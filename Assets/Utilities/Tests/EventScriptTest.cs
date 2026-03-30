@@ -52,7 +52,7 @@ namespace Utilities.Tests
                 TokenType.RightParen,
                 TokenType.RightParen,
                 TokenType.Semicolon,
-                TokenType.EOF
+                TokenType.Eof
             };
 
             Assert.AreEqual(expected.Length, tokens.Count);

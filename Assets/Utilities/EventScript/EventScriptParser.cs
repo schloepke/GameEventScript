@@ -17,7 +17,7 @@ namespace StepH.Utilities.EventScript
         public ProgramNode ParseProgram()
         {
             var program = new ProgramNode();
-            while (current.Type != TokenType.EOF)
+            while (current.Type != TokenType.Eof)
             {
                 program.Handlers.Add(ParseEventHandler());
             }
@@ -27,7 +27,7 @@ namespace StepH.Utilities.EventScript
         
         private void Advance()
         {
-            current = tokens.MoveNext() ? tokens.Current : new Token(TokenType.EOF, "");
+            current = tokens.MoveNext() ? tokens.Current : new Token(TokenType.Eof, "");
         }
 
         private bool Match(TokenType type)
@@ -72,7 +72,7 @@ namespace StepH.Utilities.EventScript
             Expect(TokenType.LeftBrace, "Expected '{'.");
 
             var body = new List<StatementNode>();
-            while (current.Type != TokenType.RightBrace && current.Type != TokenType.EOF)
+            while (current.Type != TokenType.RightBrace && current.Type != TokenType.Eof)
             {
                 body.Add(ParseStatement());
             }
@@ -170,7 +170,7 @@ namespace StepH.Utilities.EventScript
             var condition = ParseExpression();
             Expect(TokenType.LeftBrace, "Expected '{' after condition.");
             var thenBlock = new List<StatementNode>();
-            while (current.Type != TokenType.RightBrace && current.Type != TokenType.EOF)
+            while (current.Type != TokenType.RightBrace && current.Type != TokenType.Eof)
                 thenBlock.Add(ParseStatement());
             Expect(TokenType.RightBrace, "Expected '}' after if block.");
 
@@ -179,7 +179,7 @@ namespace StepH.Utilities.EventScript
             {
                 Expect(TokenType.LeftBrace, "Expected '{' after 'else'.");
                 elseBlock = new List<StatementNode>();
-                while (current.Type != TokenType.RightBrace && current.Type != TokenType.EOF)
+                while (current.Type != TokenType.RightBrace && current.Type != TokenType.Eof)
                     elseBlock.Add(ParseStatement());
                 Expect(TokenType.RightBrace, "Expected '}' after else block.");
             }
@@ -199,7 +199,7 @@ namespace StepH.Utilities.EventScript
             var collection = ParseExpression();
             Expect(TokenType.LeftBrace, "Expected '{' after for-in statement.");
             var body = new List<StatementNode>();
-            while (current.Type != TokenType.RightBrace && current.Type != TokenType.EOF)
+            while (current.Type != TokenType.RightBrace && current.Type != TokenType.Eof)
                 body.Add(ParseStatement());
             Expect(TokenType.RightBrace, "Expected '}' after for block.");
 

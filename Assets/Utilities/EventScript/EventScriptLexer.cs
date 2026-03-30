@@ -22,7 +22,7 @@ namespace StepH.Utilities.EventScript
         EqualEqual, BangEqual, Less, Greater, LessEqual, GreaterEqual,
 
         // Misc
-        EOF
+        Eof
     }
 
     public class Token
@@ -43,8 +43,8 @@ namespace StepH.Utilities.EventScript
     {
         private readonly string _source;
         private readonly List<Token> _tokens = new();
-        private int _start = 0;
-        private int _current = 0;
+        private int _start;
+        private int _current;
 
         private static readonly Dictionary<string, TokenType> Keywords = new()
         {
@@ -71,7 +71,7 @@ namespace StepH.Utilities.EventScript
                 _start = _current;
                 ScanToken();
             }
-            _tokens.Add(new Token(TokenType.EOF, ""));
+            _tokens.Add(new Token(TokenType.Eof, ""));
             return _tokens;
         }
 

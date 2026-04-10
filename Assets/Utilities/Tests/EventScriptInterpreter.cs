@@ -1,6 +1,6 @@
+using System;
 using NUnit.Framework;
 using StepH.Utilities.EventScript;
-using StepH.Utilities.Logging;
 
 namespace Utilities.Tests
 {
@@ -10,7 +10,7 @@ namespace Utilities.Tests
         private ProgramNode Compile(string source)
         {
             var tokens = new Lexer(source).Tokenize();
-            tokens.ForEach(it => ILogger.Default.Trace(it.ToString()));
+            tokens.ForEach(it => Console.WriteLine($"[Trace] {it}"));
             var parser = new StreamParser(tokens.GetEnumerator());
             return parser.ParseProgram();
         }

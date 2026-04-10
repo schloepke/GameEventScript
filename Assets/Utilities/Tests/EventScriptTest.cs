@@ -1,7 +1,6 @@
 using System;
 using NUnit.Framework;
 using StepH.Utilities.EventScript;
-using StepH.Utilities.Logging;
 
 namespace Utilities.Tests
 {
@@ -27,7 +26,7 @@ namespace Utilities.Tests
             Assert.AreEqual(TokenType.Identifier, tokens[1].Type);
             Assert.AreEqual("Start", tokens[1].Lexeme);
             
-            tokens.ForEach(it => ILogger.Default.Trace(it.ToString()));
+            tokens.ForEach(it => Console.WriteLine($"[Trace] {it}"));
             
         }
 

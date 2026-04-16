@@ -4,88 +4,34 @@ using System.Collections.Generic;
 
 namespace StepH.Flow.EventScript;
 
-public class ProgramNode
-{
-    public List<EventHandlerNode> Handlers { get; set; } = new();
-}
+public abstract record EventScriptNode;
 
-public class EventHandlerNode
-{
-    public string Name { get; set; } = string.Empty;
-    public List<string> Parameters { get; set; } = new();
-    public List<StatementNode> Body { get; set; } = new();
-}
-
-public abstract class StatementNode
-{
-}
-
-public class EmitStatement : StatementNode
-{
-    public string EventName { get; set; } = string.Empty;
-    public List<ExpressionNode> Arguments { get; set; } = new();
-}
-
-public class LetStatement : StatementNode
-{
-    public string Identifier { get; set; } = string.Empty;
-    public ExpressionNode Value { get; set; } = null!;
-}
-
-public class IfStatement : StatementNode
-{
-    public ExpressionNode Condition { get; set; } = null!;
-    public List<StatementNode> ThenBlock { get; set; } = new();
-    public List<StatementNode>? ElseBlock { get; set; }
-}
-
-public class ForStatement : StatementNode
-{
-    public string Variable { get; set; } = string.Empty;
-    public ExpressionNode Collection { get; set; } = null!;
-    public List<StatementNode> Body { get; set; } = new();
-}
-
-public class ExpressionStatement : StatementNode
-{
-    public ExpressionNode Expression { get; set; } = null!;
-}
-
-public abstract class ExpressionNode
-{
-}
-
-public class IdentifierExpression : ExpressionNode
-{
-    public string Name { get; set; } = string.Empty;
-}
-
-public class LiteralExpression : ExpressionNode
-{
-    public object Value { get; set; } // Could be string, double, bool
-}
-
-public class BinaryExpression : ExpressionNode
-{
-    public string Operator { get; set; } = string.Empty;
-    public ExpressionNode Left { get; set; } = null!;
-    public ExpressionNode Right { get; set; } = null!;
-}
-
-public class UnaryExpression : ExpressionNode
-{
-    public string Operator { get; set; } = string.Empty;
-    public ExpressionNode Operand { get; set; } = null!;
-}
-
-public class MemberAccessExpression : ExpressionNode
-{
-    public ExpressionNode Object { get; set; } = null!;
-    public string Property { get; set; } = string.Empty;
-}
-
-public class FunctionCallExpression : ExpressionNode
-{
-    public string FunctionName { get; set; } = string.Empty;
-    public List<ExpressionNode> Arguments { get; set; } = new();
-}
+public sealed record EventScriptProgram(IReadOnlyList<EventHandlerNode> Handlers) : EventScriptNode;
+public sealed record EventHandlerNode(string Message, IReadOnlyList<string> Parameters, IReadOnlyList<StatementNode> Statements, bool IsExternal = false) : EventScriptNode;
+public abstract record StatementNode : EventScriptNode;
+public sealed record EmitStatementNode(string Message, IReadOnlyList<ExpressionNode> Arguments) : StatementNode;
+public sealed record LetStatementNode(string Identifier, ExpressionNode Expression) : StatementNode;
+public sealed record IfStatementNode(ExpressionNode Condition, IReadOnlyList<StatementNode> ThenStatements, IReadOnlyList<StatementNode> ElseStatements) : StatementNode;
+public sealed record ForStatementNode(string Identifier, ExpressionNode Source, IReadOnlyList<StatementNode> Statements) : StatementNode;
+public sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
+public abstract record ExpressionNode : EventScriptNode;
+public sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
+public sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
+public sealed record NumberLiteralExpressionNode(decimal Value, string RawText) : ExpressionNode;
+public sealed record StringLiteralExpressionNode(string Value) : ExpressionNode;
+public sealed record UnaryExpressionNode(string Operator, ExpressionNode Operand) : ExpressionNode;
+public sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
+public sealed record DiceExpressionNode(int DiceCount, int SideCount, DiceModifierNode? Modifier) : ExpressionNode;
+public abstract record DiceModifierNode : EventScriptNode;
+public sealed record KeepHighestModifierNode(int Count) : DiceModifierNode;
+public sealed record DropLowestModifierNode(int Count) : DiceModifierNode;
+public sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
+public sealed record MemberAccessExpressionNode(ExpressionNode Target, string Member) : ExpressionNode;
+public sealed record CollectionAccessExpressionNode(ExpressionNode Target, CollectionSelectorNode Selector) : ExpressionNode;
+public abstract record CollectionSelectorNode : EventScriptNode;
+public sealed record ExpressionSelectorNode(ExpressionNode Expression) : CollectionSelectorNode;
+public sealed record CountSelectorNode : CollectionSelectorNode;
+public sealed record PredicateSelectorNode(string Operator, string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
+public sealed record FilterSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
+public sealed record SumSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+public sealed record SelectSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;

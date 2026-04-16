@@ -1,0 +1,67 @@
+Program ::= { EventEndpoint }
+
+EventEndpoint ::= EventHandler | ExternalEventHandler
+EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] "{" { Statement } "}"
+ExternalEventHandler ::= "external" "on" Message [ "(" [ ParamList ] ")" ] ";"
+
+ParamList ::= Identifier { "," Identifier }
+
+Statement ::= EmitStatement
+             | LetStatement
+             | IfStatement
+             | ForStatement
+             | ExpressionStatement
+
+EmitStatement ::= "emit" Message [ "(" [ Argumentlist ] ")" ] ";"
+LetStatement ::= "let" Identifier "=" Expression ";"
+IfStatement ::= "if" Expression "{" { Statement } "}" [ "else" "{" { Statement } "}" ]
+ForStatement ::= "for" Identifier "in" Expression "{" { Statement } "}"
+ExpressionStatement ::= Expression ";"
+
+Argumentlist ::= Expression { "," Expression }
+
+Expression ::= OrExpression
+
+OrExpression ::= AndExpression { "||" AndExpression }
+AndExpression ::= EqualityExpression { "&&" EqualityExpression }
+EqualityExpression ::= RelationalExpression { ( "==" | "!=" ) RelationalExpression }
+RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
+AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" ) MultiplicativeExpression }
+MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "%" ) UnaryExpression }
+UnaryExpression ::= "!" UnaryExpression | PostfixExpression
+PostfixExpression ::= PrimaryExpression { PostfixSuffix }
+PostfixSuffix ::= "." Identifier
+                | "[" CollectionSelector "]"
+PrimaryExpression ::= Literal | Identifier | "(" Expression ")"
+                    | RandomExpression
+                    | DiceExpression
+
+Literal ::= Number | TextString | "true" | "false"
+
+Message ::= UpperLetter { LowerLetter | UpperLetter | Digit }
+
+Identifier ::= LowerLetter { LowerLetter | UpperLetter | Digit }
+Number ::= Digit { Digit } [ "." Digit { Digit } ]
+TextString ::= "'" { AnyCharButSingleQuote } "'"
+
+LowerLetter ::= "[a-z]"
+UpperLetter ::= "[A-Z]"
+
+Digit ::= "[0-9]"
+
+AnyCharButSingleQuote ::= "[^']*"
+
+CollectionSelector ::= Expression
+                     | "count"
+                     | CollectionPredicateOperator Identifier "where" Expression
+                     | "filter" Identifier "where" Expression
+                     | "sum" Identifier "->" Expression
+                     | "select" Identifier "->" Expression
+CollectionPredicateOperator ::= "any" | "all"
+
+RandomExpression ::= "random" AdditiveExpression "to" AdditiveExpression
+
+DiceExpression ::= "dice" Number "d" Number [ DiceModifier ]
+DiceModifier ::= KeepHighest | DropLowest
+KeepHighest ::= "keep" "highest" [ Number ]
+DropLowest ::= "drop" "lowest" [ Number ]

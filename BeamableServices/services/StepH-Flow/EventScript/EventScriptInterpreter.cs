@@ -1,17 +1,15 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 
 namespace StepH.Flow.EventScript;
 
-public sealed record EventScriptEmittedEvent(string Message, IReadOnlyList<object?> Arguments);
+public sealed record EventScriptEmittedEvent(string Message, IReadOnlyList<EventScriptValue> Arguments);
 
-public sealed record EventScriptExecutionResult(string Message, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, object?> Variables);
+public sealed record EventScriptExecutionResult(string Message, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, EventScriptValue> Variables);
 
 public interface IEventScriptRandom
 {
@@ -24,7 +22,11 @@ public sealed class DefaultEventScriptRandom(Random? random = null) : IEventScri
 
     public int NextInclusive(int minInclusive, int maxInclusive)
     {
-        if (minInclusive > maxInclusive) throw new ArgumentOutOfRangeException(nameof(minInclusive), "minInclusive must be <= maxInclusive");
+        if (minInclusive > maxInclusive)
+        {
+            (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
+        }
+
         if (maxInclusive != int.MaxValue) return _random.Next(minInclusive, maxInclusive + 1);
         var sample = _random.NextDouble();
         return minInclusive + (int)Math.Floor(sample * ((long)maxInclusive - minInclusive + 1));
@@ -35,76 +37,86 @@ public sealed class EventScriptRuntimeException(string message) : Exception(mess
 
 public sealed class EventScriptInterpreter
 {
+    private const int RandomUnitMax = 1_000_000;
+    private const decimal RandomUnitScale = RandomUnitMax;
     private readonly Dictionary<string, List<EventHandlerNode>> _handlers;
-    private readonly Dictionary<string, EventHandlerNode> _externalHandlers;
-    private readonly Dictionary<string, EventScriptExternalMessageBinding> _externalBindings;
+    private readonly Dictionary<string, TypeDefinitionNode> _typeDefinitions;
+    private readonly Dictionary<string, List<EventScriptExternalMessageBinding>> _externalBindings;
     private readonly IEventScriptRandom _random;
-    private readonly int _maxEmitDepth;
-    private readonly Dictionary<(Type Type, string Member), Func<object, object?>> _memberAccessCache = new();
+    private readonly int _maxProcessedEventsPerRun;
 
-    private static readonly IReadOnlyDictionary<string, object?> EmptyVariables = new Dictionary<string, object?>(StringComparer.Ordinal);
+    private static readonly IReadOnlyDictionary<string, EventScriptValue> EmptyVariables = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
 
     private EventScriptInterpreter(EventScriptProgram eventScriptProgram, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
         _ = eventScriptProgram ?? throw new ArgumentNullException(nameof(eventScriptProgram));
         _random = random ?? new DefaultEventScriptRandom();
+        _typeDefinitions = BuildTypeDefinitionMap(eventScriptProgram.TypeDefinitions);
         _handlers = BuildHandlerMap(eventScriptProgram);
-        _externalHandlers = BuildExternalHandlerMap(eventScriptProgram);
-        _externalBindings = new Dictionary<string, EventScriptExternalMessageBinding>(context?.ExternalBindings ?? EmptyExternalBindings, StringComparer.Ordinal);
-        _maxEmitDepth = context?.MaxEmitDepth ?? 64;
-        if (_maxEmitDepth <= 0) throw new EventScriptCompilationException("Max emit depth must be > 0");
-        ValidateEndpointConfiguration(_handlers, _externalHandlers, _externalBindings);
+        _externalBindings = BuildExternalBindingMap(context?.ExternalBindings);
+        _maxProcessedEventsPerRun = context?.MaxProcessedEventsPerRun ?? 64;
+        if (_maxProcessedEventsPerRun <= 0) throw new EventScriptCompilationException("Max processed events per run must be > 0");
     }
 
     public static EventScriptInterpreter Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
         => new(EventScriptParser.Parse(script), random, context);
 
-    public EventScriptExecutionResult Emit(string message, params object[] args)
+    public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args)
+        => Enqueue(message, args).Drain();
+
+    public EventScriptExecutionResult EmitClr(string message, params object?[] args)
+        => Emit(message, EventScriptValue.FromClrList(args).ToArray());
+
+    public EventScriptRun Enqueue(string message, params EventScriptValue[] args)
     {
-        var dispatchState = new DispatchState(_maxEmitDepth);
-        var variables = DispatchInternalMessage(message, args, dispatchState, captureVariables: true);
-        return new EventScriptExecutionResult(message, dispatchState.EmittedEvents, variables);
+        args = NormalizeArgs(args);
+        return new EventScriptRun(this, message, args);
     }
 
-    private IReadOnlyDictionary<string, object?> DispatchInternalMessage(string message, IReadOnlyList<object?> args, DispatchState state, bool captureVariables)
+    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args)
+        => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
+
+    private void DispatchQueuedEvent(EventScriptQueuedEvent queuedEvent, RunState state)
     {
-        if (!_handlers.TryGetValue(message, out var handlers)) throw new EventScriptRuntimeException($"No handler found for message '{message}'");
-        state.Enter(message);
-        try
+        if (_handlers.TryGetValue(queuedEvent.Message, out var handlers))
         {
-            var variables = captureVariables ? new Dictionary<string, object?>(StringComparer.Ordinal) : null;
             foreach (var handler in handlers)
             {
-                var context = new ExecutionContext(state.EmittedEvents);
-                var handlerVariables = ExecuteHandler(context, state, handler, args);
-                if (variables == null) continue;
-                foreach (var pair in handlerVariables)
+                var context = new ExecutionContext(state);
+                var handlerVariables = ExecuteHandler(context, handler, queuedEvent.Arguments);
+                if (queuedEvent.CaptureVariables)
                 {
-                    variables[pair.Key] = pair.Value;
+                    state.CaptureVariables(handlerVariables);
                 }
             }
-
-            return variables ?? EmptyVariables;
         }
-        finally
+
+        if (_externalBindings.TryGetValue(queuedEvent.Message, out var bindings))
         {
-            state.Exit(message);
+            foreach (var binding in bindings)
+            {
+                try
+                {
+                    binding.Handler(queuedEvent.Arguments);
+                }
+                catch
+                {
+                }
+            }
         }
     }
 
-    private IReadOnlyDictionary<string, object?> ExecuteHandler(ExecutionContext context, DispatchState state, EventHandlerNode handler, IReadOnlyList<object?> args)
+    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, EventHandlerNode handler, IReadOnlyList<EventScriptValue> args)
     {
-        if (handler.Parameters.Count != args.Count) throw new EventScriptRuntimeException($"Handler '{handler.Message}' expects {handler.Parameters.Count} arguments but got {args.Count}");
-
         context.PushScope();
         try
         {
             for (var i = 0; i < handler.Parameters.Count; i++)
             {
-                context.Define(handler.Parameters[i], args[i]);
+                context.Define(handler.Parameters[i], i < args.Count ? args[i] : EventScriptValue.Nothing);
             }
 
-            ExecuteStatements(context, state, handler.Statements);
+            ExecuteStatements(context, handler.Statements);
             return context.SnapshotTopScope();
         }
         finally
@@ -113,39 +125,45 @@ public sealed class EventScriptInterpreter
         }
     }
 
-    private void ExecuteStatements(ExecutionContext context, DispatchState state, IReadOnlyList<StatementNode> statements)
+    private void ExecuteStatements(ExecutionContext context, IReadOnlyList<StatementNode> statements)
     {
         foreach (var statement in statements)
         {
-            ExecuteStatement(context, state, statement);
+            ExecuteStatement(context, statement);
         }
     }
 
-    private void ExecuteStatement(ExecutionContext context, DispatchState state, StatementNode statement)
+    private void ExecuteStatement(ExecutionContext context, StatementNode statement)
     {
         switch (statement)
         {
-            case EmitStatementNode emit:
-                var args = emit.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
-                EmitMessage(context, state, emit.Message, args);
+            case PublishStatementNode publish:
+                var args = publish.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
+                EmitMessage(context, publish.Message, args);
                 return;
 
             case LetStatementNode let:
-                context.Define(let.Identifier, EvaluateExpression(context, let.Expression));
+                var letValue = EvaluateExpression(context, let.Expression);
+                if (!string.IsNullOrEmpty(let.DeclaredType))
+                {
+                    letValue = ConvertToDeclaredType(letValue, let.DeclaredType!);
+                }
+
+                context.Define(let.Identifier, letValue);
                 return;
 
             case IfStatementNode ifStatement:
-                ExecuteStatements(context, state, AsBool(EvaluateExpression(context, ifStatement.Condition)) ? ifStatement.ThenStatements : ifStatement.ElseStatements);
+                ExecuteStatements(context, AsBool(EvaluateExpression(context, ifStatement.Condition)) ? ifStatement.ThenStatements : ifStatement.ElseStatements);
                 return;
 
             case ForStatementNode forStatement:
-                foreach (var item in AsEnumerable(EvaluateExpression(context, forStatement.Source)))
+                foreach (var item in EvaluateExpression(context, forStatement.Source).AsEnumerable())
                 {
                     context.PushScope();
                     try
                     {
                         context.Define(forStatement.Identifier, item);
-                        ExecuteStatements(context, state, forStatement.Statements);
+                        ExecuteStatements(context, forStatement.Statements);
                     }
                     finally
                     {
@@ -160,50 +178,54 @@ public sealed class EventScriptInterpreter
                 return;
 
             default:
-                throw new EventScriptRuntimeException($"Unsupported statement type: {statement.GetType().Name}");
+                return;
         }
     }
 
-    private void EmitMessage(ExecutionContext context, DispatchState state, string message, IReadOnlyList<object?> args)
+    private void EmitMessage(ExecutionContext context, string message, IReadOnlyList<EventScriptValue> args)
     {
         ValidateEmitArguments(message, args.Count);
-        context.Emit(new EventScriptEmittedEvent(message, args.ToArray()));
-
-        if (_handlers.ContainsKey(message))
-        {
-            DispatchInternalMessage(message, args, state, captureVariables: false);
-            return;
-        }
-
-        if (_externalBindings.TryGetValue(message, out var binding))
-        {
-            binding.Handler(args);
-        }
+        context.Publish(message, args);
     }
 
-    private object? EvaluateExpression(ExecutionContext context, ExpressionNode expression)
+    private EventScriptValue EvaluateExpression(ExecutionContext context, ExpressionNode expression)
     {
         switch (expression)
         {
             case NumberLiteralExpressionNode number:
-                return number.Value;
+                return EventScriptValue.Number(number.Value);
+            case PercentageLiteralExpressionNode percentage:
+                return EventScriptValue.Percentage(percentage.PercentValue / 100m);
 
-            case StringLiteralExpressionNode text:
-                return text.Value;
+            case TextLiteralExpressionNode text:
+                return EventScriptValue.Text(text.Value);
+
+            case TagLiteralExpressionNode tag:
+                return EventScriptValue.Tag(tag.Name);
+
+            case ListLiteralExpressionNode listLiteral:
+                return EventScriptValue.List(listLiteral.Items.Select(item => EvaluateExpression(context, item)));
+
+            case SetLiteralExpressionNode setLiteral:
+                return EventScriptValue.Set(setLiteral.Items.Select(item => EvaluateExpression(context, item)));
+
+            case DictionaryLiteralExpressionNode dictionaryLiteral:
+                return EvaluateDictionaryLiteral(context, dictionaryLiteral);
 
             case BooleanLiteralExpressionNode boolean:
-                return boolean.Value;
+                return EventScriptValue.Boolean(boolean.Value);
 
             case IdentifierExpressionNode identifier:
                 return context.Resolve(identifier.Name);
 
             case UnaryExpressionNode unary:
-                if (unary.Operator == "!")
-                {
-                    return !AsBool(EvaluateExpression(context, unary.Operand));
-                }
+                return EvaluateUnaryExpression(context, unary);
 
-                throw new EventScriptRuntimeException($"Unsupported unary operator '{unary.Operator}'");
+            case VariadicTaggedExpressionNode variadic:
+                return EvaluateVariadicTaggedExpression(context, variadic);
+
+            case ClampExpressionNode clamp:
+                return EvaluateClampExpression(context, clamp);
 
             case RandomExpressionNode randomExpression:
                 return EvaluateRandomExpression(context, randomExpression);
@@ -211,8 +233,24 @@ public sealed class EventScriptInterpreter
             case DiceExpressionNode diceExpression:
                 return EvaluateDiceExpression(diceExpression);
 
+            case GuardedChoiceExpressionNode guardedChoice:
+                foreach (var branch in guardedChoice.Branches)
+                {
+                    if (AsBool(EvaluateExpression(context, branch.ConditionExpression)))
+                    {
+                        return EvaluateExpression(context, branch.ValueExpression);
+                    }
+                }
+
+                return EvaluateExpression(context, guardedChoice.OtherwiseExpression);
+
             case BinaryExpressionNode binary:
                 return EvaluateBinaryExpression(context, binary);
+
+            case TypeCheckExpressionNode typeCheck:
+                return EventScriptValue.Boolean(IsValueOfType(EvaluateExpression(context, typeCheck.Value), typeCheck.TypeName));
+            case TypeCastExpressionNode typeCast:
+                return ConvertToDeclaredType(EvaluateExpression(context, typeCast.Value), typeCast.TypeName);
 
             case MemberAccessExpressionNode memberAccess:
                 return EvaluateMemberAccess(context, memberAccess);
@@ -221,173 +259,805 @@ public sealed class EventScriptInterpreter
                 return EvaluateCollectionAccess(context, collectionAccess);
 
             default:
-                throw new EventScriptRuntimeException($"Unsupported expression type: {expression.GetType().Name}");
+                return EventScriptValue.Nothing;
         }
     }
 
-    private object EvaluateRandomExpression(ExecutionContext context, RandomExpressionNode randomExpression)
+    private EventScriptValue EvaluateRandomExpression(ExecutionContext context, RandomExpressionNode randomExpression)
     {
         var from = AsInt(EvaluateExpression(context, randomExpression.FromExpression));
         var to = AsInt(EvaluateExpression(context, randomExpression.ToExpression));
-        return from > to ? throw new EventScriptRuntimeException($"Invalid random range: {from}..{to}") : _random.NextInclusive(from, to);
+        if (from > to)
+        {
+            (from, to) = (to, from);
+        }
+
+        if (!TryNextInclusive(from, to, out var next))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValue.Integer(next);
     }
 
-    private object EvaluateDiceExpression(DiceExpressionNode diceExpression)
+    private EventScriptValue EvaluateDiceExpression(DiceExpressionNode diceExpression)
     {
-        if (diceExpression.DiceCount <= 0) throw new EventScriptRuntimeException("Dice count must be > 0");
-        if (diceExpression.SideCount <= 0) throw new EventScriptRuntimeException("Dice side count must be > 0");
+        if (diceExpression.DiceCount <= 0 || diceExpression.SideCount <= 0)
+        {
+            return EventScriptValue.Dice(EventScriptDice.Create(Array.Empty<int>()));
+        }
 
         var rolls = new int[diceExpression.DiceCount];
-        var total = 0;
         for (var i = 0; i < rolls.Length; i++)
         {
-            rolls[i] = _random.NextInclusive(1, diceExpression.SideCount);
-            total += rolls[i];
+            if (!TryNextInclusive(1, diceExpression.SideCount, out var roll))
+            {
+                return EventScriptValue.Dice(EventScriptDice.Create(Array.Empty<int>()));
+            }
+
+            rolls[i] = roll;
         }
 
-        if (diceExpression.Modifier == null) return total;
-
-        switch (diceExpression.Modifier)
-        {
-            case KeepHighestModifierNode keepHighest:
-                if (keepHighest.Count > rolls.Length) throw new EventScriptRuntimeException("Cannot keep more dice than exist");
-
-                Array.Sort(rolls);
-                var keepTotal = 0;
-                for (var i = rolls.Length - keepHighest.Count; i < rolls.Length; i++)
-                {
-                    keepTotal += rolls[i];
-                }
-
-                return keepTotal;
-
-            case DropLowestModifierNode dropLowest:
-                if (dropLowest.Count > rolls.Length) throw new EventScriptRuntimeException("Cannot drop more dice than exist");
-
-                Array.Sort(rolls);
-                var dropTotal = 0;
-                for (var i = dropLowest.Count; i < rolls.Length; i++)
-                {
-                    dropTotal += rolls[i];
-                }
-
-                return dropTotal;
-
-            default:
-                throw new EventScriptRuntimeException($"Unsupported dice modifier: {diceExpression.Modifier.GetType().Name}");
-        }
+        var dice = EventScriptDice.Create(rolls);
+        return EventScriptValue.Dice(dice);
     }
 
-    private object? EvaluateBinaryExpression(ExecutionContext context, BinaryExpressionNode binary)
+    private EventScriptValue EvaluateDictionaryLiteral(ExecutionContext context, DictionaryLiteralExpressionNode dictionaryLiteral)
     {
+        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        foreach (var entry in dictionaryLiteral.Entries)
+        {
+            map[entry.Key] = EvaluateExpression(context, entry.Value);
+        }
+
+        return EventScriptValue.Dictionary(map);
+    }
+
+    private EventScriptValue EvaluateUnaryExpression(ExecutionContext context, UnaryExpressionNode unary)
+    {
+        var operand = EvaluateExpression(context, unary.Operand);
+
+        return unary.Operator switch
+        {
+            "!" => EvaluateNotUnary(operand),
+            "has value" => EventScriptValue.Boolean(HasValue(operand)),
+            "empty" => EventScriptValue.Boolean(IsEmpty(operand)),
+            "len" => EvaluateLenUnary(operand),
+            "chance" => EvaluateChanceUnary(operand),
+            "keys" => EventScriptValue.Keys(operand),
+            "values" => EventScriptValue.Values(operand),
+            "abs" => EvaluateAbsUnary(operand),
+            "floor" => EvaluateRoundingUnary(operand, "floor"),
+            "ceil" => EvaluateRoundingUnary(operand, "ceil"),
+            "round" => EvaluateRoundingUnary(operand, "round"),
+            "rounddown" => EvaluateRoundingUnary(operand, "rounddown"),
+            "roundup" => EvaluateRoundingUnary(operand, "roundup"),
+            "roundeven" => EvaluateRoundingUnary(operand, "roundeven"),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateVariadicTaggedExpression(ExecutionContext context, VariadicTaggedExpressionNode variadic)
+    {
+        var values = variadic.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
+        if (values.Length == 0)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return variadic.Operator switch
+        {
+            "min" => EvaluateMinMax(values, isMax: false),
+            "max" => EvaluateMinMax(values, isMax: true),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateClampExpression(ExecutionContext context, ClampExpressionNode clamp)
+    {
+        var raw = EvaluateExpression(context, clamp.Value);
+        var minimum = EvaluateExpression(context, clamp.Minimum);
+        var maximum = EvaluateExpression(context, clamp.Maximum);
+
+        if (!TryCoerceNumericForOperation(raw, out var rawNumber) ||
+            !TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !TryCoerceNumericForOperation(maximum, out var maximumNumber))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!rawNumber.IsFinite || !minimumNumber.IsFinite || !maximumNumber.IsFinite)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
+        var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
+        return EventScriptValue.Number(Math.Min(Math.Max(rawNumber.Value, lower), upper));
+    }
+
+    private EventScriptValue EvaluateNotUnary(EventScriptValue operand)
+    {
+        if (operand.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        {
+            return EventScriptValue.OptionalNone();
+        }
+
+        return EventScriptValue.Boolean(!AsBool(unwrapped));
+    }
+
+    private static EventScriptValue EvaluateLenUnary(EventScriptValue operand)
+    {
+        if (operand.isNothing())
+        {
+            return EventScriptValue.Integer(0);
+        }
+
+        return operand.Kind switch
+        {
+            EventScriptValueKind.Text => EventScriptValue.Integer(operand.AsText().Length),
+            EventScriptValueKind.Iterator => EventScriptValue.Integer(operand.AsEnumerable().LongCount()),
+            EventScriptValueKind.List => EventScriptValue.Integer(operand.AsList().Count),
+            EventScriptValueKind.Dictionary => EventScriptValue.Integer(operand.AsDictionary().Count),
+            EventScriptValueKind.Set => EventScriptValue.Integer(operand.AsSet().Count),
+            EventScriptValueKind.Dice => EventScriptValue.Integer(operand.AsDice().Rolls.Count),
+            EventScriptValueKind.Optional => EventScriptValue.Integer(operand.AsOptional().HasValue ? 1 : 0),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateChanceUnary(EventScriptValue operand)
+    {
+        var percentage = ConvertToPercentage(operand);
+        if (!percentage.isPercentage())
+        {
+            return EventScriptValue.Boolean(false);
+        }
+
+        var ratio = percentage.AsNumber();
+        if (ratio <= 0m)
+        {
+            return EventScriptValue.Boolean(false);
+        }
+
+        if (ratio >= 1m)
+        {
+            return EventScriptValue.Boolean(true);
+        }
+
+        var threshold = ratio * RandomUnitScale;
+        return EventScriptValue.Boolean(NextRandomUnit() < threshold);
+    }
+
+    private static EventScriptValue EvaluateRoundingUnary(EventScriptValue operand, string operation)
+    {
+        if (operand.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!TryCoerceNumericForOperation(operand, out var number))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (number.IsNaN)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return EventScriptValue.Integer(long.MaxValue);
+        }
+
+        if (number.IsNegativeInfinity)
+        {
+            return EventScriptValue.Integer(long.MinValue);
+        }
+
+        return operation switch
+        {
+            "floor" or "rounddown" => EventScriptValue.Integer(ToIntegerSaturated(Math.Floor(number.Value))),
+            "ceil" or "roundup" => EventScriptValue.Integer(ToIntegerSaturated(Math.Ceiling(number.Value))),
+            "round" or "roundeven" => EventScriptValue.Integer(ToIntegerSaturated(Math.Round(number.Value, 0, MidpointRounding.ToEven))),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private static EventScriptValue EvaluateAbsUnary(EventScriptValue operand)
+    {
+        if (operand.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!TryCoerceNumericForOperation(operand, out var number) || !number.IsFinite)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValue.Number(Math.Abs(number.Value));
+    }
+
+    private static EventScriptValue EvaluateMinMax(IReadOnlyList<EventScriptValue> values, bool isMax)
+    {
+        var best = values[0];
+        for (var i = 1; i < values.Count; i++)
+        {
+            var comparison = EventScriptValue.StableComparer.Compare(values[i], best);
+            if ((isMax && comparison > 0) || (!isMax && comparison < 0))
+            {
+                best = values[i];
+            }
+        }
+
+        return best;
+    }
+
+    private static bool HasValue(EventScriptValue value)
+    {
+        if (value.isNothing())
+        {
+            return false;
+        }
+
+        return value.Kind switch
+        {
+            EventScriptValueKind.Optional => value.AsOptional().HasValue,
+            EventScriptValueKind.Iterator => value.AsEnumerable().Any(),
+            EventScriptValueKind.Text => value.AsText().Length > 0,
+            EventScriptValueKind.List => value.AsList().Count > 0,
+            EventScriptValueKind.Dictionary => value.AsDictionary().Count > 0,
+            EventScriptValueKind.Set => value.AsSet().Count > 0,
+            EventScriptValueKind.Dice => value.AsDice().Rolls.Count > 0,
+            EventScriptValueKind.Number => !value.IsNaN() && !value.IsInfinity(),
+            _ => true
+        };
+    }
+
+    private static bool IsEmpty(EventScriptValue value)
+    {
+        if (value.isNothing())
+        {
+            return true;
+        }
+
+        return value.Kind switch
+        {
+            EventScriptValueKind.Optional => !value.AsOptional().HasValue || IsEmpty(value.AsOptional().Value),
+            EventScriptValueKind.Iterator => !value.AsEnumerable().Any(),
+            EventScriptValueKind.Text => value.AsText().Length == 0,
+            EventScriptValueKind.List => value.AsList().Count == 0,
+            EventScriptValueKind.Dictionary => value.AsDictionary().Count == 0,
+            EventScriptValueKind.Set => value.AsSet().Count == 0,
+            EventScriptValueKind.Dice => value.AsDice().Rolls.Count == 0,
+            _ => false
+        };
+    }
+
+    private bool EvaluateSequencePattern(ExecutionContext context, EventScriptValue target, DicePatternNode pattern)
+    {
+        if (!IsPatternSequence(target))
+        {
+            return false;
+        }
+
+        var items = target.AsList();
+        var counts = items
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        return pattern switch
+        {
+            DiceCountPatternNode countPattern => MatchDiceCountPattern(context, counts, countPattern),
+            DiceFullHousePatternNode => counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 }),
+            DiceStraightPatternNode => MatchStraight(items),
+            _ => false
+        };
+    }
+
+    private bool MatchDiceCountPattern(ExecutionContext context, IReadOnlyDictionary<EventScriptValue, int> counts, DiceCountPatternNode pattern)
+    {
+        if (pattern.Face is not null)
+        {
+            return counts.TryGetValue(EvaluateExpression(context, pattern.Face), out var count) && count >= pattern.Count;
+        }
+
+        return counts.Values.Any(count => count >= pattern.Count);
+    }
+
+    private static bool MatchStraight(IReadOnlyList<EventScriptValue> items)
+    {
+        var unique = items
+            .Select(item => item.AsInteger())
+            .Distinct()
+            .OrderByDescending(x => x)
+            .ToArray();
+        if (unique.Length < 2)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < unique.Length - 1; i++)
+        {
+            if (unique[i] - 1 != unique[i + 1])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsPatternSequence(EventScriptValue value)
+        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice;
+
+    private static bool TryCombineWithPlus(EventScriptValue left, EventScriptValue right, out EventScriptValue value)
+    {
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
+        {
+            value = EvaluateDictionaryCombine(left, right);
+            return true;
+        }
+
+        if (left.Kind == EventScriptValueKind.List && right.Kind == EventScriptValueKind.List)
+        {
+            value = EventScriptValue.List(left.AsList().Concat(right.AsList()));
+            return true;
+        }
+
+        if (left.Kind == EventScriptValueKind.List)
+        {
+            value = EventScriptValue.List(left.AsList().Append(right));
+            return true;
+        }
+
+        if (right.Kind == EventScriptValueKind.List)
+        {
+            value = EventScriptValue.List(new[] { left }.Concat(right.AsList()));
+            return true;
+        }
+
+        value = EventScriptValue.Nothing;
+        return false;
+    }
+
+    private static EventScriptValue EvaluateCollectionCombine(EventScriptValue left, EventScriptValue right)
+    {
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
+        {
+            return EvaluateDictionaryCombine(left, right);
+        }
+
+        if (left.Kind == EventScriptValueKind.Set && right.Kind == EventScriptValueKind.Set)
+        {
+            return EventScriptValue.Set(left.AsSet().Concat(right.AsSet()));
+        }
+
+        if (left.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice &&
+            right.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice)
+        {
+            return EventScriptValue.List(left.AsList().Concat(right.AsList()));
+        }
+
+        return EventScriptValue.Nothing;
+    }
+
+    private static EventScriptValue EvaluateCollectionIntersect(EventScriptValue left, EventScriptValue right)
+    {
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
+        {
+            var rightKeys = new HashSet<string>(right.AsDictionary().Keys, StringComparer.Ordinal);
+            var map = left.AsDictionary()
+                .Where(pair => rightKeys.Contains(pair.Key))
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+            return EventScriptValue.Dictionary(map);
+        }
+
+        if (left.Kind == EventScriptValueKind.Set && right.Kind == EventScriptValueKind.Set)
+        {
+            var rightSet = right.AsSet();
+            return EventScriptValue.Set(left.AsSet().Where(item => rightSet.Contains(item)));
+        }
+
+        if (left.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice &&
+            right.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice)
+        {
+            var remaining = right.AsList().ToList();
+            var result = new List<EventScriptValue>();
+            foreach (var item in left.AsList())
+            {
+                var index = remaining.FindIndex(candidate => AreEqual(candidate, item));
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                result.Add(item);
+                remaining.RemoveAt(index);
+            }
+
+            return EventScriptValue.List(result);
+        }
+
+        return EventScriptValue.Nothing;
+    }
+
+    private static EventScriptValue EvaluateCollectionExcept(EventScriptValue left, EventScriptValue right)
+    {
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
+        {
+            var rightKeys = new HashSet<string>(right.AsDictionary().Keys, StringComparer.Ordinal);
+            var map = left.AsDictionary()
+                .Where(pair => !rightKeys.Contains(pair.Key))
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+            return EventScriptValue.Dictionary(map);
+        }
+
+        if (left.Kind == EventScriptValueKind.Set && right.Kind == EventScriptValueKind.Set)
+        {
+            var rightSet = right.AsSet();
+            return EventScriptValue.Set(left.AsSet().Where(item => !rightSet.Contains(item)));
+        }
+
+        if (left.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice &&
+            right.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice)
+        {
+            var remaining = right.AsList().ToList();
+            var result = new List<EventScriptValue>();
+            foreach (var item in left.AsList())
+            {
+                var index = remaining.FindIndex(candidate => AreEqual(candidate, item));
+                if (index >= 0)
+                {
+                    remaining.RemoveAt(index);
+                    continue;
+                }
+
+                result.Add(item);
+            }
+
+            return EventScriptValue.List(result);
+        }
+
+        return EventScriptValue.Nothing;
+    }
+
+    private static EventScriptValue EvaluateCollectionZip(EventScriptValue left, EventScriptValue right)
+    {
+        if (left.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice) ||
+            right.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var leftItems = left.AsList();
+        var rightItems = right.AsList();
+        var count = Math.Min(leftItems.Count, rightItems.Count);
+        var zipped = new List<EventScriptValue>(count);
+        for (var i = 0; i < count; i++)
+        {
+            zipped.Add(EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+            {
+                ["left"] = leftItems[i],
+                ["right"] = rightItems[i]
+            }));
+        }
+
+        return EventScriptValue.List(zipped);
+    }
+
+    private static EventScriptValue EvaluateDictionaryCombine(EventScriptValue left, EventScriptValue right)
+    {
+        var map = new Dictionary<string, EventScriptValue>(left.AsDictionary(), StringComparer.Ordinal);
+        foreach (var pair in right.AsDictionary())
+        {
+            map[pair.Key] = pair.Value;
+        }
+
+        return EventScriptValue.Dictionary(map);
+    }
+
+    private EventScriptValue EvaluateBinaryExpression(ExecutionContext context, BinaryExpressionNode binary)
+    {
+        var leftRaw = EvaluateExpression(context, binary.Left);
+        var rightRaw = EvaluateExpression(context, binary.Right);
+
+        if (binary.Operator == "default")
+        {
+            if (!HasValue(leftRaw))
+            {
+                return rightRaw;
+            }
+
+            if (leftRaw.isOptional())
+            {
+                var optional = leftRaw.AsOptional();
+                return optional.HasValue ? optional.Value : rightRaw;
+            }
+
+            return leftRaw;
+        }
+
+        if (leftRaw.isNothing() || rightRaw.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!TryUnwrapOptionalForOperation(leftRaw, out var left) || !TryUnwrapOptionalForOperation(rightRaw, out var right))
+        {
+            return EventScriptValue.OptionalNone();
+        }
+
         switch (binary.Operator)
         {
             case "||":
-            {
-                var left = AsBool(EvaluateExpression(context, binary.Left));
-                return left || AsBool(EvaluateExpression(context, binary.Right));
-            }
+                return EventScriptValue.Boolean(AsBool(left) || AsBool(right));
             case "&&":
-            {
-                var left = AsBool(EvaluateExpression(context, binary.Left));
-                return left && AsBool(EvaluateExpression(context, binary.Right));
-            }
-            case "==":
-                return AreEqual(EvaluateExpression(context, binary.Left), EvaluateExpression(context, binary.Right));
-            case "!=":
-                return !AreEqual(EvaluateExpression(context, binary.Left), EvaluateExpression(context, binary.Right));
+                return EventScriptValue.Boolean(AsBool(left) && AsBool(right));
+            case "default":
+                return EventScriptValue.Nothing;
+            case "=":
+                return EventScriptValue.Boolean(AreEqual(left, right));
+            case "<>":
+                return EventScriptValue.Boolean(!AreEqual(left, right));
+            case "in":
+                return EventScriptValue.Boolean(IsContainedIn(left, right));
+            case "value in":
+                return EventScriptValue.Boolean(IsValueContainedIn(left, right));
+            case "starts with":
+                return EventScriptValue.Boolean(StartsWith(left, right));
+            case "ends with":
+                return EventScriptValue.Boolean(EndsWith(left, right));
             case "<":
-                return AsDecimal(EvaluateExpression(context, binary.Left)) < AsDecimal(EvaluateExpression(context, binary.Right));
+                if (!TryCoerceNumericForOperation(left, out var leftLess) ||
+                    !TryCoerceNumericForOperation(right, out var rightLess) ||
+                    !TryCompareNumeric(leftLess, rightLess, out var lessComparison))
+                {
+                    return EventScriptValue.Boolean(false);
+                }
+
+                return EventScriptValue.Boolean(lessComparison < 0);
             case ">":
-                return AsDecimal(EvaluateExpression(context, binary.Left)) > AsDecimal(EvaluateExpression(context, binary.Right));
+                if (!TryCoerceNumericForOperation(left, out var leftGreater) ||
+                    !TryCoerceNumericForOperation(right, out var rightGreater) ||
+                    !TryCompareNumeric(leftGreater, rightGreater, out var greaterComparison))
+                {
+                    return EventScriptValue.Boolean(false);
+                }
+
+                return EventScriptValue.Boolean(greaterComparison > 0);
             case "<=":
-                return AsDecimal(EvaluateExpression(context, binary.Left)) <= AsDecimal(EvaluateExpression(context, binary.Right));
+                if (!TryCoerceNumericForOperation(left, out var leftLessOrEqual) ||
+                    !TryCoerceNumericForOperation(right, out var rightLessOrEqual) ||
+                    !TryCompareNumeric(leftLessOrEqual, rightLessOrEqual, out var lessOrEqualComparison))
+                {
+                    return EventScriptValue.Boolean(false);
+                }
+
+                return EventScriptValue.Boolean(lessOrEqualComparison <= 0);
             case ">=":
-                return AsDecimal(EvaluateExpression(context, binary.Left)) >= AsDecimal(EvaluateExpression(context, binary.Right));
+                if (!TryCoerceNumericForOperation(left, out var leftGreaterOrEqual) ||
+                    !TryCoerceNumericForOperation(right, out var rightGreaterOrEqual) ||
+                    !TryCompareNumeric(leftGreaterOrEqual, rightGreaterOrEqual, out var greaterOrEqualComparison))
+                {
+                    return EventScriptValue.Boolean(false);
+                }
+
+                return EventScriptValue.Boolean(greaterOrEqualComparison >= 0);
             case "+":
             {
-                var left = EvaluateExpression(context, binary.Left);
-                var right = EvaluateExpression(context, binary.Right);
-                if (left is string || right is string)
+                if (TryCoerceNumericForOperation(left, out var leftNumeric) &&
+                    TryCoerceNumericForOperation(right, out var rightNumeric))
                 {
-                    return $"{left}{right}";
+                    return ToEventScriptNumber(AddNumeric(leftNumeric, rightNumeric));
                 }
 
-                return AsDecimal(left) + AsDecimal(right);
+                if (TryCombineWithPlus(left, right, out var combined))
+                {
+                    return combined;
+                }
+
+                if (left.isText() || right.isText())
+                {
+                    return EventScriptValue.Text($"{ToText(left)}{ToText(right)}");
+                }
+
+                return EventScriptValue.NumberNaN();
             }
+            case "intersect":
+                return EvaluateCollectionIntersect(left, right);
+            case "combine":
+                return EvaluateCollectionCombine(left, right);
+            case "merge":
+                return EvaluateCollectionCombine(left, right);
+            case "except":
+                return EvaluateCollectionExcept(left, right);
+            case "zip":
+                return EvaluateCollectionZip(left, right);
             case "-":
-                return AsDecimal(EvaluateExpression(context, binary.Left)) - AsDecimal(EvaluateExpression(context, binary.Right));
+                if (!TryCoerceNumericForOperation(left, out var leftMinus) ||
+                    !TryCoerceNumericForOperation(right, out var rightMinus))
+                {
+                    return EventScriptValue.NumberNaN();
+                }
+
+                return ToEventScriptNumber(SubtractNumeric(leftMinus, rightMinus));
             case "*":
-                return AsDecimal(EvaluateExpression(context, binary.Left)) * AsDecimal(EvaluateExpression(context, binary.Right));
+                if (!TryCoerceNumericForOperation(left, out var leftMultiply) ||
+                    !TryCoerceNumericForOperation(right, out var rightMultiply))
+                {
+                    return EventScriptValue.NumberNaN();
+                }
+
+                return ToEventScriptNumber(MultiplyNumeric(leftMultiply, rightMultiply));
             case "/":
-            {
-                var left = AsDecimal(EvaluateExpression(context, binary.Left));
-                var divisor = AsDecimal(EvaluateExpression(context, binary.Right));
-                if (divisor == 0)
+                if (!TryCoerceNumericForOperation(left, out var leftDivide) ||
+                    !TryCoerceNumericForOperation(right, out var rightDivide))
                 {
-                    throw new EventScriptRuntimeException("Division by zero");
+                    return EventScriptValue.NumberNaN();
                 }
 
-                return left / divisor;
-            }
+                return ToEventScriptNumber(DivideNumeric(leftDivide, rightDivide));
             case "%":
-            {
-                var left = AsDecimal(EvaluateExpression(context, binary.Left));
-                var divisor = AsDecimal(EvaluateExpression(context, binary.Right));
-                if (divisor == 0)
+                if (!TryCoerceNumericForOperation(left, out var leftModulo) ||
+                    !TryCoerceNumericForOperation(right, out var rightModulo))
                 {
-                    throw new EventScriptRuntimeException("Modulo by zero");
+                    return EventScriptValue.NumberNaN();
                 }
 
-                return left % divisor;
-            }
+                return ToEventScriptNumber(ModuloNumeric(leftModulo, rightModulo));
             default:
-                throw new EventScriptRuntimeException($"Unsupported binary operator '{binary.Operator}'");
+                return EventScriptValue.Nothing;
         }
     }
 
-    private object? EvaluateMemberAccess(ExecutionContext context, MemberAccessExpressionNode memberAccess)
+    private bool IsContainedIn(EventScriptValue needle, EventScriptValue haystack)
+    {
+        switch (haystack.Kind)
+        {
+            case EventScriptValueKind.Text:
+                return haystack.AsText().Contains(ToText(needle), StringComparison.Ordinal);
+
+            case EventScriptValueKind.Dictionary:
+                return haystack.AsDictionary().ContainsKey(needle.AsText());
+
+            case EventScriptValueKind.List:
+            case EventScriptValueKind.Set:
+            case EventScriptValueKind.Dice:
+                return haystack.AsList().Any(item => AreEqual(needle, item));
+
+            default:
+                return false;
+        }
+    }
+
+    private bool IsValueContainedIn(EventScriptValue needle, EventScriptValue haystack)
+    {
+        if (haystack.Kind != EventScriptValueKind.Dictionary)
+        {
+            return false;
+        }
+
+        return haystack.AsDictionary().Values.Any(value => AreEqual(needle, value));
+    }
+
+    private bool StartsWith(EventScriptValue value, EventScriptValue prefix)
+        => MatchSequenceBoundary(value, prefix, fromStart: true);
+
+    private bool EndsWith(EventScriptValue value, EventScriptValue suffix)
+        => MatchSequenceBoundary(value, suffix, fromStart: false);
+
+    private bool MatchSequenceBoundary(EventScriptValue value, EventScriptValue boundary, bool fromStart)
+    {
+        if (value.Kind == EventScriptValueKind.Text && boundary.Kind == EventScriptValueKind.Text)
+        {
+            return fromStart
+                ? value.AsText().StartsWith(boundary.AsText(), StringComparison.Ordinal)
+                : value.AsText().EndsWith(boundary.AsText(), StringComparison.Ordinal);
+        }
+
+        if (!IsSequential(value) || !IsSequential(boundary))
+        {
+            return false;
+        }
+
+        var valueItems = value.AsList();
+        var boundaryItems = boundary.AsList();
+        if (boundaryItems.Count > valueItems.Count)
+        {
+            return false;
+        }
+
+        var startIndex = fromStart ? 0 : valueItems.Count - boundaryItems.Count;
+        for (var i = 0; i < boundaryItems.Count; i++)
+        {
+            if (!AreEqual(valueItems[startIndex + i], boundaryItems[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsSequential(EventScriptValue value)
+        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice;
+
+    private EventScriptValue EvaluateMemberAccess(ExecutionContext context, MemberAccessExpressionNode memberAccess)
     {
         var target = EvaluateExpression(context, memberAccess.Target);
-        if (target == null)
+        if (target.isNothing())
         {
-            throw new EventScriptRuntimeException($"Cannot access member '{memberAccess.Member}' on null");
+            return EventScriptValue.Nothing;
         }
 
-        if (TryGetStringDictionaryValue(target, memberAccess.Member, out var isDictionary, out var value))
+        if (target.Kind == EventScriptValueKind.Dictionary)
         {
-            return value;
+            if (target.TryGetDictionaryMember(memberAccess.Member, out var value))
+            {
+                return value;
+            }
+
+            return EventScriptValue.Nothing;
         }
 
-        if (isDictionary)
-        {
-            throw new EventScriptRuntimeException($"Member '{memberAccess.Member}' not found");
-        }
-
-        return GetMemberAccessor(target.GetType(), memberAccess.Member)(target);
+        return EventScriptValue.Nothing;
     }
 
-    private object? EvaluateCollectionAccess(ExecutionContext context, CollectionAccessExpressionNode collectionAccess)
+    private EventScriptValue EvaluateCollectionAccess(ExecutionContext context, CollectionAccessExpressionNode collectionAccess)
     {
         var target = EvaluateExpression(context, collectionAccess.Target);
-        var items = AsList(target);
+        if (target.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var items = target.AsList();
 
         switch (collectionAccess.Selector)
         {
-            case CountSelectorNode:
-                return items.Count;
-
             case ExpressionSelectorNode expressionSelector:
-                var index = AsInt(EvaluateExpression(context, expressionSelector.Expression));
-                if (index < 0 || index >= items.Count)
-                {
-                    throw new EventScriptRuntimeException($"Collection index out of range: {index}");
-                }
+                return EvaluateIndexedCollectionAccess(context, target, expressionSelector.Expression);
 
-                return items[index];
+            case PatternSelectorNode patternSelector:
+                return EventScriptValue.Boolean(EvaluateSequencePattern(context, target, patternSelector.Pattern));
+
+            case ObjectMatchSelectorNode objectMatchSelector:
+                return EventScriptValue.Boolean(EvaluateObjectMatchSelector(context, target, objectMatchSelector.Pattern));
+
+            case TakePatternSelectorNode takePatternSelector:
+                return EvaluateTakePattern(context, target, takePatternSelector.Pattern);
+
+            case SequenceSliceSelectorNode sliceSelector:
+                return EvaluateSequenceSliceSelector(target, items, sliceSelector);
 
             case PredicateSelectorNode predicateSelector:
                 return EvaluatePredicateSelector(context, items, predicateSelector);
+
+            case CountSelectorNode countSelector:
+                return EvaluateCountSelector(context, items, countSelector);
+
+            case ChooseSelectorNode chooseSelector:
+                return EvaluateChooseSelector(context, items, chooseSelector);
+
+            case DrawSelectorNode drawSelector:
+                return EvaluateDrawSelector(target, items, drawSelector);
+
+            case ShuffleSelectorNode:
+                return EvaluateShuffleSelector(target, items);
+
+            case ReverseSelectorNode:
+                return EvaluateReverseSelector(target, items);
+
+            case EdgeSelectorNode edgeSelector:
+                return EvaluateEdgeSelector(context, items, edgeSelector);
 
             case FilterSelectorNode filterSelector:
                 return EvaluateFilterSelector(context, items, filterSelector);
@@ -395,28 +1065,431 @@ public sealed class EventScriptInterpreter
             case SumSelectorNode sumSelector:
                 return EvaluateSumSelector(context, items, sumSelector);
 
+            case AverageSelectorNode averageSelector:
+                return EvaluateAverageSelector(context, items, averageSelector);
+
+            case MinSelectorNode minSelector:
+                return EvaluateExtremaSelector(context, items, minSelector.Identifier, minSelector.Projection, isMax: false);
+
+            case MaxSelectorNode maxSelector:
+                return EvaluateExtremaSelector(context, items, maxSelector.Identifier, maxSelector.Projection, isMax: true);
+
             case SelectSelectorNode selectSelector:
                 return EvaluateSelectSelector(context, items, selectSelector);
 
+            case ContainsSelectorNode containsSelector:
+                return EvaluateContainsSelector(context, target, items, containsSelector);
+
+            case SortSelectorNode sortSelector:
+                return EvaluateSortSelector(context, target, items, sortSelector);
+
+            case DistinctSelectorNode distinctSelector:
+                return EvaluateDistinctSelector(context, target, items, distinctSelector);
+
+            case GroupBySelectorNode groupBySelector:
+                return EvaluateGroupBySelector(context, items, groupBySelector);
+
+            case OrderBySelectorNode orderBySelector:
+                return EvaluateOrderBySelector(context, target, items, orderBySelector);
+
             default:
-                throw new EventScriptRuntimeException($"Unsupported collection selector: {collectionAccess.Selector.GetType().Name}");
+                return EventScriptValue.Nothing;
         }
     }
 
-    private object EvaluatePredicateSelector(
+    private EventScriptValue EvaluateEdgeSelector(
         ExecutionContext context,
-        IReadOnlyList<object?> items,
+        IReadOnlyList<EventScriptValue> items,
+        EdgeSelectorNode selector)
+    {
+        IReadOnlyList<EventScriptValue> candidates = items;
+        if (!string.IsNullOrEmpty(selector.Identifier) && selector.Predicate is not null)
+        {
+            candidates = items
+                .Where(item => EvaluatePredicateItem(context, item, selector.Identifier!, selector.Predicate))
+                .ToArray();
+        }
+
+        if (candidates.Count == 0)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return selector.Mode switch
+        {
+            "first" => candidates[0],
+            "last" => candidates[^1],
+            "single" => candidates.Count == 1 ? candidates[0] : EventScriptValue.Nothing,
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private bool EvaluatePredicateItem(
+        ExecutionContext context,
+        EventScriptValue item,
+        string identifier,
+        ExpressionNode predicate)
+    {
+        context.PushScope();
+        try
+        {
+            context.Define(identifier, item);
+            return EvaluateExpression(context, predicate).AsBoolean();
+        }
+        finally
+        {
+            context.PopScope();
+        }
+    }
+
+    private EventScriptValue EvaluateIndexedCollectionAccess(
+        ExecutionContext context,
+        EventScriptValue target,
+        ExpressionNode selectorExpression)
+    {
+        var selector = EvaluateExpression(context, selectorExpression);
+        if (selector.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (target.Kind == EventScriptValueKind.Dictionary)
+        {
+            return EvaluateDictionaryLookup(target, selector);
+        }
+
+        return EvaluateSequentialIndexAccess(target.AsList(), selector);
+    }
+
+    private static EventScriptValue EvaluateDictionaryLookup(EventScriptValue target, EventScriptValue selector)
+    {
+        if (!TryUnwrapOptionalForOperation(selector, out var lookup))
+        {
+            return EventScriptValue.OptionalNone();
+        }
+
+        var key = lookup.AsText();
+        if (string.IsNullOrEmpty(key))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return target.TryGetDictionaryMember(key, out var value)
+            ? value
+            : EventScriptValue.Nothing;
+    }
+
+    private static EventScriptValue EvaluateSequentialIndexAccess(IReadOnlyList<EventScriptValue> items, EventScriptValue selector)
+    {
+        if (!TryUnwrapOptionalForOperation(selector, out var unwrappedSelector))
+        {
+            return EventScriptValue.OptionalNone();
+        }
+
+        var index = AsInt(unwrappedSelector);
+        if (index <= 0 || index > items.Count)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return items[index - 1];
+    }
+
+    private EventScriptValue EvaluateTakePattern(ExecutionContext context, EventScriptValue target, DicePatternNode pattern)
+    {
+        if (!IsPatternSequence(target))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var items = target.AsList();
+        if (!TryTakeSequencePattern(context, items, pattern, out var takenItems))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return target.Kind == EventScriptValueKind.Dice
+            ? EventScriptValue.Dice(EventScriptDice.Create(takenItems.Select(item => (int)item.AsInteger())))
+            : EventScriptValue.List(takenItems);
+    }
+
+    private bool EvaluateObjectMatchSelector(ExecutionContext context, EventScriptValue target, ObjectMatchPatternNode pattern)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Dice))
+        {
+            return false;
+        }
+
+        foreach (var item in target.AsList())
+        {
+            if (MatchesObjectPattern(context, item, pattern))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static EventScriptValue EvaluateSequenceSliceSelector(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        SequenceSliceSelectorNode selector)
+    {
+        if (selector.Count <= 0)
+        {
+            return target.Kind == EventScriptValueKind.Dice
+                ? EventScriptValue.Dice(EventScriptDice.Create(Array.Empty<int>()))
+                : EventScriptValue.List(Array.Empty<EventScriptValue>());
+        }
+
+        var selectedItems = selector.Scope switch
+        {
+            "first" => TakeFirst(items, selector.Count),
+            "last" => TakeLast(items, selector.Count),
+            "highest" => TakeHighest(items, selector.Count),
+            "lowest" => TakeLowest(items, selector.Count),
+            _ => Array.Empty<EventScriptValue>()
+        };
+
+        if (string.Equals(selector.Operation, "drop", StringComparison.Ordinal))
+        {
+            selectedItems = DropSelection(items, selectedItems);
+        }
+
+        return target.Kind switch
+        {
+            EventScriptValueKind.Dice => EventScriptValue.Dice(EventScriptDice.Create(selectedItems.Select(item => (int)item.AsInteger()))),
+            EventScriptValueKind.List => EventScriptValue.List(selectedItems),
+            EventScriptValueKind.Set => EventScriptValue.List(selectedItems),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private static EventScriptValue[] TakeFirst(IReadOnlyList<EventScriptValue> items, int count)
+        => items.Take(count).ToArray();
+
+    private static EventScriptValue[] TakeLast(IReadOnlyList<EventScriptValue> items, int count)
+        => items.Skip(Math.Max(0, items.Count - count)).ToArray();
+
+    private static EventScriptValue[] TakeHighest(IReadOnlyList<EventScriptValue> items, int count)
+        => items
+            .OrderByDescending(item => item, EventScriptValue.StableComparer)
+            .Take(count)
+            .ToArray();
+
+    private static EventScriptValue[] TakeLowest(IReadOnlyList<EventScriptValue> items, int count)
+        => items
+            .OrderBy(item => item, EventScriptValue.StableComparer)
+            .Take(count)
+            .ToArray();
+
+    private static EventScriptValue[] DropSelection(
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyList<EventScriptValue> selection)
+    {
+        if (selection.Count == 0)
+        {
+            return items.ToArray();
+        }
+
+        var remainingSelections = selection
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var result = new List<EventScriptValue>(items.Count);
+
+        foreach (var item in items)
+        {
+            if (remainingSelections.TryGetValue(item, out var remainingCount) && remainingCount > 0)
+            {
+                remainingSelections[item] = remainingCount - 1;
+                continue;
+            }
+
+            result.Add(item);
+        }
+
+        return result.ToArray();
+    }
+
+    private bool TryTakeSequencePattern(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        DicePatternNode pattern,
+        out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        var counts = items
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        switch (pattern)
+        {
+            case DiceCountPatternNode countPattern:
+                return TryTakeCountPattern(context, items, counts, countPattern, out takenItems);
+
+            case DiceFullHousePatternNode:
+                return TryTakeFullHouse(items, counts, out takenItems);
+
+            case DiceStraightPatternNode:
+                return TryTakeStraight(items, out takenItems);
+
+            default:
+                takenItems = Array.Empty<EventScriptValue>();
+                return false;
+        }
+    }
+
+    private bool TryTakeCountPattern(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyDictionary<EventScriptValue, int> counts,
+        DiceCountPatternNode pattern,
+        out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        if (pattern.Face is not null)
+        {
+            var face = EvaluateExpression(context, pattern.Face);
+            if (counts.TryGetValue(face, out var faceCount) && faceCount >= pattern.Count)
+            {
+                takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int> { [face] = pattern.Count });
+                return true;
+            }
+
+            takenItems = Array.Empty<EventScriptValue>();
+            return false;
+        }
+
+        foreach (var candidate in EnumerateDistinctInSourceOrder(items))
+        {
+            if (counts.TryGetValue(candidate, out var candidateCount) && candidateCount >= pattern.Count)
+            {
+                takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int> { [candidate] = pattern.Count });
+                return true;
+            }
+        }
+
+        takenItems = Array.Empty<EventScriptValue>();
+        return false;
+    }
+
+    private static bool TryTakeFullHouse(
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyDictionary<EventScriptValue, int> counts,
+        out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        foreach (var tripleCandidate in EnumerateDistinctInSourceOrder(items))
+        {
+            if (!counts.TryGetValue(tripleCandidate, out var tripleCount) || tripleCount < 3)
+            {
+                continue;
+            }
+
+            foreach (var pairCandidate in EnumerateDistinctInSourceOrder(items))
+            {
+                if (AreEqual(pairCandidate, tripleCandidate))
+                {
+                    continue;
+                }
+
+                if (counts.TryGetValue(pairCandidate, out var pairCount) && pairCount >= 2)
+                {
+                    takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int>
+                    {
+                        [tripleCandidate] = 3,
+                        [pairCandidate] = 2
+                    });
+                    return true;
+                }
+            }
+        }
+
+        takenItems = Array.Empty<EventScriptValue>();
+        return false;
+    }
+
+    private static bool TryTakeStraight(IReadOnlyList<EventScriptValue> items, out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        var distinctValues = new List<EventScriptValue>();
+        var seenIntegers = new HashSet<long>();
+        foreach (var item in items)
+        {
+            var value = item.AsInteger();
+            if (seenIntegers.Add(value))
+            {
+                distinctValues.Add(item);
+            }
+        }
+
+        var uniqueIntegers = distinctValues
+            .Select(item => item.AsInteger())
+            .OrderByDescending(value => value)
+            .ToArray();
+        if (uniqueIntegers.Length < 2)
+        {
+            takenItems = Array.Empty<EventScriptValue>();
+            return false;
+        }
+
+        for (var i = 0; i < uniqueIntegers.Length - 1; i++)
+        {
+            if (uniqueIntegers[i] - 1 != uniqueIntegers[i + 1])
+            {
+                takenItems = Array.Empty<EventScriptValue>();
+                return false;
+            }
+        }
+
+        takenItems = distinctValues;
+        return true;
+    }
+
+    private static IReadOnlyList<EventScriptValue> TakeItemsByCounts(
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyDictionary<EventScriptValue, int> requiredCounts)
+    {
+        var remaining = requiredCounts.ToDictionary(pair => pair.Key, pair => pair.Value);
+        var takenItems = new List<EventScriptValue>();
+
+        foreach (var item in items)
+        {
+            if (!remaining.TryGetValue(item, out var remainingCount) || remainingCount <= 0)
+            {
+                continue;
+            }
+
+            takenItems.Add(item);
+            remaining[item] = remainingCount - 1;
+        }
+
+        return takenItems;
+    }
+
+    private static IEnumerable<EventScriptValue> EnumerateDistinctInSourceOrder(IReadOnlyList<EventScriptValue> items)
+    {
+        var seen = new HashSet<EventScriptValue>();
+        foreach (var item in items)
+        {
+            if (seen.Add(item))
+            {
+                yield return item;
+            }
+        }
+    }
+
+    private EventScriptValue EvaluatePredicateSelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
         PredicateSelectorNode selector)
     {
         var isAny = string.Equals(selector.Operator, "any", StringComparison.Ordinal);
         if (!isAny && !string.Equals(selector.Operator, "all", StringComparison.Ordinal))
         {
-            throw new EventScriptRuntimeException($"Unsupported collection predicate operator '{selector.Operator}'");
+            return EventScriptValue.Boolean(false);
         }
 
         if (!isAny && items.Count == 0)
         {
-            return true;
+            return EventScriptValue.Boolean(true);
         }
 
         foreach (var item in items)
@@ -428,12 +1501,12 @@ public sealed class EventScriptInterpreter
                 var predicateResult = AsBool(EvaluateExpression(context, selector.Predicate));
                 if (isAny && predicateResult)
                 {
-                    return true;
+                    return EventScriptValue.Boolean(true);
                 }
 
                 if (!isAny && !predicateResult)
                 {
-                    return false;
+                    return EventScriptValue.Boolean(false);
                 }
             }
             finally
@@ -442,15 +1515,251 @@ public sealed class EventScriptInterpreter
             }
         }
 
-        return !isAny;
+        return EventScriptValue.Boolean(!isAny);
     }
 
-    private object EvaluateFilterSelector(
+    private EventScriptValue EvaluateCountSelector(
         ExecutionContext context,
-        IReadOnlyList<object?> items,
+        IReadOnlyList<EventScriptValue> items,
+        CountSelectorNode selector)
+    {
+        var count = 0;
+        foreach (var item in items)
+        {
+            context.PushScope();
+            try
+            {
+                context.Define(selector.Identifier, item);
+                if (AsBool(EvaluateExpression(context, selector.Predicate)))
+                {
+                    count++;
+                }
+            }
+            finally
+            {
+                context.PopScope();
+            }
+        }
+
+        return EventScriptValue.Integer(count);
+    }
+
+    private EventScriptValue EvaluateChooseSelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        ChooseSelectorNode selector)
+    {
+        var candidates = selector.Predicate is null || string.IsNullOrEmpty(selector.Identifier)
+            ? items.ToList()
+            : FilterItems(context, items, selector.Identifier!, selector.Predicate);
+
+        IReadOnlyList<EventScriptValue> chosen;
+        if (selector.WeightExpression is not null && !string.IsNullOrEmpty(selector.WeightIdentifier))
+        {
+            chosen = ChooseWeightedItems(context, candidates, selector.Count, selector.WeightIdentifier!, selector.WeightExpression);
+        }
+        else if (selector.AtRandom)
+        {
+            chosen = ChooseRandomItems(candidates, selector.Count);
+        }
+        else
+        {
+            chosen = candidates.Take(selector.Count).ToArray();
+        }
+
+        if (selector.Count == 1)
+        {
+            return chosen.Count == 0 ? EventScriptValue.Nothing : chosen[0];
+        }
+
+        return EventScriptValue.List(chosen);
+    }
+
+    private static EventScriptValue EvaluateDrawSelector(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        DrawSelectorNode selector)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var drawn = items.Take(selector.Count).ToArray();
+        if (selector.Count == 1)
+        {
+            return drawn.Length == 0 ? EventScriptValue.Nothing : drawn[0];
+        }
+
+        return target.Kind == EventScriptValueKind.Dice
+            ? EventScriptValue.Dice(EventScriptDice.Create(drawn.Select(item => (int)item.AsInteger())))
+            : EventScriptValue.List(drawn);
+    }
+
+    private EventScriptValue EvaluateShuffleSelector(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var shuffled = items.ToArray();
+        for (var i = shuffled.Length - 1; i > 0; i--)
+        {
+            if (!TryNextInclusive(0, i, out var swapIndex))
+            {
+                return EventScriptValue.List(shuffled);
+            }
+
+            (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
+        }
+
+        return EventScriptValue.List(shuffled);
+    }
+
+    private static EventScriptValue EvaluateReverseSelector(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValue.List(items.Reverse().ToArray());
+    }
+
+    private List<EventScriptValue> FilterItems(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        string identifier,
+        ExpressionNode predicate)
+    {
+        var result = new List<EventScriptValue>();
+        foreach (var item in items)
+        {
+            context.PushScope();
+            try
+            {
+                context.Define(identifier, item);
+                if (AsBool(EvaluateExpression(context, predicate)))
+                {
+                    result.Add(item);
+                }
+            }
+            finally
+            {
+                context.PopScope();
+            }
+        }
+
+        return result;
+    }
+
+    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> candidates,
+        int count,
+        string identifier,
+        ExpressionNode weightExpression)
+    {
+        var remaining = candidates.ToList();
+        var chosen = new List<EventScriptValue>();
+
+        while (chosen.Count < count && remaining.Count > 0)
+        {
+            var weightedItems = new List<(EventScriptValue Item, decimal Weight)>();
+            decimal totalWeight = 0m;
+
+            foreach (var candidate in remaining)
+            {
+                var weight = EvaluateWeight(context, candidate, identifier, weightExpression);
+                if (weight <= 0m)
+                {
+                    continue;
+                }
+
+                weightedItems.Add((candidate, weight));
+                totalWeight += weight;
+            }
+
+            if (weightedItems.Count == 0 || totalWeight <= 0m)
+            {
+                break;
+            }
+
+            var threshold = NextRandomUnit() * totalWeight;
+            decimal cumulative = 0m;
+            var selected = weightedItems[^1].Item;
+            foreach (var weightedItem in weightedItems)
+            {
+                cumulative += weightedItem.Weight;
+                if (threshold < cumulative)
+                {
+                    selected = weightedItem.Item;
+                    break;
+                }
+            }
+
+            chosen.Add(selected);
+            remaining.Remove(selected);
+        }
+
+        return chosen;
+    }
+
+    private decimal EvaluateWeight(
+        ExecutionContext context,
+        EventScriptValue item,
+        string identifier,
+        ExpressionNode weightExpression)
+    {
+        context.PushScope();
+        try
+        {
+            context.Define(identifier, item);
+            var weightValue = EvaluateExpression(context, weightExpression);
+            if (!TryCoerceNumericForOperation(weightValue, out var weight) || !weight.IsFinite)
+            {
+                return 0m;
+            }
+
+            return weight.Value > 0m ? weight.Value : 0m;
+        }
+        finally
+        {
+            context.PopScope();
+        }
+    }
+
+    private IReadOnlyList<EventScriptValue> ChooseRandomItems(
+        IReadOnlyList<EventScriptValue> items,
+        int count)
+    {
+        var pool = items.ToList();
+        var result = new List<EventScriptValue>(Math.Min(count, pool.Count));
+        for (var i = 0; i < count && pool.Count > 0; i++)
+        {
+            if (!TryNextInclusive(0, pool.Count - 1, out var index))
+            {
+                break;
+            }
+
+            result.Add(pool[index]);
+            pool.RemoveAt(index);
+        }
+
+        return result;
+    }
+
+    private EventScriptValue EvaluateFilterSelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
         FilterSelectorNode selector)
     {
-        var result = new List<object?>();
+        var result = new List<EventScriptValue>();
         foreach (var item in items)
         {
             context.PushScope();
@@ -468,22 +1777,27 @@ public sealed class EventScriptInterpreter
             }
         }
 
-        return result;
+        return EventScriptValue.List(result);
     }
 
-    private object EvaluateSumSelector(
+    private EventScriptValue EvaluateSumSelector(
         ExecutionContext context,
-        IReadOnlyList<object?> items,
+        IReadOnlyList<EventScriptValue> items,
         SumSelectorNode selector)
     {
-        decimal sum = 0;
+        var sum = NumericValue.Finite(0m);
         foreach (var item in items)
         {
             context.PushScope();
             try
             {
                 context.Define(selector.Identifier, item);
-                sum += AsDecimal(EvaluateExpression(context, selector.Projection));
+                if (!TryCoerceNumericForOperation(EvaluateExpression(context, selector.Projection), out var number))
+                {
+                    return EventScriptValue.NumberNaN();
+                }
+
+                sum = AddNumeric(sum, number);
             }
             finally
             {
@@ -491,15 +1805,52 @@ public sealed class EventScriptInterpreter
             }
         }
 
-        return sum;
+        return ToEventScriptNumber(sum);
     }
 
-    private object EvaluateSelectSelector(
+    private EventScriptValue EvaluateAverageSelector(
         ExecutionContext context,
-        IReadOnlyList<object?> items,
+        IReadOnlyList<EventScriptValue> items,
+        AverageSelectorNode selector)
+    {
+        if (items.Count == 0)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var sum = NumericValue.Finite(0m);
+        var count = 0;
+        foreach (var item in items)
+        {
+            context.PushScope();
+            try
+            {
+                context.Define(selector.Identifier, item);
+                if (!TryCoerceNumericForOperation(EvaluateExpression(context, selector.Projection), out var number) || !number.IsFinite)
+                {
+                    return EventScriptValue.Nothing;
+                }
+
+                sum = AddNumeric(sum, number);
+                count++;
+            }
+            finally
+            {
+                context.PopScope();
+            }
+        }
+
+        return count == 0 || !sum.IsFinite
+            ? EventScriptValue.Nothing
+            : EventScriptValue.Number(sum.Value / count);
+    }
+
+    private EventScriptValue EvaluateSelectSelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
         SelectSelectorNode selector)
     {
-        var result = new List<object?>(items.Count);
+        var result = new List<EventScriptValue>(items.Count);
         foreach (var item in items)
         {
             context.PushScope();
@@ -514,33 +1865,292 @@ public sealed class EventScriptInterpreter
             }
         }
 
-        return result;
+        return EventScriptValue.List(result);
     }
 
-    private Func<object, object?> GetMemberAccessor(Type type, string member)
+    private EventScriptValue EvaluateContainsSelector(
+        ExecutionContext context,
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        ContainsSelectorNode selector)
     {
-        if (_memberAccessCache.TryGetValue((type, member), out var accessor))
+        var value = EvaluateExpression(context, selector.ValueExpression);
+        return selector.Mode switch
         {
-            return accessor;
+            "single" => EventScriptValue.Boolean(ContainsSingle(target, items, value)),
+            "all" => EventScriptValue.Boolean(ContainsAll(target, items, value)),
+            "any" => EventScriptValue.Boolean(ContainsAny(target, items, value)),
+            _ => EventScriptValue.Boolean(false)
+        };
+    }
+
+    private static bool ContainsSingle(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
+    {
+        if (target.Kind == EventScriptValueKind.Text)
+        {
+            return target.AsText().Contains(value.AsText(), StringComparison.Ordinal);
         }
 
-        var property = type.GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
-        if (property != null)
+        if (target.Kind == EventScriptValueKind.Dictionary)
         {
-            accessor = instance => property.GetValue(instance);
-            _memberAccessCache[(type, member)] = accessor;
-            return accessor;
+            return target.AsDictionary().ContainsKey(value.AsText());
         }
 
-        var field = type.GetField(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
-        if (field != null)
+        return items.Any(item => AreEqual(item, value));
+    }
+
+    private static bool ContainsAll(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
+    {
+        var required = value.AsList();
+        if (target.Kind == EventScriptValueKind.Text)
         {
-            accessor = instance => field.GetValue(instance);
-            _memberAccessCache[(type, member)] = accessor;
-            return accessor;
+            return required.All(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
         }
 
-        throw new EventScriptRuntimeException($"Member '{member}' not found on type {type.Name}");
+        if (target.Kind == EventScriptValueKind.Dictionary)
+        {
+            return required.All(item => target.AsDictionary().ContainsKey(item.AsText()));
+        }
+
+        return required.All(requiredItem => items.Any(item => AreEqual(item, requiredItem)));
+    }
+
+    private static bool ContainsAny(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
+    {
+        var required = value.AsList();
+        if (target.Kind == EventScriptValueKind.Text)
+        {
+            return required.Any(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
+        }
+
+        if (target.Kind == EventScriptValueKind.Dictionary)
+        {
+            return required.Any(item => target.AsDictionary().ContainsKey(item.AsText()));
+        }
+
+        return required.Any(requiredItem => items.Any(item => AreEqual(item, requiredItem)));
+    }
+
+    private EventScriptValue EvaluateExtremaSelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        string identifier,
+        ExpressionNode projection,
+        bool isMax)
+    {
+        if (items.Count == 0)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var bestItem = items[0];
+        EventScriptValue? bestProjection = null;
+
+        foreach (var item in items)
+        {
+            context.PushScope();
+            try
+            {
+                context.Define(identifier, item);
+                var candidateProjection = EvaluateExpression(context, projection);
+                if (bestProjection is null)
+                {
+                    bestProjection = candidateProjection;
+                    bestItem = item;
+                    continue;
+                }
+
+                var comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+                if ((isMax && comparison > 0) || (!isMax && comparison < 0))
+                {
+                    bestProjection = candidateProjection;
+                    bestItem = item;
+                }
+            }
+            finally
+            {
+                context.PopScope();
+            }
+        }
+
+        return bestItem;
+    }
+
+    private EventScriptValue EvaluateSortSelector(
+        ExecutionContext context,
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        SortSelectorNode selector)
+    {
+        var comparer = selector.Direction == "descending"
+            ? Comparer<EventScriptValue>.Create((left, right) => EventScriptValue.StableComparer.Compare(right, left))
+            : EventScriptValue.StableComparer;
+        var sortedItems = items.OrderBy(item => item, comparer).ToArray();
+
+        return target.Kind switch
+        {
+            EventScriptValueKind.Dice => EventScriptValue.List(sortedItems),
+            EventScriptValueKind.List => EventScriptValue.List(sortedItems),
+            EventScriptValueKind.Set => EventScriptValue.List(sortedItems),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateOrderBySelector(
+        ExecutionContext context,
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        OrderBySelectorNode selector)
+    {
+        var pairs = items
+            .Select(item => (Item: item, Key: EvaluateSortProjection(context, item, selector.Identifier, selector.Projection)))
+            .ToArray();
+        var comparer = selector.Direction == "descending"
+            ? Comparer<EventScriptValue>.Create((left, right) => EventScriptValue.StableComparer.Compare(right, left))
+            : EventScriptValue.StableComparer;
+        var orderedItems = pairs
+            .OrderBy(pair => pair.Key, comparer)
+            .Select(pair => pair.Item)
+            .ToArray();
+
+        return target.Kind switch
+        {
+            EventScriptValueKind.Dice => EventScriptValue.List(orderedItems),
+            EventScriptValueKind.List => EventScriptValue.List(orderedItems),
+            EventScriptValueKind.Set => EventScriptValue.List(orderedItems),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateSortProjection(
+        ExecutionContext context,
+        EventScriptValue item,
+        string identifier,
+        ExpressionNode projection)
+    {
+        context.PushScope();
+        try
+        {
+            context.Define(identifier, item);
+            return EvaluateExpression(context, projection);
+        }
+        finally
+        {
+            context.PopScope();
+        }
+    }
+
+    private EventScriptValue EvaluateDistinctSelector(
+        ExecutionContext context,
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        DistinctSelectorNode selector)
+    {
+        if (selector.Projection is null || string.IsNullOrEmpty(selector.Identifier))
+        {
+            var distinctItems = new List<EventScriptValue>();
+            foreach (var item in items)
+            {
+                if (distinctItems.Any(existing => AreEqual(existing, item)))
+                {
+                    continue;
+                }
+
+                distinctItems.Add(item);
+            }
+
+            return target.Kind switch
+            {
+                EventScriptValueKind.Set => EventScriptValue.Set(distinctItems),
+                EventScriptValueKind.List => EventScriptValue.List(distinctItems),
+                EventScriptValueKind.Dice => EventScriptValue.List(distinctItems),
+                _ => EventScriptValue.Nothing
+            };
+        }
+
+        var distinctByProjection = new List<EventScriptValue>();
+        var seenKeys = new List<EventScriptValue>();
+        foreach (var item in items)
+        {
+            var key = EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!);
+            if (seenKeys.Any(existing => AreEqual(existing, key)))
+            {
+                continue;
+            }
+
+            seenKeys.Add(key);
+            distinctByProjection.Add(item);
+        }
+
+        return target.Kind switch
+        {
+            EventScriptValueKind.Set => EventScriptValue.Set(distinctByProjection),
+            EventScriptValueKind.List => EventScriptValue.List(distinctByProjection),
+            EventScriptValueKind.Dice => EventScriptValue.List(distinctByProjection),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateGroupBySelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        GroupBySelectorNode selector)
+    {
+        var groups = new Dictionary<string, List<EventScriptValue>>(StringComparer.Ordinal);
+        foreach (var item in items)
+        {
+            var key = EvaluateSortProjection(context, item, selector.Identifier, selector.Projection).AsText();
+            if (!groups.TryGetValue(key, out var bucket))
+            {
+                bucket = new List<EventScriptValue>();
+                groups[key] = bucket;
+            }
+
+            bucket.Add(item);
+        }
+
+        return EventScriptValue.Dictionary(groups.ToDictionary(
+            pair => pair.Key,
+            pair => EventScriptValue.List(pair.Value),
+            StringComparer.Ordinal));
+    }
+
+    private bool MatchesObjectPattern(ExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
+    {
+        if (value.Kind != EventScriptValueKind.Dictionary)
+        {
+            return false;
+        }
+
+        var dictionary = value.AsDictionary();
+        foreach (var entry in pattern.Entries)
+        {
+            if (!dictionary.TryGetValue(entry.Key, out var actual))
+            {
+                return false;
+            }
+
+            switch (entry.Value)
+            {
+                case ObjectMatchExpressionValueNode expressionValue:
+                    if (!AreEqual(actual, EvaluateExpression(context, expressionValue.Expression)))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case ObjectMatchNestedValueNode nestedValue:
+                    if (!MatchesObjectPattern(context, actual, nestedValue.Pattern))
+                    {
+                        return false;
+                    }
+
+                    break;
+            }
+        }
+
+        return true;
     }
 
     private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(EventScriptProgram eventScriptProgram)
@@ -548,11 +2158,6 @@ public sealed class EventScriptInterpreter
         var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
         foreach (var handler in eventScriptProgram.Handlers)
         {
-            if (handler.IsExternal)
-            {
-                continue;
-            }
-
             if (!map.TryGetValue(handler.Message, out var handlers))
             {
                 handlers = new List<EventHandlerNode>();
@@ -575,312 +2180,717 @@ public sealed class EventScriptInterpreter
         return map;
     }
 
-    private static Dictionary<string, EventHandlerNode> BuildExternalHandlerMap(EventScriptProgram eventScriptProgram)
+    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<TypeDefinitionNode> typeDefinitions)
     {
-        var map = new Dictionary<string, EventHandlerNode>(StringComparer.Ordinal);
-        foreach (var handler in eventScriptProgram.Handlers)
+        var map = new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
+        foreach (var typeDefinition in typeDefinitions)
         {
-            if (!handler.IsExternal)
+            if (map.ContainsKey(typeDefinition.Name))
             {
-                continue;
+                throw new EventScriptCompilationException($"Type '{typeDefinition.Name}' is defined more than once");
             }
 
-            if (!map.TryAdd(handler.Message, handler))
-            {
-                throw new EventScriptCompilationException(
-                    $"External message '{handler.Message}' is declared more than once");
-            }
+            map[typeDefinition.Name] = typeDefinition;
         }
 
         return map;
     }
 
-    private static void ValidateEndpointConfiguration(
-        IReadOnlyDictionary<string, List<EventHandlerNode>> handlers,
-        IReadOnlyDictionary<string, EventHandlerNode> externalHandlers,
-        IReadOnlyDictionary<string, EventScriptExternalMessageBinding> externalBindings)
+    private static Dictionary<string, List<EventScriptExternalMessageBinding>> BuildExternalBindingMap(
+        IReadOnlyDictionary<string, IReadOnlyList<EventScriptExternalMessageBinding>>? bindings)
     {
-        foreach (var message in externalHandlers.Keys)
+        var map = new Dictionary<string, List<EventScriptExternalMessageBinding>>(StringComparer.Ordinal);
+        if (bindings == null)
         {
-            if (handlers.ContainsKey(message))
+            return map;
+        }
+
+        foreach (var pair in bindings)
+        {
+            map[pair.Key] = pair.Value.ToList();
+        }
+
+        return map;
+    }
+
+    private static bool AreEqual(EventScriptValue left, EventScriptValue right)
+        => left.Equals(right);
+
+    private static bool AsBool(EventScriptValue value)
+        => value.AsBoolean();
+
+    private static int AsInt(EventScriptValue value)
+    {
+        var integer = value.AsInteger();
+        if (integer < int.MinValue || integer > int.MaxValue)
+        {
+            return integer < 0 ? int.MinValue : int.MaxValue;
+        }
+
+        return (int)integer;
+    }
+
+    private static bool TryUnwrapOptionalForOperation(EventScriptValue value, out EventScriptValue unwrapped)
+    {
+        if (!value.isOptional())
+        {
+            unwrapped = value;
+            return true;
+        }
+
+        var optional = value.AsOptional();
+        if (!optional.HasValue)
+        {
+            unwrapped = default!;
+            return false;
+        }
+
+        unwrapped = optional.Value;
+        return true;
+    }
+
+    private enum NumericKind
+    {
+        Finite,
+        NaN,
+        PositiveInfinity,
+        NegativeInfinity
+    }
+
+    private readonly record struct NumericValue(NumericKind Kind, decimal Value)
+    {
+        public bool IsFinite => Kind == NumericKind.Finite;
+        public bool IsNaN => Kind == NumericKind.NaN;
+        public bool IsPositiveInfinity => Kind == NumericKind.PositiveInfinity;
+        public bool IsNegativeInfinity => Kind == NumericKind.NegativeInfinity;
+        public bool IsInfinity => IsPositiveInfinity || IsNegativeInfinity;
+
+        public static NumericValue Finite(decimal value) => new(NumericKind.Finite, value);
+        public static NumericValue NaN() => new(NumericKind.NaN, 0m);
+        public static NumericValue PositiveInfinity() => new(NumericKind.PositiveInfinity, 0m);
+        public static NumericValue NegativeInfinity() => new(NumericKind.NegativeInfinity, 0m);
+    }
+
+    private static bool TryCoerceNumericForOperation(EventScriptValue value, out NumericValue number)
+    {
+        if (value.isNothing())
+        {
+            number = default;
+            return false;
+        }
+
+        if (value.Kind == EventScriptValueKind.Number)
+        {
+            if (value.IsNaN())
             {
-                throw new EventScriptCompilationException(
-                    $"Message '{message}' cannot be both internal and external");
-            }
-        }
-
-        foreach (var binding in externalBindings.Values)
-        {
-            if (handlers.ContainsKey(binding.Message))
-            {
-                throw new EventScriptCompilationException(
-                    $"External binding '{binding.Message}' conflicts with an internal handler");
-            }
-
-            if (externalHandlers.TryGetValue(binding.Message, out var externalHandler) &&
-                binding.ParameterCount.HasValue &&
-                binding.ParameterCount.Value != externalHandler.Parameters.Count)
-            {
-                throw new EventScriptCompilationException(
-                    $"External binding '{binding.Message}' expects {binding.ParameterCount.Value} arguments but the script declares {externalHandler.Parameters.Count}");
-            }
-        }
-    }
-
-    private static bool AreEqual(object? left, object? right)
-    {
-        if (left == null || right == null)
-        {
-            return left == right;
-        }
-
-        if (IsNumeric(left) && IsNumeric(right))
-        {
-            return AsDecimal(left) == AsDecimal(right);
-        }
-
-        return Equals(left, right);
-    }
-
-    private static bool IsNumeric(object value)
-    {
-        return value is byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal;
-    }
-
-    private static bool AsBool(object? value)
-    {
-        if (value is bool result)
-        {
-            return result;
-        }
-
-        throw new EventScriptRuntimeException($"Expected bool value, got {DescribeType(value)}");
-    }
-
-    private static int AsInt(object? value)
-    {
-        if (value is int intValue)
-        {
-            return intValue;
-        }
-
-        var decimalValue = AsDecimal(value);
-        if (decimalValue != decimal.Truncate(decimalValue))
-        {
-            throw new EventScriptRuntimeException($"Expected integer value, got {decimalValue.ToString(CultureInfo.InvariantCulture)}");
-        }
-
-        if (decimalValue < int.MinValue || decimalValue > int.MaxValue)
-        {
-            throw new EventScriptRuntimeException($"Integer value out of range: {decimalValue.ToString(CultureInfo.InvariantCulture)}");
-        }
-
-        return (int)decimalValue;
-    }
-
-    private static decimal AsDecimal(object? value)
-    {
-        switch (value)
-        {
-            case decimal d:
-                return d;
-            case byte b:
-                return b;
-            case sbyte sb:
-                return sb;
-            case short s:
-                return s;
-            case ushort us:
-                return us;
-            case int i:
-                return i;
-            case uint ui:
-                return ui;
-            case long l:
-                return l;
-            case ulong ul:
-                return ul;
-            case float f:
-                return (decimal)f;
-            case double db:
-                return (decimal)db;
-            default:
-                throw new EventScriptRuntimeException($"Expected numeric value, got {DescribeType(value)}");
-        }
-    }
-
-    private static IReadOnlyList<object?> AsList(object? value)
-    {
-        if (value == null)
-        {
-            throw new EventScriptRuntimeException("Expected collection, got null");
-        }
-
-        if (value is IReadOnlyList<object?> readOnlyList)
-        {
-            return readOnlyList;
-        }
-
-        if (value is IList<object?> list)
-        {
-            return list.ToArray();
-        }
-
-        if (value is string text)
-        {
-            return text.Select(ch => (object?)ch.ToString()).ToArray();
-        }
-
-        if (value is IEnumerable enumerable)
-        {
-            var result = new List<object?>();
-            foreach (var item in enumerable)
-            {
-                result.Add(item);
+                number = NumericValue.NaN();
+                return true;
             }
 
-            return result;
-        }
-
-        throw new EventScriptRuntimeException($"Expected collection, got {DescribeType(value)}");
-    }
-
-    private static IEnumerable<object?> AsEnumerable(object? value)
-    {
-        if (value == null)
-        {
-            throw new EventScriptRuntimeException("Expected enumerable, got null");
-        }
-
-        if (value is string text)
-        {
-            foreach (var item in text)
+            if (value.IsInfinity())
             {
-                yield return item.ToString();
+                number = value.IsNegativeInfinity()
+                    ? NumericValue.NegativeInfinity()
+                    : NumericValue.PositiveInfinity();
+                return true;
             }
 
-            yield break;
+            number = NumericValue.Finite(value.AsNumber());
+            return true;
         }
 
-        if (value is IEnumerable enumerable)
+        if (value.Kind == EventScriptValueKind.Integer)
         {
-            foreach (var item in enumerable)
+            number = NumericValue.Finite(value.AsInteger());
+            return true;
+        }
+
+        if (value.Kind == EventScriptValueKind.Percentage)
+        {
+            number = NumericValue.Finite(value.AsNumber());
+            return true;
+        }
+
+        if (value.Kind == EventScriptValueKind.Dice)
+        {
+            number = NumericValue.Finite(value.AsDice().Sum());
+            return true;
+        }
+
+        if (value.isText())
+        {
+            if (decimal.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
             {
-                yield return item;
+                number = NumericValue.Finite(parsed);
+                return true;
             }
 
-            yield break;
+            number = default;
+            return false;
         }
 
-        throw new EventScriptRuntimeException($"Expected enumerable, got {DescribeType(value)}");
-    }
-
-    private static string DescribeType(object? value) => value?.GetType().Name ?? "null";
-
-    private void ValidateEmitArguments(string message, int argumentCount)
-    {
-        if (_handlers.TryGetValue(message, out var handlers))
+        if (value.Kind == EventScriptValueKind.Boolean)
         {
-            var expected = handlers[0].Parameters.Count;
-            if (expected != argumentCount)
-            {
-                throw new EventScriptRuntimeException(
-                    $"Message '{message}' expects {expected} arguments but got {argumentCount}");
-            }
-
-            return;
+            number = NumericValue.Finite(value.AsBoolean() ? 1m : 0m);
+            return true;
         }
 
-        if (_externalHandlers.TryGetValue(message, out var externalHandler) &&
-            externalHandler.Parameters.Count != argumentCount)
-        {
-            throw new EventScriptRuntimeException(
-                $"External message '{message}' expects {externalHandler.Parameters.Count} arguments but got {argumentCount}");
-        }
-
-        if (_externalBindings.TryGetValue(message, out var binding) &&
-            binding.ParameterCount.HasValue &&
-            binding.ParameterCount.Value != argumentCount)
-        {
-            throw new EventScriptRuntimeException(
-                $"External binding '{message}' expects {binding.ParameterCount.Value} arguments but got {argumentCount}");
-        }
-    }
-
-    private static bool TryGetStringDictionaryValue(object target, string key, out bool isDictionary, out object? value)
-    {
-        switch (target)
-        {
-            case IReadOnlyDictionary<string, object?> readOnlyDictionary:
-                isDictionary = true;
-                return readOnlyDictionary.TryGetValue(key, out value);
-            case IDictionary<string, object?> dictionary:
-                isDictionary = true;
-                return dictionary.TryGetValue(key, out value);
-            case IDictionary nonGenericDictionary:
-            {
-                isDictionary = true;
-                if (nonGenericDictionary.Contains(key))
-                {
-                    value = nonGenericDictionary[key];
-                    return true;
-                }
-
-                value = null;
-                return false;
-            }
-        }
-
-        foreach (var interfaceType in target.GetType().GetInterfaces())
-        {
-            if (!interfaceType.IsGenericType) continue;
-            var genericDefinition = interfaceType.GetGenericTypeDefinition();
-            if (genericDefinition != typeof(IDictionary<,>) && genericDefinition != typeof(IReadOnlyDictionary<,>)) continue;
-            if (interfaceType.GetGenericArguments()[0] != typeof(string)) continue;
-            var tryGetValue = interfaceType.GetMethod("TryGetValue");
-            if (tryGetValue == null) continue;
-            var parameters = new object?[] { key, null };
-            isDictionary = true;
-            var found = (bool)tryGetValue.Invoke(target, parameters)!;
-            value = parameters[1];
-            return found;
-        }
-
-        isDictionary = false;
-        value = null;
+        number = default;
         return false;
     }
 
-    private sealed class ExecutionContext
+    private static EventScriptValue ToEventScriptNumber(NumericValue number)
     {
-        private readonly Stack<Dictionary<string, object?>> _scopes = new();
-
-        public ExecutionContext(List<EventScriptEmittedEvent> emittedEvents)
+        return number.Kind switch
         {
-            _scopes.Push(new Dictionary<string, object?>(StringComparer.Ordinal));
-            EmittedEvents = emittedEvents;
+            NumericKind.Finite => EventScriptValue.Number(number.Value),
+            NumericKind.NaN => EventScriptValue.NumberNaN(),
+            NumericKind.PositiveInfinity => EventScriptValue.NumberInfinity(),
+            NumericKind.NegativeInfinity => EventScriptValue.NumberNegativeInfinity(),
+            _ => EventScriptValue.NumberNaN()
+        };
+    }
+
+    private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
+    {
+        if (left.IsNaN || right.IsNaN)
+        {
+            comparison = default;
+            return false;
         }
 
-        public List<EventScriptEmittedEvent> EmittedEvents { get; }
+        if (left.IsPositiveInfinity)
+        {
+            comparison = right.IsPositiveInfinity ? 0 : 1;
+            return true;
+        }
 
-        public void PushScope() => _scopes.Push(new Dictionary<string, object?>(StringComparer.Ordinal));
+        if (left.IsNegativeInfinity)
+        {
+            comparison = right.IsNegativeInfinity ? 0 : -1;
+            return true;
+        }
+
+        if (right.IsPositiveInfinity)
+        {
+            comparison = -1;
+            return true;
+        }
+
+        if (right.IsNegativeInfinity)
+        {
+            comparison = 1;
+            return true;
+        }
+
+        comparison = left.Value.CompareTo(right.Value);
+        return true;
+    }
+
+    private static NumericValue AddNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+
+        if (left.IsInfinity || right.IsInfinity)
+        {
+            if (left.IsPositiveInfinity && right.IsNegativeInfinity) return NumericValue.NaN();
+            if (left.IsNegativeInfinity && right.IsPositiveInfinity) return NumericValue.NaN();
+            if (left.IsPositiveInfinity || right.IsPositiveInfinity) return NumericValue.PositiveInfinity();
+            return NumericValue.NegativeInfinity();
+        }
+
+        if (TryAddFinite(left.Value, right.Value, out var sum))
+        {
+            return NumericValue.Finite(sum);
+        }
+
+        if (left.Value > 0m && right.Value > 0m) return NumericValue.PositiveInfinity();
+        if (left.Value < 0m && right.Value < 0m) return NumericValue.NegativeInfinity();
+        return NumericValue.NaN();
+    }
+
+    private static NumericValue SubtractNumeric(NumericValue left, NumericValue right)
+        => AddNumeric(left, NegateNumeric(right));
+
+    private static NumericValue MultiplyNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+
+        if ((left.IsInfinity && IsZero(right)) || (right.IsInfinity && IsZero(left)))
+        {
+            return NumericValue.NaN();
+        }
+
+        if (left.IsInfinity || right.IsInfinity)
+        {
+            return SignOf(left) * SignOf(right) >= 0
+                ? NumericValue.PositiveInfinity()
+                : NumericValue.NegativeInfinity();
+        }
+
+        if (TryMultiplyFinite(left.Value, right.Value, out var product))
+        {
+            return NumericValue.Finite(product);
+        }
+
+        return SignOf(left) * SignOf(right) >= 0
+            ? NumericValue.PositiveInfinity()
+            : NumericValue.NegativeInfinity();
+    }
+
+    private static NumericValue DivideNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+
+        if (right.IsFinite && right.Value == 0m)
+        {
+            if (left.IsFinite && left.Value == 0m) return NumericValue.NaN();
+            return SignOf(left) >= 0 ? NumericValue.PositiveInfinity() : NumericValue.NegativeInfinity();
+        }
+
+        if (left.IsInfinity && right.IsInfinity) return NumericValue.NaN();
+
+        if (left.IsInfinity)
+        {
+            return SignOf(left) * SignOf(right) >= 0
+                ? NumericValue.PositiveInfinity()
+                : NumericValue.NegativeInfinity();
+        }
+
+        if (right.IsInfinity)
+        {
+            return NumericValue.Finite(0m);
+        }
+
+        if (TryDivideFinite(left.Value, right.Value, out var quotient))
+        {
+            return NumericValue.Finite(quotient);
+        }
+
+        return SignOf(left) * SignOf(right) >= 0
+            ? NumericValue.PositiveInfinity()
+            : NumericValue.NegativeInfinity();
+    }
+
+    private static NumericValue ModuloNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+
+        if (left.IsInfinity) return NumericValue.NaN();
+        if (right.IsInfinity) return left.IsFinite ? NumericValue.Finite(left.Value) : NumericValue.NaN();
+
+        if (right.Value == 0m) return NumericValue.NaN();
+
+        if (TryModuloFinite(left.Value, right.Value, out var modulo))
+        {
+            return NumericValue.Finite(modulo);
+        }
+
+        return NumericValue.NaN();
+    }
+
+    private static NumericValue NegateNumeric(NumericValue value)
+    {
+        if (value.IsNaN) return NumericValue.NaN();
+        if (value.IsPositiveInfinity) return NumericValue.NegativeInfinity();
+        if (value.IsNegativeInfinity) return NumericValue.PositiveInfinity();
+
+        if (TryNegateFinite(value.Value, out var negated))
+        {
+            return NumericValue.Finite(negated);
+        }
+
+        return value.Value < 0m ? NumericValue.PositiveInfinity() : NumericValue.NegativeInfinity();
+    }
+
+    private static int SignOf(NumericValue value)
+    {
+        if (value.IsPositiveInfinity) return 1;
+        if (value.IsNegativeInfinity) return -1;
+        if (!value.IsFinite) return 0;
+        return value.Value.CompareTo(0m);
+    }
+
+    private static bool IsZero(NumericValue value)
+        => value.IsFinite && value.Value == 0m;
+
+    private static bool TryAddFinite(decimal left, decimal right, out decimal value)
+    {
+        try
+        {
+            value = left + right;
+            return true;
+        }
+        catch (OverflowException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static bool TryMultiplyFinite(decimal left, decimal right, out decimal value)
+    {
+        try
+        {
+            value = left * right;
+            return true;
+        }
+        catch (OverflowException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static bool TryDivideFinite(decimal left, decimal right, out decimal value)
+    {
+        try
+        {
+            value = left / right;
+            return true;
+        }
+        catch (OverflowException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static bool TryModuloFinite(decimal left, decimal right, out decimal value)
+    {
+        try
+        {
+            value = left % right;
+            return true;
+        }
+        catch (OverflowException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static bool TryNegateFinite(decimal input, out decimal value)
+    {
+        try
+        {
+            value = -input;
+            return true;
+        }
+        catch (OverflowException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static string ToText(EventScriptValue value)
+    {
+        if (value.isNothing())
+        {
+            return string.Empty;
+        }
+
+        return value.Kind switch
+        {
+            EventScriptValueKind.Text => value.AsText(),
+            EventScriptValueKind.Number => value.ToString(),
+            EventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
+            EventScriptValueKind.Boolean => value.AsBoolean().ToString(),
+            _ => value.ToString()
+        };
+    }
+
+    private EventScriptValue ConvertToDeclaredType(EventScriptValue value, string declaredType)
+    {
+        switch (declaredType)
+        {
+            case "nothing":
+                return EventScriptValue.Nothing;
+            case "tag":
+                return EventScriptValue.Tag(value.AsText());
+            case "text":
+                return EventScriptValue.Text(value.AsText());
+            case "percentage":
+                return ConvertToPercentage(value);
+            case "boolean":
+                return EventScriptValue.Boolean(value.AsBoolean());
+            case "integer":
+                return EventScriptValue.Integer(value.AsInteger());
+            case "decimal":
+            {
+                if (!TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
+                {
+                    return EventScriptValue.NumberNaN();
+                }
+
+                if (TryCoerceNumericForOperation(unwrappedNumber, out var number))
+                {
+                    return ToEventScriptNumber(number);
+                }
+
+                return EventScriptValue.NumberNaN();
+            }
+            case "list":
+                return EventScriptValue.List(value.AsList());
+            case "dictionary":
+                return EventScriptValue.Dictionary(value.AsDictionary());
+            case "set":
+                return EventScriptValue.Set(value.AsSet());
+            case "dice":
+                return EventScriptValue.Dice(value.AsDice());
+            case "optional":
+                if (value.isOptional()) return value;
+                return value.isNothing() ? EventScriptValue.OptionalNone() : EventScriptValue.OptionalSome(value);
+            default:
+                return _typeDefinitions.TryGetValue(declaredType, out var typeDefinition)
+                    ? ConvertToCustomType(value, typeDefinition)
+                    : value;
+        }
+    }
+
+    private EventScriptValue ConvertToPercentage(EventScriptValue value)
+    {
+        if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
+        {
+            return EventScriptValue.NumberNaN();
+        }
+
+        if (unwrapped.isPercentage())
+        {
+            return unwrapped;
+        }
+
+        if (TryCoerceNumericForOperation(unwrapped, out var number))
+        {
+            if (!number.IsFinite)
+            {
+                return EventScriptValue.NumberNaN();
+            }
+
+            var ratio = unwrapped.Kind == EventScriptValueKind.Integer
+                ? number.Value / 100m
+                : number.Value > 1m || number.Value < -1m
+                    ? number.Value / 100m
+                    : number.Value;
+            return EventScriptValue.Percentage(ratio);
+        }
+
+        return EventScriptValue.NumberNaN();
+    }
+
+    private EventScriptValue ConvertToCustomType(EventScriptValue value, TypeDefinitionNode typeDefinition)
+    {
+        if (value.TryGetCustomTypeName(out var existingTypeName) &&
+            string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
+        {
+            return value;
+        }
+
+        var sourceValues = value.AsDictionary().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        var materializedValues = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+
+        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is null))
+        {
+            sourceValues.TryGetValue(field.Name, out var rawValue);
+            rawValue ??= EventScriptValue.Nothing;
+
+            var fieldValue = ConvertToDeclaredType(rawValue, field.TypeName);
+            fieldValue = ApplyFieldClamp(typeDefinition, field, fieldValue, sourceValues, materializedValues);
+            fieldValue = ConvertToDeclaredType(fieldValue, field.TypeName);
+            materializedValues[field.Name] = fieldValue;
+        }
+
+        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is not null))
+        {
+            var computedValue = EvaluateCustomTypeExpression(typeDefinition, field.ComputedExpression!, sourceValues, materializedValues);
+            materializedValues[field.Name] = ConvertToDeclaredType(computedValue, field.TypeName);
+        }
+
+        return EventScriptValue.CustomType(typeDefinition.Name, materializedValues);
+    }
+
+    private EventScriptValue ApplyFieldClamp(
+        TypeDefinitionNode typeDefinition,
+        TypeFieldDefinitionNode field,
+        EventScriptValue fieldValue,
+        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
+        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    {
+        if (field.MinimumExpression is null || field.MaximumExpression is null)
+        {
+            return fieldValue;
+        }
+
+        var minimum = EvaluateCustomTypeExpression(typeDefinition, field.MinimumExpression, sourceValues, materializedValues);
+        var maximum = EvaluateCustomTypeExpression(typeDefinition, field.MaximumExpression, sourceValues, materializedValues);
+        if (!TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
+            !TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !TryCoerceNumericForOperation(maximum, out var maximumNumber))
+        {
+            return fieldValue;
+        }
+
+        if (!valueNumber.IsFinite || !minimumNumber.IsFinite || !maximumNumber.IsFinite)
+        {
+            if (maximumNumber.IsPositiveInfinity && minimumNumber.IsFinite && valueNumber.IsFinite)
+            {
+                return EventScriptValue.Number(Math.Max(valueNumber.Value, minimumNumber.Value));
+            }
+
+            return fieldValue;
+        }
+
+        var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
+        var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
+        return EventScriptValue.Number(Math.Min(Math.Max(valueNumber.Value, lower), upper));
+    }
+
+    private EventScriptValue EvaluateCustomTypeExpression(
+        TypeDefinitionNode typeDefinition,
+        ExpressionNode expression,
+        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
+        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    {
+        var state = new RunState(_maxProcessedEventsPerRun);
+        var context = new ExecutionContext(state);
+        context.PushScope();
+        try
+        {
+            foreach (var pair in sourceValues)
+            {
+                context.Define(pair.Key, pair.Value);
+            }
+
+            foreach (var pair in materializedValues)
+            {
+                context.Define(pair.Key, pair.Value);
+            }
+
+            return EvaluateExpression(context, expression);
+        }
+        finally
+        {
+            context.PopScope();
+        }
+    }
+
+    private bool IsValueOfType(EventScriptValue value, string typeName)
+    {
+        return typeName switch
+        {
+            "nothing" => value.isNothing(),
+            "tag" => value.isTag(),
+            "text" => value.isText(),
+            "percentage" => value.isPercentage(),
+            "decimal" => value.isNumber(),
+            "integer" => value.isInteger(),
+            "boolean" => value.Kind == EventScriptValueKind.Boolean,
+            "optional" => value.isOptional(),
+            "list" => value.isList(),
+            "dictionary" => value.isDictionary(),
+            "set" => value.isSet(),
+            "dice" => value.isDice(),
+            _ => value.TryGetCustomTypeName(out var customTypeName) && string.Equals(customTypeName, typeName, StringComparison.Ordinal)
+        };
+    }
+
+    private static long ToIntegerSaturated(decimal number)
+    {
+        var truncated = decimal.Truncate(number);
+        if (truncated > long.MaxValue) return long.MaxValue;
+        if (truncated < long.MinValue) return long.MinValue;
+        return (long)truncated;
+    }
+
+    private bool TryNextInclusive(int minInclusive, int maxInclusive, out int value)
+    {
+        try
+        {
+            value = _random.NextInclusive(minInclusive, maxInclusive);
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private decimal NextRandomUnit()
+    {
+        return TryNextInclusive(0, RandomUnitMax - 1, out var value)
+            ? value / RandomUnitScale
+            : 0m;
+    }
+
+    private void ValidateEmitArguments(string message, int argumentCount)
+    {
+        _ = message;
+        _ = argumentCount;
+    }
+
+    public sealed class EventScriptRun
+    {
+        private readonly EventScriptInterpreter _interpreter;
+        private readonly RunState _state;
+        private readonly string _message;
+
+        internal EventScriptRun(EventScriptInterpreter interpreter, string message, IReadOnlyList<EventScriptValue> args)
+        {
+            _interpreter = interpreter;
+            _message = message;
+            _state = new RunState(interpreter._maxProcessedEventsPerRun);
+            _state.Enqueue(message, args, captureVariables: true);
+        }
+
+        public EventScriptExecutionResult Drain()
+        {
+            while (_state.TryDequeue(out var queuedEvent))
+            {
+                if (!_state.TryStartProcessingEvent())
+                {
+                    break;
+                }
+
+                _interpreter.DispatchQueuedEvent(queuedEvent, _state);
+            }
+
+            return new EventScriptExecutionResult(_message, _state.EmittedEvents, _state.Variables);
+        }
+    }
+
+    private sealed record EventScriptQueuedEvent(string Message, IReadOnlyList<EventScriptValue> Arguments, bool CaptureVariables);
+
+    private sealed class ExecutionContext
+    {
+        private readonly Stack<Dictionary<string, EventScriptValue>> _scopes = new();
+        private readonly RunState _state;
+
+        public ExecutionContext(RunState state)
+        {
+            _state = state;
+            _scopes.Push(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+        }
+
+        public void PushScope() => _scopes.Push(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
 
         public void PopScope()
         {
             if (_scopes.Count == 1)
             {
-                throw new InvalidOperationException("Cannot pop root scope");
+                return;
             }
 
             _scopes.Pop();
         }
 
-        public void Define(string name, object? value)
+        public void Define(string name, EventScriptValue value)
         {
             _scopes.Peek()[name] = value;
         }
 
-        public object? Resolve(string name)
+        public EventScriptValue Resolve(string name)
         {
             foreach (var scope in _scopes)
             {
@@ -890,59 +2900,75 @@ public sealed class EventScriptInterpreter
                 }
             }
 
-            throw new EventScriptRuntimeException($"Unknown identifier '{name}'");
+            return EventScriptValue.Nothing;
         }
 
-        public void Emit(EventScriptEmittedEvent emittedEvent)
+        public void Publish(string message, IReadOnlyList<EventScriptValue> arguments)
+        {
+            var emittedEvent = new EventScriptEmittedEvent(message, arguments.ToArray());
+            _state.RecordEmission(emittedEvent);
+            _state.Enqueue(message, emittedEvent.Arguments, captureVariables: false);
+        }
+
+        public IReadOnlyDictionary<string, EventScriptValue> SnapshotTopScope()
+            => new Dictionary<string, EventScriptValue>(_scopes.Peek(), StringComparer.Ordinal);
+    }
+
+    private sealed class RunState
+    {
+        private readonly Queue<EventScriptQueuedEvent> _queue = new();
+        private readonly Dictionary<string, EventScriptValue> _variables = new(StringComparer.Ordinal);
+        private readonly int _maxProcessedEventsPerRun;
+        private int _processedEvents;
+
+        public RunState(int maxProcessedEventsPerRun)
+        {
+            _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
+        }
+
+        public IReadOnlyDictionary<string, EventScriptValue> Variables => _variables;
+
+        public List<EventScriptEmittedEvent> EmittedEvents { get; } = new();
+
+        public void Enqueue(string message, IReadOnlyList<EventScriptValue> args, bool captureVariables)
+        {
+            _queue.Enqueue(new EventScriptQueuedEvent(message, args.ToArray(), captureVariables));
+        }
+
+        public bool TryDequeue(out EventScriptQueuedEvent queuedEvent)
+        {
+            if (_queue.Count == 0)
+            {
+                queuedEvent = default!;
+                return false;
+            }
+
+            queuedEvent = _queue.Dequeue();
+            return true;
+        }
+
+        public bool TryStartProcessingEvent()
+        {
+            if (_processedEvents >= _maxProcessedEventsPerRun)
+            {
+                return false;
+            }
+
+            _processedEvents++;
+            return true;
+        }
+
+        public void RecordEmission(EventScriptEmittedEvent emittedEvent)
         {
             EmittedEvents.Add(emittedEvent);
         }
 
-        public IReadOnlyDictionary<string, object?> SnapshotTopScope()
+        public void CaptureVariables(IReadOnlyDictionary<string, EventScriptValue> variables)
         {
-            return new Dictionary<string, object?>(_scopes.Peek(), StringComparer.Ordinal);
+            foreach (var pair in variables)
+            {
+                _variables[pair.Key] = pair.Value;
+            }
         }
     }
-
-    private sealed class DispatchState
-    {
-        private readonly List<string> _stack = new();
-        private readonly int _maxEmitDepth;
-
-        public DispatchState(int maxEmitDepth)
-        {
-            _maxEmitDepth = maxEmitDepth;
-        }
-
-        public List<EventScriptEmittedEvent> EmittedEvents { get; } = new();
-
-        public void Enter(string message)
-        {
-            if (_stack.Contains(message))
-            {
-                var path = string.Join(" -> ", _stack.Concat(new[] { message }));
-                throw new EventScriptRuntimeException($"Emit recursion detected: {path}");
-            }
-
-            if (_stack.Count >= _maxEmitDepth)
-            {
-                throw new EventScriptRuntimeException($"Maximum emit depth of {_maxEmitDepth} exceeded");
-            }
-
-            _stack.Add(message);
-        }
-
-        public void Exit(string message)
-        {
-            if (_stack.Count == 0 || !string.Equals(_stack[^1], message, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException($"Cannot exit message '{message}' because it is not active");
-            }
-
-            _stack.RemoveAt(_stack.Count - 1);
-        }
-    }
-
-    private static readonly IReadOnlyDictionary<string, EventScriptExternalMessageBinding> EmptyExternalBindings =
-        new Dictionary<string, EventScriptExternalMessageBinding>(StringComparer.Ordinal);
 }

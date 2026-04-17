@@ -3,40 +3,57 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace StepH.Flow.EventScript;
 
 public enum EventScriptTokenKind
 {
     EndOfFile,
+    NewLine,
     Message,
     Identifier,
+    Tag,
     Number,
-    String,
+    Percentage,
+    Text,
     True,
     False,
+    Define,
     On,
-    External,
-    Emit,
+    Publish,
     Let,
+    As,
+    Be,
+    When,
+    Otherwise,
+    Has,
+    Empty,
     If,
     Else,
     For,
     In,
-    Random,
+    Starts,
+    Ends,
+    With,
+    Is,
     To,
-    Dice,
-    Keep,
-    Highest,
-    Drop,
-    Lowest,
-    Count,
-    Any,
-    All,
-    Filter,
-    Where,
-    Sum,
-    Select,
+    SelectorAny,
+    SelectorAll,
+    SelectorFilter,
+    SelectorHas,
+    SelectorTake,
+    SelectorDrop,
+    SelectorCount,
+    SelectorChoose,
+    SelectorDraw,
+    SelectorShuffle,
+    SelectorReverse,
+    SelectorSum,
+    SelectorAverage,
+    SelectorSelect,
+    SelectorContains,
+    SelectorSort,
     DiceSeparator,
     Dot,
     Comma,
@@ -47,7 +64,7 @@ public enum EventScriptTokenKind
     RightBrace,
     LeftBracket,
     RightBracket,
-    Assign,
+    Colon,
     Arrow,
     Or,
     And,
@@ -96,12 +113,37 @@ public sealed class EventScriptLexer
 
         while (true)
         {
-            SkipWhitespace();
+            SkipWhitespaceExceptNewLine();
 
             if (IsAtEnd)
             {
                 tokens.Add(new EventScriptToken(EventScriptTokenKind.EndOfFile, string.Empty, _line, _column));
                 return tokens;
+            }
+
+            switch (Current)
+            {
+                case '\r':
+                {
+                    var newlineLine = _line;
+                    var newlineColumn = _column;
+                    Advance();
+                    if (!IsAtEnd && Current == '\n')
+                    {
+                        Advance();
+                    }
+
+                    tokens.Add(new EventScriptToken(EventScriptTokenKind.NewLine, "\\n", newlineLine, newlineColumn));
+                    continue;
+                }
+                case '\n':
+                {
+                    var newlineLine = _line;
+                    var newlineColumn = _column;
+                    Advance();
+                    tokens.Add(new EventScriptToken(EventScriptTokenKind.NewLine, "\\n", newlineLine, newlineColumn));
+                    continue;
+                }
             }
 
             var startLine = _line;
@@ -110,8 +152,7 @@ public sealed class EventScriptLexer
 
             if (char.IsLower(ch) || char.IsUpper(ch))
             {
-                var text = ReadWhile(c => char.IsLetterOrDigit(c));
-                tokens.Add(CreateWordToken(text, startLine, startColumn));
+                tokens.Add(CreateWordToken(ReadWhile(char.IsLetterOrDigit), startLine, startColumn));
                 continue;
             }
 
@@ -121,21 +162,24 @@ public sealed class EventScriptLexer
                 continue;
             }
 
-            if (ch == '\'')
+            switch (ch)
             {
-                tokens.Add(ReadStringToken(startLine, startColumn));
-                continue;
+                case '\'':
+                    tokens.Add(ReadTextToken(startLine, startColumn));
+                    continue;
+                case ':' when char.IsLower(Peek()):
+                    tokens.Add(ReadSelectorToken(startLine, startColumn));
+                    continue;
+                default:
+                    tokens.Add(ReadOperatorToken(startLine, startColumn));
+                    break;
             }
-
-            tokens.Add(ReadOperatorToken(startLine, startColumn));
         }
     }
 
-    private bool IsAtEnd
-        => _index >= _length;
+    private bool IsAtEnd => _index >= _length;
 
-    private char Current
-        => _input[_index];
+    private char Current => _input[_index];
 
     private char Peek(int offset = 1)
     {
@@ -155,6 +199,7 @@ public sealed class EventScriptLexer
         {
             _column++;
         }
+
         _index++;
     }
 
@@ -175,31 +220,58 @@ public sealed class EventScriptLexer
         return text switch
         {
             "on" => new EventScriptToken(EventScriptTokenKind.On, text, line, column),
-            "external" => new EventScriptToken(EventScriptTokenKind.External, text, line, column),
-            "emit" => new EventScriptToken(EventScriptTokenKind.Emit, text, line, column),
+            "define" => new EventScriptToken(EventScriptTokenKind.Define, text, line, column),
+            "publish" => new EventScriptToken(EventScriptTokenKind.Publish, text, line, column),
             "let" => new EventScriptToken(EventScriptTokenKind.Let, text, line, column),
+            "as" => new EventScriptToken(EventScriptTokenKind.As, text, line, column),
+            "be" => new EventScriptToken(EventScriptTokenKind.Be, text, line, column),
+            "when" => new EventScriptToken(EventScriptTokenKind.When, text, line, column),
+            "otherwise" => new EventScriptToken(EventScriptTokenKind.Otherwise, text, line, column),
+            "has" => new EventScriptToken(EventScriptTokenKind.Has, text, line, column),
+            "empty" => new EventScriptToken(EventScriptTokenKind.Empty, text, line, column),
             "if" => new EventScriptToken(EventScriptTokenKind.If, text, line, column),
             "else" => new EventScriptToken(EventScriptTokenKind.Else, text, line, column),
             "for" => new EventScriptToken(EventScriptTokenKind.For, text, line, column),
             "in" => new EventScriptToken(EventScriptTokenKind.In, text, line, column),
-            "random" => new EventScriptToken(EventScriptTokenKind.Random, text, line, column),
+            "starts" => new EventScriptToken(EventScriptTokenKind.Starts, text, line, column),
+            "ends" => new EventScriptToken(EventScriptTokenKind.Ends, text, line, column),
+            "with" => new EventScriptToken(EventScriptTokenKind.With, text, line, column),
+            "is" => new EventScriptToken(EventScriptTokenKind.Is, text, line, column),
+            "or" => new EventScriptToken(EventScriptTokenKind.Or, text, line, column),
+            "and" => new EventScriptToken(EventScriptTokenKind.And, text, line, column),
+            "not" => new EventScriptToken(EventScriptTokenKind.Not, text, line, column),
             "to" => new EventScriptToken(EventScriptTokenKind.To, text, line, column),
-            "dice" => new EventScriptToken(EventScriptTokenKind.Dice, text, line, column),
-            "keep" => new EventScriptToken(EventScriptTokenKind.Keep, text, line, column),
-            "highest" => new EventScriptToken(EventScriptTokenKind.Highest, text, line, column),
-            "drop" => new EventScriptToken(EventScriptTokenKind.Drop, text, line, column),
-            "lowest" => new EventScriptToken(EventScriptTokenKind.Lowest, text, line, column),
             "true" => new EventScriptToken(EventScriptTokenKind.True, text, line, column),
             "false" => new EventScriptToken(EventScriptTokenKind.False, text, line, column),
-            "count" => new EventScriptToken(EventScriptTokenKind.Count, text, line, column),
-            "any" => new EventScriptToken(EventScriptTokenKind.Any, text, line, column),
-            "all" => new EventScriptToken(EventScriptTokenKind.All, text, line, column),
-            "filter" => new EventScriptToken(EventScriptTokenKind.Filter, text, line, column),
-            "where" => new EventScriptToken(EventScriptTokenKind.Where, text, line, column),
-            "sum" => new EventScriptToken(EventScriptTokenKind.Sum, text, line, column),
-            "select" => new EventScriptToken(EventScriptTokenKind.Select, text, line, column),
             _ when char.IsUpper(text[0]) => new EventScriptToken(EventScriptTokenKind.Message, text, line, column),
             _ => new EventScriptToken(EventScriptTokenKind.Identifier, text, line, column)
+        };
+    }
+
+    private EventScriptToken ReadSelectorToken(int line, int column)
+    {
+        Advance();
+        var selector = ReadWhile(char.IsLetterOrDigit);
+
+        return selector switch
+        {
+            "any" => new EventScriptToken(EventScriptTokenKind.SelectorAny, $":{selector}", line, column),
+            "all" => new EventScriptToken(EventScriptTokenKind.SelectorAll, $":{selector}", line, column),
+            "filter" => new EventScriptToken(EventScriptTokenKind.SelectorFilter, $":{selector}", line, column),
+            "has" => new EventScriptToken(EventScriptTokenKind.SelectorHas, $":{selector}", line, column),
+            "take" => new EventScriptToken(EventScriptTokenKind.SelectorTake, $":{selector}", line, column),
+            "drop" => new EventScriptToken(EventScriptTokenKind.SelectorDrop, $":{selector}", line, column),
+            "count" => new EventScriptToken(EventScriptTokenKind.SelectorCount, $":{selector}", line, column),
+            "choose" => new EventScriptToken(EventScriptTokenKind.SelectorChoose, $":{selector}", line, column),
+            "draw" => new EventScriptToken(EventScriptTokenKind.SelectorDraw, $":{selector}", line, column),
+            "shuffle" => new EventScriptToken(EventScriptTokenKind.SelectorShuffle, $":{selector}", line, column),
+            "reverse" => new EventScriptToken(EventScriptTokenKind.SelectorReverse, $":{selector}", line, column),
+            "sum" => new EventScriptToken(EventScriptTokenKind.SelectorSum, $":{selector}", line, column),
+            "average" => new EventScriptToken(EventScriptTokenKind.SelectorAverage, $":{selector}", line, column),
+            "select" => new EventScriptToken(EventScriptTokenKind.SelectorSelect, $":{selector}", line, column),
+            "contains" => new EventScriptToken(EventScriptTokenKind.SelectorContains, $":{selector}", line, column),
+            "sort" => new EventScriptToken(EventScriptTokenKind.SelectorSort, $":{selector}", line, column),
+            _ => new EventScriptToken(EventScriptTokenKind.Tag, $":{selector}", line, column)
         };
     }
 
@@ -207,7 +279,6 @@ public sealed class EventScriptLexer
     {
         var start = _index;
         ReadWhile(char.IsDigit);
-
         if (!IsAtEnd && Current == '.' && char.IsDigit(Peek()))
         {
             Advance();
@@ -215,31 +286,42 @@ public sealed class EventScriptLexer
         }
 
         var text = _input[start.._index];
-        return new EventScriptToken(EventScriptTokenKind.Number, text, line, column);
+        if (IsAtEnd || Current != '%') return new EventScriptToken(EventScriptTokenKind.Number, text, line, column);
+        Advance();
+        return new EventScriptToken(EventScriptTokenKind.Percentage, text, line, column);
     }
 
-    private EventScriptToken ReadStringToken(int line, int column)
+    private EventScriptToken ReadTextToken(int line, int column)
     {
         Advance();
-        var start = _index;
-
-        while (!IsAtEnd && Current != '\'')
+        var builder = new StringBuilder();
+        while (!IsAtEnd)
         {
+            if (Current == '\'')
+            {
+                if (Peek() == '\'')
+                {
+                    builder.Append('\'');
+                    Advance();
+                    Advance();
+                    continue;
+                }
+
+                Advance();
+                return new EventScriptToken(EventScriptTokenKind.Text, builder.ToString(), line, column);
+            }
+
+            builder.Append(Current);
             Advance();
         }
 
-        if (IsAtEnd) throw new EventScriptParseException("Unterminated string literal", line, column);
-
-        var text = _input[start.._index];
-        Advance();
-        return new EventScriptToken(EventScriptTokenKind.String, text, line, column);
+        throw new EventScriptParseException("Unterminated string literal", line, column);
     }
 
     private EventScriptToken ReadOperatorToken(int line, int column)
     {
         var ch = Current;
         var next = Peek();
-
         Advance();
         switch (ch)
         {
@@ -249,12 +331,9 @@ public sealed class EventScriptLexer
             case '&' when next == '&':
                 Advance();
                 return new EventScriptToken(EventScriptTokenKind.And, "&&", line, column);
-            case '=' when next == '=':
+            case '<' when next == '>':
                 Advance();
-                return new EventScriptToken(EventScriptTokenKind.Equal, "==", line, column);
-            case '!' when next == '=':
-                Advance();
-                return new EventScriptToken(EventScriptTokenKind.NotEqual, "!=", line, column);
+                return new EventScriptToken(EventScriptTokenKind.NotEqual, "<>", line, column);
             case '<' when next == '=':
                 Advance();
                 return new EventScriptToken(EventScriptTokenKind.LessOrEqual, "<=", line, column);
@@ -276,7 +355,8 @@ public sealed class EventScriptLexer
                     '}' => new EventScriptToken(EventScriptTokenKind.RightBrace, "}", line, column),
                     '[' => new EventScriptToken(EventScriptTokenKind.LeftBracket, "[", line, column),
                     ']' => new EventScriptToken(EventScriptTokenKind.RightBracket, "]", line, column),
-                    '=' => new EventScriptToken(EventScriptTokenKind.Assign, "=", line, column),
+                    ':' => new EventScriptToken(EventScriptTokenKind.Colon, ":", line, column),
+                    '=' => new EventScriptToken(EventScriptTokenKind.Equal, "=", line, column),
                     '<' => new EventScriptToken(EventScriptTokenKind.Less, "<", line, column),
                     '>' => new EventScriptToken(EventScriptTokenKind.Greater, ">", line, column),
                     '+' => new EventScriptToken(EventScriptTokenKind.Plus, "+", line, column),
@@ -290,11 +370,8 @@ public sealed class EventScriptLexer
         }
     }
 
-    private void SkipWhitespace()
+    private void SkipWhitespaceExceptNewLine()
     {
-        while (!IsAtEnd && char.IsWhiteSpace(Current))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && char.IsWhiteSpace(Current) && Current is not '\n' and not '\r') Advance();
     }
 }

@@ -3,105 +3,512 @@ using StepH.Flow.EventScript;
 namespace StepH_Flow_Tests.EventScript;
 
 [TestClass]
-public class OhEventScriptParserTests
+public class EventScriptParsingScenarios
 {
     [TestMethod]
-    public void Parse_BuildsHandlersAndStatements()
+    public void JoinedPlayerRulesCanSetStateAndBranch()
     {
-        const string script = """
+        const string script =
+            """
             on PlayerJoined(playerId) {
-                let isActive = true;
+                let isActive be true
                 if isActive {
-                    emit PlayerReady(playerId);
+                    publish PlayerReady(playerId)
                 } else {
-                    emit PlayerIdle;
+                    publish PlayerIdle
                 }
             }
             """;
 
         var program = EventScriptParser.Parse(script);
-
-        Assert.AreEqual(1, program.Handlers.Count);
-
+        Assert.HasCount(1, program.Handlers);
         var handler = program.Handlers[0];
         Assert.AreEqual("PlayerJoined", handler.Message);
         CollectionAssert.AreEqual(new[] { "playerId" }, handler.Parameters.ToArray());
-        Assert.AreEqual(2, handler.Statements.Count);
-
+        Assert.HasCount(2, handler.Statements);
         Assert.IsInstanceOfType<LetStatementNode>(handler.Statements[0]);
         Assert.IsInstanceOfType<IfStatementNode>(handler.Statements[1]);
     }
 
     [TestMethod]
-    public void Parse_BuildsExternalHandlers()
+    public void TaggedTypesCanDeclareAndCheckValues()
     {
-        const string script = """
-            external on Notify(playerId, points);
-
-            on Start {
-                emit Notify('p1', 3);
+        const string script =
+            """
+            on Start(value) {
+                let numberValue as :decimal be value;
+                if numberValue is :decimal {
+                    publish Ok;
+                }
             }
             """;
 
         var program = EventScriptParser.Parse(script);
-
-        Assert.AreEqual(2, program.Handlers.Count);
-        Assert.IsTrue(program.Handlers[0].IsExternal);
-        Assert.AreEqual("Notify", program.Handlers[0].Message);
-        CollectionAssert.AreEqual(new[] { "playerId", "points" }, program.Handlers[0].Parameters.ToArray());
-        Assert.AreEqual(0, program.Handlers[0].Statements.Count);
-        Assert.IsFalse(program.Handlers[1].IsExternal);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var ifStatement = (IfStatementNode)program.Handlers[0].Statements[1];
+        Assert.AreEqual("numberValue", letStatement.Identifier);
+        Assert.AreEqual("decimal", letStatement.DeclaredType);
+        Assert.IsInstanceOfType<TypeCheckExpressionNode>(ifStatement.Condition);
     }
 
     [TestMethod]
-    public void Parse_AllowsIdentifiersThatLookLikeCompactDiceTokens()
+    public void ChanceAndWeightedChooseCanBeParsed()
     {
-        const string script = """
+        const string script =
+            """
+            on Start(items, hitChance) {
+                let hit be :chance hitChance;
+                let target be items[:choose 1 weighted by item -> item.weight];
+                publish Done(hit, target);
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements;
+        var hit = (LetStatementNode)statements[0];
+        var target = (LetStatementNode)statements[1];
+
+        Assert.IsInstanceOfType<UnaryExpressionNode>(hit.Expression);
+        Assert.AreEqual("chance", ((UnaryExpressionNode)hit.Expression).Operator);
+
+        var choose = (ChooseSelectorNode)((CollectionAccessExpressionNode)target.Expression).Selector;
+        Assert.AreEqual(1, choose.Count);
+        Assert.IsNull(choose.Predicate);
+        Assert.AreEqual("item", choose.WeightIdentifier);
+        Assert.IsNotNull(choose.WeightExpression);
+    }
+
+    [TestMethod]
+    public void TaggedTypesWorkWithBeAssignments()
+    {
+        const string script =
+            """
+            on Start {
+                let value as :decimal be '12';
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        Assert.AreEqual("value", letStatement.Identifier);
+        Assert.AreEqual("decimal", letStatement.DeclaredType);
+    }
+
+    [TestMethod]
+    public void ConditionalValuesCanChooseASingleFallback()
+    {
+        const string script =
+            """
+            on Start(age) {
+                let score as :decimal be 12 when age is :decimal or age is :boolean otherwise 5;
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var guarded = (GuardedChoiceExpressionNode)letStatement.Expression;
+        Assert.AreEqual("score", letStatement.Identifier);
+        Assert.AreEqual("decimal", letStatement.DeclaredType);
+        Assert.HasCount(1, guarded.Branches);
+    }
+
+    [TestMethod]
+    public void ConditionalValuesCanOfferMultipleBranches()
+    {
+        const string script =
+            """
+            on Start(age) {
+                let score as :decimal be 12 when age is :boolean, or 15 when age is :decimal, otherwise 5;
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var guarded = (GuardedChoiceExpressionNode)letStatement.Expression;
+        Assert.AreEqual("score", letStatement.Identifier);
+        Assert.AreEqual("decimal", letStatement.DeclaredType);
+        Assert.HasCount(2, guarded.Branches);
+    }
+
+    [TestMethod]
+    public void TypeTagsStayCaseSensitive()
+    {
+        const string script =
+            """
+            on Start(value) {
+                let numberValue as :Decimal be value;
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+    }
+
+    [TestMethod]
+    public void LegacyExternalHandlersAreRejected()
+    {
+        const string script =
+            """
+            external on Notify(playerId, points)
+            """;
+
+        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+    }
+
+    [TestMethod]
+    public void StatementsCanShareALineWhenSeparatedBySemicolons()
+    {
+        const string script =
+            """
+            on Start {
+                let lines be 10; let values be 20
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        Assert.HasCount(2, statements);
+        Assert.AreEqual("lines", statements[0].Identifier);
+        Assert.AreEqual("values", statements[1].Identifier);
+    }
+
+    [TestMethod]
+    public void IncompleteExpressionsCanContinueOnTheNextLine()
+    {
+        const string script =
+            """
+            on Start {
+                let result be 1 +
+                    2
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var expression = (BinaryExpressionNode)letStatement.Expression;
+        Assert.AreEqual("+", expression.Operator);
+        Assert.AreEqual(1m, ((NumberLiteralExpressionNode)expression.Left).Value);
+        Assert.AreEqual(2m, ((NumberLiteralExpressionNode)expression.Right).Value);
+    }
+
+    [TestMethod]
+    public void CompactDiceLikeNamesRemainValidIdentifiers()
+    {
+        const string script =
+            """
             on Start(d6) {
-                let d6 = 1;
-                emit Done(d6);
+                let d6 be 1;
+                publish Done(d6);
             }
             """;
 
         var program = EventScriptParser.Parse(script);
         var handler = program.Handlers[0];
         var letStatement = (LetStatementNode)handler.Statements[0];
-
         CollectionAssert.AreEqual(new[] { "d6" }, handler.Parameters.ToArray());
         Assert.AreEqual("d6", letStatement.Identifier);
     }
 
     [TestMethod]
-    public void Parse_BuildsCollectionSelectors()
+    public void CollectionSelectorsUseTheirOwnTaggedMiniLanguage()
     {
-        const string script = """
+        const string script =
+            """
             on ScoreUpdated(items) {
-                let hasAny = items[any item where item.points > 10];
-                let allValid = items[all item where item.points >= 0];
-                let filtered = items[filter item where item.points > 0];
-                let total = items[sum item -> item.points];
-                let count = items[count];
-                let names = items[select item -> item.name];
+                let hasAny be items[:any item where item.points > 10];
+                let allValid be items[:all item where item.points >= 0];
+                let topPair be items[:take pair];
+                let firstTwo be items[:take first 2];
+                let withoutLast be items[:drop last 1];
+                let woundedCount be items[:count item where item.hp < item.maxHp];
+                let target be items[:choose 1 item where item.alive];
+                let randomTarget be items[:choose 1 at random item where item.alive];
+                let hand be items[:draw 3];
+                let shuffled be items[:shuffle];
+                let reversed be items[:reverse];
+                let firstItem be items[:first];
+                let lastItem be items[:last];
+                let firstAlive be items[:first item where item.alive];
+                let lastAlive be items[:last item where item.alive];
+                let singleBoss be items[:single item where item.role = :boss];
+                let filtered be items[:filter item where item.points > 0];
+                let total be items[:sum item -> item.points];
+                let averagePoints be items[:average item -> item.points];
+                let weakest be items[:min item -> item.points];
+                let strongest be items[:max item -> item.points];
+                let topItem be items[:highest item -> item.points];
+                let lowItem be items[:lowest item -> item.points];
+                let distinctItems be items[:distinct];
+                let distinctNames be items[:distinct by item -> item.name];
+                let groupedByFaction be items[:group by item -> item.faction];
+                let hasTwo be items[:contains 2];
+                let hasAll be items[:contains all [1, 2]];
+                let hasAny be items[:contains any [0, 1]];
+                let hasOrc be items[:has [faction: 'orc', alive: true]];
+                let hasNested be items[:has [owner: [team: 'red']]];
+                let orderedByPoints be items[:order by item -> item.points descending];
+                let count be :len items;
+                let bounded be :clamp 12 between 0 and 10;
+                let highest be :max of 1 and 2 and 3;
+                let names be items[:select item -> item.name];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        Assert.IsInstanceOfType<PredicateSelectorNode>(((CollectionAccessExpressionNode)statements[0].Expression).Selector);
+        Assert.IsInstanceOfType<PredicateSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
+        Assert.IsInstanceOfType<TakePatternSelectorNode>(((CollectionAccessExpressionNode)statements[2].Expression).Selector);
+        Assert.IsInstanceOfType<SequenceSliceSelectorNode>(((CollectionAccessExpressionNode)statements[3].Expression).Selector);
+        Assert.IsInstanceOfType<SequenceSliceSelectorNode>(((CollectionAccessExpressionNode)statements[4].Expression).Selector);
+        Assert.IsInstanceOfType<CountSelectorNode>(((CollectionAccessExpressionNode)statements[5].Expression).Selector);
+        Assert.IsInstanceOfType<ChooseSelectorNode>(((CollectionAccessExpressionNode)statements[6].Expression).Selector);
+        Assert.IsInstanceOfType<ChooseSelectorNode>(((CollectionAccessExpressionNode)statements[7].Expression).Selector);
+        Assert.IsInstanceOfType<DrawSelectorNode>(((CollectionAccessExpressionNode)statements[8].Expression).Selector);
+        Assert.IsInstanceOfType<ShuffleSelectorNode>(((CollectionAccessExpressionNode)statements[9].Expression).Selector);
+        Assert.IsInstanceOfType<ReverseSelectorNode>(((CollectionAccessExpressionNode)statements[10].Expression).Selector);
+        Assert.IsInstanceOfType<EdgeSelectorNode>(((CollectionAccessExpressionNode)statements[11].Expression).Selector);
+        Assert.IsInstanceOfType<EdgeSelectorNode>(((CollectionAccessExpressionNode)statements[12].Expression).Selector);
+        Assert.IsInstanceOfType<EdgeSelectorNode>(((CollectionAccessExpressionNode)statements[13].Expression).Selector);
+        Assert.IsInstanceOfType<EdgeSelectorNode>(((CollectionAccessExpressionNode)statements[14].Expression).Selector);
+        Assert.IsInstanceOfType<EdgeSelectorNode>(((CollectionAccessExpressionNode)statements[15].Expression).Selector);
+        Assert.IsInstanceOfType<FilterSelectorNode>(((CollectionAccessExpressionNode)statements[16].Expression).Selector);
+        Assert.IsInstanceOfType<SumSelectorNode>(((CollectionAccessExpressionNode)statements[17].Expression).Selector);
+        Assert.IsInstanceOfType<AverageSelectorNode>(((CollectionAccessExpressionNode)statements[18].Expression).Selector);
+        Assert.IsInstanceOfType<MinSelectorNode>(((CollectionAccessExpressionNode)statements[19].Expression).Selector);
+        Assert.IsInstanceOfType<MaxSelectorNode>(((CollectionAccessExpressionNode)statements[20].Expression).Selector);
+        Assert.IsInstanceOfType<MaxSelectorNode>(((CollectionAccessExpressionNode)statements[21].Expression).Selector);
+        Assert.IsInstanceOfType<MinSelectorNode>(((CollectionAccessExpressionNode)statements[22].Expression).Selector);
+        Assert.IsInstanceOfType<DistinctSelectorNode>(((CollectionAccessExpressionNode)statements[23].Expression).Selector);
+        Assert.IsInstanceOfType<DistinctSelectorNode>(((CollectionAccessExpressionNode)statements[24].Expression).Selector);
+        Assert.IsInstanceOfType<GroupBySelectorNode>(((CollectionAccessExpressionNode)statements[25].Expression).Selector);
+        Assert.IsInstanceOfType<ContainsSelectorNode>(((CollectionAccessExpressionNode)statements[26].Expression).Selector);
+        Assert.IsInstanceOfType<ContainsSelectorNode>(((CollectionAccessExpressionNode)statements[27].Expression).Selector);
+        Assert.IsInstanceOfType<ContainsSelectorNode>(((CollectionAccessExpressionNode)statements[28].Expression).Selector);
+        Assert.IsInstanceOfType<ObjectMatchSelectorNode>(((CollectionAccessExpressionNode)statements[29].Expression).Selector);
+        Assert.IsInstanceOfType<ObjectMatchSelectorNode>(((CollectionAccessExpressionNode)statements[30].Expression).Selector);
+        Assert.IsInstanceOfType<OrderBySelectorNode>(((CollectionAccessExpressionNode)statements[31].Expression).Selector);
+        Assert.IsInstanceOfType<UnaryExpressionNode>(statements[32].Expression);
+        Assert.IsInstanceOfType<ClampExpressionNode>(statements[33].Expression);
+        Assert.IsInstanceOfType<VariadicTaggedExpressionNode>(statements[34].Expression);
+        Assert.IsInstanceOfType<SelectSelectorNode>(((CollectionAccessExpressionNode)statements[35].Expression).Selector);
+    }
+
+    [TestMethod]
+    public void TaggedUnaryOperatorsCanBeParsedAsValueOperations()
+    {
+        const string script =
+            """
+            on Start(values) {
+                let size be :len values;
+                let distance be :abs (0 - 12.5);
+                let rounded be :floor 12.5;
+                let fallback be values :default [1];
+                let present be has value values;
+                let missing be empty values;
+                let inverted be not false;
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var sizeStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var sizeUnary = (UnaryExpressionNode)sizeStatement.Expression;
+        Assert.AreEqual("len", sizeUnary.Operator);
+        Assert.IsInstanceOfType<IdentifierExpressionNode>(sizeUnary.Operand);
+        var absStatement = (LetStatementNode)program.Handlers[0].Statements[1];
+        var absUnary = (UnaryExpressionNode)absStatement.Expression;
+        Assert.AreEqual("abs", absUnary.Operator);
+        var roundedStatement = (LetStatementNode)program.Handlers[0].Statements[2];
+        var roundedUnary = (UnaryExpressionNode)roundedStatement.Expression;
+        Assert.AreEqual("floor", roundedUnary.Operator);
+        var fallbackStatement = (LetStatementNode)program.Handlers[0].Statements[3];
+        var fallbackBinary = (BinaryExpressionNode)fallbackStatement.Expression;
+        Assert.AreEqual("default", fallbackBinary.Operator);
+        var presentStatement = (LetStatementNode)program.Handlers[0].Statements[4];
+        var presentUnary = (UnaryExpressionNode)presentStatement.Expression;
+        Assert.AreEqual("has value", presentUnary.Operator);
+        var missingStatement = (LetStatementNode)program.Handlers[0].Statements[5];
+        var missingUnary = (UnaryExpressionNode)missingStatement.Expression;
+        Assert.AreEqual("empty", missingUnary.Operator);
+        var invertedStatement = (LetStatementNode)program.Handlers[0].Statements[6];
+        var invertedUnary = (UnaryExpressionNode)invertedStatement.Expression;
+        Assert.AreEqual("!", invertedUnary.Operator);
+    }
+
+    [TestMethod]
+    public void TypeDefinitionsCanDeclareCustomMeterFields()
+    {
+        const string script =
+            """
+            define :meter as {
+                current: :decimal clamped between 0 and maximum,
+                maximum: :decimal clamped between 0 and :infinity,
+                percentage: :percentage computed by
+                    0% when maximum <= 0,
+                    otherwise (current / maximum) as :percentage
+            }
+
+            on Start {
+                let hp as :meter be [current: 25, maximum: 100];
+                publish Done(hp[:percentage]);
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        Assert.HasCount(1, program.TypeDefinitions);
+        Assert.AreEqual("meter", program.TypeDefinitions[0].Name);
+        Assert.HasCount(3, program.TypeDefinitions[0].Fields);
+        Assert.AreEqual("percentage", program.TypeDefinitions[0].Fields[2].TypeName);
+        Assert.IsNotNull(program.TypeDefinitions[0].Fields[2].ComputedExpression);
+        Assert.HasCount(1, program.Handlers);
+    }
+
+    [TestMethod]
+    public void TagsCanBeUsedAsFirstClassValuesAndDictionaryKeys()
+    {
+        const string script =
+            """
+            on Start(myDict) {
+                let lookupProperty as :tag be :name;
+                let direct be myDict[:name];
+                let dynamic be myDict[lookupProperty];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        Assert.IsInstanceOfType<TagLiteralExpressionNode>(statements[0].Expression);
+        Assert.IsInstanceOfType<ExpressionSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
+        Assert.IsInstanceOfType<ExpressionSelectorNode>(((CollectionAccessExpressionNode)statements[2].Expression).Selector);
+    }
+
+    [TestMethod]
+    public void KeysAndValuesCanBeUsedAsPrefixIterators()
+    {
+        const string script =
+            """
+            on Start(myDict, myList) {
+                let dictKeys be :keys myDict;
+                let listValues be :values myList;
             }
             """;
 
         var program = EventScriptParser.Parse(script);
         var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
 
-        Assert.IsInstanceOfType<PredicateSelectorNode>(((CollectionAccessExpressionNode)statements[0].Expression).Selector);
-        Assert.IsInstanceOfType<PredicateSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
-        Assert.IsInstanceOfType<FilterSelectorNode>(((CollectionAccessExpressionNode)statements[2].Expression).Selector);
-        Assert.IsInstanceOfType<SumSelectorNode>(((CollectionAccessExpressionNode)statements[3].Expression).Selector);
-        Assert.IsInstanceOfType<CountSelectorNode>(((CollectionAccessExpressionNode)statements[4].Expression).Selector);
-        Assert.IsInstanceOfType<SelectSelectorNode>(((CollectionAccessExpressionNode)statements[5].Expression).Selector);
+        Assert.AreEqual("keys", ((UnaryExpressionNode)statements[0].Expression).Operator);
+        Assert.AreEqual("values", ((UnaryExpressionNode)statements[1].Expression).Operator);
     }
 
     [TestMethod]
-    public void Parse_AllowsNestedSelectorsInsideSelectProjection()
+    public void MembershipChecksCanDescribeContainmentAndBoundaries()
     {
-        const string script = """
+        const string script =
+            """
+            on Start(values) {
+                let hasItem be 'a' in values;
+                let hasValue be 'Ada' value in values;
+                let prefixMatch be values starts with ['a'];
+                let suffixMatch be values ends with ['z'];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        Assert.AreEqual("in", ((BinaryExpressionNode)statements[0].Expression).Operator);
+        Assert.AreEqual("value in", ((BinaryExpressionNode)statements[1].Expression).Operator);
+        Assert.AreEqual("starts with", ((BinaryExpressionNode)statements[2].Expression).Operator);
+        Assert.AreEqual("ends with", ((BinaryExpressionNode)statements[3].Expression).Operator);
+    }
+
+    [TestMethod]
+    public void PatternSelectorsCanDescribeCommonHands()
+    {
+        const string script =
+            """
+            on Start(roll) {
+                let hasPair be roll[:has pair];
+                let hasSpecificPair be roll[:has pair of 6];
+                let hasThreeKind be roll[:has three of a kind];
+                let hasThreeSixes be roll[:has three of 6];
+                let hasSixKind be roll[:has six of a kind];
+                let hasSevenSixes be roll[:has seven of 6];
+                let hasFullHouse be roll[:has full house];
+                let hasStraight be roll[:has straight];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[0].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[0].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[1].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[2].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[2].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[3].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[3].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[4].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[4].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[5].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[5].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[6].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[6].Expression).Selector);
+        Assert.IsInstanceOfType<CollectionAccessExpressionNode>(statements[7].Expression);
+        Assert.IsInstanceOfType<PatternSelectorNode>(((CollectionAccessExpressionNode)statements[7].Expression).Selector);
+    }
+
+    [TestMethod]
+    public void InlineCollectionsCanBeDeclaredWithListDictionaryAndSetLiterals()
+    {
+        const string script =
+            """
+            on Start {
+                let myList be [1, 2, 3];
+                let myValues be [name: 'Hello', position: 1];
+                let emptyValues be [:];
+                let mySet be :set[1, 2, 2];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        var list = (ListLiteralExpressionNode)statements[0].Expression;
+        Assert.HasCount(3, list.Items);
+        Assert.IsInstanceOfType<NumberLiteralExpressionNode>(list.Items[0]);
+        var dictionary = (DictionaryLiteralExpressionNode)statements[1].Expression;
+        Assert.HasCount(2, dictionary.Entries);
+        Assert.AreEqual("name", dictionary.Entries[0].Key);
+        Assert.AreEqual("position", dictionary.Entries[1].Key);
+        Assert.IsInstanceOfType<TextLiteralExpressionNode>(dictionary.Entries[0].Value);
+        var emptyDictionary = (DictionaryLiteralExpressionNode)statements[2].Expression;
+        Assert.HasCount(0, emptyDictionary.Entries);
+        var set = (SetLiteralExpressionNode)statements[3].Expression;
+        Assert.HasCount(3, set.Items);
+    }
+
+    [TestMethod]
+    public void EscapedQuotesRemainPartOfTextValues()
+    {
+        const string script =
+            """
+            on Start {
+                let text be 'Hello ''World'', I''m here';
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var stringLiteral = (TextLiteralExpressionNode)letStatement.Expression;
+        Assert.AreEqual("Hello 'World', I'm here", stringLiteral.Value);
+    }
+
+    [TestMethod]
+    public void SelectorsCanBeNestedInsideProjections()
+    {
+        const string script =
+            """
             on Nested(items) {
-                let values = items[select item -> item.points[all point where point.x > 0]];
+                let values be items[:select item -> item.points[:all point where point.x > 0]];
             }
             """;
 
@@ -110,44 +517,114 @@ public class OhEventScriptParserTests
         var outerAccess = (CollectionAccessExpressionNode)letStatement.Expression;
         var select = (SelectSelectorNode)outerAccess.Selector;
         var nestedAccess = (CollectionAccessExpressionNode)select.Projection;
-
         Assert.IsInstanceOfType<PredicateSelectorNode>(nestedAccess.Selector);
     }
 
     [TestMethod]
-    public void Parse_RespectsOperatorPrecedence()
+    public void SortingSelectorsCanChooseAscendingOrDescending()
     {
-        const string script = """
+        const string script =
+            """
+            on Sorted(items) {
+                let ascendingItems be items[:sort ascending];
+                let descendingItems be items[:sort descending];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+        Assert.IsInstanceOfType<SortSelectorNode>(((CollectionAccessExpressionNode)statements[0].Expression).Selector);
+        Assert.IsInstanceOfType<SortSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
+    }
+
+    [TestMethod]
+    public void SortingSelectorsRequireAnExplicitDirection()
+    {
+        const string script =
+            """
+            on Sorted(items) {
+                let values be items[:sort];
+            }
+            """;
+
+        try
+        {
+            EventScriptParser.Parse(script);
+            Assert.Fail("Expected EventScriptParseException");
+        }
+        catch (EventScriptParseException)
+        {
+        }
+    }
+
+    [TestMethod]
+    public void LegacyTypeAndUnaryKeywordFormsAreRejected()
+    {
+        const string legacyTypeScript =
+            """
+            on Start(value) {
+                let score as decimal be value;
+            }
+            """;
+
+        const string legacyUnaryScript =
+            """
+            on Start(values) {
+                let size be len values;
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(legacyTypeScript));
+        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(legacyUnaryScript));
+    }
+
+    [TestMethod]
+    public void ArithmeticAndLogicKeepTheirPrecedence()
+    {
+        const string script =
+            """
             on Combat {
-                let value = 1 + 2 * 3 == 7 && !false;
+                let value be 1 + 2 * 3 = 7 && !false;
             }
             """;
 
         var program = EventScriptParser.Parse(script);
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
-
         var andExpression = (BinaryExpressionNode)letStatement.Expression;
         Assert.AreEqual("&&", andExpression.Operator);
-
         var equality = (BinaryExpressionNode)andExpression.Left;
-        Assert.AreEqual("==", equality.Operator);
-
+        Assert.AreEqual("=", equality.Operator);
         var addition = (BinaryExpressionNode)equality.Left;
         Assert.AreEqual("+", addition.Operator);
-
         var multiplication = (BinaryExpressionNode)addition.Right;
         Assert.AreEqual("*", multiplication.Operator);
-
         var unary = (UnaryExpressionNode)andExpression.Right;
         Assert.AreEqual("!", unary.Operator);
     }
 
     [TestMethod]
-    public void Parse_InvalidSyntax_ThrowsParseException()
+    public void SqlStyleInequalityCanBeParsed()
     {
-        const string script = """
+        const string script =
+            """
+            on Combat {
+                let value be 1 <> 2;
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var expression = (BinaryExpressionNode)letStatement.Expression;
+        Assert.AreEqual("<>", expression.Operator);
+    }
+
+    [TestMethod]
+    public void BrokenStatementsFailFast()
+    {
+        const string script =
+            """
             on Broken {
-                let x = ;
+                let x be ;
             }
             """;
 
@@ -155,59 +632,58 @@ public class OhEventScriptParserTests
     }
 
     [TestMethod]
-    public void Parse_BuildsRandomExpressions()
+    public void RandomRangesCanUseLiteralsValuesAndExpressions()
     {
-        const string script = """
+        const string script =
+            """
             on Randomized(min, max, bonus, board) {
-                let x = random 1 to 6;
-                let y = random min to max;
-                let z = random 1 + bonus to board.fields[count];
+                let x be :random 1 to 6;
+                let y be :random min to max;
+                let z be :random 1 + bonus to :len board.fields;
             }
             """;
 
         var program = EventScriptParser.Parse(script);
         var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
-
         Assert.IsInstanceOfType<RandomExpressionNode>(statements[0].Expression);
         Assert.IsInstanceOfType<RandomExpressionNode>(statements[1].Expression);
         Assert.IsInstanceOfType<RandomExpressionNode>(statements[2].Expression);
     }
 
     [TestMethod]
-    public void Parse_BuildsDiceExpressions()
+    public void DiceRollsCanUseTaggedExpressionsAndSliceSelectors()
     {
-        const string script = """
+        const string script =
+            """
             on DiceRolls {
-                let a = dice 3d6;
-                let b = dice 4d6 keep highest;
-                let c = dice 4d6 drop lowest;
-                let d = dice 4d6 keep highest 2;
-                let e = dice 4d6 drop lowest 2;
+                let a be :dice 3d6;
+                let b be :dice 4d6[:take highest 1];
+                let c be :dice 4d6[:drop lowest 1];
+                let d be :dice 4d6[:take highest 2];
+                let e be :dice 4d6[:drop lowest 2];
             }
             """;
 
         var program = EventScriptParser.Parse(script);
         var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
-
         var a = (DiceExpressionNode)statements[0].Expression;
         Assert.AreEqual(3, a.DiceCount);
         Assert.AreEqual(6, a.SideCount);
-        Assert.IsNull(a.Modifier);
-
-        Assert.IsInstanceOfType<KeepHighestModifierNode>(((DiceExpressionNode)statements[1].Expression).Modifier);
-        Assert.IsInstanceOfType<DropLowestModifierNode>(((DiceExpressionNode)statements[2].Expression).Modifier);
-        Assert.AreEqual(2, ((KeepHighestModifierNode)((DiceExpressionNode)statements[3].Expression).Modifier!).Count);
-        Assert.AreEqual(2, ((DropLowestModifierNode)((DiceExpressionNode)statements[4].Expression).Modifier!).Count);
+        Assert.IsInstanceOfType<SequenceSliceSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
+        Assert.IsInstanceOfType<SequenceSliceSelectorNode>(((CollectionAccessExpressionNode)statements[2].Expression).Selector);
+        Assert.IsInstanceOfType<SequenceSliceSelectorNode>(((CollectionAccessExpressionNode)statements[3].Expression).Selector);
+        Assert.IsInstanceOfType<SequenceSliceSelectorNode>(((CollectionAccessExpressionNode)statements[4].Expression).Selector);
     }
 
     [TestMethod]
-    public void Parse_IntegratesRandomAndDiceIntoExpressions()
+    public void RandomAndDiceValuesCanParticipateInLargerExpressions()
     {
-        const string script = """
+        const string script =
+            """
             on Mixed {
-                let x = dice 3d6 + 2;
-                if random 1 to 6 > 3 {
-                    emit Passed;
+                let x be :dice 3d6 + 2;
+                if :random 1 to 6 > 3 {
+                    publish Passed;
                 }
             }
             """;
@@ -215,21 +691,20 @@ public class OhEventScriptParserTests
         var program = EventScriptParser.Parse(script);
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
         var ifStatement = (IfStatementNode)program.Handlers[0].Statements[1];
-
         var letBinary = (BinaryExpressionNode)letStatement.Expression;
         Assert.IsInstanceOfType<DiceExpressionNode>(letBinary.Left);
-
         var ifBinary = (BinaryExpressionNode)ifStatement.Condition;
         Assert.IsInstanceOfType<RandomExpressionNode>(ifBinary.Left);
     }
 
     [TestMethod]
-    public void Parse_RandomUpperBound_KeepsArithmeticInsideRandomBeforeOuterComparison()
+    public void RandomUpperBoundsKeepInnerArithmeticTogether()
     {
-        const string script = """
+        const string script =
+            """
             on Mixed(max) {
-                if random 1 to max * 2 > 3 {
-                    emit Passed;
+                if :random 1 to max * 2 > 3 {
+                    publish Passed;
                 }
             }
             """;
@@ -239,17 +714,17 @@ public class OhEventScriptParserTests
         var condition = (BinaryExpressionNode)ifStatement.Condition;
         var random = (RandomExpressionNode)condition.Left;
         var upperBound = (BinaryExpressionNode)random.ToExpression;
-
         Assert.AreEqual(">", condition.Operator);
         Assert.AreEqual("*", upperBound.Operator);
     }
 
     [TestMethod]
-    public void Parse_InvalidDiceModifier_ThrowsParseException()
+    public void DropSelectorsRequireASupportedScope()
     {
-        const string script = """
+        const string script =
+            """
             on Broken {
-                let x = dice 4d6 keep middle;
+                let x be :dice 4d6[:drop middle 1];
             }
             """;
 
@@ -257,11 +732,12 @@ public class OhEventScriptParserTests
     }
 
     [TestMethod]
-    public void Parse_InvalidDiceCount_ThrowsParseException()
+    public void DiceCountsMustBePositiveIntegers()
     {
-        const string script = """
+        const string script =
+            """
             on Broken {
-                let x = dice 0d6;
+                let x be :dice 0d6;
             }
             """;
 
@@ -269,39 +745,31 @@ public class OhEventScriptParserTests
     }
 
     [TestMethod]
-    public void Parse_KeepOrDropMoreThanDice_ThrowsParseException()
+    public void TakingOrDroppingMoreItemsThanExistStillParses()
     {
-        const string script = """
+        const string script =
+            """
             on Broken {
-                let x = dice 4d6 keep highest 5;
+                let x be :dice 4d6[:take highest 5];
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        var program = EventScriptParser.Parse(script);
+        Assert.HasCount(1, program.Handlers);
     }
 
     [TestMethod]
-    public void Parse_InvalidRandomLiteralRange_ThrowsParseException()
+    public void DescendingRandomLiteralBoundsStillParse()
     {
-        const string script = """
+        const string script =
+            """
             on Broken {
-                let x = random 6 to 1;
+                let x be :random 6 to 1;
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        Assert.IsInstanceOfType<RandomExpressionNode>(letStatement.Expression);
     }
 }
-
-
-/*
-
-on PlayerJoined(match, player) {
-
-    let startFeld = dice 6d5
-    emit StartNode(dice[sum d -> d.value])
-
-}
-
-
-*/

@@ -57,7 +57,7 @@ public sealed class EventScriptParser
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
-            if (Match(Define))
+            if (Match(Record))
             {
                 typeDefinitions.Add(ParseTypeDefinition());
             }
@@ -662,6 +662,7 @@ public sealed class EventScriptParser
             ":chance" => "chance",
             ":keys" => "keys",
             ":values" => "values",
+            ":entries" => "entries",
             ":abs" => "abs",
             ":floor" => "floor",
             ":ceil" => "ceil",
@@ -1477,7 +1478,7 @@ public sealed class EventScriptParser
             For or
             In or
             EventScriptTokenKind.Is or
-            Define;
+            Record;
     }
 
     private string ParseTypeName()

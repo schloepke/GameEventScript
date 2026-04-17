@@ -30,7 +30,8 @@ public enum EventScriptValueKind
 public enum EventScriptIteratorMode
 {
     Values,
-    Keys
+    Keys,
+    Entries
 }
 
 public readonly record struct EventScriptIterator(EventScriptIteratorMode Mode, EventScriptValue Source);
@@ -406,6 +407,25 @@ public sealed record EventScriptValue : IComparable<EventScriptValue>
             yield break;
         }
 
+        if (iterator.Mode == EventScriptIteratorMode.Entries)
+        {
+            if (iterator.Source.Kind != EventScriptValueKind.Dictionary)
+            {
+                yield break;
+            }
+
+            foreach (var pair in iterator.Source.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                yield return Dictionary(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+                {
+                    ["key"] = Tag(pair.Key),
+                    ["value"] = pair.Value
+                });
+            }
+
+            yield break;
+        }
+
         switch (iterator.Source.Kind)
         {
             case EventScriptValueKind.Nothing:
@@ -661,6 +681,8 @@ public sealed record EventScriptValue : IComparable<EventScriptValue>
     public static EventScriptValue Values(EventScriptValue source) => Iterator(EventScriptIteratorMode.Values, source);
 
     public static EventScriptValue Keys(EventScriptValue source) => Iterator(EventScriptIteratorMode.Keys, source);
+
+    public static EventScriptValue Entries(EventScriptValue source) => Iterator(EventScriptIteratorMode.Entries, source);
 
     public static EventScriptValue List(IEnumerable<EventScriptValue> values)
     {

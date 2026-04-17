@@ -2,7 +2,7 @@ Program ::= { StatementSeparator } [ TopLevel { EventSeparator TopLevel } ] { St
 
 TopLevel ::= TypeDefinition | EventEndpoint
 EventEndpoint ::= EventHandler
-TypeDefinition ::= "define" TypeTag "as" "{" { StatementSeparator } [ TypeFieldDefinition { TypeFieldSeparator TypeFieldDefinition } ] { StatementSeparator } "}"
+TypeDefinition ::= "record" TypeTag "as" "{" { StatementSeparator } [ TypeFieldDefinition { TypeFieldSeparator TypeFieldDefinition } ] { StatementSeparator } "}"
 TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
 TypeFieldSeparator ::= "," | StatementSeparator
 EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
@@ -62,6 +62,7 @@ UnaryTag ::= ":len"
            | ":chance"
            | ":keys"
            | ":values"
+           | ":entries"
            | ":abs"
            | ":floor"
            | ":ceil"

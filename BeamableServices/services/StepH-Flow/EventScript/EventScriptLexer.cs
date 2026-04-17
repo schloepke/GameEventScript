@@ -19,7 +19,7 @@ public enum EventScriptTokenKind
     Text,
     True,
     False,
-    Define,
+    Record,
     On,
     Publish,
     Let,
@@ -220,7 +220,7 @@ public sealed class EventScriptLexer
         return text switch
         {
             "on" => new EventScriptToken(EventScriptTokenKind.On, text, line, column),
-            "define" => new EventScriptToken(EventScriptTokenKind.Define, text, line, column),
+            "record" => new EventScriptToken(EventScriptTokenKind.Record, text, line, column),
             "publish" => new EventScriptToken(EventScriptTokenKind.Publish, text, line, column),
             "let" => new EventScriptToken(EventScriptTokenKind.Let, text, line, column),
             "as" => new EventScriptToken(EventScriptTokenKind.As, text, line, column),

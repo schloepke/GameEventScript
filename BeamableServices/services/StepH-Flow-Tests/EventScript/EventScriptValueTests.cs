@@ -141,6 +141,24 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void EntriesCreateDictionaryLikeKeyValueItems()
+    {
+        var dictionary = Dictionary(new Dictionary<string, EventScriptValue>
+        {
+            ["name"] = Text("Mark"),
+            ["age"] = Number(25m)
+        });
+
+        var entries = Entries(dictionary).AsEnumerable().ToArray();
+
+        Assert.AreEqual(2, entries.Length);
+        Assert.AreEqual("age", entries[0].AsDictionary()["key"].AsText());
+        Assert.AreEqual(25m, entries[0].AsDictionary()["value"].AsNumber());
+        Assert.AreEqual("name", entries[1].AsDictionary()["key"].AsText());
+        Assert.AreEqual("Mark", entries[1].AsDictionary()["value"].AsText());
+    }
+
+    [TestMethod]
     public void TagsBehaveAsNamedValuesWithStableIdentity()
     {
         var first = Tag("name");

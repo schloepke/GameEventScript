@@ -56,9 +56,11 @@ public class EventScriptRuntimeScenarios
                 let dictKeys be :keys player;
                 let valueIterator be :values values;
                 let maybeValues be :values maybeTarget;
+                let entries be :entries player;
                 let keyCount be :len dictKeys;
                 let valueCount be :len valueIterator;
                 let maybeCount be :len maybeValues;
+                let entryCount be :len entries;
                 for key in dictKeys {
                     publish SeenKey(key, player[key]);
                 }
@@ -71,7 +73,11 @@ public class EventScriptRuntimeScenarios
                     publish SeenMaybe(target);
                 }
 
-                publish Done(keyCount, valueCount, maybeCount, dictKeys, valueIterator);
+                for entry in entries {
+                    publish SeenEntry(entry.key, entry[:value]);
+                }
+
+                publish Done(keyCount, valueCount, maybeCount, entryCount, dictKeys, valueIterator, entries);
             }
             """;
 
@@ -103,12 +109,21 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual("SeenMaybe", result.EmittedEvents[5].Message);
         Assert.AreEqual("boss", result.EmittedEvents[5].Arguments[0].AsText());
 
-        var done = result.EmittedEvents[6].Arguments;
+        Assert.AreEqual("SeenEntry", result.EmittedEvents[6].Message);
+        Assert.AreEqual("age", result.EmittedEvents[6].Arguments[0].AsText());
+        Assert.AreEqual(25m, result.EmittedEvents[6].Arguments[1].AsNumber());
+        Assert.AreEqual("SeenEntry", result.EmittedEvents[7].Message);
+        Assert.AreEqual("name", result.EmittedEvents[7].Arguments[0].AsText());
+        Assert.AreEqual("Mark", result.EmittedEvents[7].Arguments[1].AsText());
+
+        var done = result.EmittedEvents[8].Arguments;
         Assert.AreEqual(2L, done[0].AsInteger());
         Assert.AreEqual(3L, done[1].AsInteger());
         Assert.AreEqual(1L, done[2].AsInteger());
-        Assert.AreEqual(EventScriptValueKind.Iterator, done[3].Kind);
+        Assert.AreEqual(2L, done[3].AsInteger());
         Assert.AreEqual(EventScriptValueKind.Iterator, done[4].Kind);
+        Assert.AreEqual(EventScriptValueKind.Iterator, done[5].Kind);
+        Assert.AreEqual(EventScriptValueKind.Iterator, done[6].Kind);
     }
 
     [TestMethod]
@@ -245,7 +260,7 @@ public class EventScriptRuntimeScenarios
     public void PercentageValuesAndCustomMeterTypesCanBeUsedInScripts()
     {
         const string script = """
-            define :meter as {
+            record :meter as {
                 current: :decimal clamped between 0 and maximum,
                 maximum: :decimal clamped between 0 and :infinity,
                 percentage: :percentage computed by

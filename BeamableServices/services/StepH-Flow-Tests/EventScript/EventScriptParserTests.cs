@@ -339,7 +339,7 @@ public class EventScriptParsingScenarios
     {
         const string script =
             """
-            define :meter as {
+            record :meter as {
                 current: :decimal clamped between 0 and maximum,
                 maximum: :decimal clamped between 0 and :infinity,
                 percentage: :percentage computed by
@@ -389,6 +389,7 @@ public class EventScriptParsingScenarios
             on Start(myDict, myList) {
                 let dictKeys be :keys myDict;
                 let listValues be :values myList;
+                let dictEntries be :entries myDict;
             }
             """;
 
@@ -397,6 +398,7 @@ public class EventScriptParsingScenarios
 
         Assert.AreEqual("keys", ((UnaryExpressionNode)statements[0].Expression).Operator);
         Assert.AreEqual("values", ((UnaryExpressionNode)statements[1].Expression).Operator);
+        Assert.AreEqual("entries", ((UnaryExpressionNode)statements[2].Expression).Operator);
     }
 
     [TestMethod]

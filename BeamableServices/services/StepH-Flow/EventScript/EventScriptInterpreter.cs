@@ -326,6 +326,7 @@ public sealed class EventScriptInterpreter
             "chance" => EvaluateChanceUnary(operand),
             "keys" => EventScriptValue.Keys(operand),
             "values" => EventScriptValue.Values(operand),
+            "entries" => EventScriptValue.Entries(operand),
             "abs" => EvaluateAbsUnary(operand),
             "floor" => EvaluateRoundingUnary(operand, "floor"),
             "ceil" => EvaluateRoundingUnary(operand, "ceil"),

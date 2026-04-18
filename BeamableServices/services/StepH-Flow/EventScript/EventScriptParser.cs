@@ -53,6 +53,8 @@ public sealed class EventScriptParser
     private EventScriptProgram ParseProgram()
     {
         var typeDefinitions = new List<TypeDefinitionNode>();
+        var ruleDefinitions = new List<RuleDefinitionNode>();
+        var selectDefinitions = new List<SelectDefinitionNode>();
         var handlers = new List<EventHandlerNode>();
         SkipStatementSeparators();
         while (!Is(EndOfFile))
@@ -60,6 +62,14 @@ public sealed class EventScriptParser
             if (Match(Record))
             {
                 typeDefinitions.Add(ParseTypeDefinition());
+            }
+            else if (Match(Rule))
+            {
+                ruleDefinitions.Add(ParseRuleDefinition());
+            }
+            else if (Match(Select))
+            {
+                selectDefinitions.Add(ParseSelectDefinition());
             }
             else
             {
@@ -70,7 +80,7 @@ public sealed class EventScriptParser
             SkipStatementSeparators();
         }
 
-        return new EventScriptProgram(typeDefinitions, handlers);
+        return new EventScriptProgram(typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
     }
 
     private TypeDefinitionNode ParseTypeDefinition()
@@ -126,6 +136,43 @@ public sealed class EventScriptParser
         }
 
         return new TypeFieldDefinitionNode(name, typeName, minimumExpression, maximumExpression, computedExpression);
+    }
+
+    private RuleDefinitionNode ParseRuleDefinition()
+    {
+        var name = ExpectIdentifierLike();
+        var parameters = ParseDefinitionParameters();
+        Expect(Means);
+        SkipNewLines();
+        var expression = ParseExpression();
+        return new RuleDefinitionNode(name, parameters, expression);
+    }
+
+    private SelectDefinitionNode ParseSelectDefinition()
+    {
+        var name = ExpectIdentifierLike();
+        var parameters = ParseDefinitionParameters();
+        Expect(Means);
+        SkipNewLines();
+        var expression = ParseExpression();
+        return new SelectDefinitionNode(name, parameters, expression);
+    }
+
+    private IReadOnlyList<string> ParseDefinitionParameters()
+    {
+        var parameters = new List<string>();
+        Expect(LeftParen);
+        if (!Is(RightParen))
+        {
+            parameters.Add(ExpectIdentifierLike());
+            while (Match(Comma))
+            {
+                parameters.Add(ExpectIdentifierLike());
+            }
+        }
+
+        Expect(RightParen);
+        return parameters;
     }
 
     private EventHandlerNode ParseEventHandler()
@@ -569,6 +616,13 @@ public sealed class EventScriptParser
 
                     var token = Current;
                     throw new EventScriptParseException($"Expected least or most but found {token.Text}", token.Line, token.Column);
+                }
+
+                if (Current.Kind == Identifier)
+                {
+                    var ruleName = Advance().Text;
+                    expression = new RulePredicateExpressionNode(expression, ruleName);
+                    continue;
                 }
 
                 var threshold = ParseRelationalComparisonOperand();
@@ -1151,6 +1205,11 @@ public sealed class EventScriptParser
             return new TagLiteralExpressionNode(tagToken.Text[1..]);
         }
 
+        if (Current.Kind == Identifier && IsCallExpressionStart())
+        {
+            return ParseCallExpression();
+        }
+
         if (IsIdentifierLike(Current.Kind))
         {
             var identifierToken = Advance();
@@ -1189,6 +1248,27 @@ public sealed class EventScriptParser
         return IsDictionaryLiteralEntryStart()
             ? ParseDictionaryLiteralExpression()
             : ParseListLiteralExpression();
+    }
+
+    private CallExpressionNode ParseCallExpression()
+    {
+        var name = ExpectIdentifierLike();
+        Expect(LeftParen);
+        var arguments = new List<ExpressionNode>();
+        SkipNewLines();
+        if (!Is(RightParen))
+        {
+            arguments.Add(ParseExpression());
+            while (Match(Comma))
+            {
+                SkipNewLines();
+                arguments.Add(ParseExpression());
+            }
+        }
+
+        SkipNewLines();
+        Expect(RightParen);
+        return new CallExpressionNode(name, arguments);
     }
 
     private ListLiteralExpressionNode ParseListLiteralExpression()
@@ -1641,6 +1721,22 @@ public sealed class EventScriptParser
             In or
             EventScriptTokenKind.Is or
             Record;
+    }
+
+    private bool IsCallExpressionStart()
+    {
+        if (Current.Kind != Identifier)
+        {
+            return false;
+        }
+
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == LeftParen;
     }
 
     private string ParseTypeName()

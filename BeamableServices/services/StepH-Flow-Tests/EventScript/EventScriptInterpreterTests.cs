@@ -674,6 +674,136 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void RulesAndSelectsCanBeReusedAcrossExpressionsAndCollections()
+    {
+        const string script = """
+            rule wounded(unit) means unit.hp < unit.maxHp
+            select woundedUnits(units) means units[:filter unit where unit is wounded]
+
+            on Start(unit, units) {
+                let byCall be wounded(unit);
+                let byPredicate be unit is wounded;
+                let woundedList be woundedUnits(units);
+                publish Done(byCall, byPredicate, :len woundedList, woundedList[1].name, woundedList[2].name);
+            }
+            """;
+
+        var unit = EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+        {
+            ["name"] = "Ada",
+            ["hp"] = 2m,
+            ["maxHp"] = 5m
+        });
+        var units = EventScriptValue.List([
+            unit,
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+            {
+                ["name"] = "Bert",
+                ["hp"] = 4m,
+                ["maxHp"] = 4m
+            }),
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+            {
+                ["name"] = "Cara",
+                ["hp"] = 1m,
+                ["maxHp"] = 3m
+            })
+        ]);
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var args = interpreter.Emit("Start", unit, units).EmittedEvents[0].Arguments;
+
+        Assert.IsTrue(args[0].AsBoolean());
+        Assert.IsTrue(args[1].AsBoolean());
+        Assert.AreEqual(2, Convert.ToInt32(args[2].AsInteger()));
+        Assert.AreEqual("Ada", args[3].AsText());
+        Assert.AreEqual("Cara", args[4].AsText());
+    }
+
+    [TestMethod]
+    public void MissingRulesOrSelectsFailCompilation()
+    {
+        const string missingRuleScript = """
+            on Start(unit) {
+                let x be missingRule(unit);
+            }
+            """;
+
+        const string missingSelectScript = """
+            on Start(units) {
+                let x be missingSelect(units);
+            }
+            """;
+
+        const string invalidPredicateScript = """
+            select wounded(unit) means unit.hp < unit.maxHp
+
+            on Start(unit) {
+                let x be unit is wounded;
+            }
+            """;
+
+        const string wrongRuleArityScript = """
+            rule wounded(unit) means unit.hp < unit.maxHp
+
+            on Start(unit) {
+                let x be wounded(unit, unit);
+            }
+            """;
+
+        const string wrongSelectArityScript = """
+            select woundedUnits(units) means units[:filter unit where unit.hp < unit.maxHp]
+
+            on Start(units) {
+                let x be woundedUnits();
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(missingRuleScript));
+        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(missingSelectScript));
+        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(invalidPredicateScript));
+        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(wrongRuleArityScript));
+        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(wrongSelectArityScript));
+    }
+
+    [TestMethod]
+    public void RulesAndSelectsStayLenientWhenExpectedKeysAreMissing()
+    {
+        const string script = """
+            rule wounded(unit) means unit.hp < unit.maxHp
+            select woundedUnits(units) means units[:filter unit where unit is wounded]
+
+            on Start(unit, units) {
+                let byCall be wounded(unit);
+                let byPredicate be unit is wounded;
+                let woundedList be woundedUnits(units);
+                publish Done(byCall, byPredicate, :len woundedList);
+            }
+            """;
+
+        var incompleteUnit = EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+        {
+            ["name"] = "NoHp"
+        });
+        var units = EventScriptValue.List([
+            incompleteUnit,
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+            {
+                ["name"] = "Healthy",
+                ["hp"] = 5m,
+                ["maxHp"] = 5m
+            })
+        ]);
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var args = interpreter.Emit("Start", incompleteUnit, units).EmittedEvents[0].Arguments;
+
+        Assert.AreEqual(EventScriptValueKind.Nothing, args[0].Kind);
+        Assert.AreEqual(EventScriptValueKind.Nothing, args[1].Kind);
+        Assert.AreEqual(0, Convert.ToInt32(args[2].AsInteger()));
+    }
+
+    [TestMethod]
     public void EscapedQuotesStayInsideTextValues()
     {
         const string script = """

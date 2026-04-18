@@ -1,8 +1,10 @@
 Program ::= { StatementSeparator } [ TopLevel { EventSeparator TopLevel } ] { StatementSeparator }
 
-TopLevel ::= TypeDefinition | EventEndpoint
+TopLevel ::= TypeDefinition | RuleDefinition | SelectDefinition | EventEndpoint
 EventEndpoint ::= EventHandler
 TypeDefinition ::= "record" TypeTag "as" "{" { StatementSeparator } [ TypeFieldDefinition { TypeFieldSeparator TypeFieldDefinition } ] { StatementSeparator } "}"
+RuleDefinition ::= "rule" Identifier "(" [ ParamList ] ")" "means" Expression
+SelectDefinition ::= "select" Identifier "(" [ ParamList ] ")" "means" Expression
 TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
 TypeFieldSeparator ::= "," | StatementSeparator
 EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
@@ -57,6 +59,7 @@ IsOperation ::= "is" TypeTag
               | "is" AdditiveExpression "or" "less"
               | "is" AdditiveExpression "or" "more"
               | "is" AdditiveExpression "or" "greater"
+              | "is" Identifier
               | "is" AdditiveExpression
 AsOperation ::= "as" TypeTag
 RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
@@ -85,13 +88,14 @@ ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expressi
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }
 PostfixSuffix ::= "." Identifier
                 | "[" CollectionSelector "]"
-PrimaryExpression ::= Literal | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | "(" Expression ")"
+PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | "(" Expression ")"
                     | BracketLiteral
                     | SetLiteral
                     | GeneratedListExpression
                     | GeneratedSetExpression
                     | RandomExpression
                     | DiceExpression
+CallExpression ::= Identifier "(" [ Argumentlist ] ")"
 
 Literal ::= Number | Percentage | TextLiteral | "true" | "false"
 TagLiteral ::= ":" Identifier

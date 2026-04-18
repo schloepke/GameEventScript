@@ -52,6 +52,34 @@ public class EventScriptParsingScenarios
     }
 
     [TestMethod]
+    public void RulesAndSelectsCanBeDeclaredAndInvoked()
+    {
+        const string script =
+            """
+            rule wounded(unit) means unit.hp < unit.maxHp
+            select woundedUnits(units) means units[:filter unit where unit is wounded]
+
+            on Start(unit, units) {
+                let isWounded be wounded(unit);
+                let sameCheck be unit is wounded;
+                let result be woundedUnits(units);
+                publish Done(isWounded, sameCheck, result);
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        Assert.HasCount(1, program.RuleDefinitions);
+        Assert.HasCount(1, program.SelectDefinitions);
+        Assert.AreEqual("wounded", program.RuleDefinitions[0].Name);
+        Assert.AreEqual("woundedUnits", program.SelectDefinitions[0].Name);
+
+        var statements = program.Handlers[0].Statements.OfType<LetStatementNode>().ToArray();
+        Assert.IsInstanceOfType<CallExpressionNode>(statements[0].Expression);
+        Assert.IsInstanceOfType<RulePredicateExpressionNode>(statements[1].Expression);
+        Assert.IsInstanceOfType<CallExpressionNode>(statements[2].Expression);
+    }
+
+    [TestMethod]
     public void DomainStyleBooleanChecksCanBeParsed()
     {
         const string script =

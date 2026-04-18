@@ -41,6 +41,8 @@ public sealed class EventScriptInterpreter
     private const decimal RandomUnitScale = RandomUnitMax;
     private readonly Dictionary<string, List<EventHandlerNode>> _handlers;
     private readonly Dictionary<string, TypeDefinitionNode> _typeDefinitions;
+    private readonly Dictionary<string, RuleDefinitionNode> _ruleDefinitions;
+    private readonly Dictionary<string, SelectDefinitionNode> _selectDefinitions;
     private readonly Dictionary<string, List<EventScriptExternalMessageBinding>> _externalBindings;
     private readonly IEventScriptRandom _random;
     private readonly int _maxProcessedEventsPerRun;
@@ -52,10 +54,21 @@ public sealed class EventScriptInterpreter
         _ = eventScriptProgram ?? throw new ArgumentNullException(nameof(eventScriptProgram));
         _random = random ?? new DefaultEventScriptRandom();
         _typeDefinitions = BuildTypeDefinitionMap(eventScriptProgram.TypeDefinitions);
+        _ruleDefinitions = BuildRuleDefinitionMap(eventScriptProgram.RuleDefinitions);
+        _selectDefinitions = BuildSelectDefinitionMap(eventScriptProgram.SelectDefinitions);
+        foreach (var ruleName in _ruleDefinitions.Keys)
+        {
+            if (_selectDefinitions.ContainsKey(ruleName))
+            {
+                throw new EventScriptCompilationException($"Global definition '{ruleName}' is defined as both rule and select");
+            }
+        }
+
         _handlers = BuildHandlerMap(eventScriptProgram);
         _externalBindings = BuildExternalBindingMap(context?.ExternalBindings);
         _maxProcessedEventsPerRun = context?.MaxProcessedEventsPerRun ?? 64;
         if (_maxProcessedEventsPerRun <= 0) throw new EventScriptCompilationException("Max processed events per run must be > 0");
+        ValidateDefinitionReferences(eventScriptProgram);
     }
 
     public static EventScriptInterpreter Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
@@ -218,6 +231,9 @@ public sealed class EventScriptInterpreter
             case IdentifierExpressionNode identifier:
                 return context.Resolve(identifier.Name);
 
+            case CallExpressionNode call:
+                return EvaluateCallExpression(context, call);
+
             case UnaryExpressionNode unary:
                 return EvaluateUnaryExpression(context, unary);
 
@@ -249,6 +265,9 @@ public sealed class EventScriptInterpreter
 
             case BinaryExpressionNode binary:
                 return EvaluateBinaryExpression(context, binary);
+
+            case RulePredicateExpressionNode rulePredicate:
+                return EvaluateRulePredicateExpression(context, rulePredicate);
 
             case TypeCheckExpressionNode typeCheck:
                 return EventScriptValue.Boolean(IsValueOfType(EvaluateExpression(context, typeCheck.Value), typeCheck.TypeName));
@@ -370,6 +389,57 @@ public sealed class EventScriptInterpreter
         return generatedCollection.CollectionType == "set"
             ? EventScriptValue.Set(values)
             : EventScriptValue.List(values);
+    }
+
+    private EventScriptValue EvaluateCallExpression(ExecutionContext context, CallExpressionNode call)
+    {
+        var arguments = call.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
+
+        if (_ruleDefinitions.TryGetValue(call.Name, out var ruleDefinition))
+        {
+            return EvaluateGlobalDefinition(context, ruleDefinition.Parameters, ruleDefinition.Expression, arguments);
+        }
+
+        if (_selectDefinitions.TryGetValue(call.Name, out var selectDefinition))
+        {
+            return EvaluateGlobalDefinition(context, selectDefinition.Parameters, selectDefinition.Expression, arguments);
+        }
+
+        return EventScriptValue.Nothing;
+    }
+
+    private EventScriptValue EvaluateRulePredicateExpression(ExecutionContext context, RulePredicateExpressionNode rulePredicate)
+    {
+        if (!_ruleDefinitions.TryGetValue(rulePredicate.RuleName, out var ruleDefinition) ||
+            ruleDefinition.Parameters.Count != 1)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var value = EvaluateExpression(context, rulePredicate.Value);
+        return EvaluateGlobalDefinition(context, ruleDefinition.Parameters, ruleDefinition.Expression, new[] { value });
+    }
+
+    private EventScriptValue EvaluateGlobalDefinition(
+        ExecutionContext context,
+        IReadOnlyList<string> parameters,
+        ExpressionNode expression,
+        IReadOnlyList<EventScriptValue> arguments)
+    {
+        context.PushScope();
+        try
+        {
+            for (var i = 0; i < parameters.Count; i++)
+            {
+                context.Define(parameters[i], i < arguments.Count ? arguments[i] : EventScriptValue.Nothing);
+            }
+
+            return EvaluateExpression(context, expression);
+        }
+        finally
+        {
+            context.PopScope();
+        }
     }
 
     private bool TryProjectGeneratedItem(
@@ -2316,6 +2386,38 @@ public sealed class EventScriptInterpreter
         return map;
     }
 
+    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<RuleDefinitionNode> ruleDefinitions)
+    {
+        var map = new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal);
+        foreach (var ruleDefinition in ruleDefinitions)
+        {
+            if (map.ContainsKey(ruleDefinition.Name))
+            {
+                throw new EventScriptCompilationException($"Rule '{ruleDefinition.Name}' is defined more than once");
+            }
+
+            map[ruleDefinition.Name] = ruleDefinition;
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<SelectDefinitionNode> selectDefinitions)
+    {
+        var map = new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal);
+        foreach (var selectDefinition in selectDefinitions)
+        {
+            if (map.ContainsKey(selectDefinition.Name))
+            {
+                throw new EventScriptCompilationException($"Select '{selectDefinition.Name}' is defined more than once");
+            }
+
+            map[selectDefinition.Name] = selectDefinition;
+        }
+
+        return map;
+    }
+
     private static Dictionary<string, List<EventScriptExternalMessageBinding>> BuildExternalBindingMap(
         IReadOnlyDictionary<string, IReadOnlyList<EventScriptExternalMessageBinding>>? bindings)
     {
@@ -2335,6 +2437,309 @@ public sealed class EventScriptInterpreter
 
     private static bool AreEqual(EventScriptValue left, EventScriptValue right)
         => left.Equals(right);
+
+    private void ValidateDefinitionReferences(EventScriptProgram eventScriptProgram)
+    {
+        foreach (var typeDefinition in eventScriptProgram.TypeDefinitions)
+        {
+            foreach (var field in typeDefinition.Fields)
+            {
+                if (field.MinimumExpression is not null)
+                {
+                    ValidateExpressionReferences(field.MinimumExpression);
+                }
+
+                if (field.MaximumExpression is not null)
+                {
+                    ValidateExpressionReferences(field.MaximumExpression);
+                }
+
+                if (field.ComputedExpression is not null)
+                {
+                    ValidateExpressionReferences(field.ComputedExpression);
+                }
+            }
+        }
+
+        foreach (var ruleDefinition in eventScriptProgram.RuleDefinitions)
+        {
+            ValidateExpressionReferences(ruleDefinition.Expression);
+        }
+
+        foreach (var selectDefinition in eventScriptProgram.SelectDefinitions)
+        {
+            ValidateExpressionReferences(selectDefinition.Expression);
+        }
+
+        foreach (var handler in eventScriptProgram.Handlers)
+        {
+            foreach (var statement in handler.Statements)
+            {
+                ValidateStatementReferences(statement);
+            }
+        }
+    }
+
+    private void ValidateStatementReferences(StatementNode statement)
+    {
+        switch (statement)
+        {
+            case PublishStatementNode publish:
+                foreach (var argument in publish.Arguments)
+                {
+                    ValidateExpressionReferences(argument);
+                }
+
+                return;
+
+            case LetStatementNode let:
+                ValidateExpressionReferences(let.Expression);
+                return;
+
+            case IfStatementNode ifStatement:
+                ValidateExpressionReferences(ifStatement.Condition);
+                foreach (var nested in ifStatement.ThenStatements)
+                {
+                    ValidateStatementReferences(nested);
+                }
+
+                foreach (var nested in ifStatement.ElseStatements)
+                {
+                    ValidateStatementReferences(nested);
+                }
+
+                return;
+
+            case ForStatementNode forStatement:
+                ValidateExpressionReferences(forStatement.Source);
+                foreach (var nested in forStatement.Statements)
+                {
+                    ValidateStatementReferences(nested);
+                }
+
+                return;
+
+            case ExpressionStatementNode expressionStatement:
+                ValidateExpressionReferences(expressionStatement.Expression);
+                return;
+        }
+    }
+
+    private void ValidateExpressionReferences(ExpressionNode expression)
+    {
+        switch (expression)
+        {
+            case CallExpressionNode call:
+                ValidateCallExpression(call);
+                foreach (var argument in call.Arguments)
+                {
+                    ValidateExpressionReferences(argument);
+                }
+
+                return;
+
+            case RulePredicateExpressionNode rulePredicate:
+                if (!_ruleDefinitions.TryGetValue(rulePredicate.RuleName, out var ruleDefinition) ||
+                    ruleDefinition.Parameters.Count != 1)
+                {
+                    throw new EventScriptCompilationException(
+                        $"Rule '{rulePredicate.RuleName}' must exist and declare exactly one parameter to be used with 'is'");
+                }
+
+                ValidateExpressionReferences(rulePredicate.Value);
+                return;
+
+            case UnaryExpressionNode unary:
+                ValidateExpressionReferences(unary.Operand);
+                return;
+
+            case VariadicTaggedExpressionNode variadic:
+                foreach (var argument in variadic.Arguments)
+                {
+                    ValidateExpressionReferences(argument);
+                }
+
+                return;
+
+            case ClampExpressionNode clamp:
+                ValidateExpressionReferences(clamp.Value);
+                ValidateExpressionReferences(clamp.Minimum);
+                ValidateExpressionReferences(clamp.Maximum);
+                return;
+
+            case RandomExpressionNode random:
+                ValidateExpressionReferences(random.FromExpression);
+                ValidateExpressionReferences(random.ToExpression);
+                return;
+
+            case GeneratedCollectionExpressionNode generatedCollection:
+                ValidateExpressionReferences(generatedCollection.FromExpression);
+                ValidateExpressionReferences(generatedCollection.ToExpression);
+                if (generatedCollection.StepExpression is not null)
+                {
+                    ValidateExpressionReferences(generatedCollection.StepExpression);
+                }
+
+                if (generatedCollection.Predicate is not null)
+                {
+                    ValidateExpressionReferences(generatedCollection.Predicate);
+                }
+
+                ValidateExpressionReferences(generatedCollection.Projection);
+                return;
+
+            case GuardedChoiceExpressionNode guardedChoice:
+                foreach (var branch in guardedChoice.Branches)
+                {
+                    ValidateExpressionReferences(branch.ValueExpression);
+                    ValidateExpressionReferences(branch.ConditionExpression);
+                }
+
+                ValidateExpressionReferences(guardedChoice.OtherwiseExpression);
+                return;
+
+            case BinaryExpressionNode binary:
+                ValidateExpressionReferences(binary.Left);
+                ValidateExpressionReferences(binary.Right);
+                return;
+
+            case TypeCheckExpressionNode typeCheck:
+                ValidateExpressionReferences(typeCheck.Value);
+                return;
+
+            case TypeCastExpressionNode typeCast:
+                ValidateExpressionReferences(typeCast.Value);
+                return;
+
+            case MemberAccessExpressionNode memberAccess:
+                ValidateExpressionReferences(memberAccess.Target);
+                return;
+
+            case CollectionAccessExpressionNode collectionAccess:
+                ValidateExpressionReferences(collectionAccess.Target);
+                ValidateCollectionSelectorReferences(collectionAccess.Selector);
+                return;
+
+            case ListLiteralExpressionNode list:
+                foreach (var item in list.Items)
+                {
+                    ValidateExpressionReferences(item);
+                }
+
+                return;
+
+            case SetLiteralExpressionNode set:
+                foreach (var item in set.Items)
+                {
+                    ValidateExpressionReferences(item);
+                }
+
+                return;
+
+            case DictionaryLiteralExpressionNode dictionary:
+                foreach (var entry in dictionary.Entries)
+                {
+                    ValidateExpressionReferences(entry.Value);
+                }
+
+                return;
+        }
+    }
+
+    private void ValidateCollectionSelectorReferences(CollectionSelectorNode selector)
+    {
+        switch (selector)
+        {
+            case ExpressionSelectorNode expressionSelector:
+                ValidateExpressionReferences(expressionSelector.Expression);
+                return;
+            case PredicateSelectorNode predicateSelector:
+                ValidateExpressionReferences(predicateSelector.Predicate);
+                return;
+            case CountSelectorNode countSelector:
+                ValidateExpressionReferences(countSelector.Predicate);
+                return;
+            case ChooseSelectorNode chooseSelector:
+                if (chooseSelector.Predicate is not null)
+                {
+                    ValidateExpressionReferences(chooseSelector.Predicate);
+                }
+
+                if (chooseSelector.WeightExpression is not null)
+                {
+                    ValidateExpressionReferences(chooseSelector.WeightExpression);
+                }
+
+                return;
+            case EdgeSelectorNode edgeSelector when edgeSelector.Predicate is not null:
+                ValidateExpressionReferences(edgeSelector.Predicate);
+                return;
+            case FilterSelectorNode filterSelector:
+                ValidateExpressionReferences(filterSelector.Predicate);
+                return;
+            case SumSelectorNode sumSelector:
+                ValidateExpressionReferences(sumSelector.Projection);
+                return;
+            case AverageSelectorNode averageSelector:
+                ValidateExpressionReferences(averageSelector.Projection);
+                return;
+            case SelectSelectorNode selectSelector:
+                ValidateExpressionReferences(selectSelector.Projection);
+                return;
+            case DictionarySelectorNode dictionarySelector:
+                ValidateExpressionReferences(dictionarySelector.KeyProjection);
+                if (dictionarySelector.ValueProjection is not null)
+                {
+                    ValidateExpressionReferences(dictionarySelector.ValueProjection);
+                }
+
+                return;
+            case MinSelectorNode minSelector:
+                ValidateExpressionReferences(minSelector.Projection);
+                return;
+            case MaxSelectorNode maxSelector:
+                ValidateExpressionReferences(maxSelector.Projection);
+                return;
+            case ContainsSelectorNode containsSelector:
+                ValidateExpressionReferences(containsSelector.ValueExpression);
+                return;
+            case DistinctSelectorNode distinctSelector when distinctSelector.Projection is not null:
+                ValidateExpressionReferences(distinctSelector.Projection);
+                return;
+            case GroupBySelectorNode groupBySelector:
+                ValidateExpressionReferences(groupBySelector.Projection);
+                return;
+            case OrderBySelectorNode orderBySelector:
+                ValidateExpressionReferences(orderBySelector.Projection);
+                return;
+        }
+    }
+
+    private void ValidateCallExpression(CallExpressionNode call)
+    {
+        if (_ruleDefinitions.TryGetValue(call.Name, out var ruleDefinition))
+        {
+            ValidateCallArity("Rule", call.Name, ruleDefinition.Parameters.Count, call.Arguments.Count);
+            return;
+        }
+
+        if (_selectDefinitions.TryGetValue(call.Name, out var selectDefinition))
+        {
+            ValidateCallArity("Select", call.Name, selectDefinition.Parameters.Count, call.Arguments.Count);
+            return;
+        }
+
+        throw new EventScriptCompilationException($"No rule or select named '{call.Name}' exists");
+    }
+
+    private static void ValidateCallArity(string kind, string name, int expectedCount, int actualCount)
+    {
+        if (expectedCount != actualCount)
+        {
+            throw new EventScriptCompilationException(
+                $"{kind} '{name}' expects {expectedCount} argument(s) but received {actualCount}");
+        }
+    }
 
     private static bool AsBool(EventScriptValue value)
         => value.AsBoolean();

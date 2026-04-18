@@ -6,8 +6,14 @@ namespace StepH.Flow.EventScript;
 
 public abstract record EventScriptNode;
 
-public sealed record EventScriptProgram(IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : EventScriptNode;
+public sealed record EventScriptProgram(
+    IReadOnlyList<TypeDefinitionNode> TypeDefinitions,
+    IReadOnlyList<RuleDefinitionNode> RuleDefinitions,
+    IReadOnlyList<SelectDefinitionNode> SelectDefinitions,
+    IReadOnlyList<EventHandlerNode> Handlers) : EventScriptNode;
 public sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : EventScriptNode;
+public sealed record RuleDefinitionNode(string Name, IReadOnlyList<string> Parameters, ExpressionNode Expression) : EventScriptNode;
+public sealed record SelectDefinitionNode(string Name, IReadOnlyList<string> Parameters, ExpressionNode Expression) : EventScriptNode;
 public sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression) : EventScriptNode;
 public sealed record EventHandlerNode(string Message, IReadOnlyList<string> Parameters, IReadOnlyList<StatementNode> Statements) : EventScriptNode;
 public abstract record StatementNode : EventScriptNode;
@@ -19,6 +25,7 @@ public sealed record ExpressionStatementNode(ExpressionNode Expression) : Statem
 public abstract record ExpressionNode : EventScriptNode;
 public sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 public sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
+public sealed record CallExpressionNode(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 public sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
 public sealed record NumberLiteralExpressionNode(decimal Value, string RawText) : ExpressionNode;
 public sealed record PercentageLiteralExpressionNode(decimal PercentValue) : ExpressionNode;
@@ -43,6 +50,7 @@ public sealed record GeneratedCollectionExpressionNode(
 public sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 public sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : EventScriptNode;
 public sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
+public sealed record RulePredicateExpressionNode(ExpressionNode Value, string RuleName) : ExpressionNode;
 public sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 public sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 public abstract record DicePatternNode : EventScriptNode;

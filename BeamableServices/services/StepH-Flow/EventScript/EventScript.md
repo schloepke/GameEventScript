@@ -1,0 +1,1183 @@
+# EventScript Language Guide
+
+## Overview
+
+EventScript is a small, domain-oriented scripting language for event-driven game logic.
+
+It is designed around a few core ideas:
+
+- Scripts react to messages with `on Message { ... }`.
+- Scripts publish new messages with `publish Message(...)`.
+- The runtime uses a FIFO pub/sub model.
+- The language is intentionally lenient:
+  missing data often becomes `nothing` instead of throwing.
+- Dictionaries and immutable collections are first-class.
+- The syntax favors readable, domain-like expressions over technical ceremony.
+
+EventScript is case-sensitive.
+
+## Design Principles
+
+- Keywords are lowercase: `on`, `publish`, `let`, `if`, `for`, `rule`, `select`.
+- Messages start with an uppercase letter: `Start`, `DamageTaken`, `TurnEnded`.
+- Local variables and identifiers start with a lowercase letter: `hp`, `target`, `woundedUnits`.
+- Type names are written as tags: `:decimal`, `:text`, `:list`, `:meter`.
+- Tags are also first-class values: `:name`, `:boss`, `:fire`.
+- Collection mini-language lives inside `[...]`.
+- Many failures are represented as `nothing` rather than exceptions.
+
+## Hello World
+
+```eventscript
+on Start {
+    publish Hello('world')
+}
+```
+
+## Top-Level Structure
+
+An EventScript program can contain:
+
+- `record` definitions for custom types
+- `rule` definitions for reusable predicates
+- `select` definitions for reusable expressions
+- event handlers with `on`
+
+Example:
+
+```eventscript
+record :meter as {
+    current: :decimal,
+    maximum: :decimal
+}
+
+rule wounded(unit) means unit.hp < unit.maxHp
+select woundedUnits(units) means units[:filter unit where unit is wounded]
+
+on Start(unit, units) {
+    if unit is wounded {
+        publish HealRequested(unit)
+    }
+
+    let choices be woundedUnits(units)
+    publish Done(:len choices)
+}
+```
+
+## Event Handlers
+
+Event handlers subscribe to a message.
+
+```eventscript
+on DamageTaken(unit, amount) {
+    let remainingHp be unit.hp - amount
+    publish HpChanged(unit.id, remainingHp)
+}
+```
+
+Handlers:
+
+- are matched by message name
+- may declare zero or more parameters
+- may have multiple handlers for the same message
+- run in declaration order
+
+Multiple handlers for the same message must use the same parameter count.
+
+## Publishing Events
+
+Use `publish` to send a message.
+
+```eventscript
+publish UnitDied(unit.id)
+publish TurnEnded
+```
+
+Publishing is lenient:
+
+- publishing an unknown message is allowed
+- publishing a message with no subscribers is a valid no-op
+- the event is still considered published
+
+## Runtime Model
+
+The runtime uses FIFO pub/sub semantics.
+
+When an event is published:
+
+1. it is appended to the emitted event list
+2. it is appended to the FIFO queue
+3. it is processed later by the queue drain loop
+
+For each queued event:
+
+1. all script handlers for that message run in declaration order
+2. then all external bindings for that message run in binding registration order
+
+This means publish chains are not recursive direct calls. They are queued message deliveries.
+
+## Public Interpreter API
+
+At the interpreter level there are two main ways to run scripts.
+
+Synchronous enqueue-and-drain:
+
+```csharp
+var interpreter = EventScriptInterpreter.Compile(script);
+var result = interpreter.Emit("Start", EventScriptValue.Integer(3));
+```
+
+Low-level queue API:
+
+```csharp
+var interpreter = EventScriptInterpreter.Compile(script);
+var run = interpreter.Enqueue("Start", EventScriptValue.Integer(3));
+var result = run.Drain();
+```
+
+The execution result contains:
+
+- the initial message
+- all published events
+- a variable snapshot from the initial externally triggered handler dispatch
+
+## Comments
+
+There is currently no comment syntax in the language.
+
+## Variables and `let`
+
+Variables are introduced with `let`.
+
+```eventscript
+let hp be 10
+let name be 'Ada'
+let alive be true
+```
+
+Optional explicit typing:
+
+```eventscript
+let hp as :decimal be 10
+let name as :text be 'Ada'
+let tags as :set be :set[:select item from 1 to 3 -> item]
+```
+
+Typed `let` uses conversion semantics where possible.
+
+## Guarded Assignment
+
+`let` can use guarded choices.
+
+```eventscript
+let score be 12 when x = 10,
+    or 20 when x = 15,
+    otherwise 5
+```
+
+This is an expression form, not a statement-only special case.
+
+## Primitive Literals
+
+### Decimal numbers
+
+```eventscript
+12
+12.5
+0.75
+```
+
+### Percentages
+
+```eventscript
+25%
+75%
+0%
+```
+
+### Text
+
+```eventscript
+'hello'
+'Ada''s turn'
+```
+
+Single quotes are escaped by doubling them.
+
+### Booleans
+
+```eventscript
+true
+false
+```
+
+### Tags
+
+```eventscript
+:name
+:boss
+:fire
+```
+
+Tags are values. They are not strings, although they can often be converted to text as needed.
+
+## Messages, Identifiers, and Case
+
+Examples:
+
+```eventscript
+on Start {
+    let playerId be 10
+    publish TurnStarted(playerId)
+}
+```
+
+- `Start` and `TurnStarted` are messages
+- `playerId` is a local identifier
+
+The language is not case-insensitive.
+
+## Built-In Types
+
+Built-in type tags:
+
+- `:tag`
+- `:text`
+- `:percentage`
+- `:decimal`
+- `:integer`
+- `:boolean`
+- `:optional`
+- `:list`
+- `:dictionary`
+- `:set`
+- `:dice`
+- `:nothing`
+
+## Type Checks and Type Casts
+
+### Type checks
+
+```eventscript
+if value is :decimal {
+    publish Numeric
+}
+```
+
+### Type casts
+
+```eventscript
+let ratio as :percentage be 75
+let amount as :decimal be '12.5'
+let flags as :list be 'abc'
+```
+
+## Domain-Style Boolean Phrases
+
+The language supports readable boolean phrases.
+
+```eventscript
+if hp is 0 or less { ... }
+if mana is at least 3 { ... }
+if hand is empty { ... }
+if target has value { ... }
+```
+
+These map to existing runtime semantics:
+
+- `x is 0 or less` -> `x <= 0`
+- `x is at least 3` -> `x >= 3`
+- `x is empty` -> `empty x`
+- `x has value` -> `has value x`
+
+Related forms:
+
+```eventscript
+if hp is at most 10 { ... }
+if value is 5 or more { ... }
+if value is 5 or greater { ... }
+```
+
+## Operators
+
+### Equality
+
+```eventscript
+x = y
+x <> y
+```
+
+### Logical operators
+
+```eventscript
+a and b
+a or b
+not a
+!a
+```
+
+### Comparison
+
+```eventscript
+x < y
+x <= y
+x > y
+x >= y
+```
+
+### Arithmetic
+
+```eventscript
+a + b
+a - b
+a * b
+a / b
+a % b
+```
+
+### Collection combination
+
+```eventscript
+a :intersect b
+a :combine b
+a :merge b
+a :except b
+a :zip b
+```
+
+Semantics depend on the operand kinds.
+
+## `nothing` and Lenient Evaluation
+
+`nothing` is the language's absence value.
+
+Typical sources of `nothing`:
+
+- unknown identifier
+- missing dictionary key
+- out-of-range list access
+- unsupported operator for a type
+- missing optional value in some operations
+
+Examples:
+
+```eventscript
+let missing be unit['unknown']
+let alsoMissing be values[99]
+let unknownVariable be doesNotExist
+```
+
+These do not throw script exceptions. They become `nothing`.
+
+This leniency is intentional.
+
+## Defaulting
+
+Use `:default` to provide a fallback.
+
+```eventscript
+let hp be unit.hp :default 0
+let name be entry['name'] :default 'unknown'
+let hand be maybeHand :default [1, 2, 3]
+```
+
+`x :default y` uses `y` when `x` has no value.
+
+This includes:
+
+- `nothing`
+- empty text
+- empty list
+- empty dictionary
+- empty set
+- empty dice
+- `optional none`
+- `NaN`
+- infinity
+
+## Presence and Emptiness
+
+Use:
+
+```eventscript
+has value x
+empty x
+```
+
+or their domain-style equivalents:
+
+```eventscript
+x has value
+x is empty
+```
+
+Behavior:
+
+- non-empty text/list/dictionary/set/dice -> has value
+- empty containers -> no value
+- `nothing` -> no value
+- `optional none` -> no value
+- `NaN` and infinity -> no value
+
+## Membership and Boundary Checks
+
+```eventscript
+'name' in entry
+'Ada' value in entry
+'ab' in 'cabin'
+[1, 2] starts with [1]
+[1, 2, 3] ends with [2, 3]
+```
+
+Supported operators:
+
+- `in`
+- `value in`
+- `starts with`
+- `ends with`
+
+For dictionaries:
+
+- `x in dict` checks keys
+- `x value in dict` checks values
+
+## Collections
+
+EventScript has four main collection-like data shapes:
+
+- `:list`
+- `:dictionary`
+- `:set`
+- `:dice`
+
+### List literals
+
+```eventscript
+[1, 2, 3]
+['a', 'b', 'c']
+[]
+```
+
+### Dictionary literals
+
+```eventscript
+[name: 'Ada', age: 25]
+[:]
+```
+
+### Set literals
+
+```eventscript
+:set[1, 2, 2, 3]
+```
+
+Sets deduplicate values and are sorted with the stable EventScript value order.
+
+### Dice
+
+```eventscript
+:dice 4d6
+```
+
+Dice are ordered descending by value.
+
+## Indexing and Lookup
+
+### One-based sequential indexing
+
+Lists and dice use one-based indexing:
+
+```eventscript
+let values be [10, 20, 30]
+let first be values[1]
+let third be values[3]
+```
+
+Out of range returns `nothing`:
+
+```eventscript
+values[0]
+values[99]
+```
+
+### Dictionary lookup
+
+```eventscript
+let entry be [name: 'Ada', age: 25]
+
+let a be entry['name']
+let b be entry[:name]
+let key be :name
+let c be entry[key]
+let d be entry.name
+```
+
+Missing keys return `nothing`.
+
+## Collection Mini-Language
+
+The `[...]` syntax after a value is also used for collection selectors.
+
+Example:
+
+```eventscript
+units[:filter unit where unit.hp > 0]
+```
+
+This is distinct from plain indexed lookup:
+
+```eventscript
+values[1]
+```
+
+## Collection Predicates
+
+### `:any` and `:all`
+
+```eventscript
+units[:any unit where unit.hp <= 0]
+units[:all unit where unit.alive]
+```
+
+### `:count`
+
+```eventscript
+units[:count unit where unit.hp < unit.maxHp]
+```
+
+## Filtering, Projection, and Dictionary Building
+
+### Filter
+
+```eventscript
+units[:filter unit where unit.alive]
+```
+
+### Select
+
+```eventscript
+units[:select unit -> unit.name]
+```
+
+### Dictionary projection
+
+```eventscript
+units[:dictionary unit by unit.id]
+units[:dictionary unit by unit.id -> unit.name]
+```
+
+If duplicate keys occur, the last value wins.
+
+## First, Last, and Single
+
+```eventscript
+units[:first]
+units[:last]
+units[:single]
+```
+
+With predicate:
+
+```eventscript
+units[:first unit where unit.alive]
+units[:last unit where unit.alive]
+units[:single unit where unit.role = :boss]
+```
+
+`[:single ...]` returns `nothing` unless exactly one item matches.
+
+## Sorting and Ordering
+
+### Stable value sort
+
+```eventscript
+items[:sort ascending]
+items[:sort descending]
+```
+
+### Projection-based order
+
+```eventscript
+units[:order by unit -> unit.initiative descending]
+items[:order by item -> item.name ascending]
+```
+
+## Distinct and Grouping
+
+### Distinct
+
+```eventscript
+items[:distinct]
+items[:distinct by item -> item.id]
+```
+
+### Group by
+
+```eventscript
+units[:group by unit -> unit.team]
+```
+
+The result is a dictionary where each group key maps to a list of matching items.
+
+## Sum, Average, Min, Max, Highest, Lowest
+
+```eventscript
+units[:sum unit -> unit.hp]
+units[:average unit -> unit.hp]
+units[:min unit -> unit.hp]
+units[:max unit -> unit.hp]
+units[:highest unit -> unit.hp]
+units[:lowest unit -> unit.hp]
+```
+
+Notes:
+
+- `:sum` and `:average` compute numeric results
+- `:min`, `:max`, `:highest`, and `:lowest` return the original item, not the projected value
+- empty collections usually return `nothing`
+
+## Contains
+
+```eventscript
+items[:contains 2]
+items[:contains all [1, 2]]
+items[:contains any [5, 9]]
+```
+
+For text:
+
+```eventscript
+'battle'[:contains 'tt']
+'battle'[:contains all ['ba', 'tt']]
+'battle'[:contains any ['xx', 'tt']]
+```
+
+For dictionaries, `:contains` checks keys.
+
+## Sequence Operations
+
+### Reverse
+
+```eventscript
+items[:reverse]
+```
+
+Supported for ordered collections:
+
+- `list`
+- `dice`
+
+For `dice`, reversing returns a list.
+
+### Shuffle
+
+```eventscript
+deck[:shuffle]
+```
+
+Supported for:
+
+- `list`
+- `dice`
+
+Not supported for sets and dictionaries.
+
+### Draw
+
+```eventscript
+deck[:draw 3]
+```
+
+Because EventScript is immutable, `:draw` returns the drawn value(s) but does not mutate the original source.
+
+Typical usage:
+
+```eventscript
+let cards be [1, 2, 3, 4, 5][:shuffle]
+let hand be cards[:draw 3]
+let restCards be cards[:drop first 3]
+```
+
+### Take and Drop
+
+```eventscript
+items[:take first 3]
+items[:take last 2]
+items[:take highest 2]
+items[:take lowest 2]
+
+items[:drop first 3]
+items[:drop last 2]
+items[:drop highest 1]
+items[:drop lowest 1]
+```
+
+## Dice and Pattern Matching
+
+Patterns are written with `:has` and `:take`.
+
+```eventscript
+roll[:has pair]
+roll[:has pair of 6]
+roll[:has three of a kind]
+roll[:has three of 6]
+roll[:has full house]
+roll[:has straight]
+```
+
+Supported count patterns:
+
+- `pair`
+- `three`
+- `four`
+- `five`
+- `six`
+- `seven`
+
+Extraction:
+
+```eventscript
+roll[:take pair]
+roll[:take full house]
+cards[:take straight]
+```
+
+For straight checks, duplicates are ignored.
+
+## Object and Dictionary Matching
+
+Collections can match dictionary-shaped items with subset semantics.
+
+```eventscript
+units[:has [faction: 'orc', alive: true]]
+units[:has [owner: [team: 'red']]]
+```
+
+Rules:
+
+- extra keys in the actual object are allowed
+- all specified keys must exist
+- nested matches are recursive
+- non-dictionary items do not match
+
+## Generated Collections
+
+EventScript can generate lists and sets from ranges.
+
+### Generated list
+
+```eventscript
+:list[:select item from 1 to 5 -> item * item]
+```
+
+### Generated set
+
+```eventscript
+:set[:select item from 1 to 4 where item >= 2 -> item % 2]
+```
+
+Optional parts:
+
+- `step`
+- `where`
+
+Example:
+
+```eventscript
+let evens be :list[:select item from 1 to 10 step 2 -> item]
+let filtered be :list[:select item from 1 to 6 where item % 2 = 0 -> item * item]
+```
+
+If the step direction does not reach the target range, the result is empty.
+
+## Rules
+
+Rules define reusable predicates.
+
+```eventscript
+rule wounded(unit) means unit.hp < unit.maxHp
+rule defeated(unit) means unit.hp is 0 or less
+```
+
+Use rules in two ways:
+
+### Call syntax
+
+```eventscript
+wounded(unit)
+```
+
+### Predicate syntax for single-parameter rules
+
+```eventscript
+unit is wounded
+```
+
+The `is ruleName` form only works for rules with exactly one parameter.
+
+## Select Definitions
+
+Select definitions define reusable expressions.
+
+```eventscript
+select woundedUnits(units) means units[:filter unit where unit is wounded]
+select unitsById(units) means units[:dictionary unit by unit.id]
+```
+
+Use them with normal call syntax:
+
+```eventscript
+let choices be woundedUnits(units)
+let byId be unitsById(units)
+```
+
+## Records
+
+Records define closed custom types.
+
+```eventscript
+record :meter as {
+    current: :decimal,
+    maximum: :decimal
+}
+```
+
+Records may use:
+
+- typed fields
+- field clamping
+- computed fields
+
+Example:
+
+```eventscript
+record :meter as {
+    current: :decimal clamped between 0 and maximum,
+    maximum: :decimal clamped between 0 and :infinity,
+    percentage: :percentage computed by
+        0% when maximum <= 0,
+        otherwise (current / maximum) as :percentage
+}
+```
+
+Usage:
+
+```eventscript
+let hp as :meter be [current: 25, maximum: 100]
+let ratio be hp.percentage
+```
+
+Custom records expose dictionary-like lookup behavior for their defined fields.
+
+## Prefix Value Operators
+
+Current prefix tag operators:
+
+- `:len`
+- `:chance`
+- `:keys`
+- `:values`
+- `:entries`
+- `:abs`
+- `:floor`
+- `:ceil`
+- `:round`
+- `:rounddown`
+- `:roundup`
+- `:roundeven`
+
+Examples:
+
+```eventscript
+let count be :len items
+let hit be :chance 25%
+let keys be :keys entry
+let values be :values items
+let entries be :entries entry
+let distance be :abs (0 - 5)
+let roundedDown be :floor 12.9
+```
+
+Note: because unary minus is not a standalone literal form, negative values are typically written as expressions like `(0 - 5)`.
+
+## Keys, Values, and Entries
+
+### `:keys`
+
+```eventscript
+for key in :keys entry {
+    publish Seen(key)
+}
+```
+
+### `:values`
+
+```eventscript
+for value in :values items {
+    publish Seen(value)
+}
+```
+
+### `:entries`
+
+```eventscript
+for item in :entries entry {
+    publish Pair(item.key, item.value)
+}
+```
+
+Entry values behave like dictionary-like objects with `key` and `value`.
+
+## Randomness
+
+### Integer range
+
+```eventscript
+:random 1 to 6
+```
+
+### Dice
+
+```eventscript
+:dice 4d6
+```
+
+### Chance
+
+```eventscript
+:chance 25%
+```
+
+### Random choice
+
+```eventscript
+units[:choose 1 at random]
+units[:choose 1 at random unit where unit.alive]
+units[:choose 1 weighted by unit -> unit.weight]
+```
+
+## Combining Collections
+
+### Lists
+
+```eventscript
+[1, 2, 3] + 4
+[1, 2, 3] + [4, 5]
+```
+
+### Dictionaries
+
+```eventscript
+[name: 'Mark', age: 32] + [city: 'Somewhere']
+[name: 'Mark', age: 32] :merge [age: 33]
+```
+
+For dictionaries, overlapping keys are overwritten by the right-hand side.
+
+### Sets
+
+```eventscript
+:set[1, 2] :merge :set[2, 3]
+:set[1, 2, 3] :intersect :set[2, 4]
+:set[1, 2, 3] :except :set[2]
+```
+
+## Flow Control
+
+### `if`
+
+```eventscript
+if unit is wounded {
+    publish HealRequested(unit)
+} else {
+    publish Continue
+}
+```
+
+### `for`
+
+```eventscript
+for unit in units {
+    if unit.alive {
+        publish UnitReady(unit.id)
+    }
+}
+```
+
+The source can be any expression that can be iterated.
+
+## Truthiness
+
+Many conditions are evaluated through boolean conversion.
+
+Examples:
+
+- `true` is true
+- `false` is false
+- `nothing` is false
+- empty values often become false in meaningful contexts
+
+For explicit intent, prefer readable forms such as:
+
+- `has value x`
+- `empty x`
+- `x is 0 or less`
+
+## External Bindings
+
+The runtime can attach external bindings to messages through the host API.
+
+Important behavior:
+
+- external bindings are subscribers, like script handlers
+- they run after all script handlers of the same message
+- exceptions from external bindings are swallowed
+- multiple bindings per message are allowed
+
+This makes external integration compatible with the same pub/sub message model.
+
+## Event Queue Limits
+
+The runtime prevents infinite event loops with a per-run processed event limit.
+
+The relevant host-side setting is:
+
+- `MaxProcessedEventsPerRun`
+
+If the limit is reached, processing stops silently.
+
+No script exception is thrown.
+
+## Common Lenient Behaviors
+
+The following are intentionally allowed:
+
+- unknown published messages
+- events without listeners
+- missing dictionary keys
+- out-of-range list access
+- rules that evaluate through missing data and yield `nothing`
+- external binding exceptions
+
+Examples:
+
+```eventscript
+let missingName be unit['name']
+let missingItem be values[99]
+publish UnknownMessage(1, 2, 3)
+```
+
+## Compilation Errors
+
+Some things fail at compile time instead of returning `nothing`.
+
+Examples:
+
+- duplicate rule names
+- duplicate select names
+- a name defined as both rule and select
+- unknown called rule/select
+- wrong rule/select arity
+- using `x is ruleName` with a non-rule or with a rule that does not have exactly one parameter
+
+## Current Limitations
+
+At the current language stage:
+
+- there is no comment syntax
+- there are no user-defined mutable variables
+- there are no traditional functions beyond `rule` and `select`
+- there is no direct mutation of collections or dictionaries
+- unary negative number literals are not a dedicated syntax form
+
+## Practical Examples
+
+### Example: Damage and defeat
+
+```eventscript
+rule defeated(unit) means unit.hp is 0 or less
+
+on DamageTaken(unit, amount) {
+    let hp be unit.hp - amount
+
+    if hp is 0 or less {
+        publish UnitDefeated(unit.id)
+    } else {
+        publish UnitHpChanged(unit.id, hp)
+    }
+}
+```
+
+### Example: Filtering candidates
+
+```eventscript
+rule targetable(unit) means unit.alive and not unit.hidden
+select targetableUnits(units) means units[:filter unit where unit is targetable]
+
+on ChooseTarget(units) {
+    let candidates be targetableUnits(units)
+    let target be candidates[:choose 1 at random]
+    publish TargetChosen(target.id)
+}
+```
+
+### Example: Building a lookup dictionary
+
+```eventscript
+select unitsById(units) means units[:dictionary unit by unit.id]
+
+on Start(units) {
+    let byId be unitsById(units)
+    let hero be byId[:hero]
+    publish Ready(hero.name :default 'Unknown')
+}
+```
+
+### Example: Dice logic
+
+```eventscript
+on RollAttack {
+    let roll be :dice 4d6
+    let crit be roll[:has pair of 6]
+    let total be roll[:sum die -> die]
+
+    if crit {
+        publish CriticalHit(total)
+    } else {
+        publish NormalHit(total)
+    }
+}
+```
+
+### Example: Custom record type
+
+```eventscript
+record :meter as {
+    current: :decimal clamped between 0 and maximum,
+    maximum: :decimal clamped between 0 and :infinity,
+    percentage: :percentage computed by
+        0% when maximum <= 0,
+        otherwise (current / maximum) as :percentage
+}
+
+on Start {
+    let mana as :meter be [current: 30, maximum: 50]
+    if mana.percentage >= 50% {
+        publish ReadyToCast
+    }
+}
+```
+
+## Summary
+
+EventScript is a readable, immutable, lenient, event-driven scripting language with:
+
+- FIFO pub/sub execution
+- dictionary-first data modeling
+- strong collection tooling
+- reusable predicates with `rule`
+- reusable expressions with `select`
+- custom structured types with `record`
+- graceful `nothing`-based failure semantics
+
+For the exact grammar, see [EventScript.bnf](./EventScript.bnf).

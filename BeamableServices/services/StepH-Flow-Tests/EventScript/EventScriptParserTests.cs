@@ -52,6 +52,46 @@ public class EventScriptParsingScenarios
     }
 
     [TestMethod]
+    public void DomainStyleBooleanChecksCanBeParsed()
+    {
+        const string script =
+            """
+            on Start(hp, mana, hand, target) {
+                if hp is 0 or less {
+                    publish Dead;
+                };
+
+                if mana is at least 3 {
+                    publish Cast;
+                };
+
+                if hand is empty {
+                    publish Draw;
+                };
+
+                if target has value {
+                    publish Hit;
+                };
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<IfStatementNode>().ToArray();
+
+        var hpCheck = (BinaryExpressionNode)statements[0].Condition;
+        Assert.AreEqual("<=", hpCheck.Operator);
+
+        var manaCheck = (BinaryExpressionNode)statements[1].Condition;
+        Assert.AreEqual(">=", manaCheck.Operator);
+
+        var handCheck = (UnaryExpressionNode)statements[2].Condition;
+        Assert.AreEqual("empty", handCheck.Operator);
+
+        var targetCheck = (UnaryExpressionNode)statements[3].Condition;
+        Assert.AreEqual("has value", targetCheck.Operator);
+    }
+
+    [TestMethod]
     public void ChanceAndWeightedChooseCanBeParsed()
     {
         const string script =
@@ -520,6 +560,60 @@ public class EventScriptParsingScenarios
         var select = (SelectSelectorNode)outerAccess.Selector;
         var nestedAccess = (CollectionAccessExpressionNode)select.Projection;
         Assert.IsInstanceOfType<PredicateSelectorNode>(nestedAccess.Selector);
+    }
+
+    [TestMethod]
+    public void DictionarySelectorsCanBuildLookupObjects()
+    {
+        const string script =
+            """
+            on Build(items) {
+                let byId be items[:dictionary item by item.id];
+                let namesById be items[:dictionary item by item.id -> item.name];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+
+        var byId = (DictionarySelectorNode)((CollectionAccessExpressionNode)statements[0].Expression).Selector;
+        Assert.AreEqual("item", byId.Identifier);
+        Assert.IsNull(byId.ValueProjection);
+
+        var namesById = (DictionarySelectorNode)((CollectionAccessExpressionNode)statements[1].Expression).Selector;
+        Assert.AreEqual("item", namesById.Identifier);
+        Assert.IsNotNull(namesById.ValueProjection);
+    }
+
+    [TestMethod]
+    public void GeneratedCollectionsCanBeBuiltFromRangesWithOptionalWhere()
+    {
+        const string script =
+            """
+            on Build {
+                let squares be :list[:select item from 1 to 5 -> item * item];
+                let evenSquares be :list[:select item from 1 to 10 step 2 where item > 3 -> item * item];
+                let tags be :set[:select item from 1 to 4 where item >= 2 -> item % 2];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+
+        var squares = (GeneratedCollectionExpressionNode)statements[0].Expression;
+        Assert.AreEqual("list", squares.CollectionType);
+        Assert.AreEqual("item", squares.Identifier);
+        Assert.IsNull(squares.StepExpression);
+        Assert.IsNull(squares.Predicate);
+
+        var evenSquares = (GeneratedCollectionExpressionNode)statements[1].Expression;
+        Assert.AreEqual("list", evenSquares.CollectionType);
+        Assert.IsNotNull(evenSquares.StepExpression);
+        Assert.IsNotNull(evenSquares.Predicate);
+
+        var tags = (GeneratedCollectionExpressionNode)statements[2].Expression;
+        Assert.AreEqual("set", tags.CollectionType);
+        Assert.IsNotNull(tags.Predicate);
     }
 
     [TestMethod]

@@ -45,10 +45,20 @@ AndExpression ::= EqualityExpression { ( "&&" | "and" ) EqualityExpression }
 EqualityExpression ::= MembershipExpression { ( "=" | "<>" ) MembershipExpression }
 MembershipExpression ::= TypeCheckExpression { MembershipOperator TypeCheckExpression }
 MembershipOperator ::= "in"
+                     | "has" "value"
                      | "value" "in"
                      | "starts" "with"
                      | "ends" "with"
-TypeCheckExpression ::= RelationalExpression { ( "is" | "as" ) TypeTag }
+TypeCheckExpression ::= RelationalExpression { IsOperation | AsOperation }
+IsOperation ::= "is" TypeTag
+              | "is" "empty"
+              | "is" "at" "least" AdditiveExpression
+              | "is" "at" "most" AdditiveExpression
+              | "is" AdditiveExpression "or" "less"
+              | "is" AdditiveExpression "or" "more"
+              | "is" AdditiveExpression "or" "greater"
+              | "is" AdditiveExpression
+AsOperation ::= "as" TypeTag
 RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
 AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" ) MultiplicativeExpression }
 MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "%" ) UnaryExpression }
@@ -78,6 +88,8 @@ PostfixSuffix ::= "." Identifier
 PrimaryExpression ::= Literal | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | "(" Expression ")"
                     | BracketLiteral
                     | SetLiteral
+                    | GeneratedListExpression
+                    | GeneratedSetExpression
                     | RandomExpression
                     | DiceExpression
 
@@ -134,6 +146,7 @@ StructuredCollectionSelector ::= QuantifiedCollectionSelector
                                | GroupByCollectionSelector
                                | ContainsCollectionSelector
                                | SelectCollectionSelector
+                               | DictionaryCollectionSelector
                                | SortCollectionSelector
                                | OrderByCollectionSelector
 QuantifiedCollectionSelector ::= QuantifiedCollectionSelectorKeyword Identifier "where" Expression
@@ -160,8 +173,12 @@ ContainsCollectionSelector ::= ":contains" Expression
                              | ":contains" "all" Expression
                              | ":contains" "any" Expression
 SelectCollectionSelector ::= ":select" Identifier "->" Expression
+DictionaryCollectionSelector ::= ":dictionary" Identifier "by" Expression [ "->" Expression ]
 SortCollectionSelector ::= ":sort" SortDirection
 OrderByCollectionSelector ::= ":order" "by" Identifier "->" Expression SortDirection
+GeneratedListExpression ::= ":list" "[" GeneratedCollectionSelector "]"
+GeneratedSetExpression ::= ":set" "[" GeneratedCollectionSelector "]"
+GeneratedCollectionSelector ::= ":select" Identifier "from" Expression "to" Expression [ "step" Expression ] [ "where" Expression ] "->" Expression
 SortDirection ::= "ascending" | "descending"
 SliceSelector ::= SliceScope Number
 SliceScope ::= "first" | "last" | "highest" | "lowest"

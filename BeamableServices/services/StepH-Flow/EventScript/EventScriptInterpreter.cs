@@ -233,6 +233,9 @@ public sealed class EventScriptInterpreter
             case DiceExpressionNode diceExpression:
                 return EvaluateDiceExpression(diceExpression);
 
+            case GeneratedCollectionExpressionNode generatedCollection:
+                return EvaluateGeneratedCollectionExpression(context, generatedCollection);
+
             case GuardedChoiceExpressionNode guardedChoice:
                 foreach (var branch in guardedChoice.Branches)
                 {
@@ -311,6 +314,87 @@ public sealed class EventScriptInterpreter
         }
 
         return EventScriptValue.Dictionary(map);
+    }
+
+    private EventScriptValue EvaluateGeneratedCollectionExpression(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection)
+    {
+        var fromValue = EvaluateExpression(context, generatedCollection.FromExpression);
+        var toValue = EvaluateExpression(context, generatedCollection.ToExpression);
+        var stepValue = generatedCollection.StepExpression is null
+            ? EventScriptValue.Integer(1)
+            : EvaluateExpression(context, generatedCollection.StepExpression);
+
+        if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
+            !TryCoerceNumericForOperation(toValue, out var toNumber) ||
+            !TryCoerceNumericForOperation(stepValue, out var stepNumber) ||
+            !fromNumber.IsFinite ||
+            !toNumber.IsFinite ||
+            !stepNumber.IsFinite)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var from = ToIntegerSaturated(fromNumber.Value);
+        var to = ToIntegerSaturated(toNumber.Value);
+        var step = ToIntegerSaturated(stepNumber.Value);
+
+        if (step == 0)
+        {
+            return generatedCollection.CollectionType == "set"
+                ? EventScriptValue.Set(Array.Empty<EventScriptValue>())
+                : EventScriptValue.List(Array.Empty<EventScriptValue>());
+        }
+
+        var values = new List<EventScriptValue>();
+        if (step > 0)
+        {
+            for (var current = from; current <= to; current += step)
+            {
+                if (!TryProjectGeneratedItem(context, generatedCollection, EventScriptValue.Integer(current), values))
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            for (var current = from; current >= to; current += step)
+            {
+                if (!TryProjectGeneratedItem(context, generatedCollection, EventScriptValue.Integer(current), values))
+                {
+                    break;
+                }
+            }
+        }
+
+        return generatedCollection.CollectionType == "set"
+            ? EventScriptValue.Set(values)
+            : EventScriptValue.List(values);
+    }
+
+    private bool TryProjectGeneratedItem(
+        ExecutionContext context,
+        GeneratedCollectionExpressionNode generatedCollection,
+        EventScriptValue item,
+        List<EventScriptValue> values)
+    {
+        context.PushScope();
+        try
+        {
+            context.Define(generatedCollection.Identifier, item);
+            if (generatedCollection.Predicate is not null &&
+                !AsBool(EvaluateExpression(context, generatedCollection.Predicate)))
+            {
+                return true;
+            }
+
+            values.Add(EvaluateExpression(context, generatedCollection.Projection));
+            return true;
+        }
+        finally
+        {
+            context.PopScope();
+        }
     }
 
     private EventScriptValue EvaluateUnaryExpression(ExecutionContext context, UnaryExpressionNode unary)
@@ -1077,6 +1161,9 @@ public sealed class EventScriptInterpreter
 
             case SelectSelectorNode selectSelector:
                 return EvaluateSelectSelector(context, items, selectSelector);
+
+            case DictionarySelectorNode dictionarySelector:
+                return EvaluateDictionarySelector(context, items, dictionarySelector);
 
             case ContainsSelectorNode containsSelector:
                 return EvaluateContainsSelector(context, target, items, containsSelector);
@@ -1867,6 +1954,38 @@ public sealed class EventScriptInterpreter
         }
 
         return EventScriptValue.List(result);
+    }
+
+    private EventScriptValue EvaluateDictionarySelector(
+        ExecutionContext context,
+        IReadOnlyList<EventScriptValue> items,
+        DictionarySelectorNode selector)
+    {
+        var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        foreach (var item in items)
+        {
+            context.PushScope();
+            try
+            {
+                context.Define(selector.Identifier, item);
+                var key = EvaluateExpression(context, selector.KeyProjection).AsText();
+                if (string.IsNullOrEmpty(key))
+                {
+                    continue;
+                }
+
+                var value = selector.ValueProjection is null
+                    ? item
+                    : EvaluateExpression(context, selector.ValueProjection);
+                result[key] = value;
+            }
+            finally
+            {
+                context.PopScope();
+            }
+        }
+
+        return EventScriptValue.Dictionary(result);
     }
 
     private EventScriptValue EvaluateContainsSelector(

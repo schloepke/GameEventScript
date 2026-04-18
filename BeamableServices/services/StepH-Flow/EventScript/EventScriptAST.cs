@@ -32,6 +32,14 @@ public sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList
 public sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
 public sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
 public sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
+public sealed record GeneratedCollectionExpressionNode(
+    string CollectionType,
+    string Identifier,
+    ExpressionNode FromExpression,
+    ExpressionNode ToExpression,
+    ExpressionNode? StepExpression,
+    ExpressionNode? Predicate,
+    ExpressionNode Projection) : ExpressionNode;
 public sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 public sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : EventScriptNode;
 public sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
@@ -71,6 +79,7 @@ public sealed record FilterSelectorNode(string Identifier, ExpressionNode Predic
 public sealed record SumSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 public sealed record AverageSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 public sealed record SelectSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
+public sealed record DictionarySelectorNode(string Identifier, ExpressionNode KeyProjection, ExpressionNode? ValueProjection) : CollectionSelectorNode;
 public sealed record MinSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 public sealed record MaxSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 public sealed record ContainsSelectorNode(string Mode, ExpressionNode ValueExpression) : CollectionSelectorNode;

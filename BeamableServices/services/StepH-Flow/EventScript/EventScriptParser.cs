@@ -396,6 +396,14 @@ public sealed class EventScriptParser
 
         while (true)
         {
+            if (Match(Has))
+            {
+                SkipNewLines();
+                ExpectValueWord();
+                expression = new UnaryExpressionNode("has value", expression);
+                continue;
+            }
+
             if (Match(In))
             {
                 var op = Previous.Text;
@@ -527,8 +535,64 @@ public sealed class EventScriptParser
             if (Match(EventScriptTokenKind.Is))
             {
                 SkipNewLines();
-                var typeName = ParseTypeName();
-                expression = new TypeCheckExpressionNode(expression, typeName);
+                if (Is(Tag))
+                {
+                    var typeName = ParseTypeName();
+                    expression = new TypeCheckExpressionNode(expression, typeName);
+                    continue;
+                }
+
+                if (Match(Empty))
+                {
+                    expression = new UnaryExpressionNode("empty", expression);
+                    continue;
+                }
+
+                if (MatchWord("at"))
+                {
+                    SkipNewLines();
+                    if (MatchWord("least"))
+                    {
+                        SkipNewLines();
+                        var right = ParseRelationalComparisonOperand();
+                        expression = new BinaryExpressionNode(expression, ">=", right);
+                        continue;
+                    }
+
+                    if (MatchWord("most"))
+                    {
+                        SkipNewLines();
+                        var right = ParseRelationalComparisonOperand();
+                        expression = new BinaryExpressionNode(expression, "<=", right);
+                        continue;
+                    }
+
+                    var token = Current;
+                    throw new EventScriptParseException($"Expected least or most but found {token.Text}", token.Line, token.Column);
+                }
+
+                var threshold = ParseRelationalComparisonOperand();
+                SkipNewLines();
+                if (Match(Or))
+                {
+                    SkipNewLines();
+                    if (MatchWord("less"))
+                    {
+                        expression = new BinaryExpressionNode(expression, "<=", threshold);
+                        continue;
+                    }
+
+                    if (MatchWord("more") || MatchWord("greater"))
+                    {
+                        expression = new BinaryExpressionNode(expression, ">=", threshold);
+                        continue;
+                    }
+
+                    var token = Current;
+                    throw new EventScriptParseException($"Expected less, more or greater but found {token.Text}", token.Line, token.Column);
+                }
+
+                expression = new BinaryExpressionNode(expression, "=", threshold);
                 continue;
             }
 
@@ -545,6 +609,9 @@ public sealed class EventScriptParser
 
         return expression;
     }
+
+    private ExpressionNode ParseRelationalComparisonOperand()
+        => ParseAdditiveExpression();
 
     private ExpressionNode ParseRelationalExpression()
     {
@@ -840,6 +907,25 @@ public sealed class EventScriptParser
             return new SelectSelectorNode(identifier, projection);
         }
 
+        if (MatchTag(":dictionary"))
+        {
+            SkipNewLines();
+            var identifier = ExpectIdentifierLike();
+            SkipNewLines();
+            ExpectWord("by");
+            SkipNewLines();
+            var keyProjection = ParseExpression();
+            SkipNewLines();
+            ExpressionNode? valueProjection = null;
+            if (Match(Arrow))
+            {
+                SkipNewLines();
+                valueProjection = ParseExpression();
+            }
+
+            return new DictionarySelectorNode(identifier, keyProjection, valueProjection);
+        }
+
         if (Match(SelectorContains))
         {
             return ParseContainsSelector();
@@ -1019,9 +1105,14 @@ public sealed class EventScriptParser
             return ParseDiceExpression();
         }
 
+        if (MatchTag(":list"))
+        {
+            return ParseCollectionFactoryExpression("list");
+        }
+
         if (MatchTag(":set"))
         {
-            return ParseSetLiteralExpression();
+            return ParseCollectionFactoryExpression("set");
         }
 
         if (Match(Number))
@@ -1137,6 +1228,77 @@ public sealed class EventScriptParser
         SkipNewLines();
         Expect(RightBracket);
         return new SetLiteralExpressionNode(items);
+    }
+
+    private ExpressionNode ParseCollectionFactoryExpression(string collectionType)
+    {
+        Expect(LeftBracket);
+        SkipNewLines();
+
+        if (Match(SelectorSelect))
+        {
+            var expression = ParseGeneratedCollectionExpression(collectionType);
+            SkipNewLines();
+            Expect(RightBracket);
+            return expression;
+        }
+
+        if (collectionType == "set")
+        {
+            var items = new List<ExpressionNode>();
+            if (!Is(RightBracket))
+            {
+                items.Add(ParseExpression());
+                while (Match(Comma))
+                {
+                    SkipNewLines();
+                    items.Add(ParseExpression());
+                }
+            }
+
+            SkipNewLines();
+            Expect(RightBracket);
+            return new SetLiteralExpressionNode(items);
+        }
+
+        var token = Current;
+        throw new EventScriptParseException($"Expected :select but found {token.Text}", token.Line, token.Column);
+    }
+
+    private GeneratedCollectionExpressionNode ParseGeneratedCollectionExpression(string collectionType)
+    {
+        SkipNewLines();
+        var identifier = ExpectIdentifierLike();
+        SkipNewLines();
+        ExpectWord("from");
+        SkipNewLines();
+        var fromExpression = ParseExpression();
+        SkipNewLines();
+        Expect(To);
+        SkipNewLines();
+        var toExpression = ParseExpression();
+
+        ExpressionNode? stepExpression = null;
+        SkipNewLines();
+        if (MatchWord("step"))
+        {
+            SkipNewLines();
+            stepExpression = ParseExpression();
+        }
+
+        ExpressionNode? predicate = null;
+        SkipNewLines();
+        if (MatchWord("where"))
+        {
+            SkipNewLines();
+            predicate = ParseExpression();
+        }
+
+        SkipNewLines();
+        Expect(Arrow);
+        SkipNewLines();
+        var projection = ParseExpression();
+        return new GeneratedCollectionExpressionNode(collectionType, identifier, fromExpression, toExpression, stepExpression, predicate, projection);
     }
 
     private DictionaryLiteralExpressionNode ParseDictionaryLiteralExpression()

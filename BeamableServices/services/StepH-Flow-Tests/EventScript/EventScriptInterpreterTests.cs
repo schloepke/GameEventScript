@@ -159,6 +159,38 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void DictionarySelectorsCanBuildLookupObjectsWithLastWinsSemantics()
+    {
+        const string script = """
+            on Start(items) {
+                let byId be items[:dictionary item by item.id];
+                let namesById be items[:dictionary item by item.id -> item.name];
+                publish Done(
+                    byId[:orc].hp,
+                    byId[:mage].hp,
+                    namesById[:orc],
+                    namesById[:mage],
+                    :len byId);
+            }
+            """;
+
+        var items = EventScriptValue.List([
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["id"] = EventScriptValue.Tag("orc"), ["name"] = "Orc Grunt", ["hp"] = 4m }),
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["id"] = EventScriptValue.Tag("mage"), ["name"] = "Mage", ["hp"] = 7m }),
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["id"] = EventScriptValue.Tag("orc"), ["name"] = "Orc Chief", ["hp"] = 9m })
+        ]);
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var args = interpreter.Emit("Start", items).EmittedEvents[0].Arguments;
+
+        Assert.AreEqual(9m, args[0].AsNumber());
+        Assert.AreEqual(7m, args[1].AsNumber());
+        Assert.AreEqual("Orc Chief", args[2].AsText());
+        Assert.AreEqual("Mage", args[3].AsText());
+        Assert.AreEqual(2L, args[4].AsInteger());
+    }
+
+    [TestMethod]
     public void CollectionsCanBeProjectedFilteredAndSummed()
     {
         const string script = """
@@ -603,6 +635,45 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void GeneratedCollectionsCanProjectRangesIntoListsAndSets()
+    {
+        const string script = """
+            on Start {
+                let squares be :list[:select item from 1 to 5 -> item * item];
+                let descending be :list[:select item from 5 to 1 step (0 - 2) -> item];
+                let filtered be :list[:select item from 1 to 6 where item % 2 = 0 -> item * item];
+                let tags be :set[:select item from 1 to 4 where item >= 2 -> item % 2];
+                let emptyByDirection be :list[:select item from 1 to 5 step (0 - 1) -> item];
+                publish Done(
+                    squares[1], squares[2], squares[3], squares[4], squares[5],
+                    descending[1], descending[2], descending[3],
+                    filtered[1], filtered[2], filtered[3],
+                    :len tags, 0 in tags, 1 in tags,
+                    :len emptyByDirection);
+            }
+            """;
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+
+        Assert.AreEqual(1m, args[0].AsNumber());
+        Assert.AreEqual(4m, args[1].AsNumber());
+        Assert.AreEqual(9m, args[2].AsNumber());
+        Assert.AreEqual(16m, args[3].AsNumber());
+        Assert.AreEqual(25m, args[4].AsNumber());
+        Assert.AreEqual(5L, args[5].AsInteger());
+        Assert.AreEqual(3L, args[6].AsInteger());
+        Assert.AreEqual(1L, args[7].AsInteger());
+        Assert.AreEqual(4m, args[8].AsNumber());
+        Assert.AreEqual(16m, args[9].AsNumber());
+        Assert.AreEqual(36m, args[10].AsNumber());
+        Assert.AreEqual(2, Convert.ToInt32(args[11].AsInteger()));
+        Assert.IsTrue(args[12].AsBoolean());
+        Assert.IsTrue(args[13].AsBoolean());
+        Assert.AreEqual(0, Convert.ToInt32(args[14].AsInteger()));
+    }
+
+    [TestMethod]
     public void EscapedQuotesStayInsideTextValues()
     {
         const string script = """
@@ -824,6 +895,60 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual("fallback", args[19].AsText());
         Assert.AreEqual("default", args[20].AsText());
         Assert.AreEqual("fallback", args[21].AsText());
+    }
+
+    [TestMethod]
+    public void DomainStyleBooleanChecksBehaveLikeTheirTechnicalForms()
+    {
+        const string script = """
+            on Start(hp, mana, hand, target) {
+                let hpCheck be hp is 0 or less;
+                let manaCheck be mana is at least 3;
+                let handCheck be hand is empty;
+                let targetCheck be target has value;
+                publish Done(hpCheck, manaCheck, handCheck, targetCheck);
+            }
+            """;
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var result = interpreter.Emit(
+            "Start",
+            EventScriptValue.Number(-1m),
+            EventScriptValue.Integer(3),
+            EventScriptValue.List([]),
+            EventScriptValue.Text("orc"));
+        var args = result.EmittedEvents[0].Arguments;
+
+        Assert.IsTrue(args[0].AsBoolean());
+        Assert.IsTrue(args[1].AsBoolean());
+        Assert.IsTrue(args[2].AsBoolean());
+        Assert.IsTrue(args[3].AsBoolean());
+    }
+
+    [TestMethod]
+    public void ExistingValueAndEmptyChecksRemainTheSingleRuntimeSemantics()
+    {
+        const string script = """
+            on Start(hand, target) {
+                let oldHasValue be has value target;
+                let newHasValue be target has value;
+                let oldEmpty be empty hand;
+                let newEmpty be hand is empty;
+                publish Done(oldHasValue, newHasValue, oldEmpty, newEmpty);
+            }
+            """;
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var result = interpreter.Emit(
+            "Start",
+            EventScriptValue.List([]),
+            EventScriptValue.Text("orc"));
+        var args = result.EmittedEvents[0].Arguments;
+
+        Assert.AreEqual(args[0], args[1]);
+        Assert.AreEqual(args[2], args[3]);
+        Assert.IsTrue(args[0].AsBoolean());
+        Assert.IsTrue(args[2].AsBoolean());
     }
 
     [TestMethod]

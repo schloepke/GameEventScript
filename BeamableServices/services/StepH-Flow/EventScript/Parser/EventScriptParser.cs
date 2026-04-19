@@ -957,7 +957,7 @@ public sealed class EventScriptParser
         if (Match(SelectorDraw))
         {
             SkipNewLines();
-            var countToken = Expect(Number);
+            var countToken = Expect(EventScriptTokenKind.Decimal);
             return new DrawSelectorNode(ParsePositiveInteger(countToken, "draw count"));
         }
 
@@ -1246,14 +1246,14 @@ public sealed class EventScriptParser
             return ParseCollectionFactoryExpression("set");
         }
 
-        if (Match(Number))
+        if (Match(EventScriptTokenKind.Decimal))
         {
-            return new NumberLiteralExpressionNode(Previous.NumberValue);
+            return new DecimalLiteralExpressionNode(Previous.DecimalValue);
         }
 
         if (Match(Percentage))
         {
-            return new PercentageLiteralExpressionNode(Previous.NumberValue);
+            return new PercentageLiteralExpressionNode(Previous.DecimalValue);
         }
 
         if (Match(Text))
@@ -1520,7 +1520,7 @@ public sealed class EventScriptParser
 
     private DiceExpressionNode ParseDiceExpression()
     {
-        var diceCountToken = Expect(Number);
+        var diceCountToken = Expect(EventScriptTokenKind.Decimal);
         var sideCountToken = ParseDiceSideCountToken();
 
         var diceCount = ParsePositiveInteger(diceCountToken, "dice count");
@@ -1535,7 +1535,7 @@ public sealed class EventScriptParser
         if (TryParseSliceScope(out var scope))
         {
             SkipNewLines();
-            var countToken = Expect(Number);
+            var countToken = Expect(EventScriptTokenKind.Decimal);
             return new SequenceSliceSelectorNode("take", scope, ParsePositiveInteger(countToken, "take count"));
         }
 
@@ -1552,7 +1552,7 @@ public sealed class EventScriptParser
         }
 
         SkipNewLines();
-        var countToken = Expect(Number);
+        var countToken = Expect(EventScriptTokenKind.Decimal);
         return new SequenceSliceSelectorNode("drop", scope, ParsePositiveInteger(countToken, "drop count"));
     }
 
@@ -1589,7 +1589,7 @@ public sealed class EventScriptParser
     private CollectionSelectorNode ParseChooseSelector()
     {
         SkipNewLines();
-        var countToken = Expect(Number);
+        var countToken = Expect(EventScriptTokenKind.Decimal);
         var count = ParsePositiveInteger(countToken, "choose count");
         SkipNewLines();
 
@@ -1676,7 +1676,7 @@ public sealed class EventScriptParser
     {
         if (Match(DiceSeparator))
         {
-            return Expect(Number);
+            return Expect(EventScriptTokenKind.Decimal);
         }
 
         if (Is(Identifier))
@@ -1685,14 +1685,14 @@ public sealed class EventScriptParser
             if (string.Equals(token.Text, "d", StringComparison.Ordinal))
             {
                 Advance();
-                return Expect(Number);
+                return Expect(EventScriptTokenKind.Decimal);
             }
 
             if (IsCompactDiceToken(token.Text))
             {
                 Advance();
                 return new EventScriptToken(
-                    Number,
+                    EventScriptTokenKind.Decimal,
                     token.Text[1..],
                     token.Line,
                     token.Column + 1);

@@ -1,6 +1,7 @@
 using System.Linq;
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Semantics;
+using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript.Semantics;
 
@@ -16,7 +17,7 @@ public class EventScriptValueSemanticsScenarios
         var missing = EventScriptValueSemantics.Lookup(items, 4m);
 
         Assert.AreEqual(20m, second.AsNumber());
-        Assert.AreEqual(EventScriptValueKind.Nothing, missing.Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, missing.Type);
     }
 
     [TestMethod]
@@ -119,7 +120,7 @@ public class EventScriptValueSemanticsScenarios
     {
         Assert.IsFalse(EventScriptValueSemantics.HasValue(EventScriptValue.List(Array.Empty<EventScriptValue>())));
         Assert.IsTrue(EventScriptValueSemantics.IsEmpty(EventScriptValue.List(Array.Empty<EventScriptValue>())));
-        Assert.IsFalse(EventScriptValueSemantics.HasValue(EventScriptValue.NumberNaN()));
-        Assert.IsFalse(EventScriptValueSemantics.IsEmpty(EventScriptValue.NumberNaN()));
+        Assert.IsFalse(EventScriptValueSemantics.HasValue(EventScriptValue.DecimalNaN()));
+        Assert.IsFalse(EventScriptValueSemantics.IsEmpty(EventScriptValue.DecimalNaN()));
     }
 }

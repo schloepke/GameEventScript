@@ -39,7 +39,7 @@ public sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 public sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
 public sealed record CallExpressionNode(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 public sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
-public sealed record NumberLiteralExpressionNode(decimal Value) : ExpressionNode;
+public sealed record DecimalLiteralExpressionNode(decimal Value) : ExpressionNode;
 public sealed record PercentageLiteralExpressionNode(decimal PercentValue) : ExpressionNode;
 public sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 public sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;

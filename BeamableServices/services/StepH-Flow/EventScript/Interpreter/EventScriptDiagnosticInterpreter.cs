@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
 

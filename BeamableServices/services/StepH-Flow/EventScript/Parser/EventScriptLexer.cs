@@ -14,7 +14,7 @@ public enum EventScriptTokenKind
     Message,
     Identifier,
     Tag,
-    Number,
+    Decimal,
     Percentage,
     Text,
     True,
@@ -87,7 +87,7 @@ public enum EventScriptTokenKind
 
 public readonly record struct EventScriptToken(EventScriptTokenKind Kind, string Text, int Line, int Column)
 {
-    public decimal NumberValue => decimal.Parse(Text, CultureInfo.InvariantCulture);
+    public decimal DecimalValue => decimal.Parse(Text, CultureInfo.InvariantCulture);
 }
 
 public sealed record EventScriptLexingResult(
@@ -164,7 +164,7 @@ public sealed class EventScriptLexer
 
             if (char.IsDigit(ch))
             {
-                tokens.Add(ReadNumberToken(startLine, startColumn));
+                tokens.Add(ReadDecimalToken(startLine, startColumn));
                 continue;
             }
 
@@ -298,7 +298,7 @@ public sealed class EventScriptLexer
         };
     }
 
-    private EventScriptToken ReadNumberToken(int line, int column)
+    private EventScriptToken ReadDecimalToken(int line, int column)
     {
         var start = _index;
         ReadWhile(char.IsDigit);
@@ -309,7 +309,7 @@ public sealed class EventScriptLexer
         }
 
         var text = _input[start.._index];
-        if (IsAtEnd || Current != '%') return new EventScriptToken(EventScriptTokenKind.Number, text, line, column);
+        if (IsAtEnd || Current != '%') return new EventScriptToken(EventScriptTokenKind.Decimal, text, line, column);
         Advance();
         return new EventScriptToken(EventScriptTokenKind.Percentage, text, line, column);
     }

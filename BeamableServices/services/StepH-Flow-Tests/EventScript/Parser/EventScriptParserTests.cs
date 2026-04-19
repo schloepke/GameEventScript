@@ -288,8 +288,8 @@ public class EventScriptParsingScenarios
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
         var expression = (BinaryExpressionNode)letStatement.Expression;
         Assert.AreEqual("+", expression.Operator);
-        Assert.AreEqual(1m, ((NumberLiteralExpressionNode)expression.Left).Value);
-        Assert.AreEqual(2m, ((NumberLiteralExpressionNode)expression.Right).Value);
+        Assert.AreEqual(1m, ((DecimalLiteralExpressionNode)expression.Left).Value);
+        Assert.AreEqual(2m, ((DecimalLiteralExpressionNode)expression.Right).Value);
     }
 
     [TestMethod]
@@ -578,7 +578,7 @@ public class EventScriptParsingScenarios
         var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
         var list = (ListLiteralExpressionNode)statements[0].Expression;
         Assert.HasCount(3, list.Items);
-        Assert.IsInstanceOfType<NumberLiteralExpressionNode>(list.Items[0]);
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(list.Items[0]);
         var dictionary = (DictionaryLiteralExpressionNode)statements[1].Expression;
         Assert.HasCount(2, dictionary.Entries);
         Assert.AreEqual("name", dictionary.Entries[0].Key);

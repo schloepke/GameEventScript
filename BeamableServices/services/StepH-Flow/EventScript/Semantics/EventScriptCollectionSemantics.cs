@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Semantics;
 
@@ -10,12 +11,12 @@ public static class EventScriptCollectionSemantics
 {
     public static bool ContainsSingle(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
     {
-        if (target.Kind == EventScriptValueKind.Text)
+        if (target.Type == EventScriptValueType.Text)
         {
             return target.AsText().Contains(value.AsText(), StringComparison.Ordinal);
         }
 
-        if (target.Kind == EventScriptValueKind.Dictionary)
+        if (target.Type == EventScriptValueType.Dictionary)
         {
             return target.AsDictionary().ContainsKey(value.AsText());
         }
@@ -26,12 +27,12 @@ public static class EventScriptCollectionSemantics
     public static bool ContainsAll(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
     {
         var required = value.AsList();
-        if (target.Kind == EventScriptValueKind.Text)
+        if (target.Type == EventScriptValueType.Text)
         {
             return required.All(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
         }
 
-        if (target.Kind == EventScriptValueKind.Dictionary)
+        if (target.Type == EventScriptValueType.Dictionary)
         {
             return required.All(item => target.AsDictionary().ContainsKey(item.AsText()));
         }
@@ -42,12 +43,12 @@ public static class EventScriptCollectionSemantics
     public static bool ContainsAny(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
     {
         var required = value.AsList();
-        if (target.Kind == EventScriptValueKind.Text)
+        if (target.Type == EventScriptValueType.Text)
         {
             return required.Any(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
         }
 
-        if (target.Kind == EventScriptValueKind.Dictionary)
+        if (target.Type == EventScriptValueType.Dictionary)
         {
             return required.Any(item => target.AsDictionary().ContainsKey(item.AsText()));
         }
@@ -146,22 +147,22 @@ public static class EventScriptCollectionSemantics
 
     private static EventScriptValue MaterializeOrderedResult(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
     {
-        return target.Kind switch
+        return target.Type switch
         {
-            EventScriptValueKind.Dice => EventScriptValue.List(items),
-            EventScriptValueKind.List => EventScriptValue.List(items),
-            EventScriptValueKind.Set => EventScriptValue.List(items),
+            EventScriptValueType.Dice => EventScriptValue.List(items),
+            EventScriptValueType.List => EventScriptValue.List(items),
+            EventScriptValueType.Set => EventScriptValue.List(items),
             _ => EventScriptValue.Nothing
         };
     }
 
     private static EventScriptValue MaterializeDistinctResult(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
     {
-        return target.Kind switch
+        return target.Type switch
         {
-            EventScriptValueKind.Set => EventScriptValue.Set(items),
-            EventScriptValueKind.List => EventScriptValue.List(items),
-            EventScriptValueKind.Dice => EventScriptValue.List(items),
+            EventScriptValueType.Set => EventScriptValue.Set(items),
+            EventScriptValueType.List => EventScriptValue.List(items),
+            EventScriptValueType.Dice => EventScriptValue.List(items),
             _ => EventScriptValue.Nothing
         };
     }

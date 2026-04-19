@@ -1,5 +1,6 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript.Interpreter;
 
@@ -94,7 +95,7 @@ public class EventScriptRuntimeScenarios
         var result = interpreter.Emit("Start", player, values, maybeTarget);
 
         Assert.AreEqual("SeenKey", result.EmittedEvents[0].Message);
-        Assert.AreEqual(EventScriptValueKind.Tag, result.EmittedEvents[0].Arguments[0].Kind);
+        Assert.AreEqual(EventScriptValueType.Tag, result.EmittedEvents[0].Arguments[0].Type);
         Assert.AreEqual("age", result.EmittedEvents[0].Arguments[0].AsText());
         Assert.AreEqual(25m, result.EmittedEvents[0].Arguments[1].AsNumber());
 
@@ -122,9 +123,9 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual(3L, done[1].AsInteger());
         Assert.AreEqual(1L, done[2].AsInteger());
         Assert.AreEqual(2L, done[3].AsInteger());
-        Assert.AreEqual(EventScriptValueKind.Iterator, done[4].Kind);
-        Assert.AreEqual(EventScriptValueKind.Iterator, done[5].Kind);
-        Assert.AreEqual(EventScriptValueKind.Iterator, done[6].Kind);
+        Assert.AreEqual(EventScriptValueType.Iterator, done[4].Type);
+        Assert.AreEqual(EventScriptValueType.Iterator, done[5].Type);
+        Assert.AreEqual(EventScriptValueType.Iterator, done[6].Type);
     }
 
     [TestMethod]
@@ -514,7 +515,7 @@ public class EventScriptRuntimeScenarios
             "SortAll",
             EventScriptValue.List([3m, 1m, 2m]),
             EventScriptValue.Set([EventScriptValue.Text("beta"), EventScriptValue.Text("alpha"), EventScriptValue.Text("gamma")]),
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 6, 4, 2, 1 })));
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 4, 2, 1 })));
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(1m, args[0].AsNumber());
@@ -547,9 +548,9 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptInterpreter.Compile(script, new QueueRandom(1, 2, 3, 1));
         var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
 
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[0].Kind);
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[1].Kind);
-        Assert.IsTrue(args[2].Kind is EventScriptValueKind.Integer or EventScriptValueKind.Number);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[0].Type);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[1].Type);
+        Assert.IsTrue(args[2].Type is EventScriptValueType.Integer or EventScriptValueType.Decimal);
         Assert.AreEqual(2, Convert.ToInt32(args[3].AsInteger()));
     }
 
@@ -602,7 +603,7 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual(1m, args[2].AsNumber());
         Assert.AreEqual(2L, args[3].AsInteger());
         Assert.AreEqual(3, Convert.ToInt32(args[4].AsInteger()));
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[5].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[5].Type);
         Assert.IsTrue(args[6].AsBoolean());
         Assert.IsTrue(args[7].AsBoolean());
         Assert.IsTrue(args[8].AsBoolean());
@@ -799,8 +800,8 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptInterpreter.Compile(script);
         var args = interpreter.Emit("Start", incompleteUnit, units).EmittedEvents[0].Arguments;
 
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[0].Kind);
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[1].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[0].Type);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[1].Type);
         Assert.AreEqual(0, Convert.ToInt32(args[2].AsInteger()));
     }
 
@@ -850,7 +851,7 @@ public class EventScriptRuntimeScenarios
         var result = interpreter.Emit("Start");
         var args = result.EmittedEvents[0].Arguments;
 
-        Assert.AreEqual(EventScriptValueKind.Tag, args[0].Kind);
+        Assert.AreEqual(EventScriptValueType.Tag, args[0].Type);
         Assert.AreEqual("name", args[0].AsText());
         Assert.AreEqual(12.2m, args[1].AsNumber());
         Assert.IsTrue(args[2].IsNaN());
@@ -893,8 +894,8 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual(4, Convert.ToInt32(args[4].AsInteger()));
         Assert.AreEqual(0, Convert.ToInt32(args[5].AsInteger()));
         Assert.AreEqual(1, Convert.ToInt32(args[6].AsInteger()));
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[7].Kind);
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[8].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[7].Type);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[8].Type);
     }
 
     [TestMethod]
@@ -923,12 +924,12 @@ public class EventScriptRuntimeScenarios
 
         Assert.AreEqual(10m, args[0].AsNumber());
         Assert.AreEqual(30m, args[1].AsNumber());
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[2].Kind);
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[3].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[2].Type);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[3].Type);
         Assert.AreEqual("Ada", args[4].AsText());
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[5].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[5].Type);
         Assert.AreEqual("alpha", args[6].AsText());
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[7].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[7].Type);
     }
 
     [TestMethod]
@@ -953,7 +954,7 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual("Ada", args[2].AsText());
         Assert.AreEqual("Ada", args[3].AsText());
         Assert.AreEqual("Ada", args[4].AsText());
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[5].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[5].Type);
     }
 
     [TestMethod]
@@ -999,9 +1000,9 @@ public class EventScriptRuntimeScenarios
             EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>()),
             0m,
             false,
-            EventScriptValue.Dice(EventScriptDice.Create(Array.Empty<int>())),
-            EventScriptValue.NumberNaN(),
-            EventScriptValue.NumberInfinity());
+            EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>())),
+            EventScriptValue.DecimalNaN(),
+            EventScriptValue.DecimalInfinity());
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
@@ -1044,7 +1045,7 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptInterpreter.Compile(script);
         var result = interpreter.Emit(
             "Start",
-            EventScriptValue.Number(-1m),
+            EventScriptValue.Decimal(-1m),
             EventScriptValue.Integer(3),
             EventScriptValue.List([]),
             EventScriptValue.Text("orc"));
@@ -1144,12 +1145,12 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptInterpreter.Compile(script);
         var result = interpreter.Emit(
             "Start",
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 6, 6, 4, 3, 2 })),
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 6, 6, 6, 4, 3 })),
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 5, 5, 5, 2, 2 })),
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 6, 6, 5, 4, 3, 2 })),
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 4, 4, 4, 4, 4, 4 })),
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 6, 6, 6, 6, 6, 6, 6 })));
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 4, 3, 2 })),
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 6, 4, 3 })),
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 5, 5, 5, 2, 2 })),
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 5, 4, 3, 2 })),
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 4, 4, 4, 4, 4, 4 })),
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 6, 6, 6, 6, 6 })));
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
@@ -1183,7 +1184,7 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptInterpreter.Compile(script);
         var result = interpreter.Emit(
             "Start",
-            EventScriptValue.Dice(EventScriptDice.Create(new[] { 6, 6, 5, 5, 5 })),
+            EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 5, 5, 5 })),
             EventScriptValue.List([1m, 2m, 2m, 3m, 4m]),
             EventScriptValue.List([1m, 2m, 3m]));
         var args = result.EmittedEvents[0].Arguments;
@@ -1336,8 +1337,8 @@ public class EventScriptRuntimeScenarios
 
         Assert.IsTrue(args[0].IsNaN());
         Assert.IsTrue(args[1].IsNaN());
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[2].Kind);
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[3].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[2].Type);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[3].Type);
     }
 
     [TestMethod]
@@ -1366,7 +1367,7 @@ public class EventScriptRuntimeScenarios
 
         var interpreter = EventScriptInterpreter.Compile(script);
         var result = interpreter.EmitClr("Inspect", (object?)null);
-        Assert.AreEqual(EventScriptValueKind.Nothing, result.EmittedEvents[0].Arguments[0].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, result.EmittedEvents[0].Arguments[0].Type);
     }
 
     [TestMethod]
@@ -1380,7 +1381,7 @@ public class EventScriptRuntimeScenarios
 
         var interpreter = EventScriptInterpreter.Compile(script);
         var result = interpreter.Emit("Inspect", EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>()));
-        Assert.AreEqual(EventScriptValueKind.Nothing, result.EmittedEvents[0].Arguments[0].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, result.EmittedEvents[0].Arguments[0].Type);
     }
 
     [TestMethod]
@@ -1680,22 +1681,22 @@ public class EventScriptRuntimeScenarios
         var result = interpreter.Emit("Roll");
         var args = result.EmittedEvents[0].Arguments;
 
-        Assert.AreEqual(EventScriptValueKind.Dice, args[0].Kind);
+        Assert.AreEqual(EventScriptValueType.Dice, args[0].Type);
         Assert.AreEqual(4, Convert.ToInt32(args[1].AsInteger()));
         Assert.AreEqual(6, Convert.ToInt32(args[2].AsInteger()));
         Assert.AreEqual(5, Convert.ToInt32(args[3].AsInteger()));
         Assert.AreEqual(3, Convert.ToInt32(args[4].AsInteger()));
         Assert.AreEqual(2, Convert.ToInt32(args[5].AsInteger()));
 
-        Assert.AreEqual(EventScriptValueKind.Dice, args[6].Kind);
+        Assert.AreEqual(EventScriptValueType.Dice, args[6].Type);
         Assert.AreEqual(10m, args[6].AsNumber());
         CollectionAssert.AreEqual(new long[] { 6, 4 }, args[6].AsList().Select(x => x.AsInteger()).ToArray());
 
-        Assert.AreEqual(EventScriptValueKind.Dice, args[7].Kind);
+        Assert.AreEqual(EventScriptValueType.Dice, args[7].Type);
         Assert.AreEqual(11m, args[7].AsNumber());
         CollectionAssert.AreEqual(new long[] { 6, 3, 2 }, args[7].AsList().Select(x => x.AsInteger()).ToArray());
 
-        Assert.AreEqual(EventScriptValueKind.List, args[8].Kind);
+        Assert.AreEqual(EventScriptValueType.List, args[8].Type);
         CollectionAssert.AreEqual(new long[] { 2, 3, 5, 6 }, args[8].AsList().Select(x => x.AsInteger()).ToArray());
     }
 
@@ -1830,7 +1831,7 @@ public class EventScriptRuntimeScenarios
 
         Assert.IsTrue(args[0].IsNaN());
         Assert.IsTrue(args[1].IsNaN());
-        Assert.AreEqual(EventScriptValueKind.Nothing, args[2].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, args[2].Type);
     }
 
     private sealed class QueueRandom(params int[] values) : IEventScriptRandom

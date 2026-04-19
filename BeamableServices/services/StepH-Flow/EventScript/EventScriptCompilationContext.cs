@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript;
 

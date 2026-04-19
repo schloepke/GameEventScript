@@ -1,5 +1,6 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript.Interpreter;
 
@@ -47,7 +48,7 @@ public class EventScriptDiagnosticInterpreterScenarios
 
         var interpreter = EventScriptDiagnosticInterpreter.Compile(script);
 
-        var result = interpreter.Invoke("Start", EventScriptValue.Number(5));
+        var result = interpreter.Invoke("Start", EventScriptValue.Decimal(5m));
 
         Assert.AreEqual(7m, result.Variables["score"].AsNumber());
         Assert.AreEqual(7m, result.EmittedEvents[0].Arguments[0].AsNumber());
@@ -69,7 +70,7 @@ public class EventScriptDiagnosticInterpreterScenarios
 
         var interpreter = EventScriptDiagnosticInterpreter.Compile(script);
 
-        var result = interpreter.Invoke("Start", EventScriptValue.Number(2));
+        var result = interpreter.Invoke("Start", EventScriptValue.Decimal(2m));
 
         var matchedSteps = result.Steps.Where(step => step.Kind == EventScriptDiagnosticStepKind.HandlerMatched).ToArray();
 
@@ -95,7 +96,7 @@ public class EventScriptDiagnosticInterpreterScenarios
 
         var result = interpreter.Invoke("Start");
 
-        Assert.AreEqual(EventScriptValueKind.Nothing, result.Variables["missing"].Kind);
+        Assert.AreEqual(EventScriptValueType.Nothing, result.Variables["missing"].Type);
         Assert.IsTrue(result.Steps.Any(step =>
             step.Kind == EventScriptDiagnosticStepKind.ExpressionEvaluated &&
             step.Detail is not null &&

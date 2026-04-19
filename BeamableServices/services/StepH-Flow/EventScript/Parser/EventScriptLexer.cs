@@ -126,7 +126,7 @@ public sealed class EventScriptLexer
     {
         while (true)
         {
-            SkipWhitespaceExceptNewLine();
+            SkipTriviaExceptNewLine();
 
             if (IsAtEnd)
             {
@@ -440,9 +440,30 @@ public sealed class EventScriptLexer
         }
     }
 
-    private void SkipWhitespaceExceptNewLine()
+    private void SkipTriviaExceptNewLine()
     {
-        while (!IsAtEnd && char.IsWhiteSpace(Current) && Current is not '\n' and not '\r') Advance();
+        while (!IsAtEnd)
+        {
+            if (char.IsWhiteSpace(Current) && Current is not '\n' and not '\r')
+            {
+                Advance();
+                continue;
+            }
+
+            if (Current == '/' && Peek() == '/')
+            {
+                Advance();
+                Advance();
+                while (!IsAtEnd && Current is not '\n' and not '\r')
+                {
+                    Advance();
+                }
+
+                continue;
+            }
+
+            break;
+        }
     }
 
     private bool IsValidWordBoundary(char ch)

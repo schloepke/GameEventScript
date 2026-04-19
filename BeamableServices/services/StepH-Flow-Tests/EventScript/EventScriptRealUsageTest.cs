@@ -74,8 +74,9 @@ public class EventScriptRealUsageTest
             module TestModule
             
             on Setup(player) {
+                let someValue be 10; let AnotherValue be 20;
                 publish SetNumberOfPlayers(2)
-                publish Set,BoardSize(10, 20)
+                publish Set_BoardSize(10, 20)
                 publish SetNumberOfPushs(20)
                 publish CreatePushSeed
                 publish SetCorrectTiles('Smiley')

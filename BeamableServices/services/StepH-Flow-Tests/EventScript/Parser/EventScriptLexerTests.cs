@@ -134,6 +134,23 @@ public class EventScriptLexingScenarios
     }
 
     [TestMethod]
+    public void LineCommentsAreSkippedButTheirNewLinesRemain()
+    {
+        var tokens = Lex("// header comment\non Start { publish Done // trailing comment\n}");
+
+        AssertTokenKinds(tokens,
+            EventScriptTokenKind.NewLine,
+            EventScriptTokenKind.On,
+            EventScriptTokenKind.Message,
+            EventScriptTokenKind.LeftBrace,
+            EventScriptTokenKind.Publish,
+            EventScriptTokenKind.Message,
+            EventScriptTokenKind.NewLine,
+            EventScriptTokenKind.RightBrace,
+            EventScriptTokenKind.EndOfFile);
+    }
+
+    [TestMethod]
     public void IllegalCharactersAndAttachedIllegalSequencesAreTokenizedAsSingleSpans()
     {
         var tokens = Lex("hello%&some @ 'Mark");
@@ -203,6 +220,27 @@ public class EventScriptLexingScenarios
         Assert.IsTrue(lexerErrors.Any(error => error.Message.Contains("hello%&some", StringComparison.Ordinal)));
         Assert.IsTrue(lexerErrors.Any(error => error.Message.Contains("@", StringComparison.Ordinal)));
         Assert.IsTrue(lexerErrors.All(error => error.SourceLocation.SourceName == "Broken.es"));
+    }
+
+    [TestMethod]
+    public void ParserAcceptsStandaloneAndTrailingLineComments()
+    {
+        const string script =
+            """
+            module CombatRules
+            // initialize combat
+            on Start { // after handler header
+                let hp be 10 // base value
+                publish Done // finished
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script);
+
+        Assert.AreEqual("CombatRules", module.ModuleName);
+        Assert.AreEqual(1, module.Handlers.Count);
+        Assert.AreEqual("Start", module.Handlers[0].Message);
+        Assert.AreEqual(2, module.Handlers[0].Statements.Count);
     }
 
     private static EventScriptToken[] Lex(string script) => new EventScriptLexer(script).Tokenize().ToArray();

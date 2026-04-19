@@ -1,4 +1,9 @@
-EventScript ::= { StatementSeparator } [ ModuleDeclaration { StatementSeparator } ] [ TopLevel { EventSeparator TopLevel } ] { StatementSeparator }
+EventScript ::= { TriviaOrSeparator } [ ModuleDeclaration { StatementSeparator } ] [ TopLevel { EventSeparator TopLevel } ] { TriviaOrSeparator }
+
+TriviaOrSeparator ::= Trivia | StatementSeparator
+Trivia ::= WhiteSpace | LineComment
+WhiteSpace ::= " " | "\t"
+LineComment ::= "//" { AnyCharExceptLineBreak }
 
 ModuleDeclaration ::= "module" ModuleName
 TopLevel ::= TypeDefinition | RuleDefinition | SelectDefinition | EventEndpoint
@@ -10,7 +15,8 @@ TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression 
 TypeFieldSeparator ::= "," | StatementSeparator
 EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
 EventSeparator ::= StatementSeparator
-StatementSeparator ::= ";" | NewLine { NewLine }
+StatementSeparator ::= [ Trivia ] ( ";" [ Trivia ] | NewLine { TriviaOrNewLine } )
+TriviaOrNewLine ::= Trivia | NewLine
 NewLine ::= "\n" | "\r\n"
 
 ParamList ::= Identifier { "," Identifier }
@@ -113,6 +119,7 @@ Percentage ::= Number "%"
 TextLiteral ::= "'" { TextChar } "'"
 TextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
 EscapedSingleQuote ::= "''"
+AnyCharExceptLineBreak ::= "[^\r\n]"
 
 LowerLetter ::= "[a-z]"
 UpperLetter ::= "[A-Z]"

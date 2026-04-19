@@ -18,7 +18,7 @@ EventScript is case-sensitive.
 
 ## Design Principles
 
-- Keywords are lowercase: `on`, `publish`, `let`, `if`, `for`, `rule`, `select`.
+- Keywords are lowercase: `module`, `on`, `publish`, `let`, `if`, `for`, `rule`, `select`.
 - Messages start with an uppercase letter: `Start`, `DamageTaken`, `TurnEnded`.
 - Local variables and identifiers start with a lowercase letter: `hp`, `target`, `woundedUnits`.
 - Type names are written as tags: `:decimal`, `:text`, `:list`, `:meter`.
@@ -38,6 +38,7 @@ on Start {
 
 An EventScript can contain:
 
+- an optional `module` declaration at the top
 - `record` definitions for custom types
 - `rule` definitions for reusable predicates
 - `select` definitions for reusable expressions
@@ -46,6 +47,8 @@ An EventScript can contain:
 Example:
 
 ```eventscript
+module CombatRules
+
 record :meter as {
     current: :decimal,
     maximum: :decimal
@@ -62,6 +65,32 @@ on Start(unit, units) {
     let choices be woundedUnits(units)
     publish Done(:len choices)
 }
+```
+
+## Module Declaration
+
+Use `module Name` to declare the module name inside the script.
+
+```eventscript
+module CombatRules
+
+on Start {
+    publish Done
+}
+```
+
+Rules:
+
+- `module` is optional
+- if omitted, the parser generates an anonymous module name
+- the declaration must appear at the top level before handlers and definitions
+- module names can use either identifier style or message style names
+
+Examples:
+
+```eventscript
+module combatRules
+module CombatRules
 ```
 
 ## Event Handlers
@@ -143,7 +172,26 @@ The execution result contains:
 
 ## Comments
 
-There is currently no comment syntax in the language.
+EventScript supports line comments with `//`.
+
+Comments may appear on their own line or at the end of a line.
+
+```eventscript
+// Runs once at startup
+on Start {
+    let hp be 10 // base hit points
+    publish Done
+}
+```
+
+Rules:
+
+- comments run from `//` to the end of the line
+- block comments are not supported
+- the line break after a comment still acts as a normal statement separator
+
+`#...` directives are not part of the language syntax at the moment.
+They are reserved for possible future pragma-style preprocessing, but are not currently supported.
 
 ## Variables and `let`
 
@@ -1095,7 +1143,7 @@ Examples:
 
 At the current language stage:
 
-- there is no comment syntax
+- line comments use `//`
 - there are no user-defined mutable variables
 - there are no traditional functions beyond `rule` and `select`
 - there is no direct mutation of collections or dictionaries

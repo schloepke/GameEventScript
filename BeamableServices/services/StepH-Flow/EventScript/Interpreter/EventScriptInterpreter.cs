@@ -13,30 +13,6 @@ public sealed record EventScriptEmittedEvent(string Message, IReadOnlyList<Event
 
 public sealed record EventScriptExecutionResult(string Message, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, EventScriptValue> Variables);
 
-public interface IEventScriptRandom
-{
-    int NextInclusive(int minInclusive, int maxInclusive);
-}
-
-public sealed class DefaultEventScriptRandom(Random? random = null) : IEventScriptRandom
-{
-    private readonly Random _random = random ?? new Random();
-
-    public int NextInclusive(int minInclusive, int maxInclusive)
-    {
-        if (minInclusive > maxInclusive)
-        {
-            (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        }
-
-        if (maxInclusive != int.MaxValue) return _random.Next(minInclusive, maxInclusive + 1);
-        var sample = _random.NextDouble();
-        return minInclusive + (int)Math.Floor(sample * ((long)maxInclusive - minInclusive + 1));
-    }
-}
-
-public sealed class EventScriptRuntimeException(string message) : Exception(message);
-
 public sealed class EventScriptInterpreter
 {
     private readonly EventScriptInvocationEngine _engine;

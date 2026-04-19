@@ -4,8 +4,8 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptBooleanValue : EventScriptValue
 {
-    public static readonly EventScriptBooleanValue True = new(true);
-    public static readonly EventScriptBooleanValue False = new(false);
+    private static readonly EventScriptBooleanValue True = new(true);
+    private static readonly EventScriptBooleanValue False = new(false);
 
     private EventScriptBooleanValue(bool value)
     {

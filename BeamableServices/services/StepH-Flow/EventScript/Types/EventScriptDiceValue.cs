@@ -9,6 +9,8 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptDiceValue : EventScriptValue
 {
+    private static EventScriptDiceValue _emptyDice = new([]);
+    
     private readonly int[] _rollsDescending;
     private readonly IReadOnlyList<int> _rollsView;
 
@@ -29,16 +31,16 @@ public sealed class EventScriptDiceValue : EventScriptValue
     }
 
     public EventScriptDiceValue KeepHighest(int count)
-        => count < 0 || count > _rollsDescending.Length ? Create(Array.Empty<int>()) : Create(_rollsDescending.Take(count));
+        => _rollsDescending.Length == 0 || count < 0 || count > _rollsDescending.Length ? _emptyDice : Create(_rollsDescending.Take(count));
 
     public EventScriptDiceValue DropLowest(int count)
-        => count < 0 || count > _rollsDescending.Length ? Create(Array.Empty<int>()) : Create(_rollsDescending.Take(_rollsDescending.Length - count));
+        => _rollsDescending.Length == 0 || count < 0 || count > _rollsDescending.Length ? _emptyDice : Create(_rollsDescending.Take(_rollsDescending.Length - count));
 
     public static EventScriptDiceValue Create(IEnumerable<int> rolls)
     {
-        if (rolls == null) return new EventScriptDiceValue([]);
+        if (rolls == null) return _emptyDice;
         var values = rolls.ToArray();
-        if (values.Any(roll => roll <= 0)) return new EventScriptDiceValue([]);
+        if (values.Any(roll => roll <= 0)) return _emptyDice;
         Array.Sort(values);
         Array.Reverse(values);
         return new EventScriptDiceValue(values);

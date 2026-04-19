@@ -23,8 +23,6 @@ internal sealed class EventScriptInvocationEngine
     private readonly IEventScriptRandom _random;
     private readonly int _maxProcessedEventsPerRun;
 
-    private static readonly IReadOnlyDictionary<string, EventScriptValue> EmptyVariables = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
-
     private EventScriptInvocationEngine(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
@@ -46,8 +44,7 @@ internal sealed class EventScriptInvocationEngine
         if (_maxProcessedEventsPerRun <= 0) throw new EventScriptCompilationException("Max processed events per run must be > 0");
     }
 
-    public static EventScriptInvocationEngine Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
-        => Compile(EventScriptLinkBuilder.LinkScripts(script), random, context);
+    public static EventScriptInvocationEngine Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null) => Compile(EventScriptLinkBuilder.LinkScripts(script), random, context);
 
     public static EventScriptInvocationEngine Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
@@ -107,11 +104,9 @@ internal sealed class EventScriptInvocationEngine
             state.Steps);
     }
 
-    public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args)
-        => Enqueue(message, args).Drain();
+    public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args) => Enqueue(message, args).Drain();
 
-    public EventScriptExecutionResult EmitClr(string message, params object?[] args)
-        => Emit(message, EventScriptValue.FromClrList(args).ToArray());
+    public EventScriptExecutionResult EmitClr(string message, params object?[] args) => Emit(message, EventScriptValue.FromClrList(args).ToArray());
 
     public EventScriptRun Enqueue(string message, params EventScriptValue[] args)
     {
@@ -119,8 +114,7 @@ internal sealed class EventScriptInvocationEngine
         return new EventScriptRun(this, message, args);
     }
 
-    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args)
-        => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
+    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args) => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
 
     private void DispatchQueuedEvent(EventScriptQueuedEvent queuedEvent, RunState state)
     {
@@ -462,11 +456,7 @@ internal sealed class EventScriptInvocationEngine
         return EvaluateGlobalDefinition(context, ruleDefinition.Parameters, ruleDefinition.Expression, new[] { value });
     }
 
-    private EventScriptValue EvaluateGlobalDefinition(
-        ExecutionContext context,
-        IReadOnlyList<string> parameters,
-        ExpressionNode expression,
-        IReadOnlyList<EventScriptValue> arguments)
+    private EventScriptValue EvaluateGlobalDefinition(ExecutionContext context, IReadOnlyList<string> parameters, ExpressionNode expression, IReadOnlyList<EventScriptValue> arguments)
     {
         context.PushScope();
         try
@@ -484,11 +474,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private bool TryProjectGeneratedItem(
-        ExecutionContext context,
-        GeneratedCollectionExpressionNode generatedCollection,
-        EventScriptValue item,
-        List<EventScriptValue> values)
+    private bool TryProjectGeneratedItem(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection, EventScriptValue item, List<EventScriptValue> values)
     {
         context.PushScope();
         try
@@ -751,8 +737,7 @@ internal sealed class EventScriptInvocationEngine
         return true;
     }
 
-    private static bool IsPatternSequence(EventScriptValue value)
-        => value.Type is EventScriptValueType.List or EventScriptValueType.Dice;
+    private static bool IsPatternSequence(EventScriptValue value) => value.Type is EventScriptValueType.List or EventScriptValueType.Dice;
 
     private static bool TryCombineWithPlus(EventScriptValue left, EventScriptValue right, out EventScriptValue value)
     {
@@ -1184,10 +1169,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateEdgeSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        EdgeSelectorNode selector)
+    private EventScriptValue EvaluateEdgeSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, EdgeSelectorNode selector)
     {
         IReadOnlyList<EventScriptValue> candidates = items;
         if (!string.IsNullOrEmpty(selector.Identifier) && selector.Predicate is not null)
@@ -1211,11 +1193,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private bool EvaluatePredicateItem(
-        ExecutionContext context,
-        EventScriptValue item,
-        string identifier,
-        ExpressionNode predicate)
+    private bool EvaluatePredicateItem(ExecutionContext context, EventScriptValue item, string identifier, ExpressionNode predicate)
     {
         context.PushScope();
         try
@@ -1229,10 +1207,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateIndexedCollectionAccess(
-        ExecutionContext context,
-        EventScriptValue target,
-        ExpressionNode selectorExpression)
+    private EventScriptValue EvaluateIndexedCollectionAccess(ExecutionContext context, EventScriptValue target, ExpressionNode selectorExpression)
     {
         var selector = EvaluateExpression(context, selectorExpression);
         if (selector.isNothing())
@@ -1279,10 +1254,7 @@ internal sealed class EventScriptInvocationEngine
         return false;
     }
 
-    private static EventScriptValue EvaluateSequenceSliceSelector(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
-        SequenceSliceSelectorNode selector)
+    private static EventScriptValue EvaluateSequenceSliceSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items, SequenceSliceSelectorNode selector)
     {
         if (selector.Count <= 0)
         {
@@ -1314,27 +1286,21 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private static EventScriptValue[] TakeFirst(IReadOnlyList<EventScriptValue> items, int count)
-        => items.Take(count).ToArray();
+    private static EventScriptValue[] TakeFirst(IReadOnlyList<EventScriptValue> items, int count) => items.Take(count).ToArray();
 
-    private static EventScriptValue[] TakeLast(IReadOnlyList<EventScriptValue> items, int count)
-        => items.Skip(Math.Max(0, items.Count - count)).ToArray();
+    private static EventScriptValue[] TakeLast(IReadOnlyList<EventScriptValue> items, int count) => items.Skip(Math.Max(0, items.Count - count)).ToArray();
 
-    private static EventScriptValue[] TakeHighest(IReadOnlyList<EventScriptValue> items, int count)
-        => items
+    private static EventScriptValue[] TakeHighest(IReadOnlyList<EventScriptValue> items, int count) => items
             .OrderByDescending(item => item, EventScriptValue.StableComparer)
             .Take(count)
             .ToArray();
 
-    private static EventScriptValue[] TakeLowest(IReadOnlyList<EventScriptValue> items, int count)
-        => items
+    private static EventScriptValue[] TakeLowest(IReadOnlyList<EventScriptValue> items, int count) => items
             .OrderBy(item => item, EventScriptValue.StableComparer)
             .Take(count)
             .ToArray();
 
-    private static EventScriptValue[] DropSelection(
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyList<EventScriptValue> selection)
+    private static EventScriptValue[] DropSelection(IReadOnlyList<EventScriptValue> items, IReadOnlyList<EventScriptValue> selection)
     {
         if (selection.Count == 0)
         {
@@ -1360,11 +1326,7 @@ internal sealed class EventScriptInvocationEngine
         return result.ToArray();
     }
 
-    private bool TryTakeSequencePattern(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        DicePatternNode pattern,
-        out IReadOnlyList<EventScriptValue> takenItems)
+    private bool TryTakeSequencePattern(ExecutionContext context, IReadOnlyList<EventScriptValue> items, DicePatternNode pattern, out IReadOnlyList<EventScriptValue> takenItems)
     {
         var counts = items
             .GroupBy(item => item)
@@ -1387,12 +1349,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private bool TryTakeCountPattern(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyDictionary<EventScriptValue, int> counts,
-        DiceCountPatternNode pattern,
-        out IReadOnlyList<EventScriptValue> takenItems)
+    private bool TryTakeCountPattern(ExecutionContext context, IReadOnlyList<EventScriptValue> items, IReadOnlyDictionary<EventScriptValue, int> counts, DiceCountPatternNode pattern, out IReadOnlyList<EventScriptValue> takenItems)
     {
         if (pattern.Face is not null)
         {
@@ -1420,10 +1377,7 @@ internal sealed class EventScriptInvocationEngine
         return false;
     }
 
-    private static bool TryTakeFullHouse(
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyDictionary<EventScriptValue, int> counts,
-        out IReadOnlyList<EventScriptValue> takenItems)
+    private static bool TryTakeFullHouse(IReadOnlyList<EventScriptValue> items, IReadOnlyDictionary<EventScriptValue, int> counts, out IReadOnlyList<EventScriptValue> takenItems)
     {
         foreach (var tripleCandidate in EnumerateDistinctInSourceOrder(items))
         {
@@ -1491,9 +1445,7 @@ internal sealed class EventScriptInvocationEngine
         return true;
     }
 
-    private static IReadOnlyList<EventScriptValue> TakeItemsByCounts(
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyDictionary<EventScriptValue, int> requiredCounts)
+    private static IReadOnlyList<EventScriptValue> TakeItemsByCounts(IReadOnlyList<EventScriptValue> items, IReadOnlyDictionary<EventScriptValue, int> requiredCounts)
     {
         var remaining = requiredCounts.ToDictionary(pair => pair.Key, pair => pair.Value);
         var takenItems = new List<EventScriptValue>();
@@ -1524,10 +1476,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluatePredicateSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        PredicateSelectorNode selector)
+    private EventScriptValue EvaluatePredicateSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, PredicateSelectorNode selector)
     {
         var isAny = string.Equals(selector.Operator, "any", StringComparison.Ordinal);
         if (!isAny && !string.Equals(selector.Operator, "all", StringComparison.Ordinal))
@@ -1566,10 +1515,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Boolean(!isAny);
     }
 
-    private EventScriptValue EvaluateCountSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        CountSelectorNode selector)
+    private EventScriptValue EvaluateCountSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, CountSelectorNode selector)
     {
         var count = 0;
         foreach (var item in items)
@@ -1592,10 +1538,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Integer(count);
     }
 
-    private EventScriptValue EvaluateChooseSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        ChooseSelectorNode selector)
+    private EventScriptValue EvaluateChooseSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, ChooseSelectorNode selector)
     {
         var candidates = selector.Predicate is null || string.IsNullOrEmpty(selector.Identifier)
             ? items.ToList()
@@ -1623,10 +1566,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(chosen);
     }
 
-    private static EventScriptValue EvaluateDrawSelector(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
-        DrawSelectorNode selector)
+    private static EventScriptValue EvaluateDrawSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items, DrawSelectorNode selector)
     {
         if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
         {
@@ -1644,9 +1584,7 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.List(drawn);
     }
 
-    private EventScriptValue EvaluateShuffleSelector(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items)
+    private EventScriptValue EvaluateShuffleSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
     {
         if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
         {
@@ -1667,9 +1605,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(shuffled);
     }
 
-    private static EventScriptValue EvaluateReverseSelector(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items)
+    private static EventScriptValue EvaluateReverseSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
     {
         if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
         {
@@ -1679,11 +1615,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(items.Reverse().ToArray());
     }
 
-    private List<EventScriptValue> FilterItems(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        string identifier,
-        ExpressionNode predicate)
+    private List<EventScriptValue> FilterItems(ExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode predicate)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
@@ -1706,12 +1638,7 @@ internal sealed class EventScriptInvocationEngine
         return result;
     }
 
-    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> candidates,
-        int count,
-        string identifier,
-        ExpressionNode weightExpression)
+    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(ExecutionContext context, IReadOnlyList<EventScriptValue> candidates, int count, string identifier, ExpressionNode weightExpression)
     {
         var remaining = candidates.ToList();
         var chosen = new List<EventScriptValue>();
@@ -1758,11 +1685,7 @@ internal sealed class EventScriptInvocationEngine
         return chosen;
     }
 
-    private decimal EvaluateWeight(
-        ExecutionContext context,
-        EventScriptValue item,
-        string identifier,
-        ExpressionNode weightExpression)
+    private decimal EvaluateWeight(ExecutionContext context, EventScriptValue item, string identifier, ExpressionNode weightExpression)
     {
         context.PushScope();
         try
@@ -1782,9 +1705,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private IReadOnlyList<EventScriptValue> ChooseRandomItems(
-        IReadOnlyList<EventScriptValue> items,
-        int count)
+    private IReadOnlyList<EventScriptValue> ChooseRandomItems(IReadOnlyList<EventScriptValue> items, int count)
     {
         var pool = items.ToList();
         var result = new List<EventScriptValue>(Math.Min(count, pool.Count));
@@ -1802,10 +1723,7 @@ internal sealed class EventScriptInvocationEngine
         return result;
     }
 
-    private EventScriptValue EvaluateFilterSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        FilterSelectorNode selector)
+    private EventScriptValue EvaluateFilterSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, FilterSelectorNode selector)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
@@ -1828,10 +1746,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(result);
     }
 
-    private EventScriptValue EvaluateSumSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        SumSelectorNode selector)
+    private EventScriptValue EvaluateSumSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, SumSelectorNode selector)
     {
         var sum = NumericValue.Finite(0m);
         foreach (var item in items)
@@ -1856,10 +1771,7 @@ internal sealed class EventScriptInvocationEngine
         return ToEventScriptDecimal(sum);
     }
 
-    private EventScriptValue EvaluateAverageSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        AverageSelectorNode selector)
+    private EventScriptValue EvaluateAverageSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, AverageSelectorNode selector)
     {
         if (items.Count == 0)
         {
@@ -1893,10 +1805,7 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.Decimal(sum.Value / count);
     }
 
-    private EventScriptValue EvaluateSelectSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        SelectSelectorNode selector)
+    private EventScriptValue EvaluateSelectSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, SelectSelectorNode selector)
     {
         var result = new List<EventScriptValue>(items.Count);
         foreach (var item in items)
@@ -1916,10 +1825,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(result);
     }
 
-    private EventScriptValue EvaluateDictionarySelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        DictionarySelectorNode selector)
+    private EventScriptValue EvaluateDictionarySelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, DictionarySelectorNode selector)
     {
         var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
         foreach (var item in items)
@@ -1948,11 +1854,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Dictionary(result);
     }
 
-    private EventScriptValue EvaluateContainsSelector(
-        ExecutionContext context,
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
-        ContainsSelectorNode selector)
+    private EventScriptValue EvaluateContainsSelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, ContainsSelectorNode selector)
     {
         var value = EvaluateExpression(context, selector.ValueExpression);
         return selector.Mode switch
@@ -1964,12 +1866,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private EventScriptValue EvaluateExtremaSelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        string identifier,
-        ExpressionNode projection,
-        bool isMax)
+    private EventScriptValue EvaluateExtremaSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode projection, bool isMax)
     {
         if (items.Count == 0)
         {
@@ -2009,21 +1906,13 @@ internal sealed class EventScriptInvocationEngine
         return bestItem;
     }
 
-    private EventScriptValue EvaluateSortSelector(
-        ExecutionContext context,
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
-        SortSelectorNode selector)
+    private EventScriptValue EvaluateSortSelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, SortSelectorNode selector)
     {
         _ = context;
         return EventScriptCollectionSemantics.Sort(target, items, selector.Direction);
     }
 
-    private EventScriptValue EvaluateOrderBySelector(
-        ExecutionContext context,
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
-        OrderBySelectorNode selector)
+    private EventScriptValue EvaluateOrderBySelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, OrderBySelectorNode selector)
     {
         return EventScriptCollectionSemantics.OrderBy(
             target,
@@ -2032,11 +1921,7 @@ internal sealed class EventScriptInvocationEngine
             item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
     }
 
-    private EventScriptValue EvaluateSortProjection(
-        ExecutionContext context,
-        EventScriptValue item,
-        string identifier,
-        ExpressionNode projection)
+    private EventScriptValue EvaluateSortProjection(ExecutionContext context, EventScriptValue item, string identifier, ExpressionNode projection)
     {
         context.PushScope();
         try
@@ -2050,11 +1935,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateDistinctSelector(
-        ExecutionContext context,
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
-        DistinctSelectorNode selector)
+    private EventScriptValue EvaluateDistinctSelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, DistinctSelectorNode selector)
     {
         if (selector.Projection is null || string.IsNullOrEmpty(selector.Identifier))
         {
@@ -2067,13 +1948,8 @@ internal sealed class EventScriptInvocationEngine
             item => EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!));
     }
 
-    private EventScriptValue EvaluateGroupBySelector(
-        ExecutionContext context,
-        IReadOnlyList<EventScriptValue> items,
-        GroupBySelectorNode selector)
-        => EventScriptCollectionSemantics.GroupBy(
-            items,
-            item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
+    private EventScriptValue EvaluateGroupBySelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, GroupBySelectorNode selector) => EventScriptCollectionSemantics.GroupBy(
+        items, item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
 
     private bool MatchesObjectPattern(ExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
     {
@@ -2113,8 +1989,7 @@ internal sealed class EventScriptInvocationEngine
         return true;
     }
 
-    private static Dictionary<string, List<EventScriptExternalMessageBinding>> BuildExternalBindingMap(
-        IReadOnlyDictionary<string, IReadOnlyList<EventScriptExternalMessageBinding>>? bindings)
+    private static Dictionary<string, List<EventScriptExternalMessageBinding>> BuildExternalBindingMap(IReadOnlyDictionary<string, IReadOnlyList<EventScriptExternalMessageBinding>>? bindings)
     {
         var map = new Dictionary<string, List<EventScriptExternalMessageBinding>>(StringComparer.Ordinal);
         if (bindings == null)
@@ -2130,8 +2005,7 @@ internal sealed class EventScriptInvocationEngine
         return map;
     }
 
-    private static bool AreEqual(EventScriptValue left, EventScriptValue right)
-        => left.Equals(right);
+    private static bool AreEqual(EventScriptValue left, EventScriptValue right) => left.Equals(right);
 
     private void ValidateDefinitionReferences(EventScriptModule eventScriptModule)
     {
@@ -2436,8 +2310,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private static bool AsBool(EventScriptValue value)
-        => value.AsBoolean();
+    private static bool AsBool(EventScriptValue value) => value.AsBoolean();
 
     private static int AsInt(EventScriptValue value)
     {
@@ -2629,8 +2502,7 @@ internal sealed class EventScriptInvocationEngine
         return NumericValue.NaN();
     }
 
-    private static NumericValue SubtractNumeric(NumericValue left, NumericValue right)
-        => AddNumeric(left, NegateNumeric(right));
+    private static NumericValue SubtractNumeric(NumericValue left, NumericValue right) => AddNumeric(left, NegateNumeric(right));
 
     private static NumericValue MultiplyNumeric(NumericValue left, NumericValue right)
     {
@@ -2731,8 +2603,7 @@ internal sealed class EventScriptInvocationEngine
         return value.Value.CompareTo(0m);
     }
 
-    private static bool IsZero(NumericValue value)
-        => value.IsFinite && value.Value == 0m;
+    private static bool IsZero(NumericValue value) => value.IsFinite && value.Value == 0m;
 
     private static bool TryAddFinite(decimal left, decimal right, out decimal value)
     {
@@ -2930,12 +2801,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.CustomType(typeDefinition.Name, materializedValues);
     }
 
-    private EventScriptValue ApplyFieldClamp(
-        TypeDefinitionNode typeDefinition,
-        TypeFieldDefinitionNode field,
-        EventScriptValue fieldValue,
-        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
-        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    private EventScriptValue ApplyFieldClamp(TypeDefinitionNode typeDefinition, TypeFieldDefinitionNode field, EventScriptValue fieldValue, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
         if (field.MinimumExpression is null || field.MaximumExpression is null)
         {
@@ -2966,11 +2832,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper));
     }
 
-    private EventScriptValue EvaluateCustomTypeExpression(
-        TypeDefinitionNode typeDefinition,
-        ExpressionNode expression,
-        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
-        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    private EventScriptValue EvaluateCustomTypeExpression(TypeDefinitionNode typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
         var state = new RunState(_maxProcessedEventsPerRun);
         var context = new ExecutionContext(state);

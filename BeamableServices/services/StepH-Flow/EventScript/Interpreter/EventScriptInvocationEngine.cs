@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Semantics;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
@@ -514,8 +515,8 @@ internal sealed class EventScriptInvocationEngine
         return unary.Operator switch
         {
             "!" => EvaluateNotUnary(operand),
-            "has value" => EventScriptValue.Boolean(HasValue(operand)),
-            "empty" => EventScriptValue.Boolean(IsEmpty(operand)),
+            "has value" => EventScriptValue.Boolean(EventScriptValueSemantics.HasValue(operand)),
+            "empty" => EventScriptValue.Boolean(EventScriptValueSemantics.IsEmpty(operand)),
             "len" => EvaluateLenUnary(operand),
             "chance" => EvaluateChanceUnary(operand),
             "keys" => EventScriptValue.Keys(operand),
@@ -693,47 +694,6 @@ internal sealed class EventScriptInvocationEngine
         }
 
         return best;
-    }
-
-    private static bool HasValue(EventScriptValue value)
-    {
-        if (value.isNothing())
-        {
-            return false;
-        }
-
-        return value.Kind switch
-        {
-            EventScriptValueKind.Optional => value.AsOptional().HasValue,
-            EventScriptValueKind.Iterator => value.AsEnumerable().Any(),
-            EventScriptValueKind.Text => value.AsText().Length > 0,
-            EventScriptValueKind.List => value.AsList().Count > 0,
-            EventScriptValueKind.Dictionary => value.AsDictionary().Count > 0,
-            EventScriptValueKind.Set => value.AsSet().Count > 0,
-            EventScriptValueKind.Dice => value.AsDice().Rolls.Count > 0,
-            EventScriptValueKind.Number => !value.IsNaN() && !value.IsInfinity(),
-            _ => true
-        };
-    }
-
-    private static bool IsEmpty(EventScriptValue value)
-    {
-        if (value.isNothing())
-        {
-            return true;
-        }
-
-        return value.Kind switch
-        {
-            EventScriptValueKind.Optional => !value.AsOptional().HasValue || IsEmpty(value.AsOptional().Value),
-            EventScriptValueKind.Iterator => !value.AsEnumerable().Any(),
-            EventScriptValueKind.Text => value.AsText().Length == 0,
-            EventScriptValueKind.List => value.AsList().Count == 0,
-            EventScriptValueKind.Dictionary => value.AsDictionary().Count == 0,
-            EventScriptValueKind.Set => value.AsSet().Count == 0,
-            EventScriptValueKind.Dice => value.AsDice().Rolls.Count == 0,
-            _ => false
-        };
     }
 
     private bool EvaluateSequencePattern(ExecutionContext context, EventScriptValue target, DicePatternNode pattern)
@@ -966,7 +926,7 @@ internal sealed class EventScriptInvocationEngine
 
         if (binary.Operator == "default")
         {
-            if (!HasValue(leftRaw))
+            if (!EventScriptValueSemantics.HasValue(leftRaw))
             {
                 return rightRaw;
             }
@@ -1003,13 +963,13 @@ internal sealed class EventScriptInvocationEngine
             case "<>":
                 return EventScriptValue.Boolean(!AreEqual(left, right));
             case "in":
-                return EventScriptValue.Boolean(IsContainedIn(left, right));
+                return EventScriptValue.Boolean(EventScriptValueSemantics.Contains(right, left));
             case "value in":
-                return EventScriptValue.Boolean(IsValueContainedIn(left, right));
+                return EventScriptValue.Boolean(EventScriptValueSemantics.ContainsValue(right, left));
             case "starts with":
-                return EventScriptValue.Boolean(StartsWith(left, right));
+                return EventScriptValue.Boolean(EventScriptValueSemantics.StartsWith(left, right));
             case "ends with":
-                return EventScriptValue.Boolean(EndsWith(left, right));
+                return EventScriptValue.Boolean(EventScriptValueSemantics.EndsWith(left, right));
             case "<":
                 if (!TryCoerceNumericForOperation(left, out var leftLess) ||
                     !TryCoerceNumericForOperation(right, out var rightLess) ||
@@ -1112,78 +1072,6 @@ internal sealed class EventScriptInvocationEngine
                 return EventScriptValue.Nothing;
         }
     }
-
-    private bool IsContainedIn(EventScriptValue needle, EventScriptValue haystack)
-    {
-        switch (haystack.Kind)
-        {
-            case EventScriptValueKind.Text:
-                return haystack.AsText().Contains(ToText(needle), StringComparison.Ordinal);
-
-            case EventScriptValueKind.Dictionary:
-                return haystack.AsDictionary().ContainsKey(needle.AsText());
-
-            case EventScriptValueKind.List:
-            case EventScriptValueKind.Set:
-            case EventScriptValueKind.Dice:
-                return haystack.AsList().Any(item => AreEqual(needle, item));
-
-            default:
-                return false;
-        }
-    }
-
-    private bool IsValueContainedIn(EventScriptValue needle, EventScriptValue haystack)
-    {
-        if (haystack.Kind != EventScriptValueKind.Dictionary)
-        {
-            return false;
-        }
-
-        return haystack.AsDictionary().Values.Any(value => AreEqual(needle, value));
-    }
-
-    private bool StartsWith(EventScriptValue value, EventScriptValue prefix)
-        => MatchSequenceBoundary(value, prefix, fromStart: true);
-
-    private bool EndsWith(EventScriptValue value, EventScriptValue suffix)
-        => MatchSequenceBoundary(value, suffix, fromStart: false);
-
-    private bool MatchSequenceBoundary(EventScriptValue value, EventScriptValue boundary, bool fromStart)
-    {
-        if (value.Kind == EventScriptValueKind.Text && boundary.Kind == EventScriptValueKind.Text)
-        {
-            return fromStart
-                ? value.AsText().StartsWith(boundary.AsText(), StringComparison.Ordinal)
-                : value.AsText().EndsWith(boundary.AsText(), StringComparison.Ordinal);
-        }
-
-        if (!IsSequential(value) || !IsSequential(boundary))
-        {
-            return false;
-        }
-
-        var valueItems = value.AsList();
-        var boundaryItems = boundary.AsList();
-        if (boundaryItems.Count > valueItems.Count)
-        {
-            return false;
-        }
-
-        var startIndex = fromStart ? 0 : valueItems.Count - boundaryItems.Count;
-        for (var i = 0; i < boundaryItems.Count; i++)
-        {
-            if (!AreEqual(valueItems[startIndex + i], boundaryItems[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool IsSequential(EventScriptValue value)
-        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice;
 
     private EventScriptValue EvaluateMemberAccess(ExecutionContext context, MemberAccessExpressionNode memberAccess)
     {
@@ -1351,46 +1239,7 @@ internal sealed class EventScriptInvocationEngine
             return EventScriptValue.Nothing;
         }
 
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return EvaluateDictionaryLookup(target, selector);
-        }
-
-        return EvaluateSequentialIndexAccess(target.AsList(), selector);
-    }
-
-    private static EventScriptValue EvaluateDictionaryLookup(EventScriptValue target, EventScriptValue selector)
-    {
-        if (!TryUnwrapOptionalForOperation(selector, out var lookup))
-        {
-            return EventScriptValue.OptionalNone();
-        }
-
-        var key = lookup.AsText();
-        if (string.IsNullOrEmpty(key))
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        return target.TryGetDictionaryMember(key, out var value)
-            ? value
-            : EventScriptValue.Nothing;
-    }
-
-    private static EventScriptValue EvaluateSequentialIndexAccess(IReadOnlyList<EventScriptValue> items, EventScriptValue selector)
-    {
-        if (!TryUnwrapOptionalForOperation(selector, out var unwrappedSelector))
-        {
-            return EventScriptValue.OptionalNone();
-        }
-
-        var index = AsInt(unwrappedSelector);
-        if (index <= 0 || index > items.Count)
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        return items[index - 1];
+        return EventScriptValueSemantics.Lookup(target, selector);
     }
 
     private EventScriptValue EvaluateTakePattern(ExecutionContext context, EventScriptValue target, DicePatternNode pattern)

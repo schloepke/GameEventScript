@@ -288,8 +288,8 @@ public class EventScriptParsingScenarios
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
         var expression = (BinaryExpressionNode)letStatement.Expression;
         Assert.AreEqual("+", expression.Operator);
-        Assert.AreEqual(1m, ((DecimalLiteralExpressionNode)expression.Left).Value);
-        Assert.AreEqual(2m, ((DecimalLiteralExpressionNode)expression.Right).Value);
+        Assert.AreEqual(1L, ((IntegerLiteralExpressionNode)expression.Left).Value);
+        Assert.AreEqual(2L, ((IntegerLiteralExpressionNode)expression.Right).Value);
     }
 
     [TestMethod]
@@ -401,8 +401,10 @@ public class EventScriptParsingScenarios
         const string script =
             """
             on Start(values) {
+                let penalty be -12;
+                let debt be -12.5;
                 let size be :len values;
-                let distance be :abs (0 - 12.5);
+                let distance be :abs -12.5;
                 let rounded be :floor 12.5;
                 let fallback be values :default [1];
                 let present be has value values;
@@ -412,26 +414,40 @@ public class EventScriptParsingScenarios
             """;
 
         var program = EventScriptParser.Parse(script);
-        var sizeStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var penaltyStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var penaltyUnary = (UnaryExpressionNode)penaltyStatement.Expression;
+        Assert.AreEqual("-", penaltyUnary.Operator);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(penaltyUnary.Operand);
+        Assert.AreEqual(12L, ((IntegerLiteralExpressionNode)penaltyUnary.Operand).Value);
+
+        var debtStatement = (LetStatementNode)program.Handlers[0].Statements[1];
+        var debtUnary = (UnaryExpressionNode)debtStatement.Expression;
+        Assert.AreEqual("-", debtUnary.Operator);
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(debtUnary.Operand);
+        Assert.AreEqual(12.5m, ((DecimalLiteralExpressionNode)debtUnary.Operand).Value);
+
+        var sizeStatement = (LetStatementNode)program.Handlers[0].Statements[2];
         var sizeUnary = (UnaryExpressionNode)sizeStatement.Expression;
         Assert.AreEqual("len", sizeUnary.Operator);
         Assert.IsInstanceOfType<IdentifierExpressionNode>(sizeUnary.Operand);
-        var absStatement = (LetStatementNode)program.Handlers[0].Statements[1];
+        var absStatement = (LetStatementNode)program.Handlers[0].Statements[3];
         var absUnary = (UnaryExpressionNode)absStatement.Expression;
         Assert.AreEqual("abs", absUnary.Operator);
-        var roundedStatement = (LetStatementNode)program.Handlers[0].Statements[2];
+        Assert.IsInstanceOfType<UnaryExpressionNode>(absUnary.Operand);
+        Assert.AreEqual("-", ((UnaryExpressionNode)absUnary.Operand).Operator);
+        var roundedStatement = (LetStatementNode)program.Handlers[0].Statements[4];
         var roundedUnary = (UnaryExpressionNode)roundedStatement.Expression;
         Assert.AreEqual("floor", roundedUnary.Operator);
-        var fallbackStatement = (LetStatementNode)program.Handlers[0].Statements[3];
+        var fallbackStatement = (LetStatementNode)program.Handlers[0].Statements[5];
         var fallbackBinary = (BinaryExpressionNode)fallbackStatement.Expression;
         Assert.AreEqual("default", fallbackBinary.Operator);
-        var presentStatement = (LetStatementNode)program.Handlers[0].Statements[4];
+        var presentStatement = (LetStatementNode)program.Handlers[0].Statements[6];
         var presentUnary = (UnaryExpressionNode)presentStatement.Expression;
         Assert.AreEqual("has value", presentUnary.Operator);
-        var missingStatement = (LetStatementNode)program.Handlers[0].Statements[5];
+        var missingStatement = (LetStatementNode)program.Handlers[0].Statements[7];
         var missingUnary = (UnaryExpressionNode)missingStatement.Expression;
         Assert.AreEqual("empty", missingUnary.Operator);
-        var invertedStatement = (LetStatementNode)program.Handlers[0].Statements[6];
+        var invertedStatement = (LetStatementNode)program.Handlers[0].Statements[8];
         var invertedUnary = (UnaryExpressionNode)invertedStatement.Expression;
         Assert.AreEqual("!", invertedUnary.Operator);
     }
@@ -578,7 +594,7 @@ public class EventScriptParsingScenarios
         var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
         var list = (ListLiteralExpressionNode)statements[0].Expression;
         Assert.HasCount(3, list.Items);
-        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(list.Items[0]);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(list.Items[0]);
         var dictionary = (DictionaryLiteralExpressionNode)statements[1].Expression;
         Assert.HasCount(2, dictionary.Entries);
         Assert.AreEqual("name", dictionary.Entries[0].Key);
@@ -737,20 +753,33 @@ public class EventScriptParsingScenarios
         const string script =
             """
             on Combat {
-                let value be 1 + 2 * 3 = 7 && !false;
+                let value be 1 + 2 * 3 = 7 ^ true & ~false | false;
             }
             """;
 
         var program = EventScriptParser.Parse(script);
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
-        var andExpression = (BinaryExpressionNode)letStatement.Expression;
-        Assert.AreEqual("&&", andExpression.Operator);
-        var equality = (BinaryExpressionNode)andExpression.Left;
+        var orExpression = (BinaryExpressionNode)letStatement.Expression;
+        Assert.AreEqual("|", orExpression.Operator);
+        Assert.IsInstanceOfType<BooleanLiteralExpressionNode>(orExpression.Right);
+
+        var xorExpression = (BinaryExpressionNode)orExpression.Left;
+        Assert.AreEqual("^", xorExpression.Operator);
+
+        var equality = (BinaryExpressionNode)xorExpression.Left;
         Assert.AreEqual("=", equality.Operator);
         var addition = (BinaryExpressionNode)equality.Left;
         Assert.AreEqual("+", addition.Operator);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(addition.Left);
         var multiplication = (BinaryExpressionNode)addition.Right;
         Assert.AreEqual("*", multiplication.Operator);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(multiplication.Left);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(multiplication.Right);
+
+        var andExpression = (BinaryExpressionNode)xorExpression.Right;
+        Assert.AreEqual("&", andExpression.Operator);
+        Assert.IsInstanceOfType<BooleanLiteralExpressionNode>(andExpression.Left);
+
         var unary = (UnaryExpressionNode)andExpression.Right;
         Assert.AreEqual("!", unary.Operator);
     }
@@ -769,6 +798,8 @@ public class EventScriptParsingScenarios
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
         var expression = (BinaryExpressionNode)letStatement.Expression;
         Assert.AreEqual("<>", expression.Operator);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(expression.Left);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(expression.Right);
     }
 
     [TestMethod]
@@ -829,9 +860,10 @@ public class EventScriptParsingScenarios
         const string script =
             """
             on Randomized(min, max, bonus, board) {
-                let x be :random 1 to 6;
-                let y be :random min to max;
+                let x be :random from 1 to 6;
+                let y be :random from min to max;
                 let z be :random 1 + bonus to :len board.fields;
+                let d be :random from 0.0 to 1.0;
             }
             """;
 
@@ -840,6 +872,38 @@ public class EventScriptParsingScenarios
         Assert.IsInstanceOfType<RandomExpressionNode>(statements[0].Expression);
         Assert.IsInstanceOfType<RandomExpressionNode>(statements[1].Expression);
         Assert.IsInstanceOfType<RandomExpressionNode>(statements[2].Expression);
+        Assert.IsInstanceOfType<RandomExpressionNode>(statements[3].Expression);
+        var literalRandom = (RandomExpressionNode)statements[0].Expression;
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(literalRandom.FromExpression);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(literalRandom.ToExpression);
+        var decimalRandom = (RandomExpressionNode)statements[3].Expression;
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(decimalRandom.FromExpression);
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(decimalRandom.ToExpression);
+    }
+
+    [TestMethod]
+    public void IntegerAndDecimalLiteralsAreRepresentedByDistinctAstNodes()
+    {
+        const string script =
+            """
+            on Start {
+                let integerValue be 12;
+                let decimalValue be 12.34;
+                let randomValue be :random from 0.0 to 1.0;
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(statements[0].Expression);
+        Assert.AreEqual(12L, ((IntegerLiteralExpressionNode)statements[0].Expression).Value);
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(statements[1].Expression);
+        Assert.AreEqual(12.34m, ((DecimalLiteralExpressionNode)statements[1].Expression).Value);
+
+        var randomExpression = (RandomExpressionNode)statements[2].Expression;
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(randomExpression.FromExpression);
+        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(randomExpression.ToExpression);
     }
 
     [TestMethod]

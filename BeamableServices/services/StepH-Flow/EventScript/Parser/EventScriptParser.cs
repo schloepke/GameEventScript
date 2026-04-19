@@ -471,11 +471,26 @@ public sealed class EventScriptParser
 
     private ExpressionNode ParseOrExpression()
     {
-        var expression = ParseAndExpression();
+        var expression = ParseXorExpression();
 
         while (Match(Or))
         {
-            var op = "||";
+            var op = "|";
+            SkipNewLines();
+            var right = ParseXorExpression();
+            expression = new BinaryExpressionNode(expression, op, right);
+        }
+
+        return expression;
+    }
+
+    private ExpressionNode ParseXorExpression()
+    {
+        var expression = ParseAndExpression();
+
+        while (Match(Xor))
+        {
+            var op = "^";
             SkipNewLines();
             var right = ParseAndExpression();
             expression = new BinaryExpressionNode(expression, op, right);
@@ -490,7 +505,7 @@ public sealed class EventScriptParser
 
         while (Match(And))
         {
-            var op = "&&";
+            var op = "&";
             SkipNewLines();
             var right = ParseEqualityExpression();
             expression = new BinaryExpressionNode(expression, op, right);
@@ -792,6 +807,13 @@ public sealed class EventScriptParser
     private ExpressionNode ParseUnaryExpression()
     {
         SkipNewLines();
+        if (Match(Minus))
+        {
+            SkipNewLines();
+            var negativeOperand = ParseUnaryExpression();
+            return new UnaryExpressionNode("-", negativeOperand);
+        }
+
         if (Match(Has))
         {
             SkipNewLines();
@@ -836,7 +858,8 @@ public sealed class EventScriptParser
         }
 
         var op = Previous.Text;
-        if (string.Equals(op, "not", StringComparison.Ordinal))
+        if (string.Equals(op, "not", StringComparison.Ordinal) ||
+            string.Equals(op, "~", StringComparison.Ordinal))
         {
             op = "!";
         }
@@ -1248,7 +1271,9 @@ public sealed class EventScriptParser
 
         if (Match(EventScriptTokenKind.Decimal))
         {
-            return new DecimalLiteralExpressionNode(Previous.DecimalValue);
+            return Previous.TryGetIntegerValue(out var integerValue)
+                ? new IntegerLiteralExpressionNode(integerValue)
+                : new DecimalLiteralExpressionNode(Previous.DecimalValue);
         }
 
         if (Match(Percentage))
@@ -1503,6 +1528,8 @@ public sealed class EventScriptParser
 
     private RandomExpressionNode ParseRandomExpression()
     {
+        MatchWord("from");
+        SkipNewLines();
         var fromExpression = ParseRandomBoundExpression();
         SkipNewLines();
         Expect(To);

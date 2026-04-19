@@ -1031,6 +1031,30 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void UnaryMinusSupportsNegativeDecimalIntegerAndPercentageExpressions()
+    {
+        const string script = """
+            on Start {
+                let negInt be -12;
+                let negDecimal be -12.34;
+                let negPercent be -25%;
+                let restored be -negDecimal;
+                let boolNegation be not false;
+                publish Done(negInt, negDecimal, negPercent, restored, boolNegation);
+            }
+            """;
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+
+        Assert.AreEqual(-12m, args[0].AsNumber());
+        Assert.AreEqual(-12.34m, args[1].AsNumber());
+        Assert.AreEqual("-25%", args[2].AsText());
+        Assert.AreEqual(12.34m, args[3].AsNumber());
+        Assert.IsTrue(args[4].AsBoolean());
+    }
+
+    [TestMethod]
     public void DomainStyleBooleanChecksBehaveLikeTheirTechnicalForms()
     {
         const string script = """
@@ -1347,7 +1371,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Roll(min, max) {
-                let value be :random min to max;
+                let value be :random from min to max;
                 publish Done(value);
             }
             """;
@@ -1355,6 +1379,47 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptInterpreter.Compile(script);
         var result = interpreter.Emit("Roll", 9m, 2m);
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
+    }
+
+    [TestMethod]
+    public void RandomCanProduceDecimalResultsWhenEitherBoundIsDecimal()
+    {
+        const string script = """
+            on Roll {
+                let integerValue be :random from 1 to 6;
+                let decimalValue be :random from 0.0 to 1.0;
+                let mixedValue be :random from 1 to 2.0;
+                publish Done(integerValue, decimalValue, mixedValue);
+            }
+            """;
+
+        var interpreter = EventScriptInterpreter.Compile(script, new QueueRandom(4, 250000, 500000));
+        var args = interpreter.Emit("Roll").EmittedEvents[0].Arguments;
+
+        Assert.AreEqual(EventScriptValueType.Integer, args[0].Type);
+        Assert.AreEqual(4L, args[0].AsInteger());
+        Assert.AreEqual(EventScriptValueType.Decimal, args[1].Type);
+        Assert.AreEqual(0.25m, args[1].AsNumber());
+        Assert.AreEqual(EventScriptValueType.Decimal, args[2].Type);
+        Assert.AreEqual(1.5m, args[2].AsNumber());
+    }
+
+    [TestMethod]
+    public void XorSupportsWordAndSymbolForms()
+    {
+        const string script = """
+            on Start {
+                publish Done(true xor false, true xor true, true ^ false, false ^ false);
+            }
+            """;
+
+        var interpreter = EventScriptInterpreter.Compile(script);
+        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+
+        Assert.IsTrue(args[0].AsBoolean());
+        Assert.IsFalse(args[1].AsBoolean());
+        Assert.IsTrue(args[2].AsBoolean());
+        Assert.IsFalse(args[3].AsBoolean());
     }
 
     [TestMethod]

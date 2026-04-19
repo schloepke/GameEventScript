@@ -42,8 +42,9 @@ CollectionCombineOperator ::= ":intersect"
                             | ":except"
                             | ":zip"
 
-OrExpression ::= AndExpression { ( "||" | "or" ) AndExpression }
-AndExpression ::= EqualityExpression { ( "&&" | "and" ) EqualityExpression }
+OrExpression ::= XorExpression { ( "|" | "or" ) XorExpression }
+XorExpression ::= AndExpression { ( "^" | "xor" ) AndExpression }
+AndExpression ::= EqualityExpression { ( "&" | "and" ) EqualityExpression }
 EqualityExpression ::= MembershipExpression { ( "=" | "<>" ) MembershipExpression }
 MembershipExpression ::= TypeCheckExpression { MembershipOperator TypeCheckExpression }
 MembershipOperator ::= "in"
@@ -65,7 +66,9 @@ AsOperation ::= "as" TypeTag
 RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
 AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" ) MultiplicativeExpression }
 MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "%" ) UnaryExpression }
-UnaryExpression ::= "!" UnaryExpression
+UnaryExpression ::= "-" UnaryExpression
+                  | "!" UnaryExpression
+                  | "~" UnaryExpression
                   | "not" UnaryExpression
                   | "has" "value" UnaryExpression
                   | "empty" UnaryExpression
@@ -197,7 +200,7 @@ CollectionPattern ::= "pair" [ "of" UnaryExpression ]
 ObjectMatchPattern ::= "[" [ ObjectMatchEntry { "," ObjectMatchEntry } ] "]"
 ObjectMatchEntry ::= Identifier ":" ( Expression | ObjectMatchPattern )
 
-RandomExpression ::= ":random" AdditiveExpression "to" AdditiveExpression
+RandomExpression ::= ":random" [ "from" ] AdditiveExpression "to" AdditiveExpression
 
 DiceExpression ::= ":dice" Number "d" Number
 

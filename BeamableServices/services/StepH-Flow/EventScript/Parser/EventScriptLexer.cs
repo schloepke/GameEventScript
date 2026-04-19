@@ -70,6 +70,7 @@ public enum EventScriptTokenKind
     Colon,
     Arrow,
     Or,
+    Xor,
     And,
     Equal,
     NotEqual,
@@ -88,11 +89,22 @@ public enum EventScriptTokenKind
 public readonly record struct EventScriptToken(EventScriptTokenKind Kind, string Text, int Line, int Column)
 {
     public decimal DecimalValue => decimal.Parse(Text, CultureInfo.InvariantCulture);
+
+    public bool TryGetIntegerValue(out long value)
+    {
+        if (Kind == EventScriptTokenKind.Decimal &&
+            Text.IndexOf('.') < 0 &&
+            long.TryParse(Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
 }
 
-public sealed record EventScriptLexingResult(
-    IReadOnlyList<EventScriptToken> Tokens,
-    IReadOnlyList<EventScriptSyntaxError> Errors);
+public sealed record EventScriptLexingResult(IReadOnlyList<EventScriptToken> Tokens, IReadOnlyList<EventScriptSyntaxError> Errors);
 
 public sealed class EventScriptLexer
 {
@@ -261,6 +273,7 @@ public sealed class EventScriptLexer
             "with" => new EventScriptToken(EventScriptTokenKind.With, text, line, column),
             "is" => new EventScriptToken(EventScriptTokenKind.Is, text, line, column),
             "or" => new EventScriptToken(EventScriptTokenKind.Or, text, line, column),
+            "xor" => new EventScriptToken(EventScriptTokenKind.Xor, text, line, column),
             "and" => new EventScriptToken(EventScriptTokenKind.And, text, line, column),
             "not" => new EventScriptToken(EventScriptTokenKind.Not, text, line, column),
             "to" => new EventScriptToken(EventScriptTokenKind.To, text, line, column),
@@ -349,12 +362,6 @@ public sealed class EventScriptLexer
         Advance();
         switch (ch)
         {
-            case '|' when next == '|':
-                Advance();
-                return new EventScriptToken(EventScriptTokenKind.Or, "||", line, column);
-            case '&' when next == '&':
-                Advance();
-                return new EventScriptToken(EventScriptTokenKind.And, "&&", line, column);
             case '<' when next == '>':
                 Advance();
                 return new EventScriptToken(EventScriptTokenKind.NotEqual, "<>", line, column);
@@ -383,12 +390,16 @@ public sealed class EventScriptLexer
                     '=' => new EventScriptToken(EventScriptTokenKind.Equal, "=", line, column),
                     '<' => new EventScriptToken(EventScriptTokenKind.Less, "<", line, column),
                     '>' => new EventScriptToken(EventScriptTokenKind.Greater, ">", line, column),
+                    '|' => new EventScriptToken(EventScriptTokenKind.Or, "|", line, column),
+                    '^' => new EventScriptToken(EventScriptTokenKind.Xor, "^", line, column),
+                    '&' => new EventScriptToken(EventScriptTokenKind.And, "&", line, column),
                     '+' => new EventScriptToken(EventScriptTokenKind.Plus, "+", line, column),
                     '-' => new EventScriptToken(EventScriptTokenKind.Minus, "-", line, column),
                     '*' => new EventScriptToken(EventScriptTokenKind.Multiply, "*", line, column),
                     '/' => new EventScriptToken(EventScriptTokenKind.Divide, "/", line, column),
                     '%' => new EventScriptToken(EventScriptTokenKind.Modulo, "%", line, column),
                     '!' => new EventScriptToken(EventScriptTokenKind.Not, "!", line, column),
+                    '~' => new EventScriptToken(EventScriptTokenKind.Not, "~", line, column),
                     _ => AddUnexpectedCharacterError(ch, line, column, errors)
                 };
         }
@@ -401,11 +412,7 @@ public sealed class EventScriptLexer
     }
 
     private EventScriptSyntaxError CreateSyntaxError(string message, EventScriptSyntaxErrorKind kind, int line, int column)
-        => new(
-            message,
-            _moduleName,
-            kind,
-            new EventScriptSourceLocation(_sourceName, line, column));
+        => new(message, _moduleName, kind, new EventScriptSourceLocation(_sourceName, line, column));
 
     private void SkipWhitespaceExceptNewLine()
     {

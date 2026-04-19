@@ -229,6 +229,8 @@ internal sealed class EventScriptInvocationEngine
     {
         switch (expression)
         {
+            case IntegerLiteralExpressionNode integer:
+                return EventScriptValue.Integer(integer.Value);
             case DecimalLiteralExpressionNode number:
                 return EventScriptValue.Decimal(number.Value);
             case PercentageLiteralExpressionNode percentage:
@@ -311,19 +313,45 @@ internal sealed class EventScriptInvocationEngine
 
     private EventScriptValue EvaluateRandomExpression(ExecutionContext context, RandomExpressionNode randomExpression)
     {
-        var from = AsInt(EvaluateExpression(context, randomExpression.FromExpression));
-        var to = AsInt(EvaluateExpression(context, randomExpression.ToExpression));
-        if (from > to)
+        var fromValue = EvaluateExpression(context, randomExpression.FromExpression);
+        var toValue = EvaluateExpression(context, randomExpression.ToExpression);
+
+        if (TryUnwrapOptionalForOperation(fromValue, out var unwrappedFrom) &&
+            TryUnwrapOptionalForOperation(toValue, out var unwrappedTo) &&
+            unwrappedFrom.Type == EventScriptValueType.Integer &&
+            unwrappedTo.Type == EventScriptValueType.Integer)
         {
-            (from, to) = (to, from);
+            var from = AsInt(unwrappedFrom);
+            var to = AsInt(unwrappedTo);
+            if (from > to)
+            {
+                (from, to) = (to, from);
+            }
+
+            if (!TryNextInclusive(from, to, out var next))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            return EventScriptValue.Integer(next);
         }
 
-        if (!TryNextInclusive(from, to, out var next))
+        if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
+            !TryCoerceNumericForOperation(toValue, out var toNumber) ||
+            !fromNumber.IsFinite ||
+            !toNumber.IsFinite)
         {
             return EventScriptValue.Nothing;
         }
 
-        return EventScriptValue.Integer(next);
+        var lower = Math.Min(fromNumber.Value, toNumber.Value);
+        var upper = Math.Max(fromNumber.Value, toNumber.Value);
+        if (lower == upper)
+        {
+            return EventScriptValue.Decimal(lower);
+        }
+
+        return EventScriptValue.Decimal(lower + (upper - lower) * NextRandomUnit());
     }
 
     private EventScriptValue EvaluateDiceExpression(DiceExpressionNode diceExpression)
@@ -489,6 +517,7 @@ internal sealed class EventScriptInvocationEngine
 
         return unary.Operator switch
         {
+            "-" => EvaluateNegateUnary(operand),
             "!" => EvaluateNotUnary(operand),
             "has value" => EventScriptValue.Boolean(EventScriptValueSemantics.HasValue(operand)),
             "empty" => EventScriptValue.Boolean(EventScriptValueSemantics.IsEmpty(operand)),
@@ -505,6 +534,38 @@ internal sealed class EventScriptInvocationEngine
             "roundup" => EvaluateRoundingUnary(operand, "roundup"),
             "roundeven" => EvaluateRoundingUnary(operand, "roundeven"),
             _ => EventScriptValue.Nothing
+        };
+    }
+
+    private static EventScriptValue EvaluateNegateUnary(EventScriptValue operand)
+    {
+        if (operand.isNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        {
+            return EventScriptValue.OptionalNone();
+        }
+
+        if (unwrapped.isPercentage())
+        {
+            return EventScriptValue.Percentage(-unwrapped.AsNumber());
+        }
+
+        if (!TryCoerceNumericForOperation(unwrapped, out var number))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return number.Kind switch
+        {
+            NumericKind.Finite => EventScriptValue.Decimal(-number.Value),
+            NumericKind.NaN => EventScriptValue.DecimalNaN(),
+            NumericKind.PositiveInfinity => EventScriptValue.DecimalNegativeInfinity(),
+            NumericKind.NegativeInfinity => EventScriptValue.DecimalInfinity(),
+            _ => EventScriptValue.DecimalNaN()
         };
     }
 
@@ -926,9 +987,11 @@ internal sealed class EventScriptInvocationEngine
 
         switch (binary.Operator)
         {
-            case "||":
+            case "|":
                 return EventScriptValue.Boolean(AsBool(left) || AsBool(right));
-            case "&&":
+            case "^":
+                return EventScriptValue.Boolean(AsBool(left) ^ AsBool(right));
+            case "&":
                 return EventScriptValue.Boolean(AsBool(left) && AsBool(right));
             case "default":
                 return EventScriptValue.Nothing;

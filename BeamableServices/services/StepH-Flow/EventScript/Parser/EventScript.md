@@ -311,9 +311,14 @@ x <> y
 
 ```eventscript
 a and b
+a & b
+a xor b
+a ^ b
 a or b
+a | b
 not a
 !a
+~a
 ```
 
 ### Comparison
@@ -894,11 +899,13 @@ let hit be :chance 25%
 let keys be :keys entry
 let values be :values items
 let entries be :entries entry
-let distance be :abs (0 - 5)
+let penalty be -12
+let debt be -12.5
+let distance be :abs -5
 let roundedDown be :floor 12.9
 ```
 
-Note: because unary minus is not a standalone literal form, negative values are typically written as expressions like `(0 - 5)`.
+Negative values can be written directly with unary minus, such as `-12` or `-12.34`.
 
 ## Keys, Values, and Entries
 
@@ -933,8 +940,12 @@ Entry values behave like dictionary-like objects with `key` and `value`.
 ### Integer range
 
 ```eventscript
-:random 1 to 6
+:random from 1 to 6
+:random from 0.0 to 1.0
 ```
+
+If both bounds are integers, the result is an integer.
+If either bound is decimal, the result is a decimal.
 
 ### Dice
 
@@ -1088,7 +1099,6 @@ At the current language stage:
 - there are no user-defined mutable variables
 - there are no traditional functions beyond `rule` and `select`
 - there is no direct mutation of collections or dictionaries
-- unary negative number literals are not a dedicated syntax form
 
 ## Practical Examples
 

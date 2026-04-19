@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace StepH.Flow.EventScript;
+namespace StepH.Flow.EventScript.Parser;
 
 public enum EventScriptTokenKind
 {
@@ -90,29 +90,32 @@ public readonly record struct EventScriptToken(EventScriptTokenKind Kind, string
     public decimal NumberValue => decimal.Parse(Text, CultureInfo.InvariantCulture);
 }
 
-public sealed class EventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
-{
-    public int Line { get; } = line;
-    public int Column { get; } = column;
-}
+public sealed record EventScriptLexingResult(
+    IReadOnlyList<EventScriptToken> Tokens,
+    IReadOnlyList<EventScriptSyntaxError> Errors);
 
 public sealed class EventScriptLexer
 {
     private readonly string _input;
+    private readonly string _moduleName;
+    private readonly string _sourceName;
     private readonly int _length;
     private int _index;
     private int _line = 1;
     private int _column = 1;
 
-    public EventScriptLexer(string input)
+    public EventScriptLexer(string input, string moduleName, string sourceName)
     {
         _input = input ?? throw new ArgumentNullException(nameof(input));
+        _moduleName = string.IsNullOrWhiteSpace(moduleName) ? "AnonymousModule_Unknown" : moduleName;
+        _sourceName = string.IsNullOrWhiteSpace(sourceName) ? "UnknownSource_Unknown" : sourceName;
         _length = _input.Length;
     }
 
-    public IReadOnlyList<EventScriptToken> Tokenize()
+    public EventScriptLexingResult Tokenize()
     {
         var tokens = new List<EventScriptToken>();
+        var errors = new List<EventScriptSyntaxError>();
 
         while (true)
         {
@@ -121,7 +124,7 @@ public sealed class EventScriptLexer
             if (IsAtEnd)
             {
                 tokens.Add(new EventScriptToken(EventScriptTokenKind.EndOfFile, string.Empty, _line, _column));
-                return tokens;
+                return new EventScriptLexingResult(tokens, errors);
             }
 
             switch (Current)
@@ -168,14 +171,28 @@ public sealed class EventScriptLexer
             switch (ch)
             {
                 case '\'':
-                    tokens.Add(ReadTextToken(startLine, startColumn));
+                {
+                    var textToken = ReadTextToken(startLine, startColumn, errors);
+                    if (textToken is not null)
+                    {
+                        tokens.Add(textToken.Value);
+                    }
+
                     continue;
+                }
                 case ':' when char.IsLower(Peek()):
                     tokens.Add(ReadSelectorToken(startLine, startColumn));
                     continue;
                 default:
-                    tokens.Add(ReadOperatorToken(startLine, startColumn));
+                {
+                    var operatorToken = ReadOperatorToken(startLine, startColumn, errors);
+                    if (operatorToken is not null)
+                    {
+                        tokens.Add(operatorToken.Value);
+                    }
+
                     break;
+                }
             }
         }
     }
@@ -297,7 +314,7 @@ public sealed class EventScriptLexer
         return new EventScriptToken(EventScriptTokenKind.Percentage, text, line, column);
     }
 
-    private EventScriptToken ReadTextToken(int line, int column)
+    private EventScriptToken? ReadTextToken(int line, int column, List<EventScriptSyntaxError> errors)
     {
         Advance();
         var builder = new StringBuilder();
@@ -321,10 +338,11 @@ public sealed class EventScriptLexer
             Advance();
         }
 
-        throw new EventScriptParseException("Unterminated string literal", line, column);
+        errors.Add(CreateSyntaxError("Unterminated string literal", EventScriptSyntaxErrorKind.Lexer, line, column));
+        return null;
     }
 
-    private EventScriptToken ReadOperatorToken(int line, int column)
+    private EventScriptToken? ReadOperatorToken(int line, int column, List<EventScriptSyntaxError> errors)
     {
         var ch = Current;
         var next = Peek();
@@ -371,10 +389,23 @@ public sealed class EventScriptLexer
                     '/' => new EventScriptToken(EventScriptTokenKind.Divide, "/", line, column),
                     '%' => new EventScriptToken(EventScriptTokenKind.Modulo, "%", line, column),
                     '!' => new EventScriptToken(EventScriptTokenKind.Not, "!", line, column),
-                    _ => throw new EventScriptParseException($"Unexpected character '{ch}'", line, column)
+                    _ => AddUnexpectedCharacterError(ch, line, column, errors)
                 };
         }
     }
+
+    private EventScriptToken? AddUnexpectedCharacterError(char ch, int line, int column, List<EventScriptSyntaxError> errors)
+    {
+        errors.Add(CreateSyntaxError($"Unexpected character '{ch}'", EventScriptSyntaxErrorKind.Lexer, line, column));
+        return null;
+    }
+
+    private EventScriptSyntaxError CreateSyntaxError(string message, EventScriptSyntaxErrorKind kind, int line, int column)
+        => new(
+            message,
+            _moduleName,
+            kind,
+            new EventScriptSourceLocation(_sourceName, line, column));
 
     private void SkipWhitespaceExceptNewLine()
     {

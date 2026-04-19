@@ -8,7 +8,9 @@ namespace StepH.Flow.EventScript;
 
 public sealed record EventScriptExternalMessageBinding(string Message, Action<IReadOnlyList<EventScriptValue>> Handler, int? ParameterCount = null);
 
-public sealed class EventScriptCompilationException(string message) : Exception(message);
+public class EventScriptCompilationException(string message) : Exception(message);
+
+
 
 public sealed class EventScriptCompilationContext
 {

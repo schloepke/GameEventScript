@@ -1,30 +1,41 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using static StepH.Flow.EventScript.EventScriptTokenKind;
+using System.Security.Cryptography;
+using System.Text;
+using static StepH.Flow.EventScript.Parser.EventScriptTokenKind;
 
-namespace StepH.Flow.EventScript;
+namespace StepH.Flow.EventScript.Parser;
 
+
+/// <summary>
+/// A utility class responsible for parsing Event Script source code into a structured syntax tree.
+/// This class serves as the entry point for transforming raw script strings
+/// into an abstract representation of the script for further processing or compilation.
+/// </summary>
 public sealed class EventScriptParser
 {
-    private static readonly HashSet<string> KnownTypeNames = new(StringComparer.Ordinal)
+    /// <summary>
+    /// Parses the provided Event Script string into an EventScriptModule, which represents the root node of the syntax tree.
+    /// </summary>
+    /// <param name="script">The Event Script source code to be parsed.</param>
+    /// <param name="sourceName">An optional source name used for diagnostics.</param>
+    /// <returns>An <see cref="EventScriptModule"/> representing the parsed syntax tree structure.</returns>
+    public static EventScriptModule Parse(string script, string? sourceName = null)
     {
-        "tag",
-        "text",
-        "percentage",
-        "decimal",
-        "integer",
-        "boolean",
-        "optional",
-        "list",
-        "dictionary",
-        "set",
-        "dice",
-        "nothing"
-    };
+        _ = script ?? throw new ArgumentNullException(nameof(script));
+
+        var normalizedScript = script.Replace("\r\n", "\n").Replace('\r', '\n');
+        var hash = ComputeShortHash(normalizedScript);
+        var (moduleNameFromDirective, scriptWithoutDirective) = ExtractModuleDirective(normalizedScript);
+        var moduleName = moduleNameFromDirective ?? $"AnonymousModule_{hash}";
+        var resolvedSourceName = string.IsNullOrWhiteSpace(sourceName) ? $"UnknownSource_{hash}" : sourceName!;
+        var lexingResult = new EventScriptLexer(scriptWithoutDirective, moduleName, resolvedSourceName).Tokenize();
+
+        return new EventScriptParser(lexingResult.Tokens, moduleName, resolvedSourceName, lexingResult.Errors)
+            .ParseEventScript();
+    }
 
     private static readonly HashSet<string> CollectionCombineOperators = new(StringComparer.Ordinal)
     {
@@ -35,22 +46,27 @@ public sealed class EventScriptParser
         "zip"
     };
 
+    private sealed class EventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
+    {
+        public int Line { get; } = line;
+        public int Column { get; } = column;
+    }
+
     private readonly IReadOnlyList<EventScriptToken> _tokens;
+    private readonly string _moduleName;
+    private readonly string _sourceName;
+    private readonly List<EventScriptSyntaxError> _errors;
     private int _index;
 
-    private EventScriptParser(IReadOnlyList<EventScriptToken> tokens)
+    private EventScriptParser(IReadOnlyList<EventScriptToken> tokens, string moduleName, string sourceName, IReadOnlyList<EventScriptSyntaxError> initialErrors)
     {
         _tokens = tokens;
+        _moduleName = moduleName;
+        _sourceName = sourceName;
+        _errors = initialErrors?.ToList() ?? [];
     }
 
-    public static EventScriptProgram Parse(string script)
-    {
-        var lexer = new EventScriptLexer(script);
-        var tokens = lexer.Tokenize();
-        return new EventScriptParser(tokens).ParseProgram();
-    }
-
-    private EventScriptProgram ParseProgram()
+    private EventScriptModule ParseEventScript()
     {
         var typeDefinitions = new List<TypeDefinitionNode>();
         var ruleDefinitions = new List<RuleDefinitionNode>();
@@ -59,28 +75,77 @@ public sealed class EventScriptParser
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
-            if (Match(Record))
+            try
             {
-                typeDefinitions.Add(ParseTypeDefinition());
-            }
-            else if (Match(Rule))
-            {
-                ruleDefinitions.Add(ParseRuleDefinition());
-            }
-            else if (Match(Select))
-            {
-                selectDefinitions.Add(ParseSelectDefinition());
-            }
-            else
-            {
-                handlers.Add(ParseEventHandler());
-            }
+                if (Match(Record))
+                {
+                    typeDefinitions.Add(ParseTypeDefinition());
+                }
+                else if (Match(Rule))
+                {
+                    ruleDefinitions.Add(ParseRuleDefinition());
+                }
+                else if (Match(Select))
+                {
+                    selectDefinitions.Add(ParseSelectDefinition());
+                }
+                else
+                {
+                    handlers.Add(ParseEventHandler());
+                }
 
-            RequireHandlerSeparatorOrEndOfFile();
-            SkipStatementSeparators();
+                RequireHandlerSeparatorOrEndOfFile();
+                SkipStatementSeparators();
+            }
+            catch (EventScriptParseException ex)
+            {
+                AddParseError(ex);
+                SynchronizeTopLevel();
+            }
         }
 
-        return new EventScriptProgram(typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
+        if (_errors.Count > 0)
+        {
+            throw new EventScriptSyntaxException(_errors);
+        }
+
+        return new EventScriptModule(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
+    }
+
+    private static (string? ModuleName, string ScriptWithoutDirective) ExtractModuleDirective(string script)
+    {
+        var lines = script.Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (trimmed.Length == 0)
+            {
+                continue;
+            }
+
+            if (!trimmed.StartsWith("#module ", StringComparison.Ordinal))
+            {
+                return (null, script);
+            }
+
+            var moduleName = trimmed["#module ".Length..].Trim();
+            if (moduleName.Length == 0)
+            {
+                return (null, script);
+            }
+
+            lines[i] = string.Empty;
+            return (moduleName, string.Join('\n', lines));
+        }
+
+        return (null, script);
+    }
+
+    private static string ComputeShortHash(string text)
+    {
+        using var sha256 = SHA256.Create();
+        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(text));
+        return BitConverter.ToString(bytes, 0, 4).Replace("-", string.Empty, StringComparison.Ordinal);
     }
 
     private TypeDefinitionNode ParseTypeDefinition()
@@ -213,11 +278,23 @@ public sealed class EventScriptParser
             if (Is(EndOfFile))
             {
                 var token = Current;
-                throw new EventScriptParseException($"Expected '{closingKind}' before end of input", token.Line, token.Column);
+                AddParseError(new EventScriptParseException($"Expected '{closingKind}' before end of input", token.Line, token.Column));
+                return statements;
             }
 
-            statements.Add(ParseStatement());
-            RequireStatementSeparatorOrClosing(closingKind);
+            try
+            {
+                statements.Add(ParseStatement());
+                RequireStatementSeparatorOrClosing(closingKind);
+            }
+            catch (EventScriptParseException ex)
+            {
+                AddParseError(ex);
+                if (!SynchronizeStatement(closingKind))
+                {
+                    return statements;
+                }
+            }
         }
 
         return statements;
@@ -1028,7 +1105,7 @@ public sealed class EventScriptParser
     private CollectionSelectorNode ParseSortSelector()
     {
         SkipNewLines();
-        return new SortSelectorNode(ParseSortDirection(), null, null);
+        return new SortSelectorNode(ParseSortDirection());
     }
 
     private CollectionSelectorNode ParseEdgeSelector(string mode)
@@ -1171,7 +1248,7 @@ public sealed class EventScriptParser
 
         if (Match(Number))
         {
-            return new NumberLiteralExpressionNode(Previous.NumberValue, Previous.Text);
+            return new NumberLiteralExpressionNode(Previous.NumberValue);
         }
 
         if (Match(Percentage))
@@ -1864,4 +1941,47 @@ public sealed class EventScriptParser
     private EventScriptToken Current => _tokens[_index];
 
     private EventScriptToken Previous => _tokens[_index - 1];
+
+    private void AddParseError(EventScriptParseException exception)
+    {
+        _errors.Add(new EventScriptSyntaxError(
+            exception.Message,
+            _moduleName,
+            EventScriptSyntaxErrorKind.Parser,
+            new EventScriptSourceLocation(_sourceName, exception.Line, exception.Column)));
+    }
+
+    private void SynchronizeTopLevel()
+    {
+        while (!Is(EndOfFile))
+        {
+            if (Is(Record) || Is(Rule) || Is(Select) || Is(On))
+            {
+                return;
+            }
+
+            Advance();
+        }
+    }
+
+    private bool SynchronizeStatement(EventScriptTokenKind closingKind)
+    {
+        while (!Is(EndOfFile))
+        {
+            if (Is(closingKind))
+            {
+                return false;
+            }
+
+            if (Match(Semicolon, NewLine))
+            {
+                SkipStatementSeparators();
+                return true;
+            }
+
+            Advance();
+        }
+
+        return false;
+    }
 }

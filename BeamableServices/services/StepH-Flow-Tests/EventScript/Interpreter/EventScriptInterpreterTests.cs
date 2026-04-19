@@ -1,6 +1,7 @@
 using StepH.Flow.EventScript;
+using StepH.Flow.EventScript.Interpreter;
 
-namespace StepH_Flow_Tests.EventScript;
+namespace StepH_Flow_Tests.EventScript.Interpreter;
 
 [TestClass]
 public class EventScriptRuntimeScenarios
@@ -759,11 +760,11 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(missingRuleScript));
-        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(missingSelectScript));
-        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(invalidPredicateScript));
-        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(wrongRuleArityScript));
-        Assert.ThrowsExactly<EventScriptCompilationException>(() => EventScriptInterpreter.Compile(wrongSelectArityScript));
+        Assert.ThrowsExactly<EventScriptLinkageException>(() => EventScriptInterpreter.Compile(missingRuleScript));
+        Assert.ThrowsExactly<EventScriptLinkageException>(() => EventScriptInterpreter.Compile(missingSelectScript));
+        Assert.ThrowsExactly<EventScriptLinkageException>(() => EventScriptInterpreter.Compile(invalidPredicateScript));
+        Assert.ThrowsExactly<EventScriptLinkageException>(() => EventScriptInterpreter.Compile(wrongRuleArityScript));
+        Assert.ThrowsExactly<EventScriptLinkageException>(() => EventScriptInterpreter.Compile(wrongSelectArityScript));
     }
 
     [TestMethod]

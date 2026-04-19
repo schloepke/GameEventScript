@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using StepH.Flow.EventScript.Linker;
+using StepH.Flow.EventScript.Parser;
 
-namespace StepH.Flow.EventScript;
+namespace StepH.Flow.EventScript.Interpreter;
 
 public sealed record EventScriptEmittedEvent(string Message, IReadOnlyList<EventScriptValue> Arguments);
 
@@ -39,23 +41,38 @@ public sealed class EventScriptInterpreter
 {
     private const int RandomUnitMax = 1_000_000;
     private const decimal RandomUnitScale = RandomUnitMax;
-    private readonly Dictionary<string, List<EventHandlerNode>> _handlers;
-    private readonly Dictionary<string, TypeDefinitionNode> _typeDefinitions;
-    private readonly Dictionary<string, RuleDefinitionNode> _ruleDefinitions;
-    private readonly Dictionary<string, SelectDefinitionNode> _selectDefinitions;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> _handlers;
+    private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _typeDefinitions;
+    private readonly IReadOnlyDictionary<string, RuleDefinitionNode> _ruleDefinitions;
+    private readonly IReadOnlyDictionary<string, SelectDefinitionNode> _selectDefinitions;
     private readonly Dictionary<string, List<EventScriptExternalMessageBinding>> _externalBindings;
     private readonly IEventScriptRandom _random;
     private readonly int _maxProcessedEventsPerRun;
 
     private static readonly IReadOnlyDictionary<string, EventScriptValue> EmptyVariables = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
 
-    private EventScriptInterpreter(EventScriptProgram eventScriptProgram, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInterpretationModel CompileModel(string script, EventScriptInterpreterCompilationOptions? options = null)
+        => CompileModel(EventScriptLinkBuilder.LinkScripts(script), options);
+
+    public static EventScriptInterpretationModel CompileModel(EventScriptModule eventScriptModule, EventScriptInterpreterCompilationOptions? options = null)
     {
-        _ = eventScriptProgram ?? throw new ArgumentNullException(nameof(eventScriptProgram));
+        _ = eventScriptModule ?? throw new ArgumentNullException(nameof(eventScriptModule));
+        return CompileModel(new EventScriptLinkBuilder().AddModule(eventScriptModule).Link(), options);
+    }
+
+    public static EventScriptInterpretationModel CompileModel(LinkedEventScriptModule linkedModule, EventScriptInterpreterCompilationOptions? options = null)
+    {
+        _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
+        return new EventScriptInterpretationModel(linkedModule, options);
+    }
+
+    private EventScriptInterpreter(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    {
+        _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
         _random = random ?? new DefaultEventScriptRandom();
-        _typeDefinitions = BuildTypeDefinitionMap(eventScriptProgram.TypeDefinitions);
-        _ruleDefinitions = BuildRuleDefinitionMap(eventScriptProgram.RuleDefinitions);
-        _selectDefinitions = BuildSelectDefinitionMap(eventScriptProgram.SelectDefinitions);
+        _typeDefinitions = linkedModule.TypeDefinitions;
+        _ruleDefinitions = linkedModule.RuleDefinitions;
+        _selectDefinitions = linkedModule.SelectDefinitions;
         foreach (var ruleName in _ruleDefinitions.Keys)
         {
             if (_selectDefinitions.ContainsKey(ruleName))
@@ -64,15 +81,26 @@ public sealed class EventScriptInterpreter
             }
         }
 
-        _handlers = BuildHandlerMap(eventScriptProgram);
+        _handlers = linkedModule.Handlers;
         _externalBindings = BuildExternalBindingMap(context?.ExternalBindings);
         _maxProcessedEventsPerRun = context?.MaxProcessedEventsPerRun ?? 64;
         if (_maxProcessedEventsPerRun <= 0) throw new EventScriptCompilationException("Max processed events per run must be > 0");
-        ValidateDefinitionReferences(eventScriptProgram);
     }
 
     public static EventScriptInterpreter Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
-        => new(EventScriptParser.Parse(script), random, context);
+        => Compile(CompileModel(script), random, context);
+
+    public static EventScriptInterpreter Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+        => Compile(CompileModel(eventScriptModule), random, context);
+
+    public static EventScriptInterpreter Compile(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+        => Compile(CompileModel(linkedModule), random, context);
+
+    public static EventScriptInterpreter Compile(EventScriptInterpretationModel interpretationModel, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    {
+        _ = interpretationModel ?? throw new ArgumentNullException(nameof(interpretationModel));
+        return new EventScriptInterpreter(interpretationModel.LinkedModule, random, context);
+    }
 
     public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args)
         => Enqueue(message, args).Drain();
@@ -2343,81 +2371,6 @@ public sealed class EventScriptInterpreter
         return true;
     }
 
-    private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(EventScriptProgram eventScriptProgram)
-    {
-        var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
-        foreach (var handler in eventScriptProgram.Handlers)
-        {
-            if (!map.TryGetValue(handler.Message, out var handlers))
-            {
-                handlers = new List<EventHandlerNode>();
-                map[handler.Message] = handlers;
-            }
-
-            handlers.Add(handler);
-        }
-
-        foreach (var pair in map)
-        {
-            var expectedParameterCount = pair.Value[0].Parameters.Count;
-            if (pair.Value.Any(handler => handler.Parameters.Count != expectedParameterCount))
-            {
-                throw new EventScriptCompilationException(
-                    $"All handlers for message '{pair.Key}' must declare the same parameter count");
-            }
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<TypeDefinitionNode> typeDefinitions)
-    {
-        var map = new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
-        foreach (var typeDefinition in typeDefinitions)
-        {
-            if (map.ContainsKey(typeDefinition.Name))
-            {
-                throw new EventScriptCompilationException($"Type '{typeDefinition.Name}' is defined more than once");
-            }
-
-            map[typeDefinition.Name] = typeDefinition;
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<RuleDefinitionNode> ruleDefinitions)
-    {
-        var map = new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal);
-        foreach (var ruleDefinition in ruleDefinitions)
-        {
-            if (map.ContainsKey(ruleDefinition.Name))
-            {
-                throw new EventScriptCompilationException($"Rule '{ruleDefinition.Name}' is defined more than once");
-            }
-
-            map[ruleDefinition.Name] = ruleDefinition;
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<SelectDefinitionNode> selectDefinitions)
-    {
-        var map = new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal);
-        foreach (var selectDefinition in selectDefinitions)
-        {
-            if (map.ContainsKey(selectDefinition.Name))
-            {
-                throw new EventScriptCompilationException($"Select '{selectDefinition.Name}' is defined more than once");
-            }
-
-            map[selectDefinition.Name] = selectDefinition;
-        }
-
-        return map;
-    }
-
     private static Dictionary<string, List<EventScriptExternalMessageBinding>> BuildExternalBindingMap(
         IReadOnlyDictionary<string, IReadOnlyList<EventScriptExternalMessageBinding>>? bindings)
     {
@@ -2438,9 +2391,9 @@ public sealed class EventScriptInterpreter
     private static bool AreEqual(EventScriptValue left, EventScriptValue right)
         => left.Equals(right);
 
-    private void ValidateDefinitionReferences(EventScriptProgram eventScriptProgram)
+    private void ValidateDefinitionReferences(EventScriptModule eventScriptModule)
     {
-        foreach (var typeDefinition in eventScriptProgram.TypeDefinitions)
+        foreach (var typeDefinition in eventScriptModule.TypeDefinitions)
         {
             foreach (var field in typeDefinition.Fields)
             {
@@ -2461,17 +2414,17 @@ public sealed class EventScriptInterpreter
             }
         }
 
-        foreach (var ruleDefinition in eventScriptProgram.RuleDefinitions)
+        foreach (var ruleDefinition in eventScriptModule.RuleDefinitions)
         {
             ValidateExpressionReferences(ruleDefinition.Expression);
         }
 
-        foreach (var selectDefinition in eventScriptProgram.SelectDefinitions)
+        foreach (var selectDefinition in eventScriptModule.SelectDefinitions)
         {
             ValidateExpressionReferences(selectDefinition.Expression);
         }
 
-        foreach (var handler in eventScriptProgram.Handlers)
+        foreach (var handler in eventScriptModule.Handlers)
         {
             foreach (var statement in handler.Statements)
             {

@@ -1,6 +1,7 @@
 using StepH.Flow.EventScript;
+using StepH.Flow.EventScript.Parser;
 
-namespace StepH_Flow_Tests.EventScript;
+namespace StepH_Flow_Tests.EventScript.Parser;
 
 [TestClass]
 public class EventScriptParsingScenarios
@@ -28,6 +29,39 @@ public class EventScriptParsingScenarios
         Assert.HasCount(2, handler.Statements);
         Assert.IsInstanceOfType<LetStatementNode>(handler.Statements[0]);
         Assert.IsInstanceOfType<IfStatementNode>(handler.Statements[1]);
+    }
+
+    [TestMethod]
+    public void ParseReadsModuleDirectiveAndSetsSourceName()
+    {
+        const string script =
+            """
+            #module CoreRules
+            on Start {
+                publish Done
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script, "RulesFile.es");
+
+        Assert.AreEqual("CoreRules", module.ModuleName);
+        Assert.AreEqual("RulesFile.es", module.SourceName);
+    }
+
+    [TestMethod]
+    public void ParseCreatesAnonymousModuleAndUnknownSourceWhenNoneAreProvided()
+    {
+        const string script =
+            """
+            on Start {
+                publish Done
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script);
+
+        StringAssert.StartsWith(module.ModuleName, "AnonymousModule_");
+        StringAssert.StartsWith(module.SourceName, "UnknownSource_");
     }
 
     [TestMethod]
@@ -208,7 +242,7 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]
@@ -219,7 +253,7 @@ public class EventScriptParsingScenarios
             external on Notify(playerId, points)
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]
@@ -657,8 +691,10 @@ public class EventScriptParsingScenarios
 
         var program = EventScriptParser.Parse(script);
         var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
-        Assert.IsInstanceOfType<SortSelectorNode>(((CollectionAccessExpressionNode)statements[0].Expression).Selector);
-        Assert.IsInstanceOfType<SortSelectorNode>(((CollectionAccessExpressionNode)statements[1].Expression).Selector);
+        var ascendingSelector = (SortSelectorNode)((CollectionAccessExpressionNode)statements[0].Expression).Selector;
+        var descendingSelector = (SortSelectorNode)((CollectionAccessExpressionNode)statements[1].Expression).Selector;
+        Assert.AreEqual("ascending", ascendingSelector.Direction);
+        Assert.AreEqual("descending", descendingSelector.Direction);
     }
 
     [TestMethod]
@@ -671,14 +707,7 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        try
-        {
-            EventScriptParser.Parse(script);
-            Assert.Fail("Expected EventScriptParseException");
-        }
-        catch (EventScriptParseException)
-        {
-        }
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]
@@ -698,8 +727,8 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(legacyTypeScript));
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(legacyUnaryScript));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(legacyTypeScript));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(legacyUnaryScript));
     }
 
     [TestMethod]
@@ -743,7 +772,7 @@ public class EventScriptParsingScenarios
     }
 
     [TestMethod]
-    public void BrokenStatementsFailFast()
+    public void BrokenStatementsProduceStructuredSyntaxErrors()
     {
         const string script =
             """
@@ -752,7 +781,46 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        var exception = Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
+        Assert.HasCount(1, exception.Errors);
+        Assert.AreEqual(EventScriptSyntaxErrorKind.Parser, exception.Errors[0].Kind);
+        Assert.IsTrue(exception.Errors[0].Message.Contains("Unexpected token", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void ParserCollectsMultipleStatementErrorsWithinOneHandler()
+    {
+        const string script =
+            """
+            on Broken {
+                let x be ;
+                let y as decimal be 10;
+                publish Done(
+            }
+            """;
+
+        var exception = Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
+
+        Assert.IsGreaterThanOrEqualTo(2, exception.Errors.Count);
+        Assert.IsTrue(exception.Errors.All(error => error.Kind == EventScriptSyntaxErrorKind.Parser));
+    }
+
+    [TestMethod]
+    public void LexerAndParserErrorsCanBeCollectedTogether()
+    {
+        const string script =
+            """
+            on Broken {
+                let name be 'Mark
+                let x be @
+            }
+            """;
+
+        var exception = Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script, "Broken.es"));
+
+        Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptSyntaxErrorKind.Lexer));
+        Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptSyntaxErrorKind.Parser));
+        Assert.IsTrue(exception.Errors.All(error => error.SourceLocation.SourceName == "Broken.es"));
     }
 
     [TestMethod]
@@ -852,7 +920,7 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]
@@ -865,7 +933,7 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        Assert.ThrowsExactly<EventScriptParseException>(() => EventScriptParser.Parse(script));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]

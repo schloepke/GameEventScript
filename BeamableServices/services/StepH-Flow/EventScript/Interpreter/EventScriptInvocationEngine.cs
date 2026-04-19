@@ -9,7 +9,7 @@ using StepH.Flow.EventScript.Parser;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
-public sealed class EventScriptDiagnosticExecutionEngine
+internal sealed class EventScriptInvocationEngine
 {
     private const int RandomUnitMax = 1_000_000;
     private const decimal RandomUnitScale = RandomUnitMax;
@@ -23,7 +23,7 @@ public sealed class EventScriptDiagnosticExecutionEngine
 
     private static readonly IReadOnlyDictionary<string, EventScriptValue> EmptyVariables = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
 
-    private EventScriptDiagnosticExecutionEngine(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    private EventScriptInvocationEngine(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
         _random = random ?? new DefaultEventScriptRandom();
@@ -44,25 +44,25 @@ public sealed class EventScriptDiagnosticExecutionEngine
         if (_maxProcessedEventsPerRun <= 0) throw new EventScriptCompilationException("Max processed events per run must be > 0");
     }
 
-    public static EventScriptDiagnosticExecutionEngine Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
         => Compile(EventScriptLinkBuilder.LinkScripts(script), random, context);
 
-    public static EventScriptDiagnosticExecutionEngine Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
         _ = eventScriptModule ?? throw new ArgumentNullException(nameof(eventScriptModule));
         return Compile(new EventScriptLinkBuilder().AddModule(eventScriptModule).Link(), random, context);
     }
 
-    public static EventScriptDiagnosticExecutionEngine Compile(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
-        return new EventScriptDiagnosticExecutionEngine(linkedModule, random, context);
+        return new EventScriptInvocationEngine(linkedModule, random, context);
     }
 
-    public static EventScriptDiagnosticExecutionEngine Compile(EventScriptInterpretationModel interpretationModel, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(EventScriptInterpretationModel interpretationModel, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
     {
         _ = interpretationModel ?? throw new ArgumentNullException(nameof(interpretationModel));
-        return new EventScriptDiagnosticExecutionEngine(interpretationModel.LinkedModule, random, context);
+        return new EventScriptInvocationEngine(interpretationModel.LinkedModule, random, context);
     }
 
     public EventScriptDiagnosticInvocationResult Invoke(string message, params EventScriptValue[] args)
@@ -3322,11 +3322,11 @@ public sealed class EventScriptDiagnosticExecutionEngine
 
     public sealed class EventScriptRun
     {
-        private readonly EventScriptDiagnosticExecutionEngine _interpreter;
+        private readonly EventScriptInvocationEngine _interpreter;
         private readonly RunState _state;
         private readonly string _message;
 
-        internal EventScriptRun(EventScriptDiagnosticExecutionEngine interpreter, string message, IReadOnlyList<EventScriptValue> args)
+        internal EventScriptRun(EventScriptInvocationEngine interpreter, string message, IReadOnlyList<EventScriptValue> args)
         {
             _interpreter = interpreter;
             _message = message;

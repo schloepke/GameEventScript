@@ -44,7 +44,7 @@ public sealed class EventScriptDiagnosticInterpreter
         => Invoke(message, invocationContext: null, args);
 
     public EventScriptDiagnosticInvocationResult Invoke(string message, EventScriptInvocationContext? invocationContext, params EventScriptValue[] args)
-        => EventScriptDiagnosticExecutionEngine
+        => EventScriptInvocationEngine
             .Compile(_interpretationModel, invocationContext?.Random)
             .Invoke(message, args);
 

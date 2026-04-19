@@ -67,4 +67,66 @@ public class EventScriptRealUsageTest
         Console.WriteLine(EventScriptValue.Dictionary(game));
 
     }
+
+    [TestMethod]
+    public void CheckingErrorHandlingWorksForLexerParserAndLinker()
+    {
+        var scriptBroken =
+            """
+            #module BrokenCombat
+            
+            rule unitIsDead(unit) means unit[hp] is not at least 0
+                     
+            on FireAtUnit(unit) {
+                let UnitIsDead be unitIsDead(unit); 
+            }          
+            """;
+
+        var scriptOk1 =
+            """
+            #module BrokenCombat
+
+            rule unitIsDead(unit) means unit[hp] <= 0
+                     
+            on FireAtUnit(unit) {
+                let unitIsDead be unitIsDead(unit); 
+            }          
+            """;
+
+        var scriptOk2 =
+            """
+            #module BrokenCombat
+
+            rule unitIsDead(unit) means unit[hp] <= 0
+                     
+            on FireAtUnit(unit, origin) {
+                let unitIsDead be unitIsDead(unit); 
+            }          
+            """;
+
+        try
+        {
+            StepH.Flow.EventScript.EventScript.Parse(scriptBroken);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        try
+        {
+            StepH.Flow.EventScript.EventScript.Link(scriptOk1, scriptOk2, scriptBroken);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        try
+        {
+            StepH.Flow.EventScript.EventScript.Link(scriptOk1, scriptOk2);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
 }

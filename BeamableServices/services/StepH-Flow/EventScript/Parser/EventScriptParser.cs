@@ -28,12 +28,27 @@ public sealed class EventScriptParser
 
         var normalizedScript = script.Replace("\r\n", "\n").Replace('\r', '\n');
         var hash = ComputeShortHash(normalizedScript);
-        var (moduleNameFromDirective, scriptWithoutDirective) = ExtractModuleDirective(normalizedScript);
-        var moduleName = moduleNameFromDirective ?? $"AnonymousModule_{hash}";
+        var rawTokens = new EventScriptLexer(normalizedScript).Tokenize().ToList();
+        var moduleName = TryResolveModuleName(rawTokens) ?? $"AnonymousModule_{hash}";
         var resolvedSourceName = string.IsNullOrWhiteSpace(sourceName) ? $"UnknownSource_{hash}" : sourceName!;
-        var lexingResult = new EventScriptLexer(scriptWithoutDirective, moduleName, resolvedSourceName).Tokenize();
+        var tokens = new List<EventScriptToken>();
+        var initialErrors = new List<EventScriptSyntaxError>();
+        foreach (var token in rawTokens)
+        {
+            if (token.Kind == Illegal)
+            {
+                initialErrors.Add(new EventScriptSyntaxError(
+                    $"Illegal token '{token.Text}'",
+                    moduleName,
+                    EventScriptSyntaxErrorKind.Lexer,
+                    new EventScriptSourceLocation(resolvedSourceName, token.Line, token.Column)));
+                continue;
+            }
 
-        return new EventScriptParser(lexingResult.Tokens, moduleName, resolvedSourceName, lexingResult.Errors)
+            tokens.Add(token);
+        }
+
+        return new EventScriptParser(tokens, moduleName, resolvedSourceName, initialErrors)
             .ParseEventScript();
     }
 
@@ -72,6 +87,8 @@ public sealed class EventScriptParser
         var ruleDefinitions = new List<RuleDefinitionNode>();
         var selectDefinitions = new List<SelectDefinitionNode>();
         var handlers = new List<EventHandlerNode>();
+        SkipStatementSeparators();
+        ParseOptionalModuleDeclaration();
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
@@ -112,40 +129,58 @@ public sealed class EventScriptParser
         return new EventScriptModule(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
     }
 
-    private static (string? ModuleName, string ScriptWithoutDirective) ExtractModuleDirective(string script)
-    {
-        var lines = script.Split('\n');
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var trimmed = lines[i].Trim();
-            if (trimmed.Length == 0)
-            {
-                continue;
-            }
-
-            if (!trimmed.StartsWith("#module ", StringComparison.Ordinal))
-            {
-                return (null, script);
-            }
-
-            var moduleName = trimmed["#module ".Length..].Trim();
-            if (moduleName.Length == 0)
-            {
-                return (null, script);
-            }
-
-            lines[i] = string.Empty;
-            return (moduleName, string.Join('\n', lines));
-        }
-
-        return (null, script);
-    }
-
     private static string ComputeShortHash(string text)
     {
         using var sha256 = SHA256.Create();
         var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(text));
         return BitConverter.ToString(bytes, 0, 4).Replace("-", string.Empty, StringComparison.Ordinal);
+    }
+
+    private static string? TryResolveModuleName(IReadOnlyList<EventScriptToken> tokens)
+    {
+        var index = 0;
+        while (index < tokens.Count && tokens[index].Kind == NewLine)
+        {
+            index++;
+        }
+
+        if (index >= tokens.Count || tokens[index].Kind != Module)
+        {
+            return null;
+        }
+
+        index++;
+        while (index < tokens.Count && tokens[index].Kind == NewLine)
+        {
+            index++;
+        }
+
+        if (index >= tokens.Count)
+        {
+            return null;
+        }
+
+        return tokens[index].Kind switch
+        {
+            Identifier or Message => tokens[index].Text,
+            _ => null
+        };
+    }
+
+    private void ParseOptionalModuleDeclaration()
+    {
+        if (!Match(Module))
+        {
+            return;
+        }
+
+        SkipNewLines();
+        if (Current.Kind is not (Identifier or Message))
+        {
+            throw new EventScriptParseException($"Expected module name but found {Current.Kind}", Current.Line, Current.Column);
+        }
+
+        Advance();
     }
 
     private TypeDefinitionNode ParseTypeDefinition()
@@ -1811,6 +1846,7 @@ public sealed class EventScriptParser
     {
         return kind is
             Identifier or
+            Module or
             On or
             Publish or
             Let or
@@ -1982,7 +2018,7 @@ public sealed class EventScriptParser
     {
         while (!Is(EndOfFile))
         {
-            if (Is(Record) || Is(Rule) || Is(Select) || Is(On))
+            if (Is(Module) || Is(Record) || Is(Rule) || Is(Select) || Is(On))
             {
                 return;
             }

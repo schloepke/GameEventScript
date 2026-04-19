@@ -36,7 +36,7 @@ on Start {
 
 ## Top-Level Structure
 
-An EventScript program can contain:
+An EventScript can contain:
 
 - `record` definitions for custom types
 - `rule` definitions for reusable predicates

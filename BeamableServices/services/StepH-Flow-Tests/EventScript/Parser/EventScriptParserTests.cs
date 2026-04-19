@@ -36,7 +36,7 @@ public class EventScriptParsingScenarios
     {
         const string script =
             """
-            #module CoreRules
+            module CoreRules
             on Start {
                 publish Done
             }
@@ -834,24 +834,6 @@ public class EventScriptParsingScenarios
 
         Assert.IsGreaterThanOrEqualTo(2, exception.Errors.Count);
         Assert.IsTrue(exception.Errors.All(error => error.Kind == EventScriptSyntaxErrorKind.Parser));
-    }
-
-    [TestMethod]
-    public void LexerAndParserErrorsCanBeCollectedTogether()
-    {
-        const string script =
-            """
-            on Broken {
-                let name be 'Mark
-                let x be @
-            }
-            """;
-
-        var exception = Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script, "Broken.es"));
-
-        Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptSyntaxErrorKind.Lexer));
-        Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptSyntaxErrorKind.Parser));
-        Assert.IsTrue(exception.Errors.All(error => error.SourceLocation.SourceName == "Broken.es"));
     }
 
     [TestMethod]

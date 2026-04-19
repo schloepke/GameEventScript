@@ -103,7 +103,7 @@ public class EventScriptLinkBuilderScenarios
     {
         var builder = new EventScriptLinkBuilder()
             .AddScript("""
-                #module CombatRules
+                module CombatRules
                 on Start(unit) {
                     let wounded be missingRule(unit);
                     publish Done(wounded);
@@ -123,7 +123,7 @@ public class EventScriptLinkBuilderScenarios
     {
         var builder = new EventScriptLinkBuilder()
             .AddScript("""
-                #module BrokenRules
+                module BrokenRules
                 rule wounded(unit) means unit.hp < unit.maxHp
                 rule wounded(target) means target.hp < target.maxHp
 

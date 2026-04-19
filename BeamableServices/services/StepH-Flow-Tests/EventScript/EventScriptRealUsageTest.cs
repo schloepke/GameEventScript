@@ -1,5 +1,6 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
@@ -66,13 +67,38 @@ public class EventScriptRealUsageTest
     }
 
     [TestMethod]
+    public void ShowLexerStream()
+    {
+        const string script =
+            """
+            module TestModule
+            
+            on Setup(player) {
+                publish SetNumberOfPlayers(2)
+                publish Set,BoardSize(10, 20)
+                publish SetNumberOfPushs(20)
+                publish CreatePushSeed
+                publish SetCorrectTiles('Smiley')
+                publish SetIncorrectTiles('Whining', 'Mourning')
+                publish SetDeadTile('Devil')
+                publish SetInactiveTile('Blank')
+            }
+            """;
+
+        var lexer = new EventScriptLexer(script);
+
+        foreach (var token in lexer.Tokenize()) Console.WriteLine(token);
+
+    }
+
+    [TestMethod]
     public void CheckingErrorHandlingWorksForLexerParserAndLinker()
     {
         var scriptBroken =
             """
-            #module BrokenCombat
+            module BrokenCombat
             
-            rule unitIsDead(unit) means unit[hp] is not at least 0
+            rule unitIsDead(un%it) means unit[hp] is not at least 0
                      
             on FireAtUnit(unit) {
                 let UnitIsDead be unitIsDead(unit); 
@@ -81,7 +107,7 @@ public class EventScriptRealUsageTest
 
         var scriptOk1 =
             """
-            #module BrokenCombat
+            module BrokenCombat
 
             rule unitIsDead(unit) means unit[hp] <= 0
                      
@@ -92,7 +118,7 @@ public class EventScriptRealUsageTest
 
         var scriptOk2 =
             """
-            #module BrokenCombat
+            module BrokenCombat
 
             rule unitIsDead(unit) means unit[hp] <= 0
                      

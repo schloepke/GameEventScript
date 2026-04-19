@@ -1,5 +1,6 @@
-Program ::= { StatementSeparator } [ TopLevel { EventSeparator TopLevel } ] { StatementSeparator }
+EventScript ::= { StatementSeparator } [ ModuleDeclaration { StatementSeparator } ] [ TopLevel { EventSeparator TopLevel } ] { StatementSeparator }
 
+ModuleDeclaration ::= "module" ModuleName
 TopLevel ::= TypeDefinition | RuleDefinition | SelectDefinition | EventEndpoint
 EventEndpoint ::= EventHandler
 TypeDefinition ::= "record" TypeTag "as" "{" { StatementSeparator } [ TypeFieldDefinition { TypeFieldSeparator TypeFieldDefinition } ] { StatementSeparator } "}"
@@ -104,6 +105,7 @@ Literal ::= Number | Percentage | TextLiteral | "true" | "false"
 TagLiteral ::= ":" Identifier
 
 Message ::= UpperLetter { LowerLetter | UpperLetter | Digit }
+ModuleName ::= Identifier | Message
 
 Identifier ::= LowerLetter { LowerLetter | UpperLetter | Digit }
 Number ::= Digit { Digit } [ "." Digit { Digit } ]

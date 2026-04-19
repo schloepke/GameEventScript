@@ -10,6 +10,7 @@ namespace StepH.Flow.EventScript.Parser;
 public enum EventScriptTokenKind
 {
     EndOfFile,
+    Illegal,
     NewLine,
     Message,
     Identifier,
@@ -19,6 +20,7 @@ public enum EventScriptTokenKind
     Text,
     True,
     False,
+    Module,
     Record,
     Rule,
     Select,
@@ -99,44 +101,37 @@ public readonly record struct EventScriptToken(EventScriptTokenKind Kind, string
             return true;
         }
 
-        value = default;
+        value = 0;
         return false;
     }
+    
+    public override string ToString() => $"{Kind}('{Text}', {Line}:{Column})";
 }
-
-public sealed record EventScriptLexingResult(IReadOnlyList<EventScriptToken> Tokens, IReadOnlyList<EventScriptSyntaxError> Errors);
 
 public sealed class EventScriptLexer
 {
     private readonly string _input;
-    private readonly string _moduleName;
-    private readonly string _sourceName;
     private readonly int _length;
     private int _index;
     private int _line = 1;
     private int _column = 1;
 
-    public EventScriptLexer(string input, string moduleName, string sourceName)
+    public EventScriptLexer(string input)
     {
         _input = input ?? throw new ArgumentNullException(nameof(input));
-        _moduleName = string.IsNullOrWhiteSpace(moduleName) ? "AnonymousModule_Unknown" : moduleName;
-        _sourceName = string.IsNullOrWhiteSpace(sourceName) ? "UnknownSource_Unknown" : sourceName;
         _length = _input.Length;
     }
 
-    public EventScriptLexingResult Tokenize()
+    public IEnumerable<EventScriptToken> Tokenize()
     {
-        var tokens = new List<EventScriptToken>();
-        var errors = new List<EventScriptSyntaxError>();
-
         while (true)
         {
             SkipWhitespaceExceptNewLine();
 
             if (IsAtEnd)
             {
-                tokens.Add(new EventScriptToken(EventScriptTokenKind.EndOfFile, string.Empty, _line, _column));
-                return new EventScriptLexingResult(tokens, errors);
+                yield return new EventScriptToken(EventScriptTokenKind.EndOfFile, string.Empty, _line, _column);
+                yield break;
             }
 
             switch (Current)
@@ -151,7 +146,7 @@ public sealed class EventScriptLexer
                         Advance();
                     }
 
-                    tokens.Add(new EventScriptToken(EventScriptTokenKind.NewLine, "\\n", newlineLine, newlineColumn));
+                    yield return new EventScriptToken(EventScriptTokenKind.NewLine, "\\n", newlineLine, newlineColumn);
                     continue;
                 }
                 case '\n':
@@ -159,7 +154,7 @@ public sealed class EventScriptLexer
                     var newlineLine = _line;
                     var newlineColumn = _column;
                     Advance();
-                    tokens.Add(new EventScriptToken(EventScriptTokenKind.NewLine, "\\n", newlineLine, newlineColumn));
+                    yield return new EventScriptToken(EventScriptTokenKind.NewLine, "\\n", newlineLine, newlineColumn);
                     continue;
                 }
             }
@@ -170,41 +165,27 @@ public sealed class EventScriptLexer
 
             if (char.IsLower(ch) || char.IsUpper(ch))
             {
-                tokens.Add(CreateWordToken(ReadWhile(char.IsLetterOrDigit), startLine, startColumn));
+                yield return ReadWordLikeToken(startLine, startColumn);
                 continue;
             }
 
             if (char.IsDigit(ch))
             {
-                tokens.Add(ReadDecimalToken(startLine, startColumn));
+                yield return ReadNumberLikeToken(startLine, startColumn);
                 continue;
             }
 
             switch (ch)
             {
                 case '\'':
-                {
-                    var textToken = ReadTextToken(startLine, startColumn, errors);
-                    if (textToken is not null)
-                    {
-                        tokens.Add(textToken.Value);
-                    }
-
+                    yield return ReadTextToken(startLine, startColumn);
                     continue;
-                }
                 case ':' when char.IsLower(Peek()):
-                    tokens.Add(ReadSelectorToken(startLine, startColumn));
+                    yield return ReadSelectorToken(startLine, startColumn);
                     continue;
                 default:
-                {
-                    var operatorToken = ReadOperatorToken(startLine, startColumn, errors);
-                    if (operatorToken is not null)
-                    {
-                        tokens.Add(operatorToken.Value);
-                    }
-
-                    break;
-                }
+                    yield return ReadOperatorToken(startLine, startColumn);
+                    continue;
             }
         }
     }
@@ -279,15 +260,44 @@ public sealed class EventScriptLexer
             "to" => new EventScriptToken(EventScriptTokenKind.To, text, line, column),
             "true" => new EventScriptToken(EventScriptTokenKind.True, text, line, column),
             "false" => new EventScriptToken(EventScriptTokenKind.False, text, line, column),
+            "module" => new EventScriptToken(EventScriptTokenKind.Module, text, line, column),
             _ when char.IsUpper(text[0]) => new EventScriptToken(EventScriptTokenKind.Message, text, line, column),
             _ => new EventScriptToken(EventScriptTokenKind.Identifier, text, line, column)
         };
     }
 
+    private EventScriptToken ReadWordLikeToken(int line, int column)
+    {
+        var start = _index;
+        var word = ReadWhile(char.IsLetterOrDigit);
+        if (!IsAtEnd && (StartsAttachedIllegalOperatorSequence() || !IsValidWordBoundary(Current)))
+        {
+            while (!IsAtEnd && !char.IsWhiteSpace(Current))
+            {
+                Advance();
+            }
+
+            return new EventScriptToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
+        }
+
+        return CreateWordToken(word, line, column);
+    }
+
     private EventScriptToken ReadSelectorToken(int line, int column)
     {
+        var start = _index;
         Advance();
         var selector = ReadWhile(char.IsLetterOrDigit);
+
+        if (!IsAtEnd && (StartsAttachedIllegalOperatorSequence() || !IsValidWordBoundary(Current)))
+        {
+            while (!IsAtEnd && !char.IsWhiteSpace(Current))
+            {
+                Advance();
+            }
+
+            return new EventScriptToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
+        }
 
         return selector switch
         {
@@ -311,7 +321,7 @@ public sealed class EventScriptLexer
         };
     }
 
-    private EventScriptToken ReadDecimalToken(int line, int column)
+    private EventScriptToken ReadNumberLikeToken(int line, int column)
     {
         var start = _index;
         ReadWhile(char.IsDigit);
@@ -322,13 +332,39 @@ public sealed class EventScriptLexer
         }
 
         var text = _input[start.._index];
-        if (IsAtEnd || Current != '%') return new EventScriptToken(EventScriptTokenKind.Decimal, text, line, column);
-        Advance();
-        return new EventScriptToken(EventScriptTokenKind.Percentage, text, line, column);
+        if (!IsAtEnd && Current == '%')
+        {
+            Advance();
+            text = _input[start..(_index - 1)];
+            if (!IsAtEnd && !IsValidNumberBoundary(Current))
+            {
+                while (!IsAtEnd && !char.IsWhiteSpace(Current))
+                {
+                    Advance();
+                }
+
+                return new EventScriptToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
+            }
+
+            return new EventScriptToken(EventScriptTokenKind.Percentage, text, line, column);
+        }
+
+        if (!IsAtEnd && !IsValidNumberBoundary(Current))
+        {
+            while (!IsAtEnd && !char.IsWhiteSpace(Current))
+            {
+                Advance();
+            }
+
+            return new EventScriptToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
+        }
+
+        return new EventScriptToken(EventScriptTokenKind.Decimal, text, line, column);
     }
 
-    private EventScriptToken? ReadTextToken(int line, int column, List<EventScriptSyntaxError> errors)
+    private EventScriptToken ReadTextToken(int line, int column)
     {
+        var start = _index;
         Advance();
         var builder = new StringBuilder();
         while (!IsAtEnd)
@@ -351,11 +387,10 @@ public sealed class EventScriptLexer
             Advance();
         }
 
-        errors.Add(CreateSyntaxError("Unterminated string literal", EventScriptSyntaxErrorKind.Lexer, line, column));
-        return null;
+        return new EventScriptToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
     }
 
-    private EventScriptToken? ReadOperatorToken(int line, int column, List<EventScriptSyntaxError> errors)
+    private EventScriptToken ReadOperatorToken(int line, int column)
     {
         var ch = Current;
         var next = Peek();
@@ -400,22 +435,46 @@ public sealed class EventScriptLexer
                     '%' => new EventScriptToken(EventScriptTokenKind.Modulo, "%", line, column),
                     '!' => new EventScriptToken(EventScriptTokenKind.Not, "!", line, column),
                     '~' => new EventScriptToken(EventScriptTokenKind.Not, "~", line, column),
-                    _ => AddUnexpectedCharacterError(ch, line, column, errors)
+                    _ => new EventScriptToken(EventScriptTokenKind.Illegal, ch.ToString(), line, column)
                 };
         }
     }
 
-    private EventScriptToken? AddUnexpectedCharacterError(char ch, int line, int column, List<EventScriptSyntaxError> errors)
-    {
-        errors.Add(CreateSyntaxError($"Unexpected character '{ch}'", EventScriptSyntaxErrorKind.Lexer, line, column));
-        return null;
-    }
-
-    private EventScriptSyntaxError CreateSyntaxError(string message, EventScriptSyntaxErrorKind kind, int line, int column)
-        => new(message, _moduleName, kind, new EventScriptSourceLocation(_sourceName, line, column));
-
     private void SkipWhitespaceExceptNewLine()
     {
         while (!IsAtEnd && char.IsWhiteSpace(Current) && Current is not '\n' and not '\r') Advance();
+    }
+
+    private bool IsValidWordBoundary(char ch)
+        => char.IsWhiteSpace(ch) || IsStructuralBoundary(ch);
+
+    private bool IsValidNumberBoundary(char ch)
+        => char.IsWhiteSpace(ch) ||
+           IsStructuralBoundary(ch) ||
+           (ch == 'd' && char.IsDigit(Peek()));
+
+    private static bool IsStructuralBoundary(char ch)
+        => ch is
+            '(' or ')' or '{' or '}' or '[' or ']' or
+            ',' or ';' or '.' or ':' or
+            '+' or '-' or '*' or '/' or '%' or
+            '!' or '~' or '&' or '|' or '^' or
+            '=' or '<' or '>';
+
+    private bool StartsAttachedIllegalOperatorSequence()
+    {
+        if (IsAtEnd)
+        {
+            return false;
+        }
+
+        return Current switch
+        {
+            '%' when Peek() is '&' or '|' or '^' or '%' => true,
+            '&' when Peek() == '&' => true,
+            '|' when Peek() == '|' => true,
+            '^' when Peek() is '&' or '|' or '^' or '%' => true,
+            _ => false
+        };
     }
 }

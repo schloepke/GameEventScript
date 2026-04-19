@@ -10,22 +10,22 @@ namespace StepH.Flow.EventScript.Interpreter;
 
 public sealed class EventScriptDiagnosticInterpreter
 {
-    private readonly EventScriptInterpretationModel _interpretationModel;
+    private readonly CompiledEventScript _compiledScript;
 
-    private EventScriptDiagnosticInterpreter(EventScriptInterpretationModel interpretationModel)
+    private EventScriptDiagnosticInterpreter(CompiledEventScript compiledScript)
     {
-        _interpretationModel = interpretationModel ?? throw new ArgumentNullException(nameof(interpretationModel));
+        _compiledScript = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
     }
 
     public static EventScriptDiagnosticInterpreter Compile(string script)
-        => Compile(EventScriptInterpreter.CompileModel(
+        => Compile(EventScriptInterpreter.CompileScript(
             EventScriptLinkBuilder.LinkScripts(script),
             new EventScriptInterpreterCompilationOptions { EnableDiagnostics = true }));
 
     public static EventScriptDiagnosticInterpreter Compile(EventScriptModule eventScriptModule)
     {
         _ = eventScriptModule ?? throw new ArgumentNullException(nameof(eventScriptModule));
-        return Compile(EventScriptInterpreter.CompileModel(
+        return Compile(EventScriptInterpreter.CompileScript(
             new EventScriptLinkBuilder().AddModule(eventScriptModule).Link(),
             new EventScriptInterpreterCompilationOptions { EnableDiagnostics = true }));
     }
@@ -33,20 +33,20 @@ public sealed class EventScriptDiagnosticInterpreter
     public static EventScriptDiagnosticInterpreter Compile(LinkedEventScriptModule linkedModule)
     {
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
-        return Compile(EventScriptInterpreter.CompileModel(
+        return Compile(EventScriptInterpreter.CompileScript(
             linkedModule,
             new EventScriptInterpreterCompilationOptions { EnableDiagnostics = true }));
     }
 
-    public static EventScriptDiagnosticInterpreter Compile(EventScriptInterpretationModel interpretationModel)
-        => new(interpretationModel);
+    public static EventScriptDiagnosticInterpreter Compile(CompiledEventScript compiledScript)
+        => new(compiledScript);
 
     public EventScriptDiagnosticInvocationResult Invoke(string message, params EventScriptValue[] args)
         => Invoke(message, invocationContext: null, args);
 
     public EventScriptDiagnosticInvocationResult Invoke(string message, EventScriptInvocationContext? invocationContext, params EventScriptValue[] args)
         => EventScriptInvocationEngine
-            .Compile(_interpretationModel, invocationContext?.Random)
+            .Compile(_compiledScript, invocationContext?.Random)
             .Invoke(message, args);
 
     public EventScriptDiagnosticInvocationResult InvokeClr(string message, params object?[] args)

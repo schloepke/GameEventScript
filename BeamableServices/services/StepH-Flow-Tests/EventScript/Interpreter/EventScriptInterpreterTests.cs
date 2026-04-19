@@ -1,5 +1,6 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript.Interpreter;
@@ -1457,7 +1458,7 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void PublishingFromOneHandlerCanTriggerTheNextMessage()
+    public void HostCanProcessPublishedMessagesThroughTheQueue()
     {
         const string script = """
             on Start(value) {
@@ -1469,8 +1470,8 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var interpreter = EventScriptInterpreter.Compile(script);
-        var result = interpreter.Emit("Start", 2m);
+        var host = new EventScriptHost().Load(EventScriptInterpreter.CompileScript(script));
+        var result = host.Emit("Start", 2m);
 
         Assert.HasCount(2, result.EmittedEvents);
         Assert.AreEqual("Next", result.EmittedEvents[0].Message);
@@ -1480,7 +1481,7 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void EventLoopsStopAtTheConfiguredProcessingLimit()
+    public void HostStopsEventLoopsAtTheConfiguredProcessingLimit()
     {
         const string script = """
             on Start {
@@ -1492,12 +1493,11 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var context = new EventScriptCompilationContext
+        var host = new EventScriptHost(options: new EventScriptHostOptions
         {
             MaxProcessedEventsPerRun = 4
-        };
-        var interpreter = EventScriptInterpreter.Compile(script, context: context);
-        var result = interpreter.Emit("Start");
+        }).Load(EventScriptInterpreter.CompileScript(script));
+        var result = host.Emit("Start");
         Assert.HasCount(4, result.EmittedEvents);
         Assert.AreEqual("Loop", result.EmittedEvents[0].Message);
         Assert.AreEqual("Start", result.EmittedEvents[1].Message);
@@ -1506,7 +1506,7 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void PublishedMessagesCanReachBoundExternalSubscribers()
+    public void HostCanRoutePublishedMessagesToExternalSubscribers()
     {
         const string script = """
             on Start(playerId) {
@@ -1515,11 +1515,11 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<EventScriptValue[]>();
-        var compileContext = new EventScriptCompilationContext()
+        var host = new EventScriptHost()
+            .Load(EventScriptInterpreter.CompileScript(script))
             .BindExternal("Notify", args => invocations.Add(args.ToArray()), parameterCount: 2);
-        var interpreter = EventScriptInterpreter.Compile(script, context: compileContext);
 
-        var result = interpreter.Emit("Start", "p1");
+        var result = host.Emit("Start", "p1");
 
         Assert.HasCount(1, invocations);
         Assert.AreEqual("p1", invocations[0][0].AsText());
@@ -1529,7 +1529,7 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void ExternalSubscribersRunAfterScriptHandlers()
+    public void HostRunsExternalSubscribersAfterScriptHandlersByDefaultPriority()
     {
         const string script = """
             on Start(value) {
@@ -1542,11 +1542,11 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
-        var compileContext = new EventScriptCompilationContext()
+        var host = new EventScriptHost()
+            .Load(EventScriptInterpreter.CompileScript(script))
             .BindExternal("Notify", args => invocations.Add($"external:{args[0].AsNumber()}"), parameterCount: 1);
-        var interpreter = EventScriptInterpreter.Compile(script, context: compileContext);
 
-        var result = interpreter.Emit("Start", 4m);
+        var result = host.Emit("Start", 4m);
 
         Assert.HasCount(1, invocations);
         Assert.AreEqual("external:4", invocations[0]);
@@ -1556,7 +1556,7 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void MultipleExternalSubscribersRunInRegistrationOrder()
+    public void HostRunsMultipleExternalSubscribersInRegistrationOrder()
     {
         const string script = """
             on Start(value) {
@@ -1565,18 +1565,18 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
-        var compileContext = new EventScriptCompilationContext()
+        var host = new EventScriptHost()
+            .Load(EventScriptInterpreter.CompileScript(script))
             .BindExternal("Notify", args => invocations.Add($"first:{args[0].AsNumber()}"), parameterCount: 1)
             .BindExternal("Notify", args => invocations.Add($"second:{args[0].AsNumber()}"), parameterCount: 1);
-        var interpreter = EventScriptInterpreter.Compile(script, context: compileContext);
 
-        interpreter.Emit("Start", 4m);
+        host.Emit("Start", 4m);
 
         CollectionAssert.AreEqual(new[] { "first:4", "second:4" }, invocations);
     }
 
     [TestMethod]
-    public void FailingExternalSubscribersDoNotStopLaterSubscribers()
+    public void HostIgnoresFailingExternalSubscribersAndContinues()
     {
         const string script = """
             on Start(value) {
@@ -1585,12 +1585,12 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
-        var compileContext = new EventScriptCompilationContext()
+        var host = new EventScriptHost()
+            .Load(EventScriptInterpreter.CompileScript(script))
             .BindExternal("Notify", _ => throw new InvalidOperationException("boom"), parameterCount: 1)
             .BindExternal("Notify", args => invocations.Add($"ok:{args[0].AsNumber()}"), parameterCount: 1);
-        var interpreter = EventScriptInterpreter.Compile(script, context: compileContext);
 
-        var result = interpreter.Emit("Start", 4m);
+        var result = host.Emit("Start", 4m);
 
         CollectionAssert.AreEqual(new[] { "ok:4" }, invocations);
         Assert.HasCount(1, result.EmittedEvents);
@@ -1598,7 +1598,7 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void QueuedRunsDrainToTheSameResultAsEmit()
+    public void HostQueuedRunsDrainToTheSameResultAsEmit()
     {
         const string script = """
             on Start(value) {
@@ -1610,10 +1610,10 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var interpreter = EventScriptInterpreter.Compile(script);
+        var host = new EventScriptHost().Load(EventScriptInterpreter.CompileScript(script));
 
-        var emitResult = interpreter.Emit("Start", 2m);
-        var queuedResult = interpreter.Enqueue("Start", 2m).Drain();
+        var emitResult = host.Emit("Start", 2m);
+        var queuedResult = host.Enqueue("Start", 2m).Drain();
 
         CollectionAssert.AreEqual(
             emitResult.EmittedEvents.Select(evt => evt.Message).ToArray(),

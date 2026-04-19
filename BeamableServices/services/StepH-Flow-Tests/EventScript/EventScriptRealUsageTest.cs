@@ -1,5 +1,6 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript;
@@ -49,22 +50,17 @@ public class EventScriptRealUsageTest
             }
             """;
 
-        var context = new EventScriptCompilationContext();
-
         var game = new Dictionary<string, EventScriptValue>();
 
+        var host = new EventScriptHost()
+            .Load(EventScriptInterpreter.CompileScript(script))
+            .BindExternal("SetBoardSize", p => { game["width"] = p[0]; game["height"] = p[1]; }, 2)
+            .BindExternal("SetNumberOfPlayer", p => { game["playerLimit"] = p[0]; }, 1)
+            .BindExternal("SetNumberOfPushs", p => { game["pushCount"] = p[0]; }, 1)
+            .BindExternal("CreatePushSeed", _ => { game["gameSeed"] = System.Random.Shared.NextInt64(); }, 0);
 
-        context.BindExternal("SetBoardSize", p => { game["width"] = p[0]; game["height"] = p[1]; }, 2);
-        context.BindExternal("SetNumberOfPlayer", p => { game["playerLimit"] = p[0]; }, 1);
-        context.BindExternal("SetNumberOfPushs", p => { game["pushCount"] = p[0]; }, 1);
-        context.BindExternal("CreatePushSeed", p => { game["gameSeed"] = System.Random.Shared.NextInt64(); }, 0);
-
-
-        var interpreter = EventScriptInterpreter.Compile(script: script, context: context);
-
-
-        Console.WriteLine(interpreter.Emit("Setup", EventScriptValue.Text("player1")));
-        Console.WriteLine(interpreter.Emit("Start", EventScriptValue.Dictionary(game)));
+        Console.WriteLine(host.Emit("Setup", EventScriptValue.Text("player1")));
+        Console.WriteLine(host.Emit("Start", EventScriptValue.Dictionary(game)));
         Console.WriteLine(EventScriptValue.Dictionary(game));
 
     }

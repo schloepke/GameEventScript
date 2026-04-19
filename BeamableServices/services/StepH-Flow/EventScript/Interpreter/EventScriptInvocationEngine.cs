@@ -15,21 +15,19 @@ internal sealed class EventScriptInvocationEngine
 {
     private const int RandomUnitMax = 1_000_000;
     private const decimal RandomUnitScale = RandomUnitMax;
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> _handlers;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _handlers;
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _typeDefinitions;
     private readonly IReadOnlyDictionary<string, RuleDefinitionNode> _ruleDefinitions;
     private readonly IReadOnlyDictionary<string, SelectDefinitionNode> _selectDefinitions;
-    private readonly Dictionary<string, List<EventScriptExternalMessageBinding>> _externalBindings;
     private readonly IEventScriptRandom _random;
-    private readonly int _maxProcessedEventsPerRun;
 
-    private EventScriptInvocationEngine(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    private EventScriptInvocationEngine(CompiledEventScript compiledScript, IEventScriptRandom? random = null)
     {
-        _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
+        _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
         _random = random ?? new DefaultEventScriptRandom();
-        _typeDefinitions = linkedModule.TypeDefinitions;
-        _ruleDefinitions = linkedModule.RuleDefinitions;
-        _selectDefinitions = linkedModule.SelectDefinitions;
+        _typeDefinitions = compiledScript.LinkedModule.TypeDefinitions;
+        _ruleDefinitions = compiledScript.LinkedModule.RuleDefinitions;
+        _selectDefinitions = compiledScript.LinkedModule.SelectDefinitions;
         foreach (var ruleName in _ruleDefinitions.Keys)
         {
             if (_selectDefinitions.ContainsKey(ruleName))
@@ -38,30 +36,27 @@ internal sealed class EventScriptInvocationEngine
             }
         }
 
-        _handlers = linkedModule.Handlers;
-        _externalBindings = BuildExternalBindingMap(context?.ExternalBindings);
-        _maxProcessedEventsPerRun = context?.MaxProcessedEventsPerRun ?? 64;
-        if (_maxProcessedEventsPerRun <= 0) throw new EventScriptCompilationException("Max processed events per run must be > 0");
+        _handlers = compiledScript.Handlers;
     }
 
-    public static EventScriptInvocationEngine Compile(string script, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null) => Compile(EventScriptLinkBuilder.LinkScripts(script), random, context);
+    public static EventScriptInvocationEngine Compile(string script, IEventScriptRandom? random = null) => Compile(EventScriptLinkBuilder.LinkScripts(script), random);
 
-    public static EventScriptInvocationEngine Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null)
     {
         _ = eventScriptModule ?? throw new ArgumentNullException(nameof(eventScriptModule));
-        return Compile(new EventScriptLinkBuilder().AddModule(eventScriptModule).Link(), random, context);
+        return Compile(new EventScriptLinkBuilder().AddModule(eventScriptModule).Link(), random);
     }
 
-    public static EventScriptInvocationEngine Compile(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null)
     {
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
-        return new EventScriptInvocationEngine(linkedModule, random, context);
+        return Compile(new CompiledEventScript(linkedModule), random);
     }
 
-    public static EventScriptInvocationEngine Compile(EventScriptInterpretationModel interpretationModel, IEventScriptRandom? random = null, EventScriptCompilationContext? context = null)
+    public static EventScriptInvocationEngine Compile(CompiledEventScript compiledScript, IEventScriptRandom? random = null)
     {
-        _ = interpretationModel ?? throw new ArgumentNullException(nameof(interpretationModel));
-        return new EventScriptInvocationEngine(interpretationModel.LinkedModule, random, context);
+        _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
+        return new EventScriptInvocationEngine(compiledScript, random);
     }
 
     public EventScriptDiagnosticInvocationResult Invoke(string message, params EventScriptValue[] args)
@@ -72,7 +67,7 @@ internal sealed class EventScriptInvocationEngine
         }
 
         args = NormalizeArgs(args);
-        var state = new RunState(_maxProcessedEventsPerRun, diagnosticsEnabled: true);
+        var state = new RunState(diagnosticsEnabled: true);
         state.RecordDiagnostic(EventScriptDiagnosticStepKind.InvocationStarted, message, args, $"Invoke '{message}'");
 
         if (_handlers.TryGetValue(message, out var handlers))
@@ -85,7 +80,7 @@ internal sealed class EventScriptInvocationEngine
                     args,
                     $"Handler '{handler.Message}' with parameters ({string.Join(", ", handler.Parameters)})");
                 var context = new ExecutionContext(state);
-                var handlerVariables = ExecuteHandler(context, handler, args);
+                var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
                 state.CaptureVariables(handlerVariables);
             }
         }
@@ -104,47 +99,40 @@ internal sealed class EventScriptInvocationEngine
             state.Steps);
     }
 
-    public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args) => Enqueue(message, args).Drain();
-
-    public EventScriptExecutionResult EmitClr(string message, params object?[] args) => Emit(message, EventScriptValue.FromClrList(args).ToArray());
-
-    public EventScriptRun Enqueue(string message, params EventScriptValue[] args)
+    public EventScriptExecutionResult InvokeMessage(string message, params EventScriptValue[] args)
     {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            throw new ArgumentException("Message must not be null or whitespace", nameof(message));
+        }
+
         args = NormalizeArgs(args);
-        return new EventScriptRun(this, message, args);
-    }
-
-    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args) => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
-
-    private void DispatchQueuedEvent(EventScriptQueuedEvent queuedEvent, RunState state)
-    {
-        if (_handlers.TryGetValue(queuedEvent.Message, out var handlers))
+        var state = new RunState();
+        if (_handlers.TryGetValue(message, out var handlers))
         {
             foreach (var handler in handlers)
             {
                 var context = new ExecutionContext(state);
-                var handlerVariables = ExecuteHandler(context, handler, queuedEvent.Arguments);
-                if (queuedEvent.CaptureVariables)
-                {
-                    state.CaptureVariables(handlerVariables);
-                }
+                var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
+                state.CaptureVariables(handlerVariables);
             }
         }
 
-        if (_externalBindings.TryGetValue(queuedEvent.Message, out var bindings))
-        {
-            foreach (var binding in bindings)
-            {
-                try
-                {
-                    binding.Handler(queuedEvent.Arguments);
-                }
-                catch
-                {
-                }
-            }
-        }
+        return new EventScriptExecutionResult(message, state.EmittedEvents, state.Variables);
     }
+
+    public EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyList<EventScriptValue> args)
+    {
+        _ = handler ?? throw new ArgumentNullException(nameof(handler));
+        args = NormalizeArgs(args).ToArray();
+        var state = new RunState();
+        var context = new ExecutionContext(state);
+        var variables = ExecuteHandler(context, handler.Syntax, args);
+        state.CaptureVariables(variables);
+        return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
+    }
+
+    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args) => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
 
     private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, EventHandlerNode handler, IReadOnlyList<EventScriptValue> args)
     {
@@ -1989,22 +1977,6 @@ internal sealed class EventScriptInvocationEngine
         return true;
     }
 
-    private static Dictionary<string, List<EventScriptExternalMessageBinding>> BuildExternalBindingMap(IReadOnlyDictionary<string, IReadOnlyList<EventScriptExternalMessageBinding>>? bindings)
-    {
-        var map = new Dictionary<string, List<EventScriptExternalMessageBinding>>(StringComparer.Ordinal);
-        if (bindings == null)
-        {
-            return map;
-        }
-
-        foreach (var pair in bindings)
-        {
-            map[pair.Key] = pair.Value.ToList();
-        }
-
-        return map;
-    }
-
     private static bool AreEqual(EventScriptValue left, EventScriptValue right) => left.Equals(right);
 
     private void ValidateDefinitionReferences(EventScriptModule eventScriptModule)
@@ -2834,7 +2806,7 @@ internal sealed class EventScriptInvocationEngine
 
     private EventScriptValue EvaluateCustomTypeExpression(TypeDefinitionNode typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
-        var state = new RunState(_maxProcessedEventsPerRun);
+        var state = new RunState();
         var context = new ExecutionContext(state);
         context.PushScope();
         try
@@ -2912,38 +2884,6 @@ internal sealed class EventScriptInvocationEngine
         _ = argumentCount;
     }
 
-    public sealed class EventScriptRun
-    {
-        private readonly EventScriptInvocationEngine _interpreter;
-        private readonly RunState _state;
-        private readonly string _message;
-
-        internal EventScriptRun(EventScriptInvocationEngine interpreter, string message, IReadOnlyList<EventScriptValue> args)
-        {
-            _interpreter = interpreter;
-            _message = message;
-            _state = new RunState(interpreter._maxProcessedEventsPerRun);
-            _state.Enqueue(message, args, captureVariables: true);
-        }
-
-        public EventScriptExecutionResult Drain()
-        {
-            while (_state.TryDequeue(out var queuedEvent))
-            {
-                if (!_state.TryStartProcessingEvent())
-                {
-                    break;
-                }
-
-                _interpreter.DispatchQueuedEvent(queuedEvent, _state);
-            }
-
-            return new EventScriptExecutionResult(_message, _state.EmittedEvents, _state.Variables);
-        }
-    }
-
-    private sealed record EventScriptQueuedEvent(string Message, IReadOnlyList<EventScriptValue> Arguments, bool CaptureVariables);
-
     private sealed class ExecutionContext
     {
         private readonly Stack<Dictionary<string, EventScriptValue>> _scopes = new();
@@ -3003,13 +2943,12 @@ internal sealed class EventScriptInvocationEngine
         public void Publish(string message, IReadOnlyList<EventScriptValue> arguments)
         {
             var emittedEvent = new EventScriptEmittedEvent(message, arguments.ToArray());
-            _state.RecordEmission(emittedEvent);
+            _state.RecordPublishedEvent(emittedEvent);
             _state.RecordDiagnostic(
                 EventScriptDiagnosticStepKind.EventPublished,
                 message,
                 emittedEvent.Arguments,
                 $"Published '{message}'");
-            _state.Enqueue(message, emittedEvent.Arguments, captureVariables: false);
         }
 
         public void RecordStatement(StatementNode statement)
@@ -3034,16 +2973,12 @@ internal sealed class EventScriptInvocationEngine
 
     private sealed class RunState
     {
-        private readonly Queue<EventScriptQueuedEvent> _queue = new();
         private readonly Dictionary<string, EventScriptValue> _variables = new(StringComparer.Ordinal);
-        private readonly int _maxProcessedEventsPerRun;
         private readonly bool _diagnosticsEnabled;
-        private int _processedEvents;
         private int _diagnosticSequence;
 
-        public RunState(int maxProcessedEventsPerRun, bool diagnosticsEnabled = false)
+        public RunState(bool diagnosticsEnabled = false)
         {
-            _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
             _diagnosticsEnabled = diagnosticsEnabled;
         }
 
@@ -3053,35 +2988,7 @@ internal sealed class EventScriptInvocationEngine
 
         public List<EventScriptDiagnosticStep> Steps { get; } = new();
 
-        public void Enqueue(string message, IReadOnlyList<EventScriptValue> args, bool captureVariables)
-        {
-            _queue.Enqueue(new EventScriptQueuedEvent(message, args.ToArray(), captureVariables));
-        }
-
-        public bool TryDequeue(out EventScriptQueuedEvent queuedEvent)
-        {
-            if (_queue.Count == 0)
-            {
-                queuedEvent = default!;
-                return false;
-            }
-
-            queuedEvent = _queue.Dequeue();
-            return true;
-        }
-
-        public bool TryStartProcessingEvent()
-        {
-            if (_processedEvents >= _maxProcessedEventsPerRun)
-            {
-                return false;
-            }
-
-            _processedEvents++;
-            return true;
-        }
-
-        public void RecordEmission(EventScriptEmittedEvent emittedEvent)
+        public void RecordPublishedEvent(EventScriptEmittedEvent emittedEvent)
         {
             EmittedEvents.Add(emittedEvent);
         }

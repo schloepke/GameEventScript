@@ -1956,58 +1956,11 @@ internal sealed class EventScriptInvocationEngine
         var value = EvaluateExpression(context, selector.ValueExpression);
         return selector.Mode switch
         {
-            "single" => EventScriptValue.Boolean(ContainsSingle(target, items, value)),
-            "all" => EventScriptValue.Boolean(ContainsAll(target, items, value)),
-            "any" => EventScriptValue.Boolean(ContainsAny(target, items, value)),
+            "single" => EventScriptValue.Boolean(EventScriptCollectionSemantics.ContainsSingle(target, items, value)),
+            "all" => EventScriptValue.Boolean(EventScriptCollectionSemantics.ContainsAll(target, items, value)),
+            "any" => EventScriptValue.Boolean(EventScriptCollectionSemantics.ContainsAny(target, items, value)),
             _ => EventScriptValue.Boolean(false)
         };
-    }
-
-    private static bool ContainsSingle(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
-    {
-        if (target.Kind == EventScriptValueKind.Text)
-        {
-            return target.AsText().Contains(value.AsText(), StringComparison.Ordinal);
-        }
-
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return target.AsDictionary().ContainsKey(value.AsText());
-        }
-
-        return items.Any(item => AreEqual(item, value));
-    }
-
-    private static bool ContainsAll(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
-    {
-        var required = value.AsList();
-        if (target.Kind == EventScriptValueKind.Text)
-        {
-            return required.All(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
-        }
-
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return required.All(item => target.AsDictionary().ContainsKey(item.AsText()));
-        }
-
-        return required.All(requiredItem => items.Any(item => AreEqual(item, requiredItem)));
-    }
-
-    private static bool ContainsAny(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
-    {
-        var required = value.AsList();
-        if (target.Kind == EventScriptValueKind.Text)
-        {
-            return required.Any(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
-        }
-
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return required.Any(item => target.AsDictionary().ContainsKey(item.AsText()));
-        }
-
-        return required.Any(requiredItem => items.Any(item => AreEqual(item, requiredItem)));
     }
 
     private EventScriptValue EvaluateExtremaSelector(
@@ -2061,18 +2014,8 @@ internal sealed class EventScriptInvocationEngine
         IReadOnlyList<EventScriptValue> items,
         SortSelectorNode selector)
     {
-        var comparer = selector.Direction == "descending"
-            ? Comparer<EventScriptValue>.Create((left, right) => EventScriptValue.StableComparer.Compare(right, left))
-            : EventScriptValue.StableComparer;
-        var sortedItems = items.OrderBy(item => item, comparer).ToArray();
-
-        return target.Kind switch
-        {
-            EventScriptValueKind.Dice => EventScriptValue.List(sortedItems),
-            EventScriptValueKind.List => EventScriptValue.List(sortedItems),
-            EventScriptValueKind.Set => EventScriptValue.List(sortedItems),
-            _ => EventScriptValue.Nothing
-        };
+        _ = context;
+        return EventScriptCollectionSemantics.Sort(target, items, selector.Direction);
     }
 
     private EventScriptValue EvaluateOrderBySelector(
@@ -2081,24 +2024,11 @@ internal sealed class EventScriptInvocationEngine
         IReadOnlyList<EventScriptValue> items,
         OrderBySelectorNode selector)
     {
-        var pairs = items
-            .Select(item => (Item: item, Key: EvaluateSortProjection(context, item, selector.Identifier, selector.Projection)))
-            .ToArray();
-        var comparer = selector.Direction == "descending"
-            ? Comparer<EventScriptValue>.Create((left, right) => EventScriptValue.StableComparer.Compare(right, left))
-            : EventScriptValue.StableComparer;
-        var orderedItems = pairs
-            .OrderBy(pair => pair.Key, comparer)
-            .Select(pair => pair.Item)
-            .ToArray();
-
-        return target.Kind switch
-        {
-            EventScriptValueKind.Dice => EventScriptValue.List(orderedItems),
-            EventScriptValueKind.List => EventScriptValue.List(orderedItems),
-            EventScriptValueKind.Set => EventScriptValue.List(orderedItems),
-            _ => EventScriptValue.Nothing
-        };
+        return EventScriptCollectionSemantics.OrderBy(
+            target,
+            items,
+            selector.Direction,
+            item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
     }
 
     private EventScriptValue EvaluateSortProjection(
@@ -2127,72 +2057,22 @@ internal sealed class EventScriptInvocationEngine
     {
         if (selector.Projection is null || string.IsNullOrEmpty(selector.Identifier))
         {
-            var distinctItems = new List<EventScriptValue>();
-            foreach (var item in items)
-            {
-                if (distinctItems.Any(existing => AreEqual(existing, item)))
-                {
-                    continue;
-                }
-
-                distinctItems.Add(item);
-            }
-
-            return target.Kind switch
-            {
-                EventScriptValueKind.Set => EventScriptValue.Set(distinctItems),
-                EventScriptValueKind.List => EventScriptValue.List(distinctItems),
-                EventScriptValueKind.Dice => EventScriptValue.List(distinctItems),
-                _ => EventScriptValue.Nothing
-            };
+            return EventScriptCollectionSemantics.Distinct(target, items);
         }
 
-        var distinctByProjection = new List<EventScriptValue>();
-        var seenKeys = new List<EventScriptValue>();
-        foreach (var item in items)
-        {
-            var key = EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!);
-            if (seenKeys.Any(existing => AreEqual(existing, key)))
-            {
-                continue;
-            }
-
-            seenKeys.Add(key);
-            distinctByProjection.Add(item);
-        }
-
-        return target.Kind switch
-        {
-            EventScriptValueKind.Set => EventScriptValue.Set(distinctByProjection),
-            EventScriptValueKind.List => EventScriptValue.List(distinctByProjection),
-            EventScriptValueKind.Dice => EventScriptValue.List(distinctByProjection),
-            _ => EventScriptValue.Nothing
-        };
+        return EventScriptCollectionSemantics.DistinctBy(
+            target,
+            items,
+            item => EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!));
     }
 
     private EventScriptValue EvaluateGroupBySelector(
         ExecutionContext context,
         IReadOnlyList<EventScriptValue> items,
         GroupBySelectorNode selector)
-    {
-        var groups = new Dictionary<string, List<EventScriptValue>>(StringComparer.Ordinal);
-        foreach (var item in items)
-        {
-            var key = EvaluateSortProjection(context, item, selector.Identifier, selector.Projection).AsText();
-            if (!groups.TryGetValue(key, out var bucket))
-            {
-                bucket = new List<EventScriptValue>();
-                groups[key] = bucket;
-            }
-
-            bucket.Add(item);
-        }
-
-        return EventScriptValue.Dictionary(groups.ToDictionary(
-            pair => pair.Key,
-            pair => EventScriptValue.List(pair.Value),
-            StringComparer.Ordinal));
-    }
+        => EventScriptCollectionSemantics.GroupBy(
+            items,
+            item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
 
     private bool MatchesObjectPattern(ExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
     {

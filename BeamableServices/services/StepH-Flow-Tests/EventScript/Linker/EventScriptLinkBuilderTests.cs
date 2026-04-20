@@ -66,6 +66,50 @@ public class EventScriptLinkBuilderScenarios
     }
 
     [TestMethod]
+    public void ValidLinkedModulesCanCompileAndInvokeWithoutInterpreterSideValidation()
+    {
+        const string sharedScript =
+            """
+            rule wounded(unit) means unit.hp < unit.maxHp
+            select living(units) means units[:filter unit where unit.hp > 0]
+            """;
+
+        const string runtimeScript =
+            """
+            on Start(unit, units) {
+                let byRule be wounded(unit)
+                let bySelect be living(units)
+                publish Done(result: byRule, total: :len bySelect)
+            }
+            """;
+
+        var linkedModule = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(sharedScript))
+            .AddModule(EventScriptManager.ParseModule(runtimeScript))
+            .Link();
+
+        var compiled = EventScriptInterpretationCompiler.Compile(linkedModule);
+        var unit = EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+        {
+            ["hp"] = 2m,
+            ["maxHp"] = 5m
+        });
+        var units = EventScriptValue.List([
+            unit,
+            EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>
+            {
+                ["hp"] = 0m,
+                ["maxHp"] = 4m
+            })
+        ]);
+
+        var args = compiled.Emit("Start", unit, units).EmittedEvents[0].Arguments;
+
+        Assert.IsTrue(args["result"].AsBoolean());
+        Assert.AreEqual(1, Convert.ToInt32(args["total"].AsInteger()));
+    }
+
+    [TestMethod]
     public void LinkBuilderFailsWhenCrossModuleDependenciesAreMissing()
     {
         const string runtimeScript =

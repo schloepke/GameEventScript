@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System.Collections.Generic;
+using System.Linq;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
@@ -28,7 +29,14 @@ public sealed record EventScriptDiagnosticEvent(
     EventScriptDiagnosticEventKind Kind,
     string Name,
     EventScriptNamedArguments Arguments,
-    string? Detail = null);
+    string? Detail = null)
+{
+    public override string ToString()
+    {
+        var call = Name + "(" + Arguments + ")";
+        return $"[#{Sequence:D5}] {Kind,-18}: {call} => {Detail}";
+    }
+}
 
 public interface IEventScriptDiagnosticCollector
 {
@@ -44,4 +52,9 @@ public sealed class EventScriptDiagnosticTraceCollector : IEventScriptDiagnostic
 
     public void Record(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
         => _events.Add(new EventScriptDiagnosticEvent(++_sequence, kind, name, EventScriptNamedArguments.Create(arguments), detail));
+
+    public override string ToString()
+    {
+        return $"EventScriptDiagnosticTraceCollector: {_events.Count} events\n{_events.Select(e => e.ToString()).Aggregate((a, b) => a + "\n" + b)}";
+    }
 }

@@ -7,127 +7,52 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptRandomGenerator
 {
-    private readonly Random? _random;
-    private readonly Queue<object>? _sequence;
+    private readonly Random _random;
+    private readonly Queue<decimal>? _sequence;
 
-    public EventScriptRandomGenerator() : this(random: new Random())
+    private EventScriptRandomGenerator(Random random, IEnumerable<decimal>? sequence = null)
     {
+        _random = random;
+        _sequence = sequence == null ? null : new Queue<decimal>(sequence);
     }
 
-    private EventScriptRandomGenerator(int seed) : this(random: new Random(seed))
-    {
-    }
+    public static EventScriptRandomGenerator Create() => new(new Random());
 
-    private EventScriptRandomGenerator(Random random)
-    {
-        _random = random ?? throw new ArgumentNullException(nameof(random));
-    }
+    public static EventScriptRandomGenerator FromRandom(Random random) => new(random);
 
-    private EventScriptRandomGenerator(IEnumerable<object> sequence)
-    {
-        _sequence = new Queue<object>(sequence ?? throw new ArgumentNullException(nameof(sequence)));
-    }
+    public static EventScriptRandomGenerator FromSeed(int seed) => new(new Random(seed));
 
-    public static EventScriptRandomGenerator FromSeed(int seed) => new(seed);
-
-    public static EventScriptRandomGenerator FromSequence(params object[] values) => new(values);
+    public static EventScriptRandomGenerator FromSequence(params decimal[] values) => new(new Random(), values);
 
     public int NextInclusiveInt(int minInclusive, int maxInclusive)
     {
+        if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue))
-        {
-            var intValue = queuedValue switch
-            {
-                int value => value,
-                long value when value >= int.MinValue && value <= int.MaxValue => (int)value,
-                decimal value when decimal.Truncate(value) == value &&
-                                   value >= int.MinValue &&
-                                   value <= int.MaxValue => (int)value,
-                _ => throw new InvalidOperationException($"Queued random value '{queuedValue}' is not a valid integer random value.")
-            };
-
-            ValidateRange(intValue, minInclusive, maxInclusive);
-            return intValue;
-        }
-
-        var random = _random ?? throw new InvalidOperationException("No random source configured.");
-        NormalizeRange(ref minInclusive, ref maxInclusive);
-        if (maxInclusive != int.MaxValue) return random.Next(minInclusive, maxInclusive + 1);
-        var sample = random.NextDouble();
-        random.Next();
-        return minInclusive + (int)Math.Floor(sample * ((long)maxInclusive - minInclusive + 1));
+            return Math.Min(Math.Max(queuedValue <= int.MinValue ? int.MinValue : queuedValue >= int.MaxValue ? int.MaxValue : (int)decimal.Truncate(queuedValue), minInclusive), maxInclusive);
+        if (minInclusive == maxInclusive) return minInclusive;
+        if (maxInclusive < int.MaxValue) return _random.Next(minInclusive, maxInclusive + 1);
+        return minInclusive + (int)Math.Floor(_random.NextDouble() * ((long)maxInclusive - minInclusive + 1));
     }
 
     public decimal NextInclusiveDecimal(decimal minInclusive, decimal maxInclusive)
     {
-        if (TryDequeueSequenceValue(out var queuedValue))
-        {
-            var decimalValue = queuedValue switch
-            {
-                decimal value => value,
-                int value => value,
-                long value => value,
-                _ => throw new InvalidOperationException($"Queued random value '{queuedValue}' is not a valid decimal random value.")
-            };
-
-            ValidateRange(decimalValue, minInclusive, maxInclusive);
-            return decimalValue;
-        }
-
-        var random = _random ?? throw new InvalidOperationException("No random source configured.");
-        NormalizeRange(ref minInclusive, ref maxInclusive);
-        if (minInclusive == maxInclusive)
-        {
-            return minInclusive;
-        }
-
-        var sample = (decimal)random.NextDouble();
+        if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
+        if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
+        if (minInclusive == maxInclusive) return minInclusive;
+        var sample = (decimal)_random.NextDouble();
         return minInclusive + ((maxInclusive - minInclusive) * sample);
     }
 
-    private bool TryDequeueSequenceValue(out object value)
+    private bool TryDequeueSequenceValue(out decimal value)
     {
-        if (_sequence is { Count: > 0 })
+        if (_sequence == null || _sequence.Count == 0)
         {
-            value = _sequence.Dequeue();
-            return true;
+            value = 0;
+            return false;
         }
 
-        value = default!;
-        return false;
+        value = _sequence.Dequeue();
+        return true;
     }
-
-    private static void NormalizeRange(ref int minInclusive, ref int maxInclusive)
-    {
-        if (minInclusive > maxInclusive)
-        {
-            (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        }
-    }
-
-    private static void NormalizeRange(ref decimal minInclusive, ref decimal maxInclusive)
-    {
-        if (minInclusive > maxInclusive)
-        {
-            (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        }
-    }
-
-    private static void ValidateRange(int value, int minInclusive, int maxInclusive)
-    {
-        NormalizeRange(ref minInclusive, ref maxInclusive);
-        if (value < minInclusive || value > maxInclusive)
-        {
-            throw new InvalidOperationException($"Queued random value {value} out of expected range [{minInclusive}, {maxInclusive}]");
-        }
-    }
-
-    private static void ValidateRange(decimal value, decimal minInclusive, decimal maxInclusive)
-    {
-        NormalizeRange(ref minInclusive, ref maxInclusive);
-        if (value < minInclusive || value > maxInclusive)
-        {
-            throw new InvalidOperationException($"Queued random value {value} out of expected range [{minInclusive}, {maxInclusive}]");
-        }
-    }
+    
 }

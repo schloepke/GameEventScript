@@ -20,13 +20,10 @@ internal sealed class EventScriptInvocationEngine
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly bool _diagnosticsEnabled;
 
-    internal EventScriptInvocationEngine(
-        CompiledEventScript compiledScript,
-        EventScriptInvocationContext? invocationContext,
-        IEventScriptDiagnosticCollector? diagnosticCollector)
+    internal EventScriptInvocationEngine(CompiledEventScript compiledScript, EventScriptInvocationContext? invocationContext, IEventScriptDiagnosticCollector? diagnosticCollector)
     {
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
-        _randomGenerator = invocationContext?.Random ?? new EventScriptRandomGenerator();
+        _randomGenerator = invocationContext?.Random ?? EventScriptRandomGenerator.Create();
         _typeDefinitions = compiledScript.TypeDefinitions;
         _ruleDefinitions = compiledScript.RuleDefinitions;
         _selectDefinitions = compiledScript.SelectDefinitions;
@@ -182,8 +179,7 @@ internal sealed class EventScriptInvocationEngine
         context.Publish(message, args);
     }
 
-    private EventScriptValue EvaluateExpression(ExecutionContext context, ExpressionNode expression)
-        => EvaluateExpressionCore(context, expression);
+    private EventScriptValue EvaluateExpression(ExecutionContext context, ExpressionNode expression) => EvaluateExpressionCore(context, expression);
 
     private EventScriptValue EvaluateExpressionCore(ExecutionContext context, ExpressionNode expression)
     {

@@ -1455,8 +1455,10 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var host = new EventScriptHost().Load(EventScriptManager.Compile(script));
-        var result = host.Emit("Start", 2m);
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
 
         Assert.HasCount(2, result.EmittedEvents);
         Assert.AreEqual("Next", result.EmittedEvents[0].Message);
@@ -1478,11 +1480,11 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var host = new EventScriptHost(options: new EventScriptHostOptions
-        {
-            MaxProcessedEventsPerRun = 4
-        }).Load(EventScriptManager.Compile(script));
-        var result = host.Emit("Start");
+        var host = EventScriptHost.CreateBuilder()
+            .WithMaxProcessedEventsPerRun(4)
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+        var result = host.Publish("Start");
         Assert.HasCount(4, result.EmittedEvents);
         Assert.AreEqual("Loop", result.EmittedEvents[0].Message);
         Assert.AreEqual("Start", result.EmittedEvents[1].Message);
@@ -1495,16 +1497,17 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(playerId) {
-                publish Notify(arg1: playerId, arg2: 3);
+                publish Notify(playerId: playerId, count: 3);
             }
             """;
 
         var invocations = new List<EventScriptValue[]>();
-        var host = new EventScriptHost()
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
             .Load(EventScriptManager.Compile(script))
-            .BindExternal("Notify", args => invocations.Add(args.ToArray()), parameterCount: 2);
+            .Subscribe("Notify", ["playerId", "count"], context => invocations.Add([context.Arguments["playerId"], context.Arguments["count"]]));
 
-        var result = host.Emit("Start", "p1");
+        var result = host.Publish("Start", ("playerId", EventScriptValue.Text("p1")));
 
         Assert.HasCount(1, invocations);
         Assert.AreEqual("p1", invocations[0][0].AsText());
@@ -1527,11 +1530,12 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
-        var host = new EventScriptHost()
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
             .Load(EventScriptManager.Compile(script))
-            .BindExternal("Notify", ["value"], args => invocations.Add($"external:{args["value"].AsNumber()}"));
+            .Subscribe("Notify", ["value"], context => invocations.Add($"external:{context.Arguments["value"].AsNumber()}"));
 
-        var result = host.Emit("Start", 4m);
+        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
 
         Assert.HasCount(1, invocations);
         Assert.AreEqual("external:4", invocations[0]);
@@ -1550,12 +1554,13 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
-        var host = new EventScriptHost()
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
             .Load(EventScriptManager.Compile(script))
-            .BindExternal("Notify", ["value"], args => invocations.Add($"first:{args["value"].AsNumber()}"))
-            .BindExternal("Notify", ["value"], args => invocations.Add($"second:{args["value"].AsNumber()}"));
+            .Subscribe("Notify", ["value"], context => invocations.Add($"first:{context.Arguments["value"].AsNumber()}"))
+            .Subscribe("Notify", ["value"], context => invocations.Add($"second:{context.Arguments["value"].AsNumber()}"));
 
-        host.Emit("Start", 4m);
+        host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
 
         CollectionAssert.AreEqual(new[] { "first:4", "second:4" }, invocations);
     }
@@ -1570,12 +1575,13 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
-        var host = new EventScriptHost()
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
             .Load(EventScriptManager.Compile(script))
-            .BindExternal("Notify", ["value"], _ => throw new InvalidOperationException("boom"))
-            .BindExternal("Notify", ["value"], args => invocations.Add($"ok:{args["value"].AsNumber()}"));
+            .Subscribe("Notify", ["value"], _ => throw new InvalidOperationException("boom"))
+            .Subscribe("Notify", ["value"], context => invocations.Add($"ok:{context.Arguments["value"].AsNumber()}"));
 
-        var result = host.Emit("Start", 4m);
+        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
 
         CollectionAssert.AreEqual(new[] { "ok:4" }, invocations);
         Assert.HasCount(1, result.EmittedEvents);
@@ -1583,7 +1589,31 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
-    public void HostQueuedRunsDrainToTheSameResultAsEmit()
+    public void HostExternalSubscribersCanPublishFollowUpMessagesThroughTheSameRun()
+    {
+        const string script = """
+            on Start(value) {
+                publish Notify(value: value);
+            }
+            """;
+
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
+            .Load(EventScriptManager.Compile(script))
+            .Subscribe("Notify", ["value"], context => context.Publish("Done", new Dictionary<string, EventScriptValue>
+            {
+                ["value"] = context.Arguments["value"]
+            }));
+
+        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+
+        Assert.AreEqual("Notify", result.EmittedEvents[0].Message);
+        Assert.AreEqual("Done", result.EmittedEvents[1].Message);
+        Assert.AreEqual(2m, result.EmittedEvents[1].Arguments["value"].AsNumber());
+    }
+
+    [TestMethod]
+    public void HostPublishClrUsesTheSamePublishPath()
     {
         const string script = """
             on Start(value) {
@@ -1595,17 +1625,70 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var host = new EventScriptHost().Load(EventScriptManager.Compile(script));
+        var host = EventScriptHost.CreateBuilder()
+            .Build()
+            .Load(EventScriptManager.Compile(script));
 
-        var emitResult = host.Emit("Start", 2m);
-        var queuedResult = host.Enqueue("Start", 2m).Drain();
+        var publishResult = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+        var publishClrResult = host.PublishClr("Start", new Dictionary<string, object?> { ["value"] = 2m });
 
         CollectionAssert.AreEqual(
-            emitResult.EmittedEvents.Select(evt => evt.Message).ToArray(),
-            queuedResult.EmittedEvents.Select(evt => evt.Message).ToArray());
+            publishResult.EmittedEvents.Select(evt => evt.Message).ToArray(),
+            publishClrResult.EmittedEvents.Select(evt => evt.Message).ToArray());
         Assert.AreEqual(
-            emitResult.EmittedEvents[1].Arguments[0].AsNumber(),
-            queuedResult.EmittedEvents[1].Arguments[0].AsNumber());
+            publishResult.EmittedEvents[1].Arguments[0].AsNumber(),
+            publishClrResult.EmittedEvents[1].Arguments[0].AsNumber());
+    }
+
+    [TestMethod]
+    public void HostBuilderRejectsNonPositiveProcessingLimit()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => EventScriptHost.CreateBuilder().WithMaxProcessedEventsPerRun(0));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => EventScriptHost.CreateBuilder().WithMaxProcessedEventsPerRun(-1));
+    }
+
+    [TestMethod]
+    public void HostBuilderConfiguredDiagnosticCollectorRecordsTheWholePublishRun()
+    {
+        const string script = """
+            on Start(value) {
+                publish Next(value: value + 1);
+            }
+            """;
+
+        var collector = new EventScriptDiagnosticTraceCollector();
+        var compiled = EventScriptManager.Compile(script, new EventScriptInterpreterCompilationOptions { EnableDiagnostics = true });
+        var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
+            .Build()
+            .Load(compiled);
+
+        host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.DispatchStarted && evt.Name == "Start"));
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.HandlerInvoked && evt.Name == "Start"));
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished && evt.Name == "Next"));
+    }
+
+    [TestMethod]
+    public void HostBuilderConfiguredRandomIsUsedAcrossPublishRuns()
+    {
+        const string script = """
+            on Roll {
+                publish Result(value: :random 1 to 6);
+            }
+            """;
+
+        var host = EventScriptHost.CreateBuilder()
+            .WithRandom(EventScriptRandomGenerator.FromSequence(2, 5))
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+
+        var first = host.Publish("Roll");
+        var second = host.Publish("Roll");
+
+        Assert.AreEqual(2, Convert.ToInt32(first.EmittedEvents[0].Arguments["value"].AsInteger()));
+        Assert.AreEqual(5, Convert.ToInt32(second.EmittedEvents[0].Arguments["value"].AsInteger()));
     }
 
     [TestMethod]

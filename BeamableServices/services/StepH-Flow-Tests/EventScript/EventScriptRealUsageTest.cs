@@ -1,4 +1,5 @@
 using StepH.Flow.EventScript;
+using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
@@ -14,14 +15,14 @@ public class EventScriptRealUsageTest
         const string script =
             """
             on Setup(player) {
-                publish SetNumberOfPlayers(arg1: 2)
-                publish SetBoardSize(arg1: 10, arg2: 20)
-                publish SetNumberOfPushs(arg1: 20)
+                publish SetNumberOfPlayers(max: 2)
+                publish SetBoardSize(x: 10, y: 20)
+                publish SetNumberOfPushs(pushs: 20)
                 publish CreatePushSeed
-                publish SetCorrectTiles(arg1: 'Smiley')
-                publish SetIncorrectTiles(arg1: 'Whining', arg2: 'Mourning')
-                publish SetDeadTile(arg1: 'Devil')
-                publish SetInactiveTile(arg1: 'Blank')
+                publish SetCorrectTiles(tiles: 'Smiley')
+                publish SetIncorrectTiles(tiles: ['Whining', 'Mourning'])
+                publish SetDeadTile(tiles: 'Devil')
+                publish SetInactiveTile(tiles: 'Blank')
             }
 
             on Start(board) {
@@ -35,7 +36,7 @@ public class EventScriptRealUsageTest
             on TilePressed(tile) {
                 if tile[:isLit] {
                     publish SuccessfulPressed
-                } else {ja 
+                } else { 
                     publish FailedPressed
                     publish RestartGame
                 }
@@ -52,16 +53,22 @@ public class EventScriptRealUsageTest
 
         var game = new Dictionary<string, EventScriptValue>();
 
-        var host = new EventScriptHost()
-            .Load(EventScriptManager.Compile(script))
-            .BindExternal("SetBoardSize", p => { game["width"] = p[0]; game["height"] = p[1]; }, 2)
-            .BindExternal("SetNumberOfPlayer", p => { game["playerLimit"] = p[0]; }, 1)
-            .BindExternal("SetNumberOfPushs", p => { game["pushCount"] = p[0]; }, 1)
-            .BindExternal("CreatePushSeed", _ => { game["gameSeed"] = System.Random.Shared.NextInt64(); }, 0);
+        var collector = new EventScriptDiagnosticTraceCollector();
 
-        Console.WriteLine(host.Emit("Setup", EventScriptValue.Text("player1")));
-        Console.WriteLine(host.Emit("Start", EventScriptValue.Dictionary(game)));
+        var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
+            .Build()
+            .Load(EventScriptManager.Compile(script))
+            .Subscribe("SetBoardSize", ["x", "y"], context => { game["width"] = context.Arguments["x"]; game["height"] = context.Arguments["y"]; })
+            .Subscribe("SetNumberOfPlayers", ["max"], context => { game["playerLimit"] = context.Arguments["max"]; })
+            .Subscribe("SetNumberOfPushs", ["pushs"], context => { game["pushCount"] = context.Arguments["pushs"]; })
+            .Subscribe("CreatePushSeed", _ => { game["gameSeed"] = System.Random.Shared.NextInt64(); });
+
+        Console.WriteLine(host.Publish("Setup", new Dictionary<string, EventScriptValue> { ["player"] = EventScriptValue.Text("player1") }));
+        Console.WriteLine(host.Publish("Start", new Dictionary<string, EventScriptValue> { ["board"] = EventScriptValue.Dictionary(game) }));
         Console.WriteLine(EventScriptValue.Dictionary(game));
+        
+        Console.WriteLine(collector.ToString());
 
     }
 
@@ -74,14 +81,14 @@ public class EventScriptRealUsageTest
             
             on Setup(player) {
                 let someValue be 10; let AnotherValue be 20;
-                publish SetNumberOfPlayers(arg1: arg1: 2)
-                publish Set_BoardSize(arg1: arg1: 10, arg2: arg2: 20)
-                publish SetNumberOfPushs(arg1: arg1: 20)
+                publish SetNumberOfPlayers(max: 2)
+                publish SetBoardSize(x: 10, y: 20)
+                publish SetNumberOfPushs(pushs: 20)
                 publish CreatePushSeed
-                publish SetCorrectTiles(arg1: arg1: 'Smiley')
-                publish SetIncorrectTiles(arg1: arg1: 'Whining', arg2: arg2: 'Mourning')
-                publish SetDeadTile(arg1: arg1: 'Devil')
-                publish SetInactiveTile(arg1: arg1: 'Blank')
+                publish SetCorrectTiles(tiles: 'Smiley')
+                publish SetIncorrectTiles(tiles: ['Whining', 'Mourning'])
+                publish SetDeadTile(tiles: 'Devil')
+                publish SetInactiveTile(tiles: 'Blank')
             }
             """;
 

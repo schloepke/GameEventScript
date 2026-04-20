@@ -49,4 +49,6 @@ public sealed class EventScriptNamedArguments : IReadOnlyDictionary<string, Even
     public IEnumerator<KeyValuePair<string, EventScriptValue>> GetEnumerator() => _orderedPairs.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public override string ToString() => _orderedPairs.Count == 0 ? "" : _orderedPairs.Select(pair => $"{pair.Key}: {pair.Value}").Aggregate((a, b) => a + ", " + b);
 }

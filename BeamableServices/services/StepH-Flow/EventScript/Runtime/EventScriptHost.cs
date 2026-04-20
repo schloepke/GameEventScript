@@ -11,11 +11,11 @@ namespace StepH.Flow.EventScript.Runtime;
 public sealed class EventScriptHost
 {
     private readonly EventScriptHostOptions _options;
-    private readonly IEventScriptRandom? _random;
+    private readonly EventScriptRandomGenerator? _random;
     private readonly Dictionary<string, List<MessageSubscription>> _subscriptions = new(StringComparer.Ordinal);
     private long _nextRegistrationOrder;
 
-    public EventScriptHost(IEventScriptRandom? random = null, EventScriptHostOptions? options = null)
+    public EventScriptHost(EventScriptRandomGenerator? random = null, EventScriptHostOptions? options = null)
     {
         _random = random;
         _options = options ?? new EventScriptHostOptions();

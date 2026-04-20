@@ -7,6 +7,18 @@ namespace StepH_Flow_Tests.EventScript.Testing;
 
 internal static class EventScriptNamedDispatchTestExtensions
 {
+    public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, EventScriptRandomGenerator randomGenerator, string message, params EventScriptValue[] args)
+        => compiledScript.Emit(new EventScriptInvocationContext { Random = randomGenerator }, message, args);
+
+    public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, EventScriptRandomGenerator randomGenerator, string message, params object?[] args)
+        => compiledScript.Emit(new EventScriptInvocationContext { Random = randomGenerator }, message, args);
+
+    public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, EventScriptInvocationContext invocationContext, string message, params EventScriptValue[] args)
+        => compiledScript.Invoke(message, BuildNamedArguments(GetCompiledParameterNames(compiledScript, message, args.Length), args), invocationContext, diagnosticCollector: null);
+
+    public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, EventScriptInvocationContext invocationContext, string message, params object?[] args)
+        => compiledScript.Invoke(message, BuildNamedArguments(GetCompiledParameterNames(compiledScript, message, args.Length), EventScriptValue.FromClrList(args).ToArray()), invocationContext, diagnosticCollector: null);
+
     public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, string message, params EventScriptValue[] args)
         => compiledScript.Emit(message, BuildNamedArguments(GetCompiledParameterNames(compiledScript, message, args.Length), args));
 

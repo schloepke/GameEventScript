@@ -41,10 +41,10 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var random = new QueueRandom(4, 1, 6, 3, 5);
-        var interpreter = EventScriptManager.Compile(script, random);
+        var random = EventScriptRandomGenerator.FromSequence(4, 1, 6, 3, 5);
+        var interpreter = EventScriptManager.Compile(script);
 
-        var result = interpreter.Emit("Roll");
+        var result = interpreter.Emit(random, "Roll");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(4, Convert.ToInt32(args[0].AsInteger()));
@@ -149,9 +149,9 @@ public class EventScriptRuntimeScenarios
             EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["name"] = "Dragon", ["weight"] = 6m })
         ]);
 
-        var random = new QueueRandom(249999, 900000, 0, 999999);
-        var interpreter = EventScriptManager.Compile(script, random);
-        var args = interpreter.Emit("Start", units).EmittedEvents[0].Arguments;
+        var random = EventScriptRandomGenerator.FromSequence(0.249999m, 9m, 0m, 8.99999m);
+        var interpreter = EventScriptManager.Compile(script);
+        var args = interpreter.Emit(random, "Start", units).EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.IsFalse(args[1].AsBoolean());
@@ -244,9 +244,9 @@ public class EventScriptRuntimeScenarios
             EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["name"] = "Knight", ["alive"] = true })
         ]);
 
-        var random = new QueueRandom(1, 0, 1, 1, 0, 1);
-        var interpreter = EventScriptManager.Compile(script, random);
-        var args = interpreter.Emit("Start", enemies).EmittedEvents[0].Arguments;
+        var random = EventScriptRandomGenerator.FromSequence(1, 0, 1, 1, 0, 1);
+        var interpreter = EventScriptManager.Compile(script);
+        var args = interpreter.Emit(random, "Start", enemies).EmittedEvents[0].Arguments;
 
         Assert.AreEqual(4m, args[0].AsNumber());
         Assert.AreEqual(3m, args[1].AsNumber());
@@ -511,8 +511,9 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var interpreter = EventScriptManager.Compile(script, new QueueRandom(1, 2, 3, 1));
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var random = EventScriptRandomGenerator.FromSequence(1, 2, 3, 1);
+        var interpreter = EventScriptManager.Compile(script);
+        var args = interpreter.Emit(random, "Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Nothing, args[0].Type);
         Assert.AreEqual(EventScriptValueType.Nothing, args[1].Type);
@@ -555,8 +556,9 @@ public class EventScriptRuntimeScenarios
             })
         ]);
 
-        var interpreter = EventScriptManager.Compile(script, new QueueRandom(2, 5, 6));
-        var args = interpreter.Emit("Start", units).EmittedEvents[0].Arguments;
+        var random = EventScriptRandomGenerator.FromSequence(2, 5, 6);
+        var interpreter = EventScriptManager.Compile(script);
+        var args = interpreter.Emit(random, "Start", units).EmittedEvents[0].Arguments;
 
         Assert.AreEqual(3m, args[0].AsNumber());
         Assert.AreEqual(2m, args[1].AsNumber());
@@ -829,9 +831,9 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var random = new QueueRandom(2, 6, 3, 5);
-        var interpreter = EventScriptManager.Compile(script, random);
-        var result = interpreter.Emit("Start", EventScriptValue.OptionalSome("x"));
+        var random = EventScriptRandomGenerator.FromSequence(2, 6, 3, 5);
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit(random, "Start", EventScriptValue.OptionalSome("x"));
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(3, Convert.ToInt32(args[0].AsInteger()));
@@ -1065,9 +1067,9 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var random = new QueueRandom(2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5);
-        var interpreter = EventScriptManager.Compile(script, random);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var random = EventScriptRandomGenerator.FromSequence(2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5);
+        var interpreter = EventScriptManager.Compile(script);
+        var args = interpreter.Emit(random, "Start").EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.IsTrue(args[1].AsBoolean());
@@ -1310,8 +1312,9 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var interpreter = EventScriptManager.Compile(script, new QueueRandom(4, 250000, 500000));
-        var args = interpreter.Emit("Roll").EmittedEvents[0].Arguments;
+        var random = EventScriptRandomGenerator.FromSequence(4, 0.25m, 1.5m);
+        var interpreter = EventScriptManager.Compile(script);
+        var args = interpreter.Emit(random, "Roll").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Integer, args[0].Type);
         Assert.AreEqual(4L, args[0].AsInteger());
@@ -1636,9 +1639,9 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var random = new QueueRandom(1, 2);
-        var interpreter = EventScriptManager.Compile(script, random);
-        var result = interpreter.Emit("Roll");
+        var random = EventScriptRandomGenerator.FromSequence(1, 2);
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit(random, "Roll");
         Assert.AreEqual(0, Convert.ToInt32(result.EmittedEvents[0].Arguments[0].AsInteger()));
     }
 
@@ -1655,12 +1658,12 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var random = new QueueRandom(
+        var random = EventScriptRandomGenerator.FromSequence(
             2, 6, 3, 5,
             1, 4, 6, 2,
             3, 2, 6, 1);
-        var interpreter = EventScriptManager.Compile(script, random);
-        var result = interpreter.Emit("Roll");
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit(random, "Roll");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Dice, args[0].Type);
@@ -1765,8 +1768,9 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var interpreter = EventScriptManager.Compile(script, new QueueRandom(4, 2));
-        var result = interpreter.Emit("Start");
+        var random = EventScriptRandomGenerator.FromSequence(4, 2);
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit(random, "Start");
         var value = result.EmittedEvents[0].Arguments[0];
 
         Assert.IsFalse(value.IsNaN());
@@ -1816,24 +1820,4 @@ public class EventScriptRuntimeScenarios
         Assert.AreEqual(EventScriptValueType.Nothing, args[2].Type);
     }
 
-    private sealed class QueueRandom(params int[] values) : IEventScriptRandom
-    {
-        private readonly Queue<int> _values = new(values);
-
-        public int NextInclusive(int minInclusive, int maxInclusive)
-        {
-            if (_values.Count == 0)
-            {
-                throw new InvalidOperationException("No values left in random queue");
-            }
-
-            var value = _values.Dequeue();
-            if (value < minInclusive || value > maxInclusive)
-            {
-                throw new InvalidOperationException($"Queued random value {value} out of expected range [{minInclusive}, {maxInclusive}]");
-            }
-
-            return value;
-        }
-    }
 }

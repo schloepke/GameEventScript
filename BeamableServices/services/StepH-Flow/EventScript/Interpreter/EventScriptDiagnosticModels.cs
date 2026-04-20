@@ -7,7 +7,7 @@ namespace StepH.Flow.EventScript.Interpreter;
 
 public sealed class EventScriptInvocationContext
 {
-    public IEventScriptRandom? Random { get; set; }
+    public EventScriptRandomGenerator? Random { get; set; }
 }
 
 public enum EventScriptDiagnosticEventKind

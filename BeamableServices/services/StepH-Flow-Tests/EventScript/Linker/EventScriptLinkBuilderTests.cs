@@ -57,7 +57,7 @@ public class EventScriptLinkBuilderScenarios
             })
         ]);
 
-        var interpreter = EventScriptInterpreter.Compile(linkedModule);
+        var interpreter = EventScriptInterpretationCompiler.Compile(linkedModule);
         var args = interpreter.Emit("Start", unit, units).EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());

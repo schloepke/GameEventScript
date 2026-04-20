@@ -11,17 +11,11 @@ namespace StepH.Flow.EventScript;
 
 public static class EventScriptManager
 {
-    public static CompiledEventScript Compile(EventScriptInterpreterCompilationOptions? options = null, IEventScriptRandom? defaultRandom = null, params string[] inputs)
-        => new(EventScriptLinkBuilder.LinkModules(ParseModules(inputs)), options, defaultRandom);
+    public static CompiledEventScript Compile(EventScriptInterpreterCompilationOptions? options = null, params string[] inputs)
+        => new(EventScriptLinkBuilder.LinkModules(ParseModules(inputs)), options);
     
-    public static CompiledEventScript Compile(string input, EventScriptInterpreterCompilationOptions options, IEventScriptRandom? defaultRandom = null)
-        => new(EventScriptLinkBuilder.LinkModules(ParseModule(input)), options, defaultRandom);
-
-    public static CompiledEventScript Compile(string input, IEventScriptRandom defaultRandom)
-        => new(EventScriptLinkBuilder.LinkModules(ParseModule(input)), null, defaultRandom);
-    
-    public static CompiledEventScript Compile(string input)
-        => new(EventScriptLinkBuilder.LinkModules(ParseModule(input)), null, null);
+    public static CompiledEventScript Compile(string input, EventScriptInterpreterCompilationOptions? options = null)
+        => new(EventScriptLinkBuilder.LinkModules(ParseModule(input)), options);
     
     public static EventScriptModule ParseModule(string input, string? sourceName = null) => EventScriptParser.Parse(input, sourceName);
 

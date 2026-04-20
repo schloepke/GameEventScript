@@ -18,11 +18,10 @@ public sealed record EventScriptExecutionResult(string Message, IReadOnlyList<Ev
 
 public sealed class CompiledEventScript
 {
-    public CompiledEventScript(LinkedEventScriptModule linkedModule, EventScriptInterpreterCompilationOptions? options = null, IEventScriptRandom? defaultRandom = null)
+    public CompiledEventScript(LinkedEventScriptModule linkedModule, EventScriptInterpreterCompilationOptions? options = null)
     {
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
         Options = options ?? new EventScriptInterpreterCompilationOptions();
-        DefaultRandom = defaultRandom;
 
         RuleDefinitions = linkedModule.RuleDefinitions.ToDictionary(
             pair => pair.Key,
@@ -48,8 +47,6 @@ public sealed class CompiledEventScript
     }
 
     public EventScriptInterpreterCompilationOptions Options { get; }
-
-    internal IEventScriptRandom? DefaultRandom { get; }
 
     public IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> Handlers { get; }
 

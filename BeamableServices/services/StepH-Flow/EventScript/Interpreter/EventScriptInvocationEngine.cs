@@ -12,13 +12,11 @@ namespace StepH.Flow.EventScript.Interpreter;
 
 internal sealed class EventScriptInvocationEngine
 {
-    private const int RandomUnitMax = 1_000_000;
-    private const decimal RandomUnitScale = RandomUnitMax;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _handlers;
     private readonly IReadOnlyDictionary<string, CompiledTypeDefinition> _typeDefinitions;
     private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _ruleDefinitions;
     private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _selectDefinitions;
-    private readonly IEventScriptRandom _random;
+    private readonly EventScriptRandomGenerator _randomGenerator;
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly bool _diagnosticsEnabled;
 
@@ -28,7 +26,7 @@ internal sealed class EventScriptInvocationEngine
         IEventScriptDiagnosticCollector? diagnosticCollector)
     {
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
-        _random = invocationContext?.Random ?? compiledScript.DefaultRandom ?? new DefaultEventScriptRandom();
+        _randomGenerator = invocationContext?.Random ?? new EventScriptRandomGenerator();
         _typeDefinitions = compiledScript.TypeDefinitions;
         _ruleDefinitions = compiledScript.RuleDefinitions;
         _selectDefinitions = compiledScript.SelectDefinitions;
@@ -290,7 +288,7 @@ internal sealed class EventScriptInvocationEngine
                 (from, to) = (to, from);
             }
 
-            if (!TryNextInclusive(from, to, out var next))
+            if (!TryNextInclusiveInt(from, to, out var next))
             {
                 return EventScriptValue.Nothing;
             }
@@ -313,7 +311,9 @@ internal sealed class EventScriptInvocationEngine
             return EventScriptValue.Decimal(lower);
         }
 
-        return EventScriptValue.Decimal(lower + (upper - lower) * NextRandomUnit());
+        return TryNextInclusiveDecimal(lower, upper, out var nextDecimal)
+            ? EventScriptValue.Decimal(nextDecimal)
+            : EventScriptValue.Nothing;
     }
 
     private EventScriptValue EvaluateDiceExpression(DiceExpressionNode diceExpression)
@@ -326,7 +326,7 @@ internal sealed class EventScriptInvocationEngine
         var rolls = new int[diceExpression.DiceCount];
         for (var i = 0; i < rolls.Length; i++)
         {
-            if (!TryNextInclusive(1, diceExpression.SideCount, out var roll))
+            if (!TryNextInclusiveInt(1, diceExpression.SideCount, out var roll))
             {
                 return EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()));
             }
@@ -644,8 +644,9 @@ internal sealed class EventScriptInvocationEngine
             return EventScriptValue.Boolean(true);
         }
 
-        var threshold = ratio * RandomUnitScale;
-        return EventScriptValue.Boolean(NextRandomUnit() < threshold);
+        return TryNextInclusiveDecimal(0m, 1m, out var randomValue)
+            ? EventScriptValue.Boolean(randomValue < ratio)
+            : EventScriptValue.Boolean(false);
     }
 
     private static EventScriptValue EvaluateRoundingUnary(EventScriptValue operand, string operation)
@@ -1627,7 +1628,7 @@ internal sealed class EventScriptInvocationEngine
         var shuffled = items.ToArray();
         for (var i = shuffled.Length - 1; i > 0; i--)
         {
-            if (!TryNextInclusive(0, i, out var swapIndex))
+            if (!TryNextInclusiveInt(0, i, out var swapIndex))
             {
                 return EventScriptValue.List(shuffled);
             }
@@ -1698,7 +1699,11 @@ internal sealed class EventScriptInvocationEngine
                 break;
             }
 
-            var threshold = NextRandomUnit() * totalWeight;
+            if (!TryNextInclusiveDecimal(0m, totalWeight, out var threshold))
+            {
+                break;
+            }
+
             decimal cumulative = 0m;
             var selected = weightedItems[^1].Item;
             foreach (var weightedItem in weightedItems)
@@ -1744,7 +1749,7 @@ internal sealed class EventScriptInvocationEngine
         var result = new List<EventScriptValue>(Math.Min(count, pool.Count));
         for (var i = 0; i < count && pool.Count > 0; i++)
         {
-            if (!TryNextInclusive(0, pool.Count - 1, out var index))
+            if (!TryNextInclusiveInt(0, pool.Count - 1, out var index))
             {
                 break;
             }
@@ -2902,11 +2907,11 @@ internal sealed class EventScriptInvocationEngine
         return (long)truncated;
     }
 
-    private bool TryNextInclusive(int minInclusive, int maxInclusive, out int value)
+    private bool TryNextInclusiveInt(int minInclusive, int maxInclusive, out int value)
     {
         try
         {
-            value = _random.NextInclusive(minInclusive, maxInclusive);
+            value = _randomGenerator.NextInclusiveInt(minInclusive, maxInclusive);
             return true;
         }
         catch
@@ -2916,9 +2921,18 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private decimal NextRandomUnit()
+    private bool TryNextInclusiveDecimal(decimal minInclusive, decimal maxInclusive, out decimal value)
     {
-        return TryNextInclusive(0, RandomUnitMax - 1, out var value) ? value / RandomUnitScale : 0m;
+        try
+        {
+            value = _randomGenerator.NextInclusiveDecimal(minInclusive, maxInclusive);
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
     }
 
     private void ValidateEmitArguments(string message, IEnumerable<string> argumentNames)

@@ -14,7 +14,7 @@ public class EventScriptParsingScenarios
             on PlayerJoined(playerId) {
                 let isActive be true
                 if isActive {
-                    publish PlayerReady(playerId)
+                    publish PlayerReady(arg1: playerId)
                 } else {
                     publish PlayerIdle
                 }
@@ -97,7 +97,7 @@ public class EventScriptParsingScenarios
                 let isWounded be wounded(unit);
                 let sameCheck be unit is wounded;
                 let result be woundedUnits(units);
-                publish Done(isWounded, sameCheck, result);
+                publish Done(arg1: isWounded, arg2: sameCheck, arg3: result);
             }
             """;
 
@@ -161,7 +161,7 @@ public class EventScriptParsingScenarios
             on Start(items, hitChance) {
                 let hit be :chance hitChance;
                 let target be items[:choose 1 weighted by item -> item.weight];
-                publish Done(hit, target);
+                publish Done(arg1: hit, arg2: target);
             }
             """;
 
@@ -299,7 +299,7 @@ public class EventScriptParsingScenarios
             """
             on Start(d6) {
                 let d6 be 1;
-                publish Done(d6);
+                publish Done(arg1: d6);
             }
             """;
 
@@ -467,7 +467,7 @@ public class EventScriptParsingScenarios
 
             on Start {
                 let hp as :meter be [current: 25, maximum: 100];
-                publish Done(hp[:percentage]);
+                publish Done(arg1: hp[:percentage]);
             }
             """;
 
@@ -826,8 +826,7 @@ public class EventScriptParsingScenarios
             on Broken {
                 let x be ;
                 let y as decimal be 10;
-                publish Done(
-            }
+                publish Done(arg1: arg1: }
             """;
 
         var exception = Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));

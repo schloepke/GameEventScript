@@ -13,11 +13,11 @@ public class EventScriptDiagnosticInterpreterScenarios
         const string script =
             """
             on Start {
-                publish Next(3)
+                publish Next(value: 3)
             }
 
             on Next(value) {
-                publish Done(value)
+                publish Done(arg1: value)
             }
             """;
 
@@ -42,7 +42,7 @@ public class EventScriptDiagnosticInterpreterScenarios
             """
             on Start(value) {
                 let score be value + 2
-                publish Done(score)
+                publish Done(arg1: score)
             }
             """;
 
@@ -60,11 +60,11 @@ public class EventScriptDiagnosticInterpreterScenarios
         const string script =
             """
             on Start(value) {
-                publish First(value)
+                publish First(arg1: value)
             }
 
             on Start(value) {
-                publish Second(value)
+                publish Second(arg1: value)
             }
             """;
 
@@ -88,7 +88,7 @@ public class EventScriptDiagnosticInterpreterScenarios
             """
             on Start {
                 let missing be unknownValue
-                publish Done(missing)
+                publish Done(arg1: missing)
             }
             """;
 

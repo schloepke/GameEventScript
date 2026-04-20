@@ -7,7 +7,7 @@ EventScript is a small, domain-oriented scripting language for event-driven game
 It is designed around a few core ideas:
 
 - Scripts react to messages with `on Message { ... }`.
-- Scripts publish new messages with `publish Message(...)`.
+- Scripts publish new messages with `publish Message(name: value, ...)`.
 - The runtime uses a FIFO pub/sub model.
 - The language is intentionally lenient:
   missing data often becomes `nothing` instead of throwing.
@@ -30,7 +30,7 @@ EventScript is case-sensitive.
 
 ```eventscript
 on Start {
-    publish Hello('world')
+    publish Hello(arg1: 'world')
 }
 ```
 
@@ -59,11 +59,11 @@ select woundedUnits(units) means units[:filter unit where unit is wounded]
 
 on Start(unit, units) {
     if unit is wounded {
-        publish HealRequested(unit)
+        publish HealRequested(arg1: unit)
     }
 
     let choices be woundedUnits(units)
-    publish Done(:len choices)
+    publish Done(arg1: :len choices)
 }
 ```
 
@@ -100,7 +100,7 @@ Event handlers subscribe to a message.
 ```eventscript
 on DamageTaken(unit, amount) {
     let remainingHp be unit.hp - amount
-    publish HpChanged(unit.id, remainingHp)
+    publish HpChanged(arg1: unit.id, arg2: remainingHp)
 }
 ```
 
@@ -111,14 +111,15 @@ Handlers:
 - may have multiple handlers for the same message
 - run in declaration order
 
-Multiple handlers for the same message must use the same parameter count.
+Multiple handlers for the same message may use different parameter-name sets.
+Dispatch matches by exact argument names.
 
 ## Publishing Events
 
 Use `publish` to send a message.
 
 ```eventscript
-publish UnitDied(unit.id)
+publish UnitDied(unit: unit.id)
 publish TurnEnded
 ```
 
@@ -149,19 +150,21 @@ This means publish chains are not recursive direct calls. They are queued messag
 
 At the interpreter level there are two main ways to run scripts.
 
-Synchronous enqueue-and-drain:
+Named emit:
 
 ```csharp
 var interpreter = EventScriptInterpreter.Compile(script);
-var result = interpreter.Emit("Start", EventScriptValue.Integer(3));
+var result = interpreter.Emit("Start", new Dictionary<string, EventScriptValue>
+{
+    ["value"] = EventScriptValue.Integer(3)
+});
 ```
 
-Low-level queue API:
+Tuple-style convenience overload:
 
 ```csharp
 var interpreter = EventScriptInterpreter.Compile(script);
-var run = interpreter.Enqueue("Start", EventScriptValue.Integer(3));
-var result = run.Drain();
+var result = interpreter.Emit("Start", ("value", EventScriptValue.Integer(3)));
 ```
 
 The execution result contains:
@@ -276,7 +279,7 @@ Examples:
 ```eventscript
 on Start {
     let playerId be 10
-    publish TurnStarted(playerId)
+    publish TurnStarted(arg1: playerId)
 }
 ```
 
@@ -961,7 +964,7 @@ Negative values can be written directly with unary minus, such as `-12` or `-12.
 
 ```eventscript
 for key in :keys entry {
-    publish Seen(key)
+    publish Seen(arg1: key)
 }
 ```
 
@@ -969,7 +972,7 @@ for key in :keys entry {
 
 ```eventscript
 for value in :values items {
-    publish Seen(value)
+    publish Seen(arg1: value)
 }
 ```
 
@@ -977,7 +980,7 @@ for value in :values items {
 
 ```eventscript
 for item in :entries entry {
-    publish Pair(item.key, item.value)
+    publish Pair(arg1: item.key, arg2: item.value)
 }
 ```
 
@@ -1047,7 +1050,7 @@ For dictionaries, overlapping keys are overwritten by the right-hand side.
 
 ```eventscript
 if unit is wounded {
-    publish HealRequested(unit)
+    publish HealRequested(arg1: unit)
 } else {
     publish Continue
 }
@@ -1058,7 +1061,7 @@ if unit is wounded {
 ```eventscript
 for unit in units {
     if unit.alive {
-        publish UnitReady(unit.id)
+        publish UnitReady(arg1: unit.id)
     }
 }
 ```
@@ -1123,7 +1126,7 @@ Examples:
 ```eventscript
 let missingName be unit['name']
 let missingItem be values[99]
-publish UnknownMessage(1, 2, 3)
+publish UnknownMessage(arg1: 1, arg2: 2, arg3: 3)
 ```
 
 ## Compilation Errors
@@ -1159,9 +1162,9 @@ on DamageTaken(unit, amount) {
     let hp be unit.hp - amount
 
     if hp is 0 or less {
-        publish UnitDefeated(unit.id)
+        publish UnitDefeated(arg1: unit.id)
     } else {
-        publish UnitHpChanged(unit.id, hp)
+        publish UnitHpChanged(arg1: unit.id, arg2: hp)
     }
 }
 ```
@@ -1175,7 +1178,7 @@ select targetableUnits(units) means units[:filter unit where unit is targetable]
 on ChooseTarget(units) {
     let candidates be targetableUnits(units)
     let target be candidates[:choose 1 at random]
-    publish TargetChosen(target.id)
+    publish TargetChosen(arg1: target.id)
 }
 ```
 
@@ -1187,7 +1190,7 @@ select unitsById(units) means units[:dictionary unit by unit.id]
 on Start(units) {
     let byId be unitsById(units)
     let hero be byId[:hero]
-    publish Ready(hero.name :default 'Unknown')
+    publish Ready(arg1: hero.name :default 'Unknown')
 }
 ```
 
@@ -1200,9 +1203,9 @@ on RollAttack {
     let total be roll[:sum die -> die]
 
     if crit {
-        publish CriticalHit(total)
+        publish CriticalHit(arg1: total)
     } else {
-        publish NormalHit(total)
+        publish NormalHit(arg1: total)
     }
 }
 ```

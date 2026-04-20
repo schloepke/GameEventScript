@@ -59,30 +59,27 @@ internal sealed class EventScriptInvocationEngine
         return new EventScriptInvocationEngine(compiledScript, random);
     }
 
-    public EventScriptDiagnosticInvocationResult Invoke(string message, params EventScriptValue[] args)
+    public EventScriptDiagnosticInvocationResult Invoke(string message, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             throw new ArgumentException("Message must not be null or whitespace", nameof(message));
         }
 
-        args = NormalizeArgs(args);
+        args = EventScriptArgumentMap.Normalize(args);
         var state = new RunState(diagnosticsEnabled: true);
         state.RecordDiagnostic(EventScriptDiagnosticStepKind.InvocationStarted, message, args, $"Invoke '{message}'");
 
-        if (_handlers.TryGetValue(message, out var handlers))
+        foreach (var handler in GetMatchingHandlers(message, args))
         {
-            foreach (var handler in handlers)
-            {
-                state.RecordDiagnostic(
-                    EventScriptDiagnosticStepKind.HandlerMatched,
-                    handler.Message,
-                    args,
-                    $"Handler '{handler.Message}' with parameters ({string.Join(", ", handler.Parameters)})");
-                var context = new ExecutionContext(state);
-                var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
-                state.CaptureVariables(handlerVariables);
-            }
+            state.RecordDiagnostic(
+                EventScriptDiagnosticStepKind.HandlerMatched,
+                handler.Message,
+                args,
+                $"Handler '{handler.Message}' with parameters ({string.Join(", ", handler.Parameters)})");
+            var context = new ExecutionContext(state);
+            var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
+            state.CaptureVariables(handlerVariables);
         }
 
         state.RecordDiagnostic(
@@ -93,38 +90,35 @@ internal sealed class EventScriptInvocationEngine
 
         return new EventScriptDiagnosticInvocationResult(
             message,
-            args,
+            EventScriptNamedArguments.Create(args),
             state.EmittedEvents,
             state.Variables,
             state.Steps);
     }
 
-    public EventScriptExecutionResult InvokeMessage(string message, params EventScriptValue[] args)
+    public EventScriptExecutionResult InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             throw new ArgumentException("Message must not be null or whitespace", nameof(message));
         }
 
-        args = NormalizeArgs(args);
+        args = EventScriptArgumentMap.Normalize(args);
         var state = new RunState();
-        if (_handlers.TryGetValue(message, out var handlers))
+        foreach (var handler in GetMatchingHandlers(message, args))
         {
-            foreach (var handler in handlers)
-            {
-                var context = new ExecutionContext(state);
-                var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
-                state.CaptureVariables(handlerVariables);
-            }
+            var context = new ExecutionContext(state);
+            var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
+            state.CaptureVariables(handlerVariables);
         }
 
         return new EventScriptExecutionResult(message, state.EmittedEvents, state.Variables);
     }
 
-    public EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyList<EventScriptValue> args)
+    public EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
-        args = NormalizeArgs(args).ToArray();
+        args = EventScriptArgumentMap.Normalize(args);
         var state = new RunState();
         var context = new ExecutionContext(state);
         var variables = ExecuteHandler(context, handler.Syntax, args);
@@ -132,16 +126,28 @@ internal sealed class EventScriptInvocationEngine
         return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
     }
 
-    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args) => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
+    private IReadOnlyList<CompiledEventScriptHandler> GetMatchingHandlers(string message, IReadOnlyDictionary<string, EventScriptValue> args)
+    {
+        if (!_handlers.TryGetValue(message, out var handlers))
+        {
+            return [];
+        }
 
-    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, EventHandlerNode handler, IReadOnlyList<EventScriptValue> args)
+        var signatureKey = EventScriptArgumentMap.CreateSignatureKey(args.Keys);
+        return handlers
+            .Where(handler => handler.SignatureKey == signatureKey)
+            .OrderBy(handler => handler.DeclarationOrder)
+            .ToArray();
+    }
+
+    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, EventHandlerNode handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         context.PushScope();
         try
         {
-            for (var i = 0; i < handler.Parameters.Count; i++)
+            foreach (var parameter in handler.Parameters)
             {
-                context.Define(handler.Parameters[i], i < args.Count ? args[i] : EventScriptValue.Nothing);
+                context.Define(parameter, args[parameter]);
             }
 
             ExecuteStatements(context, handler.Statements);
@@ -168,7 +174,10 @@ internal sealed class EventScriptInvocationEngine
         switch (statement)
         {
             case PublishStatementNode publish:
-                var args = publish.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
+                var args = publish.Arguments.ToDictionary(
+                    argument => argument.Name,
+                    argument => EvaluateExpression(context, argument.Expression),
+                    StringComparer.Ordinal);
                 EmitMessage(context, publish.Message, args);
                 return;
 
@@ -212,9 +221,9 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private void EmitMessage(ExecutionContext context, string message, IReadOnlyList<EventScriptValue> args)
+    private void EmitMessage(ExecutionContext context, string message, IReadOnlyDictionary<string, EventScriptValue> args)
     {
-        ValidateEmitArguments(message, args.Count);
+        ValidateEmitArguments(message, args.Keys);
         context.Publish(message, args);
     }
 
@@ -2091,7 +2100,7 @@ internal sealed class EventScriptInvocationEngine
             case PublishStatementNode publish:
                 foreach (var argument in publish.Arguments)
                 {
-                    ValidateExpressionReferences(argument);
+                    ValidateExpressionReferences(argument.Expression);
                 }
 
                 return;
@@ -2941,10 +2950,10 @@ internal sealed class EventScriptInvocationEngine
             : 0m;
     }
 
-    private void ValidateEmitArguments(string message, int argumentCount)
+    private void ValidateEmitArguments(string message, IEnumerable<string> argumentNames)
     {
         _ = message;
-        _ = argumentCount;
+        _ = argumentNames;
     }
 
     private sealed class ExecutionContext
@@ -2976,7 +2985,7 @@ internal sealed class EventScriptInvocationEngine
             _state.RecordDiagnostic(
                 EventScriptDiagnosticStepKind.VariableAssigned,
                 name,
-                new[] { value },
+                SingleArgument(value),
                 $"Assigned '{name}' = {value}");
         }
 
@@ -2989,7 +2998,7 @@ internal sealed class EventScriptInvocationEngine
                     _state.RecordDiagnostic(
                         EventScriptDiagnosticStepKind.VariableResolved,
                         name,
-                        new[] { value },
+                        SingleArgument(value),
                         $"Resolved '{name}'");
                     return value;
                 }
@@ -2998,14 +3007,14 @@ internal sealed class EventScriptInvocationEngine
             _state.RecordDiagnostic(
                 EventScriptDiagnosticStepKind.VariableResolved,
                 name,
-                new[] { EventScriptValue.Nothing },
+                SingleArgument(EventScriptValue.Nothing),
                 $"Resolved '{name}' to nothing");
             return EventScriptValue.Nothing;
         }
 
-        public void Publish(string message, IReadOnlyList<EventScriptValue> arguments)
+        public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> arguments)
         {
-            var emittedEvent = new EventScriptEmittedEvent(message, arguments.ToArray());
+            var emittedEvent = new EventScriptEmittedEvent(message, EventScriptNamedArguments.Create(arguments));
             _state.RecordPublishedEvent(emittedEvent);
             _state.RecordDiagnostic(
                 EventScriptDiagnosticStepKind.EventPublished,
@@ -3018,17 +3027,20 @@ internal sealed class EventScriptInvocationEngine
             => _state.RecordDiagnostic(
                 EventScriptDiagnosticStepKind.StatementExecuting,
                 statement.GetType().Name,
-                Array.Empty<EventScriptValue>(),
+                EventScriptArgumentMap.Empty,
                 $"Executing {statement.GetType().Name}");
 
         public void RecordExpression(ExpressionNode expression, EventScriptValue value)
             => _state.RecordDiagnostic(
                 EventScriptDiagnosticStepKind.ExpressionEvaluated,
                 expression.GetType().Name,
-                new[] { value },
+                SingleArgument(value),
                 value.isNothing()
                     ? $"Expression {expression.GetType().Name} evaluated to nothing"
                     : $"Expression {expression.GetType().Name} evaluated");
+
+        private static IReadOnlyDictionary<string, EventScriptValue> SingleArgument(EventScriptValue value)
+            => new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { ["value"] = value };
 
         public IReadOnlyDictionary<string, EventScriptValue> SnapshotTopScope()
             => new Dictionary<string, EventScriptValue>(_scopes.Peek(), StringComparer.Ordinal);
@@ -3056,14 +3068,14 @@ internal sealed class EventScriptInvocationEngine
             EmittedEvents.Add(emittedEvent);
         }
 
-        public void RecordDiagnostic(EventScriptDiagnosticStepKind kind, string message, IReadOnlyList<EventScriptValue> arguments, string? detail = null)
+        public void RecordDiagnostic(EventScriptDiagnosticStepKind kind, string message, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
         {
             if (!_diagnosticsEnabled)
             {
                 return;
             }
 
-            Steps.Add(new EventScriptDiagnosticStep(++_diagnosticSequence, kind, message, arguments.ToArray(), detail));
+            Steps.Add(new EventScriptDiagnosticStep(++_diagnosticSequence, kind, message, EventScriptNamedArguments.Create(arguments), detail));
         }
 
         public void CaptureVariables(IReadOnlyDictionary<string, EventScriptValue> variables)

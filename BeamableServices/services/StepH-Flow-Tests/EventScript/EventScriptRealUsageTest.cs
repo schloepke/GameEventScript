@@ -15,14 +15,14 @@ public class EventScriptRealUsageTest
         const string script =
             """
             on Setup(player) {
-                publish SetNumberOfPlayers(2)
-                publish SetBoardSize(10, 20)
-                publish SetNumberOfPushs(20)
+                publish SetNumberOfPlayers(arg1: 2)
+                publish SetBoardSize(arg1: 10, arg2: 20)
+                publish SetNumberOfPushs(arg1: 20)
                 publish CreatePushSeed
-                publish SetCorrectTiles('Smiley')
-                publish SetIncorrectTiles('Whining', 'Mourning')
-                publish SetDeadTile('Devil')
-                publish SetInactiveTile('Blank')
+                publish SetCorrectTiles(arg1: 'Smiley')
+                publish SetIncorrectTiles(arg1: 'Whining', arg2: 'Mourning')
+                publish SetDeadTile(arg1: 'Devil')
+                publish SetInactiveTile(arg1: 'Blank')
             }
 
             on Start(board) {
@@ -75,14 +75,14 @@ public class EventScriptRealUsageTest
             
             on Setup(player) {
                 let someValue be 10; let AnotherValue be 20;
-                publish SetNumberOfPlayers(2)
-                publish Set_BoardSize(10, 20)
-                publish SetNumberOfPushs(20)
+                publish SetNumberOfPlayers(arg1: arg1: 2)
+                publish Set_BoardSize(arg1: arg1: 10, arg2: arg2: 20)
+                publish SetNumberOfPushs(arg1: arg1: 20)
                 publish CreatePushSeed
-                publish SetCorrectTiles('Smiley')
-                publish SetIncorrectTiles('Whining', 'Mourning')
-                publish SetDeadTile('Devil')
-                publish SetInactiveTile('Blank')
+                publish SetCorrectTiles(arg1: arg1: 'Smiley')
+                publish SetIncorrectTiles(arg1: arg1: 'Whining', arg2: arg2: 'Mourning')
+                publish SetDeadTile(arg1: arg1: 'Devil')
+                publish SetInactiveTile(arg1: arg1: 'Blank')
             }
             """;
 

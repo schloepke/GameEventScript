@@ -15,7 +15,7 @@ public class EventScriptRuntimeScenarios
             on Start(values, threshold) {
                 let passed be values[:any value where value > threshold];
                 if passed {
-                    publish Passed(:len values);
+                    publish Passed(arg1: :len values);
                 } else {
                     publish Failed;
                 }
@@ -37,7 +37,7 @@ public class EventScriptRuntimeScenarios
             on Roll {
                 let a be :random 1 to 6;
                 let b be :dice 4d6[:take highest 2];
-                publish Result(a, b);
+                publish Result(arg1: a, arg2: b);
             }
             """;
 
@@ -65,22 +65,22 @@ public class EventScriptRuntimeScenarios
                 let maybeCount be :len maybeValues;
                 let entryCount be :len entries;
                 for key in dictKeys {
-                    publish SeenKey(key, player[key]);
+                    publish SeenKey(arg1: key, arg2: player[key]);
                 }
 
                 for item in valueIterator {
-                    publish SeenValue(item);
+                    publish SeenValue(arg1: item);
                 }
 
                 for target in maybeValues {
-                    publish SeenMaybe(target);
+                    publish SeenMaybe(arg1: target);
                 }
 
                 for entry in entries {
-                    publish SeenEntry(entry.key, entry[:value]);
+                    publish SeenEntry(arg1: entry.key, arg2: entry[:value]);
                 }
 
-                publish Done(keyCount, valueCount, maybeCount, entryCount, dictKeys, valueIterator, entries);
+                publish Done(arg1: keyCount, arg2: valueCount, arg3: maybeCount, arg4: entryCount, arg5: dictKeys, arg6: valueIterator, arg7: entries);
             }
             """;
 
@@ -139,7 +139,7 @@ public class EventScriptRuntimeScenarios
                 let quarterHit be :chance 25%;
                 let weightedTarget be units[:choose 1 weighted by unit -> unit.weight];
                 let weightedPair be units[:choose 2 weighted by unit -> unit.weight];
-                publish Done(alwaysHit, neverHit, quarterHit, weightedTarget.name, weightedPair[1].name, weightedPair[2].name);
+                publish Done(arg1: alwaysHit, arg2: neverHit, arg3: quarterHit, arg4: weightedTarget.name, arg5: weightedPair[1].name, arg6: weightedPair[2].name);
             }
             """;
 
@@ -168,12 +168,7 @@ public class EventScriptRuntimeScenarios
             on Start(items) {
                 let byId be items[:dictionary item by item.id];
                 let namesById be items[:dictionary item by item.id -> item.name];
-                publish Done(
-                    byId[:orc].hp,
-                    byId[:mage].hp,
-                    namesById[:orc],
-                    namesById[:mage],
-                    :len byId);
+                publish Done(arg1: byId[:orc].hp, arg2: byId[:mage].hp, arg3: namesById[:orc], arg4: namesById[:mage], arg5: :len byId);
             }
             """;
 
@@ -205,7 +200,7 @@ public class EventScriptRuntimeScenarios
                 let averagePoints be items[:average item -> item.points];
                 let highestItem be items[:highest item -> item.points];
                 let lowestItem be items[:lowest item -> item.points];
-                publish Done(:len names, :len positive, total, positiveCount, averagePoints, highestItem.name, lowestItem.name);
+                publish Done(arg1: :len names, arg2: :len positive, arg3: total, arg4: positiveCount, arg5: averagePoints, arg6: highestItem.name, arg7: lowestItem.name);
             }
             """;
 
@@ -238,11 +233,7 @@ public class EventScriptRuntimeScenarios
                 let restCards be cards[:drop first 3];
                 let target be enemies[:choose 1 enemy where enemy.alive];
                 let randomTargets be enemies[:choose 2 at random enemy where enemy.alive];
-                publish Done(
-                    hand[1], hand[2], hand[3],
-                    restCards[1], restCards[2],
-                    target.name,
-                    randomTargets[1].name, randomTargets[2].name);
+                publish Done(arg1: hand[1], arg2: hand[2], arg3: hand[3], arg4: restCards[1], arg5: restCards[2], arg6: target.name, arg7: randomTargets[1].name, arg8: randomTargets[2].name);
             }
             """;
 
@@ -277,7 +268,7 @@ public class EventScriptRuntimeScenarios
                 let boundedLow be :clamp (0 - 3) between 0 and 99;
                 let highest be :max of 4 and 9 and 2;
                 let lowest be :min of 4 and 9 and 2;
-                publish Done(distance, boundedHigh, boundedLow, highest, lowest);
+                publish Done(arg1: distance, arg2: boundedHigh, arg3: boundedLow, arg4: highest, arg5: lowest);
             }
             """;
 
@@ -308,16 +299,7 @@ public class EventScriptRuntimeScenarios
                 let percent as :percentage be 75;
                 let hp as :meter be [current: 125, maximum: 100];
                 let stalled as :meter be [current: 10, maximum: 0];
-                publish Done(
-                    ratio,
-                    ratio as :decimal,
-                    ratio as :integer,
-                    percent,
-                    hp[:current],
-                    hp[:maximum],
-                    hp[:percentage],
-                    hp is :meter,
-                    stalled[:percentage]);
+                publish Done(arg1: ratio, arg2: ratio as :decimal, arg3: ratio as :integer, arg4: percent, arg5: hp[:current], arg6: hp[:maximum], arg7: hp[:percentage], arg8: hp is :meter, arg9: stalled[:percentage]);
             }
             """;
 
@@ -342,7 +324,7 @@ public class EventScriptRuntimeScenarios
             on Start(units) {
                 let weakest be units[:min unit -> unit.hp];
                 let fastest be units[:max unit -> unit.speed];
-                publish Done(weakest.name, fastest.name);
+                publish Done(arg1: weakest.name, arg2: fastest.name);
             }
             """;
 
@@ -377,12 +359,7 @@ public class EventScriptRuntimeScenarios
                 let mergedDictByMerge be dictA :merge dictB;
                 let mergedDictByPlus be dictA + dictB;
                 let zipped be ['a', 'b', 'c'] :zip [1, 2];
-                publish Done(
-                    appended[4], prepended[1], mergedList[5],
-                    commonList[1], commonList[2], :len leftOnly, leftOnly[2],
-                    3 in mergedSet, 2 in commonSet,
-                    mergedDict.age, mergedDict.city, mergedDictByMerge.age, mergedDictByPlus.age,
-                    zipped[1].left, zipped[1].right, zipped[2].left, zipped[2].right, :len zipped);
+                publish Done(arg1: appended[4], arg2: prepended[1], arg3: mergedList[5], arg4: commonList[1], arg5: commonList[2], arg6: :len leftOnly, arg7: leftOnly[2], arg8: 3 in mergedSet, arg9: 2 in commonSet, arg10: mergedDict.age, arg11: mergedDict.city, arg12: mergedDictByMerge.age, arg13: mergedDictByPlus.age, arg14: zipped[1].left, arg15: zipped[1].right, arg16: zipped[2].left, arg17: zipped[2].right, arg18: :len zipped);
             }
             """;
 
@@ -417,10 +394,7 @@ public class EventScriptRuntimeScenarios
                 let ascendingValues be values[:sort ascending];
                 let descendingValues be values[:sort descending];
                 let byPriority be units[:order by item -> item.priority descending];
-                publish Done(
-                    ascendingValues[1], ascendingValues[2], ascendingValues[3],
-                    descendingValues[1], descendingValues[2], descendingValues[3],
-                    byPriority[1].name, byPriority[2].name, byPriority[3].name);
+                publish Done(arg1: ascendingValues[1], arg2: ascendingValues[2], arg3: ascendingValues[3], arg4: descendingValues[1], arg5: descendingValues[2], arg6: descendingValues[3], arg7: byPriority[1].name, arg8: byPriority[2].name, arg9: byPriority[3].name);
             }
             """;
 
@@ -460,13 +434,7 @@ public class EventScriptRuntimeScenarios
                 let distinctValues be values[:distinct];
                 let distinctFactions be units[:distinct by unit -> unit.faction];
                 let groups be units[:group by unit -> unit.faction];
-                publish Done(
-                    firstValue, lastValue,
-                    firstAlive.name, lastAlive.name, singleBoss.name, missingBoss,
-                    :len distinctValues,
-                    distinctFactions[1].name, distinctFactions[2].name,
-                    groups[:melee][1].name, groups[:melee][2].name,
-                    groups[:ranged][1].name);
+                publish Done(arg1: firstValue, arg2: lastValue, arg3: firstAlive.name, arg4: lastAlive.name, arg5: singleBoss.name, arg6: missingBoss, arg7: :len distinctValues, arg8: distinctFactions[1].name, arg9: distinctFactions[2].name, arg10: groups[:melee][1].name, arg11: groups[:melee][2].name, arg12: groups[:ranged][1].name);
             }
             """;
 
@@ -504,10 +472,7 @@ public class EventScriptRuntimeScenarios
                 let sortedValues be values[:sort ascending];
                 let sortedTags be tags[:sort descending];
                 let sortedRoll be rolled[:sort ascending];
-                publish Done(
-                    sortedValues[1], sortedValues[2], sortedValues[3],
-                    sortedTags[1], sortedTags[2], sortedTags[3],
-                    sortedRoll[1], sortedRoll[2], sortedRoll[3], sortedRoll[4]);
+                publish Done(arg1: sortedValues[1], arg2: sortedValues[2], arg3: sortedValues[3], arg4: sortedTags[1], arg5: sortedTags[2], arg6: sortedTags[3], arg7: sortedRoll[1], arg8: sortedRoll[2], arg9: sortedRoll[3], arg10: sortedRoll[4]);
             }
             """;
 
@@ -542,7 +507,7 @@ public class EventScriptRuntimeScenarios
                 let diceRoll be :dice 3d6;
                 let shuffledDice be diceRoll[:shuffle];
                 let drawnDice be diceRoll[:draw 2];
-                publish Done(shuffledTags, drawnTag, shuffledDice[1], :len drawnDice);
+                publish Done(arg1: shuffledTags, arg2: drawnTag, arg3: shuffledDice[1], arg4: :len drawnDice);
             }
             """;
 
@@ -571,13 +536,7 @@ public class EventScriptRuntimeScenarios
                 let dictContains be [name: 'Ada', team: 'red'][:contains 'name'];
                 let hasOrc be units[:has [faction: 'orc', alive: true]];
                 let hasNestedOwner be units[:has [owner: [team: 'red']]];
-                publish Done(
-                    reversed[1], reversed[2], reversed[3],
-                    reversedDice[1], :len reversedDice,
-                    reversedSet,
-                    hasTwo, hasAll, hasAny,
-                    textContains, textContainsAll, dictContains,
-                    hasOrc, hasNestedOwner);
+                publish Done(arg1: reversed[1], arg2: reversed[2], arg3: reversed[3], arg4: reversedDice[1], arg5: :len reversedDice, arg6: reversedSet, arg7: hasTwo, arg8: hasAll, arg9: hasAny, arg10: textContains, arg11: textContainsAll, arg12: dictContains, arg13: hasOrc, arg14: hasNestedOwner);
             }
             """;
 
@@ -623,7 +582,7 @@ public class EventScriptRuntimeScenarios
                 let myList be [1, 2, 3];
                 let myValues be [name: 'Hello', position: 1];
                 let emptyValues be [:];
-                publish Done(:len myList, myValues.name, myValues.position, :len emptyValues);
+                publish Done(arg1: :len myList, arg2: myValues.name, arg3: myValues.position, arg4: :len emptyValues);
             }
             """;
 
@@ -647,12 +606,7 @@ public class EventScriptRuntimeScenarios
                 let filtered be :list[:select item from 1 to 6 where item % 2 = 0 -> item * item];
                 let tags be :set[:select item from 1 to 4 where item >= 2 -> item % 2];
                 let emptyByDirection be :list[:select item from 1 to 5 step (0 - 1) -> item];
-                publish Done(
-                    squares[1], squares[2], squares[3], squares[4], squares[5],
-                    descending[1], descending[2], descending[3],
-                    filtered[1], filtered[2], filtered[3],
-                    :len tags, 0 in tags, 1 in tags,
-                    :len emptyByDirection);
+                publish Done(arg1: squares[1], arg2: squares[2], arg3: squares[3], arg4: squares[4], arg5: squares[5], arg6: descending[1], arg7: descending[2], arg8: descending[3], arg9: filtered[1], arg10: filtered[2], arg11: filtered[3], arg12: :len tags, arg13: 0 in tags, arg14: 1 in tags, arg15: :len emptyByDirection);
             }
             """;
 
@@ -687,7 +641,7 @@ public class EventScriptRuntimeScenarios
                 let byCall be wounded(unit);
                 let byPredicate be unit is wounded;
                 let woundedList be woundedUnits(units);
-                publish Done(byCall, byPredicate, :len woundedList, woundedList[1].name, woundedList[2].name);
+                publish Done(arg1: byCall, arg2: byPredicate, arg3: :len woundedList, arg4: woundedList[1].name, arg5: woundedList[2].name);
             }
             """;
 
@@ -780,7 +734,7 @@ public class EventScriptRuntimeScenarios
                 let byCall be wounded(unit);
                 let byPredicate be unit is wounded;
                 let woundedList be woundedUnits(units);
-                publish Done(byCall, byPredicate, :len woundedList);
+                publish Done(arg1: byCall, arg2: byPredicate, arg3: :len woundedList);
             }
             """;
 
@@ -812,7 +766,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start {
                 let text be 'Hello ''World'', I''m here';
-                publish Done(text);
+                publish Done(arg1: text);
             }
             """;
 
@@ -836,15 +790,7 @@ public class EventScriptRuntimeScenarios
                 let listOk as :list be 'ab';
                 let setOk be :set[1, 1, 2];
                 let diceOk as :dice be [6, 2, 4];
-                publish Done(
-                    tagOk,
-                    numberOk,
-                    numberFail,
-                    integerOk,
-                    booleanOk,
-                    :len listOk,
-                    :len setOk,
-                    diceOk[1], :len diceOk);
+                publish Done(arg1: tagOk, arg2: numberOk, arg3: numberFail, arg4: integerOk, arg5: booleanOk, arg6: :len listOk, arg7: :len setOk, arg8: diceOk[1], arg9: :len diceOk);
             }
             """;
 
@@ -879,7 +825,7 @@ public class EventScriptRuntimeScenarios
                 let optionalLen be :len optionalValue;
                 let decimalLen be :len 12.5;
                 let booleanLen be :len true;
-                publish Done(textLen, listLen, dictLen, setLen, diceLen, nothingLen, optionalLen, decimalLen, booleanLen);
+                publish Done(arg1: textLen, arg2: listLen, arg3: dictLen, arg4: setLen, arg5: diceLen, arg6: nothingLen, arg7: optionalLen, arg8: decimalLen, arg9: booleanLen);
             }
             """;
 
@@ -907,15 +853,7 @@ public class EventScriptRuntimeScenarios
                 let values be [10, 20, 30];
                 let entries be [name: 'Ada'];
                 let tags be :set['alpha', 'beta'];
-                publish Done(
-                    values[1],
-                    values[3],
-                    values[0],
-                    values[4],
-                    entries['name'],
-                    entries['missing'],
-                    tags[1],
-                    tags[3]);
+                publish Done(arg1: values[1], arg2: values[3], arg3: values[0], arg4: values[4], arg5: entries['name'], arg6: entries['missing'], arg7: tags[1], arg8: tags[3]);
             }
             """;
 
@@ -939,7 +877,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start(entry, keyName) {
                 let lookupProperty be :name;
-                publish Done(entry.name, entry['name'], entry[:name], entry[lookupProperty], entry[keyName], entry['missing']);
+                publish Done(arg1: entry.name, arg2: entry['name'], arg3: entry[:name], arg4: entry[lookupProperty], arg5: entry[keyName], arg6: entry['missing']);
             }
             """;
 
@@ -985,10 +923,7 @@ public class EventScriptRuntimeScenarios
                 let textValue be emptyText :default 'fallback';
                 let dictValue be emptyDict :default [name: 'default'];
                 let missingTextValue be emptyDict['name'] :default 'fallback';
-                publish Done(
-                    hasOpt, hasEmptyText, hasEmptyList, hasEmptyDict, hasZero, hasFalse, hasNaN, hasInfinity,
-                    isEmptyOpt, isEmptyText, isEmptyList, isEmptyDict, isEmptyDice, isEmptyNaN, isEmptyInfinity, isNotEmptyList, isNotFalse,
-                    optValue, listValue[1], textValue, dictValue.name, missingTextValue);
+                publish Done(arg1: hasOpt, arg2: hasEmptyText, arg3: hasEmptyList, arg4: hasEmptyDict, arg5: hasZero, arg6: hasFalse, arg7: hasNaN, arg8: hasInfinity, arg9: isEmptyOpt, arg10: isEmptyText, arg11: isEmptyList, arg12: isEmptyDict, arg13: isEmptyDice, arg14: isEmptyNaN, arg15: isEmptyInfinity, arg16: isNotEmptyList, arg17: isNotFalse, arg18: optValue, arg19: listValue[1], arg20: textValue, arg21: dictValue.name, arg22: missingTextValue);
             }
             """;
 
@@ -1040,7 +975,7 @@ public class EventScriptRuntimeScenarios
                 let negPercent be -25%;
                 let restored be -negDecimal;
                 let boolNegation be not false;
-                publish Done(negInt, negDecimal, negPercent, restored, boolNegation);
+                publish Done(arg1: negInt, arg2: negDecimal, arg3: negPercent, arg4: restored, arg5: boolNegation);
             }
             """;
 
@@ -1063,7 +998,7 @@ public class EventScriptRuntimeScenarios
                 let manaCheck be mana is at least 3;
                 let handCheck be hand is empty;
                 let targetCheck be target has value;
-                publish Done(hpCheck, manaCheck, handCheck, targetCheck);
+                publish Done(arg1: hpCheck, arg2: manaCheck, arg3: handCheck, arg4: targetCheck);
             }
             """;
 
@@ -1091,7 +1026,7 @@ public class EventScriptRuntimeScenarios
                 let newHasValue be target has value;
                 let oldEmpty be empty hand;
                 let newEmpty be hand is empty;
-                publish Done(oldHasValue, newHasValue, oldEmpty, newEmpty);
+                publish Done(arg1: oldHasValue, arg2: newHasValue, arg3: oldEmpty, arg4: newEmpty);
             }
             """;
 
@@ -1126,7 +1061,7 @@ public class EventScriptRuntimeScenarios
                 let endsList be [1, 2, 3] ends with [2, 3];
                 let startsDice be :dice 4d6 starts with [6, 5];
                 let endsDice be :dice 4d6 ends with [3, 2];
-                publish Done(inText, inList, inSet, inDice, inDict, missingKey, dictValue, startsText, endsText, startsList, endsList, startsDice, endsDice);
+                publish Done(arg1: inText, arg2: inList, arg3: inSet, arg4: inDice, arg5: inDict, arg6: missingKey, arg7: dictValue, arg8: startsText, arg9: endsText, arg10: startsList, arg11: endsList, arg12: startsDice, arg13: endsDice);
             }
             """;
 
@@ -1154,16 +1089,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(pairRoll, tripleRoll, fullHouseRoll, straightRoll, sixRoll, sevenRoll) {
-                publish Done(
-                    pairRoll[:has pair],
-                    pairRoll[:has pair of 6],
-                    pairRoll[:has three of a kind],
-                    tripleRoll[:has three of a kind],
-                    tripleRoll[:has three of 6],
-                    sixRoll[:has six of a kind],
-                    sevenRoll[:has seven of 6],
-                    fullHouseRoll[:has full house],
-                    straightRoll[:has straight]);
+                publish Done(arg1: pairRoll[:has pair], arg2: pairRoll[:has pair of 6], arg3: pairRoll[:has three of a kind], arg4: tripleRoll[:has three of a kind], arg5: tripleRoll[:has three of 6], arg6: sixRoll[:has six of a kind], arg7: sevenRoll[:has seven of 6], arg8: fullHouseRoll[:has full house], arg9: straightRoll[:has straight]);
             }
             """;
 
@@ -1198,11 +1124,7 @@ public class EventScriptRuntimeScenarios
                 let fullHouseRoll be roll[:take full house];
                 let straightCards be cards[:take straight];
                 let missingPair be noMatch[:take pair] :default ['fallback'];
-                publish Done(
-                    pairRoll[1], pairRoll[2], :len pairRoll,
-                    fullHouseRoll[1], fullHouseRoll[2], fullHouseRoll[3], fullHouseRoll[4], fullHouseRoll[5],
-                    straightCards[1], straightCards[2], straightCards[3], straightCards[4],
-                    missingPair[1]);
+                publish Done(arg1: pairRoll[1], arg2: pairRoll[2], arg3: :len pairRoll, arg4: fullHouseRoll[1], arg5: fullHouseRoll[2], arg6: fullHouseRoll[3], arg7: fullHouseRoll[4], arg8: fullHouseRoll[5], arg9: straightCards[1], arg10: straightCards[2], arg11: straightCards[3], arg12: straightCards[4], arg13: missingPair[1]);
             }
             """;
 
@@ -1234,12 +1156,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(cards, orderedCards, plainText) {
-                publish Done(
-                    cards[:has pair],
-                    cards[:has three of 'King'],
-                    cards[:has full house],
-                    orderedCards[:has straight],
-                    plainText[:has pair]);
+                publish Done(arg1: cards[:has pair], arg2: cards[:has three of 'King'], arg3: cards[:has full house], arg4: orderedCards[:has straight], arg5: plainText[:has pair]);
             }
             """;
 
@@ -1269,7 +1186,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(opt, missingValue) {
-                publish Done(opt :default 10, missingValue :default 20);
+                publish Done(arg1: opt :default 10, arg2: missingValue :default 20);
             }
             """;
 
@@ -1287,7 +1204,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start(age) {
                 let score as :decimal be 12 when age is :boolean, or 15 when age is :decimal, otherwise 5;
-                publish Done(score);
+                publish Done(arg1: score);
             }
             """;
 
@@ -1308,7 +1225,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start(age) {
                 let score as :decimal be 12 when age is :decimal or age is :boolean otherwise 5;
-                publish Done(score);
+                publish Done(arg1: score);
             }
             """;
 
@@ -1325,7 +1242,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start {
                 let base as :integer be '12.7';
-                publish Done(base, :floor 12.7, :ceil 12.1, :roundeven 12.5, :roundeven 13.5, :rounddown 12.1, :roundup 12.1, :round 12.5);
+                publish Done(arg1: base, arg2: :floor 12.7, arg3: :ceil 12.1, arg4: :roundeven 12.5, arg5: :roundeven 13.5, arg6: :rounddown 12.1, arg7: :roundup 12.1, arg8: :round 12.5);
             }
             """;
 
@@ -1352,7 +1269,7 @@ public class EventScriptRuntimeScenarios
                 let nanPropagated be nanValue + 5;
                 let nothing be missing;
                 let nothingPropagated be nothing + 5;
-                publish Done(nanValue, nanPropagated, nothing, nothingPropagated);
+                publish Done(arg1: nanValue, arg2: nanPropagated, arg3: nothing, arg4: nothingPropagated);
             }
             """;
 
@@ -1372,7 +1289,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Roll(min, max) {
                 let value be :random from min to max;
-                publish Done(value);
+                publish Done(arg1: value);
             }
             """;
 
@@ -1389,7 +1306,7 @@ public class EventScriptRuntimeScenarios
                 let integerValue be :random from 1 to 6;
                 let decimalValue be :random from 0.0 to 1.0;
                 let mixedValue be :random from 1 to 2.0;
-                publish Done(integerValue, decimalValue, mixedValue);
+                publish Done(arg1: integerValue, arg2: decimalValue, arg3: mixedValue);
             }
             """;
 
@@ -1409,7 +1326,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start {
-                publish Done(true xor false, true xor true, true ^ false, false ^ false);
+                publish Done(arg1: true xor false, arg2: true xor true, arg3: true ^ false, arg4: false ^ false);
             }
             """;
 
@@ -1427,7 +1344,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Inspect(item) {
-                publish Done(item.name);
+                publish Done(arg1: item.name);
             }
             """;
 
@@ -1441,7 +1358,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Inspect(item) {
-                publish Done(item.name);
+                publish Done(arg1: item.name);
             }
             """;
 
@@ -1455,7 +1372,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Inspect(item) {
-                publish Done(item.points);
+                publish Done(arg1: item.points);
             }
             """;
 
@@ -1472,7 +1389,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start {
                 let value be 6 / 0;
-                publish Done(value);
+                publish Done(arg1: value);
             }
             """;
 
@@ -1489,7 +1406,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start {
                 let value be 6 % 0;
-                publish Done(value);
+                publish Done(arg1: value);
             }
             """;
 
@@ -1527,11 +1444,11 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(value) {
-                publish Next(value + 1);
+                publish Next(value: value + 1);
             }
 
             on Next(value) {
-                publish Done(value);
+                publish Done(arg1: value);
             }
             """;
 
@@ -1575,7 +1492,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(playerId) {
-                publish Notify(playerId, 3);
+                publish Notify(arg1: playerId, arg2: 3);
             }
             """;
 
@@ -1598,18 +1515,18 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(value) {
-                publish Notify(value);
+                publish Notify(value: value);
             }
 
             on Notify(value) {
-                publish SeenByScript(value + 1);
+                publish SeenByScript(arg1: value + 1);
             }
             """;
 
         var invocations = new List<string>();
         var host = new EventScriptHost()
             .Load(EventScriptInterpreter.CompileScript(script))
-            .BindExternal("Notify", args => invocations.Add($"external:{args[0].AsNumber()}"), parameterCount: 1);
+            .BindExternal("Notify", ["value"], args => invocations.Add($"external:{args["value"].AsNumber()}"));
 
         var result = host.Emit("Start", 4m);
 
@@ -1625,15 +1542,15 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(value) {
-                publish Notify(value);
+                publish Notify(value: value);
             }
             """;
 
         var invocations = new List<string>();
         var host = new EventScriptHost()
             .Load(EventScriptInterpreter.CompileScript(script))
-            .BindExternal("Notify", args => invocations.Add($"first:{args[0].AsNumber()}"), parameterCount: 1)
-            .BindExternal("Notify", args => invocations.Add($"second:{args[0].AsNumber()}"), parameterCount: 1);
+            .BindExternal("Notify", ["value"], args => invocations.Add($"first:{args["value"].AsNumber()}"))
+            .BindExternal("Notify", ["value"], args => invocations.Add($"second:{args["value"].AsNumber()}"));
 
         host.Emit("Start", 4m);
 
@@ -1645,15 +1562,15 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(value) {
-                publish Notify(value);
+                publish Notify(value: value);
             }
             """;
 
         var invocations = new List<string>();
         var host = new EventScriptHost()
             .Load(EventScriptInterpreter.CompileScript(script))
-            .BindExternal("Notify", _ => throw new InvalidOperationException("boom"), parameterCount: 1)
-            .BindExternal("Notify", args => invocations.Add($"ok:{args[0].AsNumber()}"), parameterCount: 1);
+            .BindExternal("Notify", ["value"], _ => throw new InvalidOperationException("boom"))
+            .BindExternal("Notify", ["value"], args => invocations.Add($"ok:{args["value"].AsNumber()}"));
 
         var result = host.Emit("Start", 4m);
 
@@ -1667,11 +1584,11 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(value) {
-                publish Next(value + 1);
+                publish Next(value: value + 1);
             }
 
             on Next(value) {
-                publish Done(value);
+                publish Done(arg1: value);
             }
             """;
 
@@ -1695,7 +1612,7 @@ public class EventScriptRuntimeScenarios
             on Start(text) {
                 for item in text {
                     if item = 'a' {
-                        publish Found(item);
+                        publish Found(arg1: item);
                     }
                 }
             }
@@ -1715,7 +1632,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Roll {
                 let value be :dice 2d6[:drop lowest 3];
-                publish Done(:len value);
+                publish Done(arg1: :len value);
             }
             """;
 
@@ -1734,7 +1651,7 @@ public class EventScriptRuntimeScenarios
                 let kept be :dice 4d6[:take highest 2];
                 let dropped be :dice 4d6[:drop lowest 1];
                 let resorted be baseDice[:sort ascending];
-                publish Done(baseDice, :len baseDice, baseDice[1], baseDice[2], baseDice[3], baseDice[4], kept, dropped, resorted);
+                publish Done(arg1: baseDice, arg2: :len baseDice, arg3: baseDice[1], arg4: baseDice[2], arg5: baseDice[3], arg6: baseDice[4], arg7: kept, arg8: dropped, arg9: resorted);
             }
             """;
 
@@ -1770,7 +1687,7 @@ public class EventScriptRuntimeScenarios
     {
         const string script = """
             on Start(a, b, c, d, e, f, g, h) {
-                publish Done(a is :tag, b is :decimal, c is :integer, d is :text, e is :list, f is :dictionary, g is :optional, h is :set);
+                publish Done(arg1: a is :tag, arg2: b is :decimal, arg3: c is :integer, arg4: d is :text, arg5: e is :list, arg6: f is :dictionary, arg7: g is :optional, arg8: h is :set);
             }
             """;
 
@@ -1808,7 +1725,7 @@ public class EventScriptRuntimeScenarios
                 }
 
                 for item in 123 {
-                    publish Loop(item);
+                    publish Loop(item: item);
                 }
             }
             """;
@@ -1844,7 +1761,7 @@ public class EventScriptRuntimeScenarios
         const string script = """
             on Start {
                 let value be :dice 2d6 + 1;
-                publish Done(value);
+                publish Done(arg1: value);
             }
             """;
 
@@ -1863,7 +1780,7 @@ public class EventScriptRuntimeScenarios
             on Start {
                 let pos be 79228162514264337593543950335 + 1;
                 let neg be 0 - 79228162514264337593543950335 - 1;
-                publish Done(pos, neg);
+                publish Done(arg1: pos, arg2: neg);
             }
             """;
 
@@ -1886,7 +1803,7 @@ public class EventScriptRuntimeScenarios
                 let optResult be invalidNumber + 2;
                 let nothing be missing;
                 let nothingResult be nothing * 3;
-                publish Done(invalidNumber, optResult, nothingResult);
+                publish Done(arg1: invalidNumber, arg2: optResult, arg3: nothingResult);
             }
             """;
 

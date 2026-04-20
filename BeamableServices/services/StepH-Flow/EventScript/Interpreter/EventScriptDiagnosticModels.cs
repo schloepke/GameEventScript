@@ -22,16 +22,6 @@ public enum EventScriptDiagnosticStepKind
     InvocationCompleted
 }
 
-public sealed record EventScriptDiagnosticStep(
-    int Sequence,
-    EventScriptDiagnosticStepKind Kind,
-    string Message,
-    IReadOnlyList<EventScriptValue> Arguments,
-    string? Detail = null);
+public sealed record EventScriptDiagnosticStep(int Sequence, EventScriptDiagnosticStepKind Kind, string Message, EventScriptNamedArguments Arguments, string? Detail = null);
 
-public sealed record EventScriptDiagnosticInvocationResult(
-    string Message,
-    IReadOnlyList<EventScriptValue> Arguments,
-    IReadOnlyList<EventScriptEmittedEvent> EmittedEvents,
-    IReadOnlyDictionary<string, EventScriptValue> Variables,
-    IReadOnlyList<EventScriptDiagnosticStep> Steps);
+public sealed record EventScriptDiagnosticInvocationResult(string Message, EventScriptNamedArguments Arguments, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, EventScriptValue> Variables, IReadOnlyList<EventScriptDiagnosticStep> Steps);

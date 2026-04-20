@@ -9,7 +9,7 @@ using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
-public sealed record EventScriptEmittedEvent(string Message, IReadOnlyList<EventScriptValue> Arguments);
+public sealed record EventScriptEmittedEvent(string Message, EventScriptNamedArguments Arguments);
 
 public sealed record EventScriptExecutionResult(string Message, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, EventScriptValue> Variables);
 
@@ -52,15 +52,27 @@ public sealed class EventScriptInterpreter
         return new EventScriptInterpreter(EventScriptInvocationEngine.Compile(compiledScript, random));
     }
 
-    public EventScriptExecutionResult Invoke(string message, params EventScriptValue[] args)
+    public EventScriptExecutionResult Invoke(string message)
+        => _engine.InvokeMessage(message, EventScriptArgumentMap.Empty);
+
+    public EventScriptExecutionResult Invoke(string message, IReadOnlyDictionary<string, EventScriptValue> args)
         => _engine.InvokeMessage(message, args);
 
-    public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args)
+    public EventScriptExecutionResult Emit(string message)
+        => Invoke(message);
+
+    public EventScriptExecutionResult Emit(string message, IReadOnlyDictionary<string, EventScriptValue> args)
         => Invoke(message, args);
 
-    public EventScriptExecutionResult EmitClr(string message, params object?[] args)
-        => Invoke(message, EventScriptValue.FromClrList(args).ToArray());
+    public EventScriptExecutionResult Emit(string message, params (string Name, EventScriptValue Value)[] args)
+        => Emit(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
 
-    internal EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyList<EventScriptValue> args)
+    public EventScriptExecutionResult EmitClr(string message, IReadOnlyDictionary<string, object?> args)
+        => Invoke(message, EventScriptArgumentMap.FromClr(args));
+
+    public EventScriptExecutionResult EmitClr(string message, params (string Name, object? Value)[] args)
+        => EmitClr(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
+
+    internal EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
         => _engine.InvokeHandler(handler, args);
 }

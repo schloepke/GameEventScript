@@ -44,6 +44,21 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var handler in eventScriptModule.Handlers)
         {
+            var duplicateParameters = handler.Parameters
+                .GroupBy(parameter => parameter, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key);
+
+            foreach (var duplicateParameter in duplicateParameters)
+            {
+                errors.Add(CreateError(
+                    eventScriptModule,
+                    $"Handler '{handler.Message}' declares parameter '{duplicateParameter}' more than once",
+                    handler.Message,
+                    EventScriptSymbolKind.Handler,
+                    EventScriptLinkageErrorKind.DuplicateHandlerParameter));
+            }
+
             foreach (var statement in handler.Statements)
             {
                 ValidateStatementReferences(eventScriptModule, statement, ruleDefinitions, selectDefinitions, errors);
@@ -61,9 +76,24 @@ public sealed partial class EventScriptLinkBuilder
         switch (statement)
         {
             case PublishStatementNode publish:
+                var duplicateArguments = publish.Arguments
+                    .GroupBy(argument => argument.Name, StringComparer.Ordinal)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key);
+
+                foreach (var duplicateArgument in duplicateArguments)
+                {
+                    errors.Add(CreateError(
+                        moduleContext,
+                        $"Publish '{publish.Message}' declares argument '{duplicateArgument}' more than once",
+                        publish.Message,
+                        EventScriptSymbolKind.Handler,
+                        EventScriptLinkageErrorKind.DuplicatePublishArgument));
+                }
+
                 foreach (var argument in publish.Arguments)
                 {
-                    ValidateExpressionReferences(moduleContext, argument, ruleDefinitions, selectDefinitions, errors);
+                    ValidateExpressionReferences(moduleContext, argument.Expression, ruleDefinitions, selectDefinitions, errors);
                 }
 
                 return;
@@ -352,7 +382,6 @@ public sealed partial class EventScriptLinkBuilder
     private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<EventScriptModule> modules, List<EventScriptLinkageError> errors)
     {
         var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
-        var sourceModules = new Dictionary<string, EventScriptModule>(StringComparer.Ordinal);
 
         foreach (var module in modules)
         {
@@ -362,24 +391,9 @@ public sealed partial class EventScriptLinkBuilder
                 {
                     handlers = [];
                     map[handler.Message] = handlers;
-                    sourceModules[handler.Message] = module;
                 }
 
                 handlers.Add(handler);
-            }
-        }
-
-        foreach (var pair in map)
-        {
-            var expectedParameterCount = pair.Value[0].Parameters.Count;
-            if (pair.Value.Any(handler => handler.Parameters.Count != expectedParameterCount))
-            {
-                errors.Add(CreateError(
-                    sourceModules[pair.Key],
-                    $"All handlers for message '{pair.Key}' must declare the same parameter count",
-                    pair.Key,
-                    EventScriptSymbolKind.Handler,
-                    EventScriptLinkageErrorKind.HandlerParameterMismatch));
             }
         }
 

@@ -27,7 +27,7 @@ Statement ::= PublishStatement
              | ForStatement
              | ExpressionStatement
 
-PublishStatement ::= "publish" Message [ "(" [ Argumentlist ] ")" ]
+PublishStatement ::= "publish" Message [ "(" [ NamedArgumentList ] ")" ]
 LetStatement ::= "let" Identifier [ "as" TypeTag ] LetAssignmentOperator LetValue
 LetAssignmentOperator ::= "be"
 LetValue ::= Expression
@@ -38,6 +38,8 @@ ForStatement ::= "for" Identifier "in" Expression "{" { Statement } "}"
 ExpressionStatement ::= Expression
 
 Argumentlist ::= Expression { "," Expression }
+NamedArgumentList ::= NamedArgument { "," NamedArgument }
+NamedArgument ::= Identifier ":" Expression
 
 Expression ::= GuardedChoiceExpression
 GuardedChoiceExpression ::= DefaultExpression [ "when" Expression { "," [ "or" ] Expression "when" Expression } "otherwise" Expression ]

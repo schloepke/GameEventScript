@@ -14,12 +14,8 @@ public sealed class CompiledEventScript
     {
         LinkedModule = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
         Options = options ?? new EventScriptInterpreterCompilationOptions();
-        Handlers = linkedModule.Handlers.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<CompiledEventScriptHandler>)pair.Value
-                .Select((handler, index) => new CompiledEventScriptHandler(pair.Key, handler, index))
-                .ToArray(),
-            StringComparer.Ordinal);
+        Handlers = linkedModule.Handlers.ToDictionary(pair => pair.Key, IReadOnlyList<CompiledEventScriptHandler> (pair) => pair.Value
+            .Select((handler, index) => new CompiledEventScriptHandler(pair.Key, handler, index)).ToArray(), StringComparer.Ordinal);
     }
 
     public LinkedEventScriptModule LinkedModule { get; }
@@ -38,6 +34,7 @@ public sealed class CompiledEventScriptHandler
         Message = message ?? throw new ArgumentNullException(nameof(message));
         Syntax = syntax ?? throw new ArgumentNullException(nameof(syntax));
         DeclarationOrder = declarationOrder;
+        SignatureKey = EventScriptArgumentMap.CreateSignatureKey(syntax.Parameters);
     }
 
     internal EventHandlerNode Syntax { get; }
@@ -47,4 +44,6 @@ public sealed class CompiledEventScriptHandler
     public int DeclarationOrder { get; }
 
     public IReadOnlyList<string> Parameters => Syntax.Parameters;
+
+    public string SignatureKey { get; }
 }

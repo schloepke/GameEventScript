@@ -26,7 +26,7 @@ public class EventScriptLinkBuilderScenarios
                 let hp as :meter be [current: unit.hp, maximum: unit.maxHp];
                 let anyWounded be wounded(unit);
                 let candidates be woundedUnits(units);
-                publish Done(anyWounded, :len candidates, hp.maximum);
+                publish Done(arg1: anyWounded, arg2: :len candidates, arg3: hp.maximum);
             }
             """;
 
@@ -70,7 +70,7 @@ public class EventScriptLinkBuilderScenarios
             on Start(unit, units) {
                 let wounded be missingRule(unit);
                 let choices be missingSelect(units);
-                publish Done(wounded, choices);
+                publish Done(arg1: wounded, arg2: choices);
             }
             """;
 
@@ -106,7 +106,7 @@ public class EventScriptLinkBuilderScenarios
                 module CombatRules
                 on Start(unit) {
                     let wounded be missingRule(unit);
-                    publish Done(wounded);
+                    publish Done(arg1: wounded);
                 }
                 """, "combat.es");
 
@@ -130,7 +130,7 @@ public class EventScriptLinkBuilderScenarios
                 on Start(unit) {
                     let byCall be missingRule(unit);
                     let byPredicate be unit is missingPredicate;
-                    publish Done(byCall, byPredicate);
+                    publish Done(arg1: byCall, arg2: byPredicate);
                 }
                 """, "broken.es");
 

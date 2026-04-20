@@ -36,6 +36,7 @@ public sealed class EventScriptHost
             {
                 Register(new ScriptMessageSubscription(
                     handler.Message,
+                    handler.SignatureKey,
                     priority ?? _options.DefaultScriptHandlerPriority,
                     _nextRegistrationOrder++,
                     interpreter,
@@ -46,39 +47,62 @@ public sealed class EventScriptHost
         return this;
     }
 
-    public EventScriptHost BindExternal(string message, Action<IReadOnlyList<EventScriptValue>> handler, int? parameterCount = null, int? priority = null)
+    public EventScriptHost BindExternal(
+        string message,
+        IReadOnlyCollection<string> parameterNames,
+        Action<IReadOnlyDictionary<string, EventScriptValue>> handler,
+        int? priority = null)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             throw new ArgumentException("Message must not be null or whitespace", nameof(message));
         }
 
+        _ = parameterNames ?? throw new ArgumentNullException(nameof(parameterNames));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
 
         Register(new ExternalMessageSubscription(
             message,
+            EventScriptArgumentMap.CreateSignatureKey(parameterNames),
             priority ?? _options.DefaultExternalHandlerPriority,
             _nextRegistrationOrder++,
-            handler,
-            parameterCount));
+            handler));
         return this;
     }
 
-    public EventScriptExecutionResult Emit(string message, params EventScriptValue[] args)
+    public EventScriptHost BindExternal(
+        string message,
+        Action<IReadOnlyDictionary<string, EventScriptValue>> handler,
+        params string[] parameterNames)
+        => BindExternal(message, parameterNames, handler, priority: null);
+
+    public EventScriptExecutionResult Emit(string message)
+        => Enqueue(message, EventScriptArgumentMap.Empty).Drain();
+
+    public EventScriptExecutionResult Emit(string message, IReadOnlyDictionary<string, EventScriptValue> args)
         => Enqueue(message, args).Drain();
 
-    public EventScriptExecutionResult EmitClr(string message, params object?[] args)
-        => Emit(message, EventScriptValue.FromClrList(args).ToArray());
+    public EventScriptExecutionResult Emit(string message, params (string Name, EventScriptValue Value)[] args)
+        => Emit(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
 
-    public EventScriptRun Enqueue(string message, params EventScriptValue[] args)
+    public EventScriptExecutionResult EmitClr(string message, IReadOnlyDictionary<string, object?> args)
+        => Emit(message, EventScriptArgumentMap.FromClr(args));
+
+    public EventScriptExecutionResult EmitClr(string message, params (string Name, object? Value)[] args)
+        => EmitClr(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
+
+    public EventScriptRun Enqueue(string message, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             throw new ArgumentException("Message must not be null or whitespace", nameof(message));
         }
 
-        return new EventScriptRun(this, message, NormalizeArgs(args), _options.MaxProcessedEventsPerRun);
+        return new EventScriptRun(this, message, EventScriptArgumentMap.Normalize(args), _options.MaxProcessedEventsPerRun);
     }
+
+    public EventScriptRun Enqueue(string message, params (string Name, EventScriptValue Value)[] args)
+        => Enqueue(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
 
     private void Register(MessageSubscription subscription)
     {
@@ -113,7 +137,11 @@ public sealed class EventScriptHost
             return;
         }
 
-        foreach (var subscription in subscriptions.OrderBy(x => x.Priority).ThenBy(x => x.RegistrationOrder))
+        var signatureKey = EventScriptArgumentMap.CreateSignatureKey(queuedEvent.Arguments.Keys);
+        foreach (var subscription in subscriptions
+                     .Where(x => x.SignatureKey == signatureKey)
+                     .OrderBy(x => x.Priority)
+                     .ThenBy(x => x.RegistrationOrder))
         {
             switch (subscription)
             {
@@ -147,15 +175,12 @@ public sealed class EventScriptHost
         }
     }
 
-    private static EventScriptValue[] NormalizeArgs(IEnumerable<EventScriptValue?> args)
-        => args.Select(arg => arg ?? EventScriptValue.Nothing).ToArray();
-
     public sealed class EventScriptRun
     {
         private readonly EventScriptHost _host;
         private readonly EventScriptRunState _state;
 
-        internal EventScriptRun(EventScriptHost host, string message, IReadOnlyList<EventScriptValue> args, int maxProcessedEventsPerRun)
+        internal EventScriptRun(EventScriptHost host, string message, IReadOnlyDictionary<string, EventScriptValue> args, int maxProcessedEventsPerRun)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _state = new EventScriptRunState(message, maxProcessedEventsPerRun);
@@ -165,7 +190,7 @@ public sealed class EventScriptHost
         public EventScriptExecutionResult Drain() => _host.Drain(_state);
     }
 
-    private sealed record QueuedMessage(string Message, IReadOnlyList<EventScriptValue> Arguments, bool CaptureVariables);
+    private sealed record QueuedMessage(string Message, IReadOnlyDictionary<string, EventScriptValue> Arguments, bool CaptureVariables);
 
     private sealed class EventScriptRunState
     {
@@ -186,9 +211,9 @@ public sealed class EventScriptHost
 
         public List<EventScriptEmittedEvent> EmittedEvents { get; } = new();
 
-        public void Enqueue(string message, IReadOnlyList<EventScriptValue> args, bool captureVariables)
+        public void Enqueue(string message, IReadOnlyDictionary<string, EventScriptValue> args, bool captureVariables)
         {
-            _queue.Enqueue(new QueuedMessage(message, args.ToArray(), captureVariables));
+            _queue.Enqueue(new QueuedMessage(message, EventScriptArgumentMap.Normalize(args), captureVariables));
         }
 
         public bool TryDequeue(out QueuedMessage queuedEvent)
@@ -228,19 +253,20 @@ public sealed class EventScriptHost
         }
     }
 
-    private abstract record MessageSubscription(string Message, int Priority, long RegistrationOrder);
+    private abstract record MessageSubscription(string Message, string SignatureKey, int Priority, long RegistrationOrder);
 
     private sealed record ScriptMessageSubscription(
         string Message,
+        string SignatureKey,
         int Priority,
         long RegistrationOrder,
         EventScriptInterpreter Interpreter,
-        CompiledEventScriptHandler Handler) : MessageSubscription(Message, Priority, RegistrationOrder);
+        CompiledEventScriptHandler Handler) : MessageSubscription(Message, SignatureKey, Priority, RegistrationOrder);
 
     private sealed record ExternalMessageSubscription(
         string Message,
+        string SignatureKey,
         int Priority,
         long RegistrationOrder,
-        Action<IReadOnlyList<EventScriptValue>> Handler,
-        int? ParameterCount) : MessageSubscription(Message, Priority, RegistrationOrder);
+        Action<IReadOnlyDictionary<string, EventScriptValue>> Handler) : MessageSubscription(Message, SignatureKey, Priority, RegistrationOrder);
 }

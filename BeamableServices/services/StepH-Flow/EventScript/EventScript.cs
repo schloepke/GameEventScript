@@ -77,7 +77,9 @@ public enum EventScriptLinkageErrorKind
     InvalidRulePredicate,
     WrongRuleArity,
     WrongSelectArity,
-    HandlerParameterMismatch
+    HandlerParameterMismatch,
+    DuplicateHandlerParameter,
+    DuplicatePublishArgument
 }
 
 public enum EventScriptSymbolKind

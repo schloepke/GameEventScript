@@ -27,7 +27,8 @@ public sealed record SelectDefinitionNode(string Name, IReadOnlyList<string> Par
 
 // Statement nodes
 
-public sealed record PublishStatementNode(string Message, IReadOnlyList<ExpressionNode> Arguments) : StatementNode;
+public sealed record PublishStatementNode(string Message, IReadOnlyList<NamedArgumentNode> Arguments) : StatementNode;
+public sealed record NamedArgumentNode(string Name, ExpressionNode Expression) : EventScriptNode;
 public sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
 public sealed record IfStatementNode(ExpressionNode Condition, IReadOnlyList<StatementNode> ThenStatements, IReadOnlyList<StatementNode> ElseStatements) : StatementNode;
 public sealed record ForStatementNode(string Identifier, ExpressionNode Source, IReadOnlyList<StatementNode> Statements) : StatementNode;

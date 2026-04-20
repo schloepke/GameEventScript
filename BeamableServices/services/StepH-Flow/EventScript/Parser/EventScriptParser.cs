@@ -364,16 +364,16 @@ public sealed class EventScriptParser
     private PublishStatementNode ParsePublishStatement()
     {
         var message = Expect(Message).Text;
-        var arguments = new List<ExpressionNode>();
+        var arguments = new List<NamedArgumentNode>();
 
         if (Match(LeftParen))
         {
             if (!Is(RightParen))
             {
-                arguments.Add(ParseExpression());
+                arguments.Add(ParseNamedMessageArgument());
                 while (Match(Comma))
                 {
-                    arguments.Add(ParseExpression());
+                    arguments.Add(ParseNamedMessageArgument());
                 }
             }
 
@@ -381,6 +381,14 @@ public sealed class EventScriptParser
         }
 
         return new PublishStatementNode(message, arguments);
+    }
+
+    private NamedArgumentNode ParseNamedMessageArgument()
+    {
+        var name = ExpectIdentifierLike();
+        Expect(Colon);
+        var expression = ParseExpression();
+        return new NamedArgumentNode(name, expression);
     }
 
     private LetStatementNode ParseLetStatement()

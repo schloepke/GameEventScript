@@ -7,7 +7,10 @@ using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript;
 
-public sealed record EventScriptExternalMessageBinding(string Message, Action<IReadOnlyList<EventScriptValue>> Handler, int? ParameterCount = null);
+public sealed record EventScriptExternalMessageBinding(
+    string Message,
+    IReadOnlyCollection<string> ParameterNames,
+    Action<IReadOnlyDictionary<string, EventScriptValue>> Handler);
 
 public class EventScriptCompilationException(string message) : Exception(message);
 
@@ -32,13 +35,17 @@ public sealed class EventScriptCompilationContext
             pair => (IReadOnlyList<EventScriptExternalMessageBinding>)pair.Value.AsReadOnly(),
             StringComparer.Ordinal);
 
-    public EventScriptCompilationContext BindExternal(string message, Action<IReadOnlyList<EventScriptValue>> handler, int? parameterCount = null)
+    public EventScriptCompilationContext BindExternal(
+        string message,
+        IReadOnlyCollection<string> parameterNames,
+        Action<IReadOnlyDictionary<string, EventScriptValue>> handler)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             throw new ArgumentException("Message must not be null or whitespace", nameof(message));
         }
 
+        _ = parameterNames ?? throw new ArgumentNullException(nameof(parameterNames));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
 
         if (!_externalBindings.TryGetValue(message, out var bindings))
@@ -47,7 +54,7 @@ public sealed class EventScriptCompilationContext
             _externalBindings[message] = bindings;
         }
 
-        bindings.Add(new EventScriptExternalMessageBinding(message, handler, parameterCount));
+        bindings.Add(new EventScriptExternalMessageBinding(message, parameterNames.ToArray(), handler));
         return this;
     }
 }

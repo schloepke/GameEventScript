@@ -7,21 +7,41 @@ namespace StepH.Flow.EventScript.Interpreter;
 
 public sealed class EventScriptInvocationContext
 {
-    public IEventScriptRandom? Random { get; init; }
+    public IEventScriptRandom? Random { get; set; }
 }
 
-public enum EventScriptDiagnosticStepKind
+public enum EventScriptDiagnosticEventKind
 {
-    InvocationStarted,
-    HandlerMatched,
-    StatementExecuting,
-    VariableResolved,
-    VariableAssigned,
-    ExpressionEvaluated,
-    EventPublished,
-    InvocationCompleted
+    DispatchStarted,
+    SubscriberMatched,
+    SubscriberInvoked,
+    DispatchCompleted,
+    HandlerInvoked,
+    ParameterBound,
+    RuleCalled,
+    SelectCalled,
+    EventPublished
 }
 
-public sealed record EventScriptDiagnosticStep(int Sequence, EventScriptDiagnosticStepKind Kind, string Message, EventScriptNamedArguments Arguments, string? Detail = null);
+public sealed record EventScriptDiagnosticEvent(
+    int Sequence,
+    EventScriptDiagnosticEventKind Kind,
+    string Name,
+    EventScriptNamedArguments Arguments,
+    string? Detail = null);
 
-public sealed record EventScriptDiagnosticInvocationResult(string Message, EventScriptNamedArguments Arguments, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, EventScriptValue> Variables, IReadOnlyList<EventScriptDiagnosticStep> Steps);
+public interface IEventScriptDiagnosticCollector
+{
+    void Record(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null);
+}
+
+public sealed class EventScriptDiagnosticTraceCollector : IEventScriptDiagnosticCollector
+{
+    private readonly List<EventScriptDiagnosticEvent> _events = [];
+    private int _sequence;
+
+    public IReadOnlyList<EventScriptDiagnosticEvent> Events => _events;
+
+    public void Record(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
+        => _events.Add(new EventScriptDiagnosticEvent(++_sequence, kind, name, EventScriptNamedArguments.Create(arguments), detail));
+}

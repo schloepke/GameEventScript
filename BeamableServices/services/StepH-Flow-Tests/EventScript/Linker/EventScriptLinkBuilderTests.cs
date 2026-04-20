@@ -11,7 +11,8 @@ public class EventScriptLinkBuilderScenarios
     [TestMethod]
     public void LinkBuilderCanMergeMultipleModulesIntoOneLinkedModule()
     {
-        const string sharedScript = """
+        const string sharedScript =
+            """
             record :meter as {
                 current: :decimal,
                 maximum: :decimal
@@ -21,7 +22,8 @@ public class EventScriptLinkBuilderScenarios
             select woundedUnits(units) means units[:filter unit where unit is wounded]
             """;
 
-        const string runtimeScript = """
+        const string runtimeScript =
+            """
             on Start(unit, units) {
                 let hp as :meter be [current: unit.hp, maximum: unit.maxHp];
                 let anyWounded be wounded(unit);
@@ -31,8 +33,8 @@ public class EventScriptLinkBuilderScenarios
             """;
 
         var linkedModule = new EventScriptLinkBuilder()
-            .AddScript(sharedScript)
-            .AddScript(runtimeScript)
+            .AddModule(EventScriptManager.ParseModule(sharedScript))
+            .AddModule(EventScriptManager.ParseModule(runtimeScript))
             .Link();
 
         Assert.AreEqual(2, linkedModule.SourceCount);
@@ -66,7 +68,8 @@ public class EventScriptLinkBuilderScenarios
     [TestMethod]
     public void LinkBuilderFailsWhenCrossModuleDependenciesAreMissing()
     {
-        const string runtimeScript = """
+        const string runtimeScript =
+            """
             on Start(unit, units) {
                 let wounded be missingRule(unit);
                 let choices be missingSelect(units);
@@ -75,7 +78,7 @@ public class EventScriptLinkBuilderScenarios
             """;
 
         var linker = new EventScriptLinkBuilder()
-            .AddScript(runtimeScript);
+            .AddModule(EventScriptManager.ParseModule(runtimeScript));
 
         Assert.ThrowsExactly<EventScriptLinkageException>(() => linker.Link());
     }
@@ -83,17 +86,19 @@ public class EventScriptLinkBuilderScenarios
     [TestMethod]
     public void LinkBuilderFailsWhenMergedDefinitionsConflict()
     {
-        const string scriptA = """
+        const string scriptA =
+            """
             rule wounded(unit) means unit.hp < unit.maxHp
             """;
 
-        const string scriptB = """
+        const string scriptB =
+            """
             select wounded(unit) means unit.hp < unit.maxHp
             """;
 
         var linker = new EventScriptLinkBuilder()
-            .AddScript(scriptA)
-            .AddScript(scriptB);
+            .AddModule(EventScriptManager.ParseModule(scriptA))
+            .AddModule(EventScriptManager.ParseModule(scriptB));
 
         Assert.ThrowsExactly<EventScriptLinkageException>(() => linker.Link());
     }
@@ -102,13 +107,14 @@ public class EventScriptLinkBuilderScenarios
     public void LinkBuilderIncludesModuleNameInDependencyErrors()
     {
         var builder = new EventScriptLinkBuilder()
-            .AddScript("""
+            .AddModule(EventScriptManager.ParseModule(
+                """
                 module CombatRules
                 on Start(unit) {
                     let wounded be missingRule(unit);
                     publish Done(arg1: wounded);
                 }
-                """, "combat.es");
+                """, "combat.es"));
 
         var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
         StringAssert.Contains(exception.Message, "Module 'CombatRules'");
@@ -122,7 +128,8 @@ public class EventScriptLinkBuilderScenarios
     public void LinkBuilderCollectsMultipleErrorsIntoOneLinkageException()
     {
         var builder = new EventScriptLinkBuilder()
-            .AddScript("""
+            .AddModule(EventScriptManager.ParseModule(
+                """
                 module BrokenRules
                 rule wounded(unit) means unit.hp < unit.maxHp
                 rule wounded(target) means target.hp < target.maxHp
@@ -132,7 +139,7 @@ public class EventScriptLinkBuilderScenarios
                     let byPredicate be unit is missingPredicate;
                     publish Done(arg1: byCall, arg2: byPredicate);
                 }
-                """, "broken.es");
+                """, "broken.es"));
 
         var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
         Assert.IsTrue(exception.Errors.Count >= 3);

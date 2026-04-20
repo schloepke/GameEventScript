@@ -7,17 +7,14 @@ namespace StepH_Flow_Tests.EventScript.Testing;
 
 internal static class EventScriptNamedDispatchTestExtensions
 {
-    public static EventScriptExecutionResult Emit(this EventScriptInterpreter interpreter, string message, params EventScriptValue[] args)
-        => interpreter.Emit(message, BuildNamedArguments(GetInterpreterParameterNames(interpreter, message, args.Length), args));
+    public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, string message, params EventScriptValue[] args)
+        => compiledScript.Emit(message, BuildNamedArguments(GetCompiledParameterNames(compiledScript, message, args.Length), args));
 
-    public static EventScriptExecutionResult Emit(this EventScriptInterpreter interpreter, string message, params object?[] args)
-        => interpreter.Emit(message, BuildNamedArguments(GetInterpreterParameterNames(interpreter, message, args.Length), EventScriptValue.FromClrList(args).ToArray()));
+    public static EventScriptExecutionResult Emit(this CompiledEventScript compiledScript, string message, params object?[] args)
+        => compiledScript.Emit(message, BuildNamedArguments(GetCompiledParameterNames(compiledScript, message, args.Length), EventScriptValue.FromClrList(args).ToArray()));
 
-    public static EventScriptExecutionResult EmitClr(this EventScriptInterpreter interpreter, string message, params object?[] args)
-        => interpreter.EmitClr(message, BuildClrNamedArguments(GetInterpreterParameterNames(interpreter, message, args.Length), args));
-
-    public static EventScriptDiagnosticInvocationResult Invoke(this EventScriptDiagnosticInterpreter interpreter, string message, params EventScriptValue[] args)
-        => interpreter.Invoke(message, BuildNamedArguments(GetDiagnosticParameterNames(interpreter, message, args.Length), args));
+    public static EventScriptExecutionResult EmitClr(this CompiledEventScript compiledScript, string message, params object?[] args)
+        => compiledScript.EmitClr(message, BuildClrNamedArguments(GetCompiledParameterNames(compiledScript, message, args.Length), args));
 
     public static EventScriptExecutionResult Emit(this EventScriptHost host, string message, params EventScriptValue[] args)
         => host.Emit(message, BuildNamedArguments(GetHostParameterNames(host, message, args.Length), args));
@@ -40,20 +37,9 @@ internal static class EventScriptNamedDispatchTestExtensions
         => parameterNames.Select((name, index) => new KeyValuePair<string, object?>(name, args[index]))
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
 
-    private static IReadOnlyList<string> GetInterpreterParameterNames(EventScriptInterpreter interpreter, string message, int argumentCount)
+    private static IReadOnlyList<string> GetCompiledParameterNames(CompiledEventScript compiledScript, string message, int argumentCount)
     {
-        var engine = GetField(interpreter, "_engine");
-        var handlers = GetField(engine, "_handlers") as System.Collections.IDictionary
-            ?? throw new InvalidOperationException("Interpreter handler table not found.");
-        return ResolveParameterNames(handlers, message, argumentCount);
-    }
-
-    private static IReadOnlyList<string> GetDiagnosticParameterNames(EventScriptDiagnosticInterpreter interpreter, string message, int argumentCount)
-    {
-        var compiledScript = GetField(interpreter, "_compiledScript");
-        var handlers = compiledScript.GetType().GetProperty("Handlers", BindingFlags.Instance | BindingFlags.Public)?.GetValue(compiledScript) as System.Collections.IDictionary
-            ?? throw new InvalidOperationException("Diagnostic interpreter handler table not found.");
-        return ResolveParameterNames(handlers, message, argumentCount);
+        return ResolveParameterNames(compiledScript.Handlers, message, argumentCount);
     }
 
     private static IReadOnlyList<string> GetHostParameterNames(EventScriptHost host, string message, int argumentCount)
@@ -99,9 +85,20 @@ internal static class EventScriptNamedDispatchTestExtensions
         throw new InvalidOperationException($"Unable to resolve a unique host signature for message '{message}' with {argumentCount} argument(s).");
     }
 
-    private static IReadOnlyList<string> ResolveParameterNames(System.Collections.IDictionary handlers, string message, int argumentCount)
+    private static object? GetField(object target, string fieldName)
     {
-        if (handlers[message] is not System.Collections.IEnumerable matchingHandlers)
+        var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+        if (field is null)
+        {
+            throw new InvalidOperationException($"Field '{fieldName}' was not found on '{target.GetType().FullName}'.");
+        }
+
+        return field.GetValue(target);
+    }
+
+    private static IReadOnlyList<string> ResolveParameterNames(IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> handlers, string message, int argumentCount)
+    {
+        if (!handlers.TryGetValue(message, out var matchingHandlers))
         {
             if (argumentCount == 0)
             {
@@ -114,10 +111,9 @@ internal static class EventScriptNamedDispatchTestExtensions
         var matches = new List<IReadOnlyList<string>>();
         foreach (var handler in matchingHandlers)
         {
-            var parameters = handler.GetType().GetProperty("Parameters", BindingFlags.Instance | BindingFlags.Public)?.GetValue(handler) as IReadOnlyList<string>;
-            if (parameters is not null && parameters.Count == argumentCount)
+            if (handler.Parameters.Count == argumentCount)
             {
-                matches.Add(parameters);
+                matches.Add(handler.Parameters);
             }
         }
 
@@ -138,8 +134,4 @@ internal static class EventScriptNamedDispatchTestExtensions
 
         throw new InvalidOperationException($"Unable to resolve a unique named signature for message '{message}' with {argumentCount} argument(s).");
     }
-
-    private static object GetField(object target, string fieldName)
-        => target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(target)
-           ?? throw new InvalidOperationException($"Field '{fieldName}' was not found on '{target.GetType().FullName}'.");
 }

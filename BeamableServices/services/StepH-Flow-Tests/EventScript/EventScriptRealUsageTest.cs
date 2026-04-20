@@ -1,5 +1,4 @@
 using StepH.Flow.EventScript;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
@@ -54,7 +53,7 @@ public class EventScriptRealUsageTest
         var game = new Dictionary<string, EventScriptValue>();
 
         var host = new EventScriptHost()
-            .Load(EventScriptInterpreter.CompileScript(script))
+            .Load(EventScriptManager.Compile(script))
             .BindExternal("SetBoardSize", p => { game["width"] = p[0]; game["height"] = p[1]; }, 2)
             .BindExternal("SetNumberOfPlayer", p => { game["playerLimit"] = p[0]; }, 1)
             .BindExternal("SetNumberOfPushs", p => { game["pushCount"] = p[0]; }, 1)
@@ -130,7 +129,7 @@ public class EventScriptRealUsageTest
 
         try
         {
-            StepH.Flow.EventScript.EventScript.Parse(scriptBroken);
+            StepH.Flow.EventScript.EventScriptManager.ParseModule(scriptBroken);
         }
         catch (Exception e)
         {
@@ -138,7 +137,7 @@ public class EventScriptRealUsageTest
         }
         try
         {
-            StepH.Flow.EventScript.EventScript.Link(scriptOk1, scriptOk2, scriptBroken);
+            StepH.Flow.EventScript.EventScriptManager.LinkScripts(scriptOk1, scriptOk2, scriptBroken);
         }
         catch (Exception e)
         {
@@ -146,7 +145,7 @@ public class EventScriptRealUsageTest
         }
         try
         {
-            StepH.Flow.EventScript.EventScript.Link(scriptOk1, scriptOk2);
+            StepH.Flow.EventScript.EventScriptManager.LinkScripts(scriptOk1, scriptOk2);
         }
         catch (Exception e)
         {

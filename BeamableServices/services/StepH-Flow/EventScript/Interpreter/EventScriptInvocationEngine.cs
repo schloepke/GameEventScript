@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
@@ -16,84 +15,26 @@ internal sealed class EventScriptInvocationEngine
     private const int RandomUnitMax = 1_000_000;
     private const decimal RandomUnitScale = RandomUnitMax;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _handlers;
-    private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _typeDefinitions;
-    private readonly IReadOnlyDictionary<string, RuleDefinitionNode> _ruleDefinitions;
-    private readonly IReadOnlyDictionary<string, SelectDefinitionNode> _selectDefinitions;
+    private readonly IReadOnlyDictionary<string, CompiledTypeDefinition> _typeDefinitions;
+    private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _ruleDefinitions;
+    private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _selectDefinitions;
     private readonly IEventScriptRandom _random;
+    private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
+    private readonly bool _diagnosticsEnabled;
 
-    private EventScriptInvocationEngine(CompiledEventScript compiledScript, IEventScriptRandom? random = null)
+    internal EventScriptInvocationEngine(
+        CompiledEventScript compiledScript,
+        EventScriptInvocationContext? invocationContext,
+        IEventScriptDiagnosticCollector? diagnosticCollector)
     {
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
-        _random = random ?? new DefaultEventScriptRandom();
-        _typeDefinitions = compiledScript.LinkedModule.TypeDefinitions;
-        _ruleDefinitions = compiledScript.LinkedModule.RuleDefinitions;
-        _selectDefinitions = compiledScript.LinkedModule.SelectDefinitions;
-        foreach (var ruleName in _ruleDefinitions.Keys)
-        {
-            if (_selectDefinitions.ContainsKey(ruleName))
-            {
-                throw new EventScriptCompilationException($"Global definition '{ruleName}' is defined as both rule and select");
-            }
-        }
-
+        _random = invocationContext?.Random ?? compiledScript.DefaultRandom ?? new DefaultEventScriptRandom();
+        _typeDefinitions = compiledScript.TypeDefinitions;
+        _ruleDefinitions = compiledScript.RuleDefinitions;
+        _selectDefinitions = compiledScript.SelectDefinitions;
         _handlers = compiledScript.Handlers;
-    }
-
-    public static EventScriptInvocationEngine Compile(string script, IEventScriptRandom? random = null) => Compile(EventScriptLinkBuilder.LinkScripts(script), random);
-
-    public static EventScriptInvocationEngine Compile(EventScriptModule eventScriptModule, IEventScriptRandom? random = null)
-    {
-        _ = eventScriptModule ?? throw new ArgumentNullException(nameof(eventScriptModule));
-        return Compile(new EventScriptLinkBuilder().AddModule(eventScriptModule).Link(), random);
-    }
-
-    public static EventScriptInvocationEngine Compile(LinkedEventScriptModule linkedModule, IEventScriptRandom? random = null)
-    {
-        _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
-        return Compile(new CompiledEventScript(linkedModule), random);
-    }
-
-    public static EventScriptInvocationEngine Compile(CompiledEventScript compiledScript, IEventScriptRandom? random = null)
-    {
-        _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
-        return new EventScriptInvocationEngine(compiledScript, random);
-    }
-
-    public EventScriptDiagnosticInvocationResult Invoke(string message, IReadOnlyDictionary<string, EventScriptValue> args)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            throw new ArgumentException("Message must not be null or whitespace", nameof(message));
-        }
-
-        args = EventScriptArgumentMap.Normalize(args);
-        var state = new RunState(diagnosticsEnabled: true);
-        state.RecordDiagnostic(EventScriptDiagnosticStepKind.InvocationStarted, message, args, $"Invoke '{message}'");
-
-        foreach (var handler in GetMatchingHandlers(message, args))
-        {
-            state.RecordDiagnostic(
-                EventScriptDiagnosticStepKind.HandlerMatched,
-                handler.Message,
-                args,
-                $"Handler '{handler.Message}' with parameters ({string.Join(", ", handler.Parameters)})");
-            var context = new ExecutionContext(state);
-            var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
-            state.CaptureVariables(handlerVariables);
-        }
-
-        state.RecordDiagnostic(
-            EventScriptDiagnosticStepKind.InvocationCompleted,
-            message,
-            args,
-            $"Completed with {state.EmittedEvents.Count} published event(s)");
-
-        return new EventScriptDiagnosticInvocationResult(
-            message,
-            EventScriptNamedArguments.Create(args),
-            state.EmittedEvents,
-            state.Variables,
-            state.Steps);
+        _diagnosticCollector = diagnosticCollector;
+        _diagnosticsEnabled = compiledScript.Options.EnableDiagnostics;
     }
 
     public EventScriptExecutionResult InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
@@ -104,11 +45,11 @@ internal sealed class EventScriptInvocationEngine
         }
 
         args = EventScriptArgumentMap.Normalize(args);
-        var state = new RunState();
+        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
         foreach (var handler in GetMatchingHandlers(message, args))
         {
             var context = new ExecutionContext(state);
-            var handlerVariables = ExecuteHandler(context, handler.Syntax, args);
+            var handlerVariables = ExecuteHandler(context, handler, args);
             state.CaptureVariables(handlerVariables);
         }
 
@@ -119,9 +60,9 @@ internal sealed class EventScriptInvocationEngine
     {
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         args = EventScriptArgumentMap.Normalize(args);
-        var state = new RunState();
+        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
         var context = new ExecutionContext(state);
-        var variables = ExecuteHandler(context, handler.Syntax, args);
+        var variables = ExecuteHandler(context, handler, args);
         state.CaptureVariables(variables);
         return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
     }
@@ -140,14 +81,32 @@ internal sealed class EventScriptInvocationEngine
             .ToArray();
     }
 
-    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, EventHandlerNode handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         context.PushScope();
         try
         {
             foreach (var parameter in handler.Parameters)
             {
+                if (handler.DiagnosticsEnabled)
+                {
+                    context.RecordDiagnostic(
+                        EventScriptDiagnosticEventKind.ParameterBound,
+                        parameter,
+                        new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { [parameter] = args[parameter] },
+                        $"Bound '{parameter}'");
+                }
+
                 context.Define(parameter, args[parameter]);
+            }
+
+            if (handler.DiagnosticsEnabled)
+            {
+                context.RecordDiagnostic(
+                    EventScriptDiagnosticEventKind.HandlerInvoked,
+                    handler.Message,
+                    args,
+                    $"Handler '{handler.Message}' invoked");
             }
 
             ExecuteStatements(context, handler.Statements);
@@ -169,8 +128,6 @@ internal sealed class EventScriptInvocationEngine
 
     private void ExecuteStatement(ExecutionContext context, StatementNode statement)
     {
-        context.RecordStatement(statement);
-
         switch (statement)
         {
             case PublishStatementNode publish:
@@ -228,11 +185,7 @@ internal sealed class EventScriptInvocationEngine
     }
 
     private EventScriptValue EvaluateExpression(ExecutionContext context, ExpressionNode expression)
-    {
-        var value = EvaluateExpressionCore(context, expression);
-        context.RecordExpression(expression, value);
-        return value;
-    }
+        => EvaluateExpressionCore(context, expression);
 
     private EventScriptValue EvaluateExpressionCore(ExecutionContext context, ExpressionNode expression)
     {
@@ -458,12 +411,12 @@ internal sealed class EventScriptInvocationEngine
 
         if (_ruleDefinitions.TryGetValue(call.Name, out var ruleDefinition))
         {
-            return EvaluateGlobalDefinition(context, ruleDefinition.Parameters, ruleDefinition.Expression, arguments);
+            return EvaluateGlobalDefinition(context, ruleDefinition, arguments);
         }
 
         if (_selectDefinitions.TryGetValue(call.Name, out var selectDefinition))
         {
-            return EvaluateGlobalDefinition(context, selectDefinition.Parameters, selectDefinition.Expression, arguments);
+            return EvaluateGlobalDefinition(context, selectDefinition, arguments);
         }
 
         return EventScriptValue.Nothing;
@@ -478,25 +431,45 @@ internal sealed class EventScriptInvocationEngine
         }
 
         var value = EvaluateExpression(context, rulePredicate.Value);
-        return EvaluateGlobalDefinition(context, ruleDefinition.Parameters, ruleDefinition.Expression, new[] { value });
+        return EvaluateGlobalDefinition(context, ruleDefinition, new[] { value });
     }
 
-    private EventScriptValue EvaluateGlobalDefinition(ExecutionContext context, IReadOnlyList<string> parameters, ExpressionNode expression, IReadOnlyList<EventScriptValue> arguments)
+    private EventScriptValue EvaluateGlobalDefinition(ExecutionContext context, CompiledGlobalDefinition definition, IReadOnlyList<EventScriptValue> arguments)
     {
         context.PushScope();
         try
         {
-            for (var i = 0; i < parameters.Count; i++)
+            if (definition.DiagnosticsEnabled)
             {
-                context.Define(parameters[i], i < arguments.Count ? arguments[i] : EventScriptValue.Nothing);
+                context.RecordDiagnostic(
+                    definition.Kind == GlobalDefinitionKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
+                    definition.Name,
+                    BuildOrderedArgumentMap(definition.Parameters, arguments),
+                    $"{definition.Kind} '{definition.Name}' called");
             }
 
-            return EvaluateExpression(context, expression);
+            for (var i = 0; i < definition.Parameters.Count; i++)
+            {
+                context.Define(definition.Parameters[i], i < arguments.Count ? arguments[i] : EventScriptValue.Nothing);
+            }
+
+            return EvaluateExpression(context, definition.Expression);
         }
         finally
         {
             context.PopScope();
         }
+    }
+
+    private static IReadOnlyDictionary<string, EventScriptValue> BuildOrderedArgumentMap(IReadOnlyList<string> parameterNames, IReadOnlyList<EventScriptValue> arguments)
+    {
+        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        for (var i = 0; i < parameterNames.Count; i++)
+        {
+            map[parameterNames[i]] = i < arguments.Count ? arguments[i] : EventScriptValue.Nothing;
+        }
+
+        return map;
     }
 
     private bool TryProjectGeneratedItem(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection, EventScriptValue item, List<EventScriptValue> values)
@@ -2814,7 +2787,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.DecimalNaN();
     }
 
-    private EventScriptValue ConvertToCustomType(EventScriptValue value, TypeDefinitionNode typeDefinition)
+    private EventScriptValue ConvertToCustomType(EventScriptValue value, CompiledTypeDefinition typeDefinition)
     {
         if (value.TryGetCustomTypeName(out var existingTypeName) &&
             string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
@@ -2845,7 +2818,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.CustomType(typeDefinition.Name, materializedValues);
     }
 
-    private EventScriptValue ApplyFieldClamp(TypeDefinitionNode typeDefinition, TypeFieldDefinitionNode field, EventScriptValue fieldValue, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    private EventScriptValue ApplyFieldClamp(CompiledTypeDefinition typeDefinition, CompiledTypeFieldDefinition field, EventScriptValue fieldValue, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
         if (field.MinimumExpression is null || field.MaximumExpression is null)
         {
@@ -2876,9 +2849,9 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper));
     }
 
-    private EventScriptValue EvaluateCustomTypeExpression(TypeDefinitionNode typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    private EventScriptValue EvaluateCustomTypeExpression(CompiledTypeDefinition typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
-        var state = new RunState();
+        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
         var context = new ExecutionContext(state);
         context.PushScope();
         try
@@ -2945,9 +2918,7 @@ internal sealed class EventScriptInvocationEngine
 
     private decimal NextRandomUnit()
     {
-        return TryNextInclusive(0, RandomUnitMax - 1, out var value)
-            ? value / RandomUnitScale
-            : 0m;
+        return TryNextInclusive(0, RandomUnitMax - 1, out var value) ? value / RandomUnitScale : 0m;
     }
 
     private void ValidateEmitArguments(string message, IEnumerable<string> argumentNames)
@@ -2980,14 +2951,7 @@ internal sealed class EventScriptInvocationEngine
         }
 
         public void Define(string name, EventScriptValue value)
-        {
-            _scopes.Peek()[name] = value;
-            _state.RecordDiagnostic(
-                EventScriptDiagnosticStepKind.VariableAssigned,
-                name,
-                SingleArgument(value),
-                $"Assigned '{name}' = {value}");
-        }
+            => _scopes.Peek()[name] = value;
 
         public EventScriptValue Resolve(string name)
         {
@@ -2995,20 +2959,10 @@ internal sealed class EventScriptInvocationEngine
             {
                 if (scope.TryGetValue(name, out var value))
                 {
-                    _state.RecordDiagnostic(
-                        EventScriptDiagnosticStepKind.VariableResolved,
-                        name,
-                        SingleArgument(value),
-                        $"Resolved '{name}'");
                     return value;
                 }
             }
 
-            _state.RecordDiagnostic(
-                EventScriptDiagnosticStepKind.VariableResolved,
-                name,
-                SingleArgument(EventScriptValue.Nothing),
-                $"Resolved '{name}' to nothing");
             return EventScriptValue.Nothing;
         }
 
@@ -3017,30 +2971,14 @@ internal sealed class EventScriptInvocationEngine
             var emittedEvent = new EventScriptEmittedEvent(message, EventScriptNamedArguments.Create(arguments));
             _state.RecordPublishedEvent(emittedEvent);
             _state.RecordDiagnostic(
-                EventScriptDiagnosticStepKind.EventPublished,
+                EventScriptDiagnosticEventKind.EventPublished,
                 message,
                 emittedEvent.Arguments,
                 $"Published '{message}'");
         }
 
-        public void RecordStatement(StatementNode statement)
-            => _state.RecordDiagnostic(
-                EventScriptDiagnosticStepKind.StatementExecuting,
-                statement.GetType().Name,
-                EventScriptArgumentMap.Empty,
-                $"Executing {statement.GetType().Name}");
-
-        public void RecordExpression(ExpressionNode expression, EventScriptValue value)
-            => _state.RecordDiagnostic(
-                EventScriptDiagnosticStepKind.ExpressionEvaluated,
-                expression.GetType().Name,
-                SingleArgument(value),
-                value.isNothing()
-                    ? $"Expression {expression.GetType().Name} evaluated to nothing"
-                    : $"Expression {expression.GetType().Name} evaluated");
-
-        private static IReadOnlyDictionary<string, EventScriptValue> SingleArgument(EventScriptValue value)
-            => new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { ["value"] = value };
+        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
+            => _state.RecordDiagnostic(kind, name, arguments, detail);
 
         public IReadOnlyDictionary<string, EventScriptValue> SnapshotTopScope()
             => new Dictionary<string, EventScriptValue>(_scopes.Peek(), StringComparer.Ordinal);
@@ -3049,11 +2987,12 @@ internal sealed class EventScriptInvocationEngine
     private sealed class RunState
     {
         private readonly Dictionary<string, EventScriptValue> _variables = new(StringComparer.Ordinal);
+        private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
         private readonly bool _diagnosticsEnabled;
-        private int _diagnosticSequence;
-
-        public RunState(bool diagnosticsEnabled = false)
+        
+        public RunState(IEventScriptDiagnosticCollector? diagnosticCollector, bool diagnosticsEnabled)
         {
+            _diagnosticCollector = diagnosticCollector;
             _diagnosticsEnabled = diagnosticsEnabled;
         }
 
@@ -3061,21 +3000,19 @@ internal sealed class EventScriptInvocationEngine
 
         public List<EventScriptEmittedEvent> EmittedEvents { get; } = new();
 
-        public List<EventScriptDiagnosticStep> Steps { get; } = new();
-
         public void RecordPublishedEvent(EventScriptEmittedEvent emittedEvent)
         {
             EmittedEvents.Add(emittedEvent);
         }
 
-        public void RecordDiagnostic(EventScriptDiagnosticStepKind kind, string message, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
+        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string message, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
         {
             if (!_diagnosticsEnabled)
             {
                 return;
             }
 
-            Steps.Add(new EventScriptDiagnosticStep(++_diagnosticSequence, kind, message, EventScriptNamedArguments.Create(arguments), detail));
+            _diagnosticCollector?.Record(kind, message, arguments, detail);
         }
 
         public void CaptureVariables(IReadOnlyDictionary<string, EventScriptValue> variables)

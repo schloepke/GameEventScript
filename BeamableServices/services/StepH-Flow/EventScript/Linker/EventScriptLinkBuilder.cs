@@ -11,19 +11,6 @@ public sealed partial class EventScriptLinkBuilder
 {
     private readonly List<EventScriptModule> _modules = [];
 
-    public int SourceCount => _modules.Count;
-
-    public static LinkedEventScriptModule LinkScripts(params string[] scripts)
-    {
-        var builder = new EventScriptLinkBuilder();
-        foreach (var script in scripts)
-        {
-            builder.AddScript(script);
-        }
-
-        return builder.Link();
-    }
-
     public static LinkedEventScriptModule LinkModules(params EventScriptModule[] modules)
     {
         var builder = new EventScriptLinkBuilder();
@@ -35,10 +22,15 @@ public sealed partial class EventScriptLinkBuilder
         return builder.Link();
     }
 
-    public EventScriptLinkBuilder AddScript(string script, string? sourceName = null)
+    public static LinkedEventScriptModule LinkModules(IEnumerable<EventScriptModule> modules)
     {
-        _modules.Add(EventScriptParser.Parse(script, sourceName));
-        return this;
+        var builder = new EventScriptLinkBuilder();
+        foreach (var module in modules)
+        {
+            builder.AddModule(module);
+        }
+
+        return builder.Link();
     }
 
     public EventScriptLinkBuilder AddModule(EventScriptModule eventScriptModule)
@@ -91,7 +83,7 @@ public sealed partial class EventScriptLinkBuilder
     }
 
     private static EventScriptLinkageError CreateError(
-        EventScriptModule? module,
+        EventScriptModule module,
         string message,
         string symbol,
         EventScriptSymbolKind symbolKind,
@@ -99,8 +91,8 @@ public sealed partial class EventScriptLinkBuilder
         int? line = null,
         int? column = null)
     {
-        var resolvedModuleName = module?.ModuleName ?? "AnonymousModule_Unknown";
-        var resolvedSourceName = module?.SourceName ?? "UnknownSource_Unknown";
+        var resolvedModuleName = module.ModuleName;
+        var resolvedSourceName = module.SourceName;
         return new EventScriptLinkageError(
             message,
             resolvedModuleName,

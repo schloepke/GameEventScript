@@ -17,6 +17,7 @@ internal sealed class EventScriptInvocationEngine
     private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _ruleDefinitions;
     private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _selectDefinitions;
     private readonly EventScriptRandomGenerator _randomGenerator;
+    private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly bool _diagnosticsEnabled;
 
@@ -30,6 +31,7 @@ internal sealed class EventScriptInvocationEngine
         _handlers = compiledScript.Handlers;
         _diagnosticCollector = diagnosticCollector;
         _diagnosticsEnabled = compiledScript.Options.EnableDiagnostics;
+        _randomScopes.Push(_randomGenerator);
     }
 
     public EventScriptExecutionResult InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
@@ -144,7 +146,14 @@ internal sealed class EventScriptInvocationEngine
                 return;
 
             case IfStatementNode ifStatement:
-                ExecuteStatements(context, AsBool(EvaluateExpression(context, ifStatement.Condition)) ? ifStatement.ThenStatements : ifStatement.ElseStatements);
+                if (AsBool(EvaluateExpression(context, ifStatement.Condition)))
+                {
+                    ExecuteStatementBody(context, ifStatement.ThenBody);
+                }
+                else if (ifStatement.ElseBody is not null)
+                {
+                    ExecuteStatementBody(context, ifStatement.ElseBody);
+                }
                 return;
 
             case ForStatementNode forStatement:
@@ -154,7 +163,7 @@ internal sealed class EventScriptInvocationEngine
                     try
                     {
                         context.Define(forStatement.Identifier, item);
-                        ExecuteStatements(context, forStatement.Statements);
+                        ExecuteStatementBody(context, forStatement.Body);
                     }
                     finally
                     {
@@ -162,6 +171,10 @@ internal sealed class EventScriptInvocationEngine
                     }
                 }
 
+                return;
+
+            case SeededRandomStatementNode seededRandom:
+                ExecuteSeededRandomStatement(context, seededRandom);
                 return;
 
             case ExpressionStatementNode expressionStatement:
@@ -177,6 +190,26 @@ internal sealed class EventScriptInvocationEngine
     {
         ValidateEmitArguments(message, args.Keys);
         context.Publish(message, args);
+    }
+
+    private void ExecuteStatementBody(ExecutionContext context, StatementBodyNode body)
+    {
+        if (body.IsBlock)
+        {
+            context.PushScope();
+            try
+            {
+                ExecuteStatements(context, body.Statements);
+            }
+            finally
+            {
+                context.PopScope();
+            }
+
+            return;
+        }
+
+        ExecuteStatements(context, body.Statements);
     }
 
     private EventScriptValue EvaluateExpression(ExecutionContext context, ExpressionNode expression) => EvaluateExpressionCore(context, expression);
@@ -228,8 +261,11 @@ internal sealed class EventScriptInvocationEngine
             case RandomExpressionNode randomExpression:
                 return EvaluateRandomExpression(context, randomExpression);
 
+            case SeededRandomExpressionNode seededRandomExpression:
+                return EvaluateSeededRandomExpression(context, seededRandomExpression);
+
             case DiceExpressionNode diceExpression:
-                return EvaluateDiceExpression(diceExpression);
+                return EvaluateDiceExpression(context, diceExpression);
 
             case GeneratedCollectionExpressionNode generatedCollection:
                 return EvaluateGeneratedCollectionExpression(context, generatedCollection);
@@ -312,7 +348,35 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.Nothing;
     }
 
-    private EventScriptValue EvaluateDiceExpression(DiceExpressionNode diceExpression)
+    private EventScriptValue EvaluateSeededRandomExpression(ExecutionContext context, SeededRandomExpressionNode seededRandomExpression)
+    {
+        var seedValue = EvaluateExpression(context, seededRandomExpression.SeedExpression);
+        PushSeededRandomScope(seedValue);
+        try
+        {
+            return EvaluateExpression(context, seededRandomExpression.BodyExpression);
+        }
+        finally
+        {
+            PopSeededRandomScope();
+        }
+    }
+
+    private void ExecuteSeededRandomStatement(ExecutionContext context, SeededRandomStatementNode seededRandomStatement)
+    {
+        var seedValue = EvaluateExpression(context, seededRandomStatement.SeedExpression);
+        PushSeededRandomScope(seedValue);
+        try
+        {
+            ExecuteStatementBody(context, seededRandomStatement.Body);
+        }
+        finally
+        {
+            PopSeededRandomScope();
+        }
+    }
+
+    private EventScriptValue EvaluateDiceExpression(ExecutionContext context, DiceExpressionNode diceExpression)
     {
         if (diceExpression.DiceCount <= 0 || diceExpression.SideCount <= 0)
         {
@@ -2085,21 +2149,33 @@ internal sealed class EventScriptInvocationEngine
 
             case IfStatementNode ifStatement:
                 ValidateExpressionReferences(ifStatement.Condition);
-                foreach (var nested in ifStatement.ThenStatements)
+                foreach (var nested in ifStatement.ThenBody.Statements)
                 {
                     ValidateStatementReferences(nested);
                 }
 
-                foreach (var nested in ifStatement.ElseStatements)
+                if (ifStatement.ElseBody is not null)
                 {
-                    ValidateStatementReferences(nested);
+                    foreach (var nested in ifStatement.ElseBody.Statements)
+                    {
+                        ValidateStatementReferences(nested);
+                    }
                 }
 
                 return;
 
             case ForStatementNode forStatement:
                 ValidateExpressionReferences(forStatement.Source);
-                foreach (var nested in forStatement.Statements)
+                foreach (var nested in forStatement.Body.Statements)
+                {
+                    ValidateStatementReferences(nested);
+                }
+
+                return;
+
+            case SeededRandomStatementNode seededRandom:
+                ValidateExpressionReferences(seededRandom.SeedExpression);
+                foreach (var nested in seededRandom.Body.Statements)
                 {
                     ValidateStatementReferences(nested);
                 }
@@ -2157,6 +2233,11 @@ internal sealed class EventScriptInvocationEngine
             case RandomExpressionNode random:
                 ValidateExpressionReferences(random.FromExpression);
                 ValidateExpressionReferences(random.ToExpression);
+                return;
+
+            case SeededRandomExpressionNode seededRandom:
+                ValidateExpressionReferences(seededRandom.SeedExpression);
+                ValidateExpressionReferences(seededRandom.BodyExpression);
                 return;
 
             case GeneratedCollectionExpressionNode generatedCollection:
@@ -2907,7 +2988,7 @@ internal sealed class EventScriptInvocationEngine
     {
         try
         {
-            value = _randomGenerator.NextInclusiveInt(minInclusive, maxInclusive);
+            value = _randomScopes.Peek().NextInclusiveInt(minInclusive, maxInclusive);
             return true;
         }
         catch
@@ -2921,7 +3002,7 @@ internal sealed class EventScriptInvocationEngine
     {
         try
         {
-            value = _randomGenerator.NextInclusiveDecimal(minInclusive, maxInclusive);
+            value = _randomScopes.Peek().NextInclusiveDecimal(minInclusive, maxInclusive);
             return true;
         }
         catch
@@ -2935,6 +3016,62 @@ internal sealed class EventScriptInvocationEngine
     {
         _ = message;
         _ = argumentNames;
+    }
+
+    private void PushSeededRandomScope(EventScriptValue seedValue)
+        => _randomScopes.Push(EventScriptRandomGenerator.FromSeed(DeriveStableSeed(seedValue)));
+
+    private void PopSeededRandomScope()
+    {
+        if (_randomScopes.Count > 1)
+        {
+            _randomScopes.Pop();
+        }
+    }
+
+    private static int DeriveStableSeed(EventScriptValue value)
+    {
+        var canonical = BuildStableSeedText(value);
+        unchecked
+        {
+            uint hash = 2166136261;
+            foreach (var ch in canonical)
+            {
+                hash ^= ch;
+                hash *= 16777619;
+            }
+
+            return (int)hash;
+        }
+    }
+
+    private static string BuildStableSeedText(EventScriptValue value)
+    {
+        return value.Type switch
+        {
+            EventScriptValueType.Nothing => "nothing",
+            EventScriptValueType.Tag => $"tag:{value.AsText()}",
+            EventScriptValueType.Text => $"text:{value.AsText()}",
+            EventScriptValueType.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueType.Decimal => value.IsNaN()
+                ? "decimal:nan"
+                : value.IsNegativeInfinity()
+                    ? "decimal:-infinity"
+                    : value.IsInfinity()
+                        ? "decimal:infinity"
+                        : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueType.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueType.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
+            EventScriptValueType.Optional => value.AsOptional().HasValue
+                ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
+                : "optional:none",
+            EventScriptValueType.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+            EventScriptValueType.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
+            EventScriptValueType.Dictionary => $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
+            EventScriptValueType.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",
+            EventScriptValueType.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
+            _ => value.ToString()
+        };
     }
 
     private sealed class ExecutionContext

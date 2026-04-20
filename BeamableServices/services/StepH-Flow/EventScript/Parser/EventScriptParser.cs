@@ -337,6 +337,11 @@ public sealed class EventScriptParser
 
     private StatementNode ParseStatement()
     {
+        if (IsSeededRandomStatementStart())
+        {
+            return ParseSeededRandomStatement();
+        }
+
         if (Match(Publish))
         {
             return ParsePublishStatement();
@@ -409,22 +414,17 @@ public sealed class EventScriptParser
     private IfStatementNode ParseIfStatement()
     {
         var condition = ParseExpression();
-        SkipNewLines();
-        Expect(LeftBrace);
-        var thenStatements = ParseStatementsUntil(RightBrace);
-        Expect(RightBrace);
+        var thenBody = ParseStatementBody();
 
-        var elseStatements = new List<StatementNode>();
-        SkipNewLines();
-        if (Match(Else))
+        StatementBodyNode? elseBody = null;
+        if (IsElseClauseStart())
         {
             SkipNewLines();
-            Expect(LeftBrace);
-            elseStatements.AddRange(ParseStatementsUntil(RightBrace));
-            Expect(RightBrace);
+            Expect(Else);
+            elseBody = ParseStatementBody();
         }
 
-        return new IfStatementNode(condition, thenStatements, elseStatements);
+        return new IfStatementNode(condition, thenBody, elseBody);
     }
 
     private ForStatementNode ParseForStatement()
@@ -432,11 +432,32 @@ public sealed class EventScriptParser
         var identifier = ExpectIdentifierLike();
         Expect(In);
         var source = ParseExpression();
+        var body = ParseStatementBody();
+        return new ForStatementNode(identifier, source, body);
+    }
+
+    private SeededRandomStatementNode ParseSeededRandomStatement()
+    {
+        Expect(Tag);
         SkipNewLines();
-        Expect(LeftBrace);
-        var statements = ParseStatementsUntil(RightBrace);
-        Expect(RightBrace);
-        return new ForStatementNode(identifier, source, statements);
+        Expect(With);
+        SkipNewLines();
+        var seedExpression = ParseExpression();
+        var body = ParseStatementBody();
+        return new SeededRandomStatementNode(seedExpression, body);
+    }
+
+    private StatementBodyNode ParseStatementBody()
+    {
+        SkipNewLines();
+        if (Match(LeftBrace))
+        {
+            var statements = ParseStatementsUntil(RightBrace);
+            Expect(RightBrace);
+            return new StatementBodyNode(true, statements);
+        }
+
+        return new StatementBodyNode(false, new[] { ParseStatement() });
     }
 
     private ExpressionNode ParseExpression() => ParseGuardedChoiceExpression();
@@ -1294,6 +1315,12 @@ public sealed class EventScriptParser
     {
         if (MatchTag(":random"))
         {
+            SkipNewLines();
+            if (Match(With))
+            {
+                return ParseSeededRandomExpression();
+            }
+
             return ParseRandomExpression();
         }
 
@@ -1582,6 +1609,15 @@ public sealed class EventScriptParser
         return new RandomExpressionNode(fromExpression, toExpression);
     }
 
+    private SeededRandomExpressionNode ParseSeededRandomExpression()
+    {
+        SkipNewLines();
+        var seedExpression = ParseExpression();
+        SkipNewLines();
+        var bodyExpression = ParseExpression();
+        return new SeededRandomExpressionNode(seedExpression, bodyExpression);
+    }
+
     private ExpressionNode ParseRandomBoundExpression()
     {
         SkipNewLines();
@@ -1849,6 +1885,33 @@ public sealed class EventScriptParser
     }
 
     private bool Is(EventScriptTokenKind kind) => Current.Kind == kind;
+
+    private bool IsSeededRandomStatementStart()
+    {
+        if (Current.Kind != Tag || !string.Equals(Current.Text, ":random", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == With;
+    }
+
+    private bool IsElseClauseStart()
+    {
+        var lookahead = _index;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Else;
+    }
 
     private static bool IsIdentifierLike(EventScriptTokenKind kind)
     {

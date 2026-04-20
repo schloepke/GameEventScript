@@ -1692,6 +1692,113 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void IfAndForCanUseSingleStatementsWithoutBlocks()
+    {
+        const string script = """
+            on Start(first, second, items) {
+                if first publish One
+                else if second publish Two
+                else publish Three
+
+                for item in items publish Seen(item: item)
+            }
+            """;
+
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit(
+            "Start",
+            false,
+            true,
+            EventScriptValue.List(new EventScriptValue[] { 2m, 4m }));
+
+        Assert.AreEqual("Two", result.EmittedEvents[0].Message);
+        Assert.AreEqual("Seen", result.EmittedEvents[1].Message);
+        Assert.AreEqual(2m, result.EmittedEvents[1].Arguments["item"].AsNumber());
+        Assert.AreEqual("Seen", result.EmittedEvents[2].Message);
+        Assert.AreEqual(4m, result.EmittedEvents[2].Arguments["item"].AsNumber());
+    }
+
+    [TestMethod]
+    public void BlockScopesDoNotLeakVariablesOutsideIfForAndSeededRandomBlocks()
+    {
+        const string script = """
+            on Start(items, seed) {
+                if true {
+                    let fromIf be 10
+                }
+
+                for item in items {
+                    let fromLoop be item
+                }
+
+                :random with seed {
+                    let fromRandom be :random from 1 to 6
+                    publish Inner(value: fromRandom)
+                }
+
+                if fromIf has value publish IfLeak
+                if fromLoop has value publish LoopLeak
+                if fromRandom has value publish RandomLeak
+            }
+            """;
+
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit(
+            "Start",
+            EventScriptValue.List(new EventScriptValue[] { 1m, 2m }),
+            7m);
+
+        Assert.HasCount(1, result.EmittedEvents);
+        Assert.AreEqual("Inner", result.EmittedEvents[0].Message);
+    }
+
+    [TestMethod]
+    public void SeededRandomExpressionsReplayTheSameSequenceForTheSameSeed()
+    {
+        const string script = """
+            on Start(seed) {
+                let first be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]
+                let second be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]
+                publish Done(first: first, second: second)
+            }
+            """;
+
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit("Start", 42m);
+        var args = result.EmittedEvents[0].Arguments;
+
+        CollectionAssert.AreEqual(
+            args["first"].AsList().Select(item => item.AsInteger()).ToArray(),
+            args["second"].AsList().Select(item => item.AsInteger()).ToArray());
+    }
+
+    [TestMethod]
+    public void SeededRandomStatementScopesPublishDeterministicValuesWithoutChangingTheOuterSequence()
+    {
+        const string script = """
+            on Start(seed) {
+                let outerBefore be :random from 1 to 20
+                :random with seed {
+                    publish Inner(value: :random from 1 to 20)
+                }
+                let outerAfter be :random from 1 to 20
+                publish Done(before: outerBefore, after: outerAfter)
+            }
+            """;
+
+        var random = EventScriptRandomGenerator.FromSequence(5, 9);
+        var interpreter = EventScriptManager.Compile(script);
+
+        var first = interpreter.Emit(new EventScriptInvocationContext { Random = random }, "Start", 42m);
+        var second = interpreter.Emit(new EventScriptInvocationContext { Random = EventScriptRandomGenerator.FromSequence(5, 9) }, "Start", 42m);
+
+        Assert.AreEqual("Inner", first.EmittedEvents[0].Message);
+        Assert.AreEqual(first.EmittedEvents[0].Arguments["value"].AsInteger(), second.EmittedEvents[0].Arguments["value"].AsInteger());
+        Assert.AreEqual(5L, first.EmittedEvents[1].Arguments["before"].AsInteger());
+        Assert.AreEqual(9L, first.EmittedEvents[1].Arguments["after"].AsInteger());
+    }
+
+    [TestMethod]
     public void TextIterationYieldsSingleCharacterItems()
     {
         const string script = """

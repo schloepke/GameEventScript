@@ -104,12 +104,17 @@ public sealed partial class EventScriptLinkBuilder
 
             case IfStatementNode ifStatement:
                 ValidateExpressionReferences(moduleContext, ifStatement.Condition, ruleDefinitions, selectDefinitions, errors);
-                foreach (var nested in ifStatement.ThenStatements)
+                foreach (var nested in ifStatement.ThenBody.Statements)
                 {
                     ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
                 }
 
-                foreach (var nested in ifStatement.ElseStatements)
+                if (ifStatement.ElseBody is null)
+                {
+                    return;
+                }
+
+                foreach (var nested in ifStatement.ElseBody.Statements)
                 {
                     ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
                 }
@@ -118,7 +123,16 @@ public sealed partial class EventScriptLinkBuilder
 
             case ForStatementNode forStatement:
                 ValidateExpressionReferences(moduleContext, forStatement.Source, ruleDefinitions, selectDefinitions, errors);
-                foreach (var nested in forStatement.Statements)
+                foreach (var nested in forStatement.Body.Statements)
+                {
+                    ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
+                }
+
+                return;
+
+            case SeededRandomStatementNode seededRandom:
+                ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, ruleDefinitions, selectDefinitions, errors);
+                foreach (var nested in seededRandom.Body.Statements)
                 {
                     ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
                 }
@@ -186,6 +200,11 @@ public sealed partial class EventScriptLinkBuilder
                 case RandomExpressionNode random:
                     ValidateExpressionReferences(moduleContext, random.FromExpression, ruleDefinitions, selectDefinitions, errors);
                     expression = random.ToExpression;
+                    continue;
+
+                case SeededRandomExpressionNode seededRandom:
+                    ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, ruleDefinitions, selectDefinitions, errors);
+                    expression = seededRandom.BodyExpression;
                     continue;
 
                 case GeneratedCollectionExpressionNode generatedCollection:

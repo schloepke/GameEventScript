@@ -214,6 +214,11 @@ let name as :text be 'Ada'
 let tags as :set be :set[:select item from 1 to 3 -> item]
 ```
 
+Blocks create a child variable scope. Values declared inside a block do not leak outside that block.
+This applies to blocks used by `if`, `else`, `for`, and `:random with ... { ... }`.
+
+Single-statement control flow forms do not introduce an extra block scope on their own.
+
 Typed `let` uses conversion semantics where possible.
 
 ## Guarded Assignment
@@ -998,6 +1003,31 @@ Entry values behave like dictionary-like objects with `key` and `value`.
 If both bounds are integers, the result is an integer.
 If either bound is decimal, the result is a decimal.
 
+### Seeded random scope
+
+Use `:random with ...` when you need a deterministic local random sequence derived from a seed value.
+
+Expression form:
+
+```eventscript
+let values be :random with gameSeed :list[:select item from 1 to 3 -> :random from 1 to 6]
+```
+
+Statement form:
+
+```eventscript
+:random with gameSeed {
+    let roll be :random from 1 to 6
+    publish Rolled(value: roll)
+}
+```
+
+Inside the seeded scope, all `:random ...` evaluations use the local deterministic generator.
+Outside the scope, the outer random context is unchanged.
+
+The expression form returns the value of its body expression.
+The block form is statement-only and does not produce a value.
+
 ### Dice
 
 ```eventscript
@@ -1056,6 +1086,21 @@ if unit is wounded {
 }
 ```
 
+Single-statement forms are also valid:
+
+```eventscript
+if unit is wounded publish HealRequested(arg1: unit)
+else publish Continue
+```
+
+This also enables `else if` chains:
+
+```eventscript
+if first publish One
+else if second publish Two
+else publish Three
+```
+
 ### `for`
 
 ```eventscript
@@ -1066,7 +1111,15 @@ for unit in units {
 }
 ```
 
+Single-statement loops are also valid:
+
+```eventscript
+for unit in units publish UnitReady(arg1: unit.id)
+```
+
 The source can be any expression that can be iterated.
+
+`if` and `for` are control-flow statements, not expressions.
 
 ## Truthiness
 

@@ -863,6 +863,80 @@ public class EventScriptParsingScenarios
     }
 
     [TestMethod]
+    public void IfAndForCanUseSingleStatementsAndElseIfChains()
+    {
+        const string script =
+            """
+            on Start(first, second, items) {
+                if first publish One
+                else if second publish Two
+                else publish Three
+
+                for item in items publish Seen(item: item)
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements;
+        var ifStatement = (IfStatementNode)statements[0];
+        var forStatement = (ForStatementNode)statements[1];
+
+        Assert.IsFalse(ifStatement.ThenBody.IsBlock);
+        Assert.IsNotNull(ifStatement.ElseBody);
+        Assert.IsFalse(ifStatement.ElseBody.IsBlock);
+        Assert.IsInstanceOfType<IfStatementNode>(ifStatement.ElseBody.Statements[0]);
+
+        var nestedIf = (IfStatementNode)ifStatement.ElseBody.Statements[0];
+        Assert.IsFalse(nestedIf.ThenBody.IsBlock);
+        Assert.IsNotNull(nestedIf.ElseBody);
+        Assert.IsFalse(nestedIf.ElseBody.IsBlock);
+
+        Assert.IsFalse(forStatement.Body.IsBlock);
+        Assert.IsInstanceOfType<PublishStatementNode>(forStatement.Body.Statements[0]);
+    }
+
+    [TestMethod]
+    public void SeededRandomScopesCanBeParsedAsExpressionOrStatement()
+    {
+        const string script =
+            """
+            on Start(seed) {
+                let values be :random with seed :list[:select item from 1 to 3 -> :random from 1 to 6]
+                :random with seed {
+                    publish Done(value: :random from 1 to 6)
+                }
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
+        var seededStatement = (SeededRandomStatementNode)program.Handlers[0].Statements[1];
+
+        Assert.IsInstanceOfType<SeededRandomExpressionNode>(letStatement.Expression);
+        var seededExpression = (SeededRandomExpressionNode)letStatement.Expression;
+        Assert.IsInstanceOfType<IdentifierExpressionNode>(seededExpression.SeedExpression);
+        Assert.IsInstanceOfType<GeneratedCollectionExpressionNode>(seededExpression.BodyExpression);
+
+        Assert.IsTrue(seededStatement.Body.IsBlock);
+        Assert.IsInstanceOfType<PublishStatementNode>(seededStatement.Body.Statements[0]);
+    }
+
+    [TestMethod]
+    public void SeededRandomBlocksCannotBeUsedAsValueExpressions()
+    {
+        const string script =
+            """
+            on Start(seed) {
+                let values be :random with seed {
+                    publish Done
+                }
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
+    }
+
+    [TestMethod]
     public void IntegerAndDecimalLiteralsAreRepresentedByDistinctAstNodes()
     {
         const string script =

@@ -25,6 +25,7 @@ Statement ::= PublishStatement
              | LetStatement
              | IfStatement
              | ForStatement
+             | SeededRandomStatement
              | ExpressionStatement
 
 PublishStatement ::= "publish" Message [ "(" [ NamedArgumentList ] ")" ]
@@ -33,8 +34,11 @@ LetAssignmentOperator ::= "be"
 LetValue ::= Expression
            | GuardedLetValue
 GuardedLetValue ::= Expression "when" Expression { "," [ "or" ] Expression "when" Expression } "otherwise" Expression
-IfStatement ::= "if" Expression "{" { Statement } "}" [ "else" "{" { Statement } "}" ]
-ForStatement ::= "for" Identifier "in" Expression "{" { Statement } "}"
+IfStatement ::= "if" Expression StatementOrBlock [ "else" StatementOrBlock ]
+ForStatement ::= "for" Identifier "in" Expression StatementOrBlock
+SeededRandomStatement ::= ":random" "with" Expression StatementOrBlock
+StatementOrBlock ::= Statement | StatementBlock
+StatementBlock ::= "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
 ExpressionStatement ::= Expression
 
 Argumentlist ::= Expression { "," Expression }
@@ -106,6 +110,7 @@ PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | Varia
                     | GeneratedListExpression
                     | GeneratedSetExpression
                     | RandomExpression
+                    | SeededRandomExpression
                     | DiceExpression
 CallExpression ::= Identifier "(" [ Argumentlist ] ")"
 
@@ -212,6 +217,7 @@ ObjectMatchPattern ::= "[" [ ObjectMatchEntry { "," ObjectMatchEntry } ] "]"
 ObjectMatchEntry ::= Identifier ":" ( Expression | ObjectMatchPattern )
 
 RandomExpression ::= ":random" [ "from" ] AdditiveExpression "to" AdditiveExpression
+SeededRandomExpression ::= ":random" "with" Expression Expression
 
 DiceExpression ::= ":dice" Number "d" Number
 

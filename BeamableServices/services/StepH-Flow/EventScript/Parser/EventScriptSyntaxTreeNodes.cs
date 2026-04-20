@@ -30,8 +30,10 @@ public sealed record SelectDefinitionNode(string Name, IReadOnlyList<string> Par
 public sealed record PublishStatementNode(string Message, IReadOnlyList<NamedArgumentNode> Arguments) : StatementNode;
 public sealed record NamedArgumentNode(string Name, ExpressionNode Expression) : EventScriptNode;
 public sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
-public sealed record IfStatementNode(ExpressionNode Condition, IReadOnlyList<StatementNode> ThenStatements, IReadOnlyList<StatementNode> ElseStatements) : StatementNode;
-public sealed record ForStatementNode(string Identifier, ExpressionNode Source, IReadOnlyList<StatementNode> Statements) : StatementNode;
+public sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : EventScriptNode;
+public sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
+public sealed record ForStatementNode(string Identifier, ExpressionNode Source, StatementBodyNode Body) : StatementNode;
+public sealed record SeededRandomStatementNode(ExpressionNode SeedExpression, StatementBodyNode Body) : StatementNode;
 public sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
 
 // Expression nodes
@@ -52,6 +54,7 @@ public sealed record UnaryExpressionNode(string Operator, ExpressionNode Operand
 public sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 public sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
 public sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
+public sealed record SeededRandomExpressionNode(ExpressionNode SeedExpression, ExpressionNode BodyExpression) : ExpressionNode;
 public sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
 public sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
 public sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;

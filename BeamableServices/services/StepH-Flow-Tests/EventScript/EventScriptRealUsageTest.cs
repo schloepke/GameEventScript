@@ -12,64 +12,82 @@ public class EventScriptRealUsageTest
     [TestMethod]
     public void Invoke_ExecutesControlFlowAndEmitsEvents()
     {
-        const string script =
-            """
-            on Setup(player) {
-                publish SetNumberOfPlayers(max: 2)
-                publish SetBoardSize(x: 10, y: 20)
-                publish SetNumberOfPushs(pushs: 20)
-                publish CreatePushSeed
-                publish SetCorrectTiles(tiles: 'Smiley')
-                publish SetIncorrectTiles(tiles: ['Whining', 'Mourning'])
-                publish SetDeadTile(tiles: 'Devil')
-                publish SetInactiveTile(tiles: 'Blank')
-            }
-
-            on Start(board) {
-                publish GeneratePushs
-            }
-            
-            on PlayerStartRound(player) {
-                publish StartTimer
-            }
-
-            on TilePressed(tile) {
-                if tile[:isLit] {
-                    publish SuccessfulPressed
-                } else { 
-                    publish FailedPressed
-                    publish RestartGame
+        try
+        {
+            const string script2 =
+                """
+                on Setup(player) {
+                    publish SetNumberOfPlayers(max: 2)
+                    publish SetBoardSize(x: 10, y: 20)
+                    publish SetNumberOfPushs(pushs: 20)
+                    publish CreatePushSeed
+                    publish SetCorrectTiles(tiles: 'Smiley')
+                    publish SetIncorrectTiles(tiles: ['Whining', 'Mourning'])
+                    publish SetDeadTile(tiles: 'Devil')
+                    publish SetInactiveTile(tiles: 'Blank')
                 }
-            }
 
-            on PlayerFinishedRound() {
-                publish TimerStop
-            }
-            
-            on RoundFinished() {
-                publish ShowScoreboard
-            }
-            """;
+                on Start(board) {
+                    publish GeneratePushs
+                }
 
-        var game = new Dictionary<string, EventScriptValue>();
+                on PlayerStartRound(player) {
+                    publish StartTimer
+                }
 
-        var collector = new EventScriptDiagnosticTraceCollector();
+                on TilePressed(tile) {
+                    if tile[:isLit] {
+                        publish SuccessfulPressed
+                    } else { 
+                        publish FailedPressed
+                        publish RestartGame
+                    }
+                }
 
-        var host = EventScriptHost.CreateBuilder()
-            .WithDiagnosticCollector(collector)
-            .Build()
-            .Load(EventScriptManager.Compile(script))
-            .Subscribe("SetBoardSize", ["x", "y"], context => { game["width"] = context.Arguments["x"]; game["height"] = context.Arguments["y"]; })
-            .Subscribe("SetNumberOfPlayers", ["max"], context => { game["playerLimit"] = context.Arguments["max"]; })
-            .Subscribe("SetNumberOfPushs", ["pushs"], context => { game["pushCount"] = context.Arguments["pushs"]; })
-            .Subscribe("CreatePushSeed", _ => { game["gameSeed"] = System.Random.Shared.NextInt64(); });
+                on PlayerFinishedRound() {
+                    publish TimerStop
+                }
 
-        Console.WriteLine(host.Publish("Setup", new Dictionary<string, EventScriptValue> { ["player"] = EventScriptValue.Text("player1") }));
-        Console.WriteLine(host.Publish("Start", new Dictionary<string, EventScriptValue> { ["board"] = EventScriptValue.Dictionary(game) }));
-        Console.WriteLine(EventScriptValue.Dictionary(game));
-        
-        Console.WriteLine(collector.ToString());
+                on RoundFinished() {
+                    publish ShowScoreboard
+                }
+                """;
 
+            const string script =
+                """
+                on Setup(player) {
+                    if player = 'player1' {publish SetNumberOfPlayers(max: 2)}            
+                }
+                """;
+
+
+            var game = new Dictionary<string, EventScriptValue>();
+
+            var collector = new EventScriptDiagnosticTraceCollector();
+
+            var host = EventScriptHost.CreateBuilder()
+                .WithDiagnosticCollector(collector)
+                .Build()
+                .Load(EventScriptManager.Compile(script))
+                .Subscribe("SetBoardSize", ["x", "y"], context =>
+                {
+                    game["width"] = context.Arguments["x"];
+                    game["height"] = context.Arguments["y"];
+                })
+                .Subscribe("SetNumberOfPlayers", ["max"], context => { game["playerLimit"] = context.Arguments["max"]; })
+                .Subscribe("SetNumberOfPushs", ["pushs"], context => { game["pushCount"] = context.Arguments["pushs"]; })
+                .Subscribe("CreatePushSeed", _ => { game["gameSeed"] = System.Random.Shared.NextInt64(); });
+
+            Console.WriteLine(host.Publish("Setup", new Dictionary<string, EventScriptValue> { ["player"] = EventScriptValue.Text("player1") }));
+            Console.WriteLine(host.Publish("Start", new Dictionary<string, EventScriptValue> { ["board"] = EventScriptValue.Dictionary(game) }));
+            Console.WriteLine(EventScriptValue.Dictionary(game));
+
+            Console.WriteLine(collector.ToString());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
     [TestMethod]
@@ -78,7 +96,7 @@ public class EventScriptRealUsageTest
         const string script =
             """
             module TestModule
-            
+
             on Setup(player) {
                 let someValue be 10; let AnotherValue be 20;
                 publish SetNumberOfPlayers(max: 2)
@@ -95,7 +113,6 @@ public class EventScriptRealUsageTest
         var lexer = new EventScriptLexer(script);
 
         foreach (var token in lexer.Tokenize()) Console.WriteLine(token);
-
     }
 
     [TestMethod]
@@ -104,7 +121,7 @@ public class EventScriptRealUsageTest
         var scriptBroken =
             """
             module BrokenCombat
-            
+
             rule unitIsDead(un%it) means unit[hp] is not at least 0
                      
             on FireAtUnit(unit) {
@@ -136,23 +153,25 @@ public class EventScriptRealUsageTest
 
         try
         {
-            StepH.Flow.EventScript.EventScriptManager.ParseModule(scriptBroken);
+            EventScriptManager.ParseModule(scriptBroken);
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
         }
+
         try
         {
-            StepH.Flow.EventScript.EventScriptManager.LinkScripts(scriptOk1, scriptOk2, scriptBroken);
+            EventScriptManager.LinkScripts(scriptOk1, scriptOk2, scriptBroken);
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
         }
+
         try
         {
-            StepH.Flow.EventScript.EventScriptManager.LinkScripts(scriptOk1, scriptOk2);
+            EventScriptManager.LinkScripts(scriptOk1, scriptOk2);
         }
         catch (Exception e)
         {

@@ -82,7 +82,8 @@ public enum EventScriptLinkageErrorKind
     WrongRuleArity,
     WrongSelectArity,
     DuplicateHandlerParameter,
-    DuplicatePublishArgument
+    DuplicatePublishArgument,
+    DuplicateVariable
 }
 
 public enum EventScriptSymbolKind
@@ -91,6 +92,7 @@ public enum EventScriptSymbolKind
     Rule,
     Select,
     Handler,
+    Variable,
     GlobalDefinition
 }
 

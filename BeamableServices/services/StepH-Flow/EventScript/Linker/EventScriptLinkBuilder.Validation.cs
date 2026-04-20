@@ -9,6 +9,24 @@ namespace StepH.Flow.EventScript.Linker;
 
 public sealed partial class EventScriptLinkBuilder
 {
+    private sealed class ValidationScope
+    {
+        private readonly HashSet<string> _variables;
+
+        public ValidationScope(IEnumerable<string>? names = null)
+        {
+            _variables = names is null
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : new HashSet<string>(names, StringComparer.Ordinal);
+        }
+
+        public ValidationScope CreateChild() => new();
+
+        public bool ContainsInCurrentScope(string name) => _variables.Contains(name);
+
+        public void Declare(string name) => _variables.Add(name);
+    }
+
     private static void ValidateModule(EventScriptModule eventScriptModule, IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions, IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions, List<EventScriptLinkageError> errors)
     {
         foreach (var typeDefinition in eventScriptModule.TypeDefinitions)
@@ -59,9 +77,10 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptLinkageErrorKind.DuplicateHandlerParameter));
             }
 
+            var handlerScope = new ValidationScope(handler.Parameters);
             foreach (var statement in handler.Statements)
             {
-                ValidateStatementReferences(eventScriptModule, statement, ruleDefinitions, selectDefinitions, errors);
+                ValidateStatementReferences(eventScriptModule, statement, ruleDefinitions, selectDefinitions, errors, handlerScope);
             }
         }
     }
@@ -71,7 +90,8 @@ public sealed partial class EventScriptLinkBuilder
         StatementNode statement,
         IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
         IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions,
-        List<EventScriptLinkageError> errors)
+        List<EventScriptLinkageError> errors,
+        ValidationScope scope)
     {
         switch (statement)
         {
@@ -100,48 +120,65 @@ public sealed partial class EventScriptLinkBuilder
 
             case LetStatementNode let:
                 ValidateExpressionReferences(moduleContext, let.Expression, ruleDefinitions, selectDefinitions, errors);
+                if (scope.ContainsInCurrentScope(let.Identifier))
+                {
+                    errors.Add(CreateError(
+                        moduleContext,
+                        $"Variable '{let.Identifier}' is already declared in the current scope",
+                        let.Identifier,
+                        EventScriptSymbolKind.Variable,
+                        EventScriptLinkageErrorKind.DuplicateVariable));
+                    return;
+                }
+
+                scope.Declare(let.Identifier);
                 return;
 
             case IfStatementNode ifStatement:
                 ValidateExpressionReferences(moduleContext, ifStatement.Condition, ruleDefinitions, selectDefinitions, errors);
-                foreach (var nested in ifStatement.ThenBody.Statements)
-                {
-                    ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
-                }
+                ValidateStatementBodyReferences(moduleContext, ifStatement.ThenBody, ruleDefinitions, selectDefinitions, errors, scope);
 
                 if (ifStatement.ElseBody is null)
                 {
                     return;
                 }
 
-                foreach (var nested in ifStatement.ElseBody.Statements)
-                {
-                    ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
-                }
+                ValidateStatementBodyReferences(moduleContext, ifStatement.ElseBody, ruleDefinitions, selectDefinitions, errors, scope);
 
                 return;
 
             case ForStatementNode forStatement:
                 ValidateExpressionReferences(moduleContext, forStatement.Source, ruleDefinitions, selectDefinitions, errors);
-                foreach (var nested in forStatement.Body.Statements)
-                {
-                    ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
-                }
+                var loopScope = scope.CreateChild();
+                loopScope.Declare(forStatement.Identifier);
+                ValidateStatementBodyReferences(moduleContext, forStatement.Body, ruleDefinitions, selectDefinitions, errors, loopScope);
 
                 return;
 
             case SeededRandomStatementNode seededRandom:
                 ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, ruleDefinitions, selectDefinitions, errors);
-                foreach (var nested in seededRandom.Body.Statements)
-                {
-                    ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors);
-                }
+                ValidateStatementBodyReferences(moduleContext, seededRandom.Body, ruleDefinitions, selectDefinitions, errors, scope);
 
                 return;
 
             case ExpressionStatementNode expressionStatement:
                 ValidateExpressionReferences(moduleContext, expressionStatement.Expression, ruleDefinitions, selectDefinitions, errors);
                 return;
+        }
+    }
+
+    private static void ValidateStatementBodyReferences(
+        EventScriptModule moduleContext,
+        StatementBodyNode body,
+        IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
+        IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions,
+        List<EventScriptLinkageError> errors,
+        ValidationScope parentScope)
+    {
+        var bodyScope = body.IsBlock ? parentScope.CreateChild() : parentScope;
+        foreach (var nested in body.Statements)
+        {
+            ValidateStatementReferences(moduleContext, nested, ruleDefinitions, selectDefinitions, errors, bodyScope);
         }
     }
 

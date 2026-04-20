@@ -195,4 +195,97 @@ public class EventScriptLinkBuilderScenarios
         Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptLinkageErrorKind.MissingRuleOrSelect && error.Symbol == "missingRule"));
         Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptLinkageErrorKind.InvalidRulePredicate && error.Symbol == "missingPredicate"));
     }
+
+    [TestMethod]
+    public void LinkBuilderFailsWhenALocalVariableIsDeclaredTwiceInTheSameHandlerScope()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateVariables
+                on Start {
+                    let x be 10
+                    let x be 20
+                }
+                """,
+                "duplicate-variables.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicateVariable &&
+            error.SymbolKind == EventScriptSymbolKind.Variable &&
+            error.Symbol == "x"));
+    }
+
+    [TestMethod]
+    public void LinkBuilderFailsWhenALocalVariableReusesAHandlerParameterName()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateParameterVariable
+                on Start(value) {
+                    let value be 10
+                }
+                """,
+                "duplicate-parameter-variable.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicateVariable &&
+            error.Symbol == "value"));
+    }
+
+    [TestMethod]
+    public void LinkBuilderFailsWhenABlockDeclaresTheSameVariableTwice()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateBlockVariables
+                on Start {
+                    if true {
+                        let x be 10
+                        let x be 20
+                    }
+                }
+                """,
+                "duplicate-block-variables.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicateVariable &&
+            error.Symbol == "x"));
+    }
+
+    [TestMethod]
+    public void LinkBuilderAllowsShadowingInNestedBlockScopes()
+    {
+        const string script =
+            """
+            module NestedShadowing
+            on Start {
+                let x be 10
+                if true {
+                    let x be 20
+                    publish Done(value: x)
+                }
+                publish Done(value: x)
+            }
+            """;
+
+        var linkedModule = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(script, "nested-shadowing.es"))
+            .Link();
+
+        var compiled = EventScriptInterpretationCompiler.Compile(linkedModule);
+        var result = compiled.Emit("Start");
+
+        Assert.HasCount(2, result.EmittedEvents);
+        Assert.AreEqual(20m, result.EmittedEvents[0].Arguments["value"].AsNumber());
+        Assert.AreEqual(10m, result.EmittedEvents[1].Arguments["value"].AsNumber());
+    }
 }

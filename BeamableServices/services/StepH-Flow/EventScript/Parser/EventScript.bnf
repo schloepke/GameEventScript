@@ -35,7 +35,7 @@ LetValue ::= Expression
            | GuardedLetValue
 GuardedLetValue ::= Expression "when" Expression { "," [ "or" ] Expression "when" Expression } "otherwise" Expression
 IfStatement ::= "if" Expression StatementOrBlock [ "else" StatementOrBlock ]
-ForStatement ::= "for" Identifier "in" Expression StatementOrBlock
+ForStatement ::= "for" Identifier ( "in" CollectionIterationExpression | RangeIterationSource ) StatementOrBlock
 SeededRandomStatement ::= ":random" "with" Expression StatementOrBlock
 StatementOrBlock ::= Statement | StatementBlock
 StatementBlock ::= "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
@@ -109,6 +109,7 @@ PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | Varia
                     | SetLiteral
                     | GeneratedListExpression
                     | GeneratedSetExpression
+                    | RangeExpression
                     | RandomExpression
                     | SeededRandomExpression
                     | DiceExpression
@@ -142,6 +143,7 @@ TypeTag ::= ":text"
           | ":integer"
           | ":boolean"
           | ":optional"
+          | ":range"
           | ":list"
           | ":dictionary"
           | ":set"
@@ -201,7 +203,7 @@ SortCollectionSelector ::= ":sort" SortDirection
 OrderByCollectionSelector ::= ":order" "by" Identifier "->" Expression SortDirection
 GeneratedListExpression ::= ":list" "[" GeneratedCollectionSelector "]"
 GeneratedSetExpression ::= ":set" "[" GeneratedCollectionSelector "]"
-GeneratedCollectionSelector ::= ":select" Identifier "from" Expression "to" Expression [ "step" Expression ] [ "where" Expression ] "->" Expression
+GeneratedCollectionSelector ::= ":select" Identifier ( RangeIterationSource | "in" CollectionIterationExpression ) [ "where" Expression ] "->" Expression
 SortDirection ::= "ascending" | "descending"
 SliceSelector ::= SliceScope Number
 SliceScope ::= "first" | "last" | "highest" | "lowest"
@@ -218,6 +220,9 @@ ObjectMatchEntry ::= Identifier ":" ( Expression | ObjectMatchPattern )
 
 RandomExpression ::= ":random" [ "from" ] AdditiveExpression "to" AdditiveExpression
 SeededRandomExpression ::= ":random" "with" Expression Expression
+RangeExpression ::= RangeIterationSource
+RangeIterationSource ::= "from" Expression "to" Expression [ "step" Expression ]
+CollectionIterationExpression ::= Expression
 
 DiceExpression ::= ":dice" Number "d" Number
 

@@ -681,17 +681,43 @@ public class EventScriptParsingScenarios
         var squares = (GeneratedCollectionExpressionNode)statements[0].Expression;
         Assert.AreEqual("list", squares.CollectionType);
         Assert.AreEqual("item", squares.Identifier);
-        Assert.IsNull(squares.StepExpression);
+        Assert.IsInstanceOfType<RangeIterationSourceNode>(squares.Source);
+        Assert.IsNull(((RangeIterationSourceNode)squares.Source).RangeExpression.StepExpression);
         Assert.IsNull(squares.Predicate);
 
         var evenSquares = (GeneratedCollectionExpressionNode)statements[1].Expression;
         Assert.AreEqual("list", evenSquares.CollectionType);
-        Assert.IsNotNull(evenSquares.StepExpression);
+        Assert.IsInstanceOfType<RangeIterationSourceNode>(evenSquares.Source);
+        Assert.IsNotNull(((RangeIterationSourceNode)evenSquares.Source).RangeExpression.StepExpression);
         Assert.IsNotNull(evenSquares.Predicate);
 
         var tags = (GeneratedCollectionExpressionNode)statements[2].Expression;
         Assert.AreEqual("set", tags.CollectionType);
+        Assert.IsInstanceOfType<RangeIterationSourceNode>(tags.Source);
         Assert.IsNotNull(tags.Predicate);
+    }
+
+    [TestMethod]
+    public void GeneratedCollectionsCanBeBuiltFromCollectionExpressions()
+    {
+        const string script =
+            """
+            on Build(values) {
+                let doubled be :list[:select item in values -> item * 2];
+                let filteredTags be :set[:select item in values where item > 3 -> item % 2];
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+
+        var doubled = (GeneratedCollectionExpressionNode)statements[0].Expression;
+        Assert.IsInstanceOfType<CollectionIterationSourceNode>(doubled.Source);
+        Assert.IsNull(doubled.Predicate);
+
+        var filteredTags = (GeneratedCollectionExpressionNode)statements[1].Expression;
+        Assert.IsInstanceOfType<CollectionIterationSourceNode>(filteredTags.Source);
+        Assert.IsNotNull(filteredTags.Predicate);
     }
 
     [TestMethod]
@@ -891,8 +917,60 @@ public class EventScriptParsingScenarios
         Assert.IsNotNull(nestedIf.ElseBody);
         Assert.IsFalse(nestedIf.ElseBody.IsBlock);
 
+        Assert.IsInstanceOfType<CollectionIterationSourceNode>(forStatement.Source);
         Assert.IsFalse(forStatement.Body.IsBlock);
         Assert.IsInstanceOfType<PublishStatementNode>(forStatement.Body.Statements[0]);
+    }
+
+    [TestMethod]
+    public void ForCanIterateCollectionsRangesAndStandaloneRangeExpressions()
+    {
+        const string script =
+            """
+            on Start(values) {
+                let fullRange be from 1 to 20
+                let odds as :range be from 1 to 9 step 2
+                for item in values publish Seen(value: item)
+                for item from 1 to 20 publish Seen(value: item)
+                for item from 10 to 1 step (0 - 2) publish Seen(value: item)
+            }
+            """;
+
+        var program = EventScriptParser.Parse(script);
+        var statements = program.Handlers[0].Statements;
+        var fullRangeLet = (LetStatementNode)statements[0];
+        var rangeLet = (LetStatementNode)statements[1];
+        var firstFor = (ForStatementNode)statements[2];
+        var secondFor = (ForStatementNode)statements[3];
+        var thirdFor = (ForStatementNode)statements[4];
+
+        Assert.IsInstanceOfType<RangeExpressionNode>(fullRangeLet.Expression);
+        Assert.AreEqual("range", rangeLet.DeclaredType);
+        Assert.IsInstanceOfType<RangeExpressionNode>(rangeLet.Expression);
+        Assert.IsInstanceOfType<CollectionIterationSourceNode>(firstFor.Source);
+        Assert.IsInstanceOfType<RangeIterationSourceNode>(secondFor.Source);
+        Assert.IsInstanceOfType<RangeIterationSourceNode>(thirdFor.Source);
+    }
+
+    [TestMethod]
+    public void DirectRangesAreRejectedAfterInForLoopsAndGeneratedCollections()
+    {
+        const string invalidForScript =
+            """
+            on Start {
+                for item in from 1 to 10 publish Seen(value: item)
+            }
+            """;
+
+        const string invalidSelectScript =
+            """
+            on Start {
+                let values be :list[:select item in from 1 to 5 -> item]
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(invalidForScript));
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(invalidSelectScript));
     }
 
     [TestMethod]

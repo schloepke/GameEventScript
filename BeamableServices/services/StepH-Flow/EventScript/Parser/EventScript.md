@@ -304,6 +304,7 @@ Built-in type tags:
 - `:integer`
 - `:boolean`
 - `:optional`
+- `:range`
 - `:list`
 - `:dictionary`
 - `:set`
@@ -823,18 +824,20 @@ Rules:
 
 ## Generated Collections
 
-EventScript can generate lists and sets from ranges.
+EventScript can generate lists and sets from ranges or other iterable sources.
 
 ### Generated list
 
 ```eventscript
 :list[:select item from 1 to 5 -> item * item]
+:list[:select item in values -> item * item]
 ```
 
 ### Generated set
 
 ```eventscript
 :set[:select item from 1 to 4 where item >= 2 -> item % 2]
+:set[:select item in values where item >= 2 -> item % 2]
 ```
 
 Optional parts:
@@ -846,10 +849,26 @@ Example:
 
 ```eventscript
 let evens be :list[:select item from 1 to 10 step 2 -> item]
+let doubled be :list[:select item in values -> item * 2]
 let filtered be :list[:select item from 1 to 6 where item % 2 = 0 -> item * item]
 ```
 
 If the step direction does not reach the target range, the result is empty.
+
+## Ranges
+
+Ranges are reusable iterable values.
+
+```eventscript
+let odds as :range be from 1 to 9 step 2
+for item in odds publish Seen(value: item)
+```
+
+You can also iterate a range directly in `for`:
+
+```eventscript
+for item from 1 to 9 step 2 publish Seen(value: item)
+```
 
 ## Rules
 
@@ -1115,9 +1134,13 @@ Single-statement loops are also valid:
 
 ```eventscript
 for unit in units publish UnitReady(arg1: unit.id)
+for index from 1 to 5 publish Tick(value: index)
 ```
 
-The source can be any expression that can be iterated.
+Use `in` for collection or iterator expressions.
+Use `from ... to ... [step ...]` for direct range loops.
+
+`for unit in from 1 to 5 ...` is not valid.
 
 `if` and `for` are control-flow statements, not expressions.
 

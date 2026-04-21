@@ -21,6 +21,7 @@ public static class EventScriptValueSemantics
         {
             EventScriptValueType.Optional => value.AsOptional().HasValue,
             EventScriptValueType.Iterator => value.AsEnumerable().Any(),
+            EventScriptValueType.Range => value.AsEnumerable().Any(),
             EventScriptValueType.Text => value.AsText().Length > 0,
             EventScriptValueType.List => value.AsList().Count > 0,
             EventScriptValueType.Dictionary => value.AsDictionary().Count > 0,
@@ -42,6 +43,7 @@ public static class EventScriptValueSemantics
         {
             EventScriptValueType.Optional => !value.AsOptional().HasValue || IsEmpty(value.AsOptional().Value),
             EventScriptValueType.Iterator => !value.AsEnumerable().Any(),
+            EventScriptValueType.Range => !value.AsEnumerable().Any(),
             EventScriptValueType.Text => value.AsText().Length == 0,
             EventScriptValueType.List => value.AsList().Count == 0,
             EventScriptValueType.Dictionary => value.AsDictionary().Count == 0,
@@ -72,7 +74,7 @@ public static class EventScriptValueSemantics
         {
             EventScriptValueType.Text => haystack.AsText().Contains(ToComparableText(needle), StringComparison.Ordinal),
             EventScriptValueType.Dictionary => haystack.AsDictionary().ContainsKey(needle.AsText()),
-            EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice => haystack.AsList().Any(item => item.Equals(needle)),
+            EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice or EventScriptValueType.Range => haystack.AsList().Any(item => item.Equals(needle)),
             _ => false
         };
     }
@@ -180,7 +182,7 @@ public static class EventScriptValueSemantics
     }
 
     private static bool IsSequential(EventScriptValue value)
-        => value.Type is EventScriptValueType.List or EventScriptValueType.Dice;
+        => value.Type is EventScriptValueType.List or EventScriptValueType.Dice or EventScriptValueType.Range;
 
     private static int AsInt(EventScriptValue value)
     {

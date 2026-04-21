@@ -157,7 +157,7 @@ internal sealed class EventScriptInvocationEngine
                 return;
 
             case ForStatementNode forStatement:
-                foreach (var item in EvaluateExpression(context, forStatement.Source).AsEnumerable())
+                foreach (var item in EnumerateIterationSource(context, forStatement.Source))
                 {
                     context.PushScope();
                     try
@@ -257,6 +257,9 @@ internal sealed class EventScriptInvocationEngine
             case ClampExpressionNode clamp:
                 return EvaluateClampExpression(context, clamp);
 
+            case RangeExpressionNode rangeExpression:
+                return EvaluateRangeExpression(context, rangeExpression);
+
             case RandomExpressionNode randomExpression:
                 return EvaluateRandomExpression(context, randomExpression);
 
@@ -347,6 +350,13 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.Nothing;
     }
 
+    private EventScriptValue EvaluateRangeExpression(ExecutionContext context, RangeExpressionNode rangeExpression)
+    {
+        return TryEvaluateRangeExpression(context, rangeExpression, out var range)
+            ? range
+            : EventScriptValue.Nothing;
+    }
+
     private EventScriptValue EvaluateSeededRandomExpression(ExecutionContext context, SeededRandomExpressionNode seededRandomExpression)
     {
         var seedValue = EvaluateExpression(context, seededRandomExpression.SeedExpression);
@@ -410,52 +420,12 @@ internal sealed class EventScriptInvocationEngine
 
     private EventScriptValue EvaluateGeneratedCollectionExpression(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection)
     {
-        var fromValue = EvaluateExpression(context, generatedCollection.FromExpression);
-        var toValue = EvaluateExpression(context, generatedCollection.ToExpression);
-        var stepValue = generatedCollection.StepExpression is null
-            ? EventScriptValue.Integer(1)
-            : EvaluateExpression(context, generatedCollection.StepExpression);
-
-        if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
-            !TryCoerceNumericForOperation(toValue, out var toNumber) ||
-            !TryCoerceNumericForOperation(stepValue, out var stepNumber) ||
-            !fromNumber.IsFinite ||
-            !toNumber.IsFinite ||
-            !stepNumber.IsFinite)
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        var from = ToIntegerSaturated(fromNumber.Value);
-        var to = ToIntegerSaturated(toNumber.Value);
-        var step = ToIntegerSaturated(stepNumber.Value);
-
-        if (step == 0)
-        {
-            return generatedCollection.CollectionType == "set"
-                ? EventScriptValue.Set(Array.Empty<EventScriptValue>())
-                : EventScriptValue.List(Array.Empty<EventScriptValue>());
-        }
-
         var values = new List<EventScriptValue>();
-        if (step > 0)
+        foreach (var item in EnumerateIterationSource(context, generatedCollection.Source))
         {
-            for (var current = from; current <= to; current += step)
+            if (!TryProjectGeneratedItem(context, generatedCollection, item, values))
             {
-                if (!TryProjectGeneratedItem(context, generatedCollection, EventScriptValue.Integer(current), values))
-                {
-                    break;
-                }
-            }
-        }
-        else
-        {
-            for (var current = from; current >= to; current += step)
-            {
-                if (!TryProjectGeneratedItem(context, generatedCollection, EventScriptValue.Integer(current), values))
-                {
-                    break;
-                }
+                break;
             }
         }
 
@@ -550,6 +520,59 @@ internal sealed class EventScriptInvocationEngine
         {
             context.PopScope();
         }
+    }
+
+    private IEnumerable<EventScriptValue> EnumerateIterationSource(ExecutionContext context, IterationSourceNode source)
+    {
+        switch (source)
+        {
+            case CollectionIterationSourceNode collectionSource:
+                foreach (var item in EvaluateExpression(context, collectionSource.Expression).AsEnumerable())
+                {
+                    yield return item;
+                }
+
+                yield break;
+
+            case RangeIterationSourceNode rangeSource:
+                if (!TryEvaluateRangeExpression(context, rangeSource.RangeExpression, out var rangeValue))
+                {
+                    yield break;
+                }
+
+                foreach (var item in rangeValue.AsEnumerable())
+                {
+                    yield return item;
+                }
+
+                yield break;
+        }
+    }
+
+    private bool TryEvaluateRangeExpression(ExecutionContext context, RangeExpressionNode rangeExpression, out EventScriptValue range)
+    {
+        var fromValue = EvaluateExpression(context, rangeExpression.FromExpression);
+        var toValue = EvaluateExpression(context, rangeExpression.ToExpression);
+        var stepValue = rangeExpression.StepExpression is null
+            ? EventScriptValue.Integer(1)
+            : EvaluateExpression(context, rangeExpression.StepExpression);
+
+        if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
+            !TryCoerceNumericForOperation(toValue, out var toNumber) ||
+            !TryCoerceNumericForOperation(stepValue, out var stepNumber) ||
+            !fromNumber.IsFinite ||
+            !toNumber.IsFinite ||
+            !stepNumber.IsFinite)
+        {
+            range = EventScriptValue.Nothing;
+            return false;
+        }
+
+        range = EventScriptValue.Range(
+            ToIntegerSaturated(fromNumber.Value),
+            ToIntegerSaturated(toNumber.Value),
+            ToIntegerSaturated(stepNumber.Value));
+        return true;
     }
 
     private EventScriptValue EvaluateUnaryExpression(ExecutionContext context, UnaryExpressionNode unary)
@@ -675,6 +698,7 @@ internal sealed class EventScriptInvocationEngine
         {
             EventScriptValueType.Text => EventScriptValue.Integer(operand.AsText().Length),
             EventScriptValueType.Iterator => EventScriptValue.Integer(operand.AsEnumerable().LongCount()),
+            EventScriptValueType.Range => EventScriptValue.Integer(operand.AsEnumerable().LongCount()),
             EventScriptValueType.List => EventScriptValue.Integer(operand.AsList().Count),
             EventScriptValueType.Dictionary => EventScriptValue.Integer(operand.AsDictionary().Count),
             EventScriptValueType.Set => EventScriptValue.Integer(operand.AsSet().Count),
@@ -2502,6 +2526,8 @@ internal sealed class EventScriptInvocationEngine
             }
             case "list":
                 return EventScriptValue.List(value.AsList());
+            case "range":
+                return value.isRange() ? value : EventScriptValue.Nothing;
             case "dictionary":
                 return EventScriptValue.Dictionary(value.AsDictionary());
             case "set":
@@ -2648,6 +2674,7 @@ internal sealed class EventScriptInvocationEngine
             "boolean" => value.Type == EventScriptValueType.Boolean,
             "optional" => value.isOptional(),
             "list" => value.isList(),
+            "range" => value.isRange(),
             "dictionary" => value.isDictionary(),
             "set" => value.isSet(),
             "dice" => value.isDice(),
@@ -2739,6 +2766,7 @@ internal sealed class EventScriptInvocationEngine
                 ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                 : "optional:none",
             EventScriptValueType.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+            EventScriptValueType.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
             EventScriptValueType.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
             EventScriptValueType.Dictionary => $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
             EventScriptValueType.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",

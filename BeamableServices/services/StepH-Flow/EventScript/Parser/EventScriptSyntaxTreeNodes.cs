@@ -12,6 +12,7 @@ public abstract record ExpressionNode : EventScriptNode;
 public abstract record CollectionSelectorNode : EventScriptNode;
 public abstract record ObjectMatchValueNode : EventScriptNode;
 public abstract record DicePatternNode : EventScriptNode;
+public abstract record IterationSourceNode : EventScriptNode;
 
 // Root node of the syntax tree
 
@@ -32,7 +33,7 @@ public sealed record NamedArgumentNode(string Name, ExpressionNode Expression) :
 public sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
 public sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : EventScriptNode;
 public sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
-public sealed record ForStatementNode(string Identifier, ExpressionNode Source, StatementBodyNode Body) : StatementNode;
+public sealed record ForStatementNode(string Identifier, IterationSourceNode Source, StatementBodyNode Body) : StatementNode;
 public sealed record SeededRandomStatementNode(ExpressionNode SeedExpression, StatementBodyNode Body) : StatementNode;
 public sealed record ExpressionStatementNode(ExpressionNode Expression) : StatementNode;
 
@@ -53,10 +54,11 @@ public sealed record DictionaryEntryNode(string Key, ExpressionNode Value) : Eve
 public sealed record UnaryExpressionNode(string Operator, ExpressionNode Operand) : ExpressionNode;
 public sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 public sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
+public sealed record RangeExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression) : ExpressionNode;
 public sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
 public sealed record SeededRandomExpressionNode(ExpressionNode SeedExpression, ExpressionNode BodyExpression) : ExpressionNode;
 public sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
-public sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
+public sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, IterationSourceNode Source, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
 public sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 public sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : EventScriptNode;
 public sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
@@ -105,3 +107,8 @@ public sealed record ObjectMatchPatternNode(IReadOnlyList<ObjectMatchEntryNode> 
 public sealed record ObjectMatchEntryNode(string Key, ObjectMatchValueNode Value) : EventScriptNode;
 public sealed record ObjectMatchExpressionValueNode(ExpressionNode Expression) : ObjectMatchValueNode;
 public sealed record ObjectMatchNestedValueNode(ObjectMatchPatternNode Pattern) : ObjectMatchValueNode;
+
+// Iteration source nodes
+
+public sealed record CollectionIterationSourceNode(ExpressionNode Expression) : IterationSourceNode;
+public sealed record RangeIterationSourceNode(RangeExpressionNode RangeExpression) : IterationSourceNode;

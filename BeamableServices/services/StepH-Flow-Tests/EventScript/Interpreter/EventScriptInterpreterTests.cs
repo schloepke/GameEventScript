@@ -633,6 +633,57 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void RangesCanBeDeclaredIteratedAndUsedAsGeneratedCollectionSources()
+    {
+        const string script = """
+            on Start(values) {
+                let fullRange as :range be from 1 to 3;
+                let odds as :range be from 1 to 5 step 2;
+                let descending be from 5 to 1 step (0 - 2);
+                let zeroStep be from 1 to 5 step 0;
+                let doubled be :list[:select item in values -> item * 2];
+                let filtered be :set[:select item in values where item > 3 -> item % 2];
+
+                for item in fullRange publish Full(value: item);
+                for item from 1 to 5 step 2 publish Direct(value: item);
+                for item in odds publish Indirect(value: item);
+                for item in zeroStep publish Zero(value: item);
+
+                publish Done(isRange: odds is :range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: :len zeroStep, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: :len filtered, hasZero: 0 in filtered, hasOne: 1 in filtered);
+            }
+            """;
+
+        var interpreter = EventScriptManager.Compile(script);
+        var result = interpreter.Emit("Start", EventScriptValue.List(new EventScriptValue[] { 2m, 4m, 5m }));
+
+        Assert.AreEqual("Full", result.EmittedEvents[0].Message);
+        Assert.AreEqual(1L, result.EmittedEvents[0].Arguments["value"].AsInteger());
+        Assert.AreEqual(2L, result.EmittedEvents[1].Arguments["value"].AsInteger());
+        Assert.AreEqual(3L, result.EmittedEvents[2].Arguments["value"].AsInteger());
+        Assert.AreEqual("Direct", result.EmittedEvents[3].Message);
+        Assert.AreEqual(1L, result.EmittedEvents[3].Arguments["value"].AsInteger());
+        Assert.AreEqual(3L, result.EmittedEvents[4].Arguments["value"].AsInteger());
+        Assert.AreEqual(5L, result.EmittedEvents[5].Arguments["value"].AsInteger());
+        Assert.AreEqual("Indirect", result.EmittedEvents[6].Message);
+        Assert.AreEqual(1L, result.EmittedEvents[6].Arguments["value"].AsInteger());
+        Assert.AreEqual(3L, result.EmittedEvents[7].Arguments["value"].AsInteger());
+        Assert.AreEqual(5L, result.EmittedEvents[8].Arguments["value"].AsInteger());
+        Assert.AreEqual("Done", result.EmittedEvents[9].Message);
+
+        var done = result.EmittedEvents[9].Arguments;
+        Assert.IsTrue(done["isRange"].AsBoolean());
+        Assert.AreEqual(5L, done["descendingFirst"].AsInteger());
+        Assert.AreEqual(3L, done["descendingSecond"].AsInteger());
+        Assert.AreEqual(1L, done["descendingThird"].AsInteger());
+        Assert.AreEqual(0L, done["zeroLen"].AsInteger());
+        Assert.AreEqual(4m, done["doubledFirst"].AsNumber());
+        Assert.AreEqual(8m, done["doubledSecond"].AsNumber());
+        Assert.AreEqual(2L, done["filteredLen"].AsInteger());
+        Assert.IsTrue(done["hasZero"].AsBoolean());
+        Assert.IsTrue(done["hasOne"].AsBoolean());
+    }
+
+    [TestMethod]
     public void RulesAndSelectsCanBeReusedAcrossExpressionsAndCollections()
     {
         const string script = """

@@ -148,7 +148,7 @@ public sealed partial class EventScriptLinkBuilder
                 return;
 
             case ForStatementNode forStatement:
-                ValidateExpressionReferences(moduleContext, forStatement.Source, ruleDefinitions, selectDefinitions, errors);
+                ValidateIterationSourceReferences(moduleContext, forStatement.Source, ruleDefinitions, selectDefinitions, errors);
                 var loopScope = scope.CreateChild();
                 loopScope.Declare(forStatement.Identifier);
                 ValidateStatementBodyReferences(moduleContext, forStatement.Body, ruleDefinitions, selectDefinitions, errors, loopScope);
@@ -234,6 +234,17 @@ public sealed partial class EventScriptLinkBuilder
                     expression = clamp.Maximum;
                     continue;
 
+                case RangeExpressionNode rangeExpression:
+                    ValidateExpressionReferences(moduleContext, rangeExpression.FromExpression, ruleDefinitions, selectDefinitions, errors);
+                    ValidateExpressionReferences(moduleContext, rangeExpression.ToExpression, ruleDefinitions, selectDefinitions, errors);
+                    if (rangeExpression.StepExpression is not null)
+                    {
+                        expression = rangeExpression.StepExpression;
+                        continue;
+                    }
+
+                    return;
+
                 case RandomExpressionNode random:
                     ValidateExpressionReferences(moduleContext, random.FromExpression, ruleDefinitions, selectDefinitions, errors);
                     expression = random.ToExpression;
@@ -245,13 +256,7 @@ public sealed partial class EventScriptLinkBuilder
                     continue;
 
                 case GeneratedCollectionExpressionNode generatedCollection:
-                    ValidateExpressionReferences(moduleContext, generatedCollection.FromExpression, ruleDefinitions, selectDefinitions, errors);
-                    ValidateExpressionReferences(moduleContext, generatedCollection.ToExpression, ruleDefinitions, selectDefinitions, errors);
-                    if (generatedCollection.StepExpression is not null)
-                    {
-                        ValidateExpressionReferences(moduleContext, generatedCollection.StepExpression, ruleDefinitions, selectDefinitions, errors);
-                    }
-
+                    ValidateIterationSourceReferences(moduleContext, generatedCollection.Source, ruleDefinitions, selectDefinitions, errors);
                     if (generatedCollection.Predicate is not null)
                     {
                         ValidateExpressionReferences(moduleContext, generatedCollection.Predicate, ruleDefinitions, selectDefinitions, errors);
@@ -318,6 +323,24 @@ public sealed partial class EventScriptLinkBuilder
             }
 
             break;
+        }
+    }
+
+    private static void ValidateIterationSourceReferences(
+        EventScriptModule moduleContext,
+        IterationSourceNode source,
+        IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
+        IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions,
+        List<EventScriptLinkageError> errors)
+    {
+        switch (source)
+        {
+            case CollectionIterationSourceNode collectionSource:
+                ValidateExpressionReferences(moduleContext, collectionSource.Expression, ruleDefinitions, selectDefinitions, errors);
+                return;
+            case RangeIterationSourceNode rangeSource:
+                ValidateExpressionReferences(moduleContext, rangeSource.RangeExpression, ruleDefinitions, selectDefinitions, errors);
+                return;
         }
     }
 

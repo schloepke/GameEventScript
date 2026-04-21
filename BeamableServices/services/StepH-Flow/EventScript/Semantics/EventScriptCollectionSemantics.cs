@@ -152,6 +152,7 @@ public static class EventScriptCollectionSemantics
             EventScriptValueType.Dice => EventScriptValue.List(items),
             EventScriptValueType.List => EventScriptValue.List(items),
             EventScriptValueType.Set => EventScriptValue.List(items),
+            EventScriptValueType.Range => EventScriptValue.List(items),
             _ => EventScriptValue.Nothing
         };
     }
@@ -163,6 +164,7 @@ public static class EventScriptCollectionSemantics
             EventScriptValueType.Set => EventScriptValue.Set(items),
             EventScriptValueType.List => EventScriptValue.List(items),
             EventScriptValueType.Dice => EventScriptValue.List(items),
+            EventScriptValueType.Range => EventScriptValue.List(items),
             _ => EventScriptValue.Nothing
         };
     }

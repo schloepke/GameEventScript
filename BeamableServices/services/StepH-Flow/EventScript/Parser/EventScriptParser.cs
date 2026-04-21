@@ -430,8 +430,28 @@ public sealed class EventScriptParser
     private ForStatementNode ParseForStatement()
     {
         var identifier = ExpectIdentifierLike();
-        Expect(In);
-        var source = ParseExpression();
+        SkipNewLines();
+        IterationSourceNode source;
+        if (Match(In))
+        {
+            SkipNewLines();
+            if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+            {
+                throw new EventScriptParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current.Line, Current.Column);
+            }
+
+            source = new CollectionIterationSourceNode(ParseExpression());
+        }
+        else if (MatchWord("from"))
+        {
+            source = new RangeIterationSourceNode(ParseRangeExpressionCore());
+        }
+        else
+        {
+            var token = Current;
+            throw new EventScriptParseException($"Expected {In} or 'from' but found {token.Text}", token.Line, token.Column);
+        }
+
         var body = ParseStatementBody();
         return new ForStatementNode(identifier, source, body);
     }
@@ -1313,6 +1333,11 @@ public sealed class EventScriptParser
 
     private ExpressionNode ParsePrimaryExpression()
     {
+        if (MatchWord("from"))
+        {
+            return ParseRangeExpressionCore();
+        }
+
         if (MatchTag(":random"))
         {
             SkipNewLines();
@@ -1522,20 +1547,25 @@ public sealed class EventScriptParser
         SkipNewLines();
         var identifier = ExpectIdentifierLike();
         SkipNewLines();
-        ExpectWord("from");
-        SkipNewLines();
-        var fromExpression = ParseExpression();
-        SkipNewLines();
-        Expect(To);
-        SkipNewLines();
-        var toExpression = ParseExpression();
-
-        ExpressionNode? stepExpression = null;
-        SkipNewLines();
-        if (MatchWord("step"))
+        IterationSourceNode source;
+        if (MatchWord("from"))
+        {
+            source = new RangeIterationSourceNode(ParseRangeExpressionCore());
+        }
+        else if (Match(In))
         {
             SkipNewLines();
-            stepExpression = ParseExpression();
+            if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+            {
+                throw new EventScriptParseException("Direct ranges are not allowed after 'in'; use ':select item from ... to ...' or iterate a range value", Current.Line, Current.Column);
+            }
+
+            source = new CollectionIterationSourceNode(ParseExpression());
+        }
+        else
+        {
+            var token = Current;
+            throw new EventScriptParseException($"Expected 'from' or {In} but found {token.Text}", token.Line, token.Column);
         }
 
         ExpressionNode? predicate = null;
@@ -1550,7 +1580,7 @@ public sealed class EventScriptParser
         Expect(Arrow);
         SkipNewLines();
         var projection = ParseExpression();
-        return new GeneratedCollectionExpressionNode(collectionType, identifier, fromExpression, toExpression, stepExpression, predicate, projection);
+        return new GeneratedCollectionExpressionNode(collectionType, identifier, source, predicate, projection);
     }
 
     private DictionaryLiteralExpressionNode ParseDictionaryLiteralExpression()
@@ -1609,6 +1639,25 @@ public sealed class EventScriptParser
         return new RandomExpressionNode(fromExpression, toExpression);
     }
 
+    private RangeExpressionNode ParseRangeExpressionCore()
+    {
+        SkipNewLines();
+        var fromExpression = ParseRangeBoundExpression();
+        SkipNewLines();
+        Expect(To);
+        SkipNewLines();
+        var toExpression = ParseRangeBoundExpression();
+
+        ExpressionNode? stepExpression = null;
+        if (MatchWord("step"))
+        {
+            SkipNewLines();
+            stepExpression = ParseExpression();
+        }
+
+        return new RangeExpressionNode(fromExpression, toExpression, stepExpression);
+    }
+
     private SeededRandomExpressionNode ParseSeededRandomExpression()
     {
         SkipNewLines();
@@ -1619,6 +1668,12 @@ public sealed class EventScriptParser
     }
 
     private ExpressionNode ParseRandomBoundExpression()
+    {
+        SkipNewLines();
+        return ParseAdditiveExpression();
+    }
+
+    private ExpressionNode ParseRangeBoundExpression()
     {
         SkipNewLines();
         return ParseAdditiveExpression();

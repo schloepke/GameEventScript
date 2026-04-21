@@ -21,6 +21,7 @@ public enum EventScriptValueType
     Boolean,
     Optional,
     Iterator,
+    Range,
     List,
     Dictionary,
     Set,
@@ -53,6 +54,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     public bool isOptional() => Type == EventScriptValueType.Optional;
     public bool isSet() => Type == EventScriptValueType.Set;
     public bool isDice() => Type == EventScriptValueType.Dice;
+    public bool isRange() => Type == EventScriptValueType.Range;
 
     public virtual string AsText()
     {
@@ -141,6 +143,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             case EventScriptNothingValue:
                 return Array.Empty<EventScriptValue>();
             case EventScriptIteratorValue:
+                return new ReadOnlyCollection<EventScriptValue>(AsEnumerable().ToArray());
+            case EventScriptRangeValue:
                 return new ReadOnlyCollection<EventScriptValue>(AsEnumerable().ToArray());
             case EventScriptListValue list:
                 return list.Items;
@@ -251,6 +255,16 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
         if (this is EventScriptIteratorValue iterator)
         {
             foreach (var item in EnumerateIterator(iterator))
+            {
+                yield return item;
+            }
+
+            yield break;
+        }
+
+        if (this is EventScriptRangeValue range)
+        {
+            foreach (var item in EnumerateRange(range))
             {
                 yield return item;
             }
@@ -376,6 +390,29 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
         }
     }
 
+    private IEnumerable<EventScriptValue> EnumerateRange(EventScriptRangeValue range)
+    {
+        if (range.Step == 0)
+        {
+            yield break;
+        }
+
+        if (range.Step > 0)
+        {
+            for (var current = range.From; current <= range.To; current += range.Step)
+            {
+                yield return Integer(current);
+            }
+
+            yield break;
+        }
+
+        for (var current = range.From; current >= range.To; current += range.Step)
+        {
+            yield return Integer(current);
+        }
+    }
+
     public virtual bool TryGetDictionaryMember(string key, out EventScriptValue value)
     {
         if (this is not EventScriptDictionaryValue dictionary)
@@ -420,6 +457,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Boolean => "Boolean",
             EventScriptValueType.Optional => "Optional",
             EventScriptValueType.Iterator => "Iterator",
+            EventScriptValueType.Range => "Range",
             EventScriptValueType.List => "List",
             EventScriptValueType.Dictionary => "Dictionary",
             EventScriptValueType.Set => "Set",
@@ -445,6 +483,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Boolean => AsBoolean().ToString(),
             EventScriptValueType.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
             EventScriptValueType.Iterator => $"iterator[{string.Join(", ", AsEnumerable().Select(x => x.ToString()))}]",
+            EventScriptValueType.Range => $"range[{((EventScriptRangeValue)this).From} to {((EventScriptRangeValue)this).To} step {((EventScriptRangeValue)this).Step}]",
             EventScriptValueType.List => $"[{string.Join(", ", AsList().Select(x => x.ToString()))}]",
             EventScriptValueType.Set => $"set[{string.Join(", ", AsSet().Select(x => x.ToString()))}]",
             EventScriptValueType.Dictionary => $"dict[{string.Join(", ", AsDictionary().Select(x => $"{x.Key}: {x.Value}"))}]",
@@ -487,6 +526,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Boolean => AsBoolean() == other.AsBoolean(),
             EventScriptValueType.Optional => EqualsOptional(AsOptional(), other.AsOptional()),
             EventScriptValueType.Iterator => AsEnumerable().SequenceEqual(other.AsEnumerable()),
+            EventScriptValueType.Range => ((EventScriptRangeValue)this).From == ((EventScriptRangeValue)other).From &&
+                                          ((EventScriptRangeValue)this).To == ((EventScriptRangeValue)other).To &&
+                                          ((EventScriptRangeValue)this).Step == ((EventScriptRangeValue)other).Step,
             EventScriptValueType.List => AsList().SequenceEqual(other.AsList()),
             EventScriptValueType.Dictionary => EqualsDictionary(AsDictionary(), other.AsDictionary()),
             EventScriptValueType.Set => AsSet().SetEquals(other.AsSet()),
@@ -531,6 +573,14 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             case EventScriptValueType.Iterator:
                 foreach (var item in AsEnumerable()) hash.Add(item);
                 break;
+            case EventScriptValueType.Range:
+            {
+                var range = (EventScriptRangeValue)this;
+                hash.Add(range.From);
+                hash.Add(range.To);
+                hash.Add(range.Step);
+                break;
+            }
             case EventScriptValueType.List:
                 foreach (var item in AsList()) hash.Add(item);
                 break;
@@ -576,6 +626,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
     public static EventScriptValue Iterator(EventScriptIteratorMode mode, EventScriptValue source)
         => EventScriptIteratorValue.Create(mode, RequireNotNull(source));
+
+    public static EventScriptValue Range(long from, long to, long step = 1)
+        => EventScriptRangeValue.Create(from, to, step);
 
     public static EventScriptValue Values(EventScriptValue source) => Iterator(EventScriptIteratorMode.Values, source);
 
@@ -728,10 +781,11 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Boolean => 4,
             EventScriptValueType.Optional => 5,
             EventScriptValueType.Iterator => 6,
-            EventScriptValueType.List => 7,
-            EventScriptValueType.Dictionary => 8,
-            EventScriptValueType.Set => 9,
-            EventScriptValueType.Dice => 10,
+            EventScriptValueType.Range => 7,
+            EventScriptValueType.List => 8,
+            EventScriptValueType.Dictionary => 9,
+            EventScriptValueType.Set => 10,
+            EventScriptValueType.Dice => 11,
             _ => 8
         };
     }
@@ -812,6 +866,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 EventScriptValueType.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
                 EventScriptValueType.Optional => CompareOptional(left.AsOptional(), right.AsOptional()),
                 EventScriptValueType.Iterator => CompareSequence(left.AsEnumerable().ToArray(), right.AsEnumerable().ToArray()),
+                EventScriptValueType.Range => CompareRange((EventScriptRangeValue)left, (EventScriptRangeValue)right),
                 EventScriptValueType.List => CompareSequence(left.AsList(), right.AsList()),
                 EventScriptValueType.Dictionary => CompareDictionary(left.AsDictionary(), right.AsDictionary()),
                 EventScriptValueType.Set => CompareSequence(
@@ -844,6 +899,17 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             }
 
             return 0;
+        }
+
+        private static int CompareRange(EventScriptRangeValue left, EventScriptRangeValue right)
+        {
+            var byFrom = left.From.CompareTo(right.From);
+            if (byFrom != 0) return byFrom;
+
+            var byTo = left.To.CompareTo(right.To);
+            if (byTo != 0) return byTo;
+
+            return left.Step.CompareTo(right.Step);
         }
     }
 
@@ -1061,6 +1127,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             case EventScriptIntegerValue:
             case EventScriptBooleanValue:
             case EventScriptDiceValue:
+            case EventScriptRangeValue:
             case EventScriptIteratorValue:
                 value = Text(ToString());
                 return true;
@@ -1083,6 +1150,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 value = this;
                 return true;
             case EventScriptIteratorValue:
+                value = List(AsEnumerable());
+                return true;
+            case EventScriptRangeValue:
                 value = List(AsEnumerable());
                 return true;
             case EventScriptSetValue:
@@ -1137,6 +1207,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 value = Set(AsList());
                 return true;
             case EventScriptIteratorValue:
+                value = Set(AsEnumerable());
+                return true;
+            case EventScriptRangeValue:
                 value = Set(AsEnumerable());
                 return true;
         }

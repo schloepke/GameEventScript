@@ -82,6 +82,7 @@ public enum EventScriptLinkageErrorKind
     WrongRuleArity,
     WrongSelectArity,
     DuplicateHandlerParameter,
+    DuplicateDefinitionParameter,
     DuplicatePublishArgument,
     DuplicateVariable
 }

@@ -262,6 +262,44 @@ public class EventScriptLinkBuilderScenarios
     }
 
     [TestMethod]
+    public void LinkBuilderFailsWhenARuleDeclaresTheSameParameterTwice()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateRuleParameters
+                rule wounded(unit, unit) means unit.hp < unit.maxHp
+                """,
+                "duplicate-rule-parameters.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicateDefinitionParameter &&
+            error.SymbolKind == EventScriptSymbolKind.Rule &&
+            error.Symbol == "wounded"));
+    }
+
+    [TestMethod]
+    public void LinkBuilderFailsWhenASelectDeclaresTheSameParameterTwice()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateSelectParameters
+                select wounded(units, units) means units[:filter unit where unit.hp < unit.maxHp]
+                """,
+                "duplicate-select-parameters.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicateDefinitionParameter &&
+            error.SymbolKind == EventScriptSymbolKind.Select &&
+            error.Symbol == "wounded"));
+    }
+
+    [TestMethod]
     public void LinkBuilderAllowsShadowingInNestedBlockScopes()
     {
         const string script =

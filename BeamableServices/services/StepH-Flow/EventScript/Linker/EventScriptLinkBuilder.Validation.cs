@@ -52,11 +52,41 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var ruleDefinition in eventScriptModule.RuleDefinitions)
         {
+            var duplicateParameters = ruleDefinition.Parameters
+                .GroupBy(parameter => parameter, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key);
+
+            foreach (var duplicateParameter in duplicateParameters)
+            {
+                errors.Add(CreateError(
+                    eventScriptModule,
+                    $"Rule '{ruleDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
+                    ruleDefinition.Name,
+                    EventScriptSymbolKind.Rule,
+                    EventScriptLinkageErrorKind.DuplicateDefinitionParameter));
+            }
+
             ValidateExpressionReferences(eventScriptModule, ruleDefinition.Expression, ruleDefinitions, selectDefinitions, errors);
         }
 
         foreach (var selectDefinition in eventScriptModule.SelectDefinitions)
         {
+            var duplicateParameters = selectDefinition.Parameters
+                .GroupBy(parameter => parameter, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key);
+
+            foreach (var duplicateParameter in duplicateParameters)
+            {
+                errors.Add(CreateError(
+                    eventScriptModule,
+                    $"Select '{selectDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
+                    selectDefinition.Name,
+                    EventScriptSymbolKind.Select,
+                    EventScriptLinkageErrorKind.DuplicateDefinitionParameter));
+            }
+
             ValidateExpressionReferences(eventScriptModule, selectDefinition.Expression, ruleDefinitions, selectDefinitions, errors);
         }
 

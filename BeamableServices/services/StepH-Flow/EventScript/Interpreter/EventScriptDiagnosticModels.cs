@@ -53,8 +53,7 @@ public sealed class EventScriptDiagnosticTraceCollector : IEventScriptDiagnostic
     public void Record(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
         => _events.Add(new EventScriptDiagnosticEvent(++_sequence, kind, name, EventScriptNamedArguments.Create(arguments), detail));
 
-    public override string ToString()
-    {
-        return $"EventScriptDiagnosticTraceCollector: {_events.Count} events\n{_events.Select(e => e.ToString()).Aggregate((a, b) => a + "\n" + b)}";
-    }
+    public override string ToString() => _events.Count == 0
+        ? "EventScriptDiagnosticTraceCollector: no events"
+        : $"EventScriptDiagnosticTraceCollector: {_events.Count} events\n{_events.Select(e => e.ToString()).Aggregate((a, b) => a + "\n" + b)}";
 }

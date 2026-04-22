@@ -177,7 +177,7 @@ public sealed class CompiledEventScriptHandler
         Parameters = syntax.Parameters.ToArray();
         Statements = syntax.Statements.ToArray();
         DeclarationOrder = declarationOrder;
-        SignatureId = EventScriptMessageSignature.CreateSignatureId(Parameters);
+        SignatureId = EventScriptMessageSignature.CreateSignatureId(Message, Parameters);
         DiagnosticsEnabled = diagnosticsEnabled;
         Definition = new EventScriptMessageSignature(Message, Parameters);
     }

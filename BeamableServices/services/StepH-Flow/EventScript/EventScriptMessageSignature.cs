@@ -12,14 +12,29 @@ public sealed class EventScriptMessageSignature
     public static EventScriptMessageSignature MessageSignature(string name, IEnumerable<string>? parameters)
         => new(name, parameters);
 
-    public static string CreateSignatureId(IEnumerable<string> names)
-        => string.Join("|", names.OrderBy(name => name, StringComparer.Ordinal));
+    public static string NormalizeMessageName(string? name)
+        => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+
+    public static IReadOnlyList<string> NormalizeParameterNames(IEnumerable<string>? names)
+        => names is null
+            ? []
+            : names
+                .Select(name => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim())
+                .Where(name => !string.IsNullOrEmpty(name))
+                .ToArray();
+
+    public static string CreateSignatureId(string name, IEnumerable<string>? parameterNames)
+    {
+        var normalizedName = NormalizeMessageName(name);
+        var normalizedParameters = NormalizeParameterNames(parameterNames);
+        return $"{normalizedName}({string.Join(",", normalizedParameters.OrderBy(parameter => parameter, StringComparer.Ordinal))})";
+    }
 
     public EventScriptMessageSignature(string name, IEnumerable<string>? parameters)
     {
-        Name = string.IsNullOrWhiteSpace(name) ? string.Empty : name;
-        Parameters = parameters is null ? [] : parameters.Where(parameter => !string.IsNullOrWhiteSpace(parameter)).ToArray();
-        SignatureId = CreateSignatureId(Parameters);
+        Name = NormalizeMessageName(name);
+        Parameters = NormalizeParameterNames(parameters);
+        SignatureId = CreateSignatureId(Name, Parameters);
     }
 
     public string Name { get; }

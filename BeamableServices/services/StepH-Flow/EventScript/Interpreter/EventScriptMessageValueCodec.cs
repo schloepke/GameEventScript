@@ -113,7 +113,7 @@ internal static class EventScriptMessageValueCodec
         }
 
         var normalizedArguments = EventScriptNamedArguments.Create(arguments);
-        var argumentSignatureId = EventScriptMessageSignature.CreateSignatureId(normalizedArguments.Keys);
+        var argumentSignatureId = EventScriptMessageSignature.CreateSignatureId(handler.Name, normalizedArguments.Keys);
         if (!string.Equals(argumentSignatureId, handler.SignatureId, StringComparison.Ordinal))
         {
             return false;

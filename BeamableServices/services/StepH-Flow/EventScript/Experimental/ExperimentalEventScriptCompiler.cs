@@ -159,7 +159,7 @@ public static class ExperimentalEventScriptCompiler
 
                     var rootScope = ScopeFrame.CreateRoot(handler.Parameters);
                     var programIndex = CompileStatements(handler.Message, handler.Statements, rootScope);
-                    var signatureId = EventScriptMessageSignature.CreateSignatureId(handler.Parameters);
+                    var signatureId = EventScriptMessageSignature.CreateSignatureId(handler.Message, handler.Parameters);
                     compiledHandlers.Add(new ExperimentalCompiledEventScriptHandler(
                         handler.Message,
                         handler.Parameters.ToArray(),

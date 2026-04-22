@@ -24,6 +24,25 @@ public sealed class EventScriptMessageTests
     }
 
     [TestMethod]
+    public void SignatureIdIncludesMessageNameAndNormalizesWhitespace()
+    {
+        var shoot = new EventScriptMessageSignature(" Shoot ", ["unit", "target"]);
+        var run = new EventScriptMessageSignature("Run", ["target", "unit"]);
+        var message = new EventScriptMessage(" Shoot ", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+        {
+            ["target"] = EventScriptValue.Integer(2),
+            ["unit"] = EventScriptValue.Integer(1)
+        });
+
+        Assert.AreEqual("Shoot(target,unit)", shoot.SignatureId);
+        Assert.AreEqual("Run(target,unit)", run.SignatureId);
+        Assert.AreNotEqual(shoot.SignatureId, run.SignatureId);
+        Assert.AreEqual("Shoot", message.Name);
+        Assert.AreEqual(shoot.SignatureId, message.SignatureId);
+        Assert.IsTrue(shoot.Matches(message));
+    }
+
+    [TestMethod]
     public void CompiledScriptExposeMessageDefinitionsAndInvokeMessageApi()
     {
         const string script = """

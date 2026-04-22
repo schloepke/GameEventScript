@@ -16,9 +16,9 @@ public sealed class EventScriptMessage
 
     public EventScriptMessage(string name, EventScriptNamedArguments? arguments = null)
     {
-        Name = string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+        Name = EventScriptMessageSignature.NormalizeMessageName(name);
         Arguments = arguments ?? EventScriptNamedArguments.Empty;
-        SignatureId = EventScriptMessageSignature.CreateSignatureId(Arguments.Keys);
+        SignatureId = EventScriptMessageSignature.CreateSignatureId(Name, Arguments.Keys);
     }
 
     public string Name { get; }

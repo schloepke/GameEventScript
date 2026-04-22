@@ -345,4 +345,24 @@ public class EventScriptLinkBuilderScenarios
             error.Kind == EventScriptLinkageErrorKind.DuplicatePublishArgument &&
             error.Symbol == "handler bind"));
     }
+
+    [TestMethod]
+    public void LinkBuilderFailsWhenHandlerLiteralUsesDuplicateParameters()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateHandlerLiteralParams
+                on Start(unit, target) {
+                    let shoot as :handler be :handler Shoot(unit, unit)
+                    publish Done
+                }
+                """,
+                "duplicate-handler-literal-params.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicateHandlerParameter &&
+            error.Symbol == "Shoot"));
+    }
 }

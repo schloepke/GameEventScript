@@ -213,7 +213,8 @@ public sealed partial class EventScriptLinkBuilder
 
                     return;
 
-                case HandlerLiteralExpressionNode:
+                case HandlerLiteralExpressionNode handlerLiteral:
+                    ValidateDuplicateHandlerLiteralParameters(moduleContext, handlerLiteral, errors);
                     return;
 
                 case MessageLiteralExpressionNode messageLiteral:
@@ -510,6 +511,27 @@ public sealed partial class EventScriptLinkBuilder
                 symbolName,
                 EventScriptSymbolKind.Handler,
                 EventScriptLinkageErrorKind.DuplicatePublishArgument));
+        }
+    }
+
+    private static void ValidateDuplicateHandlerLiteralParameters(
+        EventScriptModule moduleContext,
+        HandlerLiteralExpressionNode handlerLiteral,
+        List<EventScriptLinkageError> errors)
+    {
+        var duplicateParameters = handlerLiteral.Parameters
+            .GroupBy(parameter => parameter, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key);
+
+        foreach (var duplicateParameter in duplicateParameters)
+        {
+            errors.Add(CreateError(
+                moduleContext,
+                $"Handler literal '{handlerLiteral.Message}' declares parameter '{duplicateParameter}' more than once",
+                handlerLiteral.Message,
+                EventScriptSymbolKind.Handler,
+                EventScriptLinkageErrorKind.DuplicateHandlerParameter));
         }
     }
 

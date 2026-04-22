@@ -145,5 +145,44 @@ public sealed class ExperimentalOpcodeCompilerTests
             result.EmittedEvents.Select(it => it.Arguments["value"].AsInteger()).ToList());
     }
 
+    [TestMethod]
+    public void ExperimentalRuntimeTreatsMessageAndHandlerAsFirstClassTypes()
+    {
+        const string script =
+            """
+            module ExperimentalMessageFirstClass
+            on Start(unit, target) {
+                let shoot as :handler be :handler Shoot(unit, target)
+                let msg as :message be shoot(unit: unit, target: target)
+                publish Done(
+                    msgIsMessage: msg is :message,
+                    msgIsDictionary: msg is :dictionary,
+                    handlerIsHandler: shoot is :handler,
+                    handlerIsDictionary: shoot is :dictionary,
+                    msgName: msg.name,
+                    msgSignature: msg[:signatureid],
+                    handlerName: shoot.name,
+                    handlerParameterCount: :len shoot[:parameters],
+                    messageArgumentCount: :len msg.arguments
+                )
+            }
+            """;
+
+        var compiled = Compile(script);
+        var result = compiled.Invoke(Message("Start", ("unit", "u1"), ("target", "t1")));
+
+        Assert.HasCount(1, result.EmittedEvents);
+        var args = result.EmittedEvents[0].Arguments;
+        Assert.IsTrue(args["msgIsMessage"].AsBoolean());
+        Assert.IsFalse(args["msgIsDictionary"].AsBoolean());
+        Assert.IsTrue(args["handlerIsHandler"].AsBoolean());
+        Assert.IsFalse(args["handlerIsDictionary"].AsBoolean());
+        Assert.AreEqual("Shoot", args["msgName"].AsText());
+        Assert.AreEqual("Shoot(target,unit)", args["msgSignature"].AsText());
+        Assert.AreEqual("Shoot", args["handlerName"].AsText());
+        Assert.AreEqual(2L, args["handlerParameterCount"].AsInteger());
+        Assert.AreEqual(2L, args["messageArgumentCount"].AsInteger());
+    }
+
     private static ExperimentalCompiledEventScript Compile(string script) => ExperimentalEventScriptCompiler.Compile(LinkModules(ParseModule(script)));
 }

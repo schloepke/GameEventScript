@@ -160,4 +160,46 @@ public sealed class EventScriptMessageTests
         Assert.IsFalse(result.EmittedEvents[0].Arguments["isMessage"].AsBoolean());
         Assert.IsTrue(result.EmittedEvents[0].Arguments["isNothing"].AsBoolean());
     }
+
+    [TestMethod]
+    public void MessageAndHandlerRemainFirstClassWithMemberAccessButAreNotDictionaryTypes()
+    {
+        const string script = """
+                              module MessageFirstClass
+                              on Start(unit, target) {
+                                  let shoot as :handler be :handler Shoot(unit, target)
+                                  let msg as :message be shoot(unit: unit, target: target)
+                                  publish Done(
+                                      msgIsMessage: msg is :message,
+                                      msgIsDictionary: msg is :dictionary,
+                                      handlerIsHandler: shoot is :handler,
+                                      handlerIsDictionary: shoot is :dictionary,
+                                      msgName: msg.name,
+                                      msgSignature: msg[:signatureid],
+                                      handlerName: shoot.name,
+                                      handlerParameterCount: :len shoot[:parameters],
+                                      messageArgumentCount: :len msg.arguments
+                                  )
+                              }
+                              """;
+
+        var compiled = EventScriptManager.Compile(script);
+        var result = compiled.Invoke("Start", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+        {
+            ["unit"] = EventScriptValue.Text("u1"),
+            ["target"] = EventScriptValue.Text("t1")
+        });
+
+        Assert.HasCount(1, result.EmittedEvents);
+        var args = result.EmittedEvents[0].Arguments;
+        Assert.IsTrue(args["msgIsMessage"].AsBoolean());
+        Assert.IsFalse(args["msgIsDictionary"].AsBoolean());
+        Assert.IsTrue(args["handlerIsHandler"].AsBoolean());
+        Assert.IsFalse(args["handlerIsDictionary"].AsBoolean());
+        Assert.AreEqual("Shoot", args["msgName"].AsText());
+        Assert.AreEqual("Shoot(target,unit)", args["msgSignature"].AsText());
+        Assert.AreEqual("Shoot", args["handlerName"].AsText());
+        Assert.AreEqual(2L, args["handlerParameterCount"].AsInteger());
+        Assert.AreEqual(2L, args["messageArgumentCount"].AsInteger());
+    }
 }

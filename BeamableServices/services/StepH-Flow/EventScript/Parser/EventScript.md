@@ -21,7 +21,7 @@ EventScript is case-sensitive.
 - Keywords are lowercase: `module`, `on`, `publish`, `let`, `if`, `for`, `rule`, `select`.
 - Messages start with an uppercase letter: `Start`, `DamageTaken`, `TurnEnded`.
 - Local variables and identifiers start with a lowercase letter: `hp`, `target`, `woundedUnits`.
-- Type names are written as tags: `:decimal`, `:text`, `:list`, `:meter`.
+- Type names are written as tags: `:decimal`, `:text`, `:list`, `:message`, `:handler`, `:meter`.
 - Tags are also first-class values: `:name`, `:boss`, `:fire`.
 - Collection mini-language lives inside `[...]`.
 - Many failures are represented as `nothing` rather than exceptions.
@@ -305,11 +305,17 @@ Built-in type tags:
 - `:boolean`
 - `:optional`
 - `:range`
+- `:message`
+- `:handler`
 - `:list`
 - `:dictionary`
 - `:set`
 - `:dice`
 - `:nothing`
+
+`message` and `handler` are first-class built-in types.
+They expose read-only members (`name`, `signatureid`, plus `arguments`/`parameters`) via both `.` and `[:]`,
+but they are not treated as `:dictionary` for type checks.
 
 ## Type Checks and Type Casts
 

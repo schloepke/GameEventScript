@@ -1372,14 +1372,9 @@ internal sealed class ExperimentalOpcodeInvocationEngine
             return EventScriptValue.Nothing;
         }
 
-        if (target.Type == EventScriptValueType.Dictionary)
+        if (target.TryGetDictionaryMember(memberAccess.Member, out var value))
         {
-            if (target.TryGetDictionaryMember(memberAccess.Member, out var value))
-            {
-                return value;
-            }
-
-            return EventScriptValue.Nothing;
+            return value;
         }
 
         return EventScriptValue.Nothing;
@@ -2717,13 +2712,17 @@ internal sealed class ExperimentalOpcodeInvocationEngine
             case "range":
                 return value.isRange() ? value : EventScriptValue.Nothing;
             case "message":
-                return EventScriptMessageValueCodec.TryReadMessageValue(value, out var messageValue)
-                    ? EventScriptMessageValueCodec.CreateMessageValue(messageValue)
-                    : EventScriptValue.Nothing;
+                return value.Type == EventScriptValueType.Message
+                    ? value
+                    : EventScriptMessageValueCodec.TryReadMessageValue(value, out var messageValue)
+                        ? EventScriptMessageValueCodec.CreateMessageValue(messageValue)
+                        : EventScriptValue.Nothing;
             case "handler":
-                return EventScriptMessageValueCodec.TryReadHandlerValue(value, out var handlerValue)
-                    ? EventScriptMessageValueCodec.CreateHandlerValue(handlerValue)
-                    : EventScriptValue.Nothing;
+                return value.Type == EventScriptValueType.Handler
+                    ? value
+                    : EventScriptMessageValueCodec.TryReadHandlerValue(value, out var handlerValue)
+                        ? EventScriptMessageValueCodec.CreateHandlerValue(handlerValue)
+                        : EventScriptValue.Nothing;
             case "dictionary":
                 return EventScriptValue.Dictionary(value.AsDictionary());
             case "set":
@@ -2871,8 +2870,8 @@ internal sealed class ExperimentalOpcodeInvocationEngine
             "optional" => value.isOptional(),
             "list" => value.isList(),
             "range" => value.isRange(),
-            "message" => EventScriptMessageValueCodec.TryReadMessageValue(value, out _),
-            "handler" => EventScriptMessageValueCodec.TryReadHandlerValue(value, out _),
+            "message" => value.Type == EventScriptValueType.Message || EventScriptMessageValueCodec.TryReadMessageValue(value, out _),
+            "handler" => value.Type == EventScriptValueType.Handler || EventScriptMessageValueCodec.TryReadHandlerValue(value, out _),
             "dictionary" => value.isDictionary(),
             "set" => value.isSet(),
             "dice" => value.isDice(),
@@ -2965,6 +2964,8 @@ internal sealed class ExperimentalOpcodeInvocationEngine
                 : "optional:none",
             EventScriptValueType.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
             EventScriptValueType.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
+            EventScriptValueType.Message => $"message:{((EventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((EventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
+            EventScriptValueType.Handler => $"handler:{((EventScriptHandlerValue)value).Signature.SignatureId}",
             EventScriptValueType.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
             EventScriptValueType.Dictionary => $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
             EventScriptValueType.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",

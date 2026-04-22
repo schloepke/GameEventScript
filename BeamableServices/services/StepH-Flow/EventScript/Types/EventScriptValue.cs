@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using StepH.Flow.EventScript;
 
 namespace StepH.Flow.EventScript.Types;
 
@@ -22,6 +23,8 @@ public enum EventScriptValueType
     Optional,
     Iterator,
     Range,
+    Message,
+    Handler,
     List,
     Dictionary,
     Set,
@@ -55,6 +58,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     public bool isSet() => Type == EventScriptValueType.Set;
     public bool isDice() => Type == EventScriptValueType.Dice;
     public bool isRange() => Type == EventScriptValueType.Range;
+    public bool isMessage() => Type == EventScriptValueType.Message;
+    public bool isHandler() => Type == EventScriptValueType.Handler;
 
     public virtual string AsText()
     {
@@ -173,6 +178,10 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 return EmptyDictionaryView.Instance;
             case EventScriptDictionaryValue dictionary:
                 return dictionary.VisibleView;
+            case EventScriptMessageValue message:
+                return message.Members;
+            case EventScriptHandlerValue handler:
+                return handler.Members;
         }
 
         if (TryConvertToDictionary(out var converted) && converted.Type == EventScriptValueType.Dictionary)
@@ -458,6 +467,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Optional => "Optional",
             EventScriptValueType.Iterator => "Iterator",
             EventScriptValueType.Range => "Range",
+            EventScriptValueType.Message => "Message",
+            EventScriptValueType.Handler => "Handler",
             EventScriptValueType.List => "List",
             EventScriptValueType.Dictionary => "Dictionary",
             EventScriptValueType.Set => "Set",
@@ -484,6 +495,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
             EventScriptValueType.Iterator => $"iterator[{string.Join(", ", AsEnumerable().Select(x => x.ToString()))}]",
             EventScriptValueType.Range => $"range[{((EventScriptRangeValue)this).From} to {((EventScriptRangeValue)this).To} step {((EventScriptRangeValue)this).Step}]",
+            EventScriptValueType.Message => ((EventScriptMessageValue)this).Value.ToString(),
+            EventScriptValueType.Handler => $"handler {((EventScriptHandlerValue)this).Signature.SignatureId}",
             EventScriptValueType.List => $"[{string.Join(", ", AsList().Select(x => x.ToString()))}]",
             EventScriptValueType.Set => $"set[{string.Join(", ", AsSet().Select(x => x.ToString()))}]",
             EventScriptValueType.Dictionary => $"dict[{string.Join(", ", AsDictionary().Select(x => $"{x.Key}: {x.Value}"))}]",
@@ -529,6 +542,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Range => ((EventScriptRangeValue)this).From == ((EventScriptRangeValue)other).From &&
                                           ((EventScriptRangeValue)this).To == ((EventScriptRangeValue)other).To &&
                                           ((EventScriptRangeValue)this).Step == ((EventScriptRangeValue)other).Step,
+            EventScriptValueType.Message => ((EventScriptMessageValue)this).Value.SignatureId == ((EventScriptMessageValue)other).Value.SignatureId &&
+                                            EqualsDictionary(((EventScriptMessageValue)this).Value.Arguments, ((EventScriptMessageValue)other).Value.Arguments),
+            EventScriptValueType.Handler => ((EventScriptHandlerValue)this).Signature.SignatureId == ((EventScriptHandlerValue)other).Signature.SignatureId,
             EventScriptValueType.List => AsList().SequenceEqual(other.AsList()),
             EventScriptValueType.Dictionary => EqualsDictionary(AsDictionary(), other.AsDictionary()),
             EventScriptValueType.Set => AsSet().SetEquals(other.AsSet()),
@@ -581,6 +597,18 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 hash.Add(range.Step);
                 break;
             }
+            case EventScriptValueType.Message:
+                hash.Add(((EventScriptMessageValue)this).Value.SignatureId, StringComparer.Ordinal);
+                foreach (var pair in ((EventScriptMessageValue)this).Value.Arguments.OrderBy(x => x.Key, StringComparer.Ordinal))
+                {
+                    hash.Add(pair.Key, StringComparer.Ordinal);
+                    hash.Add(pair.Value);
+                }
+
+                break;
+            case EventScriptValueType.Handler:
+                hash.Add(((EventScriptHandlerValue)this).Signature.SignatureId, StringComparer.Ordinal);
+                break;
             case EventScriptValueType.List:
                 foreach (var item in AsList()) hash.Add(item);
                 break;
@@ -629,6 +657,12 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
     public static EventScriptValue Range(long from, long to, long step = 1)
         => EventScriptRangeValue.Create(from, to, step);
+
+    public static EventScriptValue Message(EventScriptMessage message)
+        => EventScriptMessageValue.Create(message);
+
+    public static EventScriptValue Handler(EventScriptMessageSignature signature)
+        => EventScriptHandlerValue.Create(signature);
 
     public static EventScriptValue Values(EventScriptValue source) => Iterator(EventScriptIteratorMode.Values, source);
 
@@ -782,10 +816,12 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueType.Optional => 5,
             EventScriptValueType.Iterator => 6,
             EventScriptValueType.Range => 7,
-            EventScriptValueType.List => 8,
-            EventScriptValueType.Dictionary => 9,
-            EventScriptValueType.Set => 10,
-            EventScriptValueType.Dice => 11,
+            EventScriptValueType.Message => 8,
+            EventScriptValueType.Handler => 9,
+            EventScriptValueType.List => 10,
+            EventScriptValueType.Dictionary => 11,
+            EventScriptValueType.Set => 12,
+            EventScriptValueType.Dice => 13,
             _ => 8
         };
     }
@@ -867,6 +903,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 EventScriptValueType.Optional => CompareOptional(left.AsOptional(), right.AsOptional()),
                 EventScriptValueType.Iterator => CompareSequence(left.AsEnumerable().ToArray(), right.AsEnumerable().ToArray()),
                 EventScriptValueType.Range => CompareRange((EventScriptRangeValue)left, (EventScriptRangeValue)right),
+                EventScriptValueType.Message => CompareMessage((EventScriptMessageValue)left, (EventScriptMessageValue)right),
+                EventScriptValueType.Handler => CompareHandler((EventScriptHandlerValue)left, (EventScriptHandlerValue)right),
                 EventScriptValueType.List => CompareSequence(left.AsList(), right.AsList()),
                 EventScriptValueType.Dictionary => CompareDictionary(left.AsDictionary(), right.AsDictionary()),
                 EventScriptValueType.Set => CompareSequence(
@@ -911,6 +949,20 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
             return left.Step.CompareTo(right.Step);
         }
+
+        private static int CompareMessage(EventScriptMessageValue left, EventScriptMessageValue right)
+        {
+            var bySignature = StringComparer.Ordinal.Compare(left.Value.SignatureId, right.Value.SignatureId);
+            if (bySignature != 0)
+            {
+                return bySignature;
+            }
+
+            return CompareDictionary(left.Value.Arguments, right.Value.Arguments);
+        }
+
+        private static int CompareHandler(EventScriptHandlerValue left, EventScriptHandlerValue right)
+            => StringComparer.Ordinal.Compare(left.Signature.SignatureId, right.Signature.SignatureId);
     }
 
     private bool TryConvertToNumber(out EventScriptValue value)
@@ -1128,6 +1180,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             case EventScriptBooleanValue:
             case EventScriptDiceValue:
             case EventScriptRangeValue:
+            case EventScriptMessageValue:
+            case EventScriptHandlerValue:
             case EventScriptIteratorValue:
                 value = Text(ToString());
                 return true;
@@ -1178,6 +1232,12 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
         if (this is EventScriptDictionaryValue)
         {
             value = this;
+            return true;
+        }
+
+        if (this is EventScriptMessageValue or EventScriptHandlerValue)
+        {
+            value = Dictionary(AsDictionary());
             return true;
         }
 

@@ -173,6 +173,39 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void MessageAndHandlerAreFirstClassValueTypesWithReadOnlyMembers()
+    {
+        var signature = new EventScriptMessageSignature("Shoot", ["unit", "target"]);
+        var message = new EventScriptMessage("Shoot", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+        {
+            ["unit"] = Text("u1"),
+            ["target"] = Text("t1")
+        });
+
+        var messageValue = Message(message);
+        var handlerValue = Handler(signature);
+
+        Assert.AreEqual(EventScriptValueType.Message, messageValue.Type);
+        Assert.AreEqual(EventScriptValueType.Handler, handlerValue.Type);
+        Assert.IsFalse(messageValue.isDictionary());
+        Assert.IsFalse(handlerValue.isDictionary());
+
+        Assert.IsTrue(messageValue.TryGetDictionaryMember("name", out var messageName));
+        Assert.IsTrue(messageValue.TryGetDictionaryMember("arguments", out var messageArguments));
+        Assert.IsTrue(messageValue.TryGetDictionaryMember("signatureid", out var messageSignatureId));
+        Assert.AreEqual("Shoot", messageName.AsText());
+        Assert.HasCount(2, messageArguments.AsDictionary());
+        Assert.AreEqual("Shoot(target,unit)", messageSignatureId.AsText());
+
+        Assert.IsTrue(handlerValue.TryGetDictionaryMember("name", out var handlerName));
+        Assert.IsTrue(handlerValue.TryGetDictionaryMember("parameters", out var handlerParameters));
+        Assert.IsTrue(handlerValue.TryGetDictionaryMember("signatureid", out var handlerSignatureId));
+        Assert.AreEqual("Shoot", handlerName.AsText());
+        Assert.HasCount(2, handlerParameters.AsList());
+        Assert.AreEqual("Shoot(target,unit)", handlerSignatureId.AsText());
+    }
+
+    [TestMethod]
     public void ClrDictionariesWithNonTextKeysDoNotThrow()
     {
         var value = EventScriptValue.FromClr(new Dictionary<int, string> { [1] = "a" });

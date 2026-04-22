@@ -60,12 +60,23 @@ public static class EventScriptValueSemantics
             return EventScriptValue.Nothing;
         }
 
-        if (target.Type == EventScriptValueType.Dictionary)
+        if (!TryUnwrapOptional(selector, out var lookup))
         {
-            return LookupDictionary(target, selector);
+            return EventScriptValue.OptionalNone();
         }
 
-        return LookupSequential(target.AsList(), selector);
+        var key = lookup.AsText();
+        if (!string.IsNullOrEmpty(key) && target.TryGetDictionaryMember(key, out var value))
+        {
+            return value;
+        }
+
+        if (target.Type is EventScriptValueType.Dictionary or EventScriptValueType.Message or EventScriptValueType.Handler)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return LookupSequential(target.AsList(), lookup);
     }
 
     public static bool Contains(EventScriptValue haystack, EventScriptValue needle)
@@ -114,31 +125,8 @@ public static class EventScriptValueSemantics
         return true;
     }
 
-    private static EventScriptValue LookupDictionary(EventScriptValue target, EventScriptValue selector)
+    private static EventScriptValue LookupSequential(IReadOnlyList<EventScriptValue> items, EventScriptValue unwrappedSelector)
     {
-        if (!TryUnwrapOptional(selector, out var lookup))
-        {
-            return EventScriptValue.OptionalNone();
-        }
-
-        var key = lookup.AsText();
-        if (string.IsNullOrEmpty(key))
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        return target.TryGetDictionaryMember(key, out var value)
-            ? value
-            : EventScriptValue.Nothing;
-    }
-
-    private static EventScriptValue LookupSequential(IReadOnlyList<EventScriptValue> items, EventScriptValue selector)
-    {
-        if (!TryUnwrapOptional(selector, out var unwrappedSelector))
-        {
-            return EventScriptValue.OptionalNone();
-        }
-
         var index = AsInt(unwrappedSelector);
         if (index <= 0 || index > items.Count)
         {

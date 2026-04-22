@@ -2,105 +2,45 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
 internal static class EventScriptMessageValueCodec
 {
-    private const string MessageTypeName = "message";
-    private const string HandlerTypeName = "handler";
-    private const string NameKey = "name";
-    private const string ParametersKey = "parameters";
-    private const string ArgumentsKey = "arguments";
-    private const string SignatureIdKey = "signatureid";
-
     public static EventScriptValue CreateHandlerValue(EventScriptMessageSignature signature)
     {
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
-        var values = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
-        {
-            [NameKey] = EventScriptValue.Text(signature.Name),
-            [ParametersKey] = EventScriptValue.List(signature.Parameters.Select(parameter => EventScriptValue.Text(parameter))),
-            [SignatureIdKey] = EventScriptValue.Text(signature.SignatureId)
-        };
-
-        return EventScriptValue.CustomType(HandlerTypeName, values);
+        return EventScriptValue.Handler(signature);
     }
 
     public static EventScriptValue CreateMessageValue(EventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        var values = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
-        {
-            [NameKey] = EventScriptValue.Text(message.Name),
-            [ArgumentsKey] = EventScriptValue.Dictionary(message.Arguments.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)),
-            [SignatureIdKey] = EventScriptValue.Text(message.SignatureId)
-        };
-
-        return EventScriptValue.CustomType(MessageTypeName, values);
+        return EventScriptValue.Message(message);
     }
 
     public static bool TryReadHandlerValue(EventScriptValue value, out EventScriptMessageSignature signature)
     {
         signature = new EventScriptMessageSignature(string.Empty, []);
-        if (!value.TryGetCustomTypeName(out var typeName) ||
-            !string.Equals(typeName, HandlerTypeName, StringComparison.Ordinal))
+        if (value is not EventScriptHandlerValue handler)
         {
             return false;
         }
 
-        var map = value.AsDictionary();
-        if (!map.TryGetValue(NameKey, out var nameValue))
-        {
-            return false;
-        }
-
-        var name = nameValue.AsText();
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return false;
-        }
-
-        IReadOnlyList<string> parameters = [];
-        if (map.TryGetValue(ParametersKey, out var parametersValue))
-        {
-            parameters = parametersValue.AsList()
-                .Select(parameter => parameter.AsText())
-                .Where(parameter => !string.IsNullOrWhiteSpace(parameter))
-                .ToArray();
-        }
-
-        signature = new EventScriptMessageSignature(name, parameters);
+        signature = handler.Signature;
         return true;
     }
 
     public static bool TryReadMessageValue(EventScriptValue value, out EventScriptMessage message)
     {
         message = new EventScriptMessage(string.Empty);
-        if (!value.TryGetCustomTypeName(out var typeName) ||
-            !string.Equals(typeName, MessageTypeName, StringComparison.Ordinal))
+        if (value is not EventScriptMessageValue typedMessage)
         {
             return false;
         }
 
-        var map = value.AsDictionary();
-        if (!map.TryGetValue(NameKey, out var nameValue))
-        {
-            return false;
-        }
-
-        var name = nameValue.AsText();
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return false;
-        }
-
-        var arguments = map.TryGetValue(ArgumentsKey, out var argumentsValue)
-            ? argumentsValue.AsDictionary().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
-            : new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
-        message = new EventScriptMessage(name, arguments);
+        message = typedMessage.Value;
         return true;
     }
 

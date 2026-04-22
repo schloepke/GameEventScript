@@ -122,6 +122,36 @@ public class EventScriptRealUsageTest
     }
 
     [TestMethod]
+    public void ShowSyntaxTreeJson()
+    {
+        const string script =
+            """
+            module TestModule
+            
+            rule Wounded(unit) means unit[hp] <= 0
+
+            on Setup(player) {
+                let someValue1 as :asDecimal be '10.2'
+                let someValue2 as :asDecimal be 10.2
+                let someValue3 be '10.2'
+                let someValue4 be 10.2
+                let someHandler be Shot(unit, target)
+                let someMessage be :message Shot(unit: 1, target: 2)
+                for i from 1 to 10 {
+                    let x be i *10
+                    publish SpeedBoost(boost: x)
+                }
+                publish SetNumberOfPlayers(max: 2)
+                let someValue be 10; let AnotherValue be 20;
+                publish SetBoardSize(x: 10, y: 20)
+            }
+            """;
+
+        Console.WriteLine(EventScriptManager.ParseModule(script, "ast-debug.es").ToJson());
+    }
+
+
+    [TestMethod]
     public void CheckingErrorHandlingWorksForLexerParserAndLinker()
     {
         var scriptBroken =

@@ -1,18 +1,97 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace StepH.Flow.EventScript.Parser;
 
 // Abstract nodes for the syntax tree
 
-public abstract record EventScriptNode;
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(PublishStatementNode), "publishStatement")]
+[JsonDerivedType(typeof(LetStatementNode), "letStatement")]
+[JsonDerivedType(typeof(IfStatementNode), "ifStatement")]
+[JsonDerivedType(typeof(ForStatementNode), "forStatement")]
+[JsonDerivedType(typeof(SeededRandomStatementNode), "seededRandomStatement")]
+[JsonDerivedType(typeof(ExpressionStatementNode), "expressionStatement")]
 public abstract record StatementNode : EventScriptNode;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(IdentifierExpressionNode), "identifierExpression")]
+[JsonDerivedType(typeof(TagLiteralExpressionNode), "tagLiteralExpression")]
+[JsonDerivedType(typeof(HandlerLiteralExpressionNode), "handlerLiteralExpression")]
+[JsonDerivedType(typeof(MessageLiteralExpressionNode), "messageLiteralExpression")]
+[JsonDerivedType(typeof(HandlerBindExpressionNode), "handlerBindExpression")]
+[JsonDerivedType(typeof(CallExpressionNode), "callExpression")]
+[JsonDerivedType(typeof(BooleanLiteralExpressionNode), "booleanLiteralExpression")]
+[JsonDerivedType(typeof(IntegerLiteralExpressionNode), "integerLiteralExpression")]
+[JsonDerivedType(typeof(DecimalLiteralExpressionNode), "decimalLiteralExpression")]
+[JsonDerivedType(typeof(PercentageLiteralExpressionNode), "percentageLiteralExpression")]
+[JsonDerivedType(typeof(TextLiteralExpressionNode), "textLiteralExpression")]
+[JsonDerivedType(typeof(ListLiteralExpressionNode), "listLiteralExpression")]
+[JsonDerivedType(typeof(SetLiteralExpressionNode), "setLiteralExpression")]
+[JsonDerivedType(typeof(DictionaryLiteralExpressionNode), "dictionaryLiteralExpression")]
+[JsonDerivedType(typeof(UnaryExpressionNode), "unaryExpression")]
+[JsonDerivedType(typeof(VariadicTaggedExpressionNode), "variadicTaggedExpression")]
+[JsonDerivedType(typeof(ClampExpressionNode), "clampExpression")]
+[JsonDerivedType(typeof(RangeExpressionNode), "rangeExpression")]
+[JsonDerivedType(typeof(RandomExpressionNode), "randomExpression")]
+[JsonDerivedType(typeof(SeededRandomExpressionNode), "seededRandomExpression")]
+[JsonDerivedType(typeof(DiceExpressionNode), "diceExpression")]
+[JsonDerivedType(typeof(GeneratedCollectionExpressionNode), "generatedCollectionExpression")]
+[JsonDerivedType(typeof(GuardedChoiceExpressionNode), "guardedChoiceExpression")]
+[JsonDerivedType(typeof(BinaryExpressionNode), "binaryExpression")]
+[JsonDerivedType(typeof(RulePredicateExpressionNode), "rulePredicateExpression")]
+[JsonDerivedType(typeof(TypeCheckExpressionNode), "typeCheckExpression")]
+[JsonDerivedType(typeof(TypeCastExpressionNode), "typeCastExpression")]
+[JsonDerivedType(typeof(MemberAccessExpressionNode), "memberAccessExpression")]
+[JsonDerivedType(typeof(CollectionAccessExpressionNode), "collectionAccessExpression")]
 public abstract record ExpressionNode : EventScriptNode;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(ExpressionSelectorNode), "expressionSelector")]
+[JsonDerivedType(typeof(PatternSelectorNode), "patternSelector")]
+[JsonDerivedType(typeof(ObjectMatchSelectorNode), "objectMatchSelector")]
+[JsonDerivedType(typeof(TakePatternSelectorNode), "takePatternSelector")]
+[JsonDerivedType(typeof(SequenceSliceSelectorNode), "sequenceSliceSelector")]
+[JsonDerivedType(typeof(PredicateSelectorNode), "predicateSelector")]
+[JsonDerivedType(typeof(CountSelectorNode), "countSelector")]
+[JsonDerivedType(typeof(ChooseSelectorNode), "chooseSelector")]
+[JsonDerivedType(typeof(DrawSelectorNode), "drawSelector")]
+[JsonDerivedType(typeof(ShuffleSelectorNode), "shuffleSelector")]
+[JsonDerivedType(typeof(ReverseSelectorNode), "reverseSelector")]
+[JsonDerivedType(typeof(EdgeSelectorNode), "edgeSelector")]
+[JsonDerivedType(typeof(FilterSelectorNode), "filterSelector")]
+[JsonDerivedType(typeof(SumSelectorNode), "sumSelector")]
+[JsonDerivedType(typeof(AverageSelectorNode), "averageSelector")]
+[JsonDerivedType(typeof(SelectSelectorNode), "selectSelector")]
+[JsonDerivedType(typeof(DictionarySelectorNode), "dictionarySelector")]
+[JsonDerivedType(typeof(MinSelectorNode), "minSelector")]
+[JsonDerivedType(typeof(MaxSelectorNode), "maxSelector")]
+[JsonDerivedType(typeof(ContainsSelectorNode), "containsSelector")]
+[JsonDerivedType(typeof(SortSelectorNode), "sortSelector")]
+[JsonDerivedType(typeof(DistinctSelectorNode), "distinctSelector")]
+[JsonDerivedType(typeof(GroupBySelectorNode), "groupBySelector")]
+[JsonDerivedType(typeof(OrderBySelectorNode), "orderBySelector")]
 public abstract record CollectionSelectorNode : EventScriptNode;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(ObjectMatchExpressionValueNode), "objectMatchExpressionValue")]
+[JsonDerivedType(typeof(ObjectMatchNestedValueNode), "objectMatchNestedValue")]
 public abstract record ObjectMatchValueNode : EventScriptNode;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(DiceCountPatternNode), "diceCountPattern")]
+[JsonDerivedType(typeof(DiceFullHousePatternNode), "diceFullHousePattern")]
+[JsonDerivedType(typeof(DiceStraightPatternNode), "diceStraightPattern")]
 public abstract record DicePatternNode : EventScriptNode;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(CollectionIterationSourceNode), "collectionIterationSource")]
+[JsonDerivedType(typeof(RangeIterationSourceNode), "rangeIterationSource")]
 public abstract record IterationSourceNode : EventScriptNode;
+
+public abstract record EventScriptNode;
 
 // Root node of the syntax tree
 

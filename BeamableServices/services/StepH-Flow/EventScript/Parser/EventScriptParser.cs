@@ -210,7 +210,7 @@ public sealed class EventScriptParser
 
     private TypeFieldDefinitionNode ParseTypeFieldDefinition()
     {
-        var name = ExpectIdentifierLike();
+        var name = ExpectIdentifier();
         Expect(Colon);
         SkipNewLines();
         var typeName = ParseTypeName();
@@ -240,7 +240,7 @@ public sealed class EventScriptParser
 
     private RuleDefinitionNode ParseRuleDefinition()
     {
-        var name = ExpectIdentifierLike();
+        var name = ExpectIdentifier();
         var parameters = ParseDefinitionParameters();
         Expect(Means);
         SkipNewLines();
@@ -250,7 +250,7 @@ public sealed class EventScriptParser
 
     private SelectDefinitionNode ParseSelectDefinition()
     {
-        var name = ExpectIdentifierLike();
+        var name = ExpectIdentifier();
         var parameters = ParseDefinitionParameters();
         Expect(Means);
         SkipNewLines();
@@ -264,10 +264,10 @@ public sealed class EventScriptParser
         Expect(LeftParen);
         if (!Is(RightParen))
         {
-            parameters.Add(ExpectIdentifierLike());
+            parameters.Add(ExpectIdentifier());
             while (Match(Comma))
             {
-                parameters.Add(ExpectIdentifierLike());
+                parameters.Add(ExpectIdentifier());
             }
         }
 
@@ -288,10 +288,10 @@ public sealed class EventScriptParser
         {
             if (!Is(RightParen))
             {
-                parameters.Add(ExpectIdentifierLike());
+                parameters.Add(ExpectIdentifier());
                 while (Match(Comma))
                 {
-                    parameters.Add(ExpectIdentifierLike());
+                    parameters.Add(ExpectIdentifier());
                 }
             }
 
@@ -392,7 +392,7 @@ public sealed class EventScriptParser
 
     private NamedArgumentNode ParseNamedArgument()
     {
-        var name = ExpectIdentifierLike();
+        var name = ExpectIdentifier();
         Expect(Colon);
         var expression = ParseExpression();
         return new NamedArgumentNode(name, expression);
@@ -400,7 +400,7 @@ public sealed class EventScriptParser
 
     private LetStatementNode ParseLetStatement()
     {
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         string? declaredType = null;
         if (Match(As))
         {
@@ -431,7 +431,7 @@ public sealed class EventScriptParser
 
     private ForStatementNode ParseForStatement()
     {
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         SkipNewLines();
         IterationSourceNode source;
         if (Match(In))
@@ -998,7 +998,7 @@ public sealed class EventScriptParser
             if (Match(Dot))
             {
                 SkipNewLines();
-                var member = ExpectIdentifierLike();
+                var member = ExpectIdentifier();
                 expression = new MemberAccessExpressionNode(expression, member);
                 continue;
             }
@@ -1023,7 +1023,7 @@ public sealed class EventScriptParser
         if (Match(SelectorAny, SelectorAll))
         {
             var op = Previous.Kind == SelectorAny ? "any" : "all";
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             ExpectWord("where");
             var predicate = ParseExpression();
             return new PredicateSelectorNode(op, identifier, predicate);
@@ -1052,7 +1052,7 @@ public sealed class EventScriptParser
 
         if (Match(SelectorCount))
         {
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             ExpectWord("where");
             var predicate = ParseExpression();
             return new CountSelectorNode(identifier, predicate);
@@ -1097,7 +1097,7 @@ public sealed class EventScriptParser
 
         if (Match(SelectorFilter))
         {
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             ExpectWord("where");
             var predicate = ParseExpression();
             return new FilterSelectorNode(identifier, predicate);
@@ -1105,7 +1105,7 @@ public sealed class EventScriptParser
 
         if (Match(SelectorSum))
         {
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             Expect(Arrow);
             var projection = ParseExpression();
             return new SumSelectorNode(identifier, projection);
@@ -1113,7 +1113,7 @@ public sealed class EventScriptParser
 
         if (Match(SelectorAverage))
         {
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             Expect(Arrow);
             var projection = ParseExpression();
             return new AverageSelectorNode(identifier, projection);
@@ -1141,7 +1141,7 @@ public sealed class EventScriptParser
 
         if (Match(SelectorSelect))
         {
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             Expect(Arrow);
             var projection = ParseExpression();
             return new SelectSelectorNode(identifier, projection);
@@ -1150,7 +1150,7 @@ public sealed class EventScriptParser
         if (MatchTag(":dictionary"))
         {
             SkipNewLines();
-            var identifier = ExpectIdentifierLike();
+            var identifier = ExpectIdentifier();
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
@@ -1225,7 +1225,7 @@ public sealed class EventScriptParser
             return new EdgeSelectorNode(mode, null, null);
         }
 
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         ExpectWord("where");
         var predicate = ParseExpression();
         return new EdgeSelectorNode(mode, identifier, predicate);
@@ -1236,7 +1236,7 @@ public sealed class EventScriptParser
         SkipNewLines();
         ExpectWord("by");
         SkipNewLines();
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         Expect(Arrow);
         var projection = ParseExpression();
         var direction = ParseSortDirection();
@@ -1246,7 +1246,7 @@ public sealed class EventScriptParser
     private CollectionSelectorNode ParseProjectionSelector(string op)
     {
         SkipNewLines();
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         Expect(Arrow);
         var projection = ParseExpression();
 
@@ -1285,7 +1285,7 @@ public sealed class EventScriptParser
         }
 
         SkipNewLines();
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         Expect(Arrow);
         var projection = ParseExpression();
         return new DistinctSelectorNode(identifier, projection);
@@ -1296,7 +1296,7 @@ public sealed class EventScriptParser
         SkipNewLines();
         ExpectWord("by");
         SkipNewLines();
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         Expect(Arrow);
         var projection = ParseExpression();
         return new GroupBySelectorNode(identifier, projection);
@@ -1324,7 +1324,7 @@ public sealed class EventScriptParser
 
     private ObjectMatchEntryNode ParseObjectMatchEntry()
     {
-        var key = ExpectIdentifierLike();
+        var key = ExpectIdentifier();
         Expect(Colon);
         SkipNewLines();
         ObjectMatchValueNode value = Is(LeftBracket)
@@ -1419,7 +1419,7 @@ public sealed class EventScriptParser
             return ParseCallOrHandlerBindExpression();
         }
 
-        if (IsIdentifierLike(Current.Kind))
+        if (Current.Kind == Identifier)
         {
             var identifierToken = Advance();
             return new IdentifierExpressionNode(identifierToken.Text);
@@ -1470,11 +1470,11 @@ public sealed class EventScriptParser
             SkipNewLines();
             if (!Is(RightParen))
             {
-                parameters.Add(ExpectIdentifierLike());
+                parameters.Add(ExpectIdentifier());
                 while (Match(Comma))
                 {
                     SkipNewLines();
-                    parameters.Add(ExpectIdentifierLike());
+                    parameters.Add(ExpectIdentifier());
                 }
             }
 
@@ -1512,14 +1512,16 @@ public sealed class EventScriptParser
 
     private ExpressionNode ParseCallOrHandlerBindExpression()
     {
-        var name = ExpectIdentifierLike();
-        var calleeExpression = new IdentifierExpressionNode(name);
+        var isMessageCallee = Current.Kind == Message;
+        var name = isMessageCallee ? Expect(Message).Text : ExpectIdentifier();
         Expect(LeftParen);
         SkipNewLines();
         if (Is(RightParen))
         {
             Expect(RightParen);
-            return new CallExpressionNode(name, []);
+            return isMessageCallee
+                ? new HandlerLiteralExpressionNode(name, [])
+                : new CallExpressionNode(name, []);
         }
 
         if (IsNamedArgumentStart())
@@ -1533,7 +1535,23 @@ public sealed class EventScriptParser
 
             SkipNewLines();
             Expect(RightParen);
-            return new HandlerBindExpressionNode(calleeExpression, namedArguments);
+            return isMessageCallee
+                ? new MessageLiteralExpressionNode(name, namedArguments)
+                : new HandlerBindExpressionNode(new IdentifierExpressionNode(name), namedArguments);
+        }
+
+        if (isMessageCallee)
+        {
+            var parameters = new List<string> { ExpectIdentifier() };
+            while (Match(Comma))
+            {
+                SkipNewLines();
+                parameters.Add(ExpectIdentifier());
+            }
+
+            SkipNewLines();
+            Expect(RightParen);
+            return new HandlerLiteralExpressionNode(name, parameters);
         }
 
         var arguments = new List<ExpressionNode> { ParseExpression() };
@@ -1625,7 +1643,7 @@ public sealed class EventScriptParser
     private GeneratedCollectionExpressionNode ParseGeneratedCollectionExpression(string collectionType)
     {
         SkipNewLines();
-        var identifier = ExpectIdentifierLike();
+        var identifier = ExpectIdentifier();
         SkipNewLines();
         IterationSourceNode source;
         if (MatchWord("from"))
@@ -1684,7 +1702,7 @@ public sealed class EventScriptParser
 
     private DictionaryEntryNode ParseDictionaryEntry()
     {
-        var key = ExpectIdentifierLike();
+        var key = ExpectIdentifier();
         Expect(Colon);
         var value = ParseExpression();
         return new DictionaryEntryNode(key, value);
@@ -1692,7 +1710,7 @@ public sealed class EventScriptParser
 
     private bool IsDictionaryLiteralEntryStart()
     {
-        if (!IsIdentifierLike(Current.Kind))
+        if (Current.Kind != Identifier)
         {
             return false;
         }
@@ -1859,7 +1877,7 @@ public sealed class EventScriptParser
                 _tokens[lookahead].Kind == Identifier &&
                 string.Equals(_tokens[lookahead].Text, "where", StringComparison.Ordinal))
             {
-                identifier = ExpectIdentifierLike();
+                identifier = ExpectIdentifier();
                 ExpectWord("where");
                 predicate = ParseExpression();
             }
@@ -1871,7 +1889,7 @@ public sealed class EventScriptParser
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
-            weightIdentifier = ExpectIdentifierLike();
+            weightIdentifier = ExpectIdentifier();
             SkipNewLines();
             Expect(Arrow);
             SkipNewLines();
@@ -1990,9 +2008,9 @@ public sealed class EventScriptParser
         throw new EventScriptParseException($"Expected {kind} but found {token.Kind}", token.Line, token.Column);
     }
 
-    private string ExpectIdentifierLike()
+    private string ExpectIdentifier()
     {
-        if (IsIdentifierLike(Current.Kind))
+        if (Is(Identifier))
         {
             return Advance().Text;
         }
@@ -2048,28 +2066,6 @@ public sealed class EventScriptParser
         return lookahead < _tokens.Count && _tokens[lookahead].Kind == Else;
     }
 
-    private static bool IsIdentifierLike(EventScriptTokenKind kind)
-    {
-        return kind is
-            Identifier or
-            Message or
-            Module or
-            On or
-            Publish or
-            Let or
-            As or
-            Be or
-            When or
-            Otherwise or
-            Has or
-            If or
-            Else or
-            For or
-            In or
-            EventScriptTokenKind.Is or
-            Record;
-    }
-
     private bool IsCallExpressionStart()
     {
         if (Current.Kind is not (Identifier or Message))
@@ -2088,7 +2084,7 @@ public sealed class EventScriptParser
 
     private bool IsNamedArgumentStart()
     {
-        if (!IsIdentifierLike(Current.Kind))
+        if (Current.Kind != Identifier)
         {
             return false;
         }

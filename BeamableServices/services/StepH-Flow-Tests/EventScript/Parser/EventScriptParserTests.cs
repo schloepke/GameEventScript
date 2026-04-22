@@ -1227,4 +1227,69 @@ public class EventScriptParsingScenarios
 
         Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(invalidScript));
     }
+
+    [TestMethod]
+    public void UppercaseInvocationDisambiguatesBetweenHandlerAndMessage()
+    {
+        const string script =
+            """
+            on Start(unit, target) {
+                let handler be Shoot(unit, target)
+                let message be Shoot(unit: unit, target: target)
+                let check be wounded(unit)
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script);
+        var statements = module.Handlers[0].Statements.Cast<LetStatementNode>().ToArray();
+
+        Assert.IsInstanceOfType<HandlerLiteralExpressionNode>(statements[0].Expression);
+        Assert.IsInstanceOfType<MessageLiteralExpressionNode>(statements[1].Expression);
+        Assert.IsInstanceOfType<CallExpressionNode>(statements[2].Expression);
+    }
+
+    [TestMethod]
+    public void UppercasePositionalInvocationRequiresIdentifierParameters()
+    {
+        const string script =
+            """
+            on Start(unit) {
+                let invalid be Shoot(unit + 1)
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
+    }
+
+    [TestMethod]
+    public void UppercaseEmptyInvocationParsesAsHandlerLiteral()
+    {
+        const string script =
+            """
+            on Start {
+                let handler be Shoot()
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script);
+        var statement = (LetStatementNode)module.Handlers[0].Statements[0];
+        var handler = (HandlerLiteralExpressionNode)statement.Expression;
+        Assert.AreEqual("Shoot", handler.Message);
+        Assert.HasCount(0, handler.Parameters);
+    }
+
+    [TestMethod]
+    public void RuleAndSelectNamesAndParametersMustUseIdentifierCasing()
+    {
+        const string script =
+            """
+            rule Wounded(unit) means unit.hp < unit.maxHp
+            select filter(Units) means Units
+            on Start(Target) {
+                publish Done
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
+    }
 }

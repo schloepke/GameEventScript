@@ -1,6 +1,7 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
+using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript.Linker;
@@ -364,5 +365,42 @@ public class EventScriptLinkBuilderScenarios
         Assert.IsTrue(exception.Errors.Any(error =>
             error.Kind == EventScriptLinkageErrorKind.DuplicateHandlerParameter &&
             error.Symbol == "Shoot"));
+    }
+
+    [TestMethod]
+    public void LinkBuilderCollectsCaseViolationsForProgrammaticAstModules()
+    {
+        var module = new EventScriptModule(
+            "InvalidCaseModule",
+            "invalid-case.es",
+            [],
+            [
+                new RuleDefinitionNode("Wounded", ["unit"], new BooleanLiteralExpressionNode(true))
+            ],
+            [
+                new SelectDefinitionNode("Filter", ["Units"], new IdentifierExpressionNode("Units"))
+            ],
+            [
+                new EventHandlerNode(
+                    "start",
+                    ["Target"],
+                    [
+                        new LetStatementNode("Value", null, new IntegerLiteralExpressionNode(1)),
+                        new ExpressionStatementNode(new CallExpressionNode("Wounded", [new IdentifierExpressionNode("Target")]))
+                    ])
+            ]);
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() =>
+            new EventScriptLinkBuilder().AddModule(module).Link());
+
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.InvalidIdentifierCase &&
+            error.Symbol == "Wounded"));
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.InvalidIdentifierCase &&
+            error.Symbol == "Filter"));
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.InvalidMessageCase &&
+            error.Symbol == "start"));
     }
 }

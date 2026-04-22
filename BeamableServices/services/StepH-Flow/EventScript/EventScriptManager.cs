@@ -84,7 +84,9 @@ public enum EventScriptLinkageErrorKind
     DuplicateHandlerParameter,
     DuplicateDefinitionParameter,
     DuplicatePublishArgument,
-    DuplicateVariable
+    DuplicateVariable,
+    InvalidIdentifierCase,
+    InvalidMessageCase
 }
 
 public enum EventScriptSymbolKind
@@ -93,6 +95,7 @@ public enum EventScriptSymbolKind
     Rule,
     Select,
     Handler,
+    Message,
     Variable,
     GlobalDefinition
 }

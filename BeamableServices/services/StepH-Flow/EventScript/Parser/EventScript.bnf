@@ -113,7 +113,9 @@ PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | Varia
                     | RandomExpression
                     | SeededRandomExpression
                     | DiceExpression
+                    | MessageInvocationExpression
 CallExpression ::= Identifier "(" [ Argumentlist ] ")"
+MessageInvocationExpression ::= Message "(" [ NamedArgumentList | ParamList ] ")"
 
 Literal ::= Number | Percentage | TextLiteral | "true" | "false"
 TagLiteral ::= ":" Identifier

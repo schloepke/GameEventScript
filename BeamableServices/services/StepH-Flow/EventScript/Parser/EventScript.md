@@ -293,6 +293,18 @@ on Start {
 
 The language is not case-insensitive.
 
+Call/message disambiguation is case-based:
+
+- `wounded(unit)` is a `rule/select` call (`wounded` is lowercase).
+- `Shot(unit, target)` is a handler literal (`Shot` is uppercase, positional identifiers).
+- `Shot(unit: source, target: victim)` is a message literal (`Shot` is uppercase, named args).
+- `Shot(unit + 1)` is invalid (uppercase positional arguments must be identifier names).
+
+Naming rules are strict:
+
+- variable-style names are lowercase identifiers (`let`, parameters, loop vars, selector bind names, rule/select names, call targets)
+- message/handler names are uppercase message lexemes
+
 ## Built-In Types
 
 Built-in type tags:

@@ -33,6 +33,14 @@ public sealed partial class EventScriptLinkBuilder
         {
             foreach (var field in typeDefinition.Fields)
             {
+                ValidateIdentifierCase(
+                    eventScriptModule,
+                    field.Name,
+                    field.Name,
+                    EventScriptSymbolKind.Variable,
+                    "Field names must use identifier casing (start lowercase and contain only letters or digits)",
+                    errors);
+
                 if (field.MinimumExpression is not null)
                 {
                     ValidateExpressionReferences(eventScriptModule, field.MinimumExpression, ruleDefinitions, selectDefinitions, errors);
@@ -52,6 +60,25 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var ruleDefinition in eventScriptModule.RuleDefinitions)
         {
+            ValidateIdentifierCase(
+                eventScriptModule,
+                ruleDefinition.Name,
+                ruleDefinition.Name,
+                EventScriptSymbolKind.Rule,
+                "Rule names must use identifier casing (start lowercase and contain only letters or digits)",
+                errors);
+
+            foreach (var parameter in ruleDefinition.Parameters)
+            {
+                ValidateIdentifierCase(
+                    eventScriptModule,
+                    parameter,
+                    ruleDefinition.Name,
+                    EventScriptSymbolKind.Rule,
+                    $"Rule '{ruleDefinition.Name}' declares an invalid parameter name '{parameter}'",
+                    errors);
+            }
+
             var duplicateParameters = ruleDefinition.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
@@ -72,6 +99,25 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var selectDefinition in eventScriptModule.SelectDefinitions)
         {
+            ValidateIdentifierCase(
+                eventScriptModule,
+                selectDefinition.Name,
+                selectDefinition.Name,
+                EventScriptSymbolKind.Select,
+                "Select names must use identifier casing (start lowercase and contain only letters or digits)",
+                errors);
+
+            foreach (var parameter in selectDefinition.Parameters)
+            {
+                ValidateIdentifierCase(
+                    eventScriptModule,
+                    parameter,
+                    selectDefinition.Name,
+                    EventScriptSymbolKind.Select,
+                    $"Select '{selectDefinition.Name}' declares an invalid parameter name '{parameter}'",
+                    errors);
+            }
+
             var duplicateParameters = selectDefinition.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
@@ -92,6 +138,25 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var handler in eventScriptModule.Handlers)
         {
+            ValidateMessageCase(
+                eventScriptModule,
+                handler.Message,
+                handler.Message,
+                EventScriptSymbolKind.Handler,
+                "Handler message names must use message casing (start uppercase and contain only letters or digits)",
+                errors);
+
+            foreach (var parameter in handler.Parameters)
+            {
+                ValidateIdentifierCase(
+                    eventScriptModule,
+                    parameter,
+                    handler.Message,
+                    EventScriptSymbolKind.Handler,
+                    $"Handler '{handler.Message}' declares an invalid parameter name '{parameter}'",
+                    errors);
+            }
+
             var duplicateParameters = handler.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
@@ -131,6 +196,13 @@ public sealed partial class EventScriptLinkBuilder
 
             case LetStatementNode let:
                 ValidateExpressionReferences(moduleContext, let.Expression, ruleDefinitions, selectDefinitions, errors);
+                ValidateIdentifierCase(
+                    moduleContext,
+                    let.Identifier,
+                    let.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Variable '{let.Identifier}' must use identifier casing (start lowercase and contain only letters or digits)",
+                    errors);
                 if (scope.ContainsInCurrentScope(let.Identifier))
                 {
                     errors.Add(CreateError(
@@ -160,6 +232,13 @@ public sealed partial class EventScriptLinkBuilder
 
             case ForStatementNode forStatement:
                 ValidateIterationSourceReferences(moduleContext, forStatement.Source, ruleDefinitions, selectDefinitions, errors);
+                ValidateIdentifierCase(
+                    moduleContext,
+                    forStatement.Identifier,
+                    forStatement.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Loop variable '{forStatement.Identifier}' must use identifier casing (start lowercase and contain only letters or digits)",
+                    errors);
                 var loopScope = scope.CreateChild();
                 loopScope.Declare(forStatement.Identifier);
                 ValidateStatementBodyReferences(moduleContext, forStatement.Body, ruleDefinitions, selectDefinitions, errors, loopScope);
@@ -204,7 +283,24 @@ public sealed partial class EventScriptLinkBuilder
         {
             switch (expression)
             {
+                case IdentifierExpressionNode identifierExpression:
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        identifierExpression.Name,
+                        identifierExpression.Name,
+                        EventScriptSymbolKind.Variable,
+                        $"Identifier '{identifierExpression.Name}' must use identifier casing (start lowercase and contain only letters or digits)",
+                        errors);
+                    return;
+
                 case CallExpressionNode call:
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        call.Name,
+                        call.Name,
+                        EventScriptSymbolKind.GlobalDefinition,
+                        $"Call target '{call.Name}' must use identifier casing (rule/select names start lowercase)",
+                        errors);
                     ValidateCallExpression(moduleContext, call, ruleDefinitions, selectDefinitions, errors);
                     foreach (var argument in call.Arguments)
                     {
@@ -214,13 +310,44 @@ public sealed partial class EventScriptLinkBuilder
                     return;
 
                 case HandlerLiteralExpressionNode handlerLiteral:
+                    ValidateMessageCase(
+                        moduleContext,
+                        handlerLiteral.Message,
+                        handlerLiteral.Message,
+                        EventScriptSymbolKind.Handler,
+                        $"Handler literal '{handlerLiteral.Message}' must use message casing (start uppercase and contain only letters or digits)",
+                        errors);
+                    foreach (var parameter in handlerLiteral.Parameters)
+                    {
+                        ValidateIdentifierCase(
+                            moduleContext,
+                            parameter,
+                            handlerLiteral.Message,
+                            EventScriptSymbolKind.Handler,
+                            $"Handler literal '{handlerLiteral.Message}' declares invalid parameter '{parameter}'",
+                            errors);
+                    }
                     ValidateDuplicateHandlerLiteralParameters(moduleContext, handlerLiteral, errors);
                     return;
 
                 case MessageLiteralExpressionNode messageLiteral:
+                    ValidateMessageCase(
+                        moduleContext,
+                        messageLiteral.Message,
+                        messageLiteral.Message,
+                        EventScriptSymbolKind.Message,
+                        $"Message literal '{messageLiteral.Message}' must use message casing (start uppercase and contain only letters or digits)",
+                        errors);
                     ValidateDuplicateNamedArguments(moduleContext, messageLiteral.Message, messageLiteral.Arguments, errors);
                     foreach (var argument in messageLiteral.Arguments)
                     {
+                        ValidateIdentifierCase(
+                            moduleContext,
+                            argument.Name,
+                            messageLiteral.Message,
+                            EventScriptSymbolKind.Message,
+                            $"Message literal '{messageLiteral.Message}' declares invalid argument name '{argument.Name}'",
+                            errors);
                         ValidateExpressionReferences(moduleContext, argument.Expression, ruleDefinitions, selectDefinitions, errors);
                     }
 
@@ -231,12 +358,26 @@ public sealed partial class EventScriptLinkBuilder
                     ValidateExpressionReferences(moduleContext, handlerBind.CalleeExpression, ruleDefinitions, selectDefinitions, errors);
                     foreach (var argument in handlerBind.Arguments)
                     {
+                        ValidateIdentifierCase(
+                            moduleContext,
+                            argument.Name,
+                            "handler bind",
+                            EventScriptSymbolKind.Handler,
+                            $"Handler binding declares invalid argument name '{argument.Name}'",
+                            errors);
                         ValidateExpressionReferences(moduleContext, argument.Expression, ruleDefinitions, selectDefinitions, errors);
                     }
 
                     return;
 
                 case RulePredicateExpressionNode rulePredicate:
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        rulePredicate.RuleName,
+                        rulePredicate.RuleName,
+                        EventScriptSymbolKind.Rule,
+                        $"Rule predicate target '{rulePredicate.RuleName}' must use identifier casing (start lowercase)",
+                        errors);
                     if (!ruleDefinitions.TryGetValue(rulePredicate.RuleName, out var ruleDefinition) || ruleDefinition.Parameters.Count != 1)
                     {
                         errors.Add(CreateError(
@@ -290,6 +431,13 @@ public sealed partial class EventScriptLinkBuilder
                     continue;
 
                 case GeneratedCollectionExpressionNode generatedCollection:
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        generatedCollection.Identifier,
+                        generatedCollection.Identifier,
+                        EventScriptSymbolKind.Variable,
+                        $"Generated collection identifier '{generatedCollection.Identifier}' must use identifier casing (start lowercase)",
+                        errors);
                     ValidateIterationSourceReferences(moduleContext, generatedCollection.Source, ruleDefinitions, selectDefinitions, errors);
                     if (generatedCollection.Predicate is not null)
                     {
@@ -391,15 +539,51 @@ public sealed partial class EventScriptLinkBuilder
                 ValidateExpressionReferences(moduleContext, expressionSelector.Expression, ruleDefinitions, selectDefinitions, errors);
                 return;
             case PredicateSelectorNode predicateSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    predicateSelector.Identifier,
+                    predicateSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{predicateSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, predicateSelector.Predicate, ruleDefinitions, selectDefinitions, errors);
                 return;
             case CountSelectorNode countSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    countSelector.Identifier,
+                    countSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{countSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, countSelector.Predicate, ruleDefinitions, selectDefinitions, errors);
                 return;
             case ChooseSelectorNode chooseSelector:
+                if (chooseSelector.Identifier is not null)
+                {
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        chooseSelector.Identifier,
+                        chooseSelector.Identifier,
+                        EventScriptSymbolKind.Variable,
+                        $"Selector identifier '{chooseSelector.Identifier}' must use identifier casing (start lowercase)",
+                        errors);
+                }
+
                 if (chooseSelector.Predicate is not null)
                 {
                     ValidateExpressionReferences(moduleContext, chooseSelector.Predicate, ruleDefinitions, selectDefinitions, errors);
+                }
+
+                if (chooseSelector.WeightIdentifier is not null)
+                {
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        chooseSelector.WeightIdentifier,
+                        chooseSelector.WeightIdentifier,
+                        EventScriptSymbolKind.Variable,
+                        $"Selector weight identifier '{chooseSelector.WeightIdentifier}' must use identifier casing (start lowercase)",
+                        errors);
                 }
 
                 if (chooseSelector.WeightExpression is not null)
@@ -409,21 +593,66 @@ public sealed partial class EventScriptLinkBuilder
 
                 return;
             case EdgeSelectorNode { Predicate: not null } edgeSelector:
+                if (edgeSelector.Identifier is not null)
+                {
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        edgeSelector.Identifier,
+                        edgeSelector.Identifier,
+                        EventScriptSymbolKind.Variable,
+                        $"Selector identifier '{edgeSelector.Identifier}' must use identifier casing (start lowercase)",
+                        errors);
+                }
                 ValidateExpressionReferences(moduleContext, edgeSelector.Predicate, ruleDefinitions, selectDefinitions, errors);
                 return;
             case FilterSelectorNode filterSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    filterSelector.Identifier,
+                    filterSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{filterSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, filterSelector.Predicate, ruleDefinitions, selectDefinitions, errors);
                 return;
             case SumSelectorNode sumSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    sumSelector.Identifier,
+                    sumSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{sumSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, sumSelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case AverageSelectorNode averageSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    averageSelector.Identifier,
+                    averageSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{averageSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, averageSelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case SelectSelectorNode selectSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    selectSelector.Identifier,
+                    selectSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{selectSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, selectSelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case DictionarySelectorNode dictionarySelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    dictionarySelector.Identifier,
+                    dictionarySelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{dictionarySelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, dictionarySelector.KeyProjection, ruleDefinitions, selectDefinitions, errors);
                 if (dictionarySelector.ValueProjection is not null)
                 {
@@ -432,21 +661,59 @@ public sealed partial class EventScriptLinkBuilder
 
                 return;
             case MinSelectorNode minSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    minSelector.Identifier,
+                    minSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{minSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, minSelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case MaxSelectorNode maxSelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    maxSelector.Identifier,
+                    maxSelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{maxSelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, maxSelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case ContainsSelectorNode containsSelector:
                 ValidateExpressionReferences(moduleContext, containsSelector.ValueExpression, ruleDefinitions, selectDefinitions, errors);
                 return;
             case DistinctSelectorNode { Projection: not null } distinctSelector:
+                if (distinctSelector.Identifier is not null)
+                {
+                    ValidateIdentifierCase(
+                        moduleContext,
+                        distinctSelector.Identifier,
+                        distinctSelector.Identifier,
+                        EventScriptSymbolKind.Variable,
+                        $"Selector identifier '{distinctSelector.Identifier}' must use identifier casing (start lowercase)",
+                        errors);
+                }
                 ValidateExpressionReferences(moduleContext, distinctSelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case GroupBySelectorNode groupBySelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    groupBySelector.Identifier,
+                    groupBySelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{groupBySelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, groupBySelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
             case OrderBySelectorNode orderBySelector:
+                ValidateIdentifierCase(
+                    moduleContext,
+                    orderBySelector.Identifier,
+                    orderBySelector.Identifier,
+                    EventScriptSymbolKind.Variable,
+                    $"Selector identifier '{orderBySelector.Identifier}' must use identifier casing (start lowercase)",
+                    errors);
                 ValidateExpressionReferences(moduleContext, orderBySelector.Projection, ruleDefinitions, selectDefinitions, errors);
                 return;
         }
@@ -533,6 +800,84 @@ public sealed partial class EventScriptLinkBuilder
                 EventScriptSymbolKind.Handler,
                 EventScriptLinkageErrorKind.DuplicateHandlerParameter));
         }
+    }
+
+    private static void ValidateIdentifierCase(
+        EventScriptModule moduleContext,
+        string name,
+        string symbol,
+        EventScriptSymbolKind symbolKind,
+        string message,
+        List<EventScriptLinkageError> errors)
+    {
+        if (IsIdentifierCase(name))
+        {
+            return;
+        }
+
+        errors.Add(CreateError(
+            moduleContext,
+            message,
+            symbol,
+            symbolKind,
+            EventScriptLinkageErrorKind.InvalidIdentifierCase));
+    }
+
+    private static void ValidateMessageCase(
+        EventScriptModule moduleContext,
+        string name,
+        string symbol,
+        EventScriptSymbolKind symbolKind,
+        string message,
+        List<EventScriptLinkageError> errors)
+    {
+        if (IsMessageCase(name))
+        {
+            return;
+        }
+
+        errors.Add(CreateError(
+            moduleContext,
+            message,
+            symbol,
+            symbolKind,
+            EventScriptLinkageErrorKind.InvalidMessageCase));
+    }
+
+    private static bool IsIdentifierCase(string name)
+    {
+        if (string.IsNullOrEmpty(name) || !char.IsLower(name[0]))
+        {
+            return false;
+        }
+
+        for (var i = 1; i < name.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(name[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsMessageCase(string name)
+    {
+        if (string.IsNullOrEmpty(name) || !char.IsUpper(name[0]))
+        {
+            return false;
+        }
+
+        for (var i = 1; i < name.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(name[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<EventScriptModule> modules, List<EventScriptLinkageError> errors)

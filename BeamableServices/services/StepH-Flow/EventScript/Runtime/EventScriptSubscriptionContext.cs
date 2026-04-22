@@ -2,38 +2,28 @@
 
 using System;
 using System.Collections.Generic;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Types;
+using static StepH.Flow.EventScript.EventScriptMessage;
 
 namespace StepH.Flow.EventScript.Runtime;
 
 public sealed class EventScriptSubscriptionContext
 {
-    private readonly Action<string, IReadOnlyDictionary<string, EventScriptValue>> _publish;
-    private readonly Action<string, IReadOnlyDictionary<string, object?>> _publishClr;
+    private readonly Action<EventScriptMessage> _publisher;
 
-    internal EventScriptSubscriptionContext(
-        string message,
-        IReadOnlyDictionary<string, EventScriptValue> arguments,
-        Action<string, IReadOnlyDictionary<string, EventScriptValue>> publish,
-        Action<string, IReadOnlyDictionary<string, object?>> publishClr)
+    internal EventScriptSubscriptionContext(EventScriptMessage eventMessage, Action<EventScriptMessage> publish)
     {
-        Message = message ?? throw new ArgumentNullException(nameof(message));
-        Arguments = EventScriptArgumentMap.Normalize(arguments);
-        _publish = publish ?? throw new ArgumentNullException(nameof(publish));
-        _publishClr = publishClr ?? throw new ArgumentNullException(nameof(publishClr));
+        Event = eventMessage;
+        _publisher = publish ?? throw new ArgumentNullException(nameof(publish));
     }
 
-    public string Message { get; }
+    public EventScriptMessage Event { get; }
 
-    public IReadOnlyDictionary<string, EventScriptValue> Arguments { get; }
+    public string Message => Event.Name;
 
-    public void Publish(string message)
-        => Publish(message, EventScriptArgumentMap.Empty);
+    public IReadOnlyDictionary<string, EventScriptValue> Arguments => Event.Arguments;
 
-    public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> args)
-        => _publish(message, EventScriptArgumentMap.Normalize(args));
+    public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> args) => Publish(Message(message, args));
 
-    public void PublishClr(string message, IReadOnlyDictionary<string, object?> args)
-        => _publishClr(message, args);
+    public void Publish(EventScriptMessage message) => _publisher(message);
 }

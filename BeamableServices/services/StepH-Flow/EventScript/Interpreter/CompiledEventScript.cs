@@ -5,18 +5,58 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
 internal delegate IReadOnlyDictionary<string, EventScriptValue> CompiledHandlerInvoker(EventScriptInvocationEngine engine, IReadOnlyDictionary<string, EventScriptValue> args);
+
 internal delegate EventScriptValue CompiledGlobalDefinitionInvoker(EventScriptInvocationEngine engine, IReadOnlyList<EventScriptValue> arguments);
 
-public sealed record EventScriptEmittedEvent(string Message, EventScriptNamedArguments Arguments);
+public sealed class EventScriptEmittedEvent
+{
+    public EventScriptEmittedEvent(string message, EventScriptNamedArguments arguments)
+        : this(new EventScriptMessage(message, arguments))
+    {
+    }
 
-public sealed record EventScriptExecutionResult(string Message, IReadOnlyList<EventScriptEmittedEvent> EmittedEvents, IReadOnlyDictionary<string, EventScriptValue> Variables);
+    public EventScriptEmittedEvent(EventScriptMessage @event)
+    {
+        Event = @event ?? new EventScriptMessage(string.Empty);
+    }
 
-public sealed class CompiledEventScript
+    public EventScriptMessage Event { get; }
+
+    public string Message => Event.Name;
+
+    public EventScriptNamedArguments Arguments => Event.Arguments;
+}
+
+public sealed class EventScriptExecutionResult
+{
+    public EventScriptExecutionResult(string message, IReadOnlyList<EventScriptEmittedEvent> emittedEvents, IReadOnlyDictionary<string, EventScriptValue> variables)
+        : this(new EventScriptMessage(message), emittedEvents, variables)
+    {
+    }
+
+    public EventScriptExecutionResult(EventScriptMessage invocationMessage, IReadOnlyList<EventScriptEmittedEvent> emittedEvents, IReadOnlyDictionary<string, EventScriptValue> variables)
+    {
+        InvocationMessage = invocationMessage ?? new EventScriptMessage(string.Empty);
+        EmittedEvents = emittedEvents ?? Array.Empty<EventScriptEmittedEvent>();
+        Variables = variables ?? new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+    }
+
+    public EventScriptMessage InvocationMessage { get; }
+
+    public string Message => InvocationMessage.Name;
+
+    public IReadOnlyList<EventScriptEmittedEvent> EmittedEvents { get; }
+
+    public IReadOnlyDictionary<string, EventScriptValue> Variables { get; }
+}
+
+public sealed class CompiledEventScript : IEventScriptInvokableScript, IEventScriptHandlerCollection
 {
     public CompiledEventScript(LinkedEventScriptModule linkedModule, EventScriptInterpreterCompilationOptions? options = null)
     {
@@ -50,6 +90,12 @@ public sealed class CompiledEventScript
 
     public IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> Handlers { get; }
 
+    public IReadOnlyDictionary<string, IReadOnlyList<EventScriptMessageSignature>> MessageDefinitions
+        => Handlers.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<EventScriptMessageSignature>)pair.Value.Select(handler => handler.Definition).ToArray(),
+            StringComparer.Ordinal);
+
     internal IReadOnlyDictionary<string, CompiledGlobalDefinition> RuleDefinitions { get; }
 
     internal IReadOnlyDictionary<string, CompiledGlobalDefinition> SelectDefinitions { get; }
@@ -58,46 +104,12 @@ public sealed class CompiledEventScript
 
     public bool DiagnosticsEnabled => Options.EnableDiagnostics;
 
-    public EventScriptExecutionResult Invoke(string message)
-        => Invoke(message, EventScriptArgumentMap.Empty);
+    public EventScriptExecutionResult Invoke(EventScriptMessage message, EventScriptInvocationContext? invocationContext = null, IEventScriptDiagnosticCollector? diagnosticCollector = null)
+        => new EventScriptInvocationEngine(this, invocationContext, diagnosticCollector).InvokeMessage(message);
 
-    public EventScriptExecutionResult Invoke(string message, IReadOnlyDictionary<string, EventScriptValue> args)
-        => Invoke(message, args, invocationContext: null, diagnosticCollector: null);
-
-    public EventScriptExecutionResult Invoke(
-        string message,
-        IReadOnlyDictionary<string, EventScriptValue> args,
-        EventScriptInvocationContext? invocationContext,
+    internal EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args, EventScriptInvocationContext? invocationContext,
         IEventScriptDiagnosticCollector? diagnosticCollector)
-    {
-        var engine = new EventScriptInvocationEngine(this, invocationContext, diagnosticCollector);
-        return engine.InvokeMessage(message, args);
-    }
-
-    public EventScriptExecutionResult Emit(string message)
-        => Invoke(message);
-
-    public EventScriptExecutionResult Emit(string message, IReadOnlyDictionary<string, EventScriptValue> args)
-        => Invoke(message, args);
-
-    public EventScriptExecutionResult Emit(string message, params (string Name, EventScriptValue Value)[] args)
-        => Emit(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
-
-    public EventScriptExecutionResult EmitClr(string message, IReadOnlyDictionary<string, object?> args)
-        => Invoke(message, EventScriptArgumentMap.FromClr(args));
-
-    public EventScriptExecutionResult EmitClr(string message, params (string Name, object? Value)[] args)
-        => EmitClr(message, args.ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal));
-
-    internal EventScriptExecutionResult InvokeHandler(
-        CompiledEventScriptHandler handler,
-        IReadOnlyDictionary<string, EventScriptValue> args,
-        EventScriptInvocationContext? invocationContext,
-        IEventScriptDiagnosticCollector? diagnosticCollector)
-    {
-        var engine = new EventScriptInvocationEngine(this, invocationContext, diagnosticCollector);
-        return engine.InvokeHandler(handler, args);
-    }
+        => new EventScriptInvocationEngine(this, invocationContext, diagnosticCollector).InvokeHandler(handler, args);
 }
 
 internal enum GlobalDefinitionKind
@@ -106,31 +118,17 @@ internal enum GlobalDefinitionKind
     Select
 }
 
-internal sealed class CompiledGlobalDefinition
+internal sealed class CompiledGlobalDefinition(string name, IReadOnlyList<string> parameters, ExpressionNode expression, GlobalDefinitionKind kind, bool diagnosticsEnabled)
 {
-    public CompiledGlobalDefinition(
-        string name,
-        IReadOnlyList<string> parameters,
-        ExpressionNode expression,
-        GlobalDefinitionKind kind,
-        bool diagnosticsEnabled)
-    {
-        Name = name;
-        Parameters = parameters.ToArray();
-        Expression = expression ?? throw new ArgumentNullException(nameof(expression));
-        Kind = kind;
-        DiagnosticsEnabled = diagnosticsEnabled;
-    }
+    public string Name { get; } = name;
 
-    public string Name { get; }
+    public IReadOnlyList<string> Parameters { get; } = parameters.ToArray();
 
-    public IReadOnlyList<string> Parameters { get; }
+    public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
-    public ExpressionNode Expression { get; }
+    public GlobalDefinitionKind Kind { get; } = kind;
 
-    public GlobalDefinitionKind Kind { get; }
-
-    public bool DiagnosticsEnabled { get; }
+    public bool DiagnosticsEnabled { get; } = diagnosticsEnabled;
 }
 
 internal sealed class CompiledTypeDefinition
@@ -179,8 +177,9 @@ public sealed class CompiledEventScriptHandler
         Parameters = syntax.Parameters.ToArray();
         Statements = syntax.Statements.ToArray();
         DeclarationOrder = declarationOrder;
-        SignatureKey = EventScriptArgumentMap.CreateSignatureKey(Parameters);
+        SignatureId = EventScriptMessageSignature.CreateSignatureId(Parameters);
         DiagnosticsEnabled = diagnosticsEnabled;
+        Definition = new EventScriptMessageSignature(Message, Parameters);
     }
 
     internal IReadOnlyList<StatementNode> Statements { get; }
@@ -193,5 +192,7 @@ public sealed class CompiledEventScriptHandler
 
     public IReadOnlyList<string> Parameters { get; }
 
-    public string SignatureKey { get; }
+    public string SignatureId { get; }
+
+    public EventScriptMessageSignature Definition { get; }
 }

@@ -1161,4 +1161,70 @@ public class EventScriptParsingScenarios
         var letStatement = (LetStatementNode)program.Handlers[0].Statements[0];
         Assert.IsInstanceOfType<RandomExpressionNode>(letStatement.Expression);
     }
+
+    [TestMethod]
+    public void HandlerHeadersSupportHandlerTagSugar()
+    {
+        const string script =
+            """
+            on :handler Shoot(unit, target) {
+                publish Done
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script);
+        Assert.HasCount(1, module.Handlers);
+        var handler = module.Handlers[0];
+        Assert.AreEqual("Shoot", handler.Message);
+        CollectionAssert.AreEqual(new[] { "unit", "target" }, handler.Parameters.ToArray());
+    }
+
+    [TestMethod]
+    public void NamedInvocationParsesAsHandlerBindingWhilePositionalStaysCall()
+    {
+        const string script =
+            """
+            on Start(unit, myHandler) {
+                myHandler(unit: unit)
+                wounded(unit)
+            }
+            """;
+
+        var module = EventScriptParser.Parse(script);
+        var statements = module.Handlers[0].Statements.Cast<ExpressionStatementNode>().ToArray();
+        Assert.IsInstanceOfType<HandlerBindExpressionNode>(statements[0].Expression);
+        Assert.IsInstanceOfType<CallExpressionNode>(statements[1].Expression);
+    }
+
+    [TestMethod]
+    public void PublishSupportsMessageExpressionsAndRejectsPositionalMessageArguments()
+    {
+        const string validScript =
+            """
+            on Start(unit, target, myHandler, myMessage) {
+                let explicit be :message Shoot(unit: unit, target: target)
+                publish explicit
+                publish myMessage
+                publish myHandler(unit: unit, target: target)
+                publish Shoot(unit: unit, target: target)
+            }
+            """;
+
+        var module = EventScriptParser.Parse(validScript);
+        var statements = module.Handlers[0].Statements;
+        Assert.IsInstanceOfType<MessageLiteralExpressionNode>(((LetStatementNode)statements[0]).Expression);
+        Assert.IsInstanceOfType<IdentifierExpressionNode>(((PublishStatementNode)statements[1]).MessageExpression);
+        Assert.IsInstanceOfType<IdentifierExpressionNode>(((PublishStatementNode)statements[2]).MessageExpression);
+        Assert.IsInstanceOfType<HandlerBindExpressionNode>(((PublishStatementNode)statements[3]).MessageExpression);
+        Assert.IsInstanceOfType<MessageLiteralExpressionNode>(((PublishStatementNode)statements[4]).MessageExpression);
+
+        const string invalidScript =
+            """
+            on Start(unit, target) {
+                publish Shoot(unit, target)
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(invalidScript));
+    }
 }

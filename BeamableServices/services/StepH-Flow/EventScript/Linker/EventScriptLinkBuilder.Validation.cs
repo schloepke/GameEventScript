@@ -126,26 +126,7 @@ public sealed partial class EventScriptLinkBuilder
         switch (statement)
         {
             case PublishStatementNode publish:
-                var duplicateArguments = publish.Arguments
-                    .GroupBy(argument => argument.Name, StringComparer.Ordinal)
-                    .Where(group => group.Count() > 1)
-                    .Select(group => group.Key);
-
-                foreach (var duplicateArgument in duplicateArguments)
-                {
-                    errors.Add(CreateError(
-                        moduleContext,
-                        $"Publish '{publish.Message}' declares argument '{duplicateArgument}' more than once",
-                        publish.Message,
-                        EventScriptSymbolKind.Handler,
-                        EventScriptLinkageErrorKind.DuplicatePublishArgument));
-                }
-
-                foreach (var argument in publish.Arguments)
-                {
-                    ValidateExpressionReferences(moduleContext, argument.Expression, ruleDefinitions, selectDefinitions, errors);
-                }
-
+                ValidateExpressionReferences(moduleContext, publish.MessageExpression, ruleDefinitions, selectDefinitions, errors);
                 return;
 
             case LetStatementNode let:
@@ -228,6 +209,28 @@ public sealed partial class EventScriptLinkBuilder
                     foreach (var argument in call.Arguments)
                     {
                         ValidateExpressionReferences(moduleContext, argument, ruleDefinitions, selectDefinitions, errors);
+                    }
+
+                    return;
+
+                case HandlerLiteralExpressionNode:
+                    return;
+
+                case MessageLiteralExpressionNode messageLiteral:
+                    ValidateDuplicateNamedArguments(moduleContext, messageLiteral.Message, messageLiteral.Arguments, errors);
+                    foreach (var argument in messageLiteral.Arguments)
+                    {
+                        ValidateExpressionReferences(moduleContext, argument.Expression, ruleDefinitions, selectDefinitions, errors);
+                    }
+
+                    return;
+
+                case HandlerBindExpressionNode handlerBind:
+                    ValidateDuplicateNamedArguments(moduleContext, "handler bind", handlerBind.Arguments, errors);
+                    ValidateExpressionReferences(moduleContext, handlerBind.CalleeExpression, ruleDefinitions, selectDefinitions, errors);
+                    foreach (var argument in handlerBind.Arguments)
+                    {
+                        ValidateExpressionReferences(moduleContext, argument.Expression, ruleDefinitions, selectDefinitions, errors);
                     }
 
                     return;
@@ -485,6 +488,28 @@ public sealed partial class EventScriptLinkBuilder
                 name,
                 kind == "Rule" ? EventScriptSymbolKind.Rule : EventScriptSymbolKind.Select,
                 kind == "Rule" ? EventScriptLinkageErrorKind.WrongRuleArity : EventScriptLinkageErrorKind.WrongSelectArity));
+        }
+    }
+
+    private static void ValidateDuplicateNamedArguments(
+        EventScriptModule moduleContext,
+        string symbolName,
+        IReadOnlyList<NamedArgumentNode> arguments,
+        List<EventScriptLinkageError> errors)
+    {
+        var duplicateArguments = arguments
+            .GroupBy(argument => argument.Name, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key);
+
+        foreach (var duplicateArgument in duplicateArguments)
+        {
+            errors.Add(CreateError(
+                moduleContext,
+                $"Named argument '{duplicateArgument}' is declared more than once",
+                symbolName,
+                EventScriptSymbolKind.Handler,
+                EventScriptLinkageErrorKind.DuplicatePublishArgument));
         }
     }
 

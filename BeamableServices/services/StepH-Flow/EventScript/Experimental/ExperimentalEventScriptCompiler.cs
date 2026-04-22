@@ -1,0 +1,559 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Linker;
+using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Types;
+
+namespace StepH.Flow.EventScript.Experimental;
+
+public static class ExperimentalEventScriptCompiler
+{
+    public static ExperimentalCompiledEventScript Compile(
+        LinkedEventScriptModule module,
+        ExperimentalEventScriptCompilationOptions? options = null)
+    {
+        var compileOptions = options ?? new ExperimentalEventScriptCompilationOptions();
+        var errors = new List<EventScriptOpcodeCompilationError>();
+
+        if (module is null)
+        {
+            errors.Add(new EventScriptOpcodeCompilationError(
+                "LinkedEventScriptModule must not be null",
+                "UnknownModule",
+                "module",
+                EventScriptSymbolKind.GlobalDefinition,
+                EventScriptOpcodeCompilationErrorKind.InvalidInput,
+                new EventScriptSourceLocation("UnknownSource")));
+            throw new EventScriptOpcodeCompilationException(errors);
+        }
+
+        try
+        {
+            var builder = new CompilerBuilder(module, compileOptions, errors);
+            var compiled = builder.Build();
+            if (errors.Count > 0)
+            {
+                throw new EventScriptOpcodeCompilationException(errors);
+            }
+
+            return compiled;
+        }
+        catch (EventScriptOpcodeCompilationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            errors.Add(new EventScriptOpcodeCompilationError(
+                $"Internal compiler failure: {ex.Message}",
+                "UnknownModule",
+                "compiler",
+                EventScriptSymbolKind.GlobalDefinition,
+                EventScriptOpcodeCompilationErrorKind.InternalCompilerError,
+                new EventScriptSourceLocation("UnknownSource")));
+            throw new EventScriptOpcodeCompilationException(errors);
+        }
+    }
+
+    private sealed class CompilerBuilder(
+        LinkedEventScriptModule module,
+        ExperimentalEventScriptCompilationOptions options,
+        List<EventScriptOpcodeCompilationError> errors)
+    {
+        private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
+        private readonly List<string> _stringPool = [];
+        private readonly List<EventScriptValue> _constantPool = [];
+        private readonly List<ExperimentalCompiledExpression> _expressionPool = [];
+        private readonly List<ExperimentalCompiledNamedArgumentList> _namedArgumentLists = [];
+        private readonly List<ExperimentalCompiledIterationSource> _iterationSources = [];
+        private readonly List<ExperimentalEventScript> _programs = [];
+
+        private readonly Dictionary<string, ExperimentalCompiledGlobalDefinition> _rules = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ExperimentalCompiledGlobalDefinition> _selects = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ExperimentalCompiledTypeDefinition> _types = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers = new(StringComparer.Ordinal);
+
+        public ExperimentalCompiledEventScript Build()
+        {
+            CompileTypes();
+            CompileGlobalDefinitions(module.RuleDefinitions, EventScriptSymbolKind.Rule, ExperimentalGlobalDefinitionKind.Rule, _rules);
+            CompileGlobalDefinitions(module.SelectDefinitions, EventScriptSymbolKind.Select, ExperimentalGlobalDefinitionKind.Select, _selects);
+            CompileHandlers();
+
+            return new ExperimentalCompiledEventScript(
+                options,
+                _stringPool.ToArray(),
+                _constantPool.ToArray(),
+                _expressionPool.ToArray(),
+                _namedArgumentLists.ToArray(),
+                _iterationSources.ToArray(),
+                _programs.ToArray(),
+                _handlers,
+                _rules,
+                _selects,
+                _types);
+        }
+
+        private void CompileTypes()
+        {
+            foreach (var pair in module.TypeDefinitions)
+            {
+                var fields = pair.Value.Fields.Select(field => new ExperimentalCompiledTypeFieldDefinition(
+                    field.Name,
+                    field.TypeName,
+                    field.MinimumExpression is null ? null : CompileExpression(field.MinimumExpression),
+                    field.MaximumExpression is null ? null : CompileExpression(field.MaximumExpression),
+                    field.ComputedExpression is null ? null : CompileExpression(field.ComputedExpression))).ToArray();
+
+                _types[pair.Key] = new ExperimentalCompiledTypeDefinition(pair.Key, fields);
+            }
+        }
+
+        private void CompileGlobalDefinitions<TDefinition>(
+            IReadOnlyDictionary<string, TDefinition> definitions,
+            EventScriptSymbolKind symbolKind,
+            ExperimentalGlobalDefinitionKind kind,
+            Dictionary<string, ExperimentalCompiledGlobalDefinition> destination)
+            where TDefinition : EventScriptNode
+        {
+            foreach (var pair in definitions)
+            {
+                var name = pair.Key;
+                switch (pair.Value)
+                {
+                    case RuleDefinitionNode rule:
+                        ValidateDuplicateParameters(name, rule.Parameters, symbolKind);
+                        destination[name] = new ExperimentalCompiledGlobalDefinition(
+                            name,
+                            rule.Parameters.ToArray(),
+                            CompileExpression(rule.Expression),
+                            kind,
+                            options.EnableDiagnostics);
+                        break;
+                    case SelectDefinitionNode select:
+                        ValidateDuplicateParameters(name, select.Parameters, symbolKind);
+                        destination[name] = new ExperimentalCompiledGlobalDefinition(
+                            name,
+                            select.Parameters.ToArray(),
+                            CompileExpression(select.Expression),
+                            kind,
+                            options.EnableDiagnostics);
+                        break;
+                }
+            }
+        }
+
+        private void CompileHandlers()
+        {
+            foreach (var pair in module.Handlers)
+            {
+                var compiledHandlers = new List<ExperimentalCompiledEventScriptHandler>(pair.Value.Count);
+                for (var declarationOrder = 0; declarationOrder < pair.Value.Count; declarationOrder++)
+                {
+                    var handler = pair.Value[declarationOrder];
+                    ValidateDuplicateParameters(handler.Message, handler.Parameters, EventScriptSymbolKind.Handler);
+
+                    var rootScope = ScopeFrame.CreateRoot(handler.Parameters);
+                    var programIndex = CompileStatements(handler.Message, handler.Statements, rootScope);
+                    var signatureId = EventScriptMessageSignature.CreateSignatureId(handler.Parameters);
+                    compiledHandlers.Add(new ExperimentalCompiledEventScriptHandler(
+                        handler.Message,
+                        handler.Parameters.ToArray(),
+                        signatureId,
+                        declarationOrder,
+                        programIndex,
+                        options.EnableDiagnostics));
+                }
+
+                _handlers[pair.Key] = compiledHandlers.ToArray();
+            }
+        }
+
+        private int CompileStatements(string symbolName, IReadOnlyList<StatementNode> statements, ScopeFrame scope)
+        {
+            var instructions = new List<ExperimentalInstruction>(statements.Count);
+            foreach (var statement in statements)
+            {
+                CompileStatement(symbolName, statement, scope, instructions);
+            }
+
+            var programIndex = _programs.Count;
+            _programs.Add(new ExperimentalEventScript(instructions.ToArray()));
+            return programIndex;
+        }
+
+        private void CompileStatement(
+            string symbolName,
+            StatementNode statement,
+            ScopeFrame scope,
+            List<ExperimentalInstruction> instructions)
+        {
+            switch (statement)
+            {
+                case PublishStatementNode publish:
+                {
+                    ValidateDuplicatePublishArguments(symbolName, publish.MessageExpression);
+                    var messageExpression = CompileExpression(publish.MessageExpression);
+                    instructions.Add(new ExperimentalInstruction(
+                        ExperimentalOpCode.Publish,
+                        AddExpression(messageExpression)));
+                    return;
+                }
+
+                case LetStatementNode let:
+                {
+                    if (!scope.TryDeclare(let.Identifier))
+                    {
+                        errors.Add(BuildError(
+                            $"Variable '{let.Identifier}' is already defined in this scope",
+                            symbolName,
+                            EventScriptSymbolKind.Variable,
+                            EventScriptOpcodeCompilationErrorKind.DuplicateVariable));
+                    }
+
+                    var expression = CompileExpression(let.Expression);
+                    instructions.Add(new ExperimentalInstruction(
+                        ExperimentalOpCode.Let,
+                        AddString(let.Identifier),
+                        string.IsNullOrEmpty(let.DeclaredType) ? -1 : AddString(let.DeclaredType!),
+                        AddExpression(expression)));
+                    return;
+                }
+
+                case IfStatementNode ifStatement:
+                {
+                    var conditionExpression = CompileExpression(ifStatement.Condition);
+                    if (TryGetBooleanConstant(conditionExpression, out var conditionConstant))
+                    {
+                        if (conditionConstant)
+                        {
+                            CompileBodyIntoInstructions(symbolName, ifStatement.ThenBody, scope, instructions);
+                        }
+                        else if (ifStatement.ElseBody is not null)
+                        {
+                            CompileBodyIntoInstructions(symbolName, ifStatement.ElseBody, scope, instructions);
+                        }
+
+                        return;
+                    }
+
+                    var thenProgramIndex = CompileStatementBody(symbolName, ifStatement.ThenBody, scope);
+                    var elseProgramIndex = ifStatement.ElseBody is null
+                        ? -1
+                        : CompileStatementBody(symbolName, ifStatement.ElseBody, scope);
+                    instructions.Add(new ExperimentalInstruction(
+                        ExperimentalOpCode.If,
+                        AddExpression(conditionExpression),
+                        thenProgramIndex,
+                        elseProgramIndex));
+                    return;
+                }
+
+                case ForStatementNode forStatement:
+                {
+                    var loopScope = scope.CreateChild();
+                    loopScope.TryDeclare(forStatement.Identifier);
+                    var bodyProgramIndex = CompileStatementBody(symbolName, forStatement.Body, loopScope);
+                    var sourceIndex = CompileIterationSource(forStatement.Source);
+                    instructions.Add(new ExperimentalInstruction(
+                        ExperimentalOpCode.ForEach,
+                        AddString(forStatement.Identifier),
+                        sourceIndex,
+                        bodyProgramIndex));
+                    return;
+                }
+
+                case SeededRandomStatementNode seededRandom:
+                {
+                    var seedExpression = CompileExpression(seededRandom.SeedExpression);
+                    var bodyProgramIndex = CompileStatementBody(symbolName, seededRandom.Body, scope);
+                    instructions.Add(new ExperimentalInstruction(
+                        ExperimentalOpCode.SeededRandom,
+                        AddExpression(seedExpression),
+                        bodyProgramIndex));
+                    return;
+                }
+
+                case ExpressionStatementNode expressionStatement:
+                {
+                    var expression = CompileExpression(expressionStatement.Expression);
+                    instructions.Add(new ExperimentalInstruction(
+                        ExperimentalOpCode.EvaluateExpression,
+                        AddExpression(expression)));
+                    return;
+                }
+
+                default:
+                    errors.Add(BuildError(
+                        $"Unsupported statement syntax: {statement.GetType().Name}",
+                        symbolName,
+                        EventScriptSymbolKind.Handler,
+                        EventScriptOpcodeCompilationErrorKind.UnsupportedSyntax));
+                    return;
+            }
+        }
+
+        private int CompileStatementBody(string symbolName, StatementBodyNode body, ScopeFrame parentScope)
+        {
+            var scope = body.IsBlock ? parentScope.CreateChild() : parentScope;
+            return CompileStatements(symbolName, body.Statements, scope);
+        }
+
+        private void CompileBodyIntoInstructions(
+            string symbolName,
+            StatementBodyNode body,
+            ScopeFrame parentScope,
+            List<ExperimentalInstruction> instructions)
+        {
+            var scope = body.IsBlock ? parentScope.CreateChild() : parentScope;
+            foreach (var nested in body.Statements)
+            {
+                CompileStatement(symbolName, nested, scope, instructions);
+            }
+        }
+
+        private int CompileIterationSource(IterationSourceNode source)
+        {
+            ExperimentalCompiledIterationSource compiledSource = source switch
+            {
+                CollectionIterationSourceNode collection => new ExperimentalCompiledIterationSource(
+                    ExperimentalIterationSourceKind.Collection,
+                    CompileExpression(collection.Expression),
+                    null,
+                    null,
+                    null),
+                RangeIterationSourceNode range => new ExperimentalCompiledIterationSource(
+                    ExperimentalIterationSourceKind.Range,
+                    null,
+                    CompileExpression(range.RangeExpression.FromExpression),
+                    CompileExpression(range.RangeExpression.ToExpression),
+                    range.RangeExpression.StepExpression is null ? null : CompileExpression(range.RangeExpression.StepExpression)),
+                _ => new ExperimentalCompiledIterationSource(ExperimentalIterationSourceKind.Collection, null, null, null, null)
+            };
+
+            var index = _iterationSources.Count;
+            _iterationSources.Add(compiledSource);
+            return index;
+        }
+
+        private ExperimentalCompiledExpression CompileExpression(ExpressionNode expression)
+        {
+            if (TryFoldConstant(expression, out var constantValue))
+            {
+                _constantPool.Add(constantValue);
+                return new ExperimentalCompiledExpression(expression, constantValue);
+            }
+
+            return new ExperimentalCompiledExpression(expression);
+        }
+
+        private static bool TryFoldConstant(ExpressionNode expression, out EventScriptValue value)
+        {
+            switch (expression)
+            {
+                case IntegerLiteralExpressionNode integer:
+                    value = EventScriptValue.Integer(integer.Value);
+                    return true;
+                case DecimalLiteralExpressionNode number:
+                    value = EventScriptValue.Decimal(number.Value);
+                    return true;
+                case PercentageLiteralExpressionNode percentage:
+                    value = EventScriptValue.Percentage(percentage.PercentValue / 100m);
+                    return true;
+                case TextLiteralExpressionNode text:
+                    value = EventScriptValue.Text(text.Value);
+                    return true;
+                case TagLiteralExpressionNode tag:
+                    value = EventScriptValue.Tag(tag.Name);
+                    return true;
+                case BooleanLiteralExpressionNode boolean:
+                    value = EventScriptValue.Boolean(boolean.Value);
+                    return true;
+                case ListLiteralExpressionNode list:
+                {
+                    var items = new List<EventScriptValue>(list.Items.Count);
+                    foreach (var item in list.Items)
+                    {
+                        if (!TryFoldConstant(item, out var constantItem))
+                        {
+                            value = EventScriptValue.Nothing;
+                            return false;
+                        }
+
+                        items.Add(constantItem);
+                    }
+
+                    value = EventScriptValue.List(items);
+                    return true;
+                }
+                case SetLiteralExpressionNode set:
+                {
+                    var items = new List<EventScriptValue>(set.Items.Count);
+                    foreach (var item in set.Items)
+                    {
+                        if (!TryFoldConstant(item, out var constantItem))
+                        {
+                            value = EventScriptValue.Nothing;
+                            return false;
+                        }
+
+                        items.Add(constantItem);
+                    }
+
+                    value = EventScriptValue.Set(items);
+                    return true;
+                }
+                case DictionaryLiteralExpressionNode dictionary:
+                {
+                    var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+                    foreach (var entry in dictionary.Entries)
+                    {
+                        if (!TryFoldConstant(entry.Value, out var constantItem))
+                        {
+                            value = EventScriptValue.Nothing;
+                            return false;
+                        }
+
+                        map[entry.Key] = constantItem;
+                    }
+
+                    value = EventScriptValue.Dictionary(map);
+                    return true;
+                }
+                default:
+                    value = EventScriptValue.Nothing;
+                    return false;
+            }
+        }
+
+        private bool TryGetBooleanConstant(ExperimentalCompiledExpression expression, out bool value)
+        {
+            if (!expression.IsConstant || expression.ConstantValue is null)
+            {
+                value = false;
+                return false;
+            }
+
+            value = expression.ConstantValue.Type == EventScriptValueType.Boolean && expression.ConstantValue.AsBoolean();
+            return expression.ConstantValue.Type == EventScriptValueType.Boolean;
+        }
+
+        private void ValidateDuplicateParameters(string symbol, IReadOnlyList<string> parameters, EventScriptSymbolKind symbolKind)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var parameter in parameters)
+            {
+                if (seen.Add(parameter))
+                {
+                    continue;
+                }
+
+                var kind = symbolKind == EventScriptSymbolKind.Handler
+                    ? EventScriptOpcodeCompilationErrorKind.DuplicateHandlerParameter
+                    : EventScriptOpcodeCompilationErrorKind.DuplicateDefinitionParameter;
+                errors.Add(BuildError(
+                    $"{symbolKind} '{symbol}' declares parameter '{parameter}' more than once",
+                    symbol,
+                    symbolKind,
+                    kind));
+            }
+        }
+
+        private void ValidateDuplicatePublishArguments(string symbolName, ExpressionNode publishExpression)
+        {
+            var arguments = publishExpression switch
+            {
+                MessageLiteralExpressionNode messageLiteral => messageLiteral.Arguments,
+                HandlerBindExpressionNode handlerBind => handlerBind.Arguments,
+                _ => null
+            };
+            if (arguments is null)
+            {
+                return;
+            }
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var argument in arguments)
+            {
+                if (names.Add(argument.Name))
+                {
+                    continue;
+                }
+
+                errors.Add(BuildError(
+                    $"Publish expression in '{symbolName}' declares argument '{argument.Name}' more than once",
+                    symbolName,
+                    EventScriptSymbolKind.Handler,
+                    EventScriptOpcodeCompilationErrorKind.DuplicatePublishArgument));
+            }
+        }
+
+        private EventScriptOpcodeCompilationError BuildError(
+            string message,
+            string symbol,
+            EventScriptSymbolKind symbolKind,
+            EventScriptOpcodeCompilationErrorKind kind)
+            => new(
+                message,
+                "UnknownModule",
+                symbol,
+                symbolKind,
+                kind,
+                new EventScriptSourceLocation("UnknownSource"));
+
+        private int AddString(string value)
+        {
+            if (_stringIndex.TryGetValue(value, out var existing))
+            {
+                return existing;
+            }
+
+            var index = _stringPool.Count;
+            _stringPool.Add(value);
+            _stringIndex[value] = index;
+            return index;
+        }
+
+        private int AddExpression(ExperimentalCompiledExpression expression)
+        {
+            var index = _expressionPool.Count;
+            _expressionPool.Add(expression);
+            return index;
+        }
+    }
+
+    private sealed class ScopeFrame
+    {
+        private readonly ScopeFrame? _parent;
+        private readonly HashSet<string> _names = new(StringComparer.Ordinal);
+
+        private ScopeFrame(ScopeFrame? parent)
+        {
+            _parent = parent;
+        }
+
+        public static ScopeFrame CreateRoot(IReadOnlyList<string> predeclaredNames)
+        {
+            var frame = new ScopeFrame(parent: null);
+            foreach (var name in predeclaredNames)
+            {
+                frame._names.Add(name);
+            }
+
+            return frame;
+        }
+
+        public ScopeFrame CreateChild() => new(this);
+
+        public bool TryDeclare(string name) => _names.Add(name);
+
+        public bool IsDeclaredInThisScope(string name) => _names.Contains(name);
+
+        public bool IsDeclaredInAnyScope(string name)
+            => IsDeclaredInThisScope(name) || (_parent?.IsDeclaredInAnyScope(name) ?? false);
+    }
+}

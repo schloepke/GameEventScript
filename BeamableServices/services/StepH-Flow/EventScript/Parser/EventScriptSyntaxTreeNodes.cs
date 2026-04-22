@@ -28,7 +28,7 @@ public sealed record SelectDefinitionNode(string Name, IReadOnlyList<string> Par
 
 // Statement nodes
 
-public sealed record PublishStatementNode(string Message, IReadOnlyList<NamedArgumentNode> Arguments) : StatementNode;
+public sealed record PublishStatementNode(ExpressionNode MessageExpression) : StatementNode;
 public sealed record NamedArgumentNode(string Name, ExpressionNode Expression) : EventScriptNode;
 public sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
 public sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : EventScriptNode;
@@ -41,6 +41,9 @@ public sealed record ExpressionStatementNode(ExpressionNode Expression) : Statem
 
 public sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 public sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
+public sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<string> Parameters) : ExpressionNode;
+public sealed record MessageLiteralExpressionNode(string Message, IReadOnlyList<NamedArgumentNode> Arguments) : ExpressionNode;
+public sealed record HandlerBindExpressionNode(ExpressionNode CalleeExpression, IReadOnlyList<NamedArgumentNode> Arguments) : ExpressionNode;
 public sealed record CallExpressionNode(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 public sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
 public sealed record IntegerLiteralExpressionNode(long Value) : ExpressionNode;

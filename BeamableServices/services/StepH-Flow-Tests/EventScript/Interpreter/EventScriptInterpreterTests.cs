@@ -23,7 +23,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start", EventScriptValue.List([1m, 5m, 9m]), 7m);
+        var result = interpreter.InvokePositional("Start", EventScriptValue.List([1m, 5m, 9m]), 7m);
 
         Assert.HasCount(1, result.EmittedEvents);
         Assert.AreEqual("Passed", result.EmittedEvents[0].Message);
@@ -44,7 +44,7 @@ public class EventScriptRuntimeScenarios
         var random = EventScriptRandomGenerator.FromSequence(4, 1, 6, 3, 5);
         var interpreter = EventScriptManager.Compile(script);
 
-        var result = interpreter.Emit(random, "Roll");
+        var result = interpreter.InvokePositional(random, "Roll");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(4, Convert.ToInt32(args[0].AsInteger()));
@@ -93,7 +93,7 @@ public class EventScriptRuntimeScenarios
         var maybeTarget = EventScriptValue.OptionalSome(EventScriptValue.Text("boss"));
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start", player, values, maybeTarget);
+        var result = interpreter.InvokePositional("Start", player, values, maybeTarget);
 
         Assert.AreEqual("SeenKey", result.EmittedEvents[0].Message);
         Assert.AreEqual(EventScriptValueType.Tag, result.EmittedEvents[0].Arguments[0].Type);
@@ -151,7 +151,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(0.249999m, 9m, 0m, 8.99999m);
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit(random, "Start", units).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional(random, "Start", units).EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.IsFalse(args[1].AsBoolean());
@@ -179,7 +179,7 @@ public class EventScriptRuntimeScenarios
         ]);
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start", items).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional("Start", items).EmittedEvents[0].Arguments;
 
         Assert.AreEqual(9m, args[0].AsNumber());
         Assert.AreEqual(7m, args[1].AsNumber());
@@ -211,7 +211,7 @@ public class EventScriptRuntimeScenarios
         ]);
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Compute", items);
+        var result = interpreter.InvokePositional("Compute", items);
 
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
         Assert.AreEqual(3, Convert.ToInt32(result.EmittedEvents[0].Arguments[0].AsInteger()));
@@ -246,7 +246,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(1, 0, 1, 1, 0, 1);
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit(random, "Start", enemies).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional(random, "Start", enemies).EmittedEvents[0].Arguments;
 
         Assert.AreEqual(4m, args[0].AsNumber());
         Assert.AreEqual(3m, args[1].AsNumber());
@@ -273,7 +273,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var args = interpreter.Invoke("Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(12.5m, args[0].AsNumber());
         Assert.AreEqual(99m, args[1].AsNumber());
@@ -304,7 +304,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var args = interpreter.Invoke("Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual("75%", args[0].AsText());
         Assert.AreEqual(0.75m, args[1].AsNumber());
@@ -335,7 +335,7 @@ public class EventScriptRuntimeScenarios
         ]);
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start", units).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional("Start", units).EmittedEvents[0].Arguments;
 
         Assert.AreEqual("Mage", args[0].AsText());
         Assert.AreEqual("Mage", args[1].AsText());
@@ -364,7 +364,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var args = interpreter.Invoke("Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(4m, args[0].AsNumber());
         Assert.AreEqual(0m, args[1].AsNumber());
@@ -399,7 +399,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Sort",
             EventScriptValue.List([3m, 1m, 2m]),
             EventScriptValue.List([
@@ -439,7 +439,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.List([3m, 3m, 1m, 2m, 2m]),
             EventScriptValue.List([
@@ -477,7 +477,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "SortAll",
             EventScriptValue.List([3m, 1m, 2m]),
             EventScriptValue.Set([EventScriptValue.Text("beta"), EventScriptValue.Text("alpha"), EventScriptValue.Text("gamma")]),
@@ -513,7 +513,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(1, 2, 3, 1);
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit(random, "Start").EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional(random, "Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Nothing, args[0].Type);
         Assert.AreEqual(EventScriptValueType.Nothing, args[1].Type);
@@ -558,7 +558,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(2, 5, 6);
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit(random, "Start", units).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional(random, "Start", units).EmittedEvents[0].Arguments;
 
         Assert.AreEqual(3m, args[0].AsNumber());
         Assert.AreEqual(2m, args[1].AsNumber());
@@ -589,7 +589,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
 
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
         Assert.AreEqual(3, Convert.ToInt32(result.EmittedEvents[0].Arguments[0].AsInteger()));
@@ -613,7 +613,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var args = interpreter.Invoke("Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(1m, args[0].AsNumber());
         Assert.AreEqual(4m, args[1].AsNumber());
@@ -654,7 +654,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start", EventScriptValue.List(new EventScriptValue[] { 2m, 4m, 5m }));
+        var result = interpreter.InvokePositional("Start", EventScriptValue.List(new EventScriptValue[] { 2m, 4m, 5m }));
 
         Assert.AreEqual("Full", result.EmittedEvents[0].Message);
         Assert.AreEqual(1L, result.EmittedEvents[0].Arguments["value"].AsInteger());
@@ -721,7 +721,7 @@ public class EventScriptRuntimeScenarios
         ]);
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start", unit, units).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional("Start", unit, units).EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.IsTrue(args[1].AsBoolean());
@@ -806,7 +806,7 @@ public class EventScriptRuntimeScenarios
         ]);
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start", incompleteUnit, units).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional("Start", incompleteUnit, units).EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Nothing, args[0].Type);
         Assert.AreEqual(EventScriptValueType.Nothing, args[1].Type);
@@ -824,7 +824,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
 
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
         Assert.AreEqual("Hello 'World', I'm here", result.EmittedEvents[0].Arguments[0].AsText());
@@ -848,7 +848,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Tag, args[0].Type);
@@ -884,7 +884,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(2, 6, 3, 5);
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(random, "Start", EventScriptValue.OptionalSome("x"));
+        var result = interpreter.InvokePositional(random, "Start", EventScriptValue.OptionalSome("x"));
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(3, Convert.ToInt32(args[0].AsInteger()));
@@ -911,7 +911,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(10m, args[0].AsNumber());
@@ -935,7 +935,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["name"] = "Ada" }),
             EventScriptValue.Text("name"));
@@ -981,7 +981,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.OptionalSome(7m),
             "",
@@ -1033,7 +1033,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var args = interpreter.Invoke("Start").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(-12m, args[0].AsNumber());
         Assert.AreEqual(-12.34m, args[1].AsNumber());
@@ -1056,7 +1056,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.Decimal(-1m),
             EventScriptValue.Integer(3),
@@ -1084,7 +1084,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.List([]),
             EventScriptValue.Text("orc"));
@@ -1120,7 +1120,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5);
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit(random, "Start").EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional(random, "Start").EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.IsTrue(args[1].AsBoolean());
@@ -1147,7 +1147,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 4, 3, 2 })),
             EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 6, 4, 3 })),
@@ -1182,7 +1182,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.Dice(EventScriptDiceValue.Create(new[] { 6, 6, 5, 5, 5 })),
             EventScriptValue.List([1m, 2m, 2m, 3m, 4m]),
@@ -1214,7 +1214,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.List([
                 EventScriptValue.Text("King"),
@@ -1244,7 +1244,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start", EventScriptValue.OptionalNone(), EventScriptValue.Nothing);
+        var result = interpreter.InvokePositional("Start", EventScriptValue.OptionalNone(), EventScriptValue.Nothing);
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(10m, args[0].AsNumber());
@@ -1263,9 +1263,9 @@ public class EventScriptRuntimeScenarios
 
         var interpreter = EventScriptManager.Compile(script);
 
-        var boolResult = interpreter.Emit("Start", true);
-        var numberResult = interpreter.Emit("Start", 7m);
-        var textResult = interpreter.Emit("Start", "x");
+        var boolResult = interpreter.InvokePositional("Start", true);
+        var numberResult = interpreter.InvokePositional("Start", 7m);
+        var textResult = interpreter.InvokePositional("Start", "x");
 
         Assert.AreEqual(12m, boolResult.EmittedEvents[0].Arguments[0].AsNumber());
         Assert.AreEqual(15m, numberResult.EmittedEvents[0].Arguments[0].AsNumber());
@@ -1284,9 +1284,9 @@ public class EventScriptRuntimeScenarios
 
         var interpreter = EventScriptManager.Compile(script);
 
-        Assert.AreEqual(12m, interpreter.Emit("Start", true).EmittedEvents[0].Arguments[0].AsNumber());
-        Assert.AreEqual(12m, interpreter.Emit("Start", 2m).EmittedEvents[0].Arguments[0].AsNumber());
-        Assert.AreEqual(5m, interpreter.Emit("Start", "x").EmittedEvents[0].Arguments[0].AsNumber());
+        Assert.AreEqual(12m, interpreter.InvokePositional("Start", true).EmittedEvents[0].Arguments[0].AsNumber());
+        Assert.AreEqual(12m, interpreter.InvokePositional("Start", 2m).EmittedEvents[0].Arguments[0].AsNumber());
+        Assert.AreEqual(5m, interpreter.InvokePositional("Start", "x").EmittedEvents[0].Arguments[0].AsNumber());
     }
 
     [TestMethod]
@@ -1300,7 +1300,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(12, Convert.ToInt32(args[0].AsInteger()));
@@ -1327,7 +1327,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].IsNaN());
@@ -1347,7 +1347,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Roll", 9m, 2m);
+        var result = interpreter.InvokePositional("Roll", 9m, 2m);
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
     }
 
@@ -1365,7 +1365,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(4, 0.25m, 1.5m);
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit(random, "Roll").EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional(random, "Roll").EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Integer, args[0].Type);
         Assert.AreEqual(4L, args[0].AsInteger());
@@ -1385,7 +1385,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var args = interpreter.Emit("Start").EmittedEvents[0].Arguments;
+        var args = interpreter.Invoke("Start").EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.IsFalse(args[1].AsBoolean());
@@ -1403,7 +1403,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.EmitClr("Inspect", (object?)null);
+        var result = interpreter.InvokeClr("Inspect", ("item", null));
         Assert.AreEqual(EventScriptValueType.Nothing, result.EmittedEvents[0].Arguments[0].Type);
     }
 
@@ -1417,7 +1417,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Inspect", EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>()));
+        var result = interpreter.InvokePositional("Inspect", EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>()));
         Assert.AreEqual(EventScriptValueType.Nothing, result.EmittedEvents[0].Arguments[0].Type);
     }
 
@@ -1431,7 +1431,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Inspect", EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["points"] = 7m }));
+        var result = interpreter.InvokePositional("Inspect", EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue> { ["points"] = 7m }));
 
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
         Assert.AreEqual(7m, result.EmittedEvents[0].Arguments[0].AsNumber());
@@ -1448,7 +1448,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var value = result.EmittedEvents[0].Arguments[0];
         Assert.IsTrue(value.IsInfinity());
         Assert.IsFalse(value.IsNegativeInfinity());
@@ -1465,7 +1465,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         Assert.IsTrue(result.EmittedEvents[0].Arguments[0].IsNaN());
     }
 
@@ -1482,7 +1482,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Inspect", EventScriptValue.List(new EventScriptValue[] { 1m, 5m, 9m }), 7m);
+        var result = interpreter.InvokePositional("Inspect", EventScriptValue.List(new EventScriptValue[] { 1m, 5m, 9m }), 7m);
 
         CollectionAssert.AreEquivalent(
             new[] { "values", "threshold", "passed" },
@@ -1535,7 +1535,7 @@ public class EventScriptRuntimeScenarios
             .WithMaxProcessedEventsPerRun(4)
             .Build()
             .Load(EventScriptManager.Compile(script));
-        var result = host.Publish("Start");
+        var result = host.Publish(EventScriptMessage.Message("Start"));
         Assert.HasCount(4, result.EmittedEvents);
         Assert.AreEqual("Loop", result.EmittedEvents[0].Message);
         Assert.AreEqual("Start", result.EmittedEvents[1].Message);
@@ -1681,7 +1681,7 @@ public class EventScriptRuntimeScenarios
             .Load(EventScriptManager.Compile(script));
 
         var publishResult = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
-        var publishClrResult = host.PublishClr("Start", new Dictionary<string, object?> { ["value"] = 2m });
+        var publishClrResult = host.Publish(EventScriptMessage.Message("Start", ("value", 2m )));
 
         CollectionAssert.AreEqual(
             publishResult.EmittedEvents.Select(evt => evt.Message).ToArray(),
@@ -1735,8 +1735,8 @@ public class EventScriptRuntimeScenarios
             .Build()
             .Load(EventScriptManager.Compile(script));
 
-        var first = host.Publish("Roll");
-        var second = host.Publish("Roll");
+        var first = host.Publish(EventScriptMessage.Message("Roll"));
+        var second = host.Publish(EventScriptMessage.Message("Roll"));
 
         Assert.AreEqual(2, Convert.ToInt32(first.EmittedEvents[0].Arguments["value"].AsInteger()));
         Assert.AreEqual(5, Convert.ToInt32(second.EmittedEvents[0].Arguments["value"].AsInteger()));
@@ -1756,7 +1756,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             false,
             true,
@@ -1794,7 +1794,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.List(new EventScriptValue[] { 1m, 2m }),
             7m);
@@ -1815,7 +1815,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start", 42m);
+        var result = interpreter.InvokePositional("Start", 42m);
         var args = result.EmittedEvents[0].Arguments;
 
         CollectionAssert.AreEqual(
@@ -1840,8 +1840,8 @@ public class EventScriptRuntimeScenarios
         var random = EventScriptRandomGenerator.FromSequence(5, 9);
         var interpreter = EventScriptManager.Compile(script);
 
-        var first = interpreter.Emit(new EventScriptInvocationContext { Random = random }, "Start", 42m);
-        var second = interpreter.Emit(new EventScriptInvocationContext { Random = EventScriptRandomGenerator.FromSequence(5, 9) }, "Start", 42m);
+        var first = interpreter.InvokePositional(new EventScriptInvocationContext { Random = random }, "Start", 42m);
+        var second = interpreter.InvokePositional(new EventScriptInvocationContext { Random = EventScriptRandomGenerator.FromSequence(5, 9) }, "Start", 42m);
 
         Assert.AreEqual("Inner", first.EmittedEvents[0].Message);
         Assert.AreEqual(first.EmittedEvents[0].Arguments["value"].AsInteger(), second.EmittedEvents[0].Arguments["value"].AsInteger());
@@ -1863,7 +1863,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start", "ab");
+        var result = interpreter.InvokePositional("Start", "ab");
 
         Assert.HasCount(1, result.EmittedEvents);
         Assert.AreEqual("Found", result.EmittedEvents[0].Message);
@@ -1882,7 +1882,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(1, 2);
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(random, "Roll");
+        var result = interpreter.InvokePositional(random, "Roll");
         Assert.AreEqual(0, Convert.ToInt32(result.EmittedEvents[0].Arguments[0].AsInteger()));
     }
 
@@ -1904,7 +1904,7 @@ public class EventScriptRuntimeScenarios
             1, 4, 6, 2,
             3, 2, 6, 1);
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(random, "Roll");
+        var result = interpreter.InvokePositional(random, "Roll");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.AreEqual(EventScriptValueType.Dice, args[0].Type);
@@ -1936,7 +1936,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(
+        var result = interpreter.InvokePositional(
             "Start",
             EventScriptValue.Tag("name"),
             EventScriptValue.Decimal(1.5m),
@@ -1975,7 +1975,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
 
         Assert.HasCount(1, result.EmittedEvents);
         Assert.AreEqual("IfFalse", result.EmittedEvents[0].Message);
@@ -1993,7 +1993,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
 
         Assert.HasCount(1, result.EmittedEvents);
         Assert.AreEqual("Different", result.EmittedEvents[0].Message);
@@ -2011,7 +2011,7 @@ public class EventScriptRuntimeScenarios
 
         var random = EventScriptRandomGenerator.FromSequence(4, 2);
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit(random, "Start");
+        var result = interpreter.InvokePositional(random, "Start");
         var value = result.EmittedEvents[0].Arguments[0];
 
         Assert.IsFalse(value.IsNaN());
@@ -2030,7 +2030,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].IsInfinity());
@@ -2053,7 +2053,7 @@ public class EventScriptRuntimeScenarios
             """;
 
         var interpreter = EventScriptManager.Compile(script);
-        var result = interpreter.Emit("Start");
+        var result = interpreter.Invoke("Start");
         var args = result.EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].IsNaN());

@@ -4,69 +4,97 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
 
-namespace StepH.Flow.EventScript.Interpreter;
+namespace StepH.Flow.EventScript.Experimental;
 
-internal sealed class EventScriptInvocationEngine
+internal sealed class ExperimentalOpcodeInvocationEngine
 {
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _handlers;
-    private readonly IReadOnlyDictionary<string, CompiledTypeDefinition> _typeDefinitions;
-    private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _ruleDefinitions;
-    private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _selectDefinitions;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers;
+    private readonly IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> _typeDefinitions;
+    private readonly IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> _ruleDefinitions;
+    private readonly IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> _selectDefinitions;
     private readonly EventScriptRandomGenerator _randomGenerator;
     private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly bool _diagnosticsEnabled;
 
-    internal EventScriptInvocationEngine(CompiledEventScript compiledScript, EventScriptInvocationContext? invocationContext, IEventScriptDiagnosticCollector? diagnosticCollector)
+    internal ExperimentalOpcodeInvocationEngine(ExperimentalCompiledEventScript compiledScript, EventScriptInvocationContext? invocationContext, IEventScriptDiagnosticCollector? diagnosticCollector)
     {
-        _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
         _randomGenerator = invocationContext?.Random ?? EventScriptRandomGenerator.Create();
-        _typeDefinitions = compiledScript.TypeDefinitions;
-        _ruleDefinitions = compiledScript.RuleDefinitions;
-        _selectDefinitions = compiledScript.SelectDefinitions;
-        _handlers = compiledScript.Handlers;
+        _typeDefinitions = compiledScript?.TypeDefinitions ?? new Dictionary<string, ExperimentalCompiledTypeDefinition>(StringComparer.Ordinal);
+        _ruleDefinitions = compiledScript?.RuleDefinitions ?? new Dictionary<string, ExperimentalCompiledGlobalDefinition>(StringComparer.Ordinal);
+        _selectDefinitions = compiledScript?.SelectDefinitions ?? new Dictionary<string, ExperimentalCompiledGlobalDefinition>(StringComparer.Ordinal);
+        _handlers = compiledScript?.Handlers ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
+        _compiledScript = compiledScript;
         _diagnosticCollector = diagnosticCollector;
-        _diagnosticsEnabled = compiledScript.Options.EnableDiagnostics;
+        _diagnosticsEnabled = compiledScript?.Options.EnableDiagnostics ?? false;
         _randomScopes.Push(_randomGenerator);
     }
+
+    private readonly ExperimentalCompiledEventScript? _compiledScript;
 
     public EventScriptExecutionResult InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
         => InvokeMessage(new EventScriptMessage(message, args));
 
     public EventScriptExecutionResult InvokeMessage(EventScriptMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.Name))
+        try
         {
-            throw new ArgumentException("Message must not be null or whitespace", nameof(message));
-        }
+            message = message ?? new EventScriptMessage(string.Empty);
+            if (string.IsNullOrWhiteSpace(message.Name))
+            {
+                message = new EventScriptMessage(string.Empty, message.Arguments);
+            }
 
-        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
-        foreach (var handler in GetMatchingHandlers(message))
+            var state = new ExperimentalCompiledRunState(_diagnosticCollector, _diagnosticsEnabled);
+            foreach (var handler in GetMatchingHandlers(message))
+            {
+                try
+                {
+                    var context = new ExperimentalCompiledExecutionContext(state);
+                    var handlerVariables = ExecuteHandler(context, handler, message.Arguments);
+                    state.CaptureVariables(handlerVariables);
+                }
+                catch
+                {
+                }
+            }
+
+            return new EventScriptExecutionResult(message, state.EmittedEvents, state.Variables);
+        }
+        catch
         {
-            var context = new ExecutionContext(state);
-            var handlerVariables = ExecuteHandler(context, handler, message.Arguments);
-            state.CaptureVariables(handlerVariables);
+            return new EventScriptExecutionResult(string.Empty, [], new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
         }
-
-        return new EventScriptExecutionResult(message, state.EmittedEvents, state.Variables);
     }
 
-    public EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    public EventScriptExecutionResult InvokeHandler(ExperimentalCompiledEventScriptHandler? handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
-        _ = handler ?? throw new ArgumentNullException(nameof(handler));
-        args = EventScriptNamedArguments.Normalize(args);
-        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
-        var context = new ExecutionContext(state);
-        var variables = ExecuteHandler(context, handler, args);
-        state.CaptureVariables(variables);
-        return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
+        if (handler is null)
+        {
+            return new EventScriptExecutionResult(string.Empty, [], new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+        }
+
+        try
+        {
+            args = EventScriptNamedArguments.Normalize(args);
+            var state = new ExperimentalCompiledRunState(_diagnosticCollector, _diagnosticsEnabled);
+            var context = new ExperimentalCompiledExecutionContext(state);
+            var variables = ExecuteHandler(context, handler, args);
+            state.CaptureVariables(variables);
+            return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
+        }
+        catch
+        {
+            return new EventScriptExecutionResult(handler.Message, [], new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+        }
     }
 
-    private IReadOnlyList<CompiledEventScriptHandler> GetMatchingHandlers(EventScriptMessage message)
+    private IReadOnlyList<ExperimentalCompiledEventScriptHandler> GetMatchingHandlers(EventScriptMessage message)
     {
         if (!_handlers.TryGetValue(message.Name, out var handlers))
         {
@@ -79,7 +107,7 @@ internal sealed class EventScriptInvocationEngine
             .ToArray();
     }
 
-    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExperimentalCompiledExecutionContext context, ExperimentalCompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         context.PushScope();
         try
@@ -88,14 +116,15 @@ internal sealed class EventScriptInvocationEngine
             {
                 if (handler.DiagnosticsEnabled)
                 {
+                    args.TryGetValue(parameter, out var parameterValue);
                     context.RecordDiagnostic(
                         EventScriptDiagnosticEventKind.ParameterBound,
                         parameter,
-                        new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { [parameter] = args[parameter] },
+                        new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { [parameter] = parameterValue ?? EventScriptValue.Nothing },
                         $"Bound '{parameter}'");
                 }
 
-                context.Define(parameter, args[parameter]);
+                context.Define(parameter, args.TryGetValue(parameter, out var parameterArgument) ? parameterArgument : EventScriptValue.Nothing);
             }
 
             if (handler.DiagnosticsEnabled)
@@ -107,7 +136,7 @@ internal sealed class EventScriptInvocationEngine
                     $"Handler '{handler.Message}' invoked");
             }
 
-            ExecuteStatements(context, handler.Statements);
+            ExecuteProgram(context, handler.ProgramIndex);
             return context.SnapshotTopScope();
         }
         finally
@@ -116,106 +145,187 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private void ExecuteStatements(ExecutionContext context, IReadOnlyList<StatementNode> statements)
+    private void ExecuteProgram(ExperimentalCompiledExecutionContext context, int programIndex)
     {
-        foreach (var statement in statements)
+        if (_compiledScript is null || programIndex < 0 || programIndex >= _compiledScript.Programs.Count)
         {
-            ExecuteStatement(context, statement);
-        }
-    }
-
-    private void ExecuteStatement(ExecutionContext context, StatementNode statement)
-    {
-        switch (statement)
-        {
-            case PublishStatementNode publish:
-                var publishValue = EvaluateExpression(context, publish.MessageExpression);
-                if (EventScriptMessageValueCodec.TryReadMessageValue(publishValue, out var message))
-                {
-                    EmitMessage(context, message);
-                }
-
-                return;
-
-            case LetStatementNode let:
-                var letValue = EvaluateExpression(context, let.Expression);
-                if (!string.IsNullOrEmpty(let.DeclaredType))
-                {
-                    letValue = ConvertToDeclaredType(letValue, let.DeclaredType!);
-                }
-
-                context.Define(let.Identifier, letValue);
-                return;
-
-            case IfStatementNode ifStatement:
-                if (AsBool(EvaluateExpression(context, ifStatement.Condition)))
-                {
-                    ExecuteStatementBody(context, ifStatement.ThenBody);
-                }
-                else if (ifStatement.ElseBody is not null)
-                {
-                    ExecuteStatementBody(context, ifStatement.ElseBody);
-                }
-                return;
-
-            case ForStatementNode forStatement:
-                foreach (var item in EnumerateIterationSource(context, forStatement.Source))
-                {
-                    context.PushScope();
-                    try
-                    {
-                        context.Define(forStatement.Identifier, item);
-                        ExecuteStatementBody(context, forStatement.Body);
-                    }
-                    finally
-                    {
-                        context.PopScope();
-                    }
-                }
-
-                return;
-
-            case SeededRandomStatementNode seededRandom:
-                ExecuteSeededRandomStatement(context, seededRandom);
-                return;
-
-            case ExpressionStatementNode expressionStatement:
-                EvaluateExpression(context, expressionStatement.Expression);
-                return;
-
-            default:
-                return;
-        }
-    }
-
-    private static void EmitMessage(ExecutionContext context, EventScriptMessage message)
-    {
-        context.Publish(message.Name, message.Arguments);
-    }
-
-    private void ExecuteStatementBody(ExecutionContext context, StatementBodyNode body)
-    {
-        if (body.IsBlock)
-        {
-            context.PushScope();
-            try
-            {
-                ExecuteStatements(context, body.Statements);
-            }
-            finally
-            {
-                context.PopScope();
-            }
-
             return;
         }
 
-        ExecuteStatements(context, body.Statements);
+        var program = _compiledScript.Programs[programIndex];
+        foreach (var instruction in program.Instructions)
+        {
+            ExecuteInstruction(context, instruction);
+        }
     }
 
-    private EventScriptValue EvaluateExpression(ExecutionContext context, ExpressionNode expression) => EvaluateExpressionCore(context, expression);
+    private void ExecuteInstruction(ExperimentalCompiledExecutionContext context, ExperimentalInstruction instruction)
+    {
+        try
+        {
+            if (_compiledScript is null)
+            {
+                return;
+            }
 
-    private EventScriptValue EvaluateExpressionCore(ExecutionContext context, ExpressionNode expression)
+            switch (instruction.OpCode)
+            {
+                case ExperimentalOpCode.Let:
+                {
+                    var identifier = ResolveString(instruction.A);
+                    var value = EvaluateCompiledExpression(context, instruction.C);
+                    var declaredType = ResolveStringNullable(instruction.B);
+                    if (!string.IsNullOrEmpty(declaredType))
+                    {
+                        value = ConvertToDeclaredType(value, declaredType!);
+                    }
+
+                    context.Define(identifier, value);
+                    return;
+                }
+                case ExperimentalOpCode.Publish:
+                {
+                    var publishValue = EvaluateCompiledExpression(context, instruction.A);
+                    if (EventScriptMessageValueCodec.TryReadMessageValue(publishValue, out var message))
+                    {
+                        context.Publish(message.Name, message.Arguments);
+                    }
+
+                    return;
+                }
+                case ExperimentalOpCode.If:
+                {
+                    if (AsBool(EvaluateCompiledExpression(context, instruction.A)))
+                    {
+                        ExecuteProgram(context, instruction.B);
+                    }
+                    else if (instruction.C >= 0)
+                    {
+                        ExecuteProgram(context, instruction.C);
+                    }
+
+                    return;
+                }
+                case ExperimentalOpCode.ForEach:
+                {
+                    var identifier = ResolveString(instruction.A);
+                    foreach (var item in EnumerateIterationSource(context, instruction.B))
+                    {
+                        context.PushScope();
+                        try
+                        {
+                            context.Define(identifier, item);
+                            ExecuteProgram(context, instruction.C);
+                        }
+                        finally
+                        {
+                            context.PopScope();
+                        }
+                    }
+
+                    return;
+                }
+                case ExperimentalOpCode.SeededRandom:
+                {
+                    var seedValue = EvaluateCompiledExpression(context, instruction.A);
+                    PushSeededRandomScope(seedValue);
+                    try
+                    {
+                        ExecuteProgram(context, instruction.B);
+                    }
+                    finally
+                    {
+                        PopSeededRandomScope();
+                    }
+
+                    return;
+                }
+                case ExperimentalOpCode.EvaluateExpression:
+                    EvaluateCompiledExpression(context, instruction.A);
+                    return;
+                default:
+                    return;
+            }
+        }
+        catch
+        {
+            return;
+        }
+    }
+
+    private EventScriptValue EvaluateExpression(ExperimentalCompiledExecutionContext context, ExpressionNode expression)
+    {
+        try
+        {
+            return EvaluateExpressionCore(context, expression);
+        }
+        catch
+        {
+            return EventScriptValue.Nothing;
+        }
+    }
+
+    private EventScriptValue EvaluateCompiledExpression(ExperimentalCompiledExecutionContext context, int expressionIndex)
+    {
+        if (_compiledScript is null || expressionIndex < 0 || expressionIndex >= _compiledScript.ExpressionPool.Count)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var expression = _compiledScript.ExpressionPool[expressionIndex];
+        if (expression.IsConstant && expression.ConstantValue is not null)
+        {
+            return expression.ConstantValue;
+        }
+
+        return EvaluateExpression(context, expression.ExpressionNode);
+    }
+
+    private EventScriptValue EvaluateCompiledExpression(ExperimentalCompiledExecutionContext context, ExperimentalCompiledExpression? expression)
+    {
+        if (expression is null)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (expression.IsConstant && expression.ConstantValue is not null)
+        {
+            return expression.ConstantValue;
+        }
+
+        return EvaluateExpression(context, expression.ExpressionNode);
+    }
+
+    private IReadOnlyDictionary<string, EventScriptValue> EvaluateNamedArguments(ExperimentalCompiledExecutionContext context, int namedArgumentListIndex)
+    {
+        if (_compiledScript is null || namedArgumentListIndex < 0 || namedArgumentListIndex >= _compiledScript.NamedArgumentLists.Count)
+        {
+            return EventScriptNamedArguments.Empty;
+        }
+
+        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        foreach (var argument in _compiledScript.NamedArgumentLists[namedArgumentListIndex].Arguments)
+        {
+            map[argument.Name] = EvaluateCompiledExpression(context, argument.Expression);
+        }
+
+        return map;
+    }
+
+    private string ResolveString(int stringIndex)
+    {
+        if (_compiledScript is null || stringIndex < 0 || stringIndex >= _compiledScript.StringPool.Count)
+        {
+            return string.Empty;
+        }
+
+        return _compiledScript.StringPool[stringIndex];
+    }
+
+    private string? ResolveStringNullable(int stringIndex)
+        => stringIndex < 0 ? null : ResolveString(stringIndex);
+
+    private EventScriptValue EvaluateExpressionCore(ExperimentalCompiledExecutionContext context, ExpressionNode expression)
     {
         switch (expression)
         {
@@ -316,7 +426,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateRandomExpression(ExecutionContext context, RandomExpressionNode randomExpression)
+    private EventScriptValue EvaluateRandomExpression(ExperimentalCompiledExecutionContext context, RandomExpressionNode randomExpression)
     {
         var fromValue = EvaluateExpression(context, randomExpression.FromExpression);
         var toValue = EvaluateExpression(context, randomExpression.ToExpression);
@@ -361,14 +471,14 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.Nothing;
     }
 
-    private EventScriptValue EvaluateRangeExpression(ExecutionContext context, RangeExpressionNode rangeExpression)
+    private EventScriptValue EvaluateRangeExpression(ExperimentalCompiledExecutionContext context, RangeExpressionNode rangeExpression)
     {
         return TryEvaluateRangeExpression(context, rangeExpression, out var range)
             ? range
             : EventScriptValue.Nothing;
     }
 
-    private EventScriptValue EvaluateSeededRandomExpression(ExecutionContext context, SeededRandomExpressionNode seededRandomExpression)
+    private EventScriptValue EvaluateSeededRandomExpression(ExperimentalCompiledExecutionContext context, SeededRandomExpressionNode seededRandomExpression)
     {
         var seedValue = EvaluateExpression(context, seededRandomExpression.SeedExpression);
         PushSeededRandomScope(seedValue);
@@ -382,21 +492,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private void ExecuteSeededRandomStatement(ExecutionContext context, SeededRandomStatementNode seededRandomStatement)
-    {
-        var seedValue = EvaluateExpression(context, seededRandomStatement.SeedExpression);
-        PushSeededRandomScope(seedValue);
-        try
-        {
-            ExecuteStatementBody(context, seededRandomStatement.Body);
-        }
-        finally
-        {
-            PopSeededRandomScope();
-        }
-    }
-
-    private EventScriptValue EvaluateDiceExpression(ExecutionContext context, DiceExpressionNode diceExpression)
+    private EventScriptValue EvaluateDiceExpression(ExperimentalCompiledExecutionContext context, DiceExpressionNode diceExpression)
     {
         if (diceExpression.DiceCount <= 0 || diceExpression.SideCount <= 0)
         {
@@ -418,7 +514,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Dice(dice);
     }
 
-    private EventScriptValue EvaluateDictionaryLiteral(ExecutionContext context, DictionaryLiteralExpressionNode dictionaryLiteral)
+    private EventScriptValue EvaluateDictionaryLiteral(ExperimentalCompiledExecutionContext context, DictionaryLiteralExpressionNode dictionaryLiteral)
     {
         var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
         foreach (var entry in dictionaryLiteral.Entries)
@@ -429,7 +525,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Dictionary(map);
     }
 
-    private EventScriptValue EvaluateGeneratedCollectionExpression(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection)
+    private EventScriptValue EvaluateGeneratedCollectionExpression(ExperimentalCompiledExecutionContext context, GeneratedCollectionExpressionNode generatedCollection)
     {
         var values = new List<EventScriptValue>();
         foreach (var item in EnumerateIterationSource(context, generatedCollection.Source))
@@ -445,7 +541,7 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.List(values);
     }
 
-    private EventScriptValue EvaluateCallExpression(ExecutionContext context, CallExpressionNode call)
+    private EventScriptValue EvaluateCallExpression(ExperimentalCompiledExecutionContext context, CallExpressionNode call)
     {
         var arguments = call.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
 
@@ -465,7 +561,7 @@ internal sealed class EventScriptInvocationEngine
     private static EventScriptValue EvaluateHandlerLiteralExpression(HandlerLiteralExpressionNode handlerLiteral)
         => EventScriptMessageValueCodec.CreateHandlerValue(new EventScriptMessageSignature(handlerLiteral.Message, handlerLiteral.Parameters));
 
-    private EventScriptValue EvaluateMessageLiteralExpression(ExecutionContext context, MessageLiteralExpressionNode messageLiteral)
+    private EventScriptValue EvaluateMessageLiteralExpression(ExperimentalCompiledExecutionContext context, MessageLiteralExpressionNode messageLiteral)
     {
         var arguments = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
         foreach (var argument in messageLiteral.Arguments)
@@ -477,7 +573,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptMessageValueCodec.CreateMessageValue(message);
     }
 
-    private EventScriptValue EvaluateHandlerBindExpression(ExecutionContext context, HandlerBindExpressionNode handlerBind)
+    private EventScriptValue EvaluateHandlerBindExpression(ExperimentalCompiledExecutionContext context, HandlerBindExpressionNode handlerBind)
     {
         var handlerValue = EvaluateExpression(context, handlerBind.CalleeExpression);
         var arguments = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
@@ -494,7 +590,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptMessageValueCodec.CreateMessageValue(message);
     }
 
-    private EventScriptValue EvaluateRulePredicateExpression(ExecutionContext context, RulePredicateExpressionNode rulePredicate)
+    private EventScriptValue EvaluateRulePredicateExpression(ExperimentalCompiledExecutionContext context, RulePredicateExpressionNode rulePredicate)
     {
         if (!_ruleDefinitions.TryGetValue(rulePredicate.RuleName, out var ruleDefinition) ||
             ruleDefinition.Parameters.Count != 1)
@@ -506,7 +602,7 @@ internal sealed class EventScriptInvocationEngine
         return EvaluateGlobalDefinition(context, ruleDefinition, new[] { value });
     }
 
-    private EventScriptValue EvaluateGlobalDefinition(ExecutionContext context, CompiledGlobalDefinition definition, IReadOnlyList<EventScriptValue> arguments)
+    private EventScriptValue EvaluateGlobalDefinition(ExperimentalCompiledExecutionContext context, ExperimentalCompiledGlobalDefinition definition, IReadOnlyList<EventScriptValue> arguments)
     {
         context.PushScope();
         try
@@ -514,7 +610,7 @@ internal sealed class EventScriptInvocationEngine
             if (definition.DiagnosticsEnabled)
             {
                 context.RecordDiagnostic(
-                    definition.Kind == GlobalDefinitionKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
+                    definition.Kind == ExperimentalGlobalDefinitionKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
                     definition.Name,
                     BuildOrderedArgumentMap(definition.Parameters, arguments),
                     $"{definition.Kind} '{definition.Name}' called");
@@ -525,7 +621,7 @@ internal sealed class EventScriptInvocationEngine
                 context.Define(definition.Parameters[i], i < arguments.Count ? arguments[i] : EventScriptValue.Nothing);
             }
 
-            return EvaluateExpression(context, definition.Expression);
+            return EvaluateCompiledExpression(context, definition.Expression);
         }
         finally
         {
@@ -544,7 +640,7 @@ internal sealed class EventScriptInvocationEngine
         return map;
     }
 
-    private bool TryProjectGeneratedItem(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection, EventScriptValue item, List<EventScriptValue> values)
+    private bool TryProjectGeneratedItem(ExperimentalCompiledExecutionContext context, GeneratedCollectionExpressionNode generatedCollection, EventScriptValue item, List<EventScriptValue> values)
     {
         context.PushScope();
         try
@@ -565,7 +661,56 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private IEnumerable<EventScriptValue> EnumerateIterationSource(ExecutionContext context, IterationSourceNode source)
+    private IEnumerable<EventScriptValue> EnumerateIterationSource(ExperimentalCompiledExecutionContext context, int sourceIndex)
+    {
+        if (_compiledScript is null || sourceIndex < 0 || sourceIndex >= _compiledScript.IterationSources.Count)
+        {
+            yield break;
+        }
+
+        var source = _compiledScript.IterationSources[sourceIndex];
+        switch (source.Kind)
+        {
+            case ExperimentalIterationSourceKind.Collection:
+                foreach (var item in EvaluateCompiledExpression(context, source.CollectionExpression).AsEnumerable())
+                {
+                    yield return item;
+                }
+
+                yield break;
+            case ExperimentalIterationSourceKind.Range:
+            {
+                var fromValue = EvaluateCompiledExpression(context, source.FromExpression);
+                var toValue = EvaluateCompiledExpression(context, source.ToExpression);
+                var stepValue = source.StepExpression is null
+                    ? EventScriptValue.Integer(1)
+                    : EvaluateCompiledExpression(context, source.StepExpression);
+
+                if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
+                    !TryCoerceNumericForOperation(toValue, out var toNumber) ||
+                    !TryCoerceNumericForOperation(stepValue, out var stepNumber) ||
+                    !fromNumber.IsFinite ||
+                    !toNumber.IsFinite ||
+                    !stepNumber.IsFinite)
+                {
+                    yield break;
+                }
+
+                var range = EventScriptValue.Range(
+                    ToIntegerSaturated(fromNumber.Value),
+                    ToIntegerSaturated(toNumber.Value),
+                    ToIntegerSaturated(stepNumber.Value));
+                foreach (var item in range.AsEnumerable())
+                {
+                    yield return item;
+                }
+
+                yield break;
+            }
+        }
+    }
+
+    private IEnumerable<EventScriptValue> EnumerateIterationSource(ExperimentalCompiledExecutionContext context, IterationSourceNode source)
     {
         switch (source)
         {
@@ -592,7 +737,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private bool TryEvaluateRangeExpression(ExecutionContext context, RangeExpressionNode rangeExpression, out EventScriptValue range)
+    private bool TryEvaluateRangeExpression(ExperimentalCompiledExecutionContext context, RangeExpressionNode rangeExpression, out EventScriptValue range)
     {
         var fromValue = EvaluateExpression(context, rangeExpression.FromExpression);
         var toValue = EvaluateExpression(context, rangeExpression.ToExpression);
@@ -618,7 +763,7 @@ internal sealed class EventScriptInvocationEngine
         return true;
     }
 
-    private EventScriptValue EvaluateUnaryExpression(ExecutionContext context, UnaryExpressionNode unary)
+    private EventScriptValue EvaluateUnaryExpression(ExperimentalCompiledExecutionContext context, UnaryExpressionNode unary)
     {
         var operand = EvaluateExpression(context, unary.Operand);
 
@@ -676,7 +821,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private EventScriptValue EvaluateVariadicTaggedExpression(ExecutionContext context, VariadicTaggedExpressionNode variadic)
+    private EventScriptValue EvaluateVariadicTaggedExpression(ExperimentalCompiledExecutionContext context, VariadicTaggedExpressionNode variadic)
     {
         var values = variadic.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
         if (values.Length == 0)
@@ -692,7 +837,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private EventScriptValue EvaluateClampExpression(ExecutionContext context, ClampExpressionNode clamp)
+    private EventScriptValue EvaluateClampExpression(ExperimentalCompiledExecutionContext context, ClampExpressionNode clamp)
     {
         var raw = EvaluateExpression(context, clamp.Value);
         var minimum = EvaluateExpression(context, clamp.Minimum);
@@ -841,7 +986,7 @@ internal sealed class EventScriptInvocationEngine
         return best;
     }
 
-    private bool EvaluateSequencePattern(ExecutionContext context, EventScriptValue target, DicePatternNode pattern)
+    private bool EvaluateSequencePattern(ExperimentalCompiledExecutionContext context, EventScriptValue target, DicePatternNode pattern)
     {
         if (!IsPatternSequence(target))
         {
@@ -862,7 +1007,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private bool MatchDiceCountPattern(ExecutionContext context, IReadOnlyDictionary<EventScriptValue, int> counts, DiceCountPatternNode pattern)
+    private bool MatchDiceCountPattern(ExperimentalCompiledExecutionContext context, IReadOnlyDictionary<EventScriptValue, int> counts, DiceCountPatternNode pattern)
     {
         if (pattern.Face is not null)
         {
@@ -1063,7 +1208,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Dictionary(map);
     }
 
-    private EventScriptValue EvaluateBinaryExpression(ExecutionContext context, BinaryExpressionNode binary)
+    private EventScriptValue EvaluateBinaryExpression(ExperimentalCompiledExecutionContext context, BinaryExpressionNode binary)
     {
         var leftRaw = EvaluateExpression(context, binary.Left);
         var rightRaw = EvaluateExpression(context, binary.Right);
@@ -1219,7 +1364,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateMemberAccess(ExecutionContext context, MemberAccessExpressionNode memberAccess)
+    private EventScriptValue EvaluateMemberAccess(ExperimentalCompiledExecutionContext context, MemberAccessExpressionNode memberAccess)
     {
         var target = EvaluateExpression(context, memberAccess.Target);
         if (target.isNothing())
@@ -1240,7 +1385,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Nothing;
     }
 
-    private EventScriptValue EvaluateCollectionAccess(ExecutionContext context, CollectionAccessExpressionNode collectionAccess)
+    private EventScriptValue EvaluateCollectionAccess(ExperimentalCompiledExecutionContext context, CollectionAccessExpressionNode collectionAccess)
     {
         var target = EvaluateExpression(context, collectionAccess.Target);
         if (target.isNothing())
@@ -1329,7 +1474,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateEdgeSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, EdgeSelectorNode selector)
+    private EventScriptValue EvaluateEdgeSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, EdgeSelectorNode selector)
     {
         IReadOnlyList<EventScriptValue> candidates = items;
         if (!string.IsNullOrEmpty(selector.Identifier) && selector.Predicate is not null)
@@ -1353,7 +1498,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private bool EvaluatePredicateItem(ExecutionContext context, EventScriptValue item, string identifier, ExpressionNode predicate)
+    private bool EvaluatePredicateItem(ExperimentalCompiledExecutionContext context, EventScriptValue item, string identifier, ExpressionNode predicate)
     {
         context.PushScope();
         try
@@ -1367,7 +1512,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateIndexedCollectionAccess(ExecutionContext context, EventScriptValue target, ExpressionNode selectorExpression)
+    private EventScriptValue EvaluateIndexedCollectionAccess(ExperimentalCompiledExecutionContext context, EventScriptValue target, ExpressionNode selectorExpression)
     {
         var selector = EvaluateExpression(context, selectorExpression);
         if (selector.isNothing())
@@ -1378,7 +1523,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValueSemantics.Lookup(target, selector);
     }
 
-    private EventScriptValue EvaluateTakePattern(ExecutionContext context, EventScriptValue target, DicePatternNode pattern)
+    private EventScriptValue EvaluateTakePattern(ExperimentalCompiledExecutionContext context, EventScriptValue target, DicePatternNode pattern)
     {
         if (!IsPatternSequence(target))
         {
@@ -1396,7 +1541,7 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.List(takenItems);
     }
 
-    private bool EvaluateObjectMatchSelector(ExecutionContext context, EventScriptValue target, ObjectMatchPatternNode pattern)
+    private bool EvaluateObjectMatchSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, ObjectMatchPatternNode pattern)
     {
         if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice))
         {
@@ -1486,7 +1631,7 @@ internal sealed class EventScriptInvocationEngine
         return result.ToArray();
     }
 
-    private bool TryTakeSequencePattern(ExecutionContext context, IReadOnlyList<EventScriptValue> items, DicePatternNode pattern, out IReadOnlyList<EventScriptValue> takenItems)
+    private bool TryTakeSequencePattern(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, DicePatternNode pattern, out IReadOnlyList<EventScriptValue> takenItems)
     {
         var counts = items
             .GroupBy(item => item)
@@ -1509,7 +1654,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private bool TryTakeCountPattern(ExecutionContext context, IReadOnlyList<EventScriptValue> items, IReadOnlyDictionary<EventScriptValue, int> counts, DiceCountPatternNode pattern, out IReadOnlyList<EventScriptValue> takenItems)
+    private bool TryTakeCountPattern(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, IReadOnlyDictionary<EventScriptValue, int> counts, DiceCountPatternNode pattern, out IReadOnlyList<EventScriptValue> takenItems)
     {
         if (pattern.Face is not null)
         {
@@ -1636,7 +1781,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluatePredicateSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, PredicateSelectorNode selector)
+    private EventScriptValue EvaluatePredicateSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, PredicateSelectorNode selector)
     {
         var isAny = string.Equals(selector.Operator, "any", StringComparison.Ordinal);
         if (!isAny && !string.Equals(selector.Operator, "all", StringComparison.Ordinal))
@@ -1675,7 +1820,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Boolean(!isAny);
     }
 
-    private EventScriptValue EvaluateCountSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, CountSelectorNode selector)
+    private EventScriptValue EvaluateCountSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, CountSelectorNode selector)
     {
         var count = 0;
         foreach (var item in items)
@@ -1698,7 +1843,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Integer(count);
     }
 
-    private EventScriptValue EvaluateChooseSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, ChooseSelectorNode selector)
+    private EventScriptValue EvaluateChooseSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, ChooseSelectorNode selector)
     {
         var candidates = selector.Predicate is null || string.IsNullOrEmpty(selector.Identifier)
             ? items.ToList()
@@ -1775,7 +1920,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(items.Reverse().ToArray());
     }
 
-    private List<EventScriptValue> FilterItems(ExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode predicate)
+    private List<EventScriptValue> FilterItems(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode predicate)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
@@ -1798,7 +1943,7 @@ internal sealed class EventScriptInvocationEngine
         return result;
     }
 
-    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(ExecutionContext context, IReadOnlyList<EventScriptValue> candidates, int count, string identifier, ExpressionNode weightExpression)
+    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> candidates, int count, string identifier, ExpressionNode weightExpression)
     {
         var remaining = candidates.ToList();
         var chosen = new List<EventScriptValue>();
@@ -1849,7 +1994,7 @@ internal sealed class EventScriptInvocationEngine
         return chosen;
     }
 
-    private decimal EvaluateWeight(ExecutionContext context, EventScriptValue item, string identifier, ExpressionNode weightExpression)
+    private decimal EvaluateWeight(ExperimentalCompiledExecutionContext context, EventScriptValue item, string identifier, ExpressionNode weightExpression)
     {
         context.PushScope();
         try
@@ -1887,7 +2032,7 @@ internal sealed class EventScriptInvocationEngine
         return result;
     }
 
-    private EventScriptValue EvaluateFilterSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, FilterSelectorNode selector)
+    private EventScriptValue EvaluateFilterSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, FilterSelectorNode selector)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
@@ -1910,7 +2055,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(result);
     }
 
-    private EventScriptValue EvaluateSumSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, SumSelectorNode selector)
+    private EventScriptValue EvaluateSumSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, SumSelectorNode selector)
     {
         var sum = NumericValue.Finite(0m);
         foreach (var item in items)
@@ -1935,7 +2080,7 @@ internal sealed class EventScriptInvocationEngine
         return ToEventScriptDecimal(sum);
     }
 
-    private EventScriptValue EvaluateAverageSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, AverageSelectorNode selector)
+    private EventScriptValue EvaluateAverageSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, AverageSelectorNode selector)
     {
         if (items.Count == 0)
         {
@@ -1969,7 +2114,7 @@ internal sealed class EventScriptInvocationEngine
             : EventScriptValue.Decimal(sum.Value / count);
     }
 
-    private EventScriptValue EvaluateSelectSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, SelectSelectorNode selector)
+    private EventScriptValue EvaluateSelectSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, SelectSelectorNode selector)
     {
         var result = new List<EventScriptValue>(items.Count);
         foreach (var item in items)
@@ -1989,7 +2134,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.List(result);
     }
 
-    private EventScriptValue EvaluateDictionarySelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, DictionarySelectorNode selector)
+    private EventScriptValue EvaluateDictionarySelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, DictionarySelectorNode selector)
     {
         var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
         foreach (var item in items)
@@ -2018,7 +2163,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Dictionary(result);
     }
 
-    private EventScriptValue EvaluateContainsSelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, ContainsSelectorNode selector)
+    private EventScriptValue EvaluateContainsSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, ContainsSelectorNode selector)
     {
         var value = EvaluateExpression(context, selector.ValueExpression);
         return selector.Mode switch
@@ -2030,7 +2175,7 @@ internal sealed class EventScriptInvocationEngine
         };
     }
 
-    private EventScriptValue EvaluateExtremaSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode projection, bool isMax)
+    private EventScriptValue EvaluateExtremaSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode projection, bool isMax)
     {
         if (items.Count == 0)
         {
@@ -2070,13 +2215,13 @@ internal sealed class EventScriptInvocationEngine
         return bestItem;
     }
 
-    private EventScriptValue EvaluateSortSelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, SortSelectorNode selector)
+    private EventScriptValue EvaluateSortSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, SortSelectorNode selector)
     {
         _ = context;
         return EventScriptCollectionSemantics.Sort(target, items, selector.Direction);
     }
 
-    private EventScriptValue EvaluateOrderBySelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, OrderBySelectorNode selector)
+    private EventScriptValue EvaluateOrderBySelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, OrderBySelectorNode selector)
     {
         return EventScriptCollectionSemantics.OrderBy(
             target,
@@ -2085,7 +2230,7 @@ internal sealed class EventScriptInvocationEngine
             item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
     }
 
-    private EventScriptValue EvaluateSortProjection(ExecutionContext context, EventScriptValue item, string identifier, ExpressionNode projection)
+    private EventScriptValue EvaluateSortProjection(ExperimentalCompiledExecutionContext context, EventScriptValue item, string identifier, ExpressionNode projection)
     {
         context.PushScope();
         try
@@ -2099,7 +2244,7 @@ internal sealed class EventScriptInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateDistinctSelector(ExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, DistinctSelectorNode selector)
+    private EventScriptValue EvaluateDistinctSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, DistinctSelectorNode selector)
     {
         if (selector.Projection is null || string.IsNullOrEmpty(selector.Identifier))
         {
@@ -2112,10 +2257,10 @@ internal sealed class EventScriptInvocationEngine
             item => EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!));
     }
 
-    private EventScriptValue EvaluateGroupBySelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, GroupBySelectorNode selector) => EventScriptCollectionSemantics.GroupBy(
+    private EventScriptValue EvaluateGroupBySelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, GroupBySelectorNode selector) => EventScriptCollectionSemantics.GroupBy(
         items, item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
 
-    private bool MatchesObjectPattern(ExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
+    private bool MatchesObjectPattern(ExperimentalCompiledExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
     {
         if (value.Type != EventScriptValueType.Dictionary)
         {
@@ -2625,7 +2770,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.DecimalNaN();
     }
 
-    private EventScriptValue ConvertToCustomType(EventScriptValue value, CompiledTypeDefinition typeDefinition)
+    private EventScriptValue ConvertToCustomType(EventScriptValue value, ExperimentalCompiledTypeDefinition typeDefinition)
     {
         if (value.TryGetCustomTypeName(out var existingTypeName) &&
             string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
@@ -2656,7 +2801,7 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.CustomType(typeDefinition.Name, materializedValues);
     }
 
-    private EventScriptValue ApplyFieldClamp(CompiledTypeDefinition typeDefinition, CompiledTypeFieldDefinition field, EventScriptValue fieldValue, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    private EventScriptValue ApplyFieldClamp(ExperimentalCompiledTypeDefinition typeDefinition, ExperimentalCompiledTypeFieldDefinition field, EventScriptValue fieldValue, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
         if (field.MinimumExpression is null || field.MaximumExpression is null)
         {
@@ -2687,10 +2832,10 @@ internal sealed class EventScriptInvocationEngine
         return EventScriptValue.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper));
     }
 
-    private EventScriptValue EvaluateCustomTypeExpression(CompiledTypeDefinition typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    private EventScriptValue EvaluateCustomTypeExpression(ExperimentalCompiledTypeDefinition typeDefinition, ExperimentalCompiledExpression expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
-        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
-        var context = new ExecutionContext(state);
+        var state = new ExperimentalCompiledRunState(_diagnosticCollector, _diagnosticsEnabled);
+        var context = new ExperimentalCompiledExecutionContext(state);
         context.PushScope();
         try
         {
@@ -2704,7 +2849,7 @@ internal sealed class EventScriptInvocationEngine
                 context.Define(pair.Key, pair.Value);
             }
 
-            return EvaluateExpression(context, expression);
+            return EvaluateCompiledExpression(context, expression);
         }
         finally
         {
@@ -2827,102 +2972,5 @@ internal sealed class EventScriptInvocationEngine
             _ => value.ToString()
         };
     }
-
-    private sealed class ExecutionContext
-    {
-        private readonly Stack<Dictionary<string, EventScriptValue>> _scopes = new();
-        private readonly RunState _state;
-
-        public ExecutionContext(RunState state)
-        {
-            _state = state;
-            _scopes.Push(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
-        }
-
-        public void PushScope() => _scopes.Push(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
-
-        public void PopScope()
-        {
-            if (_scopes.Count == 1)
-            {
-                return;
-            }
-
-            _scopes.Pop();
-        }
-
-        public void Define(string name, EventScriptValue value)
-            => _scopes.Peek()[name] = value;
-
-        public EventScriptValue Resolve(string name)
-        {
-            foreach (var scope in _scopes)
-            {
-                if (scope.TryGetValue(name, out var value))
-                {
-                    return value;
-                }
-            }
-
-            return EventScriptValue.Nothing;
-        }
-
-        public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> arguments)
-        {
-            var publishedMessage = new EventScriptMessage(message, arguments);
-            var emittedEvent = new EventScriptEmittedEvent(publishedMessage);
-            _state.RecordPublishedEvent(emittedEvent);
-            _state.RecordDiagnostic(
-                EventScriptDiagnosticEventKind.EventPublished,
-                publishedMessage.Name,
-                emittedEvent.Arguments,
-                $"Published '{publishedMessage.Name}'");
-        }
-
-        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
-            => _state.RecordDiagnostic(kind, name, arguments, detail);
-
-        public IReadOnlyDictionary<string, EventScriptValue> SnapshotTopScope()
-            => new Dictionary<string, EventScriptValue>(_scopes.Peek(), StringComparer.Ordinal);
-    }
-
-    private sealed class RunState
-    {
-        private readonly Dictionary<string, EventScriptValue> _variables = new(StringComparer.Ordinal);
-        private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
-        private readonly bool _diagnosticsEnabled;
-        
-        public RunState(IEventScriptDiagnosticCollector? diagnosticCollector, bool diagnosticsEnabled)
-        {
-            _diagnosticCollector = diagnosticCollector;
-            _diagnosticsEnabled = diagnosticsEnabled;
-        }
-
-        public IReadOnlyDictionary<string, EventScriptValue> Variables => _variables;
-
-        public List<EventScriptEmittedEvent> EmittedEvents { get; } = new();
-
-        public void RecordPublishedEvent(EventScriptEmittedEvent emittedEvent)
-        {
-            EmittedEvents.Add(emittedEvent);
-        }
-
-        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string message, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
-        {
-            if (!_diagnosticsEnabled)
-            {
-                return;
-            }
-
-            _diagnosticCollector?.Record(kind, message, arguments, detail);
-        }
-
-        public void CaptureVariables(IReadOnlyDictionary<string, EventScriptValue> variables)
-        {
-            foreach (var pair in variables)
-            {
-                _variables[pair.Key] = pair.Value;
-            }
-        }
-    }
+    
 }

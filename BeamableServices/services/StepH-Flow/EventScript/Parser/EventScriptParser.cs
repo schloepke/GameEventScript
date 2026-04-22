@@ -278,6 +278,9 @@ public sealed class EventScriptParser
     private EventHandlerNode ParseEventHandler()
     {
         Expect(On);
+        SkipNewLines();
+        MatchTag(":handler");
+        SkipNewLines();
         var message = Expect(Message).Text;
 
         var parameters = new List<string>();
@@ -368,27 +371,26 @@ public sealed class EventScriptParser
 
     private PublishStatementNode ParsePublishStatement()
     {
-        var message = Expect(Message).Text;
-        var arguments = new List<NamedArgumentNode>();
-
-        if (Match(LeftParen))
-        {
-            if (!Is(RightParen))
-            {
-                arguments.Add(ParseNamedMessageArgument());
-                while (Match(Comma))
-                {
-                    arguments.Add(ParseNamedMessageArgument());
-                }
-            }
-
-            Expect(RightParen);
-        }
-
-        return new PublishStatementNode(message, arguments);
+        SkipNewLines();
+        return new PublishStatementNode(ParsePublishMessageExpression());
     }
 
-    private NamedArgumentNode ParseNamedMessageArgument()
+    private ExpressionNode ParsePublishMessageExpression()
+    {
+        if (MatchTag(":message"))
+        {
+            return ParseMessageLiteralExpressionCore();
+        }
+
+        if (Current.Kind == Message)
+        {
+            return ParseMessageLiteralExpressionCore();
+        }
+
+        return ParseExpression();
+    }
+
+    private NamedArgumentNode ParseNamedArgument()
     {
         var name = ExpectIdentifierLike();
         Expect(Colon);
@@ -1338,6 +1340,16 @@ public sealed class EventScriptParser
             return ParseRangeExpressionCore();
         }
 
+        if (MatchTag(":handler"))
+        {
+            return ParseHandlerLiteralExpression();
+        }
+
+        if (MatchTag(":message"))
+        {
+            return ParseMessageLiteralExpressionCore();
+        }
+
         if (MatchTag(":random"))
         {
             SkipNewLines();
@@ -1402,9 +1414,9 @@ public sealed class EventScriptParser
             return new TagLiteralExpressionNode(tagToken.Text[1..]);
         }
 
-        if (Current.Kind == Identifier && IsCallExpressionStart())
+        if ((Current.Kind == Identifier || Current.Kind == Message) && IsCallExpressionStart())
         {
-            return ParseCallExpression();
+            return ParseCallOrHandlerBindExpression();
         }
 
         if (IsIdentifierLike(Current.Kind))
@@ -1447,20 +1459,88 @@ public sealed class EventScriptParser
             : ParseListLiteralExpression();
     }
 
-    private CallExpressionNode ParseCallExpression()
+    private HandlerLiteralExpressionNode ParseHandlerLiteralExpression()
+    {
+        SkipNewLines();
+        var message = Expect(Message).Text;
+        var parameters = new List<string>();
+
+        if (Match(LeftParen))
+        {
+            SkipNewLines();
+            if (!Is(RightParen))
+            {
+                parameters.Add(ExpectIdentifierLike());
+                while (Match(Comma))
+                {
+                    SkipNewLines();
+                    parameters.Add(ExpectIdentifierLike());
+                }
+            }
+
+            SkipNewLines();
+            Expect(RightParen);
+        }
+
+        return new HandlerLiteralExpressionNode(message, parameters);
+    }
+
+    private MessageLiteralExpressionNode ParseMessageLiteralExpressionCore()
+    {
+        SkipNewLines();
+        var message = Expect(Message).Text;
+        var arguments = new List<NamedArgumentNode>();
+        if (Match(LeftParen))
+        {
+            SkipNewLines();
+            if (!Is(RightParen))
+            {
+                arguments.Add(ParseNamedArgument());
+                while (Match(Comma))
+                {
+                    SkipNewLines();
+                    arguments.Add(ParseNamedArgument());
+                }
+            }
+
+            SkipNewLines();
+            Expect(RightParen);
+        }
+
+        return new MessageLiteralExpressionNode(message, arguments);
+    }
+
+    private ExpressionNode ParseCallOrHandlerBindExpression()
     {
         var name = ExpectIdentifierLike();
+        var calleeExpression = new IdentifierExpressionNode(name);
         Expect(LeftParen);
-        var arguments = new List<ExpressionNode>();
         SkipNewLines();
-        if (!Is(RightParen))
+        if (Is(RightParen))
         {
-            arguments.Add(ParseExpression());
+            Expect(RightParen);
+            return new CallExpressionNode(name, []);
+        }
+
+        if (IsNamedArgumentStart())
+        {
+            var namedArguments = new List<NamedArgumentNode> { ParseNamedArgument() };
             while (Match(Comma))
             {
                 SkipNewLines();
-                arguments.Add(ParseExpression());
+                namedArguments.Add(ParseNamedArgument());
             }
+
+            SkipNewLines();
+            Expect(RightParen);
+            return new HandlerBindExpressionNode(calleeExpression, namedArguments);
+        }
+
+        var arguments = new List<ExpressionNode> { ParseExpression() };
+        while (Match(Comma))
+        {
+            SkipNewLines();
+            arguments.Add(ParseExpression());
         }
 
         SkipNewLines();
@@ -1972,6 +2052,7 @@ public sealed class EventScriptParser
     {
         return kind is
             Identifier or
+            Message or
             Module or
             On or
             Publish or
@@ -1991,7 +2072,7 @@ public sealed class EventScriptParser
 
     private bool IsCallExpressionStart()
     {
-        if (Current.Kind != Identifier)
+        if (Current.Kind is not (Identifier or Message))
         {
             return false;
         }
@@ -2003,6 +2084,22 @@ public sealed class EventScriptParser
         }
 
         return lookahead < _tokens.Count && _tokens[lookahead].Kind == LeftParen;
+    }
+
+    private bool IsNamedArgumentStart()
+    {
+        if (!IsIdentifierLike(Current.Kind))
+        {
+            return false;
+        }
+
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Colon;
     }
 
     private string ParseTypeName()

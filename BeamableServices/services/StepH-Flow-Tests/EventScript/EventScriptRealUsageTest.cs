@@ -56,7 +56,13 @@ public class EventScriptRealUsageTest
             const string script =
                 """
                 on Setup(player) {
-                    if player = 'player1' {publish SetNumberOfPlayers(max: 2)}            
+                    let seed be :random from 1 to 10000000
+                    let x be seed + :list[:select y from 1 to 20 -> :random from 1 to 20]
+                    publish SetRandomSequence(sequence: x)
+                    
+                    let rga as :range be from 1 to 10
+                    
+                    for i in rga publish ShowInfo(info: i)
                 }
                 """;
 
@@ -76,10 +82,10 @@ public class EventScriptRealUsageTest
                 })
                 .Subscribe("SetNumberOfPlayers", ["max"], context => { game["playerLimit"] = context.Arguments["max"]; })
                 .Subscribe("SetNumberOfPushs", ["pushs"], context => { game["pushCount"] = context.Arguments["pushs"]; })
-                .Subscribe("CreatePushSeed", _ => { game["gameSeed"] = System.Random.Shared.NextInt64(); });
+                .Subscribe("SetRandomSequence", ["sequence"], context => { game["randoms"] = context.Arguments["sequence"]; });
 
-            Console.WriteLine(host.Publish("Setup", new Dictionary<string, EventScriptValue> { ["player"] = EventScriptValue.Text("player1") }));
-            Console.WriteLine(host.Publish("Start", new Dictionary<string, EventScriptValue> { ["board"] = EventScriptValue.Dictionary(game) }));
+            Console.WriteLine(host.Publish(EventScriptMessage.Message("Setup", ("player", EventScriptValue.Text("player1")))));
+            Console.WriteLine(host.Publish(EventScriptMessage.Message("Start", ("board", EventScriptValue.Dictionary(game)))));
             Console.WriteLine(EventScriptValue.Dictionary(game));
 
             Console.WriteLine(collector.ToString());

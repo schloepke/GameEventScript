@@ -58,7 +58,7 @@ public class EventScriptLinkBuilderScenarios
         ]);
 
         var interpreter = EventScriptInterpretationCompiler.Compile(linkedModule);
-        var args = interpreter.Emit("Start", unit, units).EmittedEvents[0].Arguments;
+        var args = interpreter.InvokePositional("Start", unit, units).EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args[0].AsBoolean());
         Assert.AreEqual(1, Convert.ToInt32(args[1].AsInteger()));
@@ -103,7 +103,7 @@ public class EventScriptLinkBuilderScenarios
             })
         ]);
 
-        var args = compiled.Emit("Start", unit, units).EmittedEvents[0].Arguments;
+        var args = compiled.InvokePositional("Start", unit, units).EmittedEvents[0].Arguments;
 
         Assert.IsTrue(args["result"].AsBoolean());
         Assert.AreEqual(1, Convert.ToInt32(args["total"].AsInteger()));
@@ -320,10 +320,29 @@ public class EventScriptLinkBuilderScenarios
             .Link();
 
         var compiled = EventScriptInterpretationCompiler.Compile(linkedModule);
-        var result = compiled.Emit("Start");
+        var result = compiled.Invoke("Start");
 
         Assert.HasCount(2, result.EmittedEvents);
         Assert.AreEqual(20m, result.EmittedEvents[0].Arguments["value"].AsNumber());
         Assert.AreEqual(10m, result.EmittedEvents[1].Arguments["value"].AsNumber());
+    }
+
+    [TestMethod]
+    public void LinkBuilderFailsWhenHandlerBindingUsesDuplicateNamedArguments()
+    {
+        var builder = new EventScriptLinkBuilder()
+            .AddModule(EventScriptManager.ParseModule(
+                """
+                module DuplicateHandlerBindArgs
+                on Start(unit, target, myHandler) {
+                    publish myHandler(unit: unit, unit: target)
+                }
+                """,
+                "duplicate-handler-bind-args.es"));
+
+        var exception = Assert.ThrowsExactly<EventScriptLinkageException>(() => builder.Link());
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.Kind == EventScriptLinkageErrorKind.DuplicatePublishArgument &&
+            error.Symbol == "handler bind"));
     }
 }

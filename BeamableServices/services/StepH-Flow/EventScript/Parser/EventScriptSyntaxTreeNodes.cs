@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using StepH.Flow.EventScript;
 
 namespace StepH.Flow.EventScript.Parser;
 
@@ -91,7 +92,10 @@ public abstract record DicePatternNode : EventScriptNode;
 [JsonDerivedType(typeof(RangeIterationSourceNode), "rangeIterationSource")]
 public abstract record IterationSourceNode : EventScriptNode;
 
-public abstract record EventScriptNode;
+public abstract record EventScriptNode
+{
+    public EventScriptSourceLocation? SourceRange { get; init; }
+}
 
 // Root node of the syntax tree
 

@@ -127,10 +127,14 @@ public class EventScriptLexingScenarios
         Assert.AreEqual(EventScriptTokenKind.NewLine, firstNewLine.Kind);
         Assert.AreEqual(1, firstNewLine.Line);
         Assert.AreEqual(9, firstNewLine.Column);
+        Assert.AreEqual(2, firstNewLine.EndLine);
+        Assert.AreEqual(1, firstNewLine.EndColumn);
 
         Assert.AreEqual(EventScriptTokenKind.NewLine, secondNewLine.Kind);
         Assert.AreEqual(2, secondNewLine.Line);
         Assert.AreEqual(13, secondNewLine.Column);
+        Assert.AreEqual(3, secondNewLine.EndLine);
+        Assert.AreEqual(1, secondNewLine.EndColumn);
     }
 
     [TestMethod]
@@ -220,6 +224,7 @@ public class EventScriptLexingScenarios
         Assert.IsTrue(lexerErrors.Any(error => error.Message.Contains("hello%&some", StringComparison.Ordinal)));
         Assert.IsTrue(lexerErrors.Any(error => error.Message.Contains("@", StringComparison.Ordinal)));
         Assert.IsTrue(lexerErrors.All(error => error.SourceLocation.SourceName == "Broken.es"));
+        Assert.IsTrue(lexerErrors.All(error => error.SourceLocation.EndLine is not null && error.SourceLocation.EndColumn is not null));
     }
 
     [TestMethod]

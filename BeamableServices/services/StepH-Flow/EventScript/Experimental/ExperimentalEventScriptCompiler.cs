@@ -28,7 +28,7 @@ public static class ExperimentalEventScriptCompiler
                 "module",
                 EventScriptSymbolKind.GlobalDefinition,
                 EventScriptOpcodeCompilationErrorKind.InvalidInput,
-                new EventScriptSourceLocation("UnknownSource")));
+                new EventScriptSourceLocation("UnknownSource", ModuleName: "UnknownModule")));
             throw new EventScriptOpcodeCompilationException(errors);
         }
 
@@ -55,7 +55,7 @@ public static class ExperimentalEventScriptCompiler
                 "compiler",
                 EventScriptSymbolKind.GlobalDefinition,
                 EventScriptOpcodeCompilationErrorKind.InternalCompilerError,
-                new EventScriptSourceLocation("UnknownSource")));
+                new EventScriptSourceLocation("UnknownSource", ModuleName: "UnknownModule")));
             throw new EventScriptOpcodeCompilationException(errors);
         }
     }
@@ -719,7 +719,7 @@ public static class ExperimentalEventScriptCompiler
                 symbol,
                 symbolKind,
                 kind,
-                new EventScriptSourceLocation("UnknownSource"));
+                new EventScriptSourceLocation("UnknownSource", ModuleName: "UnknownModule"));
 
         private int AddString(string value)
         {

@@ -37,13 +37,10 @@ public sealed class ExperimentalOpcodeCompilerTests
     {
         var linked = new LinkedEventScriptModule(
             typeDefinitions: new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
-            ruleDefinitions: new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal)
+            callables: new Dictionary<string, LinkedCallableDefinition>(StringComparer.Ordinal)
             {
-                ["wounded"] = new RuleDefinitionNode("wounded", ["unit", "unit"], new IdentifierExpressionNode("unit"))
-            },
-            selectDefinitions: new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal)
-            {
-                ["alive"] = new SelectDefinitionNode("alive", ["units", "units"], new IdentifierExpressionNode("units"))
+                ["wounded"] = new LinkedCallableDefinition("wounded", ["unit", "unit"], new IdentifierExpressionNode("unit"), LinkedCallableKind.Rule),
+                ["alive"] = new LinkedCallableDefinition("alive", ["units", "units"], new IdentifierExpressionNode("units"), LinkedCallableKind.Select)
             },
             handlers: new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
             {

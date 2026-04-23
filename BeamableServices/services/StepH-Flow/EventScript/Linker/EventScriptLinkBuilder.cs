@@ -75,12 +75,13 @@ public sealed partial class EventScriptLinkBuilder
             throw new EventScriptLinkageException(errors);
         }
 
-        return new LinkedEventScriptModule(
+        var linkedModule = new LinkedEventScriptModule(
             typeDefinitions,
-            ruleDefinitions,
-            selectDefinitions,
+            callableDefinitions,
             handlers,
             _modules.Count);
+
+        return EventScriptLinkOptimizer.Optimize(linkedModule);
     }
 
     private static EventScriptLinkageError CreateError(
@@ -90,7 +91,9 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptSymbolKind symbolKind,
         EventScriptLinkageErrorKind kind,
         int? line = null,
-        int? column = null)
+        int? column = null,
+        int? endLine = null,
+        int? endColumn = null)
     {
         var resolvedModuleName = module.ModuleName;
         var resolvedSourceName = module.SourceName;
@@ -100,6 +103,6 @@ public sealed partial class EventScriptLinkBuilder
             symbol,
             symbolKind,
             kind,
-            new EventScriptSourceLocation(resolvedSourceName, line, column));
+            new EventScriptSourceLocation(resolvedSourceName, line, column, endLine, endColumn, resolvedModuleName));
     }
 }

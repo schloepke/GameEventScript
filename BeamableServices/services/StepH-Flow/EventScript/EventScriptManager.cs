@@ -106,7 +106,45 @@ public enum EventScriptSyntaxErrorKind
     Parser
 }
 
-public sealed record EventScriptSourceLocation(string SourceName, int? Line = null, int? Column = null)
+public sealed record EventScriptSourceLocation(
+    string SourceName,
+    int? Line = null,
+    int? Column = null,
+    int? EndLine = null,
+    int? EndColumn = null,
+    string ModuleName = "UnknownModule")
 {
-    public override string ToString() => Line is null && Column is null ? SourceName : Column is null ? $"{SourceName} (line {Line})" : $"{SourceName} (line {Line}, col {Column})";
+    public override string ToString()
+    {
+        var locationName = string.IsNullOrWhiteSpace(ModuleName)
+            ? SourceName
+            : $"{ModuleName}@{SourceName}";
+
+        if (Line is null && Column is null)
+        {
+            return locationName;
+        }
+
+        if (Column is null)
+        {
+            return $"{locationName} (line {Line})";
+        }
+
+        if (EndLine is null && EndColumn is null)
+        {
+            return $"{locationName} (line {Line}, col {Column})";
+        }
+
+        if (EndLine == Line && EndColumn == Column)
+        {
+            return $"{locationName} (line {Line}, col {Column})";
+        }
+
+        if (EndLine == Line)
+        {
+            return $"{locationName} (line {Line}, col {Column}-{EndColumn})";
+        }
+
+        return $"{locationName} (line {Line}, col {Column} to line {EndLine}, col {EndColumn})";
+    }
 }

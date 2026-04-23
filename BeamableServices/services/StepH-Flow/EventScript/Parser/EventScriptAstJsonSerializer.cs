@@ -3,6 +3,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using StepH.Flow.EventScript.Linker;
 
 namespace StepH.Flow.EventScript.Parser;
 
@@ -17,4 +18,8 @@ public static class EventScriptAstJsonSerializer
 
     public static string ToJson(this EventScriptModule module, JsonSerializerOptions? options = null)
         => JsonSerializer.Serialize(module, options ?? SerializerOptions);
+    
+    public static string ToJson(this LinkedEventScriptModule module, JsonSerializerOptions? options = null)
+        => JsonSerializer.Serialize(module, options ?? SerializerOptions);
+
 }

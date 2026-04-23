@@ -45,6 +45,7 @@ public sealed partial class EventScriptLinkBuilder
         var typeDefinitions = BuildTypeDefinitionMap(_modules, errors);
         var ruleDefinitions = BuildRuleDefinitionMap(_modules, errors);
         var selectDefinitions = BuildSelectDefinitionMap(_modules, errors);
+        var callableDefinitions = BuildCallableDefinitionMap(ruleDefinitions, selectDefinitions);
         var handlers = BuildHandlerMap(_modules, errors)
             .ToDictionary(
                 pair => pair.Key,
@@ -66,7 +67,7 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var module in _modules)
         {
-            ValidateModule(module, ruleDefinitions, selectDefinitions, errors);
+            ValidateModule(module, callableDefinitions, errors);
         }
 
         if (errors.Count > 0)

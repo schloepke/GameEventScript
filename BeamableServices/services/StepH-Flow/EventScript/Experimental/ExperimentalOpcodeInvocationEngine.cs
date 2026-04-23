@@ -15,8 +15,7 @@ internal sealed class ExperimentalOpcodeInvocationEngine
 {
     private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers;
     private readonly IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> _typeDefinitions;
-    private readonly IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> _ruleDefinitions;
-    private readonly IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> _selectDefinitions;
+    private readonly IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> _callables;
     private readonly EventScriptRandomGenerator _randomGenerator;
     private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
@@ -26,8 +25,7 @@ internal sealed class ExperimentalOpcodeInvocationEngine
     {
         _randomGenerator = invocationContext?.Random ?? EventScriptRandomGenerator.Create();
         _typeDefinitions = compiledScript?.TypeDefinitions ?? new Dictionary<string, ExperimentalCompiledTypeDefinition>(StringComparer.Ordinal);
-        _ruleDefinitions = compiledScript?.RuleDefinitions ?? new Dictionary<string, ExperimentalCompiledGlobalDefinition>(StringComparer.Ordinal);
-        _selectDefinitions = compiledScript?.SelectDefinitions ?? new Dictionary<string, ExperimentalCompiledGlobalDefinition>(StringComparer.Ordinal);
+        _callables = compiledScript?.Callables ?? new Dictionary<string, ExperimentalCompiledCallableDefinition>(StringComparer.Ordinal);
         _handlers = compiledScript?.Handlers ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
         _compiledScript = compiledScript;
         _diagnosticCollector = diagnosticCollector;
@@ -545,14 +543,12 @@ internal sealed class ExperimentalOpcodeInvocationEngine
     {
         var arguments = call.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
 
-        if (_ruleDefinitions.TryGetValue(call.Name, out var ruleDefinition))
+        if (_callables.TryGetValue(call.Name, out var callable))
         {
-            return EvaluateGlobalDefinition(context, ruleDefinition, arguments);
-        }
-
-        if (_selectDefinitions.TryGetValue(call.Name, out var selectDefinition))
-        {
-            return EvaluateGlobalDefinition(context, selectDefinition, arguments);
+            var result = EvaluateCallableDefinition(context, callable, arguments);
+            return callable.Kind == ExperimentalCallableKind.Rule
+                ? EventScriptValue.Boolean(AsBool(result))
+                : result;
         }
 
         return EventScriptValue.Nothing;
@@ -592,17 +588,19 @@ internal sealed class ExperimentalOpcodeInvocationEngine
 
     private EventScriptValue EvaluateRulePredicateExpression(ExperimentalCompiledExecutionContext context, RulePredicateExpressionNode rulePredicate)
     {
-        if (!_ruleDefinitions.TryGetValue(rulePredicate.RuleName, out var ruleDefinition) ||
-            ruleDefinition.Parameters.Count != 1)
+        if (!_callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
+            callable.Kind != ExperimentalCallableKind.Rule ||
+            callable.Parameters.Count != 1)
         {
             return EventScriptValue.Nothing;
         }
 
         var value = EvaluateExpression(context, rulePredicate.Value);
-        return EvaluateGlobalDefinition(context, ruleDefinition, new[] { value });
+        var result = EvaluateCallableDefinition(context, callable, new[] { value });
+        return EventScriptValue.Boolean(AsBool(result));
     }
 
-    private EventScriptValue EvaluateGlobalDefinition(ExperimentalCompiledExecutionContext context, ExperimentalCompiledGlobalDefinition definition, IReadOnlyList<EventScriptValue> arguments)
+    private EventScriptValue EvaluateCallableDefinition(ExperimentalCompiledExecutionContext context, ExperimentalCompiledCallableDefinition definition, IReadOnlyList<EventScriptValue> arguments)
     {
         context.PushScope();
         try
@@ -610,10 +608,10 @@ internal sealed class ExperimentalOpcodeInvocationEngine
             if (definition.DiagnosticsEnabled)
             {
                 context.RecordDiagnostic(
-                    definition.Kind == ExperimentalGlobalDefinitionKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
+                    definition.Kind == ExperimentalCallableKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
                     definition.Name,
                     BuildOrderedArgumentMap(definition.Parameters, arguments),
-                    $"{definition.Kind} '{definition.Name}' called");
+                    $"{definition.Kind.ToString().ToLowerInvariant()} '{definition.Name}' called");
             }
 
             for (var i = 0; i < definition.Parameters.Count; i++)

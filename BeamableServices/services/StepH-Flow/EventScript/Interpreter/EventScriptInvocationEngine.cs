@@ -14,8 +14,7 @@ internal sealed class EventScriptInvocationEngine
 {
     private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _handlers;
     private readonly IReadOnlyDictionary<string, CompiledTypeDefinition> _typeDefinitions;
-    private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _ruleDefinitions;
-    private readonly IReadOnlyDictionary<string, CompiledGlobalDefinition> _selectDefinitions;
+    private readonly IReadOnlyDictionary<string, CompiledCallableDefinition> _callables;
     private readonly EventScriptRandomGenerator _randomGenerator;
     private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
@@ -26,8 +25,7 @@ internal sealed class EventScriptInvocationEngine
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
         _randomGenerator = invocationContext?.Random ?? EventScriptRandomGenerator.Create();
         _typeDefinitions = compiledScript.TypeDefinitions;
-        _ruleDefinitions = compiledScript.RuleDefinitions;
-        _selectDefinitions = compiledScript.SelectDefinitions;
+        _callables = compiledScript.Callables;
         _handlers = compiledScript.Handlers;
         _diagnosticCollector = diagnosticCollector;
         _diagnosticsEnabled = compiledScript.Options.EnableDiagnostics;
@@ -449,14 +447,12 @@ internal sealed class EventScriptInvocationEngine
     {
         var arguments = call.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
 
-        if (_ruleDefinitions.TryGetValue(call.Name, out var ruleDefinition))
+        if (_callables.TryGetValue(call.Name, out var callable))
         {
-            return EvaluateGlobalDefinition(context, ruleDefinition, arguments);
-        }
-
-        if (_selectDefinitions.TryGetValue(call.Name, out var selectDefinition))
-        {
-            return EvaluateGlobalDefinition(context, selectDefinition, arguments);
+            var result = EvaluateCallableDefinition(context, callable, arguments);
+            return callable.Kind == CallableKind.Rule
+                ? EventScriptValue.Boolean(AsBool(result))
+                : result;
         }
 
         return EventScriptValue.Nothing;
@@ -496,17 +492,19 @@ internal sealed class EventScriptInvocationEngine
 
     private EventScriptValue EvaluateRulePredicateExpression(ExecutionContext context, RulePredicateExpressionNode rulePredicate)
     {
-        if (!_ruleDefinitions.TryGetValue(rulePredicate.RuleName, out var ruleDefinition) ||
-            ruleDefinition.Parameters.Count != 1)
+        if (!_callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
+            callable.Kind != CallableKind.Rule ||
+            callable.Parameters.Count != 1)
         {
             return EventScriptValue.Nothing;
         }
 
         var value = EvaluateExpression(context, rulePredicate.Value);
-        return EvaluateGlobalDefinition(context, ruleDefinition, new[] { value });
+        var result = EvaluateCallableDefinition(context, callable, new[] { value });
+        return EventScriptValue.Boolean(AsBool(result));
     }
 
-    private EventScriptValue EvaluateGlobalDefinition(ExecutionContext context, CompiledGlobalDefinition definition, IReadOnlyList<EventScriptValue> arguments)
+    private EventScriptValue EvaluateCallableDefinition(ExecutionContext context, CompiledCallableDefinition definition, IReadOnlyList<EventScriptValue> arguments)
     {
         context.PushScope();
         try
@@ -514,10 +512,10 @@ internal sealed class EventScriptInvocationEngine
             if (definition.DiagnosticsEnabled)
             {
                 context.RecordDiagnostic(
-                    definition.Kind == GlobalDefinitionKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
+                    definition.Kind == CallableKind.Rule ? EventScriptDiagnosticEventKind.RuleCalled : EventScriptDiagnosticEventKind.SelectCalled,
                     definition.Name,
                     BuildOrderedArgumentMap(definition.Parameters, arguments),
-                    $"{definition.Kind} '{definition.Name}' called");
+                    $"{definition.Kind.ToString().ToLowerInvariant()} '{definition.Name}' called");
             }
 
             for (var i = 0; i < definition.Parameters.Count; i++)

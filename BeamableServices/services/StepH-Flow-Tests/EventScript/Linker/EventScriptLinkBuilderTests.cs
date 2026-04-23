@@ -355,7 +355,7 @@ public class EventScriptLinkBuilderScenarios
                 """
                 module DuplicateHandlerLiteralParams
                 on Start(unit, target) {
-                    let shoot as :handler be :handler Shoot(unit, unit)
+                    let shoot as :handler be Shoot(unit, unit)
                     publish Done
                 }
                 """,

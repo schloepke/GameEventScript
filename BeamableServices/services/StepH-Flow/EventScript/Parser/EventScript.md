@@ -299,6 +299,7 @@ Call/message disambiguation is case-based:
 - `Shot(unit, target)` is a handler literal (`Shot` is uppercase, positional identifiers).
 - `Shot(unit: source, target: victim)` is a message literal (`Shot` is uppercase, named args).
 - `Shot(unit + 1)` is invalid (uppercase positional arguments must be identifier names).
+- Prefix literal forms are removed: `:handler Shot(...)` and `:message Shot(...)` are not valid.
 
 Naming rules are strict:
 

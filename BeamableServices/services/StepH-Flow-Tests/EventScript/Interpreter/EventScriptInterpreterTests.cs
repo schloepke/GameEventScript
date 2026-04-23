@@ -808,9 +808,47 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptManager.Compile(script);
         var args = interpreter.InvokePositional("Start", incompleteUnit, units).EmittedEvents[0].Arguments;
 
-        Assert.AreEqual(EventScriptValueType.Nothing, args[0].Type);
-        Assert.AreEqual(EventScriptValueType.Nothing, args[1].Type);
+        Assert.AreEqual(EventScriptValueType.Boolean, args[0].Type);
+        Assert.AreEqual(EventScriptValueType.Boolean, args[1].Type);
+        Assert.IsFalse(args[0].AsBoolean());
+        Assert.IsFalse(args[1].AsBoolean());
         Assert.AreEqual(0, Convert.ToInt32(args[2].AsInteger()));
+    }
+
+    [TestMethod]
+    public void RuleCallsAlwaysReturnBooleanWhileSelectKeepsOriginalType()
+    {
+        const string script = """
+            rule numeric(value) means value * 2
+            select numericSelect(value) means value * 2
+
+            on Start {
+                let byRuleTwo be numeric(2)
+                let byRuleZero be numeric(0)
+                let bySelect be numericSelect(2)
+                let byPredicate be 2 is numeric
+                publish Done(
+                    byRuleTwo: byRuleTwo,
+                    byRuleZero: byRuleZero,
+                    bySelect: bySelect,
+                    byPredicate: byPredicate
+                )
+            }
+            """;
+
+        var args = EventScriptManager.Compile(script)
+            .Invoke("Start")
+            .EmittedEvents[0]
+            .Arguments;
+
+        Assert.AreEqual(EventScriptValueType.Boolean, args["byRuleTwo"].Type);
+        Assert.AreEqual(EventScriptValueType.Boolean, args["byRuleZero"].Type);
+        Assert.AreEqual(EventScriptValueType.Decimal, args["bySelect"].Type);
+        Assert.AreEqual(EventScriptValueType.Boolean, args["byPredicate"].Type);
+        Assert.IsTrue(args["byRuleTwo"].AsBoolean());
+        Assert.IsFalse(args["byRuleZero"].AsBoolean());
+        Assert.AreEqual(4m, args["bySelect"].AsNumber());
+        Assert.IsTrue(args["byPredicate"].AsBoolean());
     }
 
     [TestMethod]

@@ -28,7 +28,9 @@ Statement ::= PublishStatement
              | SeededRandomStatement
              | ExpressionStatement
 
-PublishStatement ::= "publish" Message [ "(" [ NamedArgumentList ] ")" ]
+PublishStatement ::= "publish" PublishMessageExpression
+PublishMessageExpression ::= Message [ "(" [ NamedArgumentList ] ")" ]
+                         | Expression
 LetStatement ::= "let" Identifier [ "as" TypeTag ] LetAssignmentOperator LetValue
 LetAssignmentOperator ::= "be"
 LetValue ::= Expression

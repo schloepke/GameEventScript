@@ -279,8 +279,6 @@ public sealed class EventScriptParser
     {
         Expect(On);
         SkipNewLines();
-        MatchTag(":handler");
-        SkipNewLines();
         var message = Expect(Message).Text;
 
         var parameters = new List<string>();
@@ -377,11 +375,6 @@ public sealed class EventScriptParser
 
     private ExpressionNode ParsePublishMessageExpression()
     {
-        if (MatchTag(":message"))
-        {
-            return ParseMessageLiteralExpressionCore();
-        }
-
         if (Current.Kind == Message)
         {
             return ParseMessageLiteralExpressionCore();
@@ -1338,16 +1331,6 @@ public sealed class EventScriptParser
         if (MatchWord("from"))
         {
             return ParseRangeExpressionCore();
-        }
-
-        if (MatchTag(":handler"))
-        {
-            return ParseHandlerLiteralExpression();
-        }
-
-        if (MatchTag(":message"))
-        {
-            return ParseMessageLiteralExpressionCore();
         }
 
         if (MatchTag(":random"))

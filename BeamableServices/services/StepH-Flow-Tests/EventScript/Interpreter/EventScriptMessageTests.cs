@@ -105,13 +105,13 @@ public sealed class EventScriptMessageTests
         const string script = """
                               module MessageBinding
                               on Start(unit, target) {
-                                  let shoot as :handler be :handler Shoot(unit, target)
+                                  let shoot as :handler be Shoot(unit, target)
                                   let msg as :message be shoot(unit: unit, target: target)
                                   let isHandler be shoot is :handler
                                   let isMessage be msg is :message
                                   publish msg
                                   publish shoot(unit: unit, target: target)
-                                  publish :message Shoot(unit: unit, target: target)
+                                  publish Shoot(unit: unit, target: target)
                                   publish Done(isHandler: isHandler, isMessage: isMessage)
                               }
                               """;
@@ -139,7 +139,7 @@ public sealed class EventScriptMessageTests
         const string script = """
                               module MessageBindingNoOp
                               on Start(unit, hp) {
-                                  let shoot as :handler be :handler Shoot(unit, target)
+                                  let shoot as :handler be Shoot(unit, target)
                                   let invalid as :message be shoot(unit: unit, hp: hp)
                                   publish invalid
                                   publish unit
@@ -167,7 +167,7 @@ public sealed class EventScriptMessageTests
         const string script = """
                               module MessageFirstClass
                               on Start(unit, target) {
-                                  let shoot as :handler be :handler Shoot(unit, target)
+                                  let shoot as :handler be Shoot(unit, target)
                                   let msg as :message be shoot(unit: unit, target: target)
                                   publish Done(
                                       msgIsMessage: msg is :message,

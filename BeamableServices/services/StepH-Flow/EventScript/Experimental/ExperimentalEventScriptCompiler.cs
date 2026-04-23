@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
@@ -72,16 +73,14 @@ public static class ExperimentalEventScriptCompiler
         private readonly List<ExperimentalCompiledIterationSource> _iterationSources = [];
         private readonly List<ExperimentalEventScript> _programs = [];
 
-        private readonly Dictionary<string, ExperimentalCompiledGlobalDefinition> _rules = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, ExperimentalCompiledGlobalDefinition> _selects = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ExperimentalCompiledCallableDefinition> _callables = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ExperimentalCompiledTypeDefinition> _types = new(StringComparer.Ordinal);
         private readonly Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers = new(StringComparer.Ordinal);
 
         public ExperimentalCompiledEventScript Build()
         {
             CompileTypes();
-            CompileGlobalDefinitions(module.RuleDefinitions, EventScriptSymbolKind.Rule, ExperimentalGlobalDefinitionKind.Rule, _rules);
-            CompileGlobalDefinitions(module.SelectDefinitions, EventScriptSymbolKind.Select, ExperimentalGlobalDefinitionKind.Select, _selects);
+            CompileGlobalDefinitions();
             CompileHandlers();
 
             return new ExperimentalCompiledEventScript(
@@ -93,8 +92,7 @@ public static class ExperimentalEventScriptCompiler
                 _iterationSources.ToArray(),
                 _programs.ToArray(),
                 _handlers,
-                _rules,
-                _selects,
+                _callables,
                 _types);
         }
 
@@ -113,37 +111,26 @@ public static class ExperimentalEventScriptCompiler
             }
         }
 
-        private void CompileGlobalDefinitions<TDefinition>(
-            IReadOnlyDictionary<string, TDefinition> definitions,
-            EventScriptSymbolKind symbolKind,
-            ExperimentalGlobalDefinitionKind kind,
-            Dictionary<string, ExperimentalCompiledGlobalDefinition> destination)
-            where TDefinition : EventScriptNode
+        private void CompileGlobalDefinitions()
         {
-            foreach (var pair in definitions)
+            foreach (var pair in module.Callables)
             {
                 var name = pair.Key;
-                switch (pair.Value)
-                {
-                    case RuleDefinitionNode rule:
-                        ValidateDuplicateParameters(name, rule.Parameters, symbolKind);
-                        destination[name] = new ExperimentalCompiledGlobalDefinition(
-                            name,
-                            rule.Parameters.ToArray(),
-                            CompileExpression(rule.Expression),
-                            kind,
-                            options.EnableDiagnostics);
-                        break;
-                    case SelectDefinitionNode select:
-                        ValidateDuplicateParameters(name, select.Parameters, symbolKind);
-                        destination[name] = new ExperimentalCompiledGlobalDefinition(
-                            name,
-                            select.Parameters.ToArray(),
-                            CompileExpression(select.Expression),
-                            kind,
-                            options.EnableDiagnostics);
-                        break;
-                }
+                var callable = pair.Value;
+                var symbolKind = callable.Kind == LinkedCallableKind.Rule
+                    ? EventScriptSymbolKind.Rule
+                    : EventScriptSymbolKind.Select;
+                var kind = callable.Kind == LinkedCallableKind.Rule
+                    ? ExperimentalCallableKind.Rule
+                    : ExperimentalCallableKind.Select;
+
+                ValidateDuplicateParameters(name, callable.Parameters, symbolKind);
+                _callables[name] = new ExperimentalCompiledCallableDefinition(
+                    name,
+                    callable.Parameters.ToArray(),
+                    CompileExpression(callable.Expression),
+                    kind,
+                    options.EnableDiagnostics);
             }
         }
 
@@ -216,10 +203,21 @@ public static class ExperimentalEventScriptCompiler
                     }
 
                     var expression = CompileExpression(let.Expression);
+                    var declaredTypeIndex = string.IsNullOrEmpty(let.DeclaredType) ? -1 : AddString(let.DeclaredType!);
+                    if (declaredTypeIndex >= 0 &&
+                        expression.IsConstant &&
+                        expression.ConstantValue is not null &&
+                        TryConvertConstantType(expression.ConstantValue, let.DeclaredType!, out var convertedConstant))
+                    {
+                        _constantPool.Add(convertedConstant);
+                        expression = new ExperimentalCompiledExpression(let.Expression, convertedConstant);
+                        declaredTypeIndex = -1;
+                    }
+
                     instructions.Add(new ExperimentalInstruction(
                         ExperimentalOpCode.Let,
                         AddString(let.Identifier),
-                        string.IsNullOrEmpty(let.DeclaredType) ? -1 : AddString(let.DeclaredType!),
+                        declaredTypeIndex,
                         AddExpression(expression)));
                     return;
                 }
@@ -351,7 +349,7 @@ public static class ExperimentalEventScriptCompiler
             return new ExperimentalCompiledExpression(expression);
         }
 
-        private static bool TryFoldConstant(ExpressionNode expression, out EventScriptValue value)
+        private bool TryFoldConstant(ExpressionNode expression, out EventScriptValue value)
         {
             switch (expression)
             {
@@ -424,10 +422,228 @@ public static class ExperimentalEventScriptCompiler
                     value = EventScriptValue.Dictionary(map);
                     return true;
                 }
+                case TypeCastExpressionNode typeCast:
+                {
+                    if (!TryFoldConstant(typeCast.Value, out var sourceValue))
+                    {
+                        value = EventScriptValue.Nothing;
+                        return false;
+                    }
+
+                    if (!TryConvertConstantType(sourceValue, typeCast.TypeName, out value))
+                    {
+                        return false;
+                    }
+
+                    return true;
+                }
                 default:
                     value = EventScriptValue.Nothing;
                     return false;
             }
+        }
+
+        private bool TryConvertConstantType(EventScriptValue value, string declaredType, out EventScriptValue converted)
+        {
+            switch (declaredType)
+            {
+                case "nothing":
+                    converted = EventScriptValue.Nothing;
+                    return true;
+                case "tag":
+                    converted = EventScriptValue.Tag(value.AsText());
+                    return true;
+                case "text":
+                    converted = EventScriptValue.Text(value.AsText());
+                    return true;
+                case "percentage":
+                    converted = ConvertConstantToPercentage(value);
+                    return true;
+                case "boolean":
+                    converted = EventScriptValue.Boolean(value.AsBoolean());
+                    return true;
+                case "integer":
+                    converted = EventScriptValue.Integer(value.AsInteger());
+                    return true;
+                case "decimal":
+                    converted = ConvertConstantToDecimal(value);
+                    return true;
+                case "list":
+                    converted = EventScriptValue.List(value.AsList());
+                    return true;
+                case "range":
+                    converted = value.isRange() ? value : EventScriptValue.Nothing;
+                    return true;
+                case "message":
+                    converted = value.Type == EventScriptValueType.Message
+                        ? value
+                        : EventScriptMessageValueCodec.TryReadMessageValue(value, out var messageValue)
+                            ? EventScriptMessageValueCodec.CreateMessageValue(messageValue)
+                            : EventScriptValue.Nothing;
+                    return true;
+                case "handler":
+                    converted = value.Type == EventScriptValueType.Handler
+                        ? value
+                        : EventScriptMessageValueCodec.TryReadHandlerValue(value, out var handlerValue)
+                            ? EventScriptMessageValueCodec.CreateHandlerValue(handlerValue)
+                            : EventScriptValue.Nothing;
+                    return true;
+                case "dictionary":
+                    converted = EventScriptValue.Dictionary(value.AsDictionary());
+                    return true;
+                case "set":
+                    converted = EventScriptValue.Set(value.AsSet());
+                    return true;
+                case "dice":
+                    converted = EventScriptValue.Dice(value.AsDice());
+                    return true;
+                case "optional":
+                    converted = value.isOptional()
+                        ? value
+                        : value.isNothing() ? EventScriptValue.OptionalNone() : EventScriptValue.OptionalSome(value);
+                    return true;
+                default:
+                    if (_types.ContainsKey(declaredType))
+                    {
+                        converted = EventScriptValue.Nothing;
+                        return false;
+                    }
+
+                    converted = value;
+                    return true;
+            }
+        }
+
+        private static EventScriptValue ConvertConstantToDecimal(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
+            {
+                return EventScriptValue.DecimalNaN();
+            }
+
+            if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite))
+            {
+                return EventScriptValue.DecimalNaN();
+            }
+
+            if (isFinite)
+            {
+                return EventScriptValue.Decimal(number);
+            }
+
+            if (unwrapped.IsNaN())
+            {
+                return EventScriptValue.DecimalNaN();
+            }
+
+            return unwrapped.IsNegativeInfinity()
+                ? EventScriptValue.DecimalNegativeInfinity()
+                : EventScriptValue.DecimalInfinity();
+        }
+
+        private static EventScriptValue ConvertConstantToPercentage(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
+            {
+                return EventScriptValue.DecimalNaN();
+            }
+
+            if (unwrapped.isPercentage())
+            {
+                return unwrapped;
+            }
+
+            if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite) || !isFinite)
+            {
+                return EventScriptValue.DecimalNaN();
+            }
+
+            var ratio = unwrapped.Type == EventScriptValueType.Integer
+                ? number / 100m
+                : number > 1m || number < -1m
+                    ? number / 100m
+                    : number;
+            return EventScriptValue.Percentage(ratio);
+        }
+
+        private static bool TryUnwrapOptionalForConstant(EventScriptValue value, out EventScriptValue unwrapped)
+        {
+            if (!value.isOptional())
+            {
+                unwrapped = value;
+                return true;
+            }
+
+            var optional = value.AsOptional();
+            if (!optional.HasValue)
+            {
+                unwrapped = default!;
+                return false;
+            }
+
+            unwrapped = optional.Value;
+            return true;
+        }
+
+        private static bool TryCoerceNumericForConstant(EventScriptValue value, out decimal number, out bool isFinite)
+        {
+            number = default;
+            isFinite = false;
+
+            if (value.isNothing())
+            {
+                return false;
+            }
+
+            if (value.Type == EventScriptValueType.Decimal)
+            {
+                if (value.IsNaN() || value.IsInfinity())
+                {
+                    return true;
+                }
+
+                number = value.AsNumber();
+                isFinite = true;
+                return true;
+            }
+
+            if (value.Type == EventScriptValueType.Integer)
+            {
+                number = value.AsInteger();
+                isFinite = true;
+                return true;
+            }
+
+            if (value.Type == EventScriptValueType.Percentage)
+            {
+                number = value.AsNumber();
+                isFinite = true;
+                return true;
+            }
+
+            if (value.Type == EventScriptValueType.Dice)
+            {
+                number = value.AsDice().Sum();
+                isFinite = true;
+                return true;
+            }
+
+            if (value.isText() &&
+                decimal.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+            {
+                number = parsed;
+                isFinite = true;
+                return true;
+            }
+
+            if (value.Type == EventScriptValueType.Boolean)
+            {
+                number = value.AsBoolean() ? 1m : 0m;
+                isFinite = true;
+                return true;
+            }
+
+            return false;
         }
 
         private bool TryGetBooleanConstant(ExperimentalCompiledExpression expression, out bool value)

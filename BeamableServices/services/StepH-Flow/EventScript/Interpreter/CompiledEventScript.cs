@@ -12,7 +12,7 @@ namespace StepH.Flow.EventScript.Interpreter;
 
 internal delegate IReadOnlyDictionary<string, EventScriptValue> CompiledHandlerInvoker(EventScriptInvocationEngine engine, IReadOnlyDictionary<string, EventScriptValue> args);
 
-internal delegate EventScriptValue CompiledGlobalDefinitionInvoker(EventScriptInvocationEngine engine, IReadOnlyList<EventScriptValue> arguments);
+internal delegate EventScriptValue CompiledCallableDefinitionInvoker(EventScriptInvocationEngine engine, IReadOnlyList<EventScriptValue> arguments);
 
 public sealed class EventScriptEmittedEvent
 {
@@ -63,15 +63,17 @@ public sealed class CompiledEventScript : IEventScriptInvokableScript, IEventScr
         _ = linkedModule ?? throw new ArgumentNullException(nameof(linkedModule));
         Options = options ?? new EventScriptInterpreterCompilationOptions();
 
-        RuleDefinitions = linkedModule.RuleDefinitions.ToDictionary(
+        var callables = linkedModule.Callables.ToDictionary(
             pair => pair.Key,
-            pair => new CompiledGlobalDefinition(pair.Key, pair.Value.Parameters, pair.Value.Expression, GlobalDefinitionKind.Rule, Options.EnableDiagnostics),
+            pair => new CompiledCallableDefinition(
+                pair.Value.Name,
+                pair.Value.Parameters,
+                pair.Value.Expression,
+                pair.Value.Kind == LinkedCallableKind.Rule ? CallableKind.Rule : CallableKind.Select,
+                Options.EnableDiagnostics),
             StringComparer.Ordinal);
 
-        SelectDefinitions = linkedModule.SelectDefinitions.ToDictionary(
-            pair => pair.Key,
-            pair => new CompiledGlobalDefinition(pair.Key, pair.Value.Parameters, pair.Value.Expression, GlobalDefinitionKind.Select, Options.EnableDiagnostics),
-            StringComparer.Ordinal);
+        Callables = callables;
 
         TypeDefinitions = linkedModule.TypeDefinitions.ToDictionary(
             pair => pair.Key,
@@ -96,9 +98,7 @@ public sealed class CompiledEventScript : IEventScriptInvokableScript, IEventScr
             pair => (IReadOnlyList<EventScriptMessageSignature>)pair.Value.Select(handler => handler.Definition).ToArray(),
             StringComparer.Ordinal);
 
-    internal IReadOnlyDictionary<string, CompiledGlobalDefinition> RuleDefinitions { get; }
-
-    internal IReadOnlyDictionary<string, CompiledGlobalDefinition> SelectDefinitions { get; }
+    internal IReadOnlyDictionary<string, CompiledCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, CompiledTypeDefinition> TypeDefinitions { get; }
 
@@ -112,13 +112,13 @@ public sealed class CompiledEventScript : IEventScriptInvokableScript, IEventScr
         => new EventScriptInvocationEngine(this, invocationContext, diagnosticCollector).InvokeHandler(handler, args);
 }
 
-internal enum GlobalDefinitionKind
+internal enum CallableKind
 {
     Rule,
     Select
 }
 
-internal sealed class CompiledGlobalDefinition(string name, IReadOnlyList<string> parameters, ExpressionNode expression, GlobalDefinitionKind kind, bool diagnosticsEnabled)
+internal sealed class CompiledCallableDefinition(string name, IReadOnlyList<string> parameters, ExpressionNode expression, CallableKind kind, bool diagnosticsEnabled)
 {
     public string Name { get; } = name;
 
@@ -126,7 +126,7 @@ internal sealed class CompiledGlobalDefinition(string name, IReadOnlyList<string
 
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
-    public GlobalDefinitionKind Kind { get; } = kind;
+    public CallableKind Kind { get; } = kind;
 
     public bool DiagnosticsEnabled { get; } = diagnosticsEnabled;
 }

@@ -19,8 +19,7 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptInvokableScrip
         IReadOnlyList<ExperimentalCompiledIterationSource> iterationSources,
         IReadOnlyList<ExperimentalEventScript> programs,
         IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> handlers,
-        IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> ruleDefinitions,
-        IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> selectDefinitions,
+        IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> callables,
         IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> typeDefinitions)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -31,8 +30,7 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptInvokableScrip
         IterationSources = iterationSources ?? throw new ArgumentNullException(nameof(iterationSources));
         Programs = programs ?? throw new ArgumentNullException(nameof(programs));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        RuleDefinitions = ruleDefinitions ?? throw new ArgumentNullException(nameof(ruleDefinitions));
-        SelectDefinitions = selectDefinitions ?? throw new ArgumentNullException(nameof(selectDefinitions));
+        Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
     }
 
@@ -54,9 +52,7 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptInvokableScrip
 
     internal IReadOnlyList<ExperimentalEventScript> Programs { get; }
 
-    internal IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> RuleDefinitions { get; }
-
-    internal IReadOnlyDictionary<string, ExperimentalCompiledGlobalDefinition> SelectDefinitions { get; }
+    internal IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> TypeDefinitions { get; }
 

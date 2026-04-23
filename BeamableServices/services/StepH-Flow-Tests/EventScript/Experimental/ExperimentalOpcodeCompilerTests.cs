@@ -1,6 +1,7 @@
 using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.EventScriptManager;
 using static StepH.Flow.EventScript.EventScriptMessage;
 
@@ -146,13 +147,51 @@ public sealed class ExperimentalOpcodeCompilerTests
     }
 
     [TestMethod]
+    public void ExperimentalRuntimeRuleCallsAlwaysReturnBooleanWhileSelectKeepsOriginalType()
+    {
+        const string script =
+            """
+            module ExperimentalRuleBool
+            rule numeric(value) means value * 2
+            select numericSelect(value) means value * 2
+
+            on Start() {
+                let byRuleTwo be numeric(2)
+                let byRuleZero be numeric(0)
+                let bySelect be numericSelect(2)
+                let byPredicate be 2 is numeric
+                publish Done(
+                    byRuleTwo: byRuleTwo,
+                    byRuleZero: byRuleZero,
+                    bySelect: bySelect,
+                    byPredicate: byPredicate
+                )
+            }
+            """;
+
+        var args = Compile(script)
+            .Invoke(Message("Start"))
+            .EmittedEvents[0]
+            .Arguments;
+
+        Assert.AreEqual(EventScriptValueType.Boolean, args["byRuleTwo"].Type);
+        Assert.AreEqual(EventScriptValueType.Boolean, args["byRuleZero"].Type);
+        Assert.AreEqual(EventScriptValueType.Decimal, args["bySelect"].Type);
+        Assert.AreEqual(EventScriptValueType.Boolean, args["byPredicate"].Type);
+        Assert.IsTrue(args["byRuleTwo"].AsBoolean());
+        Assert.IsFalse(args["byRuleZero"].AsBoolean());
+        Assert.AreEqual(4m, args["bySelect"].AsNumber());
+        Assert.IsTrue(args["byPredicate"].AsBoolean());
+    }
+
+    [TestMethod]
     public void ExperimentalRuntimeTreatsMessageAndHandlerAsFirstClassTypes()
     {
         const string script =
             """
             module ExperimentalMessageFirstClass
             on Start(unit, target) {
-                let shoot as :handler be :handler Shoot(unit, target)
+                let shoot as :handler be Shoot(unit, target)
                 let msg as :message be shoot(unit: unit, target: target)
                 publish Done(
                     msgIsMessage: msg is :message,

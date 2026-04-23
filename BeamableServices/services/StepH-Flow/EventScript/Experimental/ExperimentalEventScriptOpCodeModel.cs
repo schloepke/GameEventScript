@@ -60,13 +60,13 @@ internal sealed class ExperimentalCompiledIterationSource(ExperimentalIterationS
     public ExperimentalCompiledExpression? StepExpression { get; } = stepExpression;
 }
 
-internal enum ExperimentalGlobalDefinitionKind
+internal enum ExperimentalCallableKind
 {
     Rule,
     Select
 }
 
-internal sealed class ExperimentalCompiledGlobalDefinition(string name, IReadOnlyList<string> parameters, ExperimentalCompiledExpression expression, ExperimentalGlobalDefinitionKind kind, bool diagnosticsEnabled)
+internal sealed class ExperimentalCompiledCallableDefinition(string name, IReadOnlyList<string> parameters, ExperimentalCompiledExpression expression, ExperimentalCallableKind kind, bool diagnosticsEnabled)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
@@ -74,7 +74,7 @@ internal sealed class ExperimentalCompiledGlobalDefinition(string name, IReadOnl
 
     public ExperimentalCompiledExpression Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
-    public ExperimentalGlobalDefinitionKind Kind { get; } = kind;
+    public ExperimentalCallableKind Kind { get; } = kind;
 
     public bool DiagnosticsEnabled { get; } = diagnosticsEnabled;
 }

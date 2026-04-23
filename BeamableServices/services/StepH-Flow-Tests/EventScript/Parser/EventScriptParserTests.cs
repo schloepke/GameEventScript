@@ -1163,7 +1163,7 @@ public class EventScriptParsingScenarios
     }
 
     [TestMethod]
-    public void HandlerHeadersSupportHandlerTagSugar()
+    public void HandlerHeadersRejectHandlerTagPrefix()
     {
         const string script =
             """
@@ -1172,11 +1172,7 @@ public class EventScriptParsingScenarios
             }
             """;
 
-        var module = EventScriptParser.Parse(script);
-        Assert.HasCount(1, module.Handlers);
-        var handler = module.Handlers[0];
-        Assert.AreEqual("Shoot", handler.Message);
-        CollectionAssert.AreEqual(new[] { "unit", "target" }, handler.Parameters.ToArray());
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]
@@ -1202,7 +1198,7 @@ public class EventScriptParsingScenarios
         const string validScript =
             """
             on Start(unit, target, myHandler, myMessage) {
-                let explicit be :message Shoot(unit: unit, target: target)
+                let explicit as :message be Shoot(unit: unit, target: target)
                 publish explicit
                 publish myMessage
                 publish myHandler(unit: unit, target: target)
@@ -1226,6 +1222,21 @@ public class EventScriptParsingScenarios
             """;
 
         Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(invalidScript));
+    }
+
+    [TestMethod]
+    public void PrefixMessageAndHandlerLiteralsAreRejected()
+    {
+        const string script =
+            """
+            on Start(unit, target) {
+                let h as :handler be :handler Shoot(unit, target)
+                let m as :message be :message Shoot(unit: unit, target: target)
+                publish :message Shoot(unit: unit, target: target)
+            }
+            """;
+
+        Assert.ThrowsExactly<EventScriptSyntaxException>(() => EventScriptParser.Parse(script));
     }
 
     [TestMethod]

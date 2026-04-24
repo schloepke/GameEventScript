@@ -68,8 +68,8 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptMessageHandler
         => _messageHandlers;
 
     public void Invoke(EventScriptMessage message, EventScriptContext context)
-        => new ExperimentalOpcodeInvocationEngine(this, context).InvokeMessage(message);
+        => ExperimentalOpcodeInvocationEngine.InvokeMessage(this, context, message);
 
     internal void InvokeHandler(ExperimentalCompiledEventScriptHandler handler, EventScriptMessage message, EventScriptContext context)
-        => new ExperimentalOpcodeInvocationEngine(this, context).InvokeHandler(handler, message.Arguments);
+        => ExperimentalOpcodeInvocationEngine.InvokeHandler(this, context, handler, message.Arguments);
 }

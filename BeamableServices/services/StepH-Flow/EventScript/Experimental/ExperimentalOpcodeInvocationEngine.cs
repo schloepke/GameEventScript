@@ -12,79 +12,90 @@ using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Experimental;
 
-internal sealed class ExperimentalOpcodeInvocationEngine
+internal static class ExperimentalOpcodeInvocationEngine
 {
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers;
-    private readonly IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> _typeDefinitions;
-    private readonly IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> _callables;
-    private readonly EventScriptContext _context;
-    private readonly EventScriptRandomGenerator _randomGenerator;
-    private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
-    private readonly bool _diagnosticsEnabled;
+    public static void InvokeMessage(ExperimentalCompiledEventScript compiledScript, EventScriptContext context, EventScriptMessage message)
+        => new InvocationSession(compiledScript, context).InvokeMessage(message);
 
-    internal ExperimentalOpcodeInvocationEngine(ExperimentalCompiledEventScript compiledScript, EventScriptContext context)
+    public static void InvokeHandler(
+        ExperimentalCompiledEventScript compiledScript,
+        EventScriptContext context,
+        ExperimentalCompiledEventScriptHandler? handler,
+        IReadOnlyDictionary<string, EventScriptValue> args)
+        => new InvocationSession(compiledScript, context).InvokeHandler(handler, args);
+
+    private sealed class InvocationSession
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-        _randomGenerator = _context.Random;
-        _typeDefinitions = compiledScript?.TypeDefinitions ?? new Dictionary<string, ExperimentalCompiledTypeDefinition>(StringComparer.Ordinal);
-        _callables = compiledScript?.Callables ?? new Dictionary<string, ExperimentalCompiledCallableDefinition>(StringComparer.Ordinal);
-        _handlers = compiledScript?.Handlers ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
-        _compiledScript = compiledScript;
-        _diagnosticsEnabled = compiledScript?.Options.EnableDiagnostics ?? false;
-        _randomScopes.Push(_randomGenerator);
-    }
+        private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers;
+        private readonly IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> _typeDefinitions;
+        private readonly IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> _callables;
+        private readonly EventScriptContext _context;
+        private readonly EventScriptRandomGenerator _randomGenerator;
+        private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
+        private readonly bool _diagnosticsEnabled;
+        private readonly ExperimentalCompiledEventScript? _compiledScript;
 
-    private readonly ExperimentalCompiledEventScript? _compiledScript;
-
-    public void InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
-        => InvokeMessage(new EventScriptMessage(message, args));
-
-    public void InvokeMessage(EventScriptMessage message)
-    {
-        try
+        internal InvocationSession(ExperimentalCompiledEventScript compiledScript, EventScriptContext context)
         {
-            message ??= new EventScriptMessage(string.Empty);
-            if (string.IsNullOrWhiteSpace(message.Name))
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _randomGenerator = _context.Random;
+            _typeDefinitions = compiledScript?.TypeDefinitions ?? new Dictionary<string, ExperimentalCompiledTypeDefinition>(StringComparer.Ordinal);
+            _callables = compiledScript?.Callables ?? new Dictionary<string, ExperimentalCompiledCallableDefinition>(StringComparer.Ordinal);
+            _handlers = compiledScript?.Handlers ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
+            _compiledScript = compiledScript;
+            _diagnosticsEnabled = compiledScript?.Options.EnableDiagnostics ?? false;
+            _randomScopes.Push(_randomGenerator);
+        }
+
+        public void InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
+            => InvokeMessage(new EventScriptMessage(message, args));
+
+        public void InvokeMessage(EventScriptMessage message)
+        {
+            try
+            {
+                message ??= new EventScriptMessage(string.Empty);
+                if (string.IsNullOrWhiteSpace(message.Name))
+                {
+                    return;
+                }
+
+                foreach (var handler in GetMatchingHandlers(message))
+                {
+                    try
+                    {
+                        var executionContext = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
+                        ExecuteHandler(executionContext, handler, message.Arguments);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+                // Runtime has to be lenient and should not throw.
+            }
+        }
+
+        public void InvokeHandler(ExperimentalCompiledEventScriptHandler? handler, IReadOnlyDictionary<string, EventScriptValue> args)
+        {
+            if (handler is null)
             {
                 return;
             }
 
-            foreach (var handler in GetMatchingHandlers(message))
+            try
             {
-                try
-                {
-                    var executionContext = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
-                    ExecuteHandler(executionContext, handler, message.Arguments);
-                }
-                catch
-                {
-                }
+                args = EventScriptNamedArguments.Normalize(args);
+                var context = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
+                ExecuteHandler(context, handler, args);
+            }
+            catch
+            {
+                // Runtime has to be lenient and should not throw.
             }
         }
-        catch
-        {
-            // Runtime has to be lenient and should not throw.
-        }
-    }
-
-    public void InvokeHandler(ExperimentalCompiledEventScriptHandler? handler, IReadOnlyDictionary<string, EventScriptValue> args)
-    {
-        if (handler is null)
-        {
-            return;
-        }
-
-        try
-        {
-            args = EventScriptNamedArguments.Normalize(args);
-            var context = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
-            ExecuteHandler(context, handler, args);
-        }
-        catch
-        {
-            // Runtime has to be lenient and should not throw.
-        }
-    }
 
     private IReadOnlyList<ExperimentalCompiledEventScriptHandler> GetMatchingHandlers(EventScriptMessage message)
         => EventScriptInvocationKernel.GetMatchingHandlers(_handlers, message, handler => handler.SignatureId, handler => handler.DeclarationOrder);
@@ -2953,5 +2964,6 @@ internal sealed class ExperimentalOpcodeInvocationEngine
             _ => value.ToString()
         };
     }
-    
+
+}
 }

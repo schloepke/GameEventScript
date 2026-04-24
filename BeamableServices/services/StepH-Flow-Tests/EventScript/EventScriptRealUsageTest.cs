@@ -74,18 +74,18 @@ public class EventScriptRealUsageTest
             var host = EventScriptHost.CreateBuilder()
                 .WithDiagnosticCollector(collector)
                 .Build()
-                .Load(EventScriptManager.Compile(script))
-                .Subscribe("SetBoardSize", ["x", "y"], context =>
+                .SubscribeForScript(EventScriptManager.CompileExperimental(script))
+                .Subscribe("SetBoardSize", ["x", "y"], (message, context) =>
                 {
-                    game["width"] = context.Arguments["x"];
-                    game["height"] = context.Arguments["y"];
+                    game["width"] = message.Arguments["x"];
+                    game["height"] = message.Arguments["y"];
                 })
-                .Subscribe("SetNumberOfPlayers", ["max"], context => { game["playerLimit"] = context.Arguments["max"]; })
-                .Subscribe("SetNumberOfPushs", ["pushs"], context => { game["pushCount"] = context.Arguments["pushs"]; })
-                .Subscribe("SetRandomSequence", ["sequence"], context => { game["randoms"] = context.Arguments["sequence"]; });
+                .Subscribe("SetNumberOfPlayers", ["max"], (message, context) => { game["playerLimit"] = message.Arguments["max"]; })
+                .Subscribe("SetNumberOfPushs", ["pushs"], (message, context) => { game["pushCount"] = message.Arguments["pushs"]; })
+                .Subscribe("SetRandomSequence", ["sequence"], (message, context) => { game["randoms"] = message.Arguments["sequence"]; });
 
-            Console.WriteLine(host.Publish(EventScriptMessage.Message("Setup", ("player", EventScriptValue.Text("player1")))));
-            Console.WriteLine(host.Publish(EventScriptMessage.Message("Start", ("board", EventScriptValue.Dictionary(game)))));
+            host.Publish(EventScriptMessage.Message("Setup", ("player", EventScriptValue.Text("player1"))));
+            host.Publish(EventScriptMessage.Message("Start", ("board", EventScriptValue.Dictionary(game))));
             Console.WriteLine(EventScriptValue.Dictionary(game));
 
             Console.WriteLine(collector.ToString());
@@ -127,19 +127,28 @@ public class EventScriptRealUsageTest
         const string script =
             """
             module TestModule
-            
+
+            record :meter as {
+                current: :decimal clamped between 0 and maximum,
+                maximum: :decimal clamped between 0 and :infinity,
+                percentage: :percentage computed by
+                    0% when maximum <= 0,
+                    otherwise (current / maximum) as :percentage
+            }
+
             rule wounded(unit) means unit[hp] <= 0
             select living(units) means units[:filter unit where unit[hp] > 0]
-
+            
             on Setup(player) {
+                let hp as :meter be [current: 25, maximum: 100];
                 let someValue1 as :asDecimal be '10.2'
                 let someValue2 as :asDecimal be 10.2
                 let someValue3 be '10.2'
-                let someValue4 as :decimal be 10.2
+                let someValue4 as :decimal be 10.2 * 7.24 + 34
                 let ruleResult be wounded(player)
                 let selectResult be living(player)
-                let someHandler be :handler Shot(unit, target)
-                let someMessage be :message Shot(unit: 1, target: 2)
+                let someHandler as :handler be Shot(unit, target)
+                let someMessage as :message be Shot(unit: 1, target: 2)
                 for i from 1 to 10 {
                     let x be i *10
                     publish SpeedBoost(boost: x)
@@ -150,7 +159,25 @@ public class EventScriptRealUsageTest
             }
             """;
 
-        Console.WriteLine(EventScriptManager.ParseModule(script, "ast-debug.es").ToJson());
+        const string script2 =
+            """
+            module CombatModule
+
+            rule unitIsDead(unit) means unit[hp] <= 0
+            """;
+
+        try
+        {
+            var parsedModule = EventScriptManager.ParseModule(script, "ast-debug.es");
+            var parsedCombatModule = EventScriptManager.ParseModule(script2, "combat-debug.es");
+            var linkedModule = EventScriptManager.LinkModules(parsedModule, parsedCombatModule);
+            Console.WriteLine(parsedModule.ToJson());
+            //Console.WriteLine(linkedModule.ToJson());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
 

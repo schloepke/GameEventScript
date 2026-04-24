@@ -10,8 +10,6 @@ using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
-internal delegate EventScriptValue CompiledCallableDefinitionInvoker(EventScriptInvocationEngine engine, IReadOnlyList<EventScriptValue> arguments);
-
 public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
 {
     private readonly IReadOnlyList<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> _messageHandlers;
@@ -71,10 +69,10 @@ public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
         => _messageHandlers;
 
     public void Invoke(EventScriptMessage message, EventScriptContext context)
-        => new EventScriptInvocationEngine(this, context).InvokeMessage(message);
+        => EventScriptInvocationEngine.InvokeMessage(this, context, message);
 
     internal void InvokeHandler(CompiledEventScriptHandler handler, EventScriptMessage message, EventScriptContext context)
-        => new EventScriptInvocationEngine(this, context).InvokeHandler(handler, message.Arguments);
+        => EventScriptInvocationEngine.InvokeHandler(this, context, handler, message.Arguments);
 }
 
 internal enum CallableKind
@@ -161,4 +159,3 @@ public sealed class CompiledEventScriptHandler
 
     public EventScriptMessageSignature Definition { get; }
 }
-

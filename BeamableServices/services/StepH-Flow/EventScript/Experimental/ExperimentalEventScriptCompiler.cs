@@ -13,9 +13,7 @@ namespace StepH.Flow.EventScript.Experimental;
 
 public static class ExperimentalEventScriptCompiler
 {
-    public static ExperimentalCompiledEventScript Compile(
-        LinkedEventScriptModule module,
-        ExperimentalEventScriptCompilationOptions? options = null)
+    public static ExperimentalCompiledEventScript Compile(LinkedEventScriptModule module, ExperimentalEventScriptCompilationOptions? options = null)
     {
         var compileOptions = options ?? new ExperimentalEventScriptCompilationOptions();
         var errors = new List<EventScriptOpcodeCompilationError>();

@@ -27,7 +27,6 @@ public class EventScriptDiagnosticCollectorScenarios
             invocationContext: null,
             diagnosticCollector: collector);
 
-        Assert.AreEqual(7m, result.Variables["score"].AsNumber());
         Assert.AreEqual(7m, result.EmittedEvents[0].Arguments[0].AsNumber());
         Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.HandlerInvoked && evt.Name == "Start"));
         Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.ParameterBound && evt.Name == "value"));

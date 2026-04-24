@@ -29,7 +29,6 @@ public sealed class ExperimentalOpcodeCompilerTests
         Assert.HasCount(1, result.EmittedEvents);
         Assert.AreEqual("Done", result.EmittedEvents[0].Message);
         Assert.AreEqual(6L, result.EmittedEvents[0].Arguments["result"].AsInteger());
-        Assert.AreEqual(6L, result.Variables["doubled"].AsInteger());
     }
 
     [TestMethod]

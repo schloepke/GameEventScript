@@ -146,32 +146,35 @@ For each queued event:
 
 This means publish chains are not recursive direct calls. They are queued message deliveries.
 
-## Public Interpreter API
+## Public Runtime API
 
-At the interpreter level there are two main ways to run scripts.
+EventScript runtime is message/context driven and resultless.
 
-Named emit:
-
-```csharp
-var interpreter = EventScriptInterpreter.Compile(script);
-var result = interpreter.Emit("Start", new Dictionary<string, EventScriptValue>
-{
-    ["value"] = EventScriptValue.Integer(3)
-});
-```
-
-Tuple-style convenience overload:
+Direct compiled invocation:
 
 ```csharp
-var interpreter = EventScriptInterpreter.Compile(script);
-var result = interpreter.Emit("Start", ("value", EventScriptValue.Integer(3)));
+var compiled = EventScriptManager.Compile(script);
+var published = new List<EventScriptMessage>();
+
+var context = new EventScriptContext(
+    EventScriptRandomGenerator.Create(),
+    message => published.Add(message));
+
+compiled.Invoke(
+    EventScriptMessage.Message("Start", ("value", EventScriptValue.Integer(3))),
+    context);
 ```
 
-The execution result contains:
+Host orchestration (queue + subscriptions):
 
-- the initial message
-- all published events
-- a variable snapshot from the initial externally triggered handler dispatch
+```csharp
+var host = EventScriptHost.CreateBuilder()
+    .WithRandom(EventScriptRandomGenerator.Create())
+    .Build()
+    .Load(compiled);
+
+host.Publish(EventScriptMessage.Message("Start", ("value", EventScriptValue.Integer(3))));
+```
 
 ## Comments
 

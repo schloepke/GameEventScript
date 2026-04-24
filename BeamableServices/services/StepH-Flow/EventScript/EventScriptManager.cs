@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
@@ -16,7 +17,10 @@ public static class EventScriptManager
     
     public static CompiledEventScript Compile(string input, EventScriptInterpreterCompilationOptions? options = null)
         => new(EventScriptLinkBuilder.LinkModules(ParseModule(input)), options);
-    
+
+    public static ExperimentalCompiledEventScript CompileExperimental(string input, ExperimentalEventScriptCompilationOptions? options = null)
+        => ExperimentalEventScriptCompiler.Compile(EventScriptLinkBuilder.LinkModules(ParseModule(input)), options);
+
     public static EventScriptModule ParseModule(string input, string? sourceName = null) => EventScriptParser.Parse(input, sourceName);
 
     public static IReadOnlyList<EventScriptModule> ParseModules(params string[] input) => input.Select(script => EventScriptParser.Parse(script)).ToList();

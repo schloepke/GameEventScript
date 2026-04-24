@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
 
@@ -16,96 +17,79 @@ internal sealed class ExperimentalOpcodeInvocationEngine
     private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers;
     private readonly IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> _typeDefinitions;
     private readonly IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> _callables;
+    private readonly EventScriptContext _context;
     private readonly EventScriptRandomGenerator _randomGenerator;
     private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
-    private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly bool _diagnosticsEnabled;
 
-    internal ExperimentalOpcodeInvocationEngine(ExperimentalCompiledEventScript compiledScript, EventScriptInvocationContext? invocationContext, IEventScriptDiagnosticCollector? diagnosticCollector)
+    internal ExperimentalOpcodeInvocationEngine(ExperimentalCompiledEventScript compiledScript, EventScriptContext context)
     {
-        _randomGenerator = invocationContext?.Random ?? EventScriptRandomGenerator.Create();
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _randomGenerator = _context.Random;
         _typeDefinitions = compiledScript?.TypeDefinitions ?? new Dictionary<string, ExperimentalCompiledTypeDefinition>(StringComparer.Ordinal);
         _callables = compiledScript?.Callables ?? new Dictionary<string, ExperimentalCompiledCallableDefinition>(StringComparer.Ordinal);
         _handlers = compiledScript?.Handlers ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
         _compiledScript = compiledScript;
-        _diagnosticCollector = diagnosticCollector;
         _diagnosticsEnabled = compiledScript?.Options.EnableDiagnostics ?? false;
         _randomScopes.Push(_randomGenerator);
     }
 
     private readonly ExperimentalCompiledEventScript? _compiledScript;
 
-    public EventScriptExecutionResult InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
+    public void InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
         => InvokeMessage(new EventScriptMessage(message, args));
 
-    public EventScriptExecutionResult InvokeMessage(EventScriptMessage message)
+    public void InvokeMessage(EventScriptMessage message)
     {
         try
         {
-            message = message ?? new EventScriptMessage(string.Empty);
+            message ??= new EventScriptMessage(string.Empty);
             if (string.IsNullOrWhiteSpace(message.Name))
             {
-                message = new EventScriptMessage(string.Empty, message.Arguments);
+                return;
             }
 
-            var state = new ExperimentalCompiledRunState(_diagnosticCollector, _diagnosticsEnabled);
             foreach (var handler in GetMatchingHandlers(message))
             {
                 try
                 {
-                    var context = new ExperimentalCompiledExecutionContext(state);
-                    var handlerVariables = ExecuteHandler(context, handler, message.Arguments);
-                    state.CaptureVariables(handlerVariables);
+                    var executionContext = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
+                    ExecuteHandler(executionContext, handler, message.Arguments);
                 }
                 catch
                 {
                 }
             }
-
-            return new EventScriptExecutionResult(message, state.EmittedEvents, state.Variables);
         }
         catch
         {
-            return new EventScriptExecutionResult(string.Empty, [], new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+            // Runtime has to be lenient and should not throw.
         }
     }
 
-    public EventScriptExecutionResult InvokeHandler(ExperimentalCompiledEventScriptHandler? handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    public void InvokeHandler(ExperimentalCompiledEventScriptHandler? handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         if (handler is null)
         {
-            return new EventScriptExecutionResult(string.Empty, [], new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+            return;
         }
 
         try
         {
             args = EventScriptNamedArguments.Normalize(args);
-            var state = new ExperimentalCompiledRunState(_diagnosticCollector, _diagnosticsEnabled);
-            var context = new ExperimentalCompiledExecutionContext(state);
-            var variables = ExecuteHandler(context, handler, args);
-            state.CaptureVariables(variables);
-            return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
+            var context = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
+            ExecuteHandler(context, handler, args);
         }
         catch
         {
-            return new EventScriptExecutionResult(handler.Message, [], new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+            // Runtime has to be lenient and should not throw.
         }
     }
 
     private IReadOnlyList<ExperimentalCompiledEventScriptHandler> GetMatchingHandlers(EventScriptMessage message)
-    {
-        if (!_handlers.TryGetValue(message.Name, out var handlers))
-        {
-            return [];
-        }
+        => EventScriptInvocationKernel.GetMatchingHandlers(_handlers, message, handler => handler.SignatureId, handler => handler.DeclarationOrder);
 
-        return handlers
-            .Where(handler => string.Equals(handler.SignatureId, message.SignatureId, StringComparison.Ordinal))
-            .OrderBy(handler => handler.DeclarationOrder)
-            .ToArray();
-    }
-
-    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExperimentalCompiledExecutionContext context, ExperimentalCompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    private void ExecuteHandler(ExperimentalCompiledExecutionContext context, ExperimentalCompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         context.PushScope();
         try
@@ -135,7 +119,6 @@ internal sealed class ExperimentalOpcodeInvocationEngine
             }
 
             ExecuteProgram(context, handler.ProgramIndex);
-            return context.SnapshotTopScope();
         }
         finally
         {
@@ -2831,8 +2814,7 @@ internal sealed class ExperimentalOpcodeInvocationEngine
 
     private EventScriptValue EvaluateCustomTypeExpression(ExperimentalCompiledTypeDefinition typeDefinition, ExperimentalCompiledExpression expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
-        var state = new ExperimentalCompiledRunState(_diagnosticCollector, _diagnosticsEnabled);
-        var context = new ExperimentalCompiledExecutionContext(state);
+        var context = new ExperimentalCompiledExecutionContext(_context, _diagnosticsEnabled);
         context.PushScope();
         try
         {

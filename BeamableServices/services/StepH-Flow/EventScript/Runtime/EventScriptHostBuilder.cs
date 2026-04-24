@@ -42,6 +42,9 @@ public sealed class EventScriptHostBuilder
     }
 
     public EventScriptHostBuilder WithDefaultScriptHandlerPriority(int priority)
+        => WithScriptHandlerPriority(priority);
+
+    public EventScriptHostBuilder WithScriptHandlerPriority(int priority)
     {
         _scriptHandlerPriority = priority;
         return this;

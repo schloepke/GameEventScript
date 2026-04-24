@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Experimental;
@@ -8,11 +9,13 @@ namespace StepH.Flow.EventScript.Experimental;
 internal sealed class ExperimentalCompiledExecutionContext
 {
     private readonly Stack<Dictionary<string, EventScriptValue>> _scopes = new();
-    private readonly ExperimentalCompiledRunState _state;
+    private readonly EventScriptContext _context;
+    private readonly bool _diagnosticsEnabled;
 
-    public ExperimentalCompiledExecutionContext(ExperimentalCompiledRunState state)
+    public ExperimentalCompiledExecutionContext(EventScriptContext context, bool diagnosticsEnabled)
     {
-        _state = state;
+        _context = context;
+        _diagnosticsEnabled = diagnosticsEnabled;
         _scopes.Push(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
     }
 
@@ -47,18 +50,16 @@ internal sealed class ExperimentalCompiledExecutionContext
     public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> arguments)
     {
         var publishedMessage = new EventScriptMessage(message, arguments);
-        var emittedEvent = new EventScriptEmittedEvent(publishedMessage);
-        _state.RecordPublishedEvent(emittedEvent);
-        _state.RecordDiagnostic(
+        _context.Publish(publishedMessage);
+        EventScriptInvocationKernel.RecordDiagnostic(
+            _context,
+            _diagnosticsEnabled,
             EventScriptDiagnosticEventKind.EventPublished,
             publishedMessage.Name,
-            emittedEvent.Arguments,
+            publishedMessage.Arguments,
             $"Published '{publishedMessage.Name}'");
     }
 
     public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
-        => _state.RecordDiagnostic(kind, name, arguments, detail);
-
-    public IReadOnlyDictionary<string, EventScriptValue> SnapshotTopScope()
-        => new Dictionary<string, EventScriptValue>(_scopes.Peek(), StringComparer.Ordinal);
+        => EventScriptInvocationKernel.RecordDiagnostic(_context, _diagnosticsEnabled, kind, name, arguments, detail);
 }

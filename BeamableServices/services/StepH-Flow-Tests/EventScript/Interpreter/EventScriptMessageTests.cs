@@ -1,4 +1,6 @@
+using System.Linq;
 using StepH.Flow.EventScript;
+using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
@@ -76,27 +78,29 @@ public sealed class EventScriptMessageTests
 
         var compiled = EventScriptManager.Compile(script);
         var seen = new List<string>();
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(compiled)
-            .Subscribe(EventScriptMessageSignature.MessageSignature("Notify", ["value"]), context =>
+            .SubscribeForScript(compiled)
+            .Subscribe(EventScriptMessageSignature.MessageSignature("Notify", ["value"]), (message, context) =>
             {
-                seen.Add(context.Message);
+                seen.Add(message.Name);
                 context.Publish(new EventScriptMessage("Done", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
                 {
-                    ["value"] = context.Arguments["value"]
+                    ["value"] = message.Arguments["value"]
                 }));
             });
 
-        var result = host.Publish(new EventScriptMessage("Start", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+        host.Publish(new EventScriptMessage("Start", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
         {
             ["value"] = EventScriptValue.Integer(3)
         }));
+        var emitted = collector.Events.Where(eventInfo => eventInfo.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
         CollectionAssert.AreEqual(new[] { "Notify" }, seen);
-        Assert.AreEqual("Start", result.InvocationMessage.Name);
-        Assert.AreEqual("Notify", result.EmittedEvents[0].Message);
-        Assert.AreEqual("Done", result.EmittedEvents[1].Message);
+        Assert.AreEqual("Notify", emitted[0].Name);
+        Assert.AreEqual("Done", emitted[1].Name);
     }
 
     [TestMethod]

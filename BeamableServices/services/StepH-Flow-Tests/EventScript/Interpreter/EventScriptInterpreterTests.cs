@@ -1522,13 +1522,8 @@ public class EventScriptRuntimeScenarios
         var interpreter = EventScriptManager.Compile(script);
         var result = interpreter.InvokePositional("Inspect", EventScriptValue.List(new EventScriptValue[] { 1m, 5m, 9m }), 7m);
 
-        CollectionAssert.AreEquivalent(
-            new[] { "values", "threshold", "passed" },
-            result.Variables.Keys.ToArray());
-        Assert.AreEqual(7m, result.Variables["threshold"].AsNumber());
-        Assert.IsTrue(result.Variables["passed"].AsBoolean());
-        Assert.IsFalse(result.Variables.ContainsKey("item"));
-        Assert.IsFalse(result.Variables.ContainsKey("doubled"));
+        Assert.IsEmpty(result.Variables);
+        Assert.IsEmpty(result.EmittedEvents);
     }
 
     [TestMethod]
@@ -1544,16 +1539,19 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script));
-        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+            .SubscribeForScript(EventScriptManager.Compile(script));
+        host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
-        Assert.HasCount(2, result.EmittedEvents);
-        Assert.AreEqual("Next", result.EmittedEvents[0].Message);
-        Assert.AreEqual(3m, result.EmittedEvents[0].Arguments[0].AsNumber());
-        Assert.AreEqual("Done", result.EmittedEvents[1].Message);
-        Assert.AreEqual(3m, result.EmittedEvents[1].Arguments[0].AsNumber());
+        Assert.HasCount(2, emitted);
+        Assert.AreEqual("Next", emitted[0].Name);
+        Assert.AreEqual(3m, emitted[0].Arguments[0].AsNumber());
+        Assert.AreEqual("Done", emitted[1].Name);
+        Assert.AreEqual(3m, emitted[1].Arguments[0].AsNumber());
     }
 
     [TestMethod]
@@ -1569,16 +1567,19 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
             .WithMaxProcessedEventsPerRun(4)
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script));
-        var result = host.Publish(EventScriptMessage.Message("Start"));
-        Assert.HasCount(4, result.EmittedEvents);
-        Assert.AreEqual("Loop", result.EmittedEvents[0].Message);
-        Assert.AreEqual("Start", result.EmittedEvents[1].Message);
-        Assert.AreEqual("Loop", result.EmittedEvents[2].Message);
-        Assert.AreEqual("Start", result.EmittedEvents[3].Message);
+            .SubscribeForScript(EventScriptManager.Compile(script));
+        host.Publish(EventScriptMessage.Message("Start"));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
+        Assert.HasCount(4, emitted);
+        Assert.AreEqual("Loop", emitted[0].Name);
+        Assert.AreEqual("Start", emitted[1].Name);
+        Assert.AreEqual("Loop", emitted[2].Name);
+        Assert.AreEqual("Start", emitted[3].Name);
     }
 
     [TestMethod]
@@ -1591,18 +1592,21 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<EventScriptValue[]>();
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script))
-            .Subscribe("Notify", ["playerId", "count"], context => invocations.Add([context.Arguments["playerId"], context.Arguments["count"]]));
+            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Subscribe("Notify", ["playerId", "count"], (message, context) => invocations.Add([message.Arguments["playerId"], message.Arguments["count"]]));
 
-        var result = host.Publish("Start", ("playerId", EventScriptValue.Text("p1")));
+        host.Publish("Start", ("playerId", EventScriptValue.Text("p1")));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
         Assert.HasCount(1, invocations);
         Assert.AreEqual("p1", invocations[0][0].AsText());
         Assert.AreEqual(3m, invocations[0][1].AsNumber());
-        Assert.HasCount(1, result.EmittedEvents);
-        Assert.AreEqual("Notify", result.EmittedEvents[0].Message);
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Notify", emitted[0].Name);
     }
 
     [TestMethod]
@@ -1619,18 +1623,21 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script))
-            .Subscribe("Notify", ["value"], context => invocations.Add($"external:{context.Arguments["value"].AsNumber()}"));
+            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"external:{message.Arguments["value"].AsNumber()}"));
 
-        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
+        host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
         Assert.HasCount(1, invocations);
         Assert.AreEqual("external:4", invocations[0]);
-        Assert.HasCount(2, result.EmittedEvents);
-        Assert.AreEqual("Notify", result.EmittedEvents[0].Message);
-        Assert.AreEqual("SeenByScript", result.EmittedEvents[1].Message);
+        Assert.HasCount(2, emitted);
+        Assert.AreEqual("Notify", emitted[0].Name);
+        Assert.AreEqual("SeenByScript", emitted[1].Name);
     }
 
     [TestMethod]
@@ -1645,9 +1652,9 @@ public class EventScriptRuntimeScenarios
         var invocations = new List<string>();
         var host = EventScriptHost.CreateBuilder()
             .Build()
-            .Load(EventScriptManager.Compile(script))
-            .Subscribe("Notify", ["value"], context => invocations.Add($"first:{context.Arguments["value"].AsNumber()}"))
-            .Subscribe("Notify", ["value"], context => invocations.Add($"second:{context.Arguments["value"].AsNumber()}"));
+            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"first:{message.Arguments["value"].AsNumber()}"))
+            .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"second:{message.Arguments["value"].AsNumber()}"));
 
         host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
 
@@ -1664,17 +1671,20 @@ public class EventScriptRuntimeScenarios
             """;
 
         var invocations = new List<string>();
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script))
-            .Subscribe("Notify", ["value"], _ => throw new InvalidOperationException("boom"))
-            .Subscribe("Notify", ["value"], context => invocations.Add($"ok:{context.Arguments["value"].AsNumber()}"));
+            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Subscribe("Notify", ["value"], (_, _) => throw new InvalidOperationException("boom"))
+            .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"ok:{message.Arguments["value"].AsNumber()}"));
 
-        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
+        host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
         CollectionAssert.AreEqual(new[] { "ok:4" }, invocations);
-        Assert.HasCount(1, result.EmittedEvents);
-        Assert.AreEqual("Notify", result.EmittedEvents[0].Message);
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Notify", emitted[0].Name);
     }
 
     [TestMethod]
@@ -1686,19 +1696,22 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script))
-            .Subscribe("Notify", ["value"], context => context.Publish("Done", new Dictionary<string, EventScriptValue>
+            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Subscribe("Notify", ["value"], (message, context) => context.Publish("Done", new Dictionary<string, EventScriptValue>
             {
-                ["value"] = context.Arguments["value"]
+                ["value"] = message.Arguments["value"]
             }));
 
-        var result = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+        host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
-        Assert.AreEqual("Notify", result.EmittedEvents[0].Message);
-        Assert.AreEqual("Done", result.EmittedEvents[1].Message);
-        Assert.AreEqual(2m, result.EmittedEvents[1].Arguments["value"].AsNumber());
+        Assert.AreEqual("Notify", emitted[0].Name);
+        Assert.AreEqual("Done", emitted[1].Name);
+        Assert.AreEqual(2m, emitted[1].Arguments["value"].AsNumber());
     }
 
     [TestMethod]
@@ -1714,19 +1727,28 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
-        var host = EventScriptHost.CreateBuilder()
+        var collectorA = new EventScriptDiagnosticTraceCollector();
+        var hostA = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collectorA)
             .Build()
-            .Load(EventScriptManager.Compile(script));
+            .SubscribeForScript(EventScriptManager.Compile(script));
+        hostA.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
+        var publishResult = collectorA.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
-        var publishResult = host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
-        var publishClrResult = host.Publish(EventScriptMessage.Message("Start", ("value", 2m )));
+        var collectorB = new EventScriptDiagnosticTraceCollector();
+        var hostB = EventScriptHost.CreateBuilder()
+            .WithDiagnosticCollector(collectorB)
+            .Build()
+            .SubscribeForScript(EventScriptManager.Compile(script));
+        hostB.Publish(EventScriptMessage.Message("Start", ("value", 2m )));
+        var publishClrResult = collectorB.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
         CollectionAssert.AreEqual(
-            publishResult.EmittedEvents.Select(evt => evt.Message).ToArray(),
-            publishClrResult.EmittedEvents.Select(evt => evt.Message).ToArray());
+            publishResult.Select(evt => evt.Name).ToArray(),
+            publishClrResult.Select(evt => evt.Name).ToArray());
         Assert.AreEqual(
-            publishResult.EmittedEvents[1].Arguments[0].AsNumber(),
-            publishClrResult.EmittedEvents[1].Arguments[0].AsNumber());
+            publishResult[1].Arguments[0].AsNumber(),
+            publishClrResult[1].Arguments[0].AsNumber());
     }
 
     [TestMethod]
@@ -1750,7 +1772,7 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .Load(compiled);
+            .SubscribeForScript(compiled);
 
         host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
 
@@ -1768,16 +1790,19 @@ public class EventScriptRuntimeScenarios
             }
             """;
 
+        var collector = new EventScriptDiagnosticTraceCollector();
         var host = EventScriptHost.CreateBuilder()
             .WithRandom(EventScriptRandomGenerator.FromSequence(2, 5))
+            .WithDiagnosticCollector(collector)
             .Build()
-            .Load(EventScriptManager.Compile(script));
+            .SubscribeForScript(EventScriptManager.Compile(script));
 
-        var first = host.Publish(EventScriptMessage.Message("Roll"));
-        var second = host.Publish(EventScriptMessage.Message("Roll"));
+        host.Publish(EventScriptMessage.Message("Roll"));
+        host.Publish(EventScriptMessage.Message("Roll"));
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
-        Assert.AreEqual(2, Convert.ToInt32(first.EmittedEvents[0].Arguments["value"].AsInteger()));
-        Assert.AreEqual(5, Convert.ToInt32(second.EmittedEvents[0].Arguments["value"].AsInteger()));
+        Assert.AreEqual(2, Convert.ToInt32(emitted[0].Arguments["value"].AsInteger()));
+        Assert.AreEqual(5, Convert.ToInt32(emitted[1].Arguments["value"].AsInteger()));
     }
 
     [TestMethod]

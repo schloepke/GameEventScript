@@ -2,14 +2,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Experimental;
 
-public sealed class ExperimentalCompiledEventScript : IEventScriptInvokableScript
+public sealed class ExperimentalCompiledEventScript : IEventScriptMessageHandlerCollection
 {
+    private readonly IReadOnlyList<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> _messageHandlers;
+
     internal ExperimentalCompiledEventScript(
         ExperimentalEventScriptCompilationOptions options,
         IReadOnlyList<string> stringPool,
@@ -32,6 +35,11 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptInvokableScrip
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
+
+        _messageHandlers = Handlers.Values
+            .SelectMany(handlerGroup => handlerGroup)
+            .Select(handler => (handler.Definition, (Action<EventScriptMessage, EventScriptContext>)((message, context) => InvokeHandler(handler, message, context))))
+            .ToArray();
     }
 
     public ExperimentalEventScriptCompilationOptions Options { get; }
@@ -56,6 +64,12 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptInvokableScrip
 
     internal IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> TypeDefinitions { get; }
 
-    public EventScriptExecutionResult Invoke(EventScriptMessage message, EventScriptInvocationContext? invocationContext = null, IEventScriptDiagnosticCollector? diagnosticCollector = null)
-        => new ExperimentalOpcodeInvocationEngine(this, invocationContext, diagnosticCollector).InvokeMessage(message);
+    IEnumerable<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> IEventScriptMessageHandlerCollection.Handlers
+        => _messageHandlers;
+
+    public void Invoke(EventScriptMessage message, EventScriptContext context)
+        => new ExperimentalOpcodeInvocationEngine(this, context).InvokeMessage(message);
+
+    internal void InvokeHandler(ExperimentalCompiledEventScriptHandler handler, EventScriptMessage message, EventScriptContext context)
+        => new ExperimentalOpcodeInvocationEngine(this, context).InvokeHandler(handler, message.Arguments);
 }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
 
@@ -15,69 +16,52 @@ internal sealed class EventScriptInvocationEngine
     private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _handlers;
     private readonly IReadOnlyDictionary<string, CompiledTypeDefinition> _typeDefinitions;
     private readonly IReadOnlyDictionary<string, CompiledCallableDefinition> _callables;
+    private readonly EventScriptContext _context;
     private readonly EventScriptRandomGenerator _randomGenerator;
     private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
-    private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly bool _diagnosticsEnabled;
 
-    internal EventScriptInvocationEngine(CompiledEventScript compiledScript, EventScriptInvocationContext? invocationContext, IEventScriptDiagnosticCollector? diagnosticCollector)
+    internal EventScriptInvocationEngine(CompiledEventScript compiledScript, EventScriptContext context)
     {
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
-        _randomGenerator = invocationContext?.Random ?? EventScriptRandomGenerator.Create();
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _randomGenerator = _context.Random;
         _typeDefinitions = compiledScript.TypeDefinitions;
         _callables = compiledScript.Callables;
         _handlers = compiledScript.Handlers;
-        _diagnosticCollector = diagnosticCollector;
         _diagnosticsEnabled = compiledScript.Options.EnableDiagnostics;
         _randomScopes.Push(_randomGenerator);
     }
 
-    public EventScriptExecutionResult InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
+    public void InvokeMessage(string message, IReadOnlyDictionary<string, EventScriptValue> args)
         => InvokeMessage(new EventScriptMessage(message, args));
 
-    public EventScriptExecutionResult InvokeMessage(EventScriptMessage message)
+    public void InvokeMessage(EventScriptMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.Name))
+        if (message is null || string.IsNullOrWhiteSpace(message.Name))
         {
-            throw new ArgumentException("Message must not be null or whitespace", nameof(message));
+            return;
         }
 
-        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
         foreach (var handler in GetMatchingHandlers(message))
         {
-            var context = new ExecutionContext(state);
-            var handlerVariables = ExecuteHandler(context, handler, message.Arguments);
-            state.CaptureVariables(handlerVariables);
+            var executionContext = new ExecutionContext(_context, _diagnosticsEnabled);
+            ExecuteHandler(executionContext, handler, message.Arguments);
         }
-
-        return new EventScriptExecutionResult(message, state.EmittedEvents, state.Variables);
     }
 
-    public EventScriptExecutionResult InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    public void InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         args = EventScriptNamedArguments.Normalize(args);
-        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
-        var context = new ExecutionContext(state);
-        var variables = ExecuteHandler(context, handler, args);
-        state.CaptureVariables(variables);
-        return new EventScriptExecutionResult(handler.Message, state.EmittedEvents, state.Variables);
+        var context = new ExecutionContext(_context, _diagnosticsEnabled);
+        ExecuteHandler(context, handler, args);
     }
 
     private IReadOnlyList<CompiledEventScriptHandler> GetMatchingHandlers(EventScriptMessage message)
-    {
-        if (!_handlers.TryGetValue(message.Name, out var handlers))
-        {
-            return [];
-        }
+        => EventScriptInvocationKernel.GetMatchingHandlers(_handlers, message, handler => handler.SignatureId, handler => handler.DeclarationOrder);
 
-        return handlers
-            .Where(handler => string.Equals(handler.SignatureId, message.SignatureId, StringComparison.Ordinal))
-            .OrderBy(handler => handler.DeclarationOrder)
-            .ToArray();
-    }
-
-    private IReadOnlyDictionary<string, EventScriptValue> ExecuteHandler(ExecutionContext context, CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    private void ExecuteHandler(ExecutionContext context, CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
         context.PushScope();
         try
@@ -106,7 +90,6 @@ internal sealed class EventScriptInvocationEngine
             }
 
             ExecuteStatements(context, handler.Statements);
-            return context.SnapshotTopScope();
         }
         finally
         {
@@ -2686,8 +2669,7 @@ internal sealed class EventScriptInvocationEngine
 
     private EventScriptValue EvaluateCustomTypeExpression(CompiledTypeDefinition typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues, IReadOnlyDictionary<string, EventScriptValue> materializedValues)
     {
-        var state = new RunState(_diagnosticCollector, _diagnosticsEnabled);
-        var context = new ExecutionContext(state);
+        var context = new ExecutionContext(_context, _diagnosticsEnabled);
         context.PushScope();
         try
         {
@@ -2830,11 +2812,13 @@ internal sealed class EventScriptInvocationEngine
     private sealed class ExecutionContext
     {
         private readonly Stack<Dictionary<string, EventScriptValue>> _scopes = new();
-        private readonly RunState _state;
+        private readonly EventScriptContext _context;
+        private readonly bool _diagnosticsEnabled;
 
-        public ExecutionContext(RunState state)
+        public ExecutionContext(EventScriptContext context, bool diagnosticsEnabled)
         {
-            _state = state;
+            _context = context;
+            _diagnosticsEnabled = diagnosticsEnabled;
             _scopes.Push(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
         }
 
@@ -2869,59 +2853,17 @@ internal sealed class EventScriptInvocationEngine
         public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> arguments)
         {
             var publishedMessage = new EventScriptMessage(message, arguments);
-            var emittedEvent = new EventScriptEmittedEvent(publishedMessage);
-            _state.RecordPublishedEvent(emittedEvent);
-            _state.RecordDiagnostic(
+            _context.Publish(publishedMessage);
+            EventScriptInvocationKernel.RecordDiagnostic(
+                _context,
+                _diagnosticsEnabled,
                 EventScriptDiagnosticEventKind.EventPublished,
                 publishedMessage.Name,
-                emittedEvent.Arguments,
+                publishedMessage.Arguments,
                 $"Published '{publishedMessage.Name}'");
         }
 
         public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
-            => _state.RecordDiagnostic(kind, name, arguments, detail);
-
-        public IReadOnlyDictionary<string, EventScriptValue> SnapshotTopScope()
-            => new Dictionary<string, EventScriptValue>(_scopes.Peek(), StringComparer.Ordinal);
-    }
-
-    private sealed class RunState
-    {
-        private readonly Dictionary<string, EventScriptValue> _variables = new(StringComparer.Ordinal);
-        private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
-        private readonly bool _diagnosticsEnabled;
-        
-        public RunState(IEventScriptDiagnosticCollector? diagnosticCollector, bool diagnosticsEnabled)
-        {
-            _diagnosticCollector = diagnosticCollector;
-            _diagnosticsEnabled = diagnosticsEnabled;
-        }
-
-        public IReadOnlyDictionary<string, EventScriptValue> Variables => _variables;
-
-        public List<EventScriptEmittedEvent> EmittedEvents { get; } = new();
-
-        public void RecordPublishedEvent(EventScriptEmittedEvent emittedEvent)
-        {
-            EmittedEvents.Add(emittedEvent);
-        }
-
-        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string message, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
-        {
-            if (!_diagnosticsEnabled)
-            {
-                return;
-            }
-
-            _diagnosticCollector?.Record(kind, message, arguments, detail);
-        }
-
-        public void CaptureVariables(IReadOnlyDictionary<string, EventScriptValue> variables)
-        {
-            foreach (var pair in variables)
-            {
-                _variables[pair.Key] = pair.Value;
-            }
-        }
+            => EventScriptInvocationKernel.RecordDiagnostic(_context, _diagnosticsEnabled, kind, name, arguments, detail);
     }
 }

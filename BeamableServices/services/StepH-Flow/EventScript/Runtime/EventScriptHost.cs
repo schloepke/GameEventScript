@@ -34,44 +34,59 @@ public sealed class EventScriptHost
 
     #region Public interface
 
-    public EventScriptHost Load(CompiledEventScript compiledScript, int? priority = null)
+    public EventScriptHost SubscribeForScript(IEventScriptMessageHandlerCollection handlers, int? priority = null)
     {
-        foreach (var handlerGroup in (compiledScript ?? throw new ArgumentNullException(nameof(compiledScript))).Handlers.Values)
+        _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        foreach (var handler in handlers.Handlers)
         {
-            foreach (var handler in handlerGroup)
-            {
-                Register(new ScriptMessageSubscription(handler.Definition, priority ?? _defaultScriptHandlerPriority, _nextRegistrationOrder++, compiledScript, handler));
-            }
+            Register(new MessageSubscription(
+                handler.Signature,
+                priority ?? _defaultScriptHandlerPriority,
+                _nextRegistrationOrder++,
+                handler.Handler));
         }
 
         return this;
     }
 
-    public EventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<EventScriptSubscriptionContext> handler, int? priority = null)
+    public EventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<EventScriptMessage, EventScriptContext> handler, int? priority = null)
         => Subscribe(MessageSignature(!string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message must not be null or whitespace", nameof(message)),
             parameterNames ?? throw new ArgumentNullException(nameof(parameterNames))), handler, priority);
 
-    public EventScriptHost Subscribe(EventScriptMessageSignature signature, Action<EventScriptSubscriptionContext> handler, int? priority = null)
-        => this.Also(_ => Register(new ExternalMessageSubscription(signature ?? throw new ArgumentNullException(nameof(signature)), priority ?? _defaultExternalHandlerPriority,
-            _nextRegistrationOrder++, handler ?? throw new ArgumentNullException(nameof(handler)))));
+    public EventScriptHost Subscribe(EventScriptMessageSignature signature, Action<EventScriptMessage, EventScriptContext> handler, int? priority = null)
+        => this.Also(_ => Register(new MessageSubscription(
+            signature ?? throw new ArgumentNullException(nameof(signature)),
+            priority ?? _defaultExternalHandlerPriority,
+            _nextRegistrationOrder++,
+            handler ?? throw new ArgumentNullException(nameof(handler)))));
 
-    public EventScriptExecutionResult Publish(EventScriptMessage message)
+    public EventScriptHost Subscribe(IEventScriptMessageHandlerCollection handlers, int? priority = null)
     {
-        if (string.IsNullOrWhiteSpace(message.Name)) throw new ArgumentException("Message name must not be null or whitespace", nameof(message));
-        var invocationContext = new EventScriptInvocationContext
+        _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        foreach (var handler in handlers.Handlers)
         {
-            Random = _random
-        };
+            Subscribe(handler.Signature, handler.Handler, priority);
+        }
 
-        var state = new EventScriptRunState(message, _maxProcessedEventsPerRun, invocationContext, _diagnosticCollector);
-        state.Enqueue(message, captureVariables: true);
-        return Drain(state);
+        return this;
     }
 
-    public EventScriptExecutionResult Publish(string message, params (string Name, EventScriptValue Value)[] args)
+    public void Publish(EventScriptMessage message)
+    {
+        if (message is null || string.IsNullOrWhiteSpace(message.Name))
+        {
+            return;
+        }
+
+        var state = new EventScriptRunState(message, _maxProcessedEventsPerRun, _random, _diagnosticCollector);
+        state.Enqueue(message);
+        Drain(state);
+    }
+
+    public void Publish(string message, params (string Name, EventScriptValue Value)[] args)
         => Publish(EventScriptMessage.Message(message, args));
 
-    public EventScriptExecutionResult Publish(string message, params (string Name, object? Value)[] args)
+    public void Publish(string message, params (string Name, object? Value)[] args)
         => Publish(EventScriptMessage.Message(message, args));
 
     #endregion
@@ -89,7 +104,7 @@ public sealed class EventScriptHost
         handlers.Add(subscription);
     }
 
-    private EventScriptExecutionResult Drain(EventScriptRunState state)
+    private void Drain(EventScriptRunState state)
     {
         while (state.TryDequeue(out var queuedEvent))
         {
@@ -98,113 +113,88 @@ public sealed class EventScriptHost
                 break;
             }
 
-            if (queuedEvent != null) Dispatch(queuedEvent, state);
+            if (queuedEvent is not null)
+            {
+                Dispatch(queuedEvent, state);
+            }
         }
-
-        return new EventScriptExecutionResult(state.InitialMessage, state.EmittedEvents, state.Variables);
     }
 
-    private void Dispatch(QueuedMessage queuedEvent, EventScriptRunState state)
+    private void Dispatch(EventScriptMessage queuedEvent, EventScriptRunState state)
     {
-        state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Message.Name, queuedEvent.Message.Arguments, $"Dispatch '{queuedEvent.Message.Name}' started");
+        state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' started");
 
-        if (!_subscriptions.TryGetValue(queuedEvent.Message.Name, out var subscriptions))
+        if (!_subscriptions.TryGetValue(queuedEvent.Name, out var subscriptions))
         {
-            state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Message.Name, queuedEvent.Message.Arguments,
-                $"Dispatch '{queuedEvent.Message.Name}' completed without subscribers");
+            state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' completed without subscribers");
             return;
         }
 
         foreach (var subscription in subscriptions
-                     .Where(x => string.Equals(x.Definition.SignatureId, queuedEvent.Message.SignatureId, StringComparison.Ordinal))
+                     .Where(x => string.Equals(x.Definition.SignatureId, queuedEvent.SignatureId, StringComparison.Ordinal))
                      .OrderBy(x => x.Priority)
                      .ThenBy(x => x.RegistrationOrder))
         {
             state.RecordDiagnostic(
                 EventScriptDiagnosticEventKind.SubscriberMatched,
-                queuedEvent.Message.Name,
-                queuedEvent.Message.Arguments,
-                $"{subscription.GetType().Name} matched");
+                queuedEvent.Name,
+                queuedEvent.Arguments,
+                $"Subscriber matched: {subscription.Definition.SignatureId}");
 
-            switch (subscription)
+            try
             {
-                case ScriptMessageSubscription script:
-                {
-                    state.RecordDiagnostic(EventScriptDiagnosticEventKind.SubscriberInvoked, queuedEvent.Message.Name, queuedEvent.Message.Arguments, "Script subscriber invoked");
-                    var result = script.CompiledScript.InvokeHandler(script.Handler, queuedEvent.Message.Arguments, state.InvocationContext, state.DiagnosticCollector);
-                    if (queuedEvent.CaptureVariables)
-                    {
-                        state.CaptureVariables(result.Variables);
-                    }
-
-                    foreach (var emittedEvent in result.EmittedEvents)
-                    {
-                        state.RecordPublishedEvent(emittedEvent);
-                        state.Enqueue(emittedEvent.Event, captureVariables: false);
-                    }
-
-                    break;
-                }
-                case ExternalMessageSubscription external:
-                    try
-                    {
-                        state.RecordDiagnostic(EventScriptDiagnosticEventKind.SubscriberInvoked, queuedEvent.Message.Name, queuedEvent.Message.Arguments, "External subscriber invoked");
-                        external.Handler(new EventScriptSubscriptionContext(queuedEvent.Message, state.PublishExternal));
-                    }
-                    catch
-                    {
-                        // Execution must always be lenient, so errors have to be handled by the handler
-                    }
-
-                    break;
+                state.RecordDiagnostic(EventScriptDiagnosticEventKind.SubscriberInvoked, queuedEvent.Name, queuedEvent.Arguments, "Subscriber invoked");
+                subscription.Handler(queuedEvent, state.Context);
+            }
+            catch
+            {
+                // Runtime dispatch must remain lenient.
             }
         }
 
-        state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Message.Name, queuedEvent.Message.Arguments, $"Dispatch '{queuedEvent.Message.Name}' completed");
+        state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' completed");
     }
 
-    private sealed record QueuedMessage(EventScriptMessage Message, bool CaptureVariables);
-
-    private sealed class EventScriptRunState(
-        EventScriptMessage initialMessage,
-        int maxProcessedEventsPerRun,
-        EventScriptInvocationContext invocationContext,
-        IEventScriptDiagnosticCollector? diagnosticCollector)
+    private sealed class EventScriptRunState
     {
-        private readonly Queue<QueuedMessage> _queue = new();
-        private readonly Dictionary<string, EventScriptValue> _variables = new(StringComparer.Ordinal);
+        private readonly Queue<EventScriptMessage> _queue = new();
+        private readonly int _maxProcessedEventsPerRun;
         private int _processedEvents;
 
-        public EventScriptMessage InitialMessage { get; } = initialMessage;
-
-        public EventScriptInvocationContext InvocationContext { get; } = invocationContext ?? throw new ArgumentNullException(nameof(invocationContext));
-
-        public IEventScriptDiagnosticCollector? DiagnosticCollector => diagnosticCollector;
-
-        public IReadOnlyDictionary<string, EventScriptValue> Variables => _variables;
-
-        public List<EventScriptEmittedEvent> EmittedEvents { get; } = [];
-
-        public void Enqueue(EventScriptMessage message, bool captureVariables)
+        public EventScriptRunState(EventScriptMessage initialMessage, int maxProcessedEventsPerRun, EventScriptRandomGenerator random,
+            IEventScriptDiagnosticCollector? diagnosticCollector)
         {
-            _queue.Enqueue(new QueuedMessage(message, captureVariables));
+            _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
+            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector);
         }
 
-        public bool TryDequeue(out QueuedMessage? queuedEvent)
+        public EventScriptContext Context { get; }
+
+        public void Enqueue(EventScriptMessage message)
+        {
+            if (message is null || string.IsNullOrWhiteSpace(message.Name))
+            {
+                return;
+            }
+
+            _queue.Enqueue(message);
+        }
+
+        public bool TryDequeue(out EventScriptMessage? message)
         {
             if (_queue.Count == 0)
             {
-                queuedEvent = null;
+                message = null;
                 return false;
             }
 
-            queuedEvent = _queue.Dequeue();
+            message = _queue.Dequeue();
             return true;
         }
 
         public bool TryStartProcessingEvent()
         {
-            if (_processedEvents >= maxProcessedEventsPerRun)
+            if (_processedEvents >= _maxProcessedEventsPerRun)
             {
                 return false;
             }
@@ -213,45 +203,22 @@ public sealed class EventScriptHost
             return true;
         }
 
-        public void PublishExternal(EventScriptMessage message)
+        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
+            => Context.RecordDiagnostic(kind, name, arguments, detail);
+
+        private void PublishInternal(EventScriptMessage message)
         {
-            var emittedEvent = new EventScriptEmittedEvent(message);
-            RecordPublishedEvent(emittedEvent);
-            Enqueue(message, captureVariables: false);
+            Enqueue(message);
             RecordDiagnostic(EventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"Published '{message.Name}'");
         }
-
-        public void RecordPublishedEvent(EventScriptEmittedEvent emittedEvent)
-        {
-            EmittedEvents.Add(emittedEvent);
-        }
-
-        public void CaptureVariables(IReadOnlyDictionary<string, EventScriptValue> variables)
-        {
-            foreach (var pair in variables)
-            {
-                _variables[pair.Key] = pair.Value;
-            }
-        }
-
-        public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
-            => diagnosticCollector?.Record(kind, name, arguments, detail);
     }
 
-    private abstract record MessageSubscription(EventScriptMessageSignature Definition, int Priority, long RegistrationOrder);
-
-    private sealed record ScriptMessageSubscription(
+    private sealed record MessageSubscription(
         EventScriptMessageSignature Definition,
         int Priority,
         long RegistrationOrder,
-        CompiledEventScript CompiledScript,
-        CompiledEventScriptHandler Handler) : MessageSubscription(Definition, Priority, RegistrationOrder);
-
-    private sealed record ExternalMessageSubscription(
-        EventScriptMessageSignature Definition,
-        int Priority,
-        long RegistrationOrder,
-        Action<EventScriptSubscriptionContext> Handler) : MessageSubscription(Definition, Priority, RegistrationOrder);
+        Action<EventScriptMessage, EventScriptContext> Handler);
 
     #endregion
 }
+

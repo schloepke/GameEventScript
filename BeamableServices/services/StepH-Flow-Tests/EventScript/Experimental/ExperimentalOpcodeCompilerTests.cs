@@ -1,7 +1,9 @@
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Experimental;
+using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.EventScriptManager;
 using static StepH.Flow.EventScript.EventScriptMessage;
@@ -151,6 +153,33 @@ public sealed class ExperimentalOpcodeCompilerTests
         CollectionAssert.AreEqual(
             new List<long> { 1, 2, 3 },
             result.EmittedEvents.Select(it => it.Arguments["value"].AsInteger()).ToList());
+    }
+
+    [TestMethod]
+    public void ExperimentalRuntimeHonorsRuntimeLimits()
+    {
+        const string script =
+            """
+            module ExperimentalRuntimeLimits
+            on Start() {
+                for value from 1 to 3 publish Tick(value: value)
+                publish Done()
+            }
+            """;
+
+        var emitted = new List<EventScriptMessage>();
+        var collector = new EventScriptDiagnosticTraceCollector();
+        var context = new EventScriptContext(
+            EventScriptRandomGenerator.Create(),
+            message => emitted.Add(message),
+            collector,
+            runtimeLimits: new EventScriptRuntimeLimits { MaxRangeItems = 2 });
+
+        Compile(script).Invoke(Message("Start"), context);
+
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Done", emitted[0].Name);
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.RuntimeLimitReached && evt.Name == "MaxRangeItems"));
     }
 
     [TestMethod]

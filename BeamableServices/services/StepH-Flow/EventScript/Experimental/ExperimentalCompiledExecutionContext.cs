@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
@@ -46,6 +47,37 @@ internal sealed class ExperimentalCompiledExecutionContext
 
         return EventScriptValue.Nothing;
     }
+
+    public bool TryConsumeExecutionStep(string detail)
+        => _context.RuntimeBudget.TryConsumeExecutionStep(detail);
+
+    public bool TryConsumeLoopIteration(string detail)
+        => _context.RuntimeBudget.TryConsumeLoopIteration(detail);
+
+    public bool TryEnterCall(string detail)
+        => _context.RuntimeBudget.TryEnterCall(detail);
+
+    public void ExitCall()
+        => _context.RuntimeBudget.ExitCall();
+
+    public bool TryCheckRangeLength(EventScriptValue range, string detail)
+    {
+        if (!EventScriptRuntimeLimitUtilities.TryGetRangeLength(range, out var length))
+        {
+            return true;
+        }
+
+        return _context.RuntimeBudget.TryCheckRangeLength(length, detail);
+    }
+
+    public bool TryCheckMaterializedValue(EventScriptValue value, string detail)
+        => TryCheckRangeLength(value, detail);
+
+    public bool TryCheckGeneratedCollectionItemCount(int count, string detail)
+        => _context.RuntimeBudget.TryCheckGeneratedCollectionItemCount(count, detail);
+
+    public bool TryCheckDice(DiceExpressionNode diceExpression)
+        => _context.RuntimeBudget.TryCheckDice(diceExpression);
 
     public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> arguments)
     {

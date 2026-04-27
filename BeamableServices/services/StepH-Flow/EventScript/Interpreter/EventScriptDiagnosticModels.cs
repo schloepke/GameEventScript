@@ -16,7 +16,8 @@ public enum EventScriptDiagnosticEventKind
     ParameterBound,
     RuleCalled,
     SelectCalled,
-    EventPublished
+    EventPublished,
+    RuntimeLimitReached
 }
 
 public sealed record EventScriptDiagnosticEvent(

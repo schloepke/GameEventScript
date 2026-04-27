@@ -14,6 +14,7 @@ public sealed class EventScriptHostBuilder
     
     private EventScriptRandomGenerator? _random;
     private IEventScriptDiagnosticCollector? _diagnosticCollector;
+    private EventScriptRuntimeLimits _runtimeLimits = EventScriptRuntimeLimits.Default;
     private int _maxProcessedEventsPerRun = DefaultMaxProcessedEventsPerRun;
     private int _scriptHandlerPriority = DefaultScriptHandlerPriority;
     private int _externalHandlerPriority = DefaultExternalHandlerPriority;
@@ -41,6 +42,12 @@ public sealed class EventScriptHostBuilder
         return this;
     }
 
+    public EventScriptHostBuilder WithRuntimeLimits(EventScriptRuntimeLimits runtimeLimits)
+    {
+        _runtimeLimits = runtimeLimits ?? throw new ArgumentNullException(nameof(runtimeLimits));
+        return this;
+    }
+
     public EventScriptHostBuilder WithDefaultScriptHandlerPriority(int priority)
         => WithScriptHandlerPriority(priority);
 
@@ -57,5 +64,5 @@ public sealed class EventScriptHostBuilder
     }
 
     public EventScriptHost Build()
-        => new(_random ?? EventScriptRandomGenerator.Create(), _diagnosticCollector, _maxProcessedEventsPerRun, _scriptHandlerPriority, _externalHandlerPriority);
+        => new(_random ?? EventScriptRandomGenerator.Create(), _diagnosticCollector, _runtimeLimits, _maxProcessedEventsPerRun, _scriptHandlerPriority, _externalHandlerPriority);
 }

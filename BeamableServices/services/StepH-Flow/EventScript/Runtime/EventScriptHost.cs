@@ -14,17 +14,19 @@ public sealed class EventScriptHost
 {
     private readonly EventScriptRandomGenerator _random;
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
+    private readonly EventScriptRuntimeLimits _runtimeLimits;
     private readonly int _maxProcessedEventsPerRun;
     private readonly int _defaultScriptHandlerPriority;
     private readonly int _defaultExternalHandlerPriority;
     private readonly Dictionary<string, List<MessageSubscription>> _subscriptions = new(StringComparer.Ordinal);
     private long _nextRegistrationOrder;
 
-    internal EventScriptHost(EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector, int maxProcessedEventsPerRun, int defaultScriptHandlerPriority,
-        int defaultExternalHandlerPriority)
+    internal EventScriptHost(EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector, EventScriptRuntimeLimits runtimeLimits, int maxProcessedEventsPerRun,
+        int defaultScriptHandlerPriority, int defaultExternalHandlerPriority)
     {
         _random = random;
         _diagnosticCollector = diagnosticCollector;
+        _runtimeLimits = runtimeLimits ?? EventScriptRuntimeLimits.Default;
         _maxProcessedEventsPerRun = maxProcessedEventsPerRun <= 0 ? EventScriptHostBuilder.DefaultMaxProcessedEventsPerRun : maxProcessedEventsPerRun;
         _defaultScriptHandlerPriority = defaultScriptHandlerPriority;
         _defaultExternalHandlerPriority = defaultExternalHandlerPriority;
@@ -78,7 +80,7 @@ public sealed class EventScriptHost
             return;
         }
 
-        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector);
+        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector, _runtimeLimits);
         state.Enqueue(message);
         Drain(state);
     }
@@ -161,10 +163,14 @@ public sealed class EventScriptHost
         private readonly int _maxProcessedEventsPerRun;
         private int _processedEvents;
 
-        public EventScriptRunState(int maxProcessedEventsPerRun, EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector)
+        public EventScriptRunState(
+            int maxProcessedEventsPerRun,
+            EventScriptRandomGenerator random,
+            IEventScriptDiagnosticCollector? diagnosticCollector,
+            EventScriptRuntimeLimits runtimeLimits)
         {
             _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
-            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true);
+            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true, runtimeLimits: runtimeLimits);
         }
 
         public EventScriptContext Context { get; }

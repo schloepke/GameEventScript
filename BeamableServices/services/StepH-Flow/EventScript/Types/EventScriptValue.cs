@@ -408,17 +408,33 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
         if (range.Step > 0)
         {
-            for (var current = range.From; current <= range.To; current += range.Step)
+            var current = range.From;
+            while (current <= range.To)
             {
                 yield return Integer(current);
+                var next = current + range.Step;
+                if (next <= current)
+                {
+                    yield break;
+                }
+
+                current = next;
             }
 
             yield break;
         }
 
-        for (var current = range.From; current >= range.To; current += range.Step)
+        var descendingCurrent = range.From;
+        while (descendingCurrent >= range.To)
         {
-            yield return Integer(current);
+            yield return Integer(descendingCurrent);
+            var next = descendingCurrent + range.Step;
+            if (next >= descendingCurrent)
+            {
+                yield break;
+            }
+
+            descendingCurrent = next;
         }
     }
 

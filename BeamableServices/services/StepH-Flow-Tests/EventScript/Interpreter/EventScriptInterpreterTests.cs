@@ -1583,6 +1583,85 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void RuntimeLimitsCapRangeEnumerationAndMaterialization()
+    {
+        const string script = """
+            on Start {
+                for item from 1 to 10 publish Tick(value: item);
+                let values as :list be from 1 to 10;
+                publish Done(count: :len values);
+            }
+            """;
+
+        var collector = new EventScriptDiagnosticTraceCollector();
+        var host = EventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new EventScriptRuntimeLimits { MaxRangeItems = 5 })
+            .WithDiagnosticCollector(collector)
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+
+        host.Publish(EventScriptMessage.Message("Start"));
+
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Done", emitted[0].Name);
+        Assert.AreEqual(0L, emitted[0].Arguments["count"].AsInteger());
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.RuntimeLimitReached && evt.Name == "MaxRangeItems"));
+    }
+
+    [TestMethod]
+    public void RuntimeLimitsCapDiceRollAllocation()
+    {
+        const string script = """
+            on Start {
+                let roll be :dice 6d6;
+                publish Done(count: :len roll);
+            }
+            """;
+
+        var collector = new EventScriptDiagnosticTraceCollector();
+        var host = EventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new EventScriptRuntimeLimits { MaxDiceCount = 4 })
+            .WithDiagnosticCollector(collector)
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+
+        host.Publish(EventScriptMessage.Message("Start"));
+
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Done", emitted[0].Name);
+        Assert.AreEqual(0L, emitted[0].Arguments["count"].AsInteger());
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.RuntimeLimitReached && evt.Name == "MaxDiceCount"));
+    }
+
+    [TestMethod]
+    public void RuntimeLimitsStopRunAfterLoopBudgetIsExhausted()
+    {
+        const string script = """
+            on Start {
+                for item from 1 to 10 publish Tick(value: item);
+                publish Done;
+            }
+            """;
+
+        var collector = new EventScriptDiagnosticTraceCollector();
+        var host = EventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new EventScriptRuntimeLimits { MaxLoopIterations = 3 })
+            .WithDiagnosticCollector(collector)
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+
+        host.Publish(EventScriptMessage.Message("Start"));
+
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
+        Assert.HasCount(3, emitted);
+        Assert.IsTrue(emitted.All(evt => evt.Name == "Tick"));
+        CollectionAssert.AreEqual(new[] { 1L, 2L, 3L }, emitted.Select(evt => evt.Arguments["value"].AsInteger()).ToArray());
+        Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.RuntimeLimitReached && evt.Name == "MaxLoopIterations"));
+    }
+
+    [TestMethod]
     public void HostCanRoutePublishedMessagesToExternalSubscribers()
     {
         const string script = """

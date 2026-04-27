@@ -15,19 +15,26 @@ public sealed class EventScriptContext
         EventScriptRandomGenerator random,
         Action<EventScriptMessage> publish,
         IEventScriptDiagnosticCollector? diagnosticCollector = null,
-        bool publishCallbackRecordsDiagnostics = false)
+        bool publishCallbackRecordsDiagnostics = false,
+        EventScriptRuntimeLimits? runtimeLimits = null)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
         DiagnosticCollector = diagnosticCollector;
         PublishCallbackRecordsDiagnostics = publishCallbackRecordsDiagnostics;
+        RuntimeLimits = runtimeLimits ?? EventScriptRuntimeLimits.Default;
+        RuntimeBudget = new EventScriptRuntimeBudget(this, RuntimeLimits);
     }
 
     public EventScriptRandomGenerator Random { get; }
 
     public IEventScriptDiagnosticCollector? DiagnosticCollector { get; }
 
+    public EventScriptRuntimeLimits RuntimeLimits { get; }
+
     internal bool PublishCallbackRecordsDiagnostics { get; }
+
+    internal EventScriptRuntimeBudget RuntimeBudget { get; }
 
     public void Publish(EventScriptMessage message)
     {

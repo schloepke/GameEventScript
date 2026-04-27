@@ -121,6 +121,16 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void RangesStopAtIntegerBoundsWithoutOverflowing()
+    {
+        var ascending = Range(long.MaxValue - 1, long.MaxValue, 1).AsEnumerable().Select(value => value.AsInteger()).ToArray();
+        var descending = Range(long.MinValue + 1, long.MinValue, -1).AsEnumerable().Select(value => value.AsInteger()).ToArray();
+
+        CollectionAssert.AreEqual(new[] { long.MaxValue - 1, long.MaxValue }, ascending);
+        CollectionAssert.AreEqual(new[] { long.MinValue + 1, long.MinValue }, descending);
+    }
+
+    [TestMethod]
     public void KeysAndValuesCreateIteratorViewsWithoutChangingTheSourceKind()
     {
         var dictionary = Dictionary(new Dictionary<string, EventScriptValue>

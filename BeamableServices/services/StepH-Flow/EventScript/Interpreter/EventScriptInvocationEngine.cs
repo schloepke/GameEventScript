@@ -113,6 +113,11 @@ internal static class EventScriptInvocationEngine
 
         private void ExecuteStatement(ExecutionContext context, StatementNode statement)
         {
+            if (!context.TryConsumeExecutionStep("Statement execution budget exhausted."))
+            {
+                return;
+            }
+
             switch (statement)
             {
                 case PublishStatementNode publish:
@@ -128,7 +133,7 @@ internal static class EventScriptInvocationEngine
                     var letValue = EvaluateExpression(context, let.Expression);
                     if (!string.IsNullOrEmpty(let.DeclaredType))
                     {
-                        letValue = ConvertToDeclaredType(letValue, let.DeclaredType!);
+                        letValue = ConvertToDeclaredType(context, letValue, let.DeclaredType!);
                     }
 
                     context.Define(let.Identifier, letValue);
@@ -149,6 +154,11 @@ internal static class EventScriptInvocationEngine
                 case ForStatementNode forStatement:
                     foreach (var item in EnumerateIterationSource(context, forStatement.Source))
                     {
+                        if (!context.TryConsumeLoopIteration("Loop iteration budget exhausted."))
+                        {
+                            break;
+                        }
+
                         context.PushScope();
                         try
                         {
@@ -205,6 +215,11 @@ internal static class EventScriptInvocationEngine
 
         private EventScriptValue EvaluateExpressionCore(ExecutionContext context, ExpressionNode expression)
         {
+            if (!context.TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+            {
+                return EventScriptValue.Nothing;
+            }
+
             switch (expression)
             {
                 case IntegerLiteralExpressionNode integer:
@@ -291,7 +306,7 @@ internal static class EventScriptInvocationEngine
                 case TypeCheckExpressionNode typeCheck:
                     return EventScriptValue.Boolean(IsValueOfType(EvaluateExpression(context, typeCheck.Value), typeCheck.TypeName));
                 case TypeCastExpressionNode typeCast:
-                    return ConvertToDeclaredType(EvaluateExpression(context, typeCast.Value), typeCast.TypeName);
+                    return ConvertToDeclaredType(context, EvaluateExpression(context, typeCast.Value), typeCast.TypeName);
 
                 case MemberAccessExpressionNode memberAccess:
                     return EvaluateMemberAccess(context, memberAccess);
@@ -391,6 +406,11 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()));
             }
 
+            if (!context.TryCheckDice(diceExpression))
+            {
+                return EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()));
+            }
+
             var rolls = new int[diceExpression.DiceCount];
             for (var i = 0; i < rolls.Length; i++)
             {
@@ -422,6 +442,11 @@ internal static class EventScriptInvocationEngine
             var values = new List<EventScriptValue>();
             foreach (var item in EnumerateIterationSource(context, generatedCollection.Source))
             {
+                if (!context.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
+                {
+                    break;
+                }
+
                 if (!TryProjectGeneratedItem(context, generatedCollection, item, values))
                 {
                     break;
@@ -496,6 +521,11 @@ internal static class EventScriptInvocationEngine
 
         private EventScriptValue EvaluateCallableDefinition(ExecutionContext context, CompiledCallableDefinition definition, IReadOnlyList<EventScriptValue> arguments)
         {
+            if (!context.TryEnterCall($"Callable '{definition.Name}' exceeded the configured call depth."))
+            {
+                return EventScriptValue.Nothing;
+            }
+
             context.PushScope();
             try
             {
@@ -518,6 +548,7 @@ internal static class EventScriptInvocationEngine
             finally
             {
                 context.PopScope();
+                context.ExitCall();
             }
         }
 
@@ -544,6 +575,11 @@ internal static class EventScriptInvocationEngine
                     return true;
                 }
 
+                if (!context.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
+                {
+                    return false;
+                }
+
                 values.Add(EvaluateExpression(context, generatedCollection.Projection));
                 return true;
             }
@@ -558,7 +594,13 @@ internal static class EventScriptInvocationEngine
             switch (source)
             {
                 case CollectionIterationSourceNode collectionSource:
-                    foreach (var item in EvaluateExpression(context, collectionSource.Expression).AsEnumerable())
+                    var collection = EvaluateExpression(context, collectionSource.Expression);
+                    if (!context.TryCheckMaterializedValue(collection, "Iteration source would enumerate more range items than allowed."))
+                    {
+                        yield break;
+                    }
+
+                    foreach (var item in collection.AsEnumerable())
                     {
                         yield return item;
                     }
@@ -603,6 +645,12 @@ internal static class EventScriptInvocationEngine
                 ToIntegerSaturated(fromNumber.Value),
                 ToIntegerSaturated(toNumber.Value),
                 ToIntegerSaturated(stepNumber.Value));
+            if (!context.TryCheckRangeLength(range, "Range item count exceeds the configured limit."))
+            {
+                range = EventScriptValue.Nothing;
+                return false;
+            }
+
             return true;
         }
 
@@ -616,7 +664,7 @@ internal static class EventScriptInvocationEngine
                 "!" => EvaluateNotUnary(operand),
                 "has value" => EventScriptValue.Boolean(EventScriptValueSemantics.HasValue(operand)),
                 "empty" => EventScriptValue.Boolean(EventScriptValueSemantics.IsEmpty(operand)),
-                "len" => EvaluateLenUnary(operand),
+                "len" => EvaluateLenUnary(context, operand),
                 "chance" => EvaluateChanceUnary(operand),
                 "keys" => EventScriptValue.Keys(operand),
                 "values" => EventScriptValue.Values(operand),
@@ -718,7 +766,7 @@ internal static class EventScriptInvocationEngine
             return EventScriptValue.Boolean(!AsBool(unwrapped));
         }
 
-        private static EventScriptValue EvaluateLenUnary(EventScriptValue operand)
+        private EventScriptValue EvaluateLenUnary(ExecutionContext context, EventScriptValue operand)
         {
             if (operand.isNothing())
             {
@@ -728,8 +776,8 @@ internal static class EventScriptInvocationEngine
             return operand.Type switch
             {
                 EventScriptValueType.Text => EventScriptValue.Integer(operand.AsText().Length),
-                EventScriptValueType.Iterator => EventScriptValue.Integer(operand.AsEnumerable().LongCount()),
-                EventScriptValueType.Range => EventScriptValue.Integer(operand.AsEnumerable().LongCount()),
+                EventScriptValueType.Iterator => CountEnumerableWithBudget(context, operand.AsEnumerable(), "Iterator length evaluation budget exhausted."),
+                EventScriptValueType.Range => EvaluateRangeLength(context, operand),
                 EventScriptValueType.List => EventScriptValue.Integer(operand.AsList().Count),
                 EventScriptValueType.Dictionary => EventScriptValue.Integer(operand.AsDictionary().Count),
                 EventScriptValueType.Set => EventScriptValue.Integer(operand.AsSet().Count),
@@ -737,6 +785,34 @@ internal static class EventScriptInvocationEngine
                 EventScriptValueType.Optional => EventScriptValue.Integer(operand.AsOptional().HasValue ? 1 : 0),
                 _ => EventScriptValue.Nothing
             };
+        }
+
+        private EventScriptValue EvaluateRangeLength(ExecutionContext context, EventScriptValue operand)
+        {
+            if (!EventScriptRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            return context.TryCheckRangeLength(operand, "Range length exceeds the configured limit.")
+                ? EventScriptValue.Integer(length)
+                : EventScriptValue.Nothing;
+        }
+
+        private EventScriptValue CountEnumerableWithBudget(ExecutionContext context, IEnumerable<EventScriptValue> values, string detail)
+        {
+            long count = 0;
+            foreach (var _ in values)
+            {
+                if (!context.TryConsumeLoopIteration(detail))
+                {
+                    return EventScriptValue.Nothing;
+                }
+
+                count++;
+            }
+
+            return EventScriptValue.Integer(count);
         }
 
         private EventScriptValue EvaluateChanceUnary(EventScriptValue operand)
@@ -1067,6 +1143,11 @@ internal static class EventScriptInvocationEngine
         {
             var target = EvaluateExpression(context, collectionAccess.Target);
             if (target.isNothing())
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            if (!context.TryCheckMaterializedValue(target, "Collection access would materialize more range items than allowed."))
             {
                 return EventScriptValue.Nothing;
             }
@@ -2038,7 +2119,7 @@ internal static class EventScriptInvocationEngine
         private static string ToText(EventScriptValue value)
             => EventScriptValueAlu.ToText(value);
 
-        private EventScriptValue ConvertToDeclaredType(EventScriptValue value, string declaredType)
+        private EventScriptValue ConvertToDeclaredType(ExecutionContext context, EventScriptValue value, string declaredType)
         {
             switch (declaredType)
             {
@@ -2069,6 +2150,11 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValue.DecimalNaN();
                 }
                 case "list":
+                    if (!context.TryCheckMaterializedValue(value, "List conversion would materialize more range items than allowed."))
+                    {
+                        return EventScriptValue.Nothing;
+                    }
+
                     return EventScriptValue.List(value.AsList());
                 case "range":
                     return value.isRange() ? value : EventScriptValue.Nothing;
@@ -2087,6 +2173,11 @@ internal static class EventScriptInvocationEngine
                 case "dictionary":
                     return EventScriptValue.Dictionary(value.AsDictionary());
                 case "set":
+                    if (!context.TryCheckMaterializedValue(value, "Set conversion would materialize more range items than allowed."))
+                    {
+                        return EventScriptValue.Nothing;
+                    }
+
                     return EventScriptValue.Set(value.AsSet());
                 case "dice":
                     return EventScriptValue.Dice(value.AsDice());
@@ -2095,7 +2186,7 @@ internal static class EventScriptInvocationEngine
                     return value.isNothing() ? EventScriptValue.OptionalNone() : EventScriptValue.OptionalSome(value);
                 default:
                     return _typeDefinitions.TryGetValue(declaredType, out var typeDefinition)
-                        ? ConvertToCustomType(value, typeDefinition)
+                        ? ConvertToCustomType(context, value, typeDefinition)
                         : value;
             }
         }
@@ -2130,7 +2221,7 @@ internal static class EventScriptInvocationEngine
             return EventScriptValue.DecimalNaN();
         }
 
-        private EventScriptValue ConvertToCustomType(EventScriptValue value, CompiledTypeDefinition typeDefinition)
+        private EventScriptValue ConvertToCustomType(ExecutionContext context, EventScriptValue value, CompiledTypeDefinition typeDefinition)
         {
             if (value.TryGetCustomTypeName(out var existingTypeName) &&
                 string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
@@ -2146,16 +2237,16 @@ internal static class EventScriptInvocationEngine
                 sourceValues.TryGetValue(field.Name, out var rawValue);
                 rawValue ??= EventScriptValue.Nothing;
 
-                var fieldValue = ConvertToDeclaredType(rawValue, field.TypeName);
+                var fieldValue = ConvertToDeclaredType(context, rawValue, field.TypeName);
                 fieldValue = ApplyFieldClamp(typeDefinition, field, fieldValue, sourceValues, materializedValues);
-                fieldValue = ConvertToDeclaredType(fieldValue, field.TypeName);
+                fieldValue = ConvertToDeclaredType(context, fieldValue, field.TypeName);
                 materializedValues[field.Name] = fieldValue;
             }
 
             foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is not null))
             {
                 var computedValue = EvaluateCustomTypeExpression(typeDefinition, field.ComputedExpression!, sourceValues, materializedValues);
-                materializedValues[field.Name] = ConvertToDeclaredType(computedValue, field.TypeName);
+                materializedValues[field.Name] = ConvertToDeclaredType(context, computedValue, field.TypeName);
             }
 
             return EventScriptValue.CustomType(typeDefinition.Name, materializedValues);
@@ -2373,6 +2464,37 @@ internal static class EventScriptInvocationEngine
 
                 return EventScriptValue.Nothing;
             }
+
+            public bool TryConsumeExecutionStep(string detail)
+                => _context.RuntimeBudget.TryConsumeExecutionStep(detail);
+
+            public bool TryConsumeLoopIteration(string detail)
+                => _context.RuntimeBudget.TryConsumeLoopIteration(detail);
+
+            public bool TryEnterCall(string detail)
+                => _context.RuntimeBudget.TryEnterCall(detail);
+
+            public void ExitCall()
+                => _context.RuntimeBudget.ExitCall();
+
+            public bool TryCheckRangeLength(EventScriptValue range, string detail)
+            {
+                if (!EventScriptRuntimeLimitUtilities.TryGetRangeLength(range, out var length))
+                {
+                    return true;
+                }
+
+                return _context.RuntimeBudget.TryCheckRangeLength(length, detail);
+            }
+
+            public bool TryCheckMaterializedValue(EventScriptValue value, string detail)
+                => TryCheckRangeLength(value, detail);
+
+            public bool TryCheckGeneratedCollectionItemCount(int count, string detail)
+                => _context.RuntimeBudget.TryCheckGeneratedCollectionItemCount(count, detail);
+
+            public bool TryCheckDice(DiceExpressionNode diceExpression)
+                => _context.RuntimeBudget.TryCheckDice(diceExpression);
 
             public void Publish(string message, IReadOnlyDictionary<string, EventScriptValue> arguments)
             {

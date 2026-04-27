@@ -14,6 +14,7 @@ public sealed class EventScriptHost
 {
     private readonly EventScriptRandomGenerator _random;
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
+    private readonly Action<EventScriptMessage>? _publishedMessageObserver;
     private readonly EventScriptRuntimeLimits _runtimeLimits;
     private readonly int _maxProcessedEventsPerRun;
     private readonly int _defaultScriptHandlerPriority;
@@ -21,11 +22,13 @@ public sealed class EventScriptHost
     private readonly Dictionary<string, List<MessageSubscription>> _dispatchIndex = new(StringComparer.Ordinal);
     private long _nextRegistrationOrder;
 
-    internal EventScriptHost(EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector, EventScriptRuntimeLimits runtimeLimits, int maxProcessedEventsPerRun,
+    internal EventScriptHost(EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector, Action<EventScriptMessage>? publishedMessageObserver,
+        EventScriptRuntimeLimits runtimeLimits, int maxProcessedEventsPerRun,
         int defaultScriptHandlerPriority, int defaultExternalHandlerPriority)
     {
         _random = random;
         _diagnosticCollector = diagnosticCollector;
+        _publishedMessageObserver = publishedMessageObserver;
         _runtimeLimits = runtimeLimits ?? EventScriptRuntimeLimits.Default;
         _maxProcessedEventsPerRun = maxProcessedEventsPerRun <= 0 ? EventScriptHostBuilder.DefaultMaxProcessedEventsPerRun : maxProcessedEventsPerRun;
         _defaultScriptHandlerPriority = defaultScriptHandlerPriority;
@@ -80,7 +83,7 @@ public sealed class EventScriptHost
             return;
         }
 
-        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector, _runtimeLimits);
+        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector, _publishedMessageObserver, _runtimeLimits);
         state.Enqueue(message);
         Drain(state);
     }
@@ -184,13 +187,17 @@ public sealed class EventScriptHost
             int maxProcessedEventsPerRun,
             EventScriptRandomGenerator random,
             IEventScriptDiagnosticCollector? diagnosticCollector,
+            Action<EventScriptMessage>? publishedMessageObserver,
             EventScriptRuntimeLimits runtimeLimits)
         {
             _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
+            PublishedMessageObserver = publishedMessageObserver;
             Context = new EventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true, runtimeLimits: runtimeLimits);
         }
 
         public EventScriptContext Context { get; }
+
+        private Action<EventScriptMessage>? PublishedMessageObserver { get; }
 
         public void Enqueue(EventScriptMessage message)
         {
@@ -231,6 +238,7 @@ public sealed class EventScriptHost
         private void PublishInternal(EventScriptMessage message)
         {
             Enqueue(message);
+            PublishedMessageObserver?.Invoke(message);
             RecordDiagnostic(EventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"Published '{message.Name}'");
         }
     }

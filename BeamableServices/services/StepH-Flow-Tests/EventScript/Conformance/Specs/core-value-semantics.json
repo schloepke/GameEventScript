@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "name": "CoreValueSemantics",
+  "tests": [
+    {
+      "kind": "valueSemantics",
+      "name": "lookup dictionary key",
+      "operation": "lookup",
+      "target": {
+        "type": ":dictionary",
+        "entries": {
+          "hp": { "type": ":integer", "value": "7" },
+          "name": { "type": ":text", "value": "Knight" }
+        }
+      },
+      "selector": { "type": ":tag", "value": "hp" },
+      "expected": { "type": ":integer", "value": "7" }
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "lookup range by one based index",
+      "operation": "lookup",
+      "target": { "type": ":range", "from": "10", "to": "20", "step": "5" },
+      "selector": { "type": ":integer", "value": "2" },
+      "expected": { "type": ":integer", "value": "15" }
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "optional none has no value",
+      "operation": "hasValue",
+      "value": { "type": ":optional", "hasValue": false },
+      "expected": false
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "empty list is empty",
+      "operation": "isEmpty",
+      "value": { "type": ":list", "items": [] },
+      "expected": true
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "contains all list values",
+      "operation": "containsAll",
+      "target": {
+        "type": ":list",
+        "items": [
+          { "type": ":integer", "value": "1" },
+          { "type": ":integer", "value": "2" },
+          { "type": ":integer", "value": "3" }
+        ]
+      },
+      "value": {
+        "type": ":list",
+        "items": [
+          { "type": ":integer", "value": "1" },
+          { "type": ":integer", "value": "3" }
+        ]
+      },
+      "expected": true
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "text starts with prefix",
+      "operation": "startsWith",
+      "target": { "type": ":text", "value": "battle" },
+      "value": { "type": ":text", "value": "bat" },
+      "expected": true
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "sort ascending values",
+      "operation": "sort",
+      "direction": "ascending",
+      "target": {
+        "type": ":list",
+        "items": [
+          { "type": ":integer", "value": "3" },
+          { "type": ":integer", "value": "1" },
+          { "type": ":integer", "value": "2" }
+        ]
+      },
+      "expected": {
+        "type": ":list",
+        "items": [
+          { "type": ":integer", "value": "1" },
+          { "type": ":integer", "value": "2" },
+          { "type": ":integer", "value": "3" }
+        ]
+      }
+    },
+    {
+      "kind": "valueSemantics",
+      "name": "distinct preserves first occurrence",
+      "operation": "distinct",
+      "target": {
+        "type": ":list",
+        "items": [
+          { "type": ":integer", "value": "2" },
+          { "type": ":integer", "value": "1" },
+          { "type": ":integer", "value": "2" },
+          { "type": ":integer", "value": "3" }
+        ]
+      },
+      "expected": {
+        "type": ":list",
+        "items": [
+          { "type": ":integer", "value": "2" },
+          { "type": ":integer", "value": "1" },
+          { "type": ":integer", "value": "3" }
+        ]
+      }
+    }
+  ]
+}

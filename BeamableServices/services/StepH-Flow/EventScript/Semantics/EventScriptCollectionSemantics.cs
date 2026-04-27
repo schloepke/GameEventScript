@@ -56,7 +56,7 @@ public static class EventScriptCollectionSemantics
         return required.Any(requiredItem => items.Any(item => item.Equals(requiredItem)));
     }
 
-    public static EventScriptValue Sort(EventScriptValue target, IReadOnlyList<EventScriptValue> items, string direction)
+    public static EventScriptValue Sort(EventScriptValue target, IEnumerable<EventScriptValue> items, string direction)
     {
         var comparer = CreateDirectionComparer(direction);
         var sortedItems = items.OrderBy(item => item, comparer).ToArray();
@@ -65,7 +65,7 @@ public static class EventScriptCollectionSemantics
 
     public static EventScriptValue OrderBy(
         EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        IEnumerable<EventScriptValue> items,
         string direction,
         Func<EventScriptValue, EventScriptValue> keySelector)
     {
@@ -79,7 +79,7 @@ public static class EventScriptCollectionSemantics
         return MaterializeOrderedResult(target, orderedItems);
     }
 
-    public static EventScriptValue Distinct(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    public static EventScriptValue Distinct(EventScriptValue target, IEnumerable<EventScriptValue> items)
     {
         var distinctItems = new List<EventScriptValue>();
         foreach (var item in items)
@@ -97,7 +97,7 @@ public static class EventScriptCollectionSemantics
 
     public static EventScriptValue DistinctBy(
         EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        IEnumerable<EventScriptValue> items,
         Func<EventScriptValue, EventScriptValue> keySelector)
     {
         var distinctItems = new List<EventScriptValue>();
@@ -118,7 +118,7 @@ public static class EventScriptCollectionSemantics
     }
 
     public static EventScriptValue GroupBy(
-        IReadOnlyList<EventScriptValue> items,
+        IEnumerable<EventScriptValue> items,
         Func<EventScriptValue, EventScriptValue> keySelector)
     {
         var groups = new Dictionary<string, List<EventScriptValue>>(StringComparer.Ordinal);

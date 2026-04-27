@@ -13,6 +13,7 @@ namespace StepH.Flow.EventScript.Interpreter;
 public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
 {
     private readonly IReadOnlyList<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> _messageHandlers;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> _dispatchIndex;
 
     public CompiledEventScript(LinkedEventScriptModule linkedModule, EventScriptInterpreterCompilationOptions? options = null)
     {
@@ -43,8 +44,9 @@ public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
                 .ToArray(),
             StringComparer.Ordinal);
 
-        _messageHandlers = Handlers.Values
-            .SelectMany(handlerGroup => handlerGroup)
+        var handlerList = Handlers.Values.SelectMany(handlerGroup => handlerGroup).ToArray();
+        _dispatchIndex = EventScriptInvocationKernel.BuildDispatchIndex(handlerList, handler => handler.SignatureId, handler => handler.DeclarationOrder);
+        _messageHandlers = handlerList
             .Select(handler => (handler.Definition, (Action<EventScriptMessage, EventScriptContext>)((message, context) => InvokeHandler(handler, message, context))))
             .ToArray();
     }
@@ -62,6 +64,8 @@ public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
     internal IReadOnlyDictionary<string, CompiledCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, CompiledTypeDefinition> TypeDefinitions { get; }
+
+    internal IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> DispatchIndex => _dispatchIndex;
 
     public bool DiagnosticsEnabled => Options.EnableDiagnostics;
 

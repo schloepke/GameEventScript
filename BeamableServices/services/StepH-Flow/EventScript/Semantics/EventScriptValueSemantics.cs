@@ -76,7 +76,9 @@ public static class EventScriptValueSemantics
             return EventScriptValue.Nothing;
         }
 
-        return LookupSequential(target.AsList(), lookup);
+        return target is EventScriptRangeValue range
+            ? LookupRange(range, lookup)
+            : LookupSequential(target.AsList(), lookup);
     }
 
     public static bool Contains(EventScriptValue haystack, EventScriptValue needle)
@@ -85,7 +87,8 @@ public static class EventScriptValueSemantics
         {
             EventScriptValueType.Text => haystack.AsText().Contains(ToComparableText(needle), StringComparison.Ordinal),
             EventScriptValueType.Dictionary => haystack.AsDictionary().ContainsKey(needle.AsText()),
-            EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice or EventScriptValueType.Range => haystack.AsList().Any(item => item.Equals(needle)),
+            EventScriptValueType.Range => haystack is EventScriptRangeValue range && ContainsRange(range, needle),
+            EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice => haystack.AsList().Any(item => item.Equals(needle)),
             _ => false
         };
     }
@@ -134,6 +137,92 @@ public static class EventScriptValueSemantics
         }
 
         return items[index - 1];
+    }
+
+    private static EventScriptValue LookupRange(EventScriptRangeValue range, EventScriptValue unwrappedSelector)
+    {
+        var index = unwrappedSelector.AsInteger();
+        if (index <= 0 || index > GetRangeLength(range))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var value = (decimal)range.From + ((decimal)index - 1m) * range.Step;
+        if (value < long.MinValue || value > long.MaxValue)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValue.Integer((long)value);
+    }
+
+    private static bool ContainsRange(EventScriptRangeValue range, EventScriptValue needle)
+    {
+        if (!needle.isNumber())
+        {
+            return false;
+        }
+
+        var value = needle.AsInteger();
+        if (!EventScriptValue.Integer(value).Equals(needle))
+        {
+            return false;
+        }
+
+        if (range.Step == 0)
+        {
+            return false;
+        }
+
+        if (range.Step > 0)
+        {
+            if (value < range.From || value > range.To)
+            {
+                return false;
+            }
+        }
+        else if (value > range.From || value < range.To)
+        {
+            return false;
+        }
+
+        return ((decimal)value - range.From) % range.Step == 0m;
+    }
+
+    private static long GetRangeLength(EventScriptRangeValue range)
+    {
+        if (range.Step == 0)
+        {
+            return 0;
+        }
+
+        if (range.Step > 0)
+        {
+            if (range.From > range.To)
+            {
+                return 0;
+            }
+
+            return ClampRangeLength(((decimal)range.To - range.From) / range.Step);
+        }
+
+        if (range.From < range.To)
+        {
+            return 0;
+        }
+
+        return ClampRangeLength(((decimal)range.From - range.To) / -(decimal)range.Step);
+    }
+
+    private static long ClampRangeLength(decimal zeroBasedDistance)
+    {
+        var length = decimal.Floor(zeroBasedDistance) + 1m;
+        if (length <= 0m)
+        {
+            return 0;
+        }
+
+        return length > long.MaxValue ? long.MaxValue : (long)length;
     }
 
     private static bool MatchSequenceBoundary(EventScriptValue value, EventScriptValue boundary, bool fromStart)

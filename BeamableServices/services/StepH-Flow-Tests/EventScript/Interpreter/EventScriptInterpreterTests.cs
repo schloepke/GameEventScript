@@ -1636,6 +1636,34 @@ public class EventScriptRuntimeScenarios
     }
 
     [TestMethod]
+    public void RuntimeLimitsDoNotCapDirectRangeLookup()
+    {
+        const string script = """
+            on Start {
+                let values as :range be from 1 to 1000000;
+                publish Done(value: values[1000000], contains: 999999 in values, fractional: 1.5 in values);
+            }
+            """;
+
+        var collector = new EventScriptDiagnosticTraceCollector();
+        var host = EventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new EventScriptRuntimeLimits { MaxRangeItems = 5 })
+            .WithDiagnosticCollector(collector)
+            .Build()
+            .Load(EventScriptManager.Compile(script));
+
+        host.Publish(EventScriptMessage.Message("Start"));
+
+        var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Done", emitted[0].Name);
+        Assert.AreEqual(1000000L, emitted[0].Arguments["value"].AsInteger());
+        Assert.IsTrue(emitted[0].Arguments["contains"].AsBoolean());
+        Assert.IsFalse(emitted[0].Arguments["fractional"].AsBoolean());
+        Assert.IsFalse(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.RuntimeLimitReached));
+    }
+
+    [TestMethod]
     public void RuntimeLimitsStopRunAfterLoopBudgetIsExhausted()
     {
         const string script = """

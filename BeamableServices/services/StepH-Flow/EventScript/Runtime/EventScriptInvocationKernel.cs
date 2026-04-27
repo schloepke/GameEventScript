@@ -7,22 +7,23 @@ namespace StepH.Flow.EventScript.Runtime;
 
 internal static class EventScriptInvocationKernel
 {
-    public static IReadOnlyList<THandler> GetMatchingHandlers<THandler>(
-        IReadOnlyDictionary<string, IReadOnlyList<THandler>> handlers,
-        EventScriptMessage message,
+    public static IReadOnlyDictionary<string, IReadOnlyList<THandler>> BuildDispatchIndex<THandler>(
+        IEnumerable<THandler> handlers,
         Func<THandler, string> signatureIdSelector,
         Func<THandler, int> declarationOrderSelector)
-    {
-        if (!handlers.TryGetValue(message.Name, out var matchingByName))
-        {
-            return [];
-        }
+        => handlers
+            .GroupBy(signatureIdSelector, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<THandler>)group.OrderBy(declarationOrderSelector).ToArray(),
+                StringComparer.Ordinal);
 
-        return matchingByName
-            .Where(handler => string.Equals(signatureIdSelector(handler), message.SignatureId, StringComparison.Ordinal))
-            .OrderBy(declarationOrderSelector)
-            .ToArray();
-    }
+    public static IReadOnlyList<THandler> GetMatchingHandlers<THandler>(
+        IReadOnlyDictionary<string, IReadOnlyList<THandler>> dispatchIndex,
+        EventScriptMessage message)
+        => dispatchIndex.TryGetValue(message.SignatureId, out var matchingHandlers)
+            ? matchingHandlers
+            : [];
 
     public static void RecordDiagnostic(
         EventScriptContext context,

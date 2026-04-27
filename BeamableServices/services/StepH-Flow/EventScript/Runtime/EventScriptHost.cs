@@ -18,7 +18,7 @@ public sealed class EventScriptHost
     private readonly int _maxProcessedEventsPerRun;
     private readonly int _defaultScriptHandlerPriority;
     private readonly int _defaultExternalHandlerPriority;
-    private readonly Dictionary<string, List<MessageSubscription>> _subscriptions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<MessageSubscription>> _dispatchIndex = new(StringComparer.Ordinal);
     private long _nextRegistrationOrder;
 
     internal EventScriptHost(EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector, EventScriptRuntimeLimits runtimeLimits, int maxProcessedEventsPerRun,
@@ -97,13 +97,13 @@ public sealed class EventScriptHost
 
     private void Register(MessageSubscription subscription)
     {
-        if (!_subscriptions.TryGetValue(subscription.Definition.Name, out var handlers))
+        if (!_dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers))
         {
             handlers = new List<MessageSubscription>();
-            _subscriptions[subscription.Definition.Name] = handlers;
+            _dispatchIndex[subscription.Definition.SignatureId] = handlers;
         }
 
-        handlers.Add(subscription);
+        InsertSubscriptionByDispatchOrder(handlers, subscription);
     }
 
     private void Drain(EventScriptRunState state)
@@ -126,16 +126,13 @@ public sealed class EventScriptHost
     {
         state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' started");
 
-        if (!_subscriptions.TryGetValue(queuedEvent.Name, out var subscriptions))
+        if (!_dispatchIndex.TryGetValue(queuedEvent.SignatureId, out var subscriptions))
         {
             state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' completed without subscribers");
             return;
         }
 
-        foreach (var subscription in subscriptions
-                     .Where(x => string.Equals(x.Definition.SignatureId, queuedEvent.SignatureId, StringComparison.Ordinal))
-                     .OrderBy(x => x.Priority)
-                     .ThenBy(x => x.RegistrationOrder))
+        foreach (var subscription in subscriptions)
         {
             state.RecordDiagnostic(
                 EventScriptDiagnosticEventKind.SubscriberMatched,
@@ -155,6 +152,26 @@ public sealed class EventScriptHost
         }
 
         state.RecordDiagnostic(EventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' completed");
+    }
+
+    private static void InsertSubscriptionByDispatchOrder(List<MessageSubscription> handlers, MessageSubscription subscription)
+    {
+        var insertIndex = handlers.FindIndex(existing => CompareDispatchOrder(subscription, existing) < 0);
+        if (insertIndex < 0)
+        {
+            handlers.Add(subscription);
+            return;
+        }
+
+        handlers.Insert(insertIndex, subscription);
+    }
+
+    private static int CompareDispatchOrder(MessageSubscription left, MessageSubscription right)
+    {
+        var priorityComparison = left.Priority.CompareTo(right.Priority);
+        return priorityComparison != 0
+            ? priorityComparison
+            : left.RegistrationOrder.CompareTo(right.RegistrationOrder);
     }
 
     private sealed class EventScriptRunState

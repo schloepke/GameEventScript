@@ -12,6 +12,7 @@ namespace StepH.Flow.EventScript.Experimental;
 public sealed class ExperimentalCompiledEventScript : IEventScriptMessageHandlerCollection
 {
     private readonly IReadOnlyList<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> _messageHandlers;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _dispatchIndex;
 
     internal ExperimentalCompiledEventScript(
         ExperimentalEventScriptCompilationOptions options,
@@ -36,8 +37,9 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptMessageHandler
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
 
-        _messageHandlers = Handlers.Values
-            .SelectMany(handlerGroup => handlerGroup)
+        var handlerList = Handlers.Values.SelectMany(handlerGroup => handlerGroup).ToArray();
+        _dispatchIndex = EventScriptInvocationKernel.BuildDispatchIndex(handlerList, handler => handler.SignatureId, handler => handler.DeclarationOrder);
+        _messageHandlers = handlerList
             .Select(handler => (handler.Definition, (Action<EventScriptMessage, EventScriptContext>)((message, context) => InvokeHandler(handler, message, context))))
             .ToArray();
     }
@@ -63,6 +65,8 @@ public sealed class ExperimentalCompiledEventScript : IEventScriptMessageHandler
     internal IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> TypeDefinitions { get; }
+
+    internal IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> DispatchIndex => _dispatchIndex;
 
     IEnumerable<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> IEventScriptMessageHandlerCollection.Handlers
         => _messageHandlers;

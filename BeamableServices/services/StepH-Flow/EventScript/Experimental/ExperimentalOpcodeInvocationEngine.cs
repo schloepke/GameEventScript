@@ -28,7 +28,7 @@ internal static class ExperimentalOpcodeInvocationEngine
 
     private sealed class InvocationSession
     {
-        private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _handlers;
+        private readonly IReadOnlyDictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>> _dispatchIndex;
         private readonly IReadOnlyDictionary<string, ExperimentalCompiledTypeDefinition> _typeDefinitions;
         private readonly IReadOnlyDictionary<string, ExperimentalCompiledCallableDefinition> _callables;
         private readonly EventScriptContext _context;
@@ -43,7 +43,7 @@ internal static class ExperimentalOpcodeInvocationEngine
             _randomGenerator = _context.Random;
             _typeDefinitions = compiledScript?.TypeDefinitions ?? new Dictionary<string, ExperimentalCompiledTypeDefinition>(StringComparer.Ordinal);
             _callables = compiledScript?.Callables ?? new Dictionary<string, ExperimentalCompiledCallableDefinition>(StringComparer.Ordinal);
-            _handlers = compiledScript?.Handlers ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
+            _dispatchIndex = compiledScript?.DispatchIndex ?? new Dictionary<string, IReadOnlyList<ExperimentalCompiledEventScriptHandler>>(StringComparer.Ordinal);
             _compiledScript = compiledScript;
             _diagnosticsEnabled = compiledScript?.Options.EnableDiagnostics ?? false;
             _randomScopes.Push(_randomGenerator);
@@ -100,7 +100,7 @@ internal static class ExperimentalOpcodeInvocationEngine
         }
 
     private IReadOnlyList<ExperimentalCompiledEventScriptHandler> GetMatchingHandlers(EventScriptMessage message)
-        => EventScriptInvocationKernel.GetMatchingHandlers(_handlers, message, handler => handler.SignatureId, handler => handler.DeclarationOrder);
+        => EventScriptInvocationKernel.GetMatchingHandlers(_dispatchIndex, message);
 
     private void ExecuteHandler(ExperimentalCompiledExecutionContext context, ExperimentalCompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
     {
@@ -775,6 +775,11 @@ internal static class ExperimentalOpcodeInvocationEngine
                     yield break;
                 }
 
+                if (!context.TryCheckRangeLength(rangeValue, "Range item count exceeds the configured limit."))
+                {
+                    yield break;
+                }
+
                 foreach (var item in rangeValue.AsEnumerable())
                 {
                     yield return item;
@@ -807,12 +812,6 @@ internal static class ExperimentalOpcodeInvocationEngine
             ToIntegerSaturated(fromNumber.Value),
             ToIntegerSaturated(toNumber.Value),
             ToIntegerSaturated(stepNumber.Value));
-        if (!context.TryCheckRangeLength(range, "Range item count exceeds the configured limit."))
-        {
-            range = EventScriptValue.Nothing;
-            return false;
-        }
-
         return true;
     }
 
@@ -1309,13 +1308,6 @@ internal static class ExperimentalOpcodeInvocationEngine
             return EventScriptValue.Nothing;
         }
 
-        if (!context.TryCheckMaterializedValue(target, "Collection access would materialize more range items than allowed."))
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        var items = target.AsList();
-
         switch (collectionAccess.Selector)
         {
             case ExpressionSelectorNode expressionSelector:
@@ -1331,90 +1323,183 @@ internal static class ExperimentalOpcodeInvocationEngine
                 return EvaluateTakePattern(context, target, takePatternSelector.Pattern);
 
             case SequenceSliceSelectorNode sliceSelector:
+                if (!TryMaterializeCollectionAccessTarget(context, target, out var sliceItems))
+                {
+                    return EventScriptValue.Nothing;
+                }
+
+                var items = sliceItems;
                 return EvaluateSequenceSliceSelector(target, items, sliceSelector);
 
             case PredicateSelectorNode predicateSelector:
-                return EvaluatePredicateSelector(context, items, predicateSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var predicateItems)
+                    ? EvaluatePredicateSelector(context, predicateItems, predicateSelector)
+                    : EventScriptValue.Nothing;
 
             case CountSelectorNode countSelector:
-                return EvaluateCountSelector(context, items, countSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var countItems)
+                    ? EvaluateCountSelector(context, countItems, countSelector)
+                    : EventScriptValue.Nothing;
 
             case ChooseSelectorNode chooseSelector:
-                return EvaluateChooseSelector(context, items, chooseSelector);
+                return TryMaterializeCollectionAccessTarget(context, target, out var chooseItems)
+                    ? EvaluateChooseSelector(context, chooseItems, chooseSelector)
+                    : EventScriptValue.Nothing;
 
             case DrawSelectorNode drawSelector:
-                return EvaluateDrawSelector(target, items, drawSelector);
+                return TryMaterializeCollectionAccessTarget(context, target, out var drawItems)
+                    ? EvaluateDrawSelector(target, drawItems, drawSelector)
+                    : EventScriptValue.Nothing;
 
             case ShuffleSelectorNode:
-                return EvaluateShuffleSelector(target, items);
+                return TryMaterializeCollectionAccessTarget(context, target, out var shuffleItems)
+                    ? EvaluateShuffleSelector(target, shuffleItems)
+                    : EventScriptValue.Nothing;
 
             case ReverseSelectorNode:
-                return EvaluateReverseSelector(target, items);
+                return TryMaterializeCollectionAccessTarget(context, target, out var reverseItems)
+                    ? EvaluateReverseSelector(target, reverseItems)
+                    : EventScriptValue.Nothing;
 
             case EdgeSelectorNode edgeSelector:
-                return EvaluateEdgeSelector(context, items, edgeSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var edgeItems)
+                    ? EvaluateEdgeSelector(context, edgeItems, edgeSelector)
+                    : EventScriptValue.Nothing;
 
             case FilterSelectorNode filterSelector:
-                return EvaluateFilterSelector(context, items, filterSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var filterItems)
+                    ? EvaluateFilterSelector(context, filterItems, filterSelector)
+                    : EventScriptValue.Nothing;
 
             case SumSelectorNode sumSelector:
-                return EvaluateSumSelector(context, items, sumSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var sumItems)
+                    ? EvaluateSumSelector(context, sumItems, sumSelector)
+                    : EventScriptValue.Nothing;
 
             case AverageSelectorNode averageSelector:
-                return EvaluateAverageSelector(context, items, averageSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var averageItems)
+                    ? EvaluateAverageSelector(context, averageItems, averageSelector)
+                    : EventScriptValue.Nothing;
 
             case MinSelectorNode minSelector:
-                return EvaluateExtremaSelector(context, items, minSelector.Identifier, minSelector.Projection, isMax: false);
+                return TryEnumerateCollectionAccessTarget(context, target, out var minItems)
+                    ? EvaluateExtremaSelector(context, minItems, minSelector.Identifier, minSelector.Projection, isMax: false)
+                    : EventScriptValue.Nothing;
 
             case MaxSelectorNode maxSelector:
-                return EvaluateExtremaSelector(context, items, maxSelector.Identifier, maxSelector.Projection, isMax: true);
+                return TryEnumerateCollectionAccessTarget(context, target, out var maxItems)
+                    ? EvaluateExtremaSelector(context, maxItems, maxSelector.Identifier, maxSelector.Projection, isMax: true)
+                    : EventScriptValue.Nothing;
 
             case SelectSelectorNode selectSelector:
-                return EvaluateSelectSelector(context, items, selectSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var selectItems)
+                    ? EvaluateSelectSelector(context, selectItems, selectSelector)
+                    : EventScriptValue.Nothing;
 
             case DictionarySelectorNode dictionarySelector:
-                return EvaluateDictionarySelector(context, items, dictionarySelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var dictionaryItems)
+                    ? EvaluateDictionarySelector(context, dictionaryItems, dictionarySelector)
+                    : EventScriptValue.Nothing;
 
             case ContainsSelectorNode containsSelector:
-                return EvaluateContainsSelector(context, target, items, containsSelector);
+                return EvaluateContainsSelector(context, target, containsSelector);
 
             case SortSelectorNode sortSelector:
-                return EvaluateSortSelector(context, target, items, sortSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var sortItems)
+                    ? EvaluateSortSelector(context, target, sortItems, sortSelector)
+                    : EventScriptValue.Nothing;
 
             case DistinctSelectorNode distinctSelector:
-                return EvaluateDistinctSelector(context, target, items, distinctSelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var distinctItems)
+                    ? EvaluateDistinctSelector(context, target, distinctItems, distinctSelector)
+                    : EventScriptValue.Nothing;
 
             case GroupBySelectorNode groupBySelector:
-                return EvaluateGroupBySelector(context, items, groupBySelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var groupItems)
+                    ? EvaluateGroupBySelector(context, groupItems, groupBySelector)
+                    : EventScriptValue.Nothing;
 
             case OrderBySelectorNode orderBySelector:
-                return EvaluateOrderBySelector(context, target, items, orderBySelector);
+                return TryEnumerateCollectionAccessTarget(context, target, out var orderItems)
+                    ? EvaluateOrderBySelector(context, target, orderItems, orderBySelector)
+                    : EventScriptValue.Nothing;
 
             default:
                 return EventScriptValue.Nothing;
         }
     }
 
-    private EventScriptValue EvaluateEdgeSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, EdgeSelectorNode selector)
+    private static bool TryMaterializeCollectionAccessTarget(ExperimentalCompiledExecutionContext context, EventScriptValue target, out IReadOnlyList<EventScriptValue> items)
     {
-        IReadOnlyList<EventScriptValue> candidates = items;
+        if (!context.TryCheckMaterializedValue(target, "Collection access would materialize more range items than allowed."))
+        {
+            items = Array.Empty<EventScriptValue>();
+            return false;
+        }
+
+        items = target.AsList();
+        return true;
+    }
+
+    private static bool TryEnumerateCollectionAccessTarget(ExperimentalCompiledExecutionContext context, EventScriptValue target, out IEnumerable<EventScriptValue> items)
+    {
+        if (!context.TryCheckMaterializedValue(target, "Collection access would enumerate more range items than allowed."))
+        {
+            items = Array.Empty<EventScriptValue>();
+            return false;
+        }
+
+        items = EnumerateListLikeValue(target);
+        return true;
+    }
+
+    private static IEnumerable<EventScriptValue> EnumerateListLikeValue(EventScriptValue value)
+    {
+        if (value.Type == EventScriptValueType.Optional)
+        {
+            var optional = value.AsOptional();
+            return optional.HasValue
+                ? EnumerateListLikeValue(optional.Value)
+                : Array.Empty<EventScriptValue>();
+        }
+
+        return value.Type is EventScriptValueType.Range or EventScriptValueType.Iterator
+            ? value.AsEnumerable()
+            : value.AsList();
+    }
+
+    private EventScriptValue EvaluateEdgeSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, EdgeSelectorNode selector)
+    {
+        IEnumerable<EventScriptValue> candidates = items;
         if (!string.IsNullOrEmpty(selector.Identifier) && selector.Predicate is not null)
         {
             candidates = items
-                .Where(item => EvaluatePredicateItem(context, item, selector.Identifier!, selector.Predicate))
-                .ToArray();
+                .Where(item => EvaluatePredicateItem(context, item, selector.Identifier!, selector.Predicate));
         }
 
-        if (candidates.Count == 0)
+        EventScriptValue? first = null;
+        EventScriptValue? last = null;
+        var count = 0;
+        foreach (var candidate in candidates)
         {
-            return EventScriptValue.Nothing;
+            first ??= candidate;
+            last = candidate;
+            count++;
+            if (selector.Mode == "first")
+            {
+                return candidate;
+            }
+
+            if (selector.Mode == "single" && count > 1)
+            {
+                return EventScriptValue.Nothing;
+            }
         }
 
         return selector.Mode switch
         {
-            "first" => candidates[0],
-            "last" => candidates[^1],
-            "single" => candidates.Count == 1 ? candidates[0] : EventScriptValue.Nothing,
+            "last" => last ?? EventScriptValue.Nothing,
+            "single" => count == 1 ? first! : EventScriptValue.Nothing,
             _ => EventScriptValue.Nothing
         };
     }
@@ -1702,17 +1787,12 @@ internal static class ExperimentalOpcodeInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluatePredicateSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, PredicateSelectorNode selector)
+    private EventScriptValue EvaluatePredicateSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, PredicateSelectorNode selector)
     {
         var isAny = string.Equals(selector.Operator, "any", StringComparison.Ordinal);
         if (!isAny && !string.Equals(selector.Operator, "all", StringComparison.Ordinal))
         {
             return EventScriptValue.Boolean(false);
-        }
-
-        if (!isAny && items.Count == 0)
-        {
-            return EventScriptValue.Boolean(true);
         }
 
         foreach (var item in items)
@@ -1741,9 +1821,9 @@ internal static class ExperimentalOpcodeInvocationEngine
         return EventScriptValue.Boolean(!isAny);
     }
 
-    private EventScriptValue EvaluateCountSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, CountSelectorNode selector)
+    private EventScriptValue EvaluateCountSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, CountSelectorNode selector)
     {
-        var count = 0;
+        var count = 0L;
         foreach (var item in items)
         {
             context.PushScope();
@@ -1841,7 +1921,7 @@ internal static class ExperimentalOpcodeInvocationEngine
         return EventScriptValue.List(items.Reverse().ToArray());
     }
 
-    private List<EventScriptValue> FilterItems(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode predicate)
+    private List<EventScriptValue> FilterItems(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, string identifier, ExpressionNode predicate)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
@@ -1953,7 +2033,7 @@ internal static class ExperimentalOpcodeInvocationEngine
         return result;
     }
 
-    private EventScriptValue EvaluateFilterSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, FilterSelectorNode selector)
+    private EventScriptValue EvaluateFilterSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, FilterSelectorNode selector)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
@@ -1976,7 +2056,7 @@ internal static class ExperimentalOpcodeInvocationEngine
         return EventScriptValue.List(result);
     }
 
-    private EventScriptValue EvaluateSumSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, SumSelectorNode selector)
+    private EventScriptValue EvaluateSumSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, SumSelectorNode selector)
     {
         var sum = NumericValue.Finite(0m);
         foreach (var item in items)
@@ -2001,13 +2081,8 @@ internal static class ExperimentalOpcodeInvocationEngine
         return ToEventScriptDecimal(sum);
     }
 
-    private EventScriptValue EvaluateAverageSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, AverageSelectorNode selector)
+    private EventScriptValue EvaluateAverageSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, AverageSelectorNode selector)
     {
-        if (items.Count == 0)
-        {
-            return EventScriptValue.Nothing;
-        }
-
         var sum = NumericValue.Finite(0m);
         var count = 0;
         foreach (var item in items)
@@ -2035,9 +2110,9 @@ internal static class ExperimentalOpcodeInvocationEngine
             : EventScriptValue.Decimal(sum.Value / count);
     }
 
-    private EventScriptValue EvaluateSelectSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, SelectSelectorNode selector)
+    private EventScriptValue EvaluateSelectSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, SelectSelectorNode selector)
     {
-        var result = new List<EventScriptValue>(items.Count);
+        var result = new List<EventScriptValue>();
         foreach (var item in items)
         {
             context.PushScope();
@@ -2055,7 +2130,7 @@ internal static class ExperimentalOpcodeInvocationEngine
         return EventScriptValue.List(result);
     }
 
-    private EventScriptValue EvaluateDictionarySelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, DictionarySelectorNode selector)
+    private EventScriptValue EvaluateDictionarySelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, DictionarySelectorNode selector)
     {
         var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
         foreach (var item in items)
@@ -2084,26 +2159,21 @@ internal static class ExperimentalOpcodeInvocationEngine
         return EventScriptValue.Dictionary(result);
     }
 
-    private EventScriptValue EvaluateContainsSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, ContainsSelectorNode selector)
+    private EventScriptValue EvaluateContainsSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, ContainsSelectorNode selector)
     {
         var value = EvaluateExpression(context, selector.ValueExpression);
         return selector.Mode switch
         {
-            "single" => EventScriptValue.Boolean(EventScriptCollectionSemantics.ContainsSingle(target, items, value)),
-            "all" => EventScriptValue.Boolean(EventScriptCollectionSemantics.ContainsAll(target, items, value)),
-            "any" => EventScriptValue.Boolean(EventScriptCollectionSemantics.ContainsAny(target, items, value)),
+            "single" => EventScriptValue.Boolean(EventScriptValueSemantics.Contains(target, value)),
+            "all" => EventScriptValue.Boolean(EnumerateListLikeValue(value).All(item => EventScriptValueSemantics.Contains(target, item))),
+            "any" => EventScriptValue.Boolean(EnumerateListLikeValue(value).Any(item => EventScriptValueSemantics.Contains(target, item))),
             _ => EventScriptValue.Boolean(false)
         };
     }
 
-    private EventScriptValue EvaluateExtremaSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, string identifier, ExpressionNode projection, bool isMax)
+    private EventScriptValue EvaluateExtremaSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, string identifier, ExpressionNode projection, bool isMax)
     {
-        if (items.Count == 0)
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        var bestItem = items[0];
+        EventScriptValue? bestItem = null;
         EventScriptValue? bestProjection = null;
 
         foreach (var item in items)
@@ -2133,16 +2203,16 @@ internal static class ExperimentalOpcodeInvocationEngine
             }
         }
 
-        return bestItem;
+        return bestItem ?? EventScriptValue.Nothing;
     }
 
-    private EventScriptValue EvaluateSortSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, SortSelectorNode selector)
+    private EventScriptValue EvaluateSortSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IEnumerable<EventScriptValue> items, SortSelectorNode selector)
     {
         _ = context;
         return EventScriptCollectionSemantics.Sort(target, items, selector.Direction);
     }
 
-    private EventScriptValue EvaluateOrderBySelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, OrderBySelectorNode selector)
+    private EventScriptValue EvaluateOrderBySelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IEnumerable<EventScriptValue> items, OrderBySelectorNode selector)
     {
         return EventScriptCollectionSemantics.OrderBy(
             target,
@@ -2165,7 +2235,7 @@ internal static class ExperimentalOpcodeInvocationEngine
         }
     }
 
-    private EventScriptValue EvaluateDistinctSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IReadOnlyList<EventScriptValue> items, DistinctSelectorNode selector)
+    private EventScriptValue EvaluateDistinctSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IEnumerable<EventScriptValue> items, DistinctSelectorNode selector)
     {
         if (selector.Projection is null || string.IsNullOrEmpty(selector.Identifier))
         {
@@ -2178,7 +2248,7 @@ internal static class ExperimentalOpcodeInvocationEngine
             item => EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!));
     }
 
-    private EventScriptValue EvaluateGroupBySelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, GroupBySelectorNode selector) => EventScriptCollectionSemantics.GroupBy(
+    private EventScriptValue EvaluateGroupBySelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, GroupBySelectorNode selector) => EventScriptCollectionSemantics.GroupBy(
         items, item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
 
     private bool MatchesObjectPattern(ExperimentalCompiledExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)

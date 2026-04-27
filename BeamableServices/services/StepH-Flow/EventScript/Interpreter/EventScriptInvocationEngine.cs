@@ -2378,6 +2378,11 @@ internal static class EventScriptInvocationEngine
             {
                 var publishedMessage = new EventScriptMessage(message, arguments);
                 _context.Publish(publishedMessage);
+                if (_context.PublishCallbackRecordsDiagnostics)
+                {
+                    return;
+                }
+
                 EventScriptInvocationKernel.RecordDiagnostic(
                     _context,
                     _diagnosticsEnabled,

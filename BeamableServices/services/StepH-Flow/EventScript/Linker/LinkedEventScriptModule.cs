@@ -12,7 +12,12 @@ public enum LinkedCallableKind
     Select
 }
 
-public sealed class LinkedCallableDefinition(string name, IReadOnlyList<string> parameters, ExpressionNode expression, LinkedCallableKind kind)
+public sealed class LinkedCallableDefinition(
+    string name,
+    IReadOnlyList<string> parameters,
+    ExpressionNode expression,
+    LinkedCallableKind kind,
+    EventScriptSourceLocation? sourceRange = null)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
@@ -21,6 +26,8 @@ public sealed class LinkedCallableDefinition(string name, IReadOnlyList<string> 
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
     public LinkedCallableKind Kind { get; } = kind;
+
+    public EventScriptSourceLocation? SourceRange { get; } = sourceRange;
 }
 
 public sealed class LinkedEventScriptModule

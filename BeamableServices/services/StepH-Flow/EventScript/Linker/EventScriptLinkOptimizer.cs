@@ -60,7 +60,7 @@ internal static class EventScriptLinkOptimizer
             optimized = EnsureBooleanRuleExpression(optimized);
         }
 
-        return new LinkedCallableDefinition(definition.Name, definition.Parameters, optimized, definition.Kind);
+        return new LinkedCallableDefinition(definition.Name, definition.Parameters, optimized, definition.Kind, definition.SourceRange);
     }
 
     private static EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)

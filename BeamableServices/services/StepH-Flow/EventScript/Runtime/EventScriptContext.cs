@@ -11,16 +11,23 @@ public sealed class EventScriptContext
 {
     private readonly Action<EventScriptMessage> _publish;
 
-    public EventScriptContext(EventScriptRandomGenerator random, Action<EventScriptMessage> publish, IEventScriptDiagnosticCollector? diagnosticCollector = null)
+    public EventScriptContext(
+        EventScriptRandomGenerator random,
+        Action<EventScriptMessage> publish,
+        IEventScriptDiagnosticCollector? diagnosticCollector = null,
+        bool publishCallbackRecordsDiagnostics = false)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
         DiagnosticCollector = diagnosticCollector;
+        PublishCallbackRecordsDiagnostics = publishCallbackRecordsDiagnostics;
     }
 
     public EventScriptRandomGenerator Random { get; }
 
     public IEventScriptDiagnosticCollector? DiagnosticCollector { get; }
+
+    internal bool PublishCallbackRecordsDiagnostics { get; }
 
     public void Publish(EventScriptMessage message)
     {
@@ -44,4 +51,3 @@ public sealed class EventScriptContext
     public void RecordDiagnostic(EventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, EventScriptValue> arguments, string? detail = null)
         => DiagnosticCollector?.Record(kind, name, arguments, detail);
 }
-

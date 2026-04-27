@@ -34,7 +34,7 @@ public sealed class EventScriptHost
 
     #region Public interface
 
-    public EventScriptHost SubscribeForScript(IEventScriptMessageHandlerCollection handlers, int? priority = null)
+    public EventScriptHost Load(IEventScriptMessageHandlerCollection handlers, int? priority = null)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
         foreach (var handler in handlers.Handlers)
@@ -78,7 +78,7 @@ public sealed class EventScriptHost
             return;
         }
 
-        var state = new EventScriptRunState(message, _maxProcessedEventsPerRun, _random, _diagnosticCollector);
+        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector);
         state.Enqueue(message);
         Drain(state);
     }
@@ -161,11 +161,10 @@ public sealed class EventScriptHost
         private readonly int _maxProcessedEventsPerRun;
         private int _processedEvents;
 
-        public EventScriptRunState(EventScriptMessage initialMessage, int maxProcessedEventsPerRun, EventScriptRandomGenerator random,
-            IEventScriptDiagnosticCollector? diagnosticCollector)
+        public EventScriptRunState(int maxProcessedEventsPerRun, EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector)
         {
             _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
-            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector);
+            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true);
         }
 
         public EventScriptContext Context { get; }
@@ -221,4 +220,3 @@ public sealed class EventScriptHost
 
     #endregion
 }
-

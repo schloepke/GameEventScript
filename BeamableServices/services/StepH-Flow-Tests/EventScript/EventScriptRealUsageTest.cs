@@ -74,7 +74,7 @@ public class EventScriptRealUsageTest
             var host = EventScriptHost.CreateBuilder()
                 .WithDiagnosticCollector(collector)
                 .Build()
-                .SubscribeForScript(EventScriptManager.CompileExperimental(script))
+                .Load(EventScriptManager.CompileExperimental(script))
                 .Subscribe("SetBoardSize", ["x", "y"], (message, context) =>
                 {
                     game["width"] = message.Arguments["x"];

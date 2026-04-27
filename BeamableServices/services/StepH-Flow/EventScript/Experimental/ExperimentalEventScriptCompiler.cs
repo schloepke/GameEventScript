@@ -122,7 +122,7 @@ public static class ExperimentalEventScriptCompiler
                     ? ExperimentalCallableKind.Rule
                     : ExperimentalCallableKind.Select;
 
-                ValidateDuplicateParameters(name, callable.Parameters, symbolKind);
+                ValidateDuplicateParameters(name, callable.Parameters, symbolKind, callable.SourceRange);
                 _callables[name] = new ExperimentalCompiledCallableDefinition(
                     name,
                     callable.Parameters.ToArray(),
@@ -140,7 +140,7 @@ public static class ExperimentalEventScriptCompiler
                 for (var declarationOrder = 0; declarationOrder < pair.Value.Count; declarationOrder++)
                 {
                     var handler = pair.Value[declarationOrder];
-                    ValidateDuplicateParameters(handler.Message, handler.Parameters, EventScriptSymbolKind.Handler);
+                    ValidateDuplicateParameters(handler.Message, handler.Parameters, EventScriptSymbolKind.Handler, handler.SourceRange);
 
                     var rootScope = ScopeFrame.CreateRoot(handler.Parameters);
                     var programIndex = CompileStatements(handler.Message, handler.Statements, rootScope);
@@ -197,7 +197,8 @@ public static class ExperimentalEventScriptCompiler
                             $"Variable '{let.Identifier}' is already defined in this scope",
                             symbolName,
                             EventScriptSymbolKind.Variable,
-                            EventScriptOpcodeCompilationErrorKind.DuplicateVariable));
+                            EventScriptOpcodeCompilationErrorKind.DuplicateVariable,
+                            let.SourceRange));
                     }
 
                     var expression = CompileExpression(let.Expression);
@@ -288,7 +289,8 @@ public static class ExperimentalEventScriptCompiler
                         $"Unsupported statement syntax: {statement.GetType().Name}",
                         symbolName,
                         EventScriptSymbolKind.Handler,
-                        EventScriptOpcodeCompilationErrorKind.UnsupportedSyntax));
+                        EventScriptOpcodeCompilationErrorKind.UnsupportedSyntax,
+                        statement.SourceRange));
                     return;
             }
         }
@@ -656,7 +658,11 @@ public static class ExperimentalEventScriptCompiler
             return expression.ConstantValue.Type == EventScriptValueType.Boolean;
         }
 
-        private void ValidateDuplicateParameters(string symbol, IReadOnlyList<string> parameters, EventScriptSymbolKind symbolKind)
+        private void ValidateDuplicateParameters(
+            string symbol,
+            IReadOnlyList<string> parameters,
+            EventScriptSymbolKind symbolKind,
+            EventScriptSourceLocation? sourceLocation)
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var parameter in parameters)
@@ -673,7 +679,8 @@ public static class ExperimentalEventScriptCompiler
                     $"{symbolKind} '{symbol}' declares parameter '{parameter}' more than once",
                     symbol,
                     symbolKind,
-                    kind));
+                    kind,
+                    sourceLocation));
             }
         }
 
@@ -702,7 +709,8 @@ public static class ExperimentalEventScriptCompiler
                     $"Publish expression in '{symbolName}' declares argument '{argument.Name}' more than once",
                     symbolName,
                     EventScriptSymbolKind.Handler,
-                    EventScriptOpcodeCompilationErrorKind.DuplicatePublishArgument));
+                    EventScriptOpcodeCompilationErrorKind.DuplicatePublishArgument,
+                    argument.SourceRange ?? publishExpression.SourceRange));
             }
         }
 
@@ -710,14 +718,18 @@ public static class ExperimentalEventScriptCompiler
             string message,
             string symbol,
             EventScriptSymbolKind symbolKind,
-            EventScriptOpcodeCompilationErrorKind kind)
-            => new(
+            EventScriptOpcodeCompilationErrorKind kind,
+            EventScriptSourceLocation? sourceLocation = null)
+        {
+            var resolvedLocation = sourceLocation ?? new EventScriptSourceLocation("UnknownSource", ModuleName: "UnknownModule");
+            return new EventScriptOpcodeCompilationError(
                 message,
-                "UnknownModule",
+                resolvedLocation.ModuleName,
                 symbol,
                 symbolKind,
                 kind,
-                new EventScriptSourceLocation("UnknownSource", ModuleName: "UnknownModule"));
+                resolvedLocation);
+        }
 
         private int AddString(string value)
         {

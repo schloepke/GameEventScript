@@ -978,7 +978,8 @@ public sealed partial class EventScriptLinkBuilder
                 pair.Key,
                 pair.Value.Parameters.ToArray(),
                 pair.Value.Expression,
-                LinkedCallableKind.Rule);
+                LinkedCallableKind.Rule,
+                pair.Value.SourceRange);
         }
 
         foreach (var pair in selectDefinitions)
@@ -987,7 +988,8 @@ public sealed partial class EventScriptLinkBuilder
                 pair.Key,
                 pair.Value.Parameters.ToArray(),
                 pair.Value.Expression,
-                LinkedCallableKind.Select);
+                LinkedCallableKind.Select,
+                pair.Value.SourceRange);
         }
 
         return map;

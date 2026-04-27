@@ -82,7 +82,7 @@ public sealed class EventScriptMessageTests
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(compiled)
+            .Load(compiled)
             .Subscribe(EventScriptMessageSignature.MessageSignature("Notify", ["value"]), (message, context) =>
             {
                 seen.Add(message.Name);

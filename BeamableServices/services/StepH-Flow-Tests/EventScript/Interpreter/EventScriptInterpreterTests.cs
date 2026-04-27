@@ -1543,7 +1543,7 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script));
+            .Load(EventScriptManager.Compile(script));
         host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
         var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
@@ -1572,7 +1572,7 @@ public class EventScriptRuntimeScenarios
             .WithMaxProcessedEventsPerRun(4)
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script));
+            .Load(EventScriptManager.Compile(script));
         host.Publish(EventScriptMessage.Message("Start"));
         var emitted = collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
         Assert.HasCount(4, emitted);
@@ -1596,7 +1596,7 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Load(EventScriptManager.Compile(script))
             .Subscribe("Notify", ["playerId", "count"], (message, context) => invocations.Add([message.Arguments["playerId"], message.Arguments["count"]]));
 
         host.Publish("Start", ("playerId", EventScriptValue.Text("p1")));
@@ -1627,7 +1627,7 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Load(EventScriptManager.Compile(script))
             .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"external:{message.Arguments["value"].AsNumber()}"));
 
         host.Publish("Start", ("value", EventScriptValue.Decimal(4m)));
@@ -1652,7 +1652,7 @@ public class EventScriptRuntimeScenarios
         var invocations = new List<string>();
         var host = EventScriptHost.CreateBuilder()
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Load(EventScriptManager.Compile(script))
             .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"first:{message.Arguments["value"].AsNumber()}"))
             .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"second:{message.Arguments["value"].AsNumber()}"));
 
@@ -1675,7 +1675,7 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Load(EventScriptManager.Compile(script))
             .Subscribe("Notify", ["value"], (_, _) => throw new InvalidOperationException("boom"))
             .Subscribe("Notify", ["value"], (message, context) => invocations.Add($"ok:{message.Arguments["value"].AsNumber()}"));
 
@@ -1700,7 +1700,7 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script))
+            .Load(EventScriptManager.Compile(script))
             .Subscribe("Notify", ["value"], (message, context) => context.Publish("Done", new Dictionary<string, EventScriptValue>
             {
                 ["value"] = message.Arguments["value"]
@@ -1731,7 +1731,7 @@ public class EventScriptRuntimeScenarios
         var hostA = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collectorA)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script));
+            .Load(EventScriptManager.Compile(script));
         hostA.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
         var publishResult = collectorA.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
@@ -1739,7 +1739,7 @@ public class EventScriptRuntimeScenarios
         var hostB = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collectorB)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script));
+            .Load(EventScriptManager.Compile(script));
         hostB.Publish(EventScriptMessage.Message("Start", ("value", 2m )));
         var publishClrResult = collectorB.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished).ToArray();
 
@@ -1772,13 +1772,14 @@ public class EventScriptRuntimeScenarios
         var host = EventScriptHost.CreateBuilder()
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(compiled);
+            .Load(compiled);
 
         host.Publish("Start", ("value", EventScriptValue.Decimal(2m)));
 
         Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.DispatchStarted && evt.Name == "Start"));
         Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.HandlerInvoked && evt.Name == "Start"));
         Assert.IsTrue(collector.Events.Any(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished && evt.Name == "Next"));
+        Assert.HasCount(1, collector.Events.Where(evt => evt.Kind == EventScriptDiagnosticEventKind.EventPublished && evt.Name == "Next").ToArray());
     }
 
     [TestMethod]
@@ -1795,7 +1796,7 @@ public class EventScriptRuntimeScenarios
             .WithRandom(EventScriptRandomGenerator.FromSequence(2, 5))
             .WithDiagnosticCollector(collector)
             .Build()
-            .SubscribeForScript(EventScriptManager.Compile(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(EventScriptMessage.Message("Roll"));
         host.Publish(EventScriptMessage.Message("Roll"));

@@ -135,16 +135,18 @@ The runtime uses FIFO pub/sub semantics.
 
 When an event is published:
 
-1. it is appended to the emitted event list
-2. it is appended to the FIFO queue
-3. it is processed later by the queue drain loop
+1. it is appended to the FIFO queue
+2. it is processed by the queue drain loop
+3. follow-up publishes are appended to the same active run
 
 For each queued event:
 
-1. all script handlers for that message run in declaration order
-2. then all external bindings for that message run in binding registration order
+1. all subscribers with the exact `SignatureId` are matched
+2. matched subscribers run by priority
+3. subscribers with the same priority run in registration order
 
 This means publish chains are not recursive direct calls. They are queued message deliveries.
+There is no fixed script-before-external rule; host priority controls the order.
 
 ## Public Runtime API
 
@@ -175,6 +177,12 @@ var host = EventScriptHost.CreateBuilder()
 
 host.Publish(EventScriptMessage.Message("Start", ("value", EventScriptValue.Integer(3))));
 ```
+
+Compilation paths:
+
+- The classic runtime is an optimized AST runtime.
+- The experimental runtime currently compiles statements to opcodes and keeps expressions AST-backed.
+- Both expose the same `IEventScriptMessageHandlerCollection` host contract.
 
 ## Comments
 
@@ -1190,7 +1198,7 @@ The runtime can attach external bindings to messages through the host API.
 Important behavior:
 
 - external bindings are subscribers, like script handlers
-- they run after all script handlers of the same message
+- they run by priority and registration order, just like script handlers
 - exceptions from external bindings are swallowed
 - multiple bindings per message are allowed
 

@@ -1,3 +1,4 @@
+using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
@@ -34,12 +35,13 @@ public sealed class ExperimentalOpcodeCompilerTests
     [TestMethod]
     public void ExperimentalCompilerCollectsMultipleErrorsAndThrowsSingleException()
     {
+        var sourceLocation = new EventScriptSourceLocation("generated.es", 7, 3, 7, 20, "GeneratedModule");
         var linked = new LinkedEventScriptModule(
             typeDefinitions: new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
             callables: new Dictionary<string, LinkedCallableDefinition>(StringComparer.Ordinal)
             {
-                ["wounded"] = new LinkedCallableDefinition("wounded", ["unit", "unit"], new IdentifierExpressionNode("unit"), LinkedCallableKind.Rule),
-                ["alive"] = new LinkedCallableDefinition("alive", ["units", "units"], new IdentifierExpressionNode("units"), LinkedCallableKind.Select)
+                ["wounded"] = new LinkedCallableDefinition("wounded", ["unit", "unit"], new IdentifierExpressionNode("unit"), LinkedCallableKind.Rule, sourceLocation),
+                ["alive"] = new LinkedCallableDefinition("alive", ["units", "units"], new IdentifierExpressionNode("units"), LinkedCallableKind.Select, sourceLocation)
             },
             handlers: new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
             {
@@ -56,8 +58,14 @@ public sealed class ExperimentalOpcodeCompilerTests
                                 [
                                     new NamedArgumentNode("x", new IntegerLiteralExpressionNode(1)),
                                     new NamedArgumentNode("x", new IntegerLiteralExpressionNode(2))
-                                ]))
+                                ])
+                                {
+                                    SourceRange = sourceLocation
+                                })
                         ])
+                    {
+                        SourceRange = sourceLocation
+                    }
                 ]
             },
             sourceCount: 1);
@@ -70,6 +78,9 @@ public sealed class ExperimentalOpcodeCompilerTests
         Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptOpcodeCompilationErrorKind.DuplicateHandlerParameter));
         Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptOpcodeCompilationErrorKind.DuplicateVariable));
         Assert.IsTrue(exception.Errors.Any(error => error.Kind == EventScriptOpcodeCompilationErrorKind.DuplicatePublishArgument));
+        Assert.IsTrue(exception.Errors.Any(error =>
+            error.ModuleName == "GeneratedModule" &&
+            error.SourceLocation.SourceName == "generated.es"));
     }
 
     [TestMethod]

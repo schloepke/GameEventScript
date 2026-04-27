@@ -17,6 +17,44 @@
     },
     {
       "kind": "scriptApi",
+      "name": "standalone and trailing comments are ignored during execution",
+      "script": "module CommentRuntime\n// initialize flow\non Start { // handler begins\n  let hp be 10 // base value\n  publish Done(value: hp) // finished\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":integer", "value": "10" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "semicolons and continued expressions preserve behavior",
+      "script": "on Start {\n  let lines be 10; let values be 20\n  let result be 1 +\n    2\n  publish Done(lines: lines, values: values, result: result)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "lines": { "type": ":integer", "value": "10" },
+                "values": { "type": ":integer", "value": "20" },
+                "result": { "type": ":decimal", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "published messages are dispatched through the same host queue",
       "script": "on Start(value) {\n  publish Next(value: value + 1)\n}\n\non Next(value) {\n  publish Done(value: value)\n}",
       "steps": [

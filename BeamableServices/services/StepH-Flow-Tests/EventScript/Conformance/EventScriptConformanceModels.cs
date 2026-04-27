@@ -35,6 +35,22 @@ public sealed class EventScriptConformanceTest
     public List<EventScriptApiStepSpec>? Steps { get; set; }
 
     public EventScriptExpectedCompileErrorSpec? ExpectedError { get; set; }
+
+    public EventScriptMessageSignatureSpec? Signature { get; set; }
+
+    public JsonElement Message { get; set; }
+
+    public string? ExpectedMessageName { get; set; }
+
+    public string? ExpectedSignatureId { get; set; }
+
+    public string? ExpectedMessageSignatureId { get; set; }
+
+    public bool? ExpectedMatches { get; set; }
+
+    public int? ExpectedArgumentCount { get; set; }
+
+    public List<EventScriptMessageDefinitionExpectationSpec>? ExpectedMessageDefinitions { get; set; }
 }
 
 public sealed class EventScriptSourceSpec
@@ -42,6 +58,22 @@ public sealed class EventScriptSourceSpec
     public string? SourceName { get; set; }
 
     public string? Text { get; set; }
+}
+
+public sealed class EventScriptMessageSignatureSpec
+{
+    public string? Name { get; set; }
+
+    public List<string>? Parameters { get; set; }
+}
+
+public sealed class EventScriptMessageDefinitionExpectationSpec
+{
+    public string? Name { get; set; }
+
+    public List<string>? SignatureIds { get; set; }
+
+    public int? Count { get; set; }
 }
 
 public sealed class EventScriptApiStepSpec

@@ -1,6 +1,6 @@
 using StepH.Flow.EventScript.Types;
 
-namespace StepH.Flow.EventScript.Interpreter;
+namespace StepH_Flow_Tests.EventScript.Experimental;
 
 public sealed class EventScriptInvocationContext
 {

@@ -1,4 +1,3 @@
-using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.Types.EventScriptValue;
 
@@ -90,13 +89,6 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
-    public void OptionalNoneExposesNothingAsItsValue()
-    {
-        var none = OptionalNone().AsOptional();
-        Assert.AreEqual(EventScriptValueType.Nothing, none.Value.Type);
-    }
-
-    [TestMethod]
     public void NegativeDiceKeepOrDropCountsProduceEmptyDice()
     {
         var dice = EventScriptDiceValue.Create([6, 3, 1]);
@@ -108,19 +100,6 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
-    public void AccessorsStayLenientAcrossUnrelatedKinds()
-    {
-        Assert.AreEqual("12", Decimal(12m).AsText());
-        Assert.AreEqual("name", Tag("name").AsText());
-        Assert.IsFalse(Text("abc").AsBoolean());
-        Assert.AreEqual(1m, Boolean(true).AsNumber());
-        Assert.AreEqual(12, Convert.ToInt32(Text("12.8").AsInteger()));
-        Assert.HasCount(0, Integer(1).AsList());
-        Assert.HasCount(0, Integer(1).AsDictionary());
-        Assert.HasCount(0, Integer(1).AsSet());
-    }
-
-    [TestMethod]
     public void RangesStopAtIntegerBoundsWithoutOverflowing()
     {
         var ascending = Range(long.MaxValue - 1, long.MaxValue, 1).AsEnumerable().Select(value => value.AsInteger()).ToArray();
@@ -128,91 +107,6 @@ public class EventScriptValueScenarios
 
         CollectionAssert.AreEqual(new[] { long.MaxValue - 1, long.MaxValue }, ascending);
         CollectionAssert.AreEqual(new[] { long.MinValue + 1, long.MinValue }, descending);
-    }
-
-    [TestMethod]
-    public void KeysAndValuesCreateIteratorViewsWithoutChangingTheSourceKind()
-    {
-        var dictionary = Dictionary(new Dictionary<string, EventScriptValue>
-        {
-            ["name"] = Text("Mark"),
-            ["age"] = Decimal(25m)
-        });
-        var list = List([1m, 2m, 3m]);
-
-        var keys = Keys(dictionary);
-        var values = Values(list);
-
-        Assert.AreEqual(EventScriptValueType.Iterator, keys.Type);
-        Assert.AreEqual(EventScriptValueType.Iterator, values.Type);
-        CollectionAssert.AreEqual(new[] { "age", "name" }, keys.AsEnumerable().Select(x => x.AsText()).ToArray());
-        CollectionAssert.AreEqual(new[] { 1m, 2m, 3m }, values.AsEnumerable().Select(x => x.AsNumber()).ToArray());
-        Assert.AreEqual(EventScriptValueType.Dictionary, dictionary.Type);
-        Assert.AreEqual(EventScriptValueType.List, list.Type);
-    }
-
-    [TestMethod]
-    public void EntriesCreateDictionaryLikeKeyValueItems()
-    {
-        var dictionary = Dictionary(new Dictionary<string, EventScriptValue>
-        {
-            ["name"] = Text("Mark"),
-            ["age"] = Decimal(25m)
-        });
-
-        var entries = Entries(dictionary).AsEnumerable().ToArray();
-
-        Assert.AreEqual(2, entries.Length);
-        Assert.AreEqual("age", entries[0].AsDictionary()["key"].AsText());
-        Assert.AreEqual(25m, entries[0].AsDictionary()["value"].AsNumber());
-        Assert.AreEqual("name", entries[1].AsDictionary()["key"].AsText());
-        Assert.AreEqual("Mark", entries[1].AsDictionary()["value"].AsText());
-    }
-
-    [TestMethod]
-    public void TagsBehaveAsNamedValuesWithStableIdentity()
-    {
-        var first = Tag("name");
-        var second = Tag("name");
-        var third = Tag("age");
-
-        Assert.AreEqual(EventScriptValueType.Tag, first.Type);
-        Assert.AreEqual(":name", first.ToString());
-        Assert.AreEqual(first, second);
-        Assert.AreNotEqual(first, third);
-    }
-
-    [TestMethod]
-    public void MessageAndHandlerAreFirstClassValueTypesWithReadOnlyMembers()
-    {
-        var signature = new EventScriptMessageSignature("Shoot", ["unit", "target"]);
-        var message = new EventScriptMessage("Shoot", new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
-        {
-            ["unit"] = Text("u1"),
-            ["target"] = Text("t1")
-        });
-
-        var messageValue = Message(message);
-        var handlerValue = Handler(signature);
-
-        Assert.AreEqual(EventScriptValueType.Message, messageValue.Type);
-        Assert.AreEqual(EventScriptValueType.Handler, handlerValue.Type);
-        Assert.IsFalse(messageValue.isDictionary());
-        Assert.IsFalse(handlerValue.isDictionary());
-
-        Assert.IsTrue(messageValue.TryGetDictionaryMember("name", out var messageName));
-        Assert.IsTrue(messageValue.TryGetDictionaryMember("arguments", out var messageArguments));
-        Assert.IsTrue(messageValue.TryGetDictionaryMember("signatureid", out var messageSignatureId));
-        Assert.AreEqual("Shoot", messageName.AsText());
-        Assert.HasCount(2, messageArguments.AsDictionary());
-        Assert.AreEqual("Shoot(target,unit)", messageSignatureId.AsText());
-
-        Assert.IsTrue(handlerValue.TryGetDictionaryMember("name", out var handlerName));
-        Assert.IsTrue(handlerValue.TryGetDictionaryMember("parameters", out var handlerParameters));
-        Assert.IsTrue(handlerValue.TryGetDictionaryMember("signatureid", out var handlerSignatureId));
-        Assert.AreEqual("Shoot", handlerName.AsText());
-        Assert.HasCount(2, handlerParameters.AsList());
-        Assert.AreEqual("Shoot(target,unit)", handlerSignatureId.AsText());
     }
 
     [TestMethod]

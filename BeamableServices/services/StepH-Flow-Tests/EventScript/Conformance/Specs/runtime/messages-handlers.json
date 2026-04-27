@@ -50,6 +50,25 @@
     },
     {
       "kind": "scriptApi",
+      "name": "empty uppercase invocation creates handler value",
+      "script": "on Start {\n  let handler as :handler be Shoot()\n  publish Done(name: handler.name, parameterCount: :len handler[:parameters])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "name": { "type": ":text", "value": "Shoot" },
+                "parameterCount": { "type": ":integer", "value": "0" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "invalid handler binding and non message publish are lenient no ops",
       "script": "module MessageBindingNoOp\non Start(unit, hp) {\n  let shoot as :handler be Shoot(unit, target)\n  let invalid as :message be shoot(unit: unit, hp: hp)\n  publish invalid\n  publish unit\n  publish Done(isMessage: invalid is :message, isNothing: invalid is :nothing)\n}",
       "steps": [

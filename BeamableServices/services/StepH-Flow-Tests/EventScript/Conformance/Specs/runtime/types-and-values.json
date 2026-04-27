@@ -163,6 +163,29 @@
     },
     {
       "kind": "scriptApi",
+      "name": "dice like names remain ordinary identifiers",
+      "script": "on Start(d6) {\n  let kept be d6\n  publish Done(value: kept)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "d6": { "type": ":integer", "value": "6" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":integer", "value": "6" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "containment boundary sort and distinct semantics",
       "script": "on Start {\n  let values be [3, 1, 2, 2]\n  publish Done(textContains: 'club' in 'battle club', startsList: [1, 2, 3] starts with [1, 2], endsList: [1, 2, 3] ends with [1, 2], hasAll: [1, 2, 3][:contains all [1, 3]], hasAny: [1, 2, 3][:contains any [0, 3]], sorted: values[:sort ascending], distinct: values[:distinct])\n}",
       "steps": [

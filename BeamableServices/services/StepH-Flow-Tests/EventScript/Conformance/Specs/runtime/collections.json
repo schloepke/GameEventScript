@@ -58,6 +58,142 @@
     },
     {
       "kind": "scriptApi",
+      "name": "selector variants are observable through runtime behavior",
+      "script": "on Start(items) {\n  let hasAny be items[:any item where item.points > 10]\n  let allValid be items[:all item where item.points >= 0]\n  let firstTwo be items[:take first 2]\n  let withoutLast be items[:drop last 1]\n  let firstAlive be items[:first item where item.alive]\n  let lastAlive be items[:last item where item.alive]\n  let singleBoss be items[:single item where item.role = :boss]\n  let weakest be items[:min item -> item.points]\n  let strongest be items[:max item -> item.points]\n  let topItem be items[:highest item -> item.points]\n  let lowItem be items[:lowest item -> item.points]\n  publish Done(hasAny: hasAny, allValid: allValid, firstTwoCount: :len firstTwo, withoutLastCount: :len withoutLast, firstAlive: firstAlive.name, lastAlive: lastAlive.name, singleBoss: singleBoss.name, weakest: weakest.name, strongest: strongest.name, topItem: topItem.name, lowItem: lowItem.name)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "items": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "A" },
+                      "points": { "type": ":integer", "value": "3" },
+                      "alive": { "type": ":boolean", "value": true },
+                      "role": { "type": ":tag", "value": "tank" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "B" },
+                      "points": { "type": ":integer", "value": "12" },
+                      "alive": { "type": ":boolean", "value": false },
+                      "role": { "type": ":tag", "value": "boss" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "C" },
+                      "points": { "type": ":integer", "value": "7" },
+                      "alive": { "type": ":boolean", "value": true },
+                      "role": { "type": ":tag", "value": "scout" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "hasAny": { "type": ":boolean", "value": true },
+                "allValid": { "type": ":boolean", "value": true },
+                "firstTwoCount": { "type": ":integer", "value": "2" },
+                "withoutLastCount": { "type": ":integer", "value": "2" },
+                "firstAlive": { "type": ":text", "value": "A" },
+                "lastAlive": { "type": ":text", "value": "C" },
+                "singleBoss": { "type": ":text", "value": "B" },
+                "weakest": { "type": ":text", "value": "A" },
+                "strongest": { "type": ":text", "value": "B" },
+                "topItem": { "type": ":text", "value": "B" },
+                "lowItem": { "type": ":text", "value": "A" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "selectors can be nested inside projections",
+      "script": "on Nested(items) {\n  let values be items[:select item -> item.points[:all point where point.x > 0]]\n  publish Done(first: values[1], second: values[2])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Nested",
+            "args": {
+              "items": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "points": {
+                        "type": ":list",
+                        "items": [
+                          {
+                            "type": ":dictionary",
+                            "entries": {
+                              "x": { "type": ":integer", "value": "1" }
+                            }
+                          },
+                          {
+                            "type": ":dictionary",
+                            "entries": {
+                              "x": { "type": ":integer", "value": "2" }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "points": {
+                        "type": ":list",
+                        "items": [
+                          {
+                            "type": ":dictionary",
+                            "entries": {
+                              "x": { "type": ":integer", "value": "1" }
+                            }
+                          },
+                          {
+                            "type": ":dictionary",
+                            "entries": {
+                              "x": { "type": ":integer", "value": "0" }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "first": { "type": ":boolean", "value": true },
+                "second": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "dictionary selectors use last wins semantics",
       "script": "on Start(items) {\n  let byId be items[:dictionary item by item.id]\n  let namesById be items[:dictionary item by item.id -> item.name]\n  publish Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
       "steps": [

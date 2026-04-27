@@ -50,6 +50,12 @@ public sealed class EventScriptJsonConformanceTests
             case "compileError":
                 RunCompileErrorTest(testCase);
                 break;
+            case "messageApi":
+                RunMessageApiTest(testCase);
+                break;
+            case "compileMetadata":
+                RunCompileMetadataTest(testCase);
+                break;
             default:
                 Assert.Fail($"{testCase}: unsupported test kind '{testCase.Test.Kind}'.");
                 break;
@@ -122,6 +128,62 @@ public sealed class EventScriptJsonConformanceTests
         }
 
         Assert.Fail($"{testCase}: expected compilation to fail.");
+    }
+
+    private static void RunMessageApiTest(EventScriptConformanceCase testCase)
+    {
+        var signatureSpec = testCase.Test.Signature
+                            ?? throw new InvalidOperationException($"{testCase}: messageApi tests require signature.");
+
+        ValidateRequired(signatureSpec.Name, "messageApi signature name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+        var signature = new EventScriptMessageSignature(signatureSpec.Name!, signatureSpec.Parameters ?? []);
+        var message = EventScriptConformanceValueCodec.DecodeMessage(RequireDefined(testCase.Test.Message, "messageApi message", testCase));
+
+        AssertOptionalEquals(testCase, "signature id", testCase.Test.ExpectedSignatureId, signature.SignatureId);
+        AssertOptionalEquals(testCase, "message name", testCase.Test.ExpectedMessageName, message.Name);
+        AssertOptionalEquals(testCase, "message signature id", testCase.Test.ExpectedMessageSignatureId, message.SignatureId);
+
+        if (testCase.Test.ExpectedMatches is { } expectedMatches)
+        {
+            Assert.AreEqual(expectedMatches, signature.Matches(message), $"{testCase}: signature match result differs.");
+        }
+
+        if (testCase.Test.ExpectedArgumentCount is { } expectedArgumentCount)
+        {
+            Assert.AreEqual(expectedArgumentCount, message.Arguments.Count, $"{testCase}: message argument count differs.");
+        }
+    }
+
+    private static void RunCompileMetadataTest(EventScriptConformanceCase testCase)
+    {
+        var expectedDefinitions = testCase.Test.ExpectedMessageDefinitions;
+        if (expectedDefinitions is null || expectedDefinitions.Count == 0)
+        {
+            Assert.Fail($"{testCase}: compileMetadata tests require expectedMessageDefinitions.");
+        }
+
+        var compiled = CompileScripts(testCase.Test);
+        foreach (var expected in expectedDefinitions)
+        {
+            ValidateRequired(expected.Name, "expected message definition name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+            if (!compiled.MessageDefinitions.TryGetValue(expected.Name!, out var definitions))
+            {
+                Assert.Fail($"{testCase}: expected compiled message definition '{expected.Name}' was not found.");
+            }
+
+            if (expected.Count is { } expectedCount)
+            {
+                Assert.AreEqual(expectedCount, definitions.Count, $"{testCase}: message definition count for '{expected.Name}' differs.");
+            }
+
+            if (expected.SignatureIds is not null)
+            {
+                CollectionAssert.AreEqual(
+                    expected.SignatureIds.ToArray(),
+                    definitions.Select(definition => definition.SignatureId).ToArray(),
+                    $"{testCase}: message definition signature ids for '{expected.Name}' differ.");
+            }
+        }
     }
 
     private static void RegisterExternalSubscribers(EventScriptConformanceCase testCase, EventScriptHost host)
@@ -459,6 +521,16 @@ public sealed class EventScriptJsonConformanceTests
     private static bool MessageMatches(string? expected, params string?[] actualMessages)
         => string.IsNullOrWhiteSpace(expected) ||
            actualMessages.Any(message => message?.Contains(expected, StringComparison.Ordinal) ?? false);
+
+    private static void AssertOptionalEquals(EventScriptConformanceCase testCase, string description, string? expected, string actual)
+    {
+        if (expected is null)
+        {
+            return;
+        }
+
+        Assert.AreEqual(expected, actual, $"{testCase}: {description} differs.");
+    }
 
     private static string DescribeDiagnosticExpectation(EventScriptDiagnosticExpectationSpec expected)
         => $"kind={expected.Kind ?? "*"}, name={expected.Name ?? "*"}, detailContains={expected.DetailContains ?? expected.MessageContains ?? "*"}";

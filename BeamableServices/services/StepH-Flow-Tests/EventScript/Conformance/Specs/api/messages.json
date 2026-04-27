@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "name": "ApiMessages",
+  "tests": [
+    {
+      "kind": "messageApi",
+      "name": "message signatures match unordered arguments",
+      "signature": {
+        "name": "Start",
+        "parameters": ["a", "b"]
+      },
+      "message": {
+        "name": "Start",
+        "args": {
+          "b": { "type": ":integer", "value": "2" },
+          "a": { "type": ":integer", "value": "1" }
+        }
+      },
+      "expectedMessageName": "Start",
+      "expectedSignatureId": "Start(a,b)",
+      "expectedMessageSignatureId": "Start(a,b)",
+      "expectedMatches": true,
+      "expectedArgumentCount": 2
+    },
+    {
+      "kind": "messageApi",
+      "name": "signature ids trim message names normalize parameter order and include name",
+      "signature": {
+        "name": " Shoot ",
+        "parameters": ["unit", "target"]
+      },
+      "message": {
+        "name": " Shoot ",
+        "args": {
+          "target": { "type": ":integer", "value": "2" },
+          "unit": { "type": ":integer", "value": "1" }
+        }
+      },
+      "expectedMessageName": "Shoot",
+      "expectedSignatureId": "Shoot(target,unit)",
+      "expectedMessageSignatureId": "Shoot(target,unit)",
+      "expectedMatches": true,
+      "expectedArgumentCount": 2
+    },
+    {
+      "kind": "messageApi",
+      "name": "signature id includes the message name",
+      "signature": {
+        "name": "Run",
+        "parameters": ["target", "unit"]
+      },
+      "message": {
+        "name": "Run",
+        "args": {
+          "target": { "type": ":integer", "value": "2" },
+          "unit": { "type": ":integer", "value": "1" }
+        }
+      },
+      "expectedMessageName": "Run",
+      "expectedSignatureId": "Run(target,unit)",
+      "expectedMessageSignatureId": "Run(target,unit)",
+      "expectedMatches": true,
+      "expectedArgumentCount": 2
+    },
+    {
+      "kind": "compileMetadata",
+      "name": "compiled scripts expose message definitions",
+      "script": "module MessageDefinitions\non Start(playerId) {\n  publish Done(playerId: playerId)\n}",
+      "expectedMessageDefinitions": [
+        {
+          "name": "Start",
+          "count": 1,
+          "signatureIds": ["Start(playerId)"]
+        }
+      ]
+    }
+  ]
+}

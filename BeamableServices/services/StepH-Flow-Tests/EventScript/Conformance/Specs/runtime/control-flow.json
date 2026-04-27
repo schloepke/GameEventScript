@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "name": "RuntimeControlFlow",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "simple publish",
+      "script": "on Start {\n  publish Done\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "published messages are dispatched through the same host queue",
+      "script": "on Start(value) {\n  publish Next(value: value + 1)\n}\n\non Next(value) {\n  publish Done(value: value)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "2" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Next",
+              "args": {
+                "value": { "type": ":decimal", "value": "3" }
+              }
+            },
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":decimal", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "processing limit stops event loops",
+      "script": "on Start {\n  publish Loop\n}\n\non Loop {\n  publish Start\n}",
+      "maxProcessedEventsPerRun": 4,
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Loop", "args": {} },
+            { "name": "Start", "args": {} },
+            { "name": "Loop", "args": {} },
+            { "name": "Start", "args": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "if and for single statements run without blocks",
+      "script": "on Start(first, second, items) {\n  if first publish One\n  else if second publish Two\n  else publish Three\n\n  for item in items publish Item(value: item)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "first": { "type": ":boolean", "value": false },
+              "second": { "type": ":boolean", "value": true },
+              "items": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "1" },
+                  { "type": ":integer", "value": "2" }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            { "name": "Two", "args": {} },
+            {
+              "name": "Item",
+              "args": {
+                "value": { "type": ":integer", "value": "1" }
+              }
+            },
+            {
+              "name": "Item",
+              "args": {
+                "value": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "threshold check publishes matching branch",
+      "script": "on Start(values, threshold) {\n  let passed be values[:any value where value > threshold]\n  if passed {\n    publish Passed(count: :len values)\n  } else {\n    publish Failed\n  }\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "values": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "1" },
+                  { "type": ":integer", "value": "5" },
+                  { "type": ":integer", "value": "9" }
+                ]
+              },
+              "threshold": { "type": ":integer", "value": "7" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Passed",
+              "args": {
+                "count": { "type": ":integer", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "block scopes do not leak variables",
+      "script": "on Start(items, seed) {\n  if true {\n    let fromIf be 10\n  }\n\n  for item in items {\n    let fromLoop be item\n  }\n\n  :random with seed {\n    let fromRandom be :random from 1 to 6\n    publish Inner(valuePresent: fromRandom has value)\n  }\n\n  if fromIf has value publish IfLeak\n  if fromLoop has value publish LoopLeak\n  if fromRandom has value publish RandomLeak\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "items": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "1" },
+                  { "type": ":integer", "value": "2" }
+                ]
+              },
+              "seed": { "type": ":integer", "value": "7" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Inner",
+              "args": {
+                "valuePresent": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "nested block scopes may shadow outer variables",
+      "script": "module NestedShadowing\non Start {\n  let x be 10\n  if true {\n    let x be 20\n    publish Done(value: x)\n  }\n  publish Done(value: x)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":integer", "value": "20" }
+              }
+            },
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":integer", "value": "10" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "incompatible conditions and loops are lenient",
+      "script": "on Start {\n  if 'abc' {\n    publish IfTrue\n  } else {\n    publish IfFalse\n  }\n\n  for item in 123 {\n    publish Loop(item: item)\n  }\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "IfFalse", "args": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "sql style inequality changes branching",
+      "script": "on Start {\n  if 1 <> 2 {\n    publish Different\n  }\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Different", "args": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "text iteration yields single character items",
+      "script": "on Start(text) {\n  for item in text {\n    if item = 'a' {\n      publish Found(value: item)\n    }\n  }\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "text": { "type": ":text", "value": "ab" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Found",
+              "args": {
+                "value": { "type": ":text", "value": "a" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

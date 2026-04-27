@@ -33,14 +33,22 @@ internal static class EventScriptConformanceValueCodec
 
         if (TryGetProperty(element, "args", out var argsElement))
         {
-            RequireObject(argsElement, "message args");
-            foreach (var property in argsElement.EnumerateObject())
-            {
-                args[property.Name] = DecodeValue(property.Value);
-            }
+            args = DecodeArguments(argsElement);
         }
 
         return EventScriptMessage.Message(name, args);
+    }
+
+    public static Dictionary<string, EventScriptValue> DecodeArguments(JsonElement element)
+    {
+        RequireObject(element, "message args");
+        var args = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        foreach (var property in element.EnumerateObject())
+        {
+            args[property.Name] = DecodeValue(property.Value);
+        }
+
+        return args;
     }
 
     public static EventScriptValue DecodeValue(JsonElement element)

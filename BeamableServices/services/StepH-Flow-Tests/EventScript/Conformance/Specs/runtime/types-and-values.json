@@ -1,0 +1,525 @@
+{
+  "version": 1,
+  "name": "RuntimeTypesAndValues",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "typed message values roundtrip",
+      "script": "on Echo(name, tags, stats, maybe, flag, percent, category, points, span) {\n  publish Echoed(name: name, tags: tags, stats: stats, maybe: maybe, flag: flag, percent: percent, category: category, points: points, span: span)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Echo",
+            "args": {
+              "name": { "type": ":text", "value": "unit-1" },
+              "tags": {
+                "type": ":list",
+                "items": [
+                  { "type": ":tag", "value": "Ready" },
+                  { "type": ":text", "value": "frontline" }
+                ]
+              },
+              "stats": {
+                "type": ":Unit",
+                "entries": {
+                  "hp": { "type": ":integer", "value": "7" },
+                  "name": { "type": ":text", "value": "Knight" }
+                }
+              },
+              "maybe": { "type": ":optional", "hasValue": false },
+              "flag": { "type": ":boolean", "value": true },
+              "percent": { "type": ":percentage", "value": "0.25" },
+              "category": { "type": ":tag", "value": "Infantry" },
+              "points": {
+                "type": ":set",
+                "items": [
+                  { "type": ":integer", "value": "2" },
+                  { "type": ":integer", "value": "1" }
+                ]
+              },
+              "span": { "type": ":range", "from": "1", "to": "3", "step": "1" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Echoed",
+              "args": {
+                "name": { "type": ":text", "value": "unit-1" },
+                "tags": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":tag", "value": "Ready" },
+                    { "type": ":text", "value": "frontline" }
+                  ]
+                },
+                "stats": {
+                  "type": ":Unit",
+                  "entries": {
+                    "hp": { "type": ":integer", "value": "7" },
+                    "name": { "type": ":text", "value": "Knight" }
+                  }
+                },
+                "maybe": { "type": ":optional", "hasValue": false },
+                "flag": { "type": ":boolean", "value": true },
+                "percent": { "type": ":percentage", "value": "0.25" },
+                "category": { "type": ":tag", "value": "Infantry" },
+                "points": {
+                  "type": ":set",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" }
+                  ]
+                },
+                "span": { "type": ":range", "from": "1", "to": "3", "step": "1" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "computed custom type fields are materialized",
+      "script": "record :meter as {\n  current: :decimal clamped between 0 and maximum,\n  maximum: :decimal clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :meter be [current: 125, maximum: 100]\n  publish Done(meter: hp, isMeter: hp is :meter)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "meter": {
+                  "type": ":meter",
+                  "entries": {
+                    "current": { "type": ":decimal", "value": "100" },
+                    "maximum": { "type": ":decimal", "value": "100" },
+                    "percentage": { "type": ":percentage", "value": "1" }
+                  }
+                },
+                "isMeter": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "inline literals escaped quotes and numeric helpers",
+      "script": "on Start(opt, missingValue) {\n  let text be 'Hello ''World'', I''m here'\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  publish Done(text: text, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, boundedHigh: boundedHigh, boundedLow: boundedLow, highest: highest, lowest: lowest, optionalFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "opt": { "type": ":optional", "hasValue": false },
+              "missingValue": { "type": ":nothing" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "text": { "type": ":text", "value": "Hello 'World', I'm here" },
+                "listLen": { "type": ":integer", "value": "3" },
+                "name": { "type": ":text", "value": "Hello" },
+                "position": { "type": ":integer", "value": "1" },
+                "emptyLen": { "type": ":integer", "value": "0" },
+                "distance": { "type": ":decimal", "value": "12.5" },
+                "boundedHigh": { "type": ":decimal", "value": "99" },
+                "boundedLow": { "type": ":decimal", "value": "0" },
+                "highest": { "type": ":integer", "value": "9" },
+                "lowest": { "type": ":integer", "value": "2" },
+                "optionalFallback": { "type": ":integer", "value": "10" },
+                "nothingFallback": { "type": ":integer", "value": "20" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "lookup and empty checks are runtime-visible",
+      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :decimal be 'abc'\n  publish Done(second: items[2], missing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "second": { "type": ":integer", "value": "20" },
+                "missing": { "type": ":nothing" },
+                "hp": { "type": ":integer", "value": "7" },
+                "emptyList": { "type": ":boolean", "value": true },
+                "invalidHasValue": { "type": ":boolean", "value": false },
+                "invalidIsEmpty": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "containment boundary sort and distinct semantics",
+      "script": "on Start {\n  let values be [3, 1, 2, 2]\n  publish Done(textContains: 'club' in 'battle club', startsList: [1, 2, 3] starts with [1, 2], endsList: [1, 2, 3] ends with [1, 2], hasAll: [1, 2, 3][:contains all [1, 3]], hasAny: [1, 2, 3][:contains any [0, 3]], sorted: values[:sort ascending], distinct: values[:distinct])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "textContains": { "type": ":boolean", "value": true },
+                "startsList": { "type": ":boolean", "value": true },
+                "endsList": { "type": ":boolean", "value": false },
+                "hasAll": { "type": ":boolean", "value": true },
+                "hasAny": { "type": ":boolean", "value": true },
+                "sorted": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
+                  ]
+                },
+                "distinct": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "decimal edge values stay observable",
+      "script": "on Start {\n  publish Done(divZero: 1 / 0, modZero: 1 % 0, overflow: 9999999999999999999999999999 * 9999999999999999999999999999)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "divZero": { "type": ":decimal", "value": "Infinity" },
+                "modZero": { "type": ":decimal", "value": "NaN" },
+                "overflow": { "type": ":decimal", "value": "Infinity" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "one based lookup and dictionary property access",
+      "script": "on Start(entry, keyName) {\n  let values be [10, 20, 30]\n  let tags be :set['alpha', 'beta']\n  let lookupProperty be :name\n  publish Done(first: values[1], third: values[3], zero: values[0], missingIndex: values[4], property: entry.name, textKey: entry['name'], tagKey: entry[:name], dynamicTag: entry[lookupProperty], dynamicText: entry[keyName], missingProperty: entry['missing'], firstTag: tags[1], missingTag: tags[3])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "entry": {
+                "type": ":dictionary",
+                "entries": {
+                  "name": { "type": ":text", "value": "Ada" }
+                }
+              },
+              "keyName": { "type": ":text", "value": "name" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "first": { "type": ":integer", "value": "10" },
+                "third": { "type": ":integer", "value": "30" },
+                "zero": { "type": ":nothing" },
+                "missingIndex": { "type": ":nothing" },
+                "property": { "type": ":text", "value": "Ada" },
+                "textKey": { "type": ":text", "value": "Ada" },
+                "tagKey": { "type": ":text", "value": "Ada" },
+                "dynamicTag": { "type": ":text", "value": "Ada" },
+                "dynamicText": { "type": ":text", "value": "Ada" },
+                "missingProperty": { "type": ":nothing" },
+                "firstTag": { "type": ":text", "value": "alpha" },
+                "missingTag": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "value checks defaults and optionals",
+      "script": "on Start(opt, emptyText, emptyList, emptyDict, zeroValue, falseValue, diceValue, nanValue, infinityValue) {\n  publish Done(hasOpt: has value opt, hasEmptyText: has value emptyText, hasEmptyList: has value emptyList, hasEmptyDict: has value emptyDict, hasZero: has value zeroValue, hasFalse: has value falseValue, hasNaN: has value nanValue, hasInfinity: has value infinityValue, isEmptyOpt: empty opt, isEmptyText: empty emptyText, isEmptyList: empty emptyList, isEmptyDict: empty emptyDict, isEmptyDice: empty diceValue, isEmptyNaN: empty nanValue, isEmptyInfinity: empty infinityValue, notEmptyList: not empty [1], notFalse: not falseValue, optValue: opt :default 10, listValue: (emptyList :default [1, 2])[1], textValue: emptyText :default 'fallback', dictValue: (emptyDict :default [name: 'default']).name, missingTextValue: emptyDict['name'] :default 'fallback')\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "opt": {
+                "type": ":optional",
+                "hasValue": true,
+                "value": { "type": ":integer", "value": "7" }
+              },
+              "emptyText": { "type": ":text", "value": "" },
+              "emptyList": { "type": ":list", "items": [] },
+              "emptyDict": { "type": ":dictionary", "entries": {} },
+              "zeroValue": { "type": ":integer", "value": "0" },
+              "falseValue": { "type": ":boolean", "value": false },
+              "diceValue": { "type": ":dice", "rolls": [] },
+              "nanValue": { "type": ":decimal", "value": "NaN" },
+              "infinityValue": { "type": ":decimal", "value": "Infinity" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "hasOpt": { "type": ":boolean", "value": true },
+                "hasEmptyText": { "type": ":boolean", "value": false },
+                "hasEmptyList": { "type": ":boolean", "value": false },
+                "hasEmptyDict": { "type": ":boolean", "value": false },
+                "hasZero": { "type": ":boolean", "value": true },
+                "hasFalse": { "type": ":boolean", "value": true },
+                "hasNaN": { "type": ":boolean", "value": false },
+                "hasInfinity": { "type": ":boolean", "value": false },
+                "isEmptyOpt": { "type": ":boolean", "value": false },
+                "isEmptyText": { "type": ":boolean", "value": true },
+                "isEmptyList": { "type": ":boolean", "value": true },
+                "isEmptyDict": { "type": ":boolean", "value": true },
+                "isEmptyDice": { "type": ":boolean", "value": true },
+                "isEmptyNaN": { "type": ":boolean", "value": false },
+                "isEmptyInfinity": { "type": ":boolean", "value": false },
+                "notEmptyList": { "type": ":boolean", "value": true },
+                "notFalse": { "type": ":boolean", "value": true },
+                "optValue": { "type": ":integer", "value": "7" },
+                "listValue": { "type": ":integer", "value": "1" },
+                "textValue": { "type": ":text", "value": "fallback" },
+                "dictValue": { "type": ":text", "value": "default" },
+                "missingTextValue": { "type": ":text", "value": "fallback" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "type conversions length checks and type tags",
+      "script": "on Start(optionalValue, a, b, c, d, e, f, g, h) {\n  let tagOk as :tag be :name\n  let numberOk as :decimal be '12.2'\n  let numberFail as :decimal be 'abc'\n  let integerOk as :integer be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let setOk be :set[1, 1, 2]\n  let diceOk as :dice be [6, 2, 4]\n  publish Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, setLen: :len setOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], optionalLen: :len optionalValue, decimalLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsDecimal: b is :decimal, cIsInteger: c is :integer, dIsText: d is :text, eIsList: e is :list, fIsDictionary: f is :dictionary, gIsOptional: g is :optional, hIsSet: h is :set)\n}",
+      "randomSequence": ["2", "6", "3", "5"],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "optionalValue": {
+                "type": ":optional",
+                "hasValue": true,
+                "value": { "type": ":text", "value": "x" }
+              },
+              "a": { "type": ":tag", "value": "name" },
+              "b": { "type": ":decimal", "value": "1.5" },
+              "c": { "type": ":integer", "value": "2" },
+              "d": { "type": ":text", "value": "x" },
+              "e": {
+                "type": ":list",
+                "items": [{ "type": ":integer", "value": "1" }]
+              },
+              "f": {
+                "type": ":dictionary",
+                "entries": {
+                  "v": { "type": ":integer", "value": "1" }
+                }
+              },
+              "g": { "type": ":optional", "hasValue": false },
+              "h": {
+                "type": ":set",
+                "items": [{ "type": ":integer", "value": "1" }]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "tagOk": { "type": ":tag", "value": "name" },
+                "numberOk": { "type": ":decimal", "value": "12.2" },
+                "numberFail": { "type": ":decimal", "value": "NaN" },
+                "integerOk": { "type": ":integer", "value": "12" },
+                "booleanOk": { "type": ":boolean", "value": true },
+                "listLen": { "type": ":integer", "value": "2" },
+                "setLen": { "type": ":integer", "value": "2" },
+                "diceFirst": { "type": ":integer", "value": "6" },
+                "diceLen": { "type": ":integer", "value": "3" },
+                "textLen": { "type": ":integer", "value": "3" },
+                "dictLen": { "type": ":integer", "value": "2" },
+                "optionalLen": { "type": ":integer", "value": "1" },
+                "decimalLen": { "type": ":nothing" },
+                "booleanLen": { "type": ":nothing" },
+                "aIsTag": { "type": ":boolean", "value": true },
+                "bIsDecimal": { "type": ":boolean", "value": true },
+                "cIsInteger": { "type": ":boolean", "value": true },
+                "dIsText": { "type": ":boolean", "value": true },
+                "eIsList": { "type": ":boolean", "value": true },
+                "fIsDictionary": { "type": ":boolean", "value": true },
+                "gIsOptional": { "type": ":boolean", "value": true },
+                "hIsSet": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "unary domain conditional and rounding forms",
+      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negDecimal be -12.34\n  let negPercent be -25%\n  let restored be -negDecimal\n  let score as :decimal be 12 when age is :boolean, or 15 when age is :decimal, otherwise 5\n  publish Done(negInt: negInt, negDecimal: negDecimal, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :floor 12.7, ceil: :ceil 12.1, roundEven12: :roundeven 12.5, roundEven13: :roundeven 13.5, roundDown: :rounddown 12.1, roundUp: :roundup 12.1, round: :round 12.5)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "hp": { "type": ":decimal", "value": "-1" },
+              "mana": { "type": ":integer", "value": "3" },
+              "hand": { "type": ":list", "items": [] },
+              "target": { "type": ":text", "value": "orc" },
+              "age": { "type": ":boolean", "value": true }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "negInt": { "type": ":decimal", "value": "-12" },
+                "negDecimal": { "type": ":decimal", "value": "-12.34" },
+                "negPercent": { "type": ":percentage", "value": "-0.25" },
+                "restored": { "type": ":decimal", "value": "12.34" },
+                "boolNegation": { "type": ":boolean", "value": true },
+                "hpCheck": { "type": ":boolean", "value": true },
+                "manaCheck": { "type": ":boolean", "value": true },
+                "handCheck": { "type": ":boolean", "value": true },
+                "targetCheck": { "type": ":boolean", "value": true },
+                "oldHasValue": { "type": ":boolean", "value": true },
+                "newHasValue": { "type": ":boolean", "value": true },
+                "oldEmpty": { "type": ":boolean", "value": true },
+                "newEmpty": { "type": ":boolean", "value": true },
+                "score": { "type": ":decimal", "value": "12" },
+                "floor": { "type": ":integer", "value": "12" },
+                "ceil": { "type": ":integer", "value": "13" },
+                "roundEven12": { "type": ":integer", "value": "12" },
+                "roundEven13": { "type": ":integer", "value": "14" },
+                "roundDown": { "type": ":integer", "value": "12" },
+                "roundUp": { "type": ":integer", "value": "13" },
+                "round": { "type": ":integer", "value": "12" }
+              }
+            }
+          ]
+        },
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "hp": { "type": ":decimal", "value": "-1" },
+              "mana": { "type": ":integer", "value": "3" },
+              "hand": { "type": ":list", "items": [] },
+              "target": { "type": ":text", "value": "orc" },
+              "age": { "type": ":text", "value": "x" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "negInt": { "type": ":decimal", "value": "-12" },
+                "negDecimal": { "type": ":decimal", "value": "-12.34" },
+                "negPercent": { "type": ":percentage", "value": "-0.25" },
+                "restored": { "type": ":decimal", "value": "12.34" },
+                "boolNegation": { "type": ":boolean", "value": true },
+                "hpCheck": { "type": ":boolean", "value": true },
+                "manaCheck": { "type": ":boolean", "value": true },
+                "handCheck": { "type": ":boolean", "value": true },
+                "targetCheck": { "type": ":boolean", "value": true },
+                "oldHasValue": { "type": ":boolean", "value": true },
+                "newHasValue": { "type": ":boolean", "value": true },
+                "oldEmpty": { "type": ":boolean", "value": true },
+                "newEmpty": { "type": ":boolean", "value": true },
+                "score": { "type": ":decimal", "value": "5" },
+                "floor": { "type": ":integer", "value": "12" },
+                "ceil": { "type": ":integer", "value": "13" },
+                "roundEven12": { "type": ":integer", "value": "12" },
+                "roundEven13": { "type": ":integer", "value": "14" },
+                "roundDown": { "type": ":integer", "value": "12" },
+                "roundUp": { "type": ":integer", "value": "13" },
+                "round": { "type": ":integer", "value": "12" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "xor supports word and symbol forms",
+      "script": "on Start {\n  publish Done(wordTrue: true xor false, wordFalse: true xor true, symbolTrue: true ^ false, symbolFalse: false ^ false)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "wordTrue": { "type": ":boolean", "value": true },
+                "wordFalse": { "type": ":boolean", "value": false },
+                "symbolTrue": { "type": ":boolean", "value": true },
+                "symbolFalse": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "missing invalid and overflowing values remain lenient",
+      "script": "on Start(item) {\n  let nanValue as :decimal be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be missing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  publish Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "item": { "type": ":nothing" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nanValue": { "type": ":decimal", "value": "NaN" },
+                "nanPropagated": { "type": ":decimal", "value": "NaN" },
+                "nothing": { "type": ":nothing" },
+                "nothingPropagated": { "type": ":nothing" },
+                "propertyFromNothing": { "type": ":nothing" },
+                "pos": { "type": ":decimal", "value": "Infinity" },
+                "neg": { "type": ":decimal", "value": "-Infinity" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

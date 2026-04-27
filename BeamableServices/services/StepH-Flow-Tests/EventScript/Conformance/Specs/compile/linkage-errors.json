@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "name": "CompileLinkageErrors",
+  "tests": [
+    {
+      "kind": "compileError",
+      "name": "missing rule call fails linkage",
+      "script": "on Start(unit) {\n  let x be missingRule(unit)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "MissingRuleOrSelect",
+        "symbol": "missingRule"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "missing select call fails linkage",
+      "script": "on Start(units) {\n  let x be missingSelect(units)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "MissingRuleOrSelect",
+        "symbol": "missingSelect"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "invalid rule predicate requires unary rule",
+      "script": "select wounded(unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "InvalidRulePredicate",
+        "symbol": "wounded",
+        "symbolKind": "Rule"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "wrong rule arity fails linkage",
+      "script": "rule wounded(unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "WrongRuleArity",
+        "symbol": "wounded",
+        "symbolKind": "Rule"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "wrong select arity fails linkage",
+      "script": "select woundedUnits(units) means units[:filter unit where unit.hp < unit.maxHp]\n\non Start(units) {\n  let x be woundedUnits()\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "WrongSelectArity",
+        "symbol": "woundedUnits",
+        "symbolKind": "Select"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "duplicate local variable fails linkage",
+      "script": "module DuplicateVariables\non Start {\n  let x be 10\n  let x be 20\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicateVariable",
+        "symbol": "x",
+        "symbolKind": "Variable",
+        "moduleName": "DuplicateVariables"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "handler parameter cannot be redeclared as local variable",
+      "script": "module DuplicateParameterVariable\non Start(value) {\n  let value be 10\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicateVariable",
+        "symbol": "value",
+        "symbolKind": "Variable",
+        "moduleName": "DuplicateParameterVariable"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "duplicate variable inside block fails linkage",
+      "script": "module DuplicateBlockVariables\non Start {\n  if true {\n    let x be 10\n    let x be 20\n  }\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicateVariable",
+        "symbol": "x",
+        "symbolKind": "Variable",
+        "moduleName": "DuplicateBlockVariables"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "duplicate rule parameters fail linkage",
+      "script": "module DuplicateRuleParameters\nrule wounded(unit, unit) means unit.hp < unit.maxHp",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicateDefinitionParameter",
+        "symbol": "wounded",
+        "symbolKind": "Rule",
+        "moduleName": "DuplicateRuleParameters"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "duplicate select parameters fail linkage",
+      "script": "module DuplicateSelectParameters\nselect wounded(units, units) means units[:filter unit where unit.hp < unit.maxHp]",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicateDefinitionParameter",
+        "symbol": "wounded",
+        "symbolKind": "Select",
+        "moduleName": "DuplicateSelectParameters"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "duplicate handler bind arguments fail linkage",
+      "script": "module DuplicateHandlerBindArgs\non Start(unit, target, myHandler) {\n  publish myHandler(unit: unit, unit: target)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicatePublishArgument",
+        "symbol": "handler bind",
+        "moduleName": "DuplicateHandlerBindArgs"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "duplicate handler literal parameters fail linkage",
+      "script": "module DuplicateHandlerLiteralParams\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, unit)\n  publish Done\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "DuplicateHandlerParameter",
+        "symbol": "Shoot",
+        "symbolKind": "Handler",
+        "moduleName": "DuplicateHandlerLiteralParams"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "rule and select definitions cannot share a name",
+      "scripts": [
+        {
+          "sourceName": "a.es",
+          "text": "module A\nrule wounded(unit) means unit.hp < unit.maxHp"
+        },
+        {
+          "sourceName": "b.es",
+          "text": "module B\nselect wounded(unit) means unit.hp < unit.maxHp"
+        }
+      ],
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "RuleSelectConflict",
+        "symbol": "wounded"
+      }
+    }
+  ]
+}

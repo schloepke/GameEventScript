@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "name": "RuntimeRulesSelects",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "rules and selects are reusable in expressions and collections",
+      "script": "rule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  publish Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList, first: woundedList[1].name, second: woundedList[2].name)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":dictionary",
+                "entries": {
+                  "name": { "type": ":text", "value": "Ada" },
+                  "hp": { "type": ":integer", "value": "2" },
+                  "maxHp": { "type": ":integer", "value": "5" }
+                }
+              },
+              "units": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Ada" },
+                      "hp": { "type": ":integer", "value": "2" },
+                      "maxHp": { "type": ":integer", "value": "5" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Bert" },
+                      "hp": { "type": ":integer", "value": "4" },
+                      "maxHp": { "type": ":integer", "value": "4" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Cara" },
+                      "hp": { "type": ":integer", "value": "1" },
+                      "maxHp": { "type": ":integer", "value": "3" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "byCall": { "type": ":boolean", "value": true },
+                "byPredicate": { "type": ":boolean", "value": true },
+                "woundedCount": { "type": ":integer", "value": "2" },
+                "first": { "type": ":text", "value": "Ada" },
+                "second": { "type": ":text", "value": "Cara" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "rules and selects are lenient when expected keys are missing",
+      "script": "rule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  publish Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":dictionary",
+                "entries": {
+                  "name": { "type": ":text", "value": "NoHp" }
+                }
+              },
+              "units": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "NoHp" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Healthy" },
+                      "hp": { "type": ":integer", "value": "5" },
+                      "maxHp": { "type": ":integer", "value": "5" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "byCall": { "type": ":boolean", "value": false },
+                "byPredicate": { "type": ":boolean", "value": false },
+                "woundedCount": { "type": ":integer", "value": "0" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "rules coerce to boolean while selects keep original value",
+      "script": "rule numeric(value) means value * 2\nselect numericSelect(value) means value * 2\n\non Start {\n  let byRuleTwo be numeric(2)\n  let byRuleZero be numeric(0)\n  let bySelect be numericSelect(2)\n  let byPredicate be 2 is numeric\n  publish Done(byRuleTwo: byRuleTwo, byRuleZero: byRuleZero, bySelect: bySelect, byPredicate: byPredicate)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "byRuleTwo": { "type": ":boolean", "value": true },
+                "byRuleZero": { "type": ":boolean", "value": false },
+                "bySelect": { "type": ":decimal", "value": "4" },
+                "byPredicate": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "multiple modules share rule select and type definitions",
+      "scripts": [
+        {
+          "sourceName": "shared.es",
+          "text": "module Shared\nrecord :meter as {\n  current: :decimal,\n  maximum: :decimal\n}\n\nrule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]"
+        },
+        {
+          "sourceName": "runtime.es",
+          "text": "module Runtime\non Start(unit, units) {\n  let hp as :meter be [current: unit.hp, maximum: unit.maxHp]\n  let anyWounded be wounded(unit)\n  let candidates be woundedUnits(units)\n  publish Done(anyWounded: anyWounded, candidateCount: :len candidates, maximum: hp.maximum)\n}"
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":dictionary",
+                "entries": {
+                  "hp": { "type": ":integer", "value": "2" },
+                  "maxHp": { "type": ":integer", "value": "5" }
+                }
+              },
+              "units": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "hp": { "type": ":integer", "value": "2" },
+                      "maxHp": { "type": ":integer", "value": "5" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "hp": { "type": ":integer", "value": "5" },
+                      "maxHp": { "type": ":integer", "value": "5" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "anyWounded": { "type": ":boolean", "value": true },
+                "candidateCount": { "type": ":integer", "value": "1" },
+                "maximum": { "type": ":decimal", "value": "5" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

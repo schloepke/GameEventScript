@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "name": "RuntimeHostDispatch",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "published messages route to external subscribers",
+      "script": "on Start(playerId) {\n  publish Notify(playerId: playerId, count: 3)\n}",
+      "externalSubscribers": [
+        {
+          "message": "Notify",
+          "parameters": ["playerId", "count"],
+          "publish": [
+            { "name": "ExternalSeen", "forwardArguments": true }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "playerId": { "type": ":text", "value": "p1" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": {
+                "playerId": { "type": ":text", "value": "p1" },
+                "count": { "type": ":integer", "value": "3" }
+              }
+            },
+            {
+              "name": "ExternalSeen",
+              "args": {
+                "playerId": { "type": ":text", "value": "p1" },
+                "count": { "type": ":integer", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "external subscribers run after script handlers by default priority",
+      "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Notify(value) {\n  publish SeenByScript(value: value + 1)\n}",
+      "externalSubscribers": [
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "publish": [
+            {
+              "name": "SeenByExternal",
+              "args": {
+                "marker": { "type": ":text", "value": "external" }
+              }
+            }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "4" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": {
+                "value": { "type": ":decimal", "value": "4" }
+              }
+            },
+            {
+              "name": "SeenByScript",
+              "args": {
+                "value": { "type": ":decimal", "value": "5" }
+              }
+            },
+            {
+              "name": "SeenByExternal",
+              "args": {
+                "marker": { "type": ":text", "value": "external" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "external subscribers keep registration order",
+      "script": "on Start(value) {\n  publish Notify(value: value)\n}",
+      "externalSubscribers": [
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "publish": [
+            {
+              "name": "ExternalFirst",
+              "args": {
+                "order": { "type": ":integer", "value": "1" }
+              }
+            }
+          ]
+        },
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "publish": [
+            {
+              "name": "ExternalSecond",
+              "args": {
+                "order": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "4" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": {
+                "value": { "type": ":decimal", "value": "4" }
+              }
+            },
+            {
+              "name": "ExternalFirst",
+              "args": {
+                "order": { "type": ":integer", "value": "1" }
+              }
+            },
+            {
+              "name": "ExternalSecond",
+              "args": {
+                "order": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "failing external subscribers are ignored and later subscribers continue",
+      "script": "on Start(value) {\n  publish Notify(value: value)\n}",
+      "externalSubscribers": [
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "throw": true
+        },
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "publish": [
+            { "name": "ExternalOk", "forwardArguments": true }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "4" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": {
+                "value": { "type": ":decimal", "value": "4" }
+              }
+            },
+            {
+              "name": "ExternalOk",
+              "args": {
+                "value": { "type": ":decimal", "value": "4" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "external subscribers publish follow up messages through same run",
+      "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Done(value) {\n  publish Final(value: value)\n}",
+      "externalSubscribers": [
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "publish": [
+            { "name": "Done", "forwardArguments": true }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "2" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": {
+                "value": { "type": ":decimal", "value": "2" }
+              }
+            },
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":decimal", "value": "2" }
+              }
+            },
+            {
+              "name": "Final",
+              "args": {
+                "value": { "type": ":decimal", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

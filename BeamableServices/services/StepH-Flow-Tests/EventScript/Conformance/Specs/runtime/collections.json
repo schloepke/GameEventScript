@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "name": "RuntimeCollections",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "collections project filter aggregate and choose edges",
+      "script": "on Compute(items) {\n  let names be items[:select item -> item.name]\n  let positive be items[:filter item where item.points > 0]\n  let total be items[:sum item -> item.points]\n  let positiveCount be items[:count item where item.points > 0]\n  let averagePoints be items[:average item -> item.points]\n  let highestItem be items[:highest item -> item.points]\n  let lowestItem be items[:lowest item -> item.points]\n  publish Done(nameCount: :len names, positiveCount: :len positive, total: total, counted: positiveCount, average: averagePoints, highest: highestItem.name, lowest: lowestItem.name)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Compute",
+            "args": {
+              "items": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "a" },
+                      "points": { "type": ":integer", "value": "3" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "b" },
+                      "points": { "type": ":integer", "value": "-1" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "c" },
+                      "points": { "type": ":integer", "value": "4" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nameCount": { "type": ":integer", "value": "3" },
+                "positiveCount": { "type": ":integer", "value": "2" },
+                "total": { "type": ":decimal", "value": "6" },
+                "counted": { "type": ":integer", "value": "2" },
+                "average": { "type": ":decimal", "value": "2" },
+                "highest": { "type": ":text", "value": "c" },
+                "lowest": { "type": ":text", "value": "b" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "dictionary selectors use last wins semantics",
+      "script": "on Start(items) {\n  let byId be items[:dictionary item by item.id]\n  let namesById be items[:dictionary item by item.id -> item.name]\n  publish Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "items": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "id": { "type": ":tag", "value": "rook" },
+                      "name": { "type": ":text", "value": "Rook A" },
+                      "hp": { "type": ":integer", "value": "4" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "id": { "type": ":tag", "value": "mage" },
+                      "name": { "type": ":text", "value": "Mage" },
+                      "hp": { "type": ":integer", "value": "7" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "id": { "type": ":tag", "value": "rook" },
+                      "name": { "type": ":text", "value": "Rook B" },
+                      "hp": { "type": ":integer", "value": "9" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "rookHp": { "type": ":integer", "value": "9" },
+                "mageHp": { "type": ":integer", "value": "7" },
+                "rookName": { "type": ":text", "value": "Rook B" },
+                "mageName": { "type": ":text", "value": "Mage" },
+                "count": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "collections sort order distinct and group",
+      "script": "on Start(values, units) {\n  let ascendingValues be values[:sort ascending]\n  let descendingValues be values[:sort descending]\n  let byPriority be units[:order by item -> item.priority descending]\n  let firstValue be values[:first]\n  let lastValue be values[:last]\n  let distinctValues be values[:distinct]\n  let distinctFactions be units[:distinct by unit -> unit.faction]\n  let groups be units[:group by unit -> unit.faction]\n  publish Done(asc1: ascendingValues[1], asc2: ascendingValues[2], asc3: ascendingValues[3], desc1: descendingValues[1], desc2: descendingValues[2], desc3: descendingValues[3], priority1: byPriority[1].name, priority2: byPriority[2].name, priority3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: :len distinctValues, distinct1: distinctFactions[1].name, distinct2: distinctFactions[2].name, melee1: groups[:melee][1].name, melee2: groups[:melee][2].name, ranged1: groups[:ranged][1].name)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "values": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "3" },
+                  { "type": ":integer", "value": "3" },
+                  { "type": ":integer", "value": "1" },
+                  { "type": ":integer", "value": "2" },
+                  { "type": ":integer", "value": "2" }
+                ]
+              },
+              "units": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Knight" },
+                      "faction": { "type": ":text", "value": "melee" },
+                      "priority": { "type": ":integer", "value": "2" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Rook" },
+                      "faction": { "type": ":text", "value": "melee" },
+                      "priority": { "type": ":integer", "value": "3" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "name": { "type": ":text", "value": "Archer" },
+                      "faction": { "type": ":text", "value": "ranged" },
+                      "priority": { "type": ":integer", "value": "1" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "asc1": { "type": ":integer", "value": "1" },
+                "asc2": { "type": ":integer", "value": "2" },
+                "asc3": { "type": ":integer", "value": "2" },
+                "desc1": { "type": ":integer", "value": "3" },
+                "desc2": { "type": ":integer", "value": "3" },
+                "desc3": { "type": ":integer", "value": "2" },
+                "priority1": { "type": ":text", "value": "Rook" },
+                "priority2": { "type": ":text", "value": "Knight" },
+                "priority3": { "type": ":text", "value": "Archer" },
+                "first": { "type": ":integer", "value": "3" },
+                "last": { "type": ":integer", "value": "2" },
+                "distinctCount": { "type": ":integer", "value": "3" },
+                "distinct1": { "type": ":text", "value": "Knight" },
+                "distinct2": { "type": ":text", "value": "Archer" },
+                "melee1": { "type": ":text", "value": "Knight" },
+                "melee2": { "type": ":text", "value": "Rook" },
+                "ranged1": { "type": ":text", "value": "Archer" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "collections combine intersect except and zip",
+      "script": "on Start {\n  let appended be [1, 2, 3] + 4\n  let prepended be 0 + [1, 2, 3]\n  let mergedList be [1, 2, 3] + [4, 5]\n  let commonList be [1, 2, 2, 3] :intersect [2, 2, 4]\n  let leftOnly be [1, 2, 2, 3] :except [2]\n  let mergedSet be :set[1, 2] :combine :set[2, 3]\n  let commonSet be :set[1, 2, 3] :intersect :set[2, 4]\n  let dictA be [name: 'Mark', age: 32]\n  let dictB be [city: 'Somewhere', age: 33]\n  let mergedDict be dictA :combine dictB\n  let mergedDictByMerge be dictA :merge dictB\n  let mergedDictByPlus be dictA + dictB\n  let zipped be ['a', 'b', 'c'] :zip [1, 2]\n  publish Done(appended: appended[4], prepended: prepended[1], mergedList: mergedList[5], common1: commonList[1], common2: commonList[2], leftOnlyLen: :len leftOnly, leftOnlySecond: leftOnly[2], mergedHas3: 3 in mergedSet, commonHas2: 2 in commonSet, mergedAge: mergedDict.age, mergedCity: mergedDict.city, mergeAge: mergedDictByMerge.age, plusAge: mergedDictByPlus.age, zip1Left: zipped[1].left, zip1Right: zipped[1].right, zip2Left: zipped[2].left, zip2Right: zipped[2].right, zipLen: :len zipped)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "appended": { "type": ":integer", "value": "4" },
+                "prepended": { "type": ":integer", "value": "0" },
+                "mergedList": { "type": ":integer", "value": "5" },
+                "common1": { "type": ":integer", "value": "2" },
+                "common2": { "type": ":integer", "value": "2" },
+                "leftOnlyLen": { "type": ":integer", "value": "3" },
+                "leftOnlySecond": { "type": ":integer", "value": "2" },
+                "mergedHas3": { "type": ":boolean", "value": true },
+                "commonHas2": { "type": ":boolean", "value": true },
+                "mergedAge": { "type": ":integer", "value": "33" },
+                "mergedCity": { "type": ":text", "value": "Somewhere" },
+                "mergeAge": { "type": ":integer", "value": "33" },
+                "plusAge": { "type": ":integer", "value": "33" },
+                "zip1Left": { "type": ":text", "value": "a" },
+                "zip1Right": { "type": ":integer", "value": "1" },
+                "zip2Left": { "type": ":text", "value": "b" },
+                "zip2Right": { "type": ":integer", "value": "2" },
+                "zipLen": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "collections reverse contains and object matching",
+      "script": "on Start(units) {\n  let reversed be [1, 2, 3][:reverse]\n  let reversedSet be :set[1, 2][:reverse]\n  let hasTwo be [1, 2, 3][:contains 2]\n  let hasAll be [1, 2, 3][:contains all [1, 3]]\n  let hasAny be [1, 2, 3][:contains any [0, 3]]\n  let textContains be 'battle'[:contains 'tt']\n  let textContainsAll be 'battle'[:contains all ['ba', 'tt']]\n  let dictContains be [name: 'Ada', team: 'red'][:contains 'name']\n  let hasRook be units[:has [faction: 'rook', alive: true]]\n  let hasNestedOwner be units[:has [owner: [team: 'red']]]\n  publish Done(reverse1: reversed[1], reverse2: reversed[2], reverse3: reversed[3], reversedSet: reversedSet, hasTwo: hasTwo, hasAll: hasAll, hasAny: hasAny, textContains: textContains, textContainsAll: textContainsAll, dictContains: dictContains, hasRook: hasRook, hasNestedOwner: hasNestedOwner)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "units": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "faction": { "type": ":text", "value": "rook" },
+                      "alive": { "type": ":boolean", "value": true },
+                      "owner": {
+                        "type": ":dictionary",
+                        "entries": {
+                          "team": { "type": ":text", "value": "red" }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "faction": { "type": ":text", "value": "human" },
+                      "alive": { "type": ":boolean", "value": true },
+                      "owner": {
+                        "type": ":dictionary",
+                        "entries": {
+                          "team": { "type": ":text", "value": "blue" }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "reverse1": { "type": ":integer", "value": "3" },
+                "reverse2": { "type": ":integer", "value": "2" },
+                "reverse3": { "type": ":integer", "value": "1" },
+                "reversedSet": { "type": ":nothing" },
+                "hasTwo": { "type": ":boolean", "value": true },
+                "hasAll": { "type": ":boolean", "value": true },
+                "hasAny": { "type": ":boolean", "value": true },
+                "textContains": { "type": ":boolean", "value": true },
+                "textContainsAll": { "type": ":boolean", "value": true },
+                "dictContains": { "type": ":boolean", "value": true },
+                "hasRook": { "type": ":boolean", "value": true },
+                "hasNestedOwner": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "keys values and entries iterate through public output",
+      "script": "on Start(player, values, maybeTarget) {\n  let dictKeys be :keys player\n  let valueIterator be :values values\n  let maybeValues be :values maybeTarget\n  let entries be :entries player\n  for key in dictKeys {\n    publish SeenKey(key: key, value: player[key])\n  }\n  for item in valueIterator {\n    publish SeenValue(value: item)\n  }\n  for target in maybeValues {\n    publish SeenMaybe(value: target)\n  }\n  for entry in entries {\n    publish SeenEntry(key: entry.key, value: entry[:value])\n  }\n  publish Done(keyCount: :len dictKeys, valueCount: :len valueIterator, maybeCount: :len maybeValues, entryCount: :len entries)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "player": {
+                "type": ":dictionary",
+                "entries": {
+                  "age": { "type": ":integer", "value": "25" },
+                  "name": { "type": ":text", "value": "Mark" }
+                }
+              },
+              "values": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "10" },
+                  { "type": ":integer", "value": "20" },
+                  { "type": ":integer", "value": "30" }
+                ]
+              },
+              "maybeTarget": {
+                "type": ":optional",
+                "hasValue": true,
+                "value": { "type": ":text", "value": "boss" }
+              }
+            }
+          },
+          "expectedPublished": [
+            { "name": "SeenKey", "args": { "key": { "type": ":tag", "value": "age" }, "value": { "type": ":integer", "value": "25" } } },
+            { "name": "SeenKey", "args": { "key": { "type": ":tag", "value": "name" }, "value": { "type": ":text", "value": "Mark" } } },
+            { "name": "SeenValue", "args": { "value": { "type": ":integer", "value": "10" } } },
+            { "name": "SeenValue", "args": { "value": { "type": ":integer", "value": "20" } } },
+            { "name": "SeenValue", "args": { "value": { "type": ":integer", "value": "30" } } },
+            { "name": "SeenMaybe", "args": { "value": { "type": ":text", "value": "boss" } } },
+            { "name": "SeenEntry", "args": { "key": { "type": ":tag", "value": "age" }, "value": { "type": ":integer", "value": "25" } } },
+            { "name": "SeenEntry", "args": { "key": { "type": ":tag", "value": "name" }, "value": { "type": ":text", "value": "Mark" } } },
+            {
+              "name": "Done",
+              "args": {
+                "keyCount": { "type": ":integer", "value": "2" },
+                "valueCount": { "type": ":integer", "value": "3" },
+                "maybeCount": { "type": ":integer", "value": "1" },
+                "entryCount": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

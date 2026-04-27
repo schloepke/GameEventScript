@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "name": "RuntimeDiagnostics",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "compile diagnostics record handler bindings and published events",
+      "compileOptions": { "enableDiagnostics": true },
+      "script": "on Start(value) {\n  let score be value + 2\n  publish Done(result: score)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "5" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "result": { "type": ":decimal", "value": "7" }
+              }
+            }
+          ],
+          "expectedDiagnostics": [
+            { "kind": "ParameterBound", "name": "value" },
+            { "kind": "HandlerInvoked", "name": "Start" },
+            { "kind": "EventPublished", "name": "Done" }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "compile diagnostics record rule and select calls",
+      "compileOptions": { "enableDiagnostics": true },
+      "script": "rule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  publish Done(byRule: byRule, count: :len bySelect)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":dictionary",
+                "entries": {
+                  "hp": { "type": ":integer", "value": "2" },
+                  "maxHp": { "type": ":integer", "value": "5" }
+                }
+              },
+              "units": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "hp": { "type": ":integer", "value": "2" },
+                      "maxHp": { "type": ":integer", "value": "5" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "byRule": { "type": ":boolean", "value": true },
+                "count": { "type": ":integer", "value": "1" }
+              }
+            }
+          ],
+          "expectedDiagnostics": [
+            { "kind": "RuleCalled", "name": "wounded" },
+            { "kind": "SelectCalled", "name": "woundedUnits" },
+            { "kind": "EventPublished", "name": "Done" }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "compile diagnostics can be disabled while host publish diagnostics remain visible",
+      "compileOptions": { "enableDiagnostics": false },
+      "script": "on Start(value) {\n  publish Done(value: value)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":integer", "value": "3" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": { "type": ":integer", "value": "3" }
+              }
+            }
+          ],
+          "expectedDiagnostics": [
+            { "kind": "EventPublished", "name": "Done" }
+          ],
+          "unexpectedDiagnostics": [
+            { "kind": "HandlerInvoked", "name": "Start" },
+            { "kind": "ParameterBound", "name": "value" }
+          ]
+        }
+      ]
+    }
+  ]
+}

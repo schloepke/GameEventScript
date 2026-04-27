@@ -8,7 +8,6 @@ using System.Text.Json;
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Runtime;
-using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH_Flow_Tests.EventScript.Conformance;
@@ -27,7 +26,7 @@ public sealed class EventScriptJsonConformanceTests
 
     public static IEnumerable<object[]> ConformanceCases()
     {
-        foreach (var file in Directory.EnumerateFiles(SpecDirectory, "*.json").OrderBy(path => path, StringComparer.Ordinal))
+        foreach (var file in Directory.EnumerateFiles(SpecDirectory, "*.json", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))
         {
             var suite = LoadSuite(file);
             foreach (var test in suite.Tests)
@@ -50,9 +49,6 @@ public sealed class EventScriptJsonConformanceTests
                 break;
             case "compileError":
                 RunCompileErrorTest(testCase);
-                break;
-            case "valueSemantics":
-                RunValueSemanticsTest(testCase);
                 break;
             default:
                 Assert.Fail($"{testCase}: unsupported test kind '{testCase.Test.Kind}'.");
@@ -78,6 +74,7 @@ public sealed class EventScriptJsonConformanceTests
         }
 
         var host = builder.Build().Load(compiled);
+        RegisterExternalSubscribers(testCase, host);
         if (test.Steps is null || test.Steps.Count == 0)
         {
             Assert.Fail($"{testCase}: scriptApi tests require at least one step.");
@@ -92,7 +89,7 @@ public sealed class EventScriptJsonConformanceTests
             host.Publish(EventScriptConformanceValueCodec.DecodeMessage(RequireDefined(step.Input, "step input", testCase)));
 
             AssertPublishedMessages(testCase, stepIndex, step.ExpectedPublished, published);
-            AssertDiagnostics(testCase, stepIndex, step.ExpectedDiagnostics, collector.Events.Skip(diagnosticsStart).ToArray());
+            AssertDiagnostics(testCase, stepIndex, step, collector.Events.Skip(diagnosticsStart).ToArray());
         }
     }
 
@@ -127,58 +124,40 @@ public sealed class EventScriptJsonConformanceTests
         Assert.Fail($"{testCase}: expected compilation to fail.");
     }
 
-    private static void RunValueSemanticsTest(EventScriptConformanceCase testCase)
+    private static void RegisterExternalSubscribers(EventScriptConformanceCase testCase, EventScriptHost host)
     {
-        var test = testCase.Test;
-        ValidateRequired(test.Operation, "valueSemantics operation", testCase.SuiteFile, testCase.SuiteName, test.Name);
-        var result = ExecuteValueSemanticsOperation(testCase);
-        AssertExpectedResult(testCase, test.Expected, result);
-    }
-
-    private static object ExecuteValueSemanticsOperation(EventScriptConformanceCase testCase)
-    {
-        var test = testCase.Test;
-        var operation = test.Operation!.Trim().ToLowerInvariant();
-
-        return operation switch
+        if (testCase.Test.ExternalSubscribers is null)
         {
-            "lookup" => EventScriptValueSemantics.Lookup(DecodeRequiredValue(test.Target, "target", testCase), DecodeRequiredValue(test.Selector, "selector", testCase)),
-            "hasvalue" => EventScriptValueSemantics.HasValue(DecodePrimaryValue(testCase)),
-            "isempty" => EventScriptValueSemantics.IsEmpty(DecodePrimaryValue(testCase)),
-            "contains" => EventScriptValueSemantics.Contains(DecodeRequiredValue(test.Target, "target", testCase), DecodeRequiredValue(test.Value, "value", testCase)),
-            "containsvalue" => EventScriptValueSemantics.ContainsValue(DecodeRequiredValue(test.Target, "target", testCase), DecodeRequiredValue(test.Value, "value", testCase)),
-            "startswith" => EventScriptValueSemantics.StartsWith(DecodeRequiredValue(test.Target, "target", testCase), DecodeRequiredValue(test.Value, "value", testCase)),
-            "endswith" => EventScriptValueSemantics.EndsWith(DecodeRequiredValue(test.Target, "target", testCase), DecodeRequiredValue(test.Value, "value", testCase)),
-            "containsall" => ContainsAll(testCase),
-            "containsany" => ContainsAny(testCase),
-            "sort" => Sort(testCase),
-            "distinct" => Distinct(testCase),
-            _ => throw new InvalidOperationException($"{testCase}: unsupported valueSemantics operation '{test.Operation}'.")
-        };
-    }
+            return;
+        }
 
-    private static bool ContainsAll(EventScriptConformanceCase testCase)
-    {
-        var target = DecodeRequiredValue(testCase.Test.Target, "target", testCase);
-        return EventScriptCollectionSemantics.ContainsAll(target, target.AsList(), DecodeRequiredValue(testCase.Test.Value, "value", testCase));
-    }
+        foreach (var subscriber in testCase.Test.ExternalSubscribers)
+        {
+            ValidateRequired(subscriber.Message, "external subscriber message", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+            host.Subscribe(
+                subscriber.Message!,
+                subscriber.Parameters ?? [],
+                (message, context) =>
+                {
+                    if (subscriber.Throw)
+                    {
+                        throw new InvalidOperationException("Configured conformance subscriber failure.");
+                    }
 
-    private static bool ContainsAny(EventScriptConformanceCase testCase)
-    {
-        var target = DecodeRequiredValue(testCase.Test.Target, "target", testCase);
-        return EventScriptCollectionSemantics.ContainsAny(target, target.AsList(), DecodeRequiredValue(testCase.Test.Value, "value", testCase));
-    }
+                    foreach (var publish in subscriber.Publish ?? [])
+                    {
+                        ValidateRequired(publish.Name, "external subscriber publish name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+                        var args = publish.ForwardArguments
+                            ? message.Arguments.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
+                            : publish.Args.ValueKind == JsonValueKind.Undefined
+                                ? new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+                                : EventScriptConformanceValueCodec.DecodeArguments(publish.Args);
 
-    private static EventScriptValue Sort(EventScriptConformanceCase testCase)
-    {
-        var target = DecodeRequiredValue(testCase.Test.Target, "target", testCase);
-        return EventScriptCollectionSemantics.Sort(target, target.AsEnumerable(), testCase.Test.Direction ?? "ascending");
-    }
-
-    private static EventScriptValue Distinct(EventScriptConformanceCase testCase)
-    {
-        var target = DecodeRequiredValue(testCase.Test.Target, "target", testCase);
-        return EventScriptCollectionSemantics.Distinct(target, target.AsEnumerable());
+                        context.Publish(EventScriptMessage.Message(publish.Name!, args));
+                    }
+                },
+                subscriber.Priority);
+        }
     }
 
     private static void AssertPublishedMessages(
@@ -204,11 +183,20 @@ public sealed class EventScriptJsonConformanceTests
     private static void AssertDiagnostics(
         EventScriptConformanceCase testCase,
         int stepIndex,
-        IReadOnlyList<EventScriptDiagnosticExpectationSpec>? expectedDiagnostics,
+        EventScriptApiStepSpec step,
         IReadOnlyList<EventScriptDiagnosticEvent> actual)
     {
+        var expectedDiagnostics = step.ExpectedDiagnostics;
         if (expectedDiagnostics is null || expectedDiagnostics.Count == 0)
         {
+            AssertUnexpectedDiagnostics(testCase, stepIndex, step.UnexpectedDiagnostics, actual);
+            return;
+        }
+
+        if (string.Equals(step.ExpectedDiagnosticsMode, "exact", StringComparison.OrdinalIgnoreCase))
+        {
+            AssertExactDiagnostics(testCase, stepIndex, expectedDiagnostics, actual);
+            AssertUnexpectedDiagnostics(testCase, stepIndex, step.UnexpectedDiagnostics, actual);
             return;
         }
 
@@ -234,6 +222,55 @@ public sealed class EventScriptJsonConformanceTests
 
             nextStart = foundIndex + 1;
         }
+
+        AssertUnexpectedDiagnostics(testCase, stepIndex, step.UnexpectedDiagnostics, actual);
+    }
+
+    private static void AssertExactDiagnostics(
+        EventScriptConformanceCase testCase,
+        int stepIndex,
+        IReadOnlyList<EventScriptDiagnosticExpectationSpec> expectedDiagnostics,
+        IReadOnlyList<EventScriptDiagnosticEvent> actual)
+    {
+        if (expectedDiagnostics.Count != actual.Count)
+        {
+            Assert.Fail(
+                $"{testCase} step {stepIndex + 1}: expected {expectedDiagnostics.Count} diagnostics but got {actual.Count}.{Environment.NewLine}" +
+                $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
+        }
+
+        for (var i = 0; i < expectedDiagnostics.Count; i++)
+        {
+            if (!DiagnosticMatches(expectedDiagnostics[i], actual[i]))
+            {
+                Assert.Fail(
+                    $"{testCase} step {stepIndex + 1}: diagnostic #{i + 1} did not match {DescribeDiagnosticExpectation(expectedDiagnostics[i])}.{Environment.NewLine}" +
+                    $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
+            }
+        }
+    }
+
+    private static void AssertUnexpectedDiagnostics(
+        EventScriptConformanceCase testCase,
+        int stepIndex,
+        IReadOnlyList<EventScriptDiagnosticExpectationSpec>? unexpectedDiagnostics,
+        IReadOnlyList<EventScriptDiagnosticEvent> actual)
+    {
+        if (unexpectedDiagnostics is null || unexpectedDiagnostics.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var unexpected in unexpectedDiagnostics)
+        {
+            var found = actual.FirstOrDefault(diagnostic => DiagnosticMatches(unexpected, diagnostic));
+            if (found is not null)
+            {
+                Assert.Fail(
+                    $"{testCase} step {stepIndex + 1}: unexpected diagnostic was found: {DescribeDiagnosticExpectation(unexpected)}.{Environment.NewLine}" +
+                    $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
+            }
+        }
     }
 
     private static bool DiagnosticMatches(EventScriptDiagnosticExpectationSpec expected, EventScriptDiagnosticEvent actual)
@@ -253,52 +290,6 @@ public sealed class EventScriptJsonConformanceTests
         var detailContains = expected.DetailContains ?? expected.MessageContains;
         return string.IsNullOrEmpty(detailContains) ||
                (actual.Detail?.Contains(detailContains, StringComparison.Ordinal) ?? false);
-    }
-
-    private static void AssertExpectedResult(EventScriptConformanceCase testCase, JsonElement expected, object actual)
-    {
-        RequireDefined(expected, "expected", testCase);
-
-        switch (actual)
-        {
-            case bool actualBoolean:
-                AssertExpectedBoolean(testCase, expected, actualBoolean);
-                break;
-            case EventScriptValue actualValue:
-                AssertExpectedValue(testCase, expected, actualValue);
-                break;
-            default:
-                Assert.Fail($"{testCase}: unsupported valueSemantics result type '{actual.GetType().Name}'.");
-                break;
-        }
-    }
-
-    private static void AssertExpectedBoolean(EventScriptConformanceCase testCase, JsonElement expected, bool actual)
-    {
-        if (expected.ValueKind is JsonValueKind.True or JsonValueKind.False)
-        {
-            Assert.AreEqual(expected.GetBoolean(), actual, $"{testCase}: boolean result differs.");
-            return;
-        }
-
-        AssertExpectedValue(testCase, expected, EventScriptValue.Boolean(actual));
-    }
-
-    private static void AssertExpectedValue(EventScriptConformanceCase testCase, JsonElement expected, EventScriptValue actual)
-    {
-        var expectedValue = expected.ValueKind is JsonValueKind.True or JsonValueKind.False
-            ? EventScriptValue.Boolean(expected.GetBoolean())
-            : EventScriptConformanceValueCodec.DecodeValue(expected);
-
-        if (expectedValue.Equals(actual))
-        {
-            return;
-        }
-
-        Assert.Fail(
-            $"{testCase}: value result differs.{Environment.NewLine}" +
-            $"Expected:{Environment.NewLine}{EventScriptConformanceValueCodec.ToPrettyJson(expectedValue)}{Environment.NewLine}" +
-            $"Actual:{Environment.NewLine}{EventScriptConformanceValueCodec.ToPrettyJson(actual)}");
     }
 
     private static void AssertSyntaxError(
@@ -358,11 +349,10 @@ public sealed class EventScriptJsonConformanceTests
 
     private static CompiledEventScript CompileScripts(EventScriptConformanceTest test)
     {
-        var modules = GetSources(test)
-            .Select(source => EventScriptManager.ParseModule(source.Text!, source.SourceName))
-            .ToArray();
-
-        return new CompiledEventScript(EventScriptManager.LinkModules(modules));
+        var sources = GetSources(test).Select(source => source.Text!).ToArray();
+        return EventScriptManager.Compile(
+            new EventScriptInterpreterCompilationOptions { EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false },
+            sources);
     }
 
     private static IEnumerable<EventScriptSourceSpec> GetSources(EventScriptConformanceTest test)
@@ -428,14 +418,6 @@ public sealed class EventScriptJsonConformanceTests
             MaxDiceSides = spec.MaxDiceSides ?? defaults.MaxDiceSides
         };
     }
-
-    private static EventScriptValue DecodePrimaryValue(EventScriptConformanceCase testCase)
-        => testCase.Test.Value.ValueKind == JsonValueKind.Undefined
-            ? DecodeRequiredValue(testCase.Test.Target, "target", testCase)
-            : EventScriptConformanceValueCodec.DecodeValue(testCase.Test.Value);
-
-    private static EventScriptValue DecodeRequiredValue(JsonElement element, string name, EventScriptConformanceCase testCase)
-        => EventScriptConformanceValueCodec.DecodeValue(RequireDefined(element, name, testCase));
 
     private static JsonElement RequireDefined(JsonElement element, string name, EventScriptConformanceCase testCase)
     {

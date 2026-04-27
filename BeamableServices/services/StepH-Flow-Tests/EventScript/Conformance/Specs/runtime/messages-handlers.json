@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "name": "RuntimeMessagesHandlers",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "handler binding creates message values and publishable calls",
+      "script": "module MessageBinding\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  let isHandler be shoot is :handler\n  let isMessage be msg is :message\n  publish msg\n  publish shoot(unit: unit, target: target)\n  publish Shoot(unit: unit, target: target)\n  publish Done(isHandler: isHandler, isMessage: isMessage)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": { "type": ":text", "value": "u1" },
+              "target": { "type": ":text", "value": "t1" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Shoot",
+              "args": {
+                "target": { "type": ":text", "value": "t1" },
+                "unit": { "type": ":text", "value": "u1" }
+              }
+            },
+            {
+              "name": "Shoot",
+              "args": {
+                "target": { "type": ":text", "value": "t1" },
+                "unit": { "type": ":text", "value": "u1" }
+              }
+            },
+            {
+              "name": "Shoot",
+              "args": {
+                "target": { "type": ":text", "value": "t1" },
+                "unit": { "type": ":text", "value": "u1" }
+              }
+            },
+            {
+              "name": "Done",
+              "args": {
+                "isHandler": { "type": ":boolean", "value": true },
+                "isMessage": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "invalid handler binding and non message publish are lenient no ops",
+      "script": "module MessageBindingNoOp\non Start(unit, hp) {\n  let shoot as :handler be Shoot(unit, target)\n  let invalid as :message be shoot(unit: unit, hp: hp)\n  publish invalid\n  publish unit\n  publish Done(isMessage: invalid is :message, isNothing: invalid is :nothing)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": { "type": ":text", "value": "u1" },
+              "hp": { "type": ":integer", "value": "10" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "isMessage": { "type": ":boolean", "value": false },
+                "isNothing": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "message and handler values expose members without becoming dictionaries",
+      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  publish Done(msgIsMessage: msg is :message, msgIsDictionary: msg is :dictionary, handlerIsHandler: shoot is :handler, handlerIsDictionary: shoot is :dictionary, msgName: msg.name, msgSignature: msg[:signatureid], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": { "type": ":text", "value": "u1" },
+              "target": { "type": ":text", "value": "t1" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "msgIsMessage": { "type": ":boolean", "value": true },
+                "msgIsDictionary": { "type": ":boolean", "value": false },
+                "handlerIsHandler": { "type": ":boolean", "value": true },
+                "handlerIsDictionary": { "type": ":boolean", "value": false },
+                "msgName": { "type": ":text", "value": "Shoot" },
+                "msgSignature": { "type": ":text", "value": "Shoot(target,unit)" },
+                "handlerName": { "type": ":text", "value": "Shoot" },
+                "handlerParameterCount": { "type": ":integer", "value": "2" },
+                "messageArgumentCount": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "message values can be transported as published arguments",
+      "script": "on Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  publish Done(messageValue: msg)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": { "type": ":text", "value": "u1" },
+              "target": { "type": ":text", "value": "t1" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "messageValue": {
+                  "type": ":message",
+                  "message": {
+                    "name": "Shoot",
+                    "args": {
+                      "target": { "type": ":text", "value": "t1" },
+                      "unit": { "type": ":text", "value": "u1" }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

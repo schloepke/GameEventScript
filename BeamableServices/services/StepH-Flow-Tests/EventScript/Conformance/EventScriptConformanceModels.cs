@@ -24,25 +24,17 @@ public sealed class EventScriptConformanceTest
 
     public List<string>? RandomSequence { get; set; }
 
+    public EventScriptCompileOptionsSpec? CompileOptions { get; set; }
+
     public EventScriptRuntimeLimitsSpec? RuntimeLimits { get; set; }
 
     public int? MaxProcessedEventsPerRun { get; set; }
 
+    public List<EventScriptExternalSubscriberSpec>? ExternalSubscribers { get; set; }
+
     public List<EventScriptApiStepSpec>? Steps { get; set; }
 
     public EventScriptExpectedCompileErrorSpec? ExpectedError { get; set; }
-
-    public string? Operation { get; set; }
-
-    public string? Direction { get; set; }
-
-    public JsonElement Target { get; set; }
-
-    public JsonElement Selector { get; set; }
-
-    public JsonElement Value { get; set; }
-
-    public JsonElement Expected { get; set; }
 }
 
 public sealed class EventScriptSourceSpec
@@ -58,7 +50,38 @@ public sealed class EventScriptApiStepSpec
 
     public List<JsonElement>? ExpectedPublished { get; set; }
 
+    public string? ExpectedDiagnosticsMode { get; set; }
+
     public List<EventScriptDiagnosticExpectationSpec>? ExpectedDiagnostics { get; set; }
+
+    public List<EventScriptDiagnosticExpectationSpec>? UnexpectedDiagnostics { get; set; }
+}
+
+public sealed class EventScriptCompileOptionsSpec
+{
+    public bool? EnableDiagnostics { get; set; }
+}
+
+public sealed class EventScriptExternalSubscriberSpec
+{
+    public string? Message { get; set; }
+
+    public List<string>? Parameters { get; set; }
+
+    public int? Priority { get; set; }
+
+    public bool Throw { get; set; }
+
+    public List<EventScriptExternalPublishSpec>? Publish { get; set; }
+}
+
+public sealed class EventScriptExternalPublishSpec
+{
+    public string? Name { get; set; }
+
+    public bool ForwardArguments { get; set; }
+
+    public JsonElement Args { get; set; }
 }
 
 public sealed class EventScriptRuntimeLimitsSpec

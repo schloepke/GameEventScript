@@ -465,6 +465,12 @@ public static class ExperimentalEventScriptCompiler
                 case "degree":
                     converted = ConvertConstantToDegree(value);
                     return true;
+                case "vector2":
+                    converted = ConvertConstantToVector2(value);
+                    return true;
+                case "vector3":
+                    converted = ConvertConstantToVector3(value);
+                    return true;
                 case "boolean":
                     converted = EventScriptValueFactory.Boolean(value.AsBoolean());
                     return true;
@@ -597,6 +603,102 @@ public static class ExperimentalEventScriptCompiler
             }
 
             return EventScriptValueFactory.DecimalNaN();
+        }
+
+        private static EventScriptValue ConvertConstantToVector2(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            if (unwrapped is EventScriptVector2Value vector2)
+            {
+                return vector2;
+            }
+
+            if (unwrapped is EventScriptVector3Value vector3)
+            {
+                return EventScriptValueFactory.Vector2(vector3.X, vector3.Y);
+            }
+
+            if (TryReadVectorComponent(unwrapped, "x", out var x) &&
+                TryReadVectorComponent(unwrapped, "y", out var y))
+            {
+                return EventScriptValueFactory.Vector2(x, y);
+            }
+
+            var items = unwrapped.AsList();
+            if (items.Count >= 2 &&
+                TryReadVectorComponent(items[0], out x) &&
+                TryReadVectorComponent(items[1], out y))
+            {
+                return EventScriptValueFactory.Vector2(x, y);
+            }
+
+            return EventScriptValue.Nothing;
+        }
+
+        private static EventScriptValue ConvertConstantToVector3(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            if (unwrapped is EventScriptVector3Value vector3)
+            {
+                return vector3;
+            }
+
+            if (unwrapped is EventScriptVector2Value vector2)
+            {
+                return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m);
+            }
+
+            if (TryReadVectorComponent(unwrapped, "x", out var x) &&
+                TryReadVectorComponent(unwrapped, "y", out var y))
+            {
+                var z = TryReadVectorComponent(unwrapped, "z", out var zValue) ? zValue : 0m;
+                return EventScriptValueFactory.Vector3(x, y, z);
+            }
+
+            var items = unwrapped.AsList();
+            if (items.Count >= 2 &&
+                TryReadVectorComponent(items[0], out x) &&
+                TryReadVectorComponent(items[1], out y))
+            {
+                var z = items.Count >= 3 && TryReadVectorComponent(items[2], out var zValue) ? zValue : 0m;
+                return EventScriptValueFactory.Vector3(x, y, z);
+            }
+
+            return EventScriptValue.Nothing;
+        }
+
+        private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
+        {
+            if (source.TryGetDictionaryMember(key, out var component) &&
+                TryReadVectorComponent(component, out value))
+            {
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        private static bool TryReadVectorComponent(EventScriptValue component, out decimal value)
+        {
+            if (!TryUnwrapOptionalForConstant(component, out var unwrapped) ||
+                !TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite) ||
+                !isFinite)
+            {
+                value = default;
+                return false;
+            }
+
+            value = number;
+            return true;
         }
 
         private static bool TryUnwrapOptionalForConstant(EventScriptValue value, out EventScriptValue unwrapped)

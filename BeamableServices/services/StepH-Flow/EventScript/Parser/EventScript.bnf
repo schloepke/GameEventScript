@@ -101,6 +101,7 @@ UnaryTag ::= ":len"
            | ":rounddown"
            | ":roundup"
            | ":roundeven"
+           | ":wrapDegree"
 VariadicTaggedExpression ::= ( ":min" | ":max" ) "of" Expression { "and" Expression }
 ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expression
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }
@@ -145,6 +146,8 @@ TypeTag ::= ":text"
           | ":tag"
           | ":percentage"
           | ":degree"
+          | ":vector2"
+          | ":vector3"
           | ":decimal"
           | ":integer"
           | ":boolean"

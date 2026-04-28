@@ -9,9 +9,17 @@ public sealed class EventScriptDegreeValue : EventScriptValue
     public static readonly EventScriptDegreeValue Zero = new(0m);
 
     public static EventScriptDegreeValue EventScriptDegree(decimal degrees)
+        => degrees == 0m ? Zero : new EventScriptDegreeValue(degrees);
+
+    public static decimal WrapDegrees(decimal degrees)
     {
-        var normalized = Normalize(degrees);
-        return normalized == 0m ? Zero : new EventScriptDegreeValue(normalized);
+        var wrapped = degrees % 360m;
+        if (wrapped < 0m)
+        {
+            wrapped += 360m;
+        }
+
+        return wrapped == 360m ? 0m : wrapped;
     }
 
     private EventScriptDegreeValue(decimal degrees)
@@ -52,16 +60,5 @@ public sealed class EventScriptDegreeValue : EventScriptValue
     {
         value = Text(FormatDegree(Degrees));
         return true;
-    }
-
-    private static decimal Normalize(decimal degrees)
-    {
-        var normalized = degrees % 360m;
-        if (normalized < 0m)
-        {
-            normalized += 360m;
-        }
-
-        return normalized == 360m ? 0m : normalized;
     }
 }

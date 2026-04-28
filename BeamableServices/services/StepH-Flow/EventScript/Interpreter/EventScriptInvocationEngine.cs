@@ -676,6 +676,7 @@ internal static class EventScriptInvocationEngine
                 "rounddown" => EvaluateRoundingUnary(operand, "rounddown"),
                 "roundup" => EvaluateRoundingUnary(operand, "roundup"),
                 "roundeven" => EvaluateRoundingUnary(operand, "roundeven"),
+                "wrapDegree" => EventScriptValueAlu.EvaluateWrapDegree(operand),
                 _ => EventScriptValue.Nothing
             };
         }
@@ -849,6 +850,11 @@ internal static class EventScriptInvocationEngine
             if (operand.IsNothing())
             {
                 return EventScriptValue.Nothing;
+            }
+
+            if (EventScriptValueAlu.TryEvaluateDegreeRounding(operand, operation, out var degree))
+            {
+                return degree;
             }
 
             if (!TryCoerceNumericForOperation(operand, out var number))
@@ -1026,36 +1032,28 @@ internal static class EventScriptInvocationEngine
                 case "ends with":
                     return EventScriptValueFactory.Boolean(left.EndsWith(right));
                 case "<":
-                    if (!TryCoerceNumericForOperation(left, out var leftLess) ||
-                        !TryCoerceNumericForOperation(right, out var rightLess) ||
-                        !TryCompareNumeric(leftLess, rightLess, out var lessComparison))
+                    if (!TryCompareDegreeAware(left, right, out var lessComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
 
                     return EventScriptValueFactory.Boolean(lessComparison < 0);
                 case ">":
-                    if (!TryCoerceNumericForOperation(left, out var leftGreater) ||
-                        !TryCoerceNumericForOperation(right, out var rightGreater) ||
-                        !TryCompareNumeric(leftGreater, rightGreater, out var greaterComparison))
+                    if (!TryCompareDegreeAware(left, right, out var greaterComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
 
                     return EventScriptValueFactory.Boolean(greaterComparison > 0);
                 case "<=":
-                    if (!TryCoerceNumericForOperation(left, out var leftLessOrEqual) ||
-                        !TryCoerceNumericForOperation(right, out var rightLessOrEqual) ||
-                        !TryCompareNumeric(leftLessOrEqual, rightLessOrEqual, out var lessOrEqualComparison))
+                    if (!TryCompareDegreeAware(left, right, out var lessOrEqualComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
 
                     return EventScriptValueFactory.Boolean(lessOrEqualComparison <= 0);
                 case ">=":
-                    if (!TryCoerceNumericForOperation(left, out var leftGreaterOrEqual) ||
-                        !TryCoerceNumericForOperation(right, out var rightGreaterOrEqual) ||
-                        !TryCompareNumeric(leftGreaterOrEqual, rightGreaterOrEqual, out var greaterOrEqualComparison))
+                    if (!TryCompareDegreeAware(left, right, out var greaterOrEqualComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
@@ -1110,6 +1108,11 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
                 case "*":
+                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "*", right, out var degreeProduct))
+                    {
+                        return degreeProduct;
+                    }
+
                     if (!TryCoerceNumericForOperation(left, out var leftMultiply) ||
                         !TryCoerceNumericForOperation(right, out var rightMultiply))
                     {
@@ -1118,6 +1121,11 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
                 case "/":
+                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "/", right, out var degreeQuotient))
+                    {
+                        return degreeQuotient;
+                    }
+
                     if (!TryCoerceNumericForOperation(left, out var leftDivide) ||
                         !TryCoerceNumericForOperation(right, out var rightDivide))
                     {
@@ -1126,6 +1134,11 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 case "%":
+                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "%", right, out var degreeModulo))
+                    {
+                        return degreeModulo;
+                    }
+
                     if (!TryCoerceNumericForOperation(left, out var leftModulo) ||
                         !TryCoerceNumericForOperation(right, out var rightModulo))
                     {
@@ -2065,6 +2078,9 @@ internal static class EventScriptInvocationEngine
         private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
             => EventScriptValueAlu.TryCompareNumeric(left, right, out comparison);
 
+        private static bool TryCompareDegreeAware(EventScriptValue left, EventScriptValue right, out int comparison)
+            => EventScriptValueAlu.TryCompareDegreeAware(left, right, out comparison);
+
         private static NumericValue AddNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.AddNumeric(left, right);
 
         private static NumericValue SubtractNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.SubtractNumeric(left, right);
@@ -2113,6 +2129,10 @@ internal static class EventScriptInvocationEngine
                     return ConvertToPercentage(value);
                 case "degree":
                     return ConvertToDegree(value);
+                case "vector2":
+                    return ConvertToVector2(value);
+                case "vector3":
+                    return ConvertToVector3(value);
                 case "boolean":
                     return EventScriptValueFactory.Boolean(value.AsBoolean());
                 case "integer":
@@ -2230,6 +2250,102 @@ internal static class EventScriptInvocationEngine
             return EventScriptValueFactory.DecimalNaN();
         }
 
+        private EventScriptValue ConvertToVector2(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            if (unwrapped is EventScriptVector2Value vector2)
+            {
+                return vector2;
+            }
+
+            if (unwrapped is EventScriptVector3Value vector3)
+            {
+                return EventScriptValueFactory.Vector2(vector3.X, vector3.Y);
+            }
+
+            if (TryReadVectorComponent(unwrapped, "x", out var x) &&
+                TryReadVectorComponent(unwrapped, "y", out var y))
+            {
+                return EventScriptValueFactory.Vector2(x, y);
+            }
+
+            var items = unwrapped.AsList();
+            if (items.Count >= 2 &&
+                TryReadVectorComponent(items[0], out x) &&
+                TryReadVectorComponent(items[1], out y))
+            {
+                return EventScriptValueFactory.Vector2(x, y);
+            }
+
+            return EventScriptValue.Nothing;
+        }
+
+        private EventScriptValue ConvertToVector3(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            if (unwrapped is EventScriptVector3Value vector3)
+            {
+                return vector3;
+            }
+
+            if (unwrapped is EventScriptVector2Value vector2)
+            {
+                return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m);
+            }
+
+            if (TryReadVectorComponent(unwrapped, "x", out var x) &&
+                TryReadVectorComponent(unwrapped, "y", out var y))
+            {
+                var z = TryReadVectorComponent(unwrapped, "z", out var zValue) ? zValue : 0m;
+                return EventScriptValueFactory.Vector3(x, y, z);
+            }
+
+            var items = unwrapped.AsList();
+            if (items.Count >= 2 &&
+                TryReadVectorComponent(items[0], out x) &&
+                TryReadVectorComponent(items[1], out y))
+            {
+                var z = items.Count >= 3 && TryReadVectorComponent(items[2], out var zValue) ? zValue : 0m;
+                return EventScriptValueFactory.Vector3(x, y, z);
+            }
+
+            return EventScriptValue.Nothing;
+        }
+
+        private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
+        {
+            if (source.TryGetDictionaryMember(key, out var component) &&
+                TryReadVectorComponent(component, out value))
+            {
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        private static bool TryReadVectorComponent(EventScriptValue component, out decimal value)
+        {
+            if (!TryUnwrapOptionalForOperation(component, out var unwrapped) ||
+                !TryCoerceNumericForOperation(unwrapped, out var number) ||
+                !number.IsFinite)
+            {
+                value = default;
+                return false;
+            }
+
+            value = number.Value;
+            return true;
+        }
+
         private EventScriptValue ConvertToCustomType(ExecutionContext context, EventScriptValue value, CompiledTypeDefinition typeDefinition)
         {
             if (value.TryGetCustomTypeName(out var existingTypeName) &&
@@ -2327,6 +2443,8 @@ internal static class EventScriptInvocationEngine
                 "text" => value.IsText(),
                 "percentage" => value.IsPercentage(),
                 "degree" => value.IsDegree(),
+                "vector2" => value.IsVector2(),
+                "vector3" => value.IsVector3(),
                 "decimal" => value.IsNumber(),
                 "integer" => value.IsInteger(),
                 "boolean" => value.Kind == EventScriptValueKind.Boolean,
@@ -2409,6 +2527,8 @@ internal static class EventScriptInvocationEngine
                 EventScriptValueKind.Text => $"text:{value.AsText()}",
                 EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Degree => $"degree:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+                EventScriptValueKind.Vector2 => $"vector2:{((EventScriptVector2Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector2Value)value).Y.ToString(CultureInfo.InvariantCulture)}",
+                EventScriptValueKind.Vector3 => $"vector3:{((EventScriptVector3Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Y.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Z.ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Decimal => value.IsNaN()
                     ? "decimal:nan"
                     : value.IsNegativeInfinity()

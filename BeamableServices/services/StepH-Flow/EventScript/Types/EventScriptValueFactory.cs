@@ -16,6 +16,10 @@ public static class EventScriptValueFactory
 
     public static EventScriptValue Degree(decimal degrees) => EventScriptDegreeValue.EventScriptDegree(degrees);
 
+    public static EventScriptValue Vector2(decimal x, decimal y) => EventScriptVector2Value.EventScriptVector2(x, y);
+
+    public static EventScriptValue Vector3(decimal x, decimal y, decimal z) => EventScriptVector3Value.EventScriptVector3(x, y, z);
+
     public static EventScriptValue DecimalNaN() => EventScriptDecimalValue.NaN;
 
     public static EventScriptValue DecimalInfinity() => EventScriptDecimalValue.Infinity;

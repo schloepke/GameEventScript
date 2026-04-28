@@ -268,9 +268,10 @@ This is an expression form, not a statement-only special case.
 43.9°
 90°
 360°
+-10°
 ```
 
-Degree values use the built-in `:degree` type. They are normalized to the circle range `0°` up to, but not including, `360°`.
+Degree values use the built-in `:degree` type. A degree is an open angle value, so negative values and values greater than `360°` are preserved. Use `:wrapDegree` to wrap an angle into the canonical `0°` up to, but not including, `360°` range.
 
 ### Text
 
@@ -335,6 +336,8 @@ Built-in type tags:
 - `:text`
 - `:percentage`
 - `:degree`
+- `:vector2`
+- `:vector3`
 - `:decimal`
 - `:integer`
 - `:boolean`
@@ -367,9 +370,14 @@ if value is :decimal {
 ```eventscript
 let ratio as :percentage be 75
 let heading as :degree be 450
+let position as :vector2 be [x: 10, y: 20]
+let point as :vector3 be [x: 10, y: 20, z: 5]
 let amount as :decimal be '12.5'
 let flags as :list be 'abc'
 ```
+
+`vector2` exposes `x` and `y`; `vector3` exposes `x`, `y`, and `z`.
+Both can be cast from dictionaries with matching component names or from lists in component order.
 
 ## Domain-Style Boolean Phrases
 
@@ -438,6 +446,8 @@ a * b
 a / b
 a % b
 ```
+
+`%` is the modulo operator. Percentage values are written as literals such as `10%`.
 
 ### Collection combination
 
@@ -1007,6 +1017,7 @@ Current prefix tag operators:
 - `:rounddown`
 - `:roundup`
 - `:roundeven`
+- `:wrapDegree`
 
 Examples:
 
@@ -1020,6 +1031,7 @@ let penalty be -12
 let debt be -12.5
 let distance be :abs -5
 let roundedDown be :floor 12.9
+let heading be :wrapDegree -10°
 ```
 
 Negative values can be written directly with unary minus, such as `-12` or `-12.34`.

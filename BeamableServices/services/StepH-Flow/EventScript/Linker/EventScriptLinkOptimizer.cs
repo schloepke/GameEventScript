@@ -544,6 +544,9 @@ internal static class EventScriptLinkOptimizer
             case "empty":
                 value = EventScriptValueFactory.Boolean(operand.IsSemanticallyEmpty());
                 return true;
+            case "wrapDegree":
+                value = EventScriptValueAlu.EvaluateWrapDegree(operand);
+                return true;
             default:
                 value = EventScriptValue.Nothing;
                 return false;
@@ -649,6 +652,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
+                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "*", right, out value))
+                {
+                    return true;
+                }
+
                 if (!TryCoerceNumericForOperation(left, out var leftMultiply) ||
                     !TryCoerceNumericForOperation(right, out var rightMultiply))
                 {
@@ -659,6 +667,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
+                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "/", right, out value))
+                {
+                    return true;
+                }
+
                 if (!TryCoerceNumericForOperation(left, out var leftDivide) ||
                     !TryCoerceNumericForOperation(right, out var rightDivide))
                 {
@@ -669,6 +682,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case "%":
+                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "%", right, out value))
+                {
+                    return true;
+                }
+
                 if (!TryCoerceNumericForOperation(left, out var leftModulo) ||
                     !TryCoerceNumericForOperation(right, out var rightModulo))
                 {
@@ -686,9 +704,7 @@ internal static class EventScriptLinkOptimizer
 
     private static EventScriptValue EvaluateNumericComparison(EventScriptValue left, EventScriptValue right, Func<int, bool> predicate)
     {
-        if (!TryCoerceNumericForOperation(left, out var leftNumeric) ||
-            !TryCoerceNumericForOperation(right, out var rightNumeric) ||
-            !TryCompareNumeric(leftNumeric, rightNumeric, out var comparison))
+        if (!EventScriptValueAlu.TryCompareDegreeAware(left, right, out var comparison))
         {
             return EventScriptValueFactory.Boolean(false);
         }
@@ -714,6 +730,12 @@ internal static class EventScriptLinkOptimizer
                 return true;
             case "degree":
                 converted = ConvertToDegree(value);
+                return true;
+            case "vector2":
+                converted = ConvertToVector2(value);
+                return true;
+            case "vector3":
+                converted = ConvertToVector3(value);
                 return true;
             case "boolean":
                 converted = EventScriptValueFactory.Boolean(value.AsBoolean());
@@ -839,6 +861,102 @@ internal static class EventScriptLinkOptimizer
         }
 
         return EventScriptValueFactory.DecimalNaN();
+    }
+
+    private static EventScriptValue ConvertToVector2(EventScriptValue value)
+    {
+        if (!TryUnwrapOptional(value, out var unwrapped))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (unwrapped is EventScriptVector2Value vector2)
+        {
+            return vector2;
+        }
+
+        if (unwrapped is EventScriptVector3Value vector3)
+        {
+            return EventScriptValueFactory.Vector2(vector3.X, vector3.Y);
+        }
+
+        if (TryReadVectorComponent(unwrapped, "x", out var x) &&
+            TryReadVectorComponent(unwrapped, "y", out var y))
+        {
+            return EventScriptValueFactory.Vector2(x, y);
+        }
+
+        var items = unwrapped.AsList();
+        if (items.Count >= 2 &&
+            TryReadVectorComponent(items[0], out x) &&
+            TryReadVectorComponent(items[1], out y))
+        {
+            return EventScriptValueFactory.Vector2(x, y);
+        }
+
+        return EventScriptValue.Nothing;
+    }
+
+    private static EventScriptValue ConvertToVector3(EventScriptValue value)
+    {
+        if (!TryUnwrapOptional(value, out var unwrapped))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (unwrapped is EventScriptVector3Value vector3)
+        {
+            return vector3;
+        }
+
+        if (unwrapped is EventScriptVector2Value vector2)
+        {
+            return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m);
+        }
+
+        if (TryReadVectorComponent(unwrapped, "x", out var x) &&
+            TryReadVectorComponent(unwrapped, "y", out var y))
+        {
+            var z = TryReadVectorComponent(unwrapped, "z", out var zValue) ? zValue : 0m;
+            return EventScriptValueFactory.Vector3(x, y, z);
+        }
+
+        var items = unwrapped.AsList();
+        if (items.Count >= 2 &&
+            TryReadVectorComponent(items[0], out x) &&
+            TryReadVectorComponent(items[1], out y))
+        {
+            var z = items.Count >= 3 && TryReadVectorComponent(items[2], out var zValue) ? zValue : 0m;
+            return EventScriptValueFactory.Vector3(x, y, z);
+        }
+
+        return EventScriptValue.Nothing;
+    }
+
+    private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
+    {
+        if (source.TryGetDictionaryMember(key, out var component) &&
+            TryReadVectorComponent(component, out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static bool TryReadVectorComponent(EventScriptValue component, out decimal value)
+    {
+        if (!TryUnwrapOptional(component, out var unwrapped) ||
+            !TryCoerceNumeric(unwrapped, out var number, out var isFinite) ||
+            !isFinite)
+        {
+            value = default;
+            return false;
+        }
+
+        value = number;
+        return true;
     }
 
     private static bool TryUnwrapOptional(EventScriptValue value, out EventScriptValue unwrapped)

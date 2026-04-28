@@ -1049,6 +1049,7 @@ public sealed class EventScriptParser
             ":rounddown" => "rounddown",
             ":roundup" => "roundup",
             ":roundeven" => "roundeven",
+            ":wrapDegree" => "wrapDegree",
             _ => string.Empty
         };
 

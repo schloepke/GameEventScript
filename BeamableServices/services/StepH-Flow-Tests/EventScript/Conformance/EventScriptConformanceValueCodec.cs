@@ -73,6 +73,15 @@ internal static class EventScriptConformanceValueCodec
                 return EventScriptValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
             case ":degree":
                 return EventScriptValueFactory.Degree(RequireDecimal(element, "value", "degree value"));
+            case ":vector2":
+                return EventScriptValueFactory.Vector2(
+                    RequireDecimal(element, "x", "vector2 x component"),
+                    RequireDecimal(element, "y", "vector2 y component"));
+            case ":vector3":
+                return EventScriptValueFactory.Vector3(
+                    RequireDecimal(element, "x", "vector3 x component"),
+                    RequireDecimal(element, "y", "vector3 y component"),
+                    RequireDecimal(element, "z", "vector3 z component"));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
@@ -151,6 +160,8 @@ internal static class EventScriptConformanceValueCodec
             EventScriptValueKind.Decimal => new JsonObject { ["type"] = ":decimal", ["value"] = FormatDecimal(value) },
             EventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
             EventScriptValueKind.Degree => new JsonObject { ["type"] = ":degree", ["value"] = FormatDecimal(value.AsNumber()) },
+            EventScriptValueKind.Vector2 => ToVector2Json((EventScriptVector2Value)value),
+            EventScriptValueKind.Vector3 => ToVector3Json((EventScriptVector3Value)value),
             EventScriptValueKind.Optional => ToOptionalJson(value),
             EventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
             EventScriptValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
@@ -267,6 +278,23 @@ internal static class EventScriptConformanceValueCodec
             ["from"] = GetInternalProperty<long>(value, "From").ToString(CultureInfo.InvariantCulture),
             ["to"] = GetInternalProperty<long>(value, "To").ToString(CultureInfo.InvariantCulture),
             ["step"] = GetInternalProperty<long>(value, "Step").ToString(CultureInfo.InvariantCulture)
+        };
+
+    private static JsonObject ToVector2Json(EventScriptVector2Value value)
+        => new()
+        {
+            ["type"] = ":vector2",
+            ["x"] = FormatDecimal(value.X),
+            ["y"] = FormatDecimal(value.Y)
+        };
+
+    private static JsonObject ToVector3Json(EventScriptVector3Value value)
+        => new()
+        {
+            ["type"] = ":vector3",
+            ["x"] = FormatDecimal(value.X),
+            ["y"] = FormatDecimal(value.Y),
+            ["z"] = FormatDecimal(value.Z)
         };
 
     private static string ToCanonicalTypeName(string typeName)

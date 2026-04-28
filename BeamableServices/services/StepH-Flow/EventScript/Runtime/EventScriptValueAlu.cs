@@ -32,6 +32,27 @@ internal static class EventScriptValueAlu
 
     public static EventScriptValue EvaluateMinMax(IReadOnlyList<EventScriptValue> values, bool isMax)
     {
+        if (values.Any(value => value.IsDegree()) &&
+            values.All(value => TryCoerceDegreeComparable(value, out _)))
+        {
+            var bestDegrees = values.Select(value =>
+            {
+                TryCoerceDegreeComparable(value, out var degrees);
+                return degrees;
+            }).First();
+
+            for (var i = 1; i < values.Count; i++)
+            {
+                TryCoerceDegreeComparable(values[i], out var degrees);
+                if ((isMax && degrees > bestDegrees) || (!isMax && degrees < bestDegrees))
+                {
+                    bestDegrees = degrees;
+                }
+            }
+
+            return EventScriptValueFactory.Degree(bestDegrees);
+        }
+
         var best = values[0];
         for (var i = 1; i < values.Count; i++)
         {
@@ -314,26 +335,229 @@ internal static class EventScriptValueAlu
 
     public static bool TryEvaluateDegreeBinary(EventScriptValue left, string operation, EventScriptValue right, out EventScriptValue value)
     {
-        if (operation is not ("+" or "-") || !left.IsDegree() && !right.IsDegree())
+        var hasDegree = left.IsDegree() || right.IsDegree();
+        if (operation is not ("+" or "-" or "*" or "/" or "%") || !hasDegree)
         {
             value = EventScriptValue.Nothing;
             return false;
         }
 
-        if (!TryCoerceDegreeOperand(left, out var leftDegrees) ||
-            !TryCoerceDegreeOperand(right, out var rightDegrees))
+        if (operation is "-" or "/" or "%" && !left.IsDegree())
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        if (!TryCalculateDegreeBinary(left, operation, right, out var degrees))
         {
             value = EventScriptValueFactory.DecimalNaN();
             return true;
         }
 
-        value = EventScriptValueFactory.Degree(operation == "+"
-            ? leftDegrees + rightDegrees
-            : leftDegrees - rightDegrees);
+        value = EventScriptValueFactory.Degree(degrees);
         return true;
     }
 
-    private static bool TryCoerceDegreeOperand(EventScriptValue value, out decimal degrees)
+    public static bool TryEvaluateDegreeRounding(EventScriptValue operand, string operation, out EventScriptValue value)
+    {
+        if (!operand.IsDegree())
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        var degrees = operand.AsNumber();
+        var rounded = operation switch
+        {
+            "floor" or "rounddown" => Math.Floor(degrees),
+            "ceil" or "roundup" => Math.Ceiling(degrees),
+            "round" or "roundeven" => Math.Round(degrees, 0, MidpointRounding.ToEven),
+            _ => degrees
+        };
+
+        value = EventScriptValueFactory.Degree(rounded);
+        return true;
+    }
+
+    public static EventScriptValue EvaluateWrapDegree(EventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        if (unwrapped.IsDegree())
+        {
+            return EventScriptValueFactory.Degree(EventScriptDegreeValue.WrapDegrees(unwrapped.AsNumber()));
+        }
+
+        if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage &&
+            TryCoerceNumericForOperation(unwrapped, out var number) &&
+            number.IsFinite)
+        {
+            return EventScriptValueFactory.Degree(EventScriptDegreeValue.WrapDegrees(number.Value));
+        }
+
+        return EventScriptValueFactory.DecimalNaN();
+    }
+
+    public static bool TryCompareDegreeAware(EventScriptValue left, EventScriptValue right, out int comparison)
+    {
+        if (left.IsDegree() || right.IsDegree())
+        {
+            if (!TryCoerceDegreeComparable(left, out var leftDegrees) ||
+                !TryCoerceDegreeComparable(right, out var rightDegrees))
+            {
+                comparison = default;
+                return false;
+            }
+
+            comparison = leftDegrees.CompareTo(rightDegrees);
+            return true;
+        }
+
+        if (!TryCoerceNumericForOperation(left, out var leftNumeric) ||
+            !TryCoerceNumericForOperation(right, out var rightNumeric))
+        {
+            comparison = default;
+            return false;
+        }
+
+        return TryCompareNumeric(leftNumeric, rightNumeric, out comparison);
+    }
+
+    private static bool TryCalculateDegreeBinary(EventScriptValue left, string operation, EventScriptValue right, out decimal degrees)
+    {
+        try
+        {
+            switch (operation)
+            {
+                case "+":
+                {
+                    var baseDegrees = left.IsDegree() ? left.AsNumber() : right.AsNumber();
+                    if (!TryCoerceDegreeAdditiveOperand(left, baseDegrees, out var leftDegrees) ||
+                        !TryCoerceDegreeAdditiveOperand(right, baseDegrees, out var rightDegrees))
+                    {
+                        degrees = default;
+                        return false;
+                    }
+
+                    degrees = leftDegrees + rightDegrees;
+                    return true;
+                }
+                case "-":
+                {
+                    var leftDegrees = left.AsNumber();
+                    if (!TryCoerceDegreeAdditiveOperand(right, leftDegrees, out var rightDegrees))
+                    {
+                        degrees = default;
+                        return false;
+                    }
+
+                    degrees = leftDegrees - rightDegrees;
+                    return true;
+                }
+                case "*":
+                    if (!TryCoerceDegreeFactor(left, out var leftFactor) ||
+                        !TryCoerceDegreeFactor(right, out var rightFactor))
+                    {
+                        degrees = default;
+                        return false;
+                    }
+
+                    degrees = leftFactor * rightFactor;
+                    return true;
+                case "/":
+                    if (!TryCoerceDegreeFactor(right, out var divisor) || divisor == 0m)
+                    {
+                        degrees = default;
+                        return false;
+                    }
+
+                    degrees = left.AsNumber() / divisor;
+                    return true;
+                case "%":
+                    var leftBaseDegrees = left.AsNumber();
+                    if (!TryCoerceDegreeModuloDivisor(right, leftBaseDegrees, out var moduloDivisor) ||
+                        moduloDivisor == 0m)
+                    {
+                        degrees = default;
+                        return false;
+                    }
+
+                    degrees = leftBaseDegrees % moduloDivisor;
+                    return true;
+                default:
+                    degrees = default;
+                    return false;
+            }
+        }
+        catch (OverflowException)
+        {
+            degrees = default;
+            return false;
+        }
+        catch (DivideByZeroException)
+        {
+            degrees = default;
+            return false;
+        }
+    }
+
+    private static bool TryCoerceDegreeAdditiveOperand(EventScriptValue value, decimal baseDegrees, out decimal degrees)
+    {
+        if (value.Kind == EventScriptValueKind.Percentage)
+        {
+            degrees = baseDegrees * value.AsNumber();
+            return true;
+        }
+
+        return TryCoerceDegreeFactor(value, out degrees);
+    }
+
+    private static bool TryCoerceDegreeModuloDivisor(EventScriptValue value, decimal baseDegrees, out decimal divisor)
+    {
+        if (value.Kind == EventScriptValueKind.Percentage)
+        {
+            divisor = baseDegrees * value.AsNumber();
+            return true;
+        }
+
+        return TryCoerceDegreeFactor(value, out divisor);
+    }
+
+    private static bool TryCoerceDegreeFactor(EventScriptValue value, out decimal factor)
+    {
+        if (value.IsDegree())
+        {
+            factor = value.AsNumber();
+            return true;
+        }
+
+        if (value.Kind == EventScriptValueKind.Percentage)
+        {
+            factor = value.AsNumber();
+            return true;
+        }
+
+        if (value.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer &&
+            TryCoerceNumericForOperation(value, out var number) &&
+            number.IsFinite)
+        {
+            factor = number.Value;
+            return true;
+        }
+
+        factor = default;
+        return false;
+    }
+
+    private static bool TryCoerceDegreeComparable(EventScriptValue value, out decimal degrees)
     {
         if (value.IsDegree())
         {
@@ -341,20 +565,16 @@ internal static class EventScriptValueAlu
             return true;
         }
 
-        if (value.Kind is not (EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage))
+        if (value.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer &&
+            TryCoerceNumericForOperation(value, out var number) &&
+            number.IsFinite)
         {
-            degrees = default;
-            return false;
+            degrees = number.Value;
+            return true;
         }
 
-        if (!TryCoerceNumericForOperation(value, out var number) || !number.IsFinite)
-        {
-            degrees = default;
-            return false;
-        }
-
-        degrees = number.Value;
-        return true;
+        degrees = default;
+        return false;
     }
 
     public static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)

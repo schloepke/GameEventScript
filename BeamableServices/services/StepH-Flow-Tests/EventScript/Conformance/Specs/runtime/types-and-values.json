@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "typed message values roundtrip",
-      "script": "on Echo(name, tags, stats, maybe, flag, percent, heading, category, points, span) {\n  publish Echoed(name: name, tags: tags, stats: stats, maybe: maybe, flag: flag, percent: percent, heading: heading, category: category, points: points, span: span)\n}",
+      "script": "on Echo(name, tags, stats, maybe, flag, percent, heading, position, point, category, points, span) {\n  publish Echoed(name: name, tags: tags, stats: stats, maybe: maybe, flag: flag, percent: percent, heading: heading, position: position, point: point, category: category, points: points, span: span)\n}",
       "steps": [
         {
           "input": {
@@ -30,6 +30,8 @@
               "flag": { "type": ":boolean", "value": true },
               "percent": { "type": ":percentage", "value": "0.25" },
               "heading": { "type": ":degree", "value": "90" },
+              "position": { "type": ":vector2", "x": "10.5", "y": "-2" },
+              "point": { "type": ":vector3", "x": "1", "y": "2", "z": "3" },
               "category": { "type": ":tag", "value": "Infantry" },
               "points": {
                 "type": ":set",
@@ -64,6 +66,8 @@
                 "flag": { "type": ":boolean", "value": true },
                 "percent": { "type": ":percentage", "value": "0.25" },
                 "heading": { "type": ":degree", "value": "90" },
+                "position": { "type": ":vector2", "x": "10.5", "y": "-2" },
+                "point": { "type": ":vector3", "x": "1", "y": "2", "z": "3" },
                 "category": { "type": ":tag", "value": "Infantry" },
                 "points": {
                   "type": ":set",
@@ -107,8 +111,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "degree literals normalize and support additive arithmetic",
-      "script": "on Start {\n  let fromLiteral be 90°\n  let wrappedLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addWrap be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractWrap be 10° - 40°\n  let negWrap be -90°\n  let castWrap as :degree be 450\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  publish Done(fromLiteral: fromLiteral, wrappedLiteral: wrappedLiteral, decimalLiteral: decimalLiteral, addWrap: addWrap, addOver: addOver, subtractWrap: subtractWrap, negWrap: negWrap, castWrap: castWrap, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
+      "name": "degree literals preserve raw angles and wrap explicitly",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :wrapDegree -10°\n  let wrapOver be :wrapDegree 370°\n  let wrapLarge be :wrapDegree 1000°\n  let wrapCast be :wrapDegree castOpen\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  publish Done(fromLiteral: fromLiteral, overLiteral: overLiteral, decimalLiteral: decimalLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -117,16 +121,92 @@
               "name": "Done",
               "args": {
                 "fromLiteral": { "type": ":degree", "value": "90" },
-                "wrappedLiteral": { "type": ":degree", "value": "0" },
+                "overLiteral": { "type": ":degree", "value": "360" },
                 "decimalLiteral": { "type": ":degree", "value": "43.9" },
-                "addWrap": { "type": ":degree", "value": "90" },
-                "addOver": { "type": ":degree", "value": "20" },
-                "subtractWrap": { "type": ":degree", "value": "330" },
-                "negWrap": { "type": ":degree", "value": "270" },
-                "castWrap": { "type": ":degree", "value": "90" },
+                "addOpen": { "type": ":degree", "value": "450" },
+                "addOver": { "type": ":degree", "value": "380" },
+                "subtractOpen": { "type": ":degree", "value": "-30" },
+                "negOpen": { "type": ":degree", "value": "-90" },
+                "castOpen": { "type": ":degree", "value": "450" },
+                "wrapNegative": { "type": ":degree", "value": "350" },
+                "wrapOver": { "type": ":degree", "value": "10" },
+                "wrapLarge": { "type": ":degree", "value": "280" },
+                "wrapCast": { "type": ":degree", "value": "90" },
                 "textValue": { "type": ":text", "value": "43.9°" },
                 "decimalValue": { "type": ":decimal", "value": "43.9" },
                 "isDegree": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "degree arithmetic percentages helpers and comparisons",
+      "script": "on Start {\n  publish Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyDecimal: 30° * 0.2, divideDecimal: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :wrapDegree (120° / 10%), moduloDegree: 370° % 90°, moduloPercent: 120° % 10%, divideZero: 120° / 0, moduloZero: 120° % 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 % 120°, floorDegree: :floor 43.9°, ceilDegree: :ceil 43.1°, roundEvenDegree: :roundeven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "addNumber": { "type": ":degree", "value": "130" },
+                "subtractNumber": { "type": ":degree", "value": "-30" },
+                "addPercentRight": { "type": ":degree", "value": "132" },
+                "addPercentLeft": { "type": ":degree", "value": "132" },
+                "subtractPercent": { "type": ":degree", "value": "108" },
+                "multiplyPercentRight": { "type": ":degree", "value": "12" },
+                "multiplyPercentLeft": { "type": ":degree", "value": "12" },
+                "multiplyDecimal": { "type": ":degree", "value": "6" },
+                "divideDecimal": { "type": ":degree", "value": "150" },
+                "dividePercent": { "type": ":degree", "value": "1200" },
+                "wrappedDividePercent": { "type": ":degree", "value": "120" },
+                "moduloDegree": { "type": ":degree", "value": "10" },
+                "moduloPercent": { "type": ":degree", "value": "0" },
+                "divideZero": { "type": ":decimal", "value": "NaN" },
+                "moduloZero": { "type": ":decimal", "value": "NaN" },
+                "reverseSubtract": { "type": ":decimal", "value": "NaN" },
+                "reverseDivide": { "type": ":decimal", "value": "NaN" },
+                "reverseModulo": { "type": ":decimal", "value": "NaN" },
+                "floorDegree": { "type": ":degree", "value": "43" },
+                "ceilDegree": { "type": ":degree", "value": "44" },
+                "roundEvenDegree": { "type": ":degree", "value": "42" },
+                "minDegree": { "type": ":degree", "value": "10" },
+                "maxDegree": { "type": ":degree", "value": "350" },
+                "greaterDegree": { "type": ":boolean", "value": true },
+                "lessMixed": { "type": ":boolean", "value": true },
+                "percentCompare": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "vector values cast expose components and convert dimensions",
+      "script": "on Start {\n  let position as :vector2 be [x: 10.5, y: -2]\n  let point as :vector3 be [1, 2, 3]\n  let lifted as :vector3 be position\n  let flattened as :vector2 be point\n  let vectorList as :list be position\n  let vectorDictionary as :dictionary be point\n  publish Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[:y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVector2: position is :vector2, isVector3: point is :vector3, vector2IsDictionary: position is :dictionary)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "position": { "type": ":vector2", "x": "10.5", "y": "-2" },
+                "point": { "type": ":vector3", "x": "1", "y": "2", "z": "3" },
+                "lifted": { "type": ":vector3", "x": "10.5", "y": "-2", "z": "0" },
+                "flattened": { "type": ":vector2", "x": "1", "y": "2" },
+                "x": { "type": ":decimal", "value": "10.5" },
+                "y": { "type": ":decimal", "value": "-2" },
+                "z": { "type": ":decimal", "value": "3" },
+                "listFirst": { "type": ":decimal", "value": "10.5" },
+                "dictZ": { "type": ":decimal", "value": "3" },
+                "isVector2": { "type": ":boolean", "value": true },
+                "isVector3": { "type": ":boolean", "value": true },
+                "vector2IsDictionary": { "type": ":boolean", "value": false }
               }
             }
           ]

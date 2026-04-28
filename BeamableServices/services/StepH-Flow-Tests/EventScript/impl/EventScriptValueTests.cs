@@ -93,18 +93,52 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
-    public void DegreeValuesNormalizeToCircleRange()
+    public void DegreeValuesPreserveRawAnglesAndWrapExplicitly()
     {
-        var wrapped = Degree(450m);
+        var over = Degree(450m);
         var negative = Degree(-270m);
-        var zero = Degree(360m);
+        var fullTurn = Degree(360m);
+        var zero = Degree(0m);
 
-        Assert.AreEqual(EventScriptValueKind.Degree, wrapped.Kind);
-        Assert.AreEqual(90m, wrapped.AsNumber());
-        Assert.AreEqual(wrapped, negative);
-        Assert.AreEqual(wrapped.GetHashCode(), negative.GetHashCode());
+        Assert.AreEqual(EventScriptValueKind.Degree, over.Kind);
+        Assert.AreEqual(450m, over.AsNumber());
+        Assert.AreEqual(-270m, negative.AsNumber());
+        Assert.AreEqual(360m, fullTurn.AsNumber());
+        Assert.AreNotEqual(over, negative);
+        Assert.AreEqual(90m, EventScriptDegreeValue.WrapDegrees(over.AsNumber()));
+        Assert.AreEqual(90m, EventScriptDegreeValue.WrapDegrees(negative.AsNumber()));
+        Assert.AreEqual(0m, EventScriptDegreeValue.WrapDegrees(fullTurn.AsNumber()));
         Assert.AreSame(EventScriptDegreeValue.Zero, zero);
-        Assert.AreEqual("90°", wrapped.ToString());
+        Assert.AreEqual("450°", over.ToString());
+    }
+
+    [TestMethod]
+    public void DegreeValuesKeepSeparateTypeIdentity()
+    {
+        var values = new List<EventScriptValue> { Degree(350m), Degree(10m) };
+
+        values.Sort(EventScriptValue.StableComparer);
+
+        Assert.IsFalse(Degree(90m).IsNumber());
+        CollectionAssert.AreEqual(new[] { 10m, 350m }, values.Select(value => value.AsNumber()).ToArray());
+    }
+
+    [TestMethod]
+    public void VectorValuesExposeStableComponents()
+    {
+        var vector2 = Vector2(10.5m, -2m);
+        var vector2Equal = Vector2(10.5m, -2m);
+        var vector3 = Vector3(10.5m, -2m, 3m);
+
+        Assert.AreEqual(EventScriptValueKind.Vector2, vector2.Kind);
+        Assert.AreEqual(vector2, vector2Equal);
+        Assert.AreEqual(vector2.GetHashCode(), vector2Equal.GetHashCode());
+        Assert.AreEqual(10.5m, vector2.AsDictionary()["x"].AsNumber());
+        Assert.AreEqual(-2m, vector2.AsList()[1].AsNumber());
+        Assert.AreEqual(3m, vector3.AsDictionary()["z"].AsNumber());
+        Assert.AreSame(EventScriptVector2Value.Zero, Vector2(0m, 0m));
+        Assert.AreSame(EventScriptVector3Value.Zero, Vector3(0m, 0m, 0m));
+        Assert.AreEqual("vector2[x: 10.5, y: -2]", vector2.ToString());
     }
 
     [TestMethod]

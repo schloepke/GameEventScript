@@ -312,6 +312,51 @@ internal static class EventScriptValueAlu
         };
     }
 
+    public static bool TryEvaluateDegreeBinary(EventScriptValue left, string operation, EventScriptValue right, out EventScriptValue value)
+    {
+        if (operation is not ("+" or "-") || !left.IsDegree() && !right.IsDegree())
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        if (!TryCoerceDegreeOperand(left, out var leftDegrees) ||
+            !TryCoerceDegreeOperand(right, out var rightDegrees))
+        {
+            value = EventScriptValueFactory.DecimalNaN();
+            return true;
+        }
+
+        value = EventScriptValueFactory.Degree(operation == "+"
+            ? leftDegrees + rightDegrees
+            : leftDegrees - rightDegrees);
+        return true;
+    }
+
+    private static bool TryCoerceDegreeOperand(EventScriptValue value, out decimal degrees)
+    {
+        if (value.IsDegree())
+        {
+            degrees = value.AsNumber();
+            return true;
+        }
+
+        if (value.Kind is not (EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage))
+        {
+            degrees = default;
+            return false;
+        }
+
+        if (!TryCoerceNumericForOperation(value, out var number) || !number.IsFinite)
+        {
+            degrees = default;
+            return false;
+        }
+
+        degrees = number.Value;
+        return true;
+    }
+
     public static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
     {
         if (left.IsNaN || right.IsNaN)

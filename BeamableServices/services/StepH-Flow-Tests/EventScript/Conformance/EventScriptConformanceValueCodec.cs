@@ -71,6 +71,8 @@ internal static class EventScriptConformanceValueCodec
                 return DecodeDecimalValue(element);
             case ":percentage":
                 return EventScriptValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
+            case ":degree":
+                return EventScriptValueFactory.Degree(RequireDecimal(element, "value", "degree value"));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
@@ -148,6 +150,7 @@ internal static class EventScriptConformanceValueCodec
             EventScriptValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
             EventScriptValueKind.Decimal => new JsonObject { ["type"] = ":decimal", ["value"] = FormatDecimal(value) },
             EventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
+            EventScriptValueKind.Degree => new JsonObject { ["type"] = ":degree", ["value"] = FormatDecimal(value.AsNumber()) },
             EventScriptValueKind.Optional => ToOptionalJson(value),
             EventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
             EventScriptValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },

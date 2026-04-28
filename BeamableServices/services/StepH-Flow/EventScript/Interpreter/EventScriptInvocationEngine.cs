@@ -227,6 +227,8 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Decimal(number.Value);
                 case PercentageLiteralExpressionNode percentage:
                     return EventScriptValueFactory.Percentage(percentage.PercentValue / 100m);
+                case DegreeLiteralExpressionNode degree:
+                    return EventScriptValueFactory.Degree(degree.Degrees);
 
                 case TextLiteralExpressionNode text:
                     return EventScriptValueFactory.Text(text.Value);
@@ -695,6 +697,11 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValueFactory.Percentage(-unwrapped.AsNumber());
             }
 
+            if (unwrapped.IsDegree())
+            {
+                return EventScriptValueFactory.Degree(-unwrapped.AsNumber());
+            }
+
             if (!TryCoerceNumericForOperation(unwrapped, out var number))
             {
                 return EventScriptValue.Nothing;
@@ -1056,6 +1063,11 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Boolean(greaterOrEqualComparison >= 0);
                 case "+":
                 {
+                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "+", right, out var degree))
+                    {
+                        return degree;
+                    }
+
                     if (TryCoerceNumericForOperation(left, out var leftNumeric) &&
                         TryCoerceNumericForOperation(right, out var rightNumeric))
                     {
@@ -1085,6 +1097,11 @@ internal static class EventScriptInvocationEngine
                 case "zip":
                     return EvaluateCollectionZip(left, right);
                 case "-":
+                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "-", right, out var degreeDifference))
+                    {
+                        return degreeDifference;
+                    }
+
                     if (!TryCoerceNumericForOperation(left, out var leftMinus) ||
                         !TryCoerceNumericForOperation(right, out var rightMinus))
                     {
@@ -2094,6 +2111,8 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Text(value.AsText());
                 case "percentage":
                     return ConvertToPercentage(value);
+                case "degree":
+                    return ConvertToDegree(value);
                 case "boolean":
                     return EventScriptValueFactory.Boolean(value.AsBoolean());
                 case "integer":
@@ -2103,6 +2122,11 @@ internal static class EventScriptInvocationEngine
                     if (!TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
                     {
                         return EventScriptValueFactory.DecimalNaN();
+                    }
+
+                    if (unwrappedNumber.IsDegree())
+                    {
+                        return EventScriptValueFactory.Decimal(unwrappedNumber.AsNumber());
                     }
 
                     if (TryCoerceNumericForOperation(unwrappedNumber, out var number))
@@ -2179,6 +2203,28 @@ internal static class EventScriptInvocationEngine
                         ? number.Value / 100m
                         : number.Value;
                 return EventScriptValueFactory.Percentage(ratio);
+            }
+
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        private EventScriptValue ConvertToDegree(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
+            if (unwrapped.IsDegree())
+            {
+                return unwrapped;
+            }
+
+            if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage &&
+                TryCoerceNumericForOperation(unwrapped, out var number) &&
+                number.IsFinite)
+            {
+                return EventScriptValueFactory.Degree(number.Value);
             }
 
             return EventScriptValueFactory.DecimalNaN();
@@ -2280,6 +2326,7 @@ internal static class EventScriptInvocationEngine
                 "tag" => value.IsTag(),
                 "text" => value.IsText(),
                 "percentage" => value.IsPercentage(),
+                "degree" => value.IsDegree(),
                 "decimal" => value.IsNumber(),
                 "integer" => value.IsInteger(),
                 "boolean" => value.Kind == EventScriptValueKind.Boolean,
@@ -2361,6 +2408,7 @@ internal static class EventScriptInvocationEngine
                 EventScriptValueKind.Tag => $"tag:{value.AsText()}",
                 EventScriptValueKind.Text => $"text:{value.AsText()}",
                 EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+                EventScriptValueKind.Degree => $"degree:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Decimal => value.IsNaN()
                     ? "decimal:nan"
                     : value.IsNegativeInfinity()

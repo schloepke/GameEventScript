@@ -14,6 +14,8 @@ public static class EventScriptValueFactory
 
     public static EventScriptValue Percentage(decimal ratio) => EventScriptPercentageValue.EventScriptPercentage(ratio);
 
+    public static EventScriptValue Degree(decimal degrees) => EventScriptDegreeValue.EventScriptDegree(degrees);
+
     public static EventScriptValue DecimalNaN() => EventScriptDecimalValue.NaN;
 
     public static EventScriptValue DecimalInfinity() => EventScriptDecimalValue.Infinity;

@@ -93,6 +93,21 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void DegreeValuesNormalizeToCircleRange()
+    {
+        var wrapped = Degree(450m);
+        var negative = Degree(-270m);
+        var zero = Degree(360m);
+
+        Assert.AreEqual(EventScriptValueKind.Degree, wrapped.Kind);
+        Assert.AreEqual(90m, wrapped.AsNumber());
+        Assert.AreEqual(wrapped, negative);
+        Assert.AreEqual(wrapped.GetHashCode(), negative.GetHashCode());
+        Assert.AreSame(EventScriptDegreeValue.Zero, zero);
+        Assert.AreEqual("90°", wrapped.ToString());
+    }
+
+    [TestMethod]
     public void PercentagesCompareAsNumericRatios()
     {
         var percentage = Percentage(0.25m);

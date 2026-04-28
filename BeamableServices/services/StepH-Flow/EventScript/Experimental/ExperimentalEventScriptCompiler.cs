@@ -362,6 +362,9 @@ public static class ExperimentalEventScriptCompiler
                 case PercentageLiteralExpressionNode percentage:
                     value = EventScriptValueFactory.Percentage(percentage.PercentValue / 100m);
                     return true;
+                case DegreeLiteralExpressionNode degree:
+                    value = EventScriptValueFactory.Degree(degree.Degrees);
+                    return true;
                 case TextLiteralExpressionNode text:
                     value = EventScriptValueFactory.Text(text.Value);
                     return true;
@@ -459,6 +462,9 @@ public static class ExperimentalEventScriptCompiler
                 case "percentage":
                     converted = ConvertConstantToPercentage(value);
                     return true;
+                case "degree":
+                    converted = ConvertConstantToDegree(value);
+                    return true;
                 case "boolean":
                     converted = EventScriptValueFactory.Boolean(value.AsBoolean());
                     return true;
@@ -521,6 +527,11 @@ public static class ExperimentalEventScriptCompiler
                 return EventScriptValueFactory.DecimalNaN();
             }
 
+            if (unwrapped.IsDegree())
+            {
+                return EventScriptValueFactory.Decimal(unwrapped.AsNumber());
+            }
+
             if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite))
             {
                 return EventScriptValueFactory.DecimalNaN();
@@ -564,6 +575,28 @@ public static class ExperimentalEventScriptCompiler
                     ? number / 100m
                     : number;
             return EventScriptValueFactory.Percentage(ratio);
+        }
+
+        private static EventScriptValue ConvertConstantToDegree(EventScriptValue value)
+        {
+            if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
+            if (unwrapped.IsDegree())
+            {
+                return unwrapped;
+            }
+
+            if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage &&
+                TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite) &&
+                isFinite)
+            {
+                return EventScriptValueFactory.Degree(number);
+            }
+
+            return EventScriptValueFactory.DecimalNaN();
         }
 
         private static bool TryUnwrapOptionalForConstant(EventScriptValue value, out EventScriptValue unwrapped)

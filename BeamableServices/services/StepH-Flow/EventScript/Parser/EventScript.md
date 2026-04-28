@@ -262,6 +262,16 @@ This is an expression form, not a statement-only special case.
 0%
 ```
 
+### Degrees
+
+```eventscript
+43.9°
+90°
+360°
+```
+
+Degree values use the built-in `:degree` type. They are normalized to the circle range `0°` up to, but not including, `360°`.
+
 ### Text
 
 ```eventscript
@@ -324,6 +334,7 @@ Built-in type tags:
 - `:tag`
 - `:text`
 - `:percentage`
+- `:degree`
 - `:decimal`
 - `:integer`
 - `:boolean`
@@ -355,6 +366,7 @@ if value is :decimal {
 
 ```eventscript
 let ratio as :percentage be 75
+let heading as :degree be 450
 let amount as :decimal be '12.5'
 let flags as :list be 'abc'
 ```

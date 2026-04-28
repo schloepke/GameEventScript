@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "typed message values roundtrip",
-      "script": "on Echo(name, tags, stats, maybe, flag, percent, category, points, span) {\n  publish Echoed(name: name, tags: tags, stats: stats, maybe: maybe, flag: flag, percent: percent, category: category, points: points, span: span)\n}",
+      "script": "on Echo(name, tags, stats, maybe, flag, percent, heading, category, points, span) {\n  publish Echoed(name: name, tags: tags, stats: stats, maybe: maybe, flag: flag, percent: percent, heading: heading, category: category, points: points, span: span)\n}",
       "steps": [
         {
           "input": {
@@ -29,6 +29,7 @@
               "maybe": { "type": ":optional", "hasValue": false },
               "flag": { "type": ":boolean", "value": true },
               "percent": { "type": ":percentage", "value": "0.25" },
+              "heading": { "type": ":degree", "value": "90" },
               "category": { "type": ":tag", "value": "Infantry" },
               "points": {
                 "type": ":set",
@@ -62,6 +63,7 @@
                 "maybe": { "type": ":optional", "hasValue": false },
                 "flag": { "type": ":boolean", "value": true },
                 "percent": { "type": ":percentage", "value": "0.25" },
+                "heading": { "type": ":degree", "value": "90" },
                 "category": { "type": ":tag", "value": "Infantry" },
                 "points": {
                   "type": ":set",
@@ -97,6 +99,34 @@
                   }
                 },
                 "isMeter": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "degree literals normalize and support additive arithmetic",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let wrappedLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addWrap be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractWrap be 10° - 40°\n  let negWrap be -90°\n  let castWrap as :degree be 450\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  publish Done(fromLiteral: fromLiteral, wrappedLiteral: wrappedLiteral, decimalLiteral: decimalLiteral, addWrap: addWrap, addOver: addOver, subtractWrap: subtractWrap, negWrap: negWrap, castWrap: castWrap, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "fromLiteral": { "type": ":degree", "value": "90" },
+                "wrappedLiteral": { "type": ":degree", "value": "0" },
+                "decimalLiteral": { "type": ":degree", "value": "43.9" },
+                "addWrap": { "type": ":degree", "value": "90" },
+                "addOver": { "type": ":degree", "value": "20" },
+                "subtractWrap": { "type": ":degree", "value": "330" },
+                "negWrap": { "type": ":degree", "value": "270" },
+                "castWrap": { "type": ":degree", "value": "90" },
+                "textValue": { "type": ":text", "value": "43.9°" },
+                "decimalValue": { "type": ":decimal", "value": "43.9" },
+                "isDegree": { "type": ":boolean", "value": true }
               }
             }
           ]

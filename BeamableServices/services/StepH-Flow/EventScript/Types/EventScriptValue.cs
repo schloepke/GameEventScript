@@ -15,6 +15,7 @@ public enum EventScriptValueKind
     Tag,
     Text,
     Percentage,
+    Degree,
     Decimal,
     Integer,
     Boolean,
@@ -49,6 +50,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     public bool IsInteger() => Kind == EventScriptValueKind.Integer;
     public bool IsText() => Kind == EventScriptValueKind.Text;
     public bool IsPercentage() => Kind == EventScriptValueKind.Percentage;
+    public bool IsDegree() => Kind == EventScriptValueKind.Degree;
     public bool IsIterator() => Kind == EventScriptValueKind.Iterator;
     public bool IsList() => Kind == EventScriptValueKind.List;
     public bool IsDictionary() => Kind == EventScriptValueKind.Dictionary;
@@ -165,6 +167,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => ":Tag",
             EventScriptValueKind.Text => ":Text",
             EventScriptValueKind.Percentage => ":Percentage",
+            EventScriptValueKind.Degree => ":Degree",
             EventScriptValueKind.Decimal => ":Decimal",
             EventScriptValueKind.Integer => ":Integer",
             EventScriptValueKind.Boolean => ":Boolean",
@@ -189,6 +192,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => $":{AsText()}",
             EventScriptValueKind.Text => AsText(),
             EventScriptValueKind.Percentage => FormatPercentage(((EventScriptPercentageValue)this).Ratio),
+            EventScriptValueKind.Degree => FormatDegree(((EventScriptDegreeValue)this).Degrees),
             EventScriptValueKind.Decimal => IsNaN() ? "NaN" : IsInfinity() ? IsNegativeInfinity() ? "-Infinity" : "Infinity" : AsNumber().ToString(CultureInfo.InvariantCulture),
             EventScriptValueKind.Integer => AsInteger().ToString(CultureInfo.InvariantCulture),
             EventScriptValueKind.Boolean => AsBoolean().ToString(),
@@ -231,6 +235,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => AsText() == other.AsText(),
             EventScriptValueKind.Text => AsText() == other.AsText(),
             EventScriptValueKind.Percentage => ((EventScriptPercentageValue)this).Ratio == ((EventScriptPercentageValue)other).Ratio,
+            EventScriptValueKind.Degree => ((EventScriptDegreeValue)this).Degrees == ((EventScriptDegreeValue)other).Degrees,
             EventScriptValueKind.Decimal => AsNumber() == other.AsNumber(),
             EventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
             EventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
@@ -278,6 +283,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 break;
             case EventScriptValueKind.Percentage:
                 hash.Add(((EventScriptPercentageValue)this).Ratio);
+                break;
+            case EventScriptValueKind.Degree:
+                hash.Add(((EventScriptDegreeValue)this).Degrees);
                 break;
             case EventScriptValueKind.Optional:
             {
@@ -353,16 +361,17 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => 1,
             EventScriptValueKind.Text => 2,
             EventScriptValueKind.Percentage => 3,
-            EventScriptValueKind.Boolean => 4,
-            EventScriptValueKind.Optional => 5,
-            EventScriptValueKind.Iterator => 6,
-            EventScriptValueKind.Range => 7,
-            EventScriptValueKind.Message => 8,
-            EventScriptValueKind.Handler => 9,
-            EventScriptValueKind.List => 10,
-            EventScriptValueKind.Dictionary => 11,
-            EventScriptValueKind.Set => 12,
-            EventScriptValueKind.Dice => 13,
+            EventScriptValueKind.Degree => 4,
+            EventScriptValueKind.Boolean => 5,
+            EventScriptValueKind.Optional => 6,
+            EventScriptValueKind.Iterator => 7,
+            EventScriptValueKind.Range => 8,
+            EventScriptValueKind.Message => 9,
+            EventScriptValueKind.Handler => 10,
+            EventScriptValueKind.List => 11,
+            EventScriptValueKind.Dictionary => 12,
+            EventScriptValueKind.Set => 13,
+            EventScriptValueKind.Dice => 14,
             _ => 8
         };
     }
@@ -540,6 +549,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 EventScriptValueKind.Tag => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 EventScriptValueKind.Text => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 EventScriptValueKind.Percentage => ((EventScriptPercentageValue)left).Ratio.CompareTo(((EventScriptPercentageValue)right).Ratio),
+                EventScriptValueKind.Degree => ((EventScriptDegreeValue)left).Degrees.CompareTo(((EventScriptDegreeValue)right).Degrees),
                 EventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
                 EventScriptValueKind.Optional => CompareOptional(left.AsOptional(), right.AsOptional()),
                 EventScriptValueKind.Iterator => CompareSequence(left.AsEnumerable().ToArray(), right.AsEnumerable().ToArray()),
@@ -713,6 +723,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     internal static bool IsHiddenKey(string key) => key != null && key.StartsWith("__", StringComparison.Ordinal);
 
     internal static string FormatPercentage(decimal ratio) => $"{(ratio * 100m).ToString("0.############################", CultureInfo.InvariantCulture)}%";
+
+    internal static string FormatDegree(decimal degrees) => $"{degrees.ToString("0.############################", CultureInfo.InvariantCulture)}\u00B0";
 
     internal static long ToIntegerPercentage(decimal ratio)
     {

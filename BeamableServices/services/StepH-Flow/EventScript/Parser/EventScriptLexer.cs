@@ -17,6 +17,7 @@ public enum EventScriptTokenKind
     Tag,
     Decimal,
     Percentage,
+    Degree,
     Text,
     True,
     False,
@@ -361,6 +362,23 @@ public sealed class EventScriptLexer
             }
 
             return CreateToken(EventScriptTokenKind.Percentage, text, line, column);
+        }
+
+        if (!IsAtEnd && Current == '\u00B0')
+        {
+            Advance();
+            text = _input[start..(_index - 1)];
+            if (!IsAtEnd && !IsValidNumberBoundary(Current))
+            {
+                while (!IsAtEnd && !char.IsWhiteSpace(Current))
+                {
+                    Advance();
+                }
+
+                return CreateToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
+            }
+
+            return CreateToken(EventScriptTokenKind.Degree, text, line, column);
         }
 
         if (!IsAtEnd && !IsValidNumberBoundary(Current))

@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.Flow.EventScript.Parser;
-using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Linker;
@@ -530,10 +529,10 @@ internal static class EventScriptLinkOptimizer
                 value = EventScriptValueFactory.Boolean(!unwrappedBool.AsBoolean());
                 return true;
             case "has value":
-                value = EventScriptValueFactory.Boolean(EventScriptValueSemantics.HasValue(operand));
+                value = EventScriptValueFactory.Boolean(operand.HasSemanticValue());
                 return true;
             case "empty":
-                value = EventScriptValueFactory.Boolean(EventScriptValueSemantics.IsEmpty(operand));
+                value = EventScriptValueFactory.Boolean(operand.IsSemanticallyEmpty());
                 return true;
             default:
                 value = EventScriptValue.Nothing;
@@ -551,7 +550,7 @@ internal static class EventScriptLinkOptimizer
 
         if (binary.Operator == "default")
         {
-            if (!EventScriptValueSemantics.HasValue(leftRaw))
+            if (!leftRaw.HasSemanticValue())
             {
                 value = rightRaw;
                 return true;

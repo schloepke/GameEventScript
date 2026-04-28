@@ -7,7 +7,6 @@ using System.Linq;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
-using StepH.Flow.EventScript.Semantics;
 using StepH.Flow.EventScript.Types;
 using NumericKind = StepH.Flow.EventScript.Runtime.EventScriptValueAlu.NumericKind;
 using NumericValue = StepH.Flow.EventScript.Runtime.EventScriptValueAlu.NumericValue;
@@ -823,8 +822,8 @@ internal static class ExperimentalOpcodeInvocationEngine
         {
             "-" => EvaluateNegateUnary(operand),
             "!" => EvaluateNotUnary(operand),
-            "has value" => EventScriptValueFactory.Boolean(EventScriptValueSemantics.HasValue(operand)),
-            "empty" => EventScriptValueFactory.Boolean(EventScriptValueSemantics.IsEmpty(operand)),
+            "has value" => EventScriptValueFactory.Boolean(operand.HasSemanticValue()),
+            "empty" => EventScriptValueFactory.Boolean(operand.IsSemanticallyEmpty()),
             "len" => EvaluateLenUnary(context, operand),
             "chance" => EvaluateChanceUnary(operand),
             "keys" => EventScriptValueFactory.Keys(operand),
@@ -1135,7 +1134,7 @@ internal static class ExperimentalOpcodeInvocationEngine
 
         if (binary.Operator == "default")
         {
-            if (!EventScriptValueSemantics.HasValue(leftRaw))
+            if (!leftRaw.HasSemanticValue())
             {
                 return rightRaw;
             }
@@ -1174,13 +1173,13 @@ internal static class ExperimentalOpcodeInvocationEngine
             case "<>":
                 return EventScriptValueFactory.Boolean(!AreEqual(left, right));
             case "in":
-                return EventScriptValueFactory.Boolean(EventScriptValueSemantics.Contains(right, left));
+                return EventScriptValueFactory.Boolean(right.Contains(left));
             case "value in":
-                return EventScriptValueFactory.Boolean(EventScriptValueSemantics.ContainsValue(right, left));
+                return EventScriptValueFactory.Boolean(right.ContainsValue(left));
             case "starts with":
-                return EventScriptValueFactory.Boolean(EventScriptValueSemantics.StartsWith(left, right));
+                return EventScriptValueFactory.Boolean(left.StartsWith(right));
             case "ends with":
-                return EventScriptValueFactory.Boolean(EventScriptValueSemantics.EndsWith(left, right));
+                return EventScriptValueFactory.Boolean(left.EndsWith(right));
             case "<":
                 if (!TryCoerceNumericForOperation(left, out var leftLess) ||
                     !TryCoerceNumericForOperation(right, out var rightLess) ||
@@ -1468,13 +1467,20 @@ internal static class ExperimentalOpcodeInvocationEngine
             : value.AsList();
     }
 
+    private EventScriptProjectionEvaluator CreateProjectionEvaluator(ExperimentalCompiledExecutionContext context)
+        => new(
+            context.PushScope,
+            context.PopScope,
+            context.Define,
+            expression => EvaluateExpression(context, expression));
+
     private EventScriptValue EvaluateEdgeSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, EdgeSelectorNode selector)
     {
         IEnumerable<EventScriptValue> candidates = items;
         if (!string.IsNullOrEmpty(selector.Identifier) && selector.Predicate is not null)
         {
-            candidates = items
-                .Where(item => EvaluatePredicateItem(context, item, selector.Identifier!, selector.Predicate));
+            var projection = CreateProjectionEvaluator(context);
+            candidates = items.Where(item => projection.EvaluateBoolean(selector.Identifier!, selector.Predicate, item));
         }
 
         EventScriptValue? first = null;
@@ -1504,20 +1510,6 @@ internal static class ExperimentalOpcodeInvocationEngine
         };
     }
 
-    private bool EvaluatePredicateItem(ExperimentalCompiledExecutionContext context, EventScriptValue item, string identifier, ExpressionNode predicate)
-    {
-        context.PushScope();
-        try
-        {
-            context.Define(identifier, item);
-            return EvaluateExpression(context, predicate).AsBoolean();
-        }
-        finally
-        {
-            context.PopScope();
-        }
-    }
-
     private EventScriptValue EvaluateIndexedCollectionAccess(ExperimentalCompiledExecutionContext context, EventScriptValue target, ExpressionNode selectorExpression)
     {
         var selector = EvaluateExpression(context, selectorExpression);
@@ -1526,7 +1518,7 @@ internal static class ExperimentalOpcodeInvocationEngine
             return EventScriptValue.Nothing;
         }
 
-        return EventScriptValueSemantics.Lookup(target, selector);
+        return target.Lookup(selector);
     }
 
     private EventScriptValue EvaluateTakePattern(ExperimentalCompiledExecutionContext context, EventScriptValue target, DicePatternNode pattern)
@@ -1795,26 +1787,18 @@ internal static class ExperimentalOpcodeInvocationEngine
             return EventScriptValueFactory.Boolean(false);
         }
 
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            var predicateResult = projection.EvaluateBoolean(selector.Identifier, selector.Predicate, item);
+            if (isAny && predicateResult)
             {
-                context.Define(selector.Identifier, item);
-                var predicateResult = AsBool(EvaluateExpression(context, selector.Predicate));
-                if (isAny && predicateResult)
-                {
-                    return EventScriptValueFactory.Boolean(true);
-                }
-
-                if (!isAny && !predicateResult)
-                {
-                    return EventScriptValueFactory.Boolean(false);
-                }
+                return EventScriptValueFactory.Boolean(true);
             }
-            finally
+
+            if (!isAny && !predicateResult)
             {
-                context.PopScope();
+                return EventScriptValueFactory.Boolean(false);
             }
         }
 
@@ -1824,20 +1808,12 @@ internal static class ExperimentalOpcodeInvocationEngine
     private EventScriptValue EvaluateCountSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, CountSelectorNode selector)
     {
         var count = 0L;
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            if (projection.EvaluateBoolean(selector.Identifier, selector.Predicate, item))
             {
-                context.Define(selector.Identifier, item);
-                if (AsBool(EvaluateExpression(context, selector.Predicate)))
-                {
-                    count++;
-                }
-            }
-            finally
-            {
-                context.PopScope();
+                count++;
             }
         }
 
@@ -1846,14 +1822,15 @@ internal static class ExperimentalOpcodeInvocationEngine
 
     private EventScriptValue EvaluateChooseSelector(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> items, ChooseSelectorNode selector)
     {
+        var projection = CreateProjectionEvaluator(context);
         var candidates = selector.Predicate is null || string.IsNullOrEmpty(selector.Identifier)
             ? items.ToList()
-            : FilterItems(context, items, selector.Identifier!, selector.Predicate);
+            : FilterItems(projection, items, selector.Identifier!, selector.Predicate);
 
         IReadOnlyList<EventScriptValue> chosen;
         if (selector.WeightExpression is not null && !string.IsNullOrEmpty(selector.WeightIdentifier))
         {
-            chosen = ChooseWeightedItems(context, candidates, selector.Count, selector.WeightIdentifier!, selector.WeightExpression);
+            chosen = ChooseWeightedItems(projection, candidates, selector.Count, selector.WeightIdentifier!, selector.WeightExpression);
         }
         else if (selector.AtRandom)
         {
@@ -1921,30 +1898,21 @@ internal static class ExperimentalOpcodeInvocationEngine
         return EventScriptValueFactory.List(items.Reverse().ToArray());
     }
 
-    private List<EventScriptValue> FilterItems(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, string identifier, ExpressionNode predicate)
+    private static List<EventScriptValue> FilterItems(EventScriptProjectionEvaluator projection, IEnumerable<EventScriptValue> items, string identifier, ExpressionNode predicate)
     {
         var result = new List<EventScriptValue>();
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            if (projection.EvaluateBoolean(identifier, predicate, item))
             {
-                context.Define(identifier, item);
-                if (AsBool(EvaluateExpression(context, predicate)))
-                {
-                    result.Add(item);
-                }
-            }
-            finally
-            {
-                context.PopScope();
+                result.Add(item);
             }
         }
 
         return result;
     }
 
-    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(ExperimentalCompiledExecutionContext context, IReadOnlyList<EventScriptValue> candidates, int count, string identifier, ExpressionNode weightExpression)
+    private IReadOnlyList<EventScriptValue> ChooseWeightedItems(EventScriptProjectionEvaluator projection, IReadOnlyList<EventScriptValue> candidates, int count, string identifier, ExpressionNode weightExpression)
     {
         var remaining = candidates.ToList();
         var chosen = new List<EventScriptValue>();
@@ -1956,7 +1924,7 @@ internal static class ExperimentalOpcodeInvocationEngine
 
             foreach (var candidate in remaining)
             {
-                var weight = EvaluateWeight(context, candidate, identifier, weightExpression);
+                var weight = projection.EvaluatePositiveWeight(identifier, weightExpression, candidate);
                 if (weight <= 0m)
                 {
                     continue;
@@ -1995,26 +1963,6 @@ internal static class ExperimentalOpcodeInvocationEngine
         return chosen;
     }
 
-    private decimal EvaluateWeight(ExperimentalCompiledExecutionContext context, EventScriptValue item, string identifier, ExpressionNode weightExpression)
-    {
-        context.PushScope();
-        try
-        {
-            context.Define(identifier, item);
-            var weightValue = EvaluateExpression(context, weightExpression);
-            if (!TryCoerceNumericForOperation(weightValue, out var weight) || !weight.IsFinite)
-            {
-                return 0m;
-            }
-
-            return weight.Value > 0m ? weight.Value : 0m;
-        }
-        finally
-        {
-            context.PopScope();
-        }
-    }
-
     private IReadOnlyList<EventScriptValue> ChooseRandomItems(IReadOnlyList<EventScriptValue> items, int count)
     {
         var pool = items.ToList();
@@ -2036,20 +1984,12 @@ internal static class ExperimentalOpcodeInvocationEngine
     private EventScriptValue EvaluateFilterSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, FilterSelectorNode selector)
     {
         var result = new List<EventScriptValue>();
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            if (projection.EvaluateBoolean(selector.Identifier, selector.Predicate, item))
             {
-                context.Define(selector.Identifier, item);
-                if (AsBool(EvaluateExpression(context, selector.Predicate)))
-                {
-                    result.Add(item);
-                }
-            }
-            finally
-            {
-                context.PopScope();
+                result.Add(item);
             }
         }
 
@@ -2059,23 +1999,15 @@ internal static class ExperimentalOpcodeInvocationEngine
     private EventScriptValue EvaluateSumSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, SumSelectorNode selector)
     {
         var sum = NumericValue.Finite(0m);
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            if (!TryCoerceNumericForOperation(projection.Evaluate(selector.Identifier, selector.Projection, item), out var number))
             {
-                context.Define(selector.Identifier, item);
-                if (!TryCoerceNumericForOperation(EvaluateExpression(context, selector.Projection), out var number))
-                {
-                    return EventScriptValueFactory.DecimalNaN();
-                }
+                return EventScriptValueFactory.DecimalNaN();
+            }
 
-                sum = AddNumeric(sum, number);
-            }
-            finally
-            {
-                context.PopScope();
-            }
+            sum = AddNumeric(sum, number);
         }
 
         return ToEventScriptDecimal(sum);
@@ -2085,24 +2017,16 @@ internal static class ExperimentalOpcodeInvocationEngine
     {
         var sum = NumericValue.Finite(0m);
         var count = 0;
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            if (!TryCoerceNumericForOperation(projection.Evaluate(selector.Identifier, selector.Projection, item), out var number) || !number.IsFinite)
             {
-                context.Define(selector.Identifier, item);
-                if (!TryCoerceNumericForOperation(EvaluateExpression(context, selector.Projection), out var number) || !number.IsFinite)
-                {
-                    return EventScriptValue.Nothing;
-                }
+                return EventScriptValue.Nothing;
+            }
 
-                sum = AddNumeric(sum, number);
-                count++;
-            }
-            finally
-            {
-                context.PopScope();
-            }
+            sum = AddNumeric(sum, number);
+            count++;
         }
 
         return count == 0 || !sum.IsFinite
@@ -2113,18 +2037,10 @@ internal static class ExperimentalOpcodeInvocationEngine
     private EventScriptValue EvaluateSelectSelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, SelectSelectorNode selector)
     {
         var result = new List<EventScriptValue>();
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
-            {
-                context.Define(selector.Identifier, item);
-                result.Add(EvaluateExpression(context, selector.Projection));
-            }
-            finally
-            {
-                context.PopScope();
-            }
+            result.Add(projection.Evaluate(selector.Identifier, selector.Projection, item));
         }
 
         return EventScriptValueFactory.List(result);
@@ -2133,27 +2049,19 @@ internal static class ExperimentalOpcodeInvocationEngine
     private EventScriptValue EvaluateDictionarySelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, DictionarySelectorNode selector)
     {
         var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        var projection = CreateProjectionEvaluator(context);
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            var key = projection.Evaluate(selector.Identifier, selector.KeyProjection, item).AsText();
+            if (string.IsNullOrEmpty(key))
             {
-                context.Define(selector.Identifier, item);
-                var key = EvaluateExpression(context, selector.KeyProjection).AsText();
-                if (string.IsNullOrEmpty(key))
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                var value = selector.ValueProjection is null
-                    ? item
-                    : EvaluateExpression(context, selector.ValueProjection);
-                result[key] = value;
-            }
-            finally
-            {
-                context.PopScope();
-            }
+            var value = selector.ValueProjection is null
+                ? item
+                : projection.Evaluate(selector.Identifier, selector.ValueProjection, item);
+            result[key] = value;
         }
 
         return EventScriptValueFactory.Dictionary(result);
@@ -2164,9 +2072,9 @@ internal static class ExperimentalOpcodeInvocationEngine
         var value = EvaluateExpression(context, selector.ValueExpression);
         return selector.Mode switch
         {
-            "single" => EventScriptValueFactory.Boolean(EventScriptValueSemantics.Contains(target, value)),
-            "all" => EventScriptValueFactory.Boolean(EnumerateListLikeValue(value).All(item => EventScriptValueSemantics.Contains(target, item))),
-            "any" => EventScriptValueFactory.Boolean(EnumerateListLikeValue(value).Any(item => EventScriptValueSemantics.Contains(target, item))),
+            "single" => EventScriptValueFactory.Boolean(target.Contains(value)),
+            "all" => EventScriptValueFactory.Boolean(EnumerateListLikeValue(value).All(target.Contains)),
+            "any" => EventScriptValueFactory.Boolean(EnumerateListLikeValue(value).Any(target.Contains)),
             _ => EventScriptValueFactory.Boolean(false)
         };
     }
@@ -2175,31 +2083,23 @@ internal static class ExperimentalOpcodeInvocationEngine
     {
         EventScriptValue? bestItem = null;
         EventScriptValue? bestProjection = null;
+        var projectionEvaluator = CreateProjectionEvaluator(context);
 
         foreach (var item in items)
         {
-            context.PushScope();
-            try
+            var candidateProjection = projectionEvaluator.Evaluate(identifier, projection, item);
+            if (bestProjection is null)
             {
-                context.Define(identifier, item);
-                var candidateProjection = EvaluateExpression(context, projection);
-                if (bestProjection is null)
-                {
-                    bestProjection = candidateProjection;
-                    bestItem = item;
-                    continue;
-                }
-
-                var comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
-                if ((isMax && comparison > 0) || (!isMax && comparison < 0))
-                {
-                    bestProjection = candidateProjection;
-                    bestItem = item;
-                }
+                bestProjection = candidateProjection;
+                bestItem = item;
+                continue;
             }
-            finally
+
+            var comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+            if ((isMax && comparison > 0) || (!isMax && comparison < 0))
             {
-                context.PopScope();
+                bestProjection = candidateProjection;
+                bestItem = item;
             }
         }
 
@@ -2209,47 +2109,40 @@ internal static class ExperimentalOpcodeInvocationEngine
     private EventScriptValue EvaluateSortSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IEnumerable<EventScriptValue> items, SortSelectorNode selector)
     {
         _ = context;
-        return EventScriptCollectionSemantics.Sort(target, items, selector.Direction);
+        return EventScriptCollectionOperators.Sort(target, items, selector.Direction);
     }
 
     private EventScriptValue EvaluateOrderBySelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IEnumerable<EventScriptValue> items, OrderBySelectorNode selector)
     {
-        return EventScriptCollectionSemantics.OrderBy(
+        var projection = CreateProjectionEvaluator(context);
+        return EventScriptCollectionOperators.OrderBy(
             target,
             items,
             selector.Direction,
-            item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
-    }
-
-    private EventScriptValue EvaluateSortProjection(ExperimentalCompiledExecutionContext context, EventScriptValue item, string identifier, ExpressionNode projection)
-    {
-        context.PushScope();
-        try
-        {
-            context.Define(identifier, item);
-            return EvaluateExpression(context, projection);
-        }
-        finally
-        {
-            context.PopScope();
-        }
+            item => projection.Evaluate(selector.Identifier, selector.Projection, item));
     }
 
     private EventScriptValue EvaluateDistinctSelector(ExperimentalCompiledExecutionContext context, EventScriptValue target, IEnumerable<EventScriptValue> items, DistinctSelectorNode selector)
     {
         if (selector.Projection is null || string.IsNullOrEmpty(selector.Identifier))
         {
-            return EventScriptCollectionSemantics.Distinct(target, items);
+            return EventScriptCollectionOperators.Distinct(target, items);
         }
 
-        return EventScriptCollectionSemantics.DistinctBy(
+        var projection = CreateProjectionEvaluator(context);
+        return EventScriptCollectionOperators.DistinctBy(
             target,
             items,
-            item => EvaluateSortProjection(context, item, selector.Identifier!, selector.Projection!));
+            item => projection.Evaluate(selector.Identifier!, selector.Projection!, item));
     }
 
-    private EventScriptValue EvaluateGroupBySelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, GroupBySelectorNode selector) => EventScriptCollectionSemantics.GroupBy(
-        items, item => EvaluateSortProjection(context, item, selector.Identifier, selector.Projection));
+    private EventScriptValue EvaluateGroupBySelector(ExperimentalCompiledExecutionContext context, IEnumerable<EventScriptValue> items, GroupBySelectorNode selector)
+    {
+        var projection = CreateProjectionEvaluator(context);
+        return EventScriptCollectionOperators.GroupBy(
+            items,
+            item => projection.Evaluate(selector.Identifier, selector.Projection, item));
+    }
 
     private bool MatchesObjectPattern(ExperimentalCompiledExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
     {

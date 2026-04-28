@@ -32,6 +32,19 @@ public sealed class EventScriptTextValue : EventScriptValue
 
     public override IEnumerable<EventScriptValue> AsEnumerable() => AsList();
 
+    public override bool HasSemanticValue() => Value.Length > 0;
+
+    public override bool IsSemanticallyEmpty() => Value.Length == 0;
+
+    public override bool Contains(EventScriptValue needle)
+        => Value.Contains(ToComparableText(needle), System.StringComparison.Ordinal);
+
+    public override bool StartsWith(EventScriptValue prefix)
+        => prefix.Kind == EventScriptValueKind.Text && Value.StartsWith(prefix.AsText(), System.StringComparison.Ordinal);
+
+    public override bool EndsWith(EventScriptValue suffix)
+        => suffix.Kind == EventScriptValueKind.Text && Value.EndsWith(suffix.AsText(), System.StringComparison.Ordinal);
+
     internal override bool TryConvertToNumber(out EventScriptValue value)
     {
         if (decimal.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))

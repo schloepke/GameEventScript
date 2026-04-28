@@ -53,6 +53,8 @@ public sealed class EventScriptDecimalValue : EventScriptValue
     public override decimal AsNumber()
         => IsNaNValue ? 0m : IsInfinityValue ? IsNegativeInfinityValue ? decimal.MinValue : decimal.MaxValue : Value;
 
+    public override bool HasSemanticValue() => !IsNaNValue && !IsInfinityValue;
+
     internal override bool TryConvertToNumber(out EventScriptValue value)
     {
         value = this;

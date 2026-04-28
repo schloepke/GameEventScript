@@ -28,6 +28,43 @@ public sealed class EventScriptRangeValue : EventScriptValue
 
     public override ISet<EventScriptValue> AsSet() => TryConvertToSet(out var value) ? value.AsSet() : new SortedSet<EventScriptValue>(StableComparer);
 
+    public override bool HasSemanticValue() => GetLength() > 0;
+
+    public override bool IsSemanticallyEmpty() => GetLength() == 0;
+
+    public override bool Contains(EventScriptValue needle)
+    {
+        if (!needle.IsNumber())
+        {
+            return false;
+        }
+
+        var value = needle.AsInteger();
+        if (!Integer(value).Equals(needle))
+        {
+            return false;
+        }
+
+        if (Step == 0)
+        {
+            return false;
+        }
+
+        if (Step > 0)
+        {
+            if (value < From || value > To)
+            {
+                return false;
+            }
+        }
+        else if (value > From || value < To)
+        {
+            return false;
+        }
+
+        return ((decimal)value - From) % Step == 0m;
+    }
+
     public override IEnumerable<EventScriptValue> AsEnumerable()
     {
         switch (Step)
@@ -65,6 +102,59 @@ public sealed class EventScriptRangeValue : EventScriptValue
 
             descendingCurrent = next;
         }
+    }
+
+    protected override EventScriptValue LookupCore(EventScriptValue selector)
+    {
+        var index = selector.AsInteger();
+        if (index <= 0 || index > GetLength())
+        {
+            return Nothing;
+        }
+
+        var value = (decimal)From + ((decimal)index - 1m) * Step;
+        if (value < long.MinValue || value > long.MaxValue)
+        {
+            return Nothing;
+        }
+
+        return Integer((long)value);
+    }
+
+    private long GetLength()
+    {
+        if (Step == 0)
+        {
+            return 0;
+        }
+
+        if (Step > 0)
+        {
+            if (From > To)
+            {
+                return 0;
+            }
+
+            return ClampLength(((decimal)To - From) / Step);
+        }
+
+        if (From < To)
+        {
+            return 0;
+        }
+
+        return ClampLength(((decimal)From - To) / -(decimal)Step);
+    }
+
+    private static long ClampLength(decimal zeroBasedDistance)
+    {
+        var length = decimal.Floor(zeroBasedDistance) + 1m;
+        if (length <= 0m)
+        {
+            return 0;
+        }
+
+        return length > long.MaxValue ? long.MaxValue : (long)length;
     }
 
     internal override bool TryConvertToText(out EventScriptValue value)

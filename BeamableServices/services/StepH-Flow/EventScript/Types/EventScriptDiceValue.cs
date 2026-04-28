@@ -36,6 +36,12 @@ public sealed class EventScriptDiceValue : EventScriptValue
 
     public override IEnumerable<EventScriptValue> AsEnumerable() => Rolls.Select(roll => Integer(roll));
 
+    public override bool HasSemanticValue() => Rolls.Count > 0;
+
+    public override bool IsSemanticallyEmpty() => Rolls.Count == 0;
+
+    public override bool Contains(EventScriptValue needle) => AsList().Any(item => item.Equals(needle));
+
     internal override bool TryConvertToNumber(out EventScriptValue value)
     {
         value = Decimal(Sum());

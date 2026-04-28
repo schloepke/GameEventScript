@@ -33,6 +33,12 @@ public sealed class EventScriptSetValue : EventScriptValue
 
     public override IEnumerable<EventScriptValue> AsEnumerable() => Items;
 
+    public override bool HasSemanticValue() => Items.Count > 0;
+
+    public override bool IsSemanticallyEmpty() => Items.Count == 0;
+
+    public override bool Contains(EventScriptValue needle) => Items.Any(item => item.Equals(needle));
+
     internal override bool TryConvertToList(out EventScriptValue value)
     {
         value = List(AsSet());

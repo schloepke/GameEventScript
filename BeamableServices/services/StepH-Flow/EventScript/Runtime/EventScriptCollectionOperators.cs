@@ -5,57 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.Flow.EventScript.Types;
 
-namespace StepH.Flow.EventScript.Semantics;
+namespace StepH.Flow.EventScript.Runtime;
 
-public static class EventScriptCollectionSemantics
+internal static class EventScriptCollectionOperators
 {
-    public static bool ContainsSingle(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
-    {
-        if (target.Kind == EventScriptValueKind.Text)
-        {
-            return target.AsText().Contains(value.AsText(), StringComparison.Ordinal);
-        }
-
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return target.AsDictionary().ContainsKey(value.AsText());
-        }
-
-        return items.Any(item => item.Equals(value));
-    }
-
-    public static bool ContainsAll(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
-    {
-        var required = value.AsList();
-        if (target.Kind == EventScriptValueKind.Text)
-        {
-            return required.All(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
-        }
-
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return required.All(item => target.AsDictionary().ContainsKey(item.AsText()));
-        }
-
-        return required.All(requiredItem => items.Any(item => item.Equals(requiredItem)));
-    }
-
-    public static bool ContainsAny(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
-    {
-        var required = value.AsList();
-        if (target.Kind == EventScriptValueKind.Text)
-        {
-            return required.Any(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
-        }
-
-        if (target.Kind == EventScriptValueKind.Dictionary)
-        {
-            return required.Any(item => target.AsDictionary().ContainsKey(item.AsText()));
-        }
-
-        return required.Any(requiredItem => items.Any(item => item.Equals(requiredItem)));
-    }
-
     public static EventScriptValue Sort(EventScriptValue target, IEnumerable<EventScriptValue> items, string direction)
     {
         var comparer = CreateDirectionComparer(direction);
@@ -82,9 +35,10 @@ public static class EventScriptCollectionSemantics
     public static EventScriptValue Distinct(EventScriptValue target, IEnumerable<EventScriptValue> items)
     {
         var distinctItems = new List<EventScriptValue>();
+        var seen = new HashSet<EventScriptValue>();
         foreach (var item in items)
         {
-            if (distinctItems.Any(existing => existing.Equals(item)))
+            if (!seen.Add(item))
             {
                 continue;
             }
@@ -101,16 +55,15 @@ public static class EventScriptCollectionSemantics
         Func<EventScriptValue, EventScriptValue> keySelector)
     {
         var distinctItems = new List<EventScriptValue>();
-        var seenKeys = new List<EventScriptValue>();
+        var seenKeys = new HashSet<EventScriptValue>();
         foreach (var item in items)
         {
             var key = keySelector(item);
-            if (seenKeys.Any(existing => existing.Equals(key)))
+            if (!seenKeys.Add(key))
             {
                 continue;
             }
 
-            seenKeys.Add(key);
             distinctItems.Add(item);
         }
 

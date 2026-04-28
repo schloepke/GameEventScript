@@ -34,6 +34,10 @@ public sealed class EventScriptNothingValue : EventScriptValue
 
     public override EventScriptDiceValue AsDice() => EventScriptDiceValue.Empty;
 
+    public override bool HasSemanticValue() => false;
+
+    public override bool IsSemanticallyEmpty() => true;
+
     internal override bool TryConvertToNumber(out EventScriptValue value)
     {
         value = Decimal(0m);

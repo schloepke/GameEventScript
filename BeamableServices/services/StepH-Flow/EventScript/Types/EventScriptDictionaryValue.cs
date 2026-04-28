@@ -55,6 +55,14 @@ public sealed class EventScriptDictionaryValue : EventScriptValue
 
     public override IReadOnlyDictionary<string, EventScriptValue> AsDictionary() => VisibleView;
 
+    public override bool HasSemanticValue() => VisibleView.Count > 0;
+
+    public override bool IsSemanticallyEmpty() => VisibleView.Count == 0;
+
+    public override bool Contains(EventScriptValue needle) => VisibleView.ContainsKey(needle.AsText());
+
+    public override bool ContainsValue(EventScriptValue needle) => VisibleView.Values.Any(value => value.Equals(needle));
+
     public override bool TryGetDictionaryMember(string key, out EventScriptValue value)
     {
         if (!IsHiddenKey(key)) return Storage.TryGetValue(key, out value);

@@ -43,7 +43,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     public static IComparer<EventScriptValue> StableComparer => StableComparerInstance;
     public static EventScriptValue Nothing => NothingInstance;
 
-    public bool IsNumber() => Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer;
+    public bool IsNumber() => Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage;
     public bool IsNothing() => Kind == EventScriptValueKind.Nothing;
     public bool IsTag() => Kind == EventScriptValueKind.Tag;
     public bool IsInteger() => Kind == EventScriptValueKind.Integer;
@@ -83,6 +83,47 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
     public virtual EventScriptDiceValue AsDice() => EventScriptDiceValue.Empty;
 
+    public virtual bool HasSemanticValue() => true;
+
+    public virtual bool IsSemanticallyEmpty() => false;
+
+    public virtual bool TryUnwrapOptional(out EventScriptValue unwrapped)
+    {
+        unwrapped = this;
+        return true;
+    }
+
+    public EventScriptValue Lookup(EventScriptValue selector)
+    {
+        if (IsNothing() || selector.IsNothing())
+        {
+            return Nothing;
+        }
+
+        if (!selector.TryUnwrapOptional(out var lookup))
+        {
+            return EventScriptValueFactory.OptionalNone();
+        }
+
+        var key = lookup.AsText();
+        if (!string.IsNullOrEmpty(key) && TryGetDictionaryMember(key, out var value))
+        {
+            return value;
+        }
+
+        return LookupCore(lookup);
+    }
+
+    public virtual bool Contains(EventScriptValue needle) => false;
+
+    public virtual bool ContainsValue(EventScriptValue needle) => false;
+
+    public virtual bool StartsWith(EventScriptValue prefix)
+        => MatchSequenceBoundary(this, prefix, fromStart: true);
+
+    public virtual bool EndsWith(EventScriptValue suffix)
+        => MatchSequenceBoundary(this, suffix, fromStart: false);
+
     public virtual IEnumerable<EventScriptValue> AsEnumerable()
     {
         yield break;
@@ -92,6 +133,16 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     {
         value = Nothing;
         return false;
+    }
+
+    protected virtual EventScriptValue LookupCore(EventScriptValue selector)
+    {
+        if (Kind is EventScriptValueKind.Dictionary or EventScriptValueKind.Message or EventScriptValueKind.Handler)
+        {
+            return Nothing;
+        }
+
+        return LookupSequential(AsList(), selector);
     }
 
     public bool TryGetCustomTypeName(out string typeName)
@@ -179,6 +230,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Nothing => true,
             EventScriptValueKind.Tag => AsText() == other.AsText(),
             EventScriptValueKind.Text => AsText() == other.AsText(),
+            EventScriptValueKind.Percentage => ((EventScriptPercentageValue)this).Ratio == ((EventScriptPercentageValue)other).Ratio,
             EventScriptValueKind.Decimal => AsNumber() == other.AsNumber(),
             EventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
             EventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
@@ -223,6 +275,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 break;
             case EventScriptValueKind.Boolean:
                 hash.Add(AsBoolean());
+                break;
+            case EventScriptValueKind.Percentage:
+                hash.Add(((EventScriptPercentageValue)this).Ratio);
                 break;
             case EventScriptValueKind.Optional:
             {
@@ -271,6 +326,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             case EventScriptValueKind.Dice:
                 foreach (var roll in AsDice().Rolls) hash.Add(roll);
                 break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "Unknown EventScript value kind.");
         }
 
         return hash.ToHashCode();
@@ -342,6 +399,110 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
         }
 
         return 0;
+    }
+
+    private static EventScriptValue LookupSequential(IReadOnlyList<EventScriptValue> items, EventScriptValue selector)
+    {
+        var index = AsInt(selector);
+        if (index <= 0 || index > items.Count)
+        {
+            return Nothing;
+        }
+
+        return items[index - 1];
+    }
+
+    private static int AsInt(EventScriptValue value)
+    {
+        var integer = value.AsInteger();
+        if (integer < int.MinValue || integer > int.MaxValue)
+        {
+            return integer < 0 ? int.MinValue : int.MaxValue;
+        }
+
+        return (int)integer;
+    }
+
+    private static bool MatchSequenceBoundary(EventScriptValue value, EventScriptValue boundary, bool fromStart)
+    {
+        if (!IsSequential(value) || !IsSequential(boundary))
+        {
+            return false;
+        }
+
+        return fromStart
+            ? MatchSequenceStart(value, boundary)
+            : MatchSequenceEnd(value, boundary);
+    }
+
+    private static bool MatchSequenceStart(EventScriptValue value, EventScriptValue boundary)
+    {
+        using var valueItems = value.AsEnumerable().GetEnumerator();
+        foreach (var boundaryItem in boundary.AsEnumerable())
+        {
+            if (!valueItems.MoveNext() || !valueItems.Current.Equals(boundaryItem))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool MatchSequenceEnd(EventScriptValue value, EventScriptValue boundary)
+    {
+        var boundaryItems = boundary.AsEnumerable().ToArray();
+        if (boundaryItems.Length == 0)
+        {
+            return true;
+        }
+
+        var tail = new Queue<EventScriptValue>(boundaryItems.Length);
+        foreach (var item in value.AsEnumerable())
+        {
+            if (tail.Count == boundaryItems.Length)
+            {
+                tail.Dequeue();
+            }
+
+            tail.Enqueue(item);
+        }
+
+        if (tail.Count < boundaryItems.Length)
+        {
+            return false;
+        }
+
+        var index = 0;
+        foreach (var item in tail)
+        {
+            if (!item.Equals(boundaryItems[index++]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsSequential(EventScriptValue value)
+        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice or EventScriptValueKind.Range;
+
+    protected static string ToComparableText(EventScriptValue value)
+    {
+        if (value.IsNothing())
+        {
+            return string.Empty;
+        }
+
+        return value.Kind switch
+        {
+            EventScriptValueKind.Text => value.AsText(),
+            EventScriptValueKind.Decimal => value.ToString(),
+            EventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
+            EventScriptValueKind.Boolean => value.AsBoolean().ToString(),
+            _ => value.ToString()
+        };
     }
 
     private sealed class StableEventScriptValueComparer : IComparer<EventScriptValue>

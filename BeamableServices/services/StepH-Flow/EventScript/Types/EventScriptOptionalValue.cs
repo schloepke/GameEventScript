@@ -40,6 +40,22 @@ public sealed class EventScriptOptionalValue : EventScriptValue
 
     public override EventScriptDiceValue AsDice() => TryConvertToDice(out var value) ? value.AsDice() : EventScriptDiceValue.Empty;
 
+    public override bool HasSemanticValue() => HasValue;
+
+    public override bool IsSemanticallyEmpty() => !HasValue || Value.IsSemanticallyEmpty();
+
+    public override bool TryUnwrapOptional(out EventScriptValue unwrapped)
+    {
+        if (!HasValue)
+        {
+            unwrapped = default!;
+            return false;
+        }
+
+        unwrapped = Value;
+        return true;
+    }
+
     internal override bool TryConvertToNumber(out EventScriptValue value)
         => TryConvertValue(static source => source.TryConvertToNumber(out var converted) ? converted : null, out value);
 

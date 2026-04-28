@@ -83,6 +83,27 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void EqualPercentagesHaveEqualHashCodes()
+    {
+        var left = Percentage(0.25m);
+        var right = Percentage(0.25m);
+
+        Assert.AreEqual(left, right);
+        Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
+    }
+
+    [TestMethod]
+    public void PercentagesCompareAsNumericRatios()
+    {
+        var percentage = Percentage(0.25m);
+        var decimalRatio = Decimal(0.25m);
+
+        Assert.IsTrue(percentage.IsNumber());
+        Assert.AreEqual(decimalRatio, percentage);
+        Assert.AreEqual(decimalRatio.GetHashCode(), percentage.GetHashCode());
+    }
+
+    [TestMethod]
     public void SetsStayCanonicallySorted()
     {
         var setValue = Set([Decimal(3m), Text("z"), Integer(1), Text("a"), Boolean(false), Decimal(2m)]);

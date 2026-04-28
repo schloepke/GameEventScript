@@ -43,6 +43,10 @@ public sealed class EventScriptIteratorValue : EventScriptValue
 
     public override EventScriptDiceValue AsDice() => TryConvertToDice(out var value) ? value.AsDice() : EventScriptDiceValue.Empty;
 
+    public override bool HasSemanticValue() => AsEnumerable().Any();
+
+    public override bool IsSemanticallyEmpty() => !AsEnumerable().Any();
+
     public override IEnumerable<EventScriptValue> AsEnumerable()
     {
         if (Source.Kind == EventScriptValueKind.Optional)

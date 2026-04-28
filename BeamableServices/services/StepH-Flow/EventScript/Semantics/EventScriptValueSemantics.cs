@@ -12,57 +12,57 @@ public static class EventScriptValueSemantics
 {
     public static bool HasValue(EventScriptValue value)
     {
-        if (value.isNothing())
+        if (value.IsNothing())
         {
             return false;
         }
 
-        return value.Type switch
+        return value.Kind switch
         {
-            EventScriptValueType.Optional => value.AsOptional().HasValue,
-            EventScriptValueType.Iterator => value.AsEnumerable().Any(),
-            EventScriptValueType.Range => value.AsEnumerable().Any(),
-            EventScriptValueType.Text => value.AsText().Length > 0,
-            EventScriptValueType.List => value.AsList().Count > 0,
-            EventScriptValueType.Dictionary => value.AsDictionary().Count > 0,
-            EventScriptValueType.Set => value.AsSet().Count > 0,
-            EventScriptValueType.Dice => value.AsDice().Rolls.Count > 0,
-            EventScriptValueType.Decimal => !value.IsNaN() && !value.IsInfinity(),
+            EventScriptValueKind.Optional => value.AsOptional().HasValue,
+            EventScriptValueKind.Iterator => value.AsEnumerable().Any(),
+            EventScriptValueKind.Range => value.AsEnumerable().Any(),
+            EventScriptValueKind.Text => value.AsText().Length > 0,
+            EventScriptValueKind.List => value.AsList().Count > 0,
+            EventScriptValueKind.Dictionary => value.AsDictionary().Count > 0,
+            EventScriptValueKind.Set => value.AsSet().Count > 0,
+            EventScriptValueKind.Dice => value.AsDice().Rolls.Count > 0,
+            EventScriptValueKind.Decimal => !value.IsNaN() && !value.IsInfinity(),
             _ => true
         };
     }
 
     public static bool IsEmpty(EventScriptValue value)
     {
-        if (value.isNothing())
+        if (value.IsNothing())
         {
             return true;
         }
 
-        return value.Type switch
+        return value.Kind switch
         {
-            EventScriptValueType.Optional => !value.AsOptional().HasValue || IsEmpty(value.AsOptional().Value),
-            EventScriptValueType.Iterator => !value.AsEnumerable().Any(),
-            EventScriptValueType.Range => !value.AsEnumerable().Any(),
-            EventScriptValueType.Text => value.AsText().Length == 0,
-            EventScriptValueType.List => value.AsList().Count == 0,
-            EventScriptValueType.Dictionary => value.AsDictionary().Count == 0,
-            EventScriptValueType.Set => value.AsSet().Count == 0,
-            EventScriptValueType.Dice => value.AsDice().Rolls.Count == 0,
+            EventScriptValueKind.Optional => !value.AsOptional().HasValue || IsEmpty(value.AsOptional().Value),
+            EventScriptValueKind.Iterator => !value.AsEnumerable().Any(),
+            EventScriptValueKind.Range => !value.AsEnumerable().Any(),
+            EventScriptValueKind.Text => value.AsText().Length == 0,
+            EventScriptValueKind.List => value.AsList().Count == 0,
+            EventScriptValueKind.Dictionary => value.AsDictionary().Count == 0,
+            EventScriptValueKind.Set => value.AsSet().Count == 0,
+            EventScriptValueKind.Dice => value.AsDice().Rolls.Count == 0,
             _ => false
         };
     }
 
     public static EventScriptValue Lookup(EventScriptValue target, EventScriptValue selector)
     {
-        if (target.isNothing() || selector.isNothing())
+        if (target.IsNothing() || selector.IsNothing())
         {
             return EventScriptValue.Nothing;
         }
 
         if (!TryUnwrapOptional(selector, out var lookup))
         {
-            return EventScriptValue.OptionalNone();
+            return EventScriptValueFactory.OptionalNone();
         }
 
         var key = lookup.AsText();
@@ -71,7 +71,7 @@ public static class EventScriptValueSemantics
             return value;
         }
 
-        if (target.Type is EventScriptValueType.Dictionary or EventScriptValueType.Message or EventScriptValueType.Handler)
+        if (target.Kind is EventScriptValueKind.Dictionary or EventScriptValueKind.Message or EventScriptValueKind.Handler)
         {
             return EventScriptValue.Nothing;
         }
@@ -83,19 +83,19 @@ public static class EventScriptValueSemantics
 
     public static bool Contains(EventScriptValue haystack, EventScriptValue needle)
     {
-        return haystack.Type switch
+        return haystack.Kind switch
         {
-            EventScriptValueType.Text => haystack.AsText().Contains(ToComparableText(needle), StringComparison.Ordinal),
-            EventScriptValueType.Dictionary => haystack.AsDictionary().ContainsKey(needle.AsText()),
-            EventScriptValueType.Range => haystack is EventScriptRangeValue range && ContainsRange(range, needle),
-            EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice => haystack.AsList().Any(item => item.Equals(needle)),
+            EventScriptValueKind.Text => haystack.AsText().Contains(ToComparableText(needle), StringComparison.Ordinal),
+            EventScriptValueKind.Dictionary => haystack.AsDictionary().ContainsKey(needle.AsText()),
+            EventScriptValueKind.Range => haystack is EventScriptRangeValue range && ContainsRange(range, needle),
+            EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Dice => haystack.AsList().Any(item => item.Equals(needle)),
             _ => false
         };
     }
 
     public static bool ContainsValue(EventScriptValue haystack, EventScriptValue needle)
     {
-        if (haystack.Type != EventScriptValueType.Dictionary)
+        if (haystack.Kind != EventScriptValueKind.Dictionary)
         {
             return false;
         }
@@ -111,7 +111,7 @@ public static class EventScriptValueSemantics
 
     public static bool TryUnwrapOptional(EventScriptValue value, out EventScriptValue unwrapped)
     {
-        if (!value.isOptional())
+        if (!value.IsOptional())
         {
             unwrapped = value;
             return true;
@@ -153,18 +153,18 @@ public static class EventScriptValueSemantics
             return EventScriptValue.Nothing;
         }
 
-        return EventScriptValue.Integer((long)value);
+        return EventScriptValueFactory.Integer((long)value);
     }
 
     private static bool ContainsRange(EventScriptRangeValue range, EventScriptValue needle)
     {
-        if (!needle.isNumber())
+        if (!needle.IsNumber())
         {
             return false;
         }
 
         var value = needle.AsInteger();
-        if (!EventScriptValue.Integer(value).Equals(needle))
+        if (!EventScriptValueFactory.Integer(value).Equals(needle))
         {
             return false;
         }
@@ -227,7 +227,7 @@ public static class EventScriptValueSemantics
 
     private static bool MatchSequenceBoundary(EventScriptValue value, EventScriptValue boundary, bool fromStart)
     {
-        if (value.Type == EventScriptValueType.Text && boundary.Type == EventScriptValueType.Text)
+        if (value.Kind == EventScriptValueKind.Text && boundary.Kind == EventScriptValueKind.Text)
         {
             return fromStart
                 ? value.AsText().StartsWith(boundary.AsText(), StringComparison.Ordinal)
@@ -259,7 +259,7 @@ public static class EventScriptValueSemantics
     }
 
     private static bool IsSequential(EventScriptValue value)
-        => value.Type is EventScriptValueType.List or EventScriptValueType.Dice or EventScriptValueType.Range;
+        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice or EventScriptValueKind.Range;
 
     private static int AsInt(EventScriptValue value)
     {
@@ -274,17 +274,17 @@ public static class EventScriptValueSemantics
 
     private static string ToComparableText(EventScriptValue value)
     {
-        if (value.isNothing())
+        if (value.IsNothing())
         {
             return string.Empty;
         }
 
-        return value.Type switch
+        return value.Kind switch
         {
-            EventScriptValueType.Text => value.AsText(),
-            EventScriptValueType.Decimal => value.ToString(),
-            EventScriptValueType.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
-            EventScriptValueType.Boolean => value.AsBoolean().ToString(),
+            EventScriptValueKind.Text => value.AsText(),
+            EventScriptValueKind.Decimal => value.ToString(),
+            EventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
+            EventScriptValueKind.Boolean => value.AsBoolean().ToString(),
             _ => value.ToString()
         };
     }

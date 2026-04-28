@@ -47,27 +47,27 @@ internal static class EventScriptValueAlu
 
     public static bool TryCombineWithPlus(EventScriptValue left, EventScriptValue right, out EventScriptValue value)
     {
-        if (left.Type == EventScriptValueType.Dictionary && right.Type == EventScriptValueType.Dictionary)
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
         {
             value = EvaluateDictionaryCombine(left, right);
             return true;
         }
 
-        if (left.Type == EventScriptValueType.List && right.Type == EventScriptValueType.List)
+        if (left.Kind == EventScriptValueKind.List && right.Kind == EventScriptValueKind.List)
         {
-            value = EventScriptValue.List(left.AsList().Concat(right.AsList()));
+            value = EventScriptValueFactory.List(left.AsList().Concat(right.AsList()));
             return true;
         }
 
-        if (left.Type == EventScriptValueType.List)
+        if (left.Kind == EventScriptValueKind.List)
         {
-            value = EventScriptValue.List(left.AsList().Append(right));
+            value = EventScriptValueFactory.List(left.AsList().Append(right));
             return true;
         }
 
-        if (right.Type == EventScriptValueType.List)
+        if (right.Kind == EventScriptValueKind.List)
         {
-            value = EventScriptValue.List(new[] { left }.Concat(right.AsList()));
+            value = EventScriptValueFactory.List(new[] { left }.Concat(right.AsList()));
             return true;
         }
 
@@ -77,20 +77,20 @@ internal static class EventScriptValueAlu
 
     public static EventScriptValue EvaluateCollectionCombine(EventScriptValue left, EventScriptValue right)
     {
-        if (left.Type == EventScriptValueType.Dictionary && right.Type == EventScriptValueType.Dictionary)
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
         {
             return EvaluateDictionaryCombine(left, right);
         }
 
-        if (left.Type == EventScriptValueType.Set && right.Type == EventScriptValueType.Set)
+        if (left.Kind == EventScriptValueKind.Set && right.Kind == EventScriptValueKind.Set)
         {
-            return EventScriptValue.Set(left.AsSet().Concat(right.AsSet()));
+            return EventScriptValueFactory.Set(left.AsSet().Concat(right.AsSet()));
         }
 
-        if (left.Type is EventScriptValueType.List or EventScriptValueType.Dice &&
-            right.Type is EventScriptValueType.List or EventScriptValueType.Dice)
+        if (left.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice &&
+            right.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice)
         {
-            return EventScriptValue.List(left.AsList().Concat(right.AsList()));
+            return EventScriptValueFactory.List(left.AsList().Concat(right.AsList()));
         }
 
         return EventScriptValue.Nothing;
@@ -98,23 +98,23 @@ internal static class EventScriptValueAlu
 
     public static EventScriptValue EvaluateCollectionIntersect(EventScriptValue left, EventScriptValue right)
     {
-        if (left.Type == EventScriptValueType.Dictionary && right.Type == EventScriptValueType.Dictionary)
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
         {
             var rightKeys = new HashSet<string>(right.AsDictionary().Keys, StringComparer.Ordinal);
             var map = left.AsDictionary()
                 .Where(pair => rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return EventScriptValue.Dictionary(map);
+            return EventScriptValueFactory.Dictionary(map);
         }
 
-        if (left.Type == EventScriptValueType.Set && right.Type == EventScriptValueType.Set)
+        if (left.Kind == EventScriptValueKind.Set && right.Kind == EventScriptValueKind.Set)
         {
             var rightSet = right.AsSet();
-            return EventScriptValue.Set(left.AsSet().Where(item => rightSet.Contains(item)));
+            return EventScriptValueFactory.Set(left.AsSet().Where(item => rightSet.Contains(item)));
         }
 
-        if (left.Type is EventScriptValueType.List or EventScriptValueType.Dice &&
-            right.Type is EventScriptValueType.List or EventScriptValueType.Dice)
+        if (left.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice &&
+            right.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice)
         {
             var remaining = right.AsList().ToList();
             var result = new List<EventScriptValue>();
@@ -130,7 +130,7 @@ internal static class EventScriptValueAlu
                 remaining.RemoveAt(index);
             }
 
-            return EventScriptValue.List(result);
+            return EventScriptValueFactory.List(result);
         }
 
         return EventScriptValue.Nothing;
@@ -138,23 +138,23 @@ internal static class EventScriptValueAlu
 
     public static EventScriptValue EvaluateCollectionExcept(EventScriptValue left, EventScriptValue right)
     {
-        if (left.Type == EventScriptValueType.Dictionary && right.Type == EventScriptValueType.Dictionary)
+        if (left.Kind == EventScriptValueKind.Dictionary && right.Kind == EventScriptValueKind.Dictionary)
         {
             var rightKeys = new HashSet<string>(right.AsDictionary().Keys, StringComparer.Ordinal);
             var map = left.AsDictionary()
                 .Where(pair => !rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return EventScriptValue.Dictionary(map);
+            return EventScriptValueFactory.Dictionary(map);
         }
 
-        if (left.Type == EventScriptValueType.Set && right.Type == EventScriptValueType.Set)
+        if (left.Kind == EventScriptValueKind.Set && right.Kind == EventScriptValueKind.Set)
         {
             var rightSet = right.AsSet();
-            return EventScriptValue.Set(left.AsSet().Where(item => !rightSet.Contains(item)));
+            return EventScriptValueFactory.Set(left.AsSet().Where(item => !rightSet.Contains(item)));
         }
 
-        if (left.Type is EventScriptValueType.List or EventScriptValueType.Dice &&
-            right.Type is EventScriptValueType.List or EventScriptValueType.Dice)
+        if (left.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice &&
+            right.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice)
         {
             var remaining = right.AsList().ToList();
             var result = new List<EventScriptValue>();
@@ -170,7 +170,7 @@ internal static class EventScriptValueAlu
                 result.Add(item);
             }
 
-            return EventScriptValue.List(result);
+            return EventScriptValueFactory.List(result);
         }
 
         return EventScriptValue.Nothing;
@@ -178,8 +178,8 @@ internal static class EventScriptValueAlu
 
     public static EventScriptValue EvaluateCollectionZip(EventScriptValue left, EventScriptValue right)
     {
-        if (left.Type is not (EventScriptValueType.List or EventScriptValueType.Dice) ||
-            right.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
+        if (left.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice) ||
+            right.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
         {
             return EventScriptValue.Nothing;
         }
@@ -190,14 +190,14 @@ internal static class EventScriptValueAlu
         var zipped = new List<EventScriptValue>(count);
         for (var i = 0; i < count; i++)
         {
-            zipped.Add(EventScriptValue.Dictionary(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+            zipped.Add(EventScriptValueFactory.Dictionary(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
             {
                 ["left"] = leftItems[i],
                 ["right"] = rightItems[i]
             }));
         }
 
-        return EventScriptValue.List(zipped);
+        return EventScriptValueFactory.List(zipped);
     }
 
     public static EventScriptValue EvaluateDictionaryCombine(EventScriptValue left, EventScriptValue right)
@@ -208,14 +208,14 @@ internal static class EventScriptValueAlu
             map[pair.Key] = pair.Value;
         }
 
-        return EventScriptValue.Dictionary(map);
+        return EventScriptValueFactory.Dictionary(map);
     }
 
     public static bool AreEqual(EventScriptValue left, EventScriptValue right) => left.Equals(right);
 
     public static bool TryUnwrapOptionalForOperation(EventScriptValue value, out EventScriptValue unwrapped)
     {
-        if (!value.isOptional())
+        if (!value.IsOptional())
         {
             unwrapped = value;
             return true;
@@ -234,13 +234,13 @@ internal static class EventScriptValueAlu
 
     public static bool TryCoerceNumericForOperation(EventScriptValue value, out NumericValue number)
     {
-        if (value.isNothing())
+        if (value.IsNothing())
         {
             number = default;
             return false;
         }
 
-        if (value.Type == EventScriptValueType.Decimal)
+        if (value.Kind == EventScriptValueKind.Decimal)
         {
             if (value.IsNaN())
             {
@@ -260,25 +260,25 @@ internal static class EventScriptValueAlu
             return true;
         }
 
-        if (value.Type == EventScriptValueType.Integer)
+        if (value.Kind == EventScriptValueKind.Integer)
         {
             number = NumericValue.Finite(value.AsInteger());
             return true;
         }
 
-        if (value.Type == EventScriptValueType.Percentage)
+        if (value.Kind == EventScriptValueKind.Percentage)
         {
             number = NumericValue.Finite(value.AsNumber());
             return true;
         }
 
-        if (value.Type == EventScriptValueType.Dice)
+        if (value.Kind == EventScriptValueKind.Dice)
         {
             number = NumericValue.Finite(value.AsDice().Sum());
             return true;
         }
 
-        if (value.isText())
+        if (value.IsText())
         {
             if (decimal.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
             {
@@ -290,7 +290,7 @@ internal static class EventScriptValueAlu
             return false;
         }
 
-        if (value.Type == EventScriptValueType.Boolean)
+        if (value.Kind == EventScriptValueKind.Boolean)
         {
             number = NumericValue.Finite(value.AsBoolean() ? 1m : 0m);
             return true;
@@ -304,11 +304,11 @@ internal static class EventScriptValueAlu
     {
         return number.Kind switch
         {
-            NumericKind.Finite => EventScriptValue.Decimal(number.Value),
-            NumericKind.NaN => EventScriptValue.DecimalNaN(),
-            NumericKind.PositiveInfinity => EventScriptValue.DecimalInfinity(),
-            NumericKind.NegativeInfinity => EventScriptValue.DecimalNegativeInfinity(),
-            _ => EventScriptValue.DecimalNaN()
+            NumericKind.Finite => EventScriptValueFactory.Decimal(number.Value),
+            NumericKind.NaN => EventScriptValueFactory.DecimalNaN(),
+            NumericKind.PositiveInfinity => EventScriptValueFactory.DecimalInfinity(),
+            NumericKind.NegativeInfinity => EventScriptValueFactory.DecimalNegativeInfinity(),
+            _ => EventScriptValueFactory.DecimalNaN()
         };
     }
 
@@ -545,17 +545,17 @@ internal static class EventScriptValueAlu
 
     public static string ToText(EventScriptValue value)
     {
-        if (value.isNothing())
+        if (value.IsNothing())
         {
             return string.Empty;
         }
 
-        return value.Type switch
+        return value.Kind switch
         {
-            EventScriptValueType.Text => value.AsText(),
-            EventScriptValueType.Decimal => value.ToString(),
-            EventScriptValueType.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
-            EventScriptValueType.Boolean => value.AsBoolean().ToString(),
+            EventScriptValueKind.Text => value.AsText(),
+            EventScriptValueKind.Decimal => value.ToString(),
+            EventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
+            EventScriptValueKind.Boolean => value.AsBoolean().ToString(),
             _ => value.ToString()
         };
     }

@@ -354,22 +354,22 @@ public static class ExperimentalEventScriptCompiler
             switch (expression)
             {
                 case IntegerLiteralExpressionNode integer:
-                    value = EventScriptValue.Integer(integer.Value);
+                    value = EventScriptValueFactory.Integer(integer.Value);
                     return true;
                 case DecimalLiteralExpressionNode number:
-                    value = EventScriptValue.Decimal(number.Value);
+                    value = EventScriptValueFactory.Decimal(number.Value);
                     return true;
                 case PercentageLiteralExpressionNode percentage:
-                    value = EventScriptValue.Percentage(percentage.PercentValue / 100m);
+                    value = EventScriptValueFactory.Percentage(percentage.PercentValue / 100m);
                     return true;
                 case TextLiteralExpressionNode text:
-                    value = EventScriptValue.Text(text.Value);
+                    value = EventScriptValueFactory.Text(text.Value);
                     return true;
                 case TagLiteralExpressionNode tag:
-                    value = EventScriptValue.Tag(tag.Name);
+                    value = EventScriptValueFactory.Tag(tag.Name);
                     return true;
                 case BooleanLiteralExpressionNode boolean:
-                    value = EventScriptValue.Boolean(boolean.Value);
+                    value = EventScriptValueFactory.Boolean(boolean.Value);
                     return true;
                 case ListLiteralExpressionNode list:
                 {
@@ -385,7 +385,7 @@ public static class ExperimentalEventScriptCompiler
                         items.Add(constantItem);
                     }
 
-                    value = EventScriptValue.List(items);
+                    value = EventScriptValueFactory.List(items);
                     return true;
                 }
                 case SetLiteralExpressionNode set:
@@ -402,7 +402,7 @@ public static class ExperimentalEventScriptCompiler
                         items.Add(constantItem);
                     }
 
-                    value = EventScriptValue.Set(items);
+                    value = EventScriptValueFactory.Set(items);
                     return true;
                 }
                 case DictionaryLiteralExpressionNode dictionary:
@@ -419,7 +419,7 @@ public static class ExperimentalEventScriptCompiler
                         map[entry.Key] = constantItem;
                     }
 
-                    value = EventScriptValue.Dictionary(map);
+                    value = EventScriptValueFactory.Dictionary(map);
                     return true;
                 }
                 case TypeCastExpressionNode typeCast:
@@ -451,56 +451,56 @@ public static class ExperimentalEventScriptCompiler
                     converted = EventScriptValue.Nothing;
                     return true;
                 case "tag":
-                    converted = EventScriptValue.Tag(value.AsText());
+                    converted = EventScriptValueFactory.Tag(value.AsText());
                     return true;
                 case "text":
-                    converted = EventScriptValue.Text(value.AsText());
+                    converted = EventScriptValueFactory.Text(value.AsText());
                     return true;
                 case "percentage":
                     converted = ConvertConstantToPercentage(value);
                     return true;
                 case "boolean":
-                    converted = EventScriptValue.Boolean(value.AsBoolean());
+                    converted = EventScriptValueFactory.Boolean(value.AsBoolean());
                     return true;
                 case "integer":
-                    converted = EventScriptValue.Integer(value.AsInteger());
+                    converted = EventScriptValueFactory.Integer(value.AsInteger());
                     return true;
                 case "decimal":
                     converted = ConvertConstantToDecimal(value);
                     return true;
                 case "list":
-                    converted = EventScriptValue.List(value.AsList());
+                    converted = EventScriptValueFactory.List(value.AsList());
                     return true;
                 case "range":
-                    converted = value.isRange() ? value : EventScriptValue.Nothing;
+                    converted = value.IsRange() ? value : EventScriptValue.Nothing;
                     return true;
                 case "message":
-                    converted = value.Type == EventScriptValueType.Message
+                    converted = value.Kind == EventScriptValueKind.Message
                         ? value
                         : EventScriptMessageValueCodec.TryReadMessageValue(value, out var messageValue)
                             ? EventScriptMessageValueCodec.CreateMessageValue(messageValue)
                             : EventScriptValue.Nothing;
                     return true;
                 case "handler":
-                    converted = value.Type == EventScriptValueType.Handler
+                    converted = value.Kind == EventScriptValueKind.Handler
                         ? value
                         : EventScriptMessageValueCodec.TryReadHandlerValue(value, out var handlerValue)
                             ? EventScriptMessageValueCodec.CreateHandlerValue(handlerValue)
                             : EventScriptValue.Nothing;
                     return true;
                 case "dictionary":
-                    converted = EventScriptValue.Dictionary(value.AsDictionary());
+                    converted = EventScriptValueFactory.Dictionary(value.AsDictionary());
                     return true;
                 case "set":
-                    converted = EventScriptValue.Set(value.AsSet());
+                    converted = EventScriptValueFactory.Set(value.AsSet());
                     return true;
                 case "dice":
-                    converted = EventScriptValue.Dice(value.AsDice());
+                    converted = EventScriptValueFactory.Dice(value.AsDice());
                     return true;
                 case "optional":
-                    converted = value.isOptional()
+                    converted = value.IsOptional()
                         ? value
-                        : value.isNothing() ? EventScriptValue.OptionalNone() : EventScriptValue.OptionalSome(value);
+                        : value.IsNothing() ? EventScriptValueFactory.OptionalNone() : EventScriptValueFactory.OptionalSome(value);
                     return true;
                 default:
                     if (_types.ContainsKey(declaredType))
@@ -518,57 +518,57 @@ public static class ExperimentalEventScriptCompiler
         {
             if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
             {
-                return EventScriptValue.DecimalNaN();
+                return EventScriptValueFactory.DecimalNaN();
             }
 
             if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite))
             {
-                return EventScriptValue.DecimalNaN();
+                return EventScriptValueFactory.DecimalNaN();
             }
 
             if (isFinite)
             {
-                return EventScriptValue.Decimal(number);
+                return EventScriptValueFactory.Decimal(number);
             }
 
             if (unwrapped.IsNaN())
             {
-                return EventScriptValue.DecimalNaN();
+                return EventScriptValueFactory.DecimalNaN();
             }
 
             return unwrapped.IsNegativeInfinity()
-                ? EventScriptValue.DecimalNegativeInfinity()
-                : EventScriptValue.DecimalInfinity();
+                ? EventScriptValueFactory.DecimalNegativeInfinity()
+                : EventScriptValueFactory.DecimalInfinity();
         }
 
         private static EventScriptValue ConvertConstantToPercentage(EventScriptValue value)
         {
             if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
             {
-                return EventScriptValue.DecimalNaN();
+                return EventScriptValueFactory.DecimalNaN();
             }
 
-            if (unwrapped.isPercentage())
+            if (unwrapped.IsPercentage())
             {
                 return unwrapped;
             }
 
             if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite) || !isFinite)
             {
-                return EventScriptValue.DecimalNaN();
+                return EventScriptValueFactory.DecimalNaN();
             }
 
-            var ratio = unwrapped.Type == EventScriptValueType.Integer
+            var ratio = unwrapped.Kind == EventScriptValueKind.Integer
                 ? number / 100m
                 : number > 1m || number < -1m
                     ? number / 100m
                     : number;
-            return EventScriptValue.Percentage(ratio);
+            return EventScriptValueFactory.Percentage(ratio);
         }
 
         private static bool TryUnwrapOptionalForConstant(EventScriptValue value, out EventScriptValue unwrapped)
         {
-            if (!value.isOptional())
+            if (!value.IsOptional())
             {
                 unwrapped = value;
                 return true;
@@ -590,12 +590,12 @@ public static class ExperimentalEventScriptCompiler
             number = default;
             isFinite = false;
 
-            if (value.isNothing())
+            if (value.IsNothing())
             {
                 return false;
             }
 
-            if (value.Type == EventScriptValueType.Decimal)
+            if (value.Kind == EventScriptValueKind.Decimal)
             {
                 if (value.IsNaN() || value.IsInfinity())
                 {
@@ -607,28 +607,28 @@ public static class ExperimentalEventScriptCompiler
                 return true;
             }
 
-            if (value.Type == EventScriptValueType.Integer)
+            if (value.Kind == EventScriptValueKind.Integer)
             {
                 number = value.AsInteger();
                 isFinite = true;
                 return true;
             }
 
-            if (value.Type == EventScriptValueType.Percentage)
+            if (value.Kind == EventScriptValueKind.Percentage)
             {
                 number = value.AsNumber();
                 isFinite = true;
                 return true;
             }
 
-            if (value.Type == EventScriptValueType.Dice)
+            if (value.Kind == EventScriptValueKind.Dice)
             {
                 number = value.AsDice().Sum();
                 isFinite = true;
                 return true;
             }
 
-            if (value.isText() &&
+            if (value.IsText() &&
                 decimal.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
             {
                 number = parsed;
@@ -636,7 +636,7 @@ public static class ExperimentalEventScriptCompiler
                 return true;
             }
 
-            if (value.Type == EventScriptValueType.Boolean)
+            if (value.Kind == EventScriptValueKind.Boolean)
             {
                 number = value.AsBoolean() ? 1m : 0m;
                 isFinite = true;
@@ -654,8 +654,8 @@ public static class ExperimentalEventScriptCompiler
                 return false;
             }
 
-            value = expression.ConstantValue.Type == EventScriptValueType.Boolean && expression.ConstantValue.AsBoolean();
-            return expression.ConstantValue.Type == EventScriptValueType.Boolean;
+            value = expression.ConstantValue.Kind == EventScriptValueKind.Boolean && expression.ConstantValue.AsBoolean();
+            return expression.ConstantValue.Kind == EventScriptValueKind.Boolean;
         }
 
         private void ValidateDuplicateParameters(

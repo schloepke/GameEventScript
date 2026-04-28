@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using static StepH.Flow.EventScript.Types.EventScriptValueFactory;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,19 +10,61 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptDiceValue : EventScriptValue
 {
-    private static EventScriptDiceValue _emptyDice = new([]);
+    public static readonly EventScriptDiceValue Empty = new([]);
     
     private readonly int[] _rollsDescending;
-    private readonly IReadOnlyList<int> _rollsView;
 
     private EventScriptDiceValue(int[] rollsDescending)
     {
         _rollsDescending = rollsDescending;
-        _rollsView = new ReadOnlyCollection<int>(rollsDescending);
+        Rolls = new ReadOnlyCollection<int>(rollsDescending);
     }
 
-    public IReadOnlyList<int> Rolls => _rollsView;
-    public override EventScriptValueType Type => EventScriptValueType.Dice;
+    public IReadOnlyList<int> Rolls { get; }
+
+    public override EventScriptValueKind Kind => EventScriptValueKind.Dice;
+
+    public override string AsText() => ToString();
+
+    public override long AsInteger() => (long)Sum();
+
+    public override decimal AsNumber() => Sum();
+
+    public override IReadOnlyList<EventScriptValue> AsList() => CreateReadOnlyList(Rolls.Select(roll => Integer(roll)));
+
+    public override EventScriptDiceValue AsDice() => this;
+
+    public override IEnumerable<EventScriptValue> AsEnumerable() => Rolls.Select(roll => Integer(roll));
+
+    internal override bool TryConvertToNumber(out EventScriptValue value)
+    {
+        value = Decimal(Sum());
+        return true;
+    }
+
+    internal override bool TryConvertToInteger(out EventScriptValue value)
+    {
+        value = Integer((long)Sum());
+        return true;
+    }
+
+    internal override bool TryConvertToText(out EventScriptValue value)
+    {
+        value = Text(ToString());
+        return true;
+    }
+
+    internal override bool TryConvertToList(out EventScriptValue value)
+    {
+        value = List(Rolls.Select(roll => Integer(roll)));
+        return true;
+    }
+
+    internal override bool TryConvertToDice(out EventScriptValue value)
+    {
+        value = this;
+        return true;
+    }
 
     public decimal Sum()
     {
@@ -31,18 +74,21 @@ public sealed class EventScriptDiceValue : EventScriptValue
     }
 
     public EventScriptDiceValue KeepHighest(int count)
-        => _rollsDescending.Length == 0 || count < 0 || count > _rollsDescending.Length ? _emptyDice : Create(_rollsDescending.Take(count));
+        => _rollsDescending.Length == 0 || count < 0 || count > _rollsDescending.Length ? Empty : EventScriptDice(_rollsDescending.Take(count));
 
     public EventScriptDiceValue DropLowest(int count)
-        => _rollsDescending.Length == 0 || count < 0 || count > _rollsDescending.Length ? _emptyDice : Create(_rollsDescending.Take(_rollsDescending.Length - count));
+        => _rollsDescending.Length == 0 || count < 0 || count > _rollsDescending.Length ? Empty : EventScriptDice(_rollsDescending.Take(_rollsDescending.Length - count));
 
-    public static EventScriptDiceValue Create(IEnumerable<int> rolls)
+    public static EventScriptDiceValue EventScriptDice(EventScriptDiceValue? diceValue) => diceValue ?? Empty;
+
+    public static EventScriptDiceValue EventScriptDice(IEnumerable<int>? rolls)
     {
-        if (rolls == null) return _emptyDice;
+        if (rolls == null) return Empty;
         var values = rolls.ToArray();
-        if (values.Any(roll => roll <= 0)) return _emptyDice;
+        if (values.Length == 0 || values.Any(roll => roll <= 0)) return Empty;
         Array.Sort(values);
         Array.Reverse(values);
         return new EventScriptDiceValue(values);
     }
+
 }

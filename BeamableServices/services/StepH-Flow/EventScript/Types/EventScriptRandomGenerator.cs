@@ -54,5 +54,4 @@ public sealed class EventScriptRandomGenerator
         value = _sequence.Dequeue();
         return true;
     }
-    
 }

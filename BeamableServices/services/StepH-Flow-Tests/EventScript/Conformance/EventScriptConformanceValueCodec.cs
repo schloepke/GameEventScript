@@ -60,36 +60,36 @@ internal static class EventScriptConformanceValueCodec
             case ":nothing":
                 return EventScriptValue.Nothing;
             case ":text":
-                return EventScriptValue.Text(RequireString(element, "value", "text value"));
+                return EventScriptValueFactory.Text(RequireString(element, "value", "text value"));
             case ":tag":
-                return EventScriptValue.Tag(RequireString(element, "value", "tag value"));
+                return EventScriptValueFactory.Tag(RequireString(element, "value", "tag value"));
             case ":boolean":
-                return EventScriptValue.Boolean(RequireBoolean(element, "value", "boolean value"));
+                return EventScriptValueFactory.Boolean(RequireBoolean(element, "value", "boolean value"));
             case ":integer":
-                return EventScriptValue.Integer(RequireInt64(element, "value", "integer value"));
+                return EventScriptValueFactory.Integer(RequireInt64(element, "value", "integer value"));
             case ":decimal":
                 return DecodeDecimalValue(element);
             case ":percentage":
-                return EventScriptValue.Percentage(RequireDecimal(element, "value", "percentage ratio"));
+                return EventScriptValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
-                return EventScriptValue.List(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
+                return EventScriptValueFactory.List(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
             case ":dictionary":
-                return EventScriptValue.Dictionary(DecodeEntries(element));
+                return EventScriptValueFactory.Dictionary(DecodeEntries(element));
             case ":set":
-                return EventScriptValue.Set(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
+                return EventScriptValueFactory.Set(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
             case ":dice":
-                return EventScriptValue.Dice(EventScriptDiceValue.Create(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
+                return EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
             case ":range":
-                return EventScriptValue.Range(
+                return EventScriptValueFactory.Range(
                     RequireInt64(element, "from", "range start"),
                     RequireInt64(element, "to", "range end"),
                     TryGetProperty(element, "step", out var stepElement) ? ReadInt64(stepElement, "range step") : 1L);
             case ":message":
-                return EventScriptValue.Message(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
+                return EventScriptValueFactory.Message(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
             default:
-                return EventScriptValue.CustomType(type[1..], DecodeEntries(element));
+                return EventScriptValueFactory.CustomType(type[1..], DecodeEntries(element));
         }
     }
 
@@ -139,25 +139,25 @@ internal static class EventScriptConformanceValueCodec
             };
         }
 
-        return value.Type switch
+        return value.Kind switch
         {
-            EventScriptValueType.Nothing => new JsonObject { ["type"] = ":nothing" },
-            EventScriptValueType.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
-            EventScriptValueType.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
-            EventScriptValueType.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
-            EventScriptValueType.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
-            EventScriptValueType.Decimal => new JsonObject { ["type"] = ":decimal", ["value"] = FormatDecimal(value) },
-            EventScriptValueType.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
-            EventScriptValueType.Optional => ToOptionalJson(value),
-            EventScriptValueType.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
-            EventScriptValueType.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
-            EventScriptValueType.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer)) },
-            EventScriptValueType.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
-            EventScriptValueType.Range => ToRangeJson(value),
-            EventScriptValueType.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<EventScriptMessage>(value, "Value")) },
-            EventScriptValueType.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
-            EventScriptValueType.Iterator => throw new NotSupportedException("Iterator values are not part of the conformance JSON value wire format."),
-            _ => throw new NotSupportedException($"Unsupported EventScript value type '{value.Type}'.")
+            EventScriptValueKind.Nothing => new JsonObject { ["type"] = ":nothing" },
+            EventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
+            EventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
+            EventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
+            EventScriptValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
+            EventScriptValueKind.Decimal => new JsonObject { ["type"] = ":decimal", ["value"] = FormatDecimal(value) },
+            EventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
+            EventScriptValueKind.Optional => ToOptionalJson(value),
+            EventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
+            EventScriptValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
+            EventScriptValueKind.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer)) },
+            EventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
+            EventScriptValueKind.Range => ToRangeJson(value),
+            EventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<EventScriptMessage>(value, "Value")) },
+            EventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
+            EventScriptValueKind.Iterator => throw new NotSupportedException("Iterator values are not part of the conformance JSON value wire format."),
+            _ => throw new NotSupportedException($"Unsupported EventScript value type '{value.Kind}'.")
         };
     }
 
@@ -166,10 +166,10 @@ internal static class EventScriptConformanceValueCodec
         var value = RequireString(element, "value", "decimal value");
         return value switch
         {
-            "NaN" => EventScriptValue.DecimalNaN(),
-            "Infinity" => EventScriptValue.DecimalInfinity(),
-            "-Infinity" => EventScriptValue.DecimalNegativeInfinity(),
-            _ => EventScriptValue.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture))
+            "NaN" => EventScriptValueFactory.DecimalNaN(),
+            "Infinity" => EventScriptValueFactory.DecimalInfinity(),
+            "-Infinity" => EventScriptValueFactory.DecimalNegativeInfinity(),
+            _ => EventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture))
         };
     }
 
@@ -178,10 +178,10 @@ internal static class EventScriptConformanceValueCodec
         var hasValue = RequireBoolean(element, "hasValue", "optional hasValue");
         if (!hasValue)
         {
-            return EventScriptValue.OptionalNone();
+            return EventScriptValueFactory.OptionalNone();
         }
 
-        return EventScriptValue.OptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
+        return EventScriptValueFactory.OptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
     }
 
     private static IReadOnlyDictionary<string, EventScriptValue> DecodeEntries(JsonElement element)
@@ -295,7 +295,7 @@ internal static class EventScriptConformanceValueCodec
             return typed;
         }
 
-        throw new NotSupportedException($"Cannot serialize {value.Type} value because property '{propertyName}' is unavailable.");
+        throw new NotSupportedException($"Cannot serialize {value.Kind} value because property '{propertyName}' is unavailable.");
     }
 
     private static JsonElement RequireObjectProperty(JsonElement element, string propertyName, string description)

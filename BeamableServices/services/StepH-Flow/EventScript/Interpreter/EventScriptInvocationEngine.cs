@@ -223,29 +223,29 @@ internal static class EventScriptInvocationEngine
             switch (expression)
             {
                 case IntegerLiteralExpressionNode integer:
-                    return EventScriptValue.Integer(integer.Value);
+                    return EventScriptValueFactory.Integer(integer.Value);
                 case DecimalLiteralExpressionNode number:
-                    return EventScriptValue.Decimal(number.Value);
+                    return EventScriptValueFactory.Decimal(number.Value);
                 case PercentageLiteralExpressionNode percentage:
-                    return EventScriptValue.Percentage(percentage.PercentValue / 100m);
+                    return EventScriptValueFactory.Percentage(percentage.PercentValue / 100m);
 
                 case TextLiteralExpressionNode text:
-                    return EventScriptValue.Text(text.Value);
+                    return EventScriptValueFactory.Text(text.Value);
 
                 case TagLiteralExpressionNode tag:
-                    return EventScriptValue.Tag(tag.Name);
+                    return EventScriptValueFactory.Tag(tag.Name);
 
                 case ListLiteralExpressionNode listLiteral:
-                    return EventScriptValue.List(listLiteral.Items.Select(item => EvaluateExpression(context, item)));
+                    return EventScriptValueFactory.List(listLiteral.Items.Select(item => EvaluateExpression(context, item)));
 
                 case SetLiteralExpressionNode setLiteral:
-                    return EventScriptValue.Set(setLiteral.Items.Select(item => EvaluateExpression(context, item)));
+                    return EventScriptValueFactory.Set(setLiteral.Items.Select(item => EvaluateExpression(context, item)));
 
                 case DictionaryLiteralExpressionNode dictionaryLiteral:
                     return EvaluateDictionaryLiteral(context, dictionaryLiteral);
 
                 case BooleanLiteralExpressionNode boolean:
-                    return EventScriptValue.Boolean(boolean.Value);
+                    return EventScriptValueFactory.Boolean(boolean.Value);
 
                 case IdentifierExpressionNode identifier:
                     return context.Resolve(identifier.Name);
@@ -304,7 +304,7 @@ internal static class EventScriptInvocationEngine
                     return EvaluateRulePredicateExpression(context, rulePredicate);
 
                 case TypeCheckExpressionNode typeCheck:
-                    return EventScriptValue.Boolean(IsValueOfType(EvaluateExpression(context, typeCheck.Value), typeCheck.TypeName));
+                    return EventScriptValueFactory.Boolean(IsValueOfType(EvaluateExpression(context, typeCheck.Value), typeCheck.TypeName));
                 case TypeCastExpressionNode typeCast:
                     return ConvertToDeclaredType(context, EvaluateExpression(context, typeCast.Value), typeCast.TypeName);
 
@@ -326,8 +326,8 @@ internal static class EventScriptInvocationEngine
 
             if (TryUnwrapOptionalForOperation(fromValue, out var unwrappedFrom) &&
                 TryUnwrapOptionalForOperation(toValue, out var unwrappedTo) &&
-                unwrappedFrom.Type == EventScriptValueType.Integer &&
-                unwrappedTo.Type == EventScriptValueType.Integer)
+                unwrappedFrom.Kind == EventScriptValueKind.Integer &&
+                unwrappedTo.Kind == EventScriptValueKind.Integer)
             {
                 var from = AsInt(unwrappedFrom);
                 var to = AsInt(unwrappedTo);
@@ -341,7 +341,7 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValue.Nothing;
                 }
 
-                return EventScriptValue.Integer(next);
+                return EventScriptValueFactory.Integer(next);
             }
 
             if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
@@ -356,11 +356,11 @@ internal static class EventScriptInvocationEngine
             var upper = Math.Max(fromNumber.Value, toNumber.Value);
             if (lower == upper)
             {
-                return EventScriptValue.Decimal(lower);
+                return EventScriptValueFactory.Decimal(lower);
             }
 
             return TryNextInclusiveDecimal(lower, upper, out var nextDecimal)
-                ? EventScriptValue.Decimal(nextDecimal)
+                ? EventScriptValueFactory.Decimal(nextDecimal)
                 : EventScriptValue.Nothing;
         }
 
@@ -403,12 +403,12 @@ internal static class EventScriptInvocationEngine
         {
             if (diceExpression.DiceCount <= 0 || diceExpression.SideCount <= 0)
             {
-                return EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()));
+                return EventScriptValueFactory.Dice(EventScriptDiceValue.Empty);
             }
 
             if (!context.TryCheckDice(diceExpression))
             {
-                return EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()));
+                return EventScriptValueFactory.Dice(EventScriptDiceValue.Empty);
             }
 
             var rolls = new int[diceExpression.DiceCount];
@@ -416,14 +416,14 @@ internal static class EventScriptInvocationEngine
             {
                 if (!TryNextInclusiveInt(1, diceExpression.SideCount, out var roll))
                 {
-                    return EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()));
+                    return EventScriptValueFactory.Dice(EventScriptDiceValue.Empty);
                 }
 
                 rolls[i] = roll;
             }
 
-            var dice = EventScriptDiceValue.Create(rolls);
-            return EventScriptValue.Dice(dice);
+            var dice = EventScriptDiceValue.EventScriptDice(rolls);
+            return EventScriptValueFactory.Dice(dice);
         }
 
         private EventScriptValue EvaluateDictionaryLiteral(ExecutionContext context, DictionaryLiteralExpressionNode dictionaryLiteral)
@@ -434,7 +434,7 @@ internal static class EventScriptInvocationEngine
                 map[entry.Key] = EvaluateExpression(context, entry.Value);
             }
 
-            return EventScriptValue.Dictionary(map);
+            return EventScriptValueFactory.Dictionary(map);
         }
 
         private EventScriptValue EvaluateGeneratedCollectionExpression(ExecutionContext context, GeneratedCollectionExpressionNode generatedCollection)
@@ -454,8 +454,8 @@ internal static class EventScriptInvocationEngine
             }
 
             return generatedCollection.CollectionType == "set"
-                ? EventScriptValue.Set(values)
-                : EventScriptValue.List(values);
+                ? EventScriptValueFactory.Set(values)
+                : EventScriptValueFactory.List(values);
         }
 
         private EventScriptValue EvaluateCallExpression(ExecutionContext context, CallExpressionNode call)
@@ -466,7 +466,7 @@ internal static class EventScriptInvocationEngine
             {
                 var result = EvaluateCallableDefinition(context, callable, arguments);
                 return callable.Kind == CallableKind.Rule
-                    ? EventScriptValue.Boolean(AsBool(result))
+                    ? EventScriptValueFactory.Boolean(AsBool(result))
                     : result;
             }
 
@@ -516,7 +516,7 @@ internal static class EventScriptInvocationEngine
 
             var value = EvaluateExpression(context, rulePredicate.Value);
             var result = EvaluateCallableDefinition(context, callable, new[] { value });
-            return EventScriptValue.Boolean(AsBool(result));
+            return EventScriptValueFactory.Boolean(AsBool(result));
         }
 
         private EventScriptValue EvaluateCallableDefinition(ExecutionContext context, CompiledCallableDefinition definition, IReadOnlyList<EventScriptValue> arguments)
@@ -632,7 +632,7 @@ internal static class EventScriptInvocationEngine
             var fromValue = EvaluateExpression(context, rangeExpression.FromExpression);
             var toValue = EvaluateExpression(context, rangeExpression.ToExpression);
             var stepValue = rangeExpression.StepExpression is null
-                ? EventScriptValue.Integer(1)
+                ? EventScriptValueFactory.Integer(1)
                 : EvaluateExpression(context, rangeExpression.StepExpression);
 
             if (!TryCoerceNumericForOperation(fromValue, out var fromNumber) ||
@@ -646,7 +646,7 @@ internal static class EventScriptInvocationEngine
                 return false;
             }
 
-            range = EventScriptValue.Range(
+            range = EventScriptValueFactory.Range(
                 ToIntegerSaturated(fromNumber.Value),
                 ToIntegerSaturated(toNumber.Value),
                 ToIntegerSaturated(stepNumber.Value));
@@ -661,13 +661,13 @@ internal static class EventScriptInvocationEngine
             {
                 "-" => EvaluateNegateUnary(operand),
                 "!" => EvaluateNotUnary(operand),
-                "has value" => EventScriptValue.Boolean(EventScriptValueSemantics.HasValue(operand)),
-                "empty" => EventScriptValue.Boolean(EventScriptValueSemantics.IsEmpty(operand)),
+                "has value" => EventScriptValueFactory.Boolean(EventScriptValueSemantics.HasValue(operand)),
+                "empty" => EventScriptValueFactory.Boolean(EventScriptValueSemantics.IsEmpty(operand)),
                 "len" => EvaluateLenUnary(context, operand),
                 "chance" => EvaluateChanceUnary(operand),
-                "keys" => EventScriptValue.Keys(operand),
-                "values" => EventScriptValue.Values(operand),
-                "entries" => EventScriptValue.Entries(operand),
+                "keys" => EventScriptValueFactory.Keys(operand),
+                "values" => EventScriptValueFactory.Values(operand),
+                "entries" => EventScriptValueFactory.Entries(operand),
                 "abs" => EvaluateAbsUnary(operand),
                 "floor" => EvaluateRoundingUnary(operand, "floor"),
                 "ceil" => EvaluateRoundingUnary(operand, "ceil"),
@@ -681,19 +681,19 @@ internal static class EventScriptInvocationEngine
 
         private static EventScriptValue EvaluateNegateUnary(EventScriptValue operand)
         {
-            if (operand.isNothing())
+            if (operand.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
 
             if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
             {
-                return EventScriptValue.OptionalNone();
+                return EventScriptValueFactory.OptionalNone();
             }
 
-            if (unwrapped.isPercentage())
+            if (unwrapped.IsPercentage())
             {
-                return EventScriptValue.Percentage(-unwrapped.AsNumber());
+                return EventScriptValueFactory.Percentage(-unwrapped.AsNumber());
             }
 
             if (!TryCoerceNumericForOperation(unwrapped, out var number))
@@ -703,11 +703,11 @@ internal static class EventScriptInvocationEngine
 
             return number.Kind switch
             {
-                NumericKind.Finite => EventScriptValue.Decimal(-number.Value),
-                NumericKind.NaN => EventScriptValue.DecimalNaN(),
-                NumericKind.PositiveInfinity => EventScriptValue.DecimalNegativeInfinity(),
-                NumericKind.NegativeInfinity => EventScriptValue.DecimalInfinity(),
-                _ => EventScriptValue.DecimalNaN()
+                NumericKind.Finite => EventScriptValueFactory.Decimal(-number.Value),
+                NumericKind.NaN => EventScriptValueFactory.DecimalNaN(),
+                NumericKind.PositiveInfinity => EventScriptValueFactory.DecimalNegativeInfinity(),
+                NumericKind.NegativeInfinity => EventScriptValueFactory.DecimalInfinity(),
+                _ => EventScriptValueFactory.DecimalNaN()
             };
         }
 
@@ -747,41 +747,41 @@ internal static class EventScriptInvocationEngine
 
             var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
             var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-            return EventScriptValue.Decimal(Math.Min(Math.Max(rawNumber.Value, lower), upper));
+            return EventScriptValueFactory.Decimal(Math.Min(Math.Max(rawNumber.Value, lower), upper));
         }
 
         private EventScriptValue EvaluateNotUnary(EventScriptValue operand)
         {
-            if (operand.isNothing())
+            if (operand.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
 
             if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
             {
-                return EventScriptValue.OptionalNone();
+                return EventScriptValueFactory.OptionalNone();
             }
 
-            return EventScriptValue.Boolean(!AsBool(unwrapped));
+            return EventScriptValueFactory.Boolean(!AsBool(unwrapped));
         }
 
         private EventScriptValue EvaluateLenUnary(ExecutionContext context, EventScriptValue operand)
         {
-            if (operand.isNothing())
+            if (operand.IsNothing())
             {
-                return EventScriptValue.Integer(0);
+                return EventScriptValueFactory.Integer(0);
             }
 
-            return operand.Type switch
+            return operand.Kind switch
             {
-                EventScriptValueType.Text => EventScriptValue.Integer(operand.AsText().Length),
-                EventScriptValueType.Iterator => CountEnumerableWithBudget(context, operand.AsEnumerable(), "Iterator length evaluation budget exhausted."),
-                EventScriptValueType.Range => EvaluateRangeLength(context, operand),
-                EventScriptValueType.List => EventScriptValue.Integer(operand.AsList().Count),
-                EventScriptValueType.Dictionary => EventScriptValue.Integer(operand.AsDictionary().Count),
-                EventScriptValueType.Set => EventScriptValue.Integer(operand.AsSet().Count),
-                EventScriptValueType.Dice => EventScriptValue.Integer(operand.AsDice().Rolls.Count),
-                EventScriptValueType.Optional => EventScriptValue.Integer(operand.AsOptional().HasValue ? 1 : 0),
+                EventScriptValueKind.Text => EventScriptValueFactory.Integer(operand.AsText().Length),
+                EventScriptValueKind.Iterator => CountEnumerableWithBudget(context, operand.AsEnumerable(), "Iterator length evaluation budget exhausted."),
+                EventScriptValueKind.Range => EvaluateRangeLength(context, operand),
+                EventScriptValueKind.List => EventScriptValueFactory.Integer(operand.AsList().Count),
+                EventScriptValueKind.Dictionary => EventScriptValueFactory.Integer(operand.AsDictionary().Count),
+                EventScriptValueKind.Set => EventScriptValueFactory.Integer(operand.AsSet().Count),
+                EventScriptValueKind.Dice => EventScriptValueFactory.Integer(operand.AsDice().Rolls.Count),
+                EventScriptValueKind.Optional => EventScriptValueFactory.Integer(operand.AsOptional().HasValue ? 1 : 0),
                 _ => EventScriptValue.Nothing
             };
         }
@@ -794,7 +794,7 @@ internal static class EventScriptInvocationEngine
             }
 
             return context.TryCheckRangeLength(operand, "Range length exceeds the configured limit.")
-                ? EventScriptValue.Integer(length)
+                ? EventScriptValueFactory.Integer(length)
                 : EventScriptValue.Nothing;
         }
 
@@ -811,36 +811,36 @@ internal static class EventScriptInvocationEngine
                 count++;
             }
 
-            return EventScriptValue.Integer(count);
+            return EventScriptValueFactory.Integer(count);
         }
 
         private EventScriptValue EvaluateChanceUnary(EventScriptValue operand)
         {
             var percentage = ConvertToPercentage(operand);
-            if (!percentage.isPercentage())
+            if (!percentage.IsPercentage())
             {
-                return EventScriptValue.Boolean(false);
+                return EventScriptValueFactory.Boolean(false);
             }
 
             var ratio = percentage.AsNumber();
             if (ratio <= 0m)
             {
-                return EventScriptValue.Boolean(false);
+                return EventScriptValueFactory.Boolean(false);
             }
 
             if (ratio >= 1m)
             {
-                return EventScriptValue.Boolean(true);
+                return EventScriptValueFactory.Boolean(true);
             }
 
             return TryNextInclusiveDecimal(0m, 1m, out var randomValue)
-                ? EventScriptValue.Boolean(randomValue < ratio)
-                : EventScriptValue.Boolean(false);
+                ? EventScriptValueFactory.Boolean(randomValue < ratio)
+                : EventScriptValueFactory.Boolean(false);
         }
 
         private static EventScriptValue EvaluateRoundingUnary(EventScriptValue operand, string operation)
         {
-            if (operand.isNothing())
+            if (operand.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
@@ -857,26 +857,26 @@ internal static class EventScriptInvocationEngine
 
             if (number.IsPositiveInfinity)
             {
-                return EventScriptValue.Integer(long.MaxValue);
+                return EventScriptValueFactory.Integer(long.MaxValue);
             }
 
             if (number.IsNegativeInfinity)
             {
-                return EventScriptValue.Integer(long.MinValue);
+                return EventScriptValueFactory.Integer(long.MinValue);
             }
 
             return operation switch
             {
-                "floor" or "rounddown" => EventScriptValue.Integer(ToIntegerSaturated(Math.Floor(number.Value))),
-                "ceil" or "roundup" => EventScriptValue.Integer(ToIntegerSaturated(Math.Ceiling(number.Value))),
-                "round" or "roundeven" => EventScriptValue.Integer(ToIntegerSaturated(Math.Round(number.Value, 0, MidpointRounding.ToEven))),
+                "floor" or "rounddown" => EventScriptValueFactory.Integer(ToIntegerSaturated(Math.Floor(number.Value))),
+                "ceil" or "roundup" => EventScriptValueFactory.Integer(ToIntegerSaturated(Math.Ceiling(number.Value))),
+                "round" or "roundeven" => EventScriptValueFactory.Integer(ToIntegerSaturated(Math.Round(number.Value, 0, MidpointRounding.ToEven))),
                 _ => EventScriptValue.Nothing
             };
         }
 
         private static EventScriptValue EvaluateAbsUnary(EventScriptValue operand)
         {
-            if (operand.isNothing())
+            if (operand.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
@@ -886,7 +886,7 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValue.Nothing;
             }
 
-            return EventScriptValue.Decimal(Math.Abs(number.Value));
+            return EventScriptValueFactory.Decimal(Math.Abs(number.Value));
         }
 
         private static EventScriptValue EvaluateMinMax(IReadOnlyList<EventScriptValue> values, bool isMax)
@@ -946,7 +946,7 @@ internal static class EventScriptInvocationEngine
             return true;
         }
 
-        private static bool IsPatternSequence(EventScriptValue value) => value.Type is EventScriptValueType.List or EventScriptValueType.Dice;
+        private static bool IsPatternSequence(EventScriptValue value) => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice;
 
         private static bool TryCombineWithPlus(EventScriptValue left, EventScriptValue right, out EventScriptValue value)
             => EventScriptValueAlu.TryCombineWithPlus(left, right, out value);
@@ -978,7 +978,7 @@ internal static class EventScriptInvocationEngine
                     return rightRaw;
                 }
 
-                if (leftRaw.isOptional())
+                if (leftRaw.IsOptional())
                 {
                     var optional = leftRaw.AsOptional();
                     return optional.HasValue ? optional.Value : rightRaw;
@@ -987,74 +987,74 @@ internal static class EventScriptInvocationEngine
                 return leftRaw;
             }
 
-            if (leftRaw.isNothing() || rightRaw.isNothing())
+            if (leftRaw.IsNothing() || rightRaw.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
 
             if (!TryUnwrapOptionalForOperation(leftRaw, out var left) || !TryUnwrapOptionalForOperation(rightRaw, out var right))
             {
-                return EventScriptValue.OptionalNone();
+                return EventScriptValueFactory.OptionalNone();
             }
 
             switch (binary.Operator)
             {
                 case "|":
-                    return EventScriptValue.Boolean(AsBool(left) || AsBool(right));
+                    return EventScriptValueFactory.Boolean(AsBool(left) || AsBool(right));
                 case "^":
-                    return EventScriptValue.Boolean(AsBool(left) ^ AsBool(right));
+                    return EventScriptValueFactory.Boolean(AsBool(left) ^ AsBool(right));
                 case "&":
-                    return EventScriptValue.Boolean(AsBool(left) && AsBool(right));
+                    return EventScriptValueFactory.Boolean(AsBool(left) && AsBool(right));
                 case "default":
                     return EventScriptValue.Nothing;
                 case "=":
-                    return EventScriptValue.Boolean(AreEqual(left, right));
+                    return EventScriptValueFactory.Boolean(AreEqual(left, right));
                 case "<>":
-                    return EventScriptValue.Boolean(!AreEqual(left, right));
+                    return EventScriptValueFactory.Boolean(!AreEqual(left, right));
                 case "in":
-                    return EventScriptValue.Boolean(EventScriptValueSemantics.Contains(right, left));
+                    return EventScriptValueFactory.Boolean(EventScriptValueSemantics.Contains(right, left));
                 case "value in":
-                    return EventScriptValue.Boolean(EventScriptValueSemantics.ContainsValue(right, left));
+                    return EventScriptValueFactory.Boolean(EventScriptValueSemantics.ContainsValue(right, left));
                 case "starts with":
-                    return EventScriptValue.Boolean(EventScriptValueSemantics.StartsWith(left, right));
+                    return EventScriptValueFactory.Boolean(EventScriptValueSemantics.StartsWith(left, right));
                 case "ends with":
-                    return EventScriptValue.Boolean(EventScriptValueSemantics.EndsWith(left, right));
+                    return EventScriptValueFactory.Boolean(EventScriptValueSemantics.EndsWith(left, right));
                 case "<":
                     if (!TryCoerceNumericForOperation(left, out var leftLess) ||
                         !TryCoerceNumericForOperation(right, out var rightLess) ||
                         !TryCompareNumeric(leftLess, rightLess, out var lessComparison))
                     {
-                        return EventScriptValue.Boolean(false);
+                        return EventScriptValueFactory.Boolean(false);
                     }
 
-                    return EventScriptValue.Boolean(lessComparison < 0);
+                    return EventScriptValueFactory.Boolean(lessComparison < 0);
                 case ">":
                     if (!TryCoerceNumericForOperation(left, out var leftGreater) ||
                         !TryCoerceNumericForOperation(right, out var rightGreater) ||
                         !TryCompareNumeric(leftGreater, rightGreater, out var greaterComparison))
                     {
-                        return EventScriptValue.Boolean(false);
+                        return EventScriptValueFactory.Boolean(false);
                     }
 
-                    return EventScriptValue.Boolean(greaterComparison > 0);
+                    return EventScriptValueFactory.Boolean(greaterComparison > 0);
                 case "<=":
                     if (!TryCoerceNumericForOperation(left, out var leftLessOrEqual) ||
                         !TryCoerceNumericForOperation(right, out var rightLessOrEqual) ||
                         !TryCompareNumeric(leftLessOrEqual, rightLessOrEqual, out var lessOrEqualComparison))
                     {
-                        return EventScriptValue.Boolean(false);
+                        return EventScriptValueFactory.Boolean(false);
                     }
 
-                    return EventScriptValue.Boolean(lessOrEqualComparison <= 0);
+                    return EventScriptValueFactory.Boolean(lessOrEqualComparison <= 0);
                 case ">=":
                     if (!TryCoerceNumericForOperation(left, out var leftGreaterOrEqual) ||
                         !TryCoerceNumericForOperation(right, out var rightGreaterOrEqual) ||
                         !TryCompareNumeric(leftGreaterOrEqual, rightGreaterOrEqual, out var greaterOrEqualComparison))
                     {
-                        return EventScriptValue.Boolean(false);
+                        return EventScriptValueFactory.Boolean(false);
                     }
 
-                    return EventScriptValue.Boolean(greaterOrEqualComparison >= 0);
+                    return EventScriptValueFactory.Boolean(greaterOrEqualComparison >= 0);
                 case "+":
                 {
                     if (TryCoerceNumericForOperation(left, out var leftNumeric) &&
@@ -1068,12 +1068,12 @@ internal static class EventScriptInvocationEngine
                         return combined;
                     }
 
-                    if (left.isText() || right.isText())
+                    if (left.IsText() || right.IsText())
                     {
-                        return EventScriptValue.Text($"{ToText(left)}{ToText(right)}");
+                        return EventScriptValueFactory.Text($"{ToText(left)}{ToText(right)}");
                     }
 
-                    return EventScriptValue.DecimalNaN();
+                    return EventScriptValueFactory.DecimalNaN();
                 }
                 case "intersect":
                     return EvaluateCollectionIntersect(left, right);
@@ -1089,7 +1089,7 @@ internal static class EventScriptInvocationEngine
                     if (!TryCoerceNumericForOperation(left, out var leftMinus) ||
                         !TryCoerceNumericForOperation(right, out var rightMinus))
                     {
-                        return EventScriptValue.DecimalNaN();
+                        return EventScriptValueFactory.DecimalNaN();
                     }
 
                     return ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
@@ -1097,7 +1097,7 @@ internal static class EventScriptInvocationEngine
                     if (!TryCoerceNumericForOperation(left, out var leftMultiply) ||
                         !TryCoerceNumericForOperation(right, out var rightMultiply))
                     {
-                        return EventScriptValue.DecimalNaN();
+                        return EventScriptValueFactory.DecimalNaN();
                     }
 
                     return ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
@@ -1105,7 +1105,7 @@ internal static class EventScriptInvocationEngine
                     if (!TryCoerceNumericForOperation(left, out var leftDivide) ||
                         !TryCoerceNumericForOperation(right, out var rightDivide))
                     {
-                        return EventScriptValue.DecimalNaN();
+                        return EventScriptValueFactory.DecimalNaN();
                     }
 
                     return ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
@@ -1113,7 +1113,7 @@ internal static class EventScriptInvocationEngine
                     if (!TryCoerceNumericForOperation(left, out var leftModulo) ||
                         !TryCoerceNumericForOperation(right, out var rightModulo))
                     {
-                        return EventScriptValue.DecimalNaN();
+                        return EventScriptValueFactory.DecimalNaN();
                     }
 
                     return ToEventScriptDecimal(ModuloNumeric(leftModulo, rightModulo));
@@ -1125,7 +1125,7 @@ internal static class EventScriptInvocationEngine
         private EventScriptValue EvaluateMemberAccess(ExecutionContext context, MemberAccessExpressionNode memberAccess)
         {
             var target = EvaluateExpression(context, memberAccess.Target);
-            if (target.isNothing())
+            if (target.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
@@ -1141,7 +1141,7 @@ internal static class EventScriptInvocationEngine
         private EventScriptValue EvaluateCollectionAccess(ExecutionContext context, CollectionAccessExpressionNode collectionAccess)
         {
             var target = EvaluateExpression(context, collectionAccess.Target);
-            if (target.isNothing())
+            if (target.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
@@ -1152,10 +1152,10 @@ internal static class EventScriptInvocationEngine
                     return EvaluateIndexedCollectionAccess(context, target, expressionSelector.Expression);
 
                 case PatternSelectorNode patternSelector:
-                    return EventScriptValue.Boolean(EvaluateSequencePattern(context, target, patternSelector.Pattern));
+                    return EventScriptValueFactory.Boolean(EvaluateSequencePattern(context, target, patternSelector.Pattern));
 
                 case ObjectMatchSelectorNode objectMatchSelector:
-                    return EventScriptValue.Boolean(EvaluateObjectMatchSelector(context, target, objectMatchSelector.Pattern));
+                    return EventScriptValueFactory.Boolean(EvaluateObjectMatchSelector(context, target, objectMatchSelector.Pattern));
 
                 case TakePatternSelectorNode takePatternSelector:
                     return EvaluateTakePattern(context, target, takePatternSelector.Pattern);
@@ -1293,7 +1293,7 @@ internal static class EventScriptInvocationEngine
 
         private static IEnumerable<EventScriptValue> EnumerateListLikeValue(EventScriptValue value)
         {
-            if (value.Type == EventScriptValueType.Optional)
+            if (value.Kind == EventScriptValueKind.Optional)
             {
                 var optional = value.AsOptional();
                 return optional.HasValue
@@ -1301,7 +1301,7 @@ internal static class EventScriptInvocationEngine
                     : Array.Empty<EventScriptValue>();
             }
 
-            return value.Type is EventScriptValueType.Range or EventScriptValueType.Iterator
+            return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Iterator
                 ? value.AsEnumerable()
                 : value.AsList();
         }
@@ -1359,7 +1359,7 @@ internal static class EventScriptInvocationEngine
         private EventScriptValue EvaluateIndexedCollectionAccess(ExecutionContext context, EventScriptValue target, ExpressionNode selectorExpression)
         {
             var selector = EvaluateExpression(context, selectorExpression);
-            if (selector.isNothing())
+            if (selector.IsNothing())
             {
                 return EventScriptValue.Nothing;
             }
@@ -1380,14 +1380,14 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValue.Nothing;
             }
 
-            return target.Type == EventScriptValueType.Dice
-                ? EventScriptValue.Dice(EventScriptDiceValue.Create(takenItems.Select(item => (int)item.AsInteger())))
-                : EventScriptValue.List(takenItems);
+            return target.Kind == EventScriptValueKind.Dice
+                ? EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(takenItems.Select(item => (int)item.AsInteger())))
+                : EventScriptValueFactory.List(takenItems);
         }
 
         private bool EvaluateObjectMatchSelector(ExecutionContext context, EventScriptValue target, ObjectMatchPatternNode pattern)
         {
-            if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Set or EventScriptValueType.Dice))
+            if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Dice))
             {
                 return false;
             }
@@ -1407,9 +1407,9 @@ internal static class EventScriptInvocationEngine
         {
             if (selector.Count <= 0)
             {
-                return target.Type == EventScriptValueType.Dice
-                    ? EventScriptValue.Dice(EventScriptDiceValue.Create(Array.Empty<int>()))
-                    : EventScriptValue.List(Array.Empty<EventScriptValue>());
+                return target.Kind == EventScriptValueKind.Dice
+                    ? EventScriptValueFactory.Dice(EventScriptDiceValue.Empty)
+                    : EventScriptValueFactory.List(Array.Empty<EventScriptValue>());
             }
 
             var selectedItems = selector.Scope switch
@@ -1426,11 +1426,11 @@ internal static class EventScriptInvocationEngine
                 selectedItems = DropSelection(items, selectedItems);
             }
 
-            return target.Type switch
+            return target.Kind switch
             {
-                EventScriptValueType.Dice => EventScriptValue.Dice(EventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
-                EventScriptValueType.List => EventScriptValue.List(selectedItems),
-                EventScriptValueType.Set => EventScriptValue.List(selectedItems),
+                EventScriptValueKind.Dice => EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(selectedItems.Select(item => (int)item.AsInteger()))),
+                EventScriptValueKind.List => EventScriptValueFactory.List(selectedItems),
+                EventScriptValueKind.Set => EventScriptValueFactory.List(selectedItems),
                 _ => EventScriptValue.Nothing
             };
         }
@@ -1631,7 +1631,7 @@ internal static class EventScriptInvocationEngine
             var isAny = string.Equals(selector.Operator, "any", StringComparison.Ordinal);
             if (!isAny && !string.Equals(selector.Operator, "all", StringComparison.Ordinal))
             {
-                return EventScriptValue.Boolean(false);
+                return EventScriptValueFactory.Boolean(false);
             }
 
             foreach (var item in items)
@@ -1643,12 +1643,12 @@ internal static class EventScriptInvocationEngine
                     var predicateResult = AsBool(EvaluateExpression(context, selector.Predicate));
                     if (isAny && predicateResult)
                     {
-                        return EventScriptValue.Boolean(true);
+                        return EventScriptValueFactory.Boolean(true);
                     }
 
                     if (!isAny && !predicateResult)
                     {
-                        return EventScriptValue.Boolean(false);
+                        return EventScriptValueFactory.Boolean(false);
                     }
                 }
                 finally
@@ -1657,7 +1657,7 @@ internal static class EventScriptInvocationEngine
                 }
             }
 
-            return EventScriptValue.Boolean(!isAny);
+            return EventScriptValueFactory.Boolean(!isAny);
         }
 
         private EventScriptValue EvaluateCountSelector(ExecutionContext context, IEnumerable<EventScriptValue> items, CountSelectorNode selector)
@@ -1680,7 +1680,7 @@ internal static class EventScriptInvocationEngine
                 }
             }
 
-            return EventScriptValue.Integer(count);
+            return EventScriptValueFactory.Integer(count);
         }
 
         private EventScriptValue EvaluateChooseSelector(ExecutionContext context, IReadOnlyList<EventScriptValue> items, ChooseSelectorNode selector)
@@ -1708,12 +1708,12 @@ internal static class EventScriptInvocationEngine
                 return chosen.Count == 0 ? EventScriptValue.Nothing : chosen[0];
             }
 
-            return EventScriptValue.List(chosen);
+            return EventScriptValueFactory.List(chosen);
         }
 
         private static EventScriptValue EvaluateDrawSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items, DrawSelectorNode selector)
         {
-            if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
+            if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
             {
                 return EventScriptValue.Nothing;
             }
@@ -1724,14 +1724,14 @@ internal static class EventScriptInvocationEngine
                 return drawn.Length == 0 ? EventScriptValue.Nothing : drawn[0];
             }
 
-            return target.Type == EventScriptValueType.Dice
-                ? EventScriptValue.Dice(EventScriptDiceValue.Create(drawn.Select(item => (int)item.AsInteger())))
-                : EventScriptValue.List(drawn);
+            return target.Kind == EventScriptValueKind.Dice
+                ? EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(drawn.Select(item => (int)item.AsInteger())))
+                : EventScriptValueFactory.List(drawn);
         }
 
         private EventScriptValue EvaluateShuffleSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
         {
-            if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
+            if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
             {
                 return EventScriptValue.Nothing;
             }
@@ -1741,23 +1741,23 @@ internal static class EventScriptInvocationEngine
             {
                 if (!TryNextInclusiveInt(0, i, out var swapIndex))
                 {
-                    return EventScriptValue.List(shuffled);
+                    return EventScriptValueFactory.List(shuffled);
                 }
 
                 (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
             }
 
-            return EventScriptValue.List(shuffled);
+            return EventScriptValueFactory.List(shuffled);
         }
 
         private static EventScriptValue EvaluateReverseSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
         {
-            if (target.Type is not (EventScriptValueType.List or EventScriptValueType.Dice))
+            if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
             {
                 return EventScriptValue.Nothing;
             }
 
-            return EventScriptValue.List(items.Reverse().ToArray());
+            return EventScriptValueFactory.List(items.Reverse().ToArray());
         }
 
         private List<EventScriptValue> FilterItems(ExecutionContext context, IEnumerable<EventScriptValue> items, string identifier, ExpressionNode predicate)
@@ -1892,7 +1892,7 @@ internal static class EventScriptInvocationEngine
                 }
             }
 
-            return EventScriptValue.List(result);
+            return EventScriptValueFactory.List(result);
         }
 
         private EventScriptValue EvaluateSumSelector(ExecutionContext context, IEnumerable<EventScriptValue> items, SumSelectorNode selector)
@@ -1906,7 +1906,7 @@ internal static class EventScriptInvocationEngine
                     context.Define(selector.Identifier, item);
                     if (!TryCoerceNumericForOperation(EvaluateExpression(context, selector.Projection), out var number))
                     {
-                        return EventScriptValue.DecimalNaN();
+                        return EventScriptValueFactory.DecimalNaN();
                     }
 
                     sum = AddNumeric(sum, number);
@@ -1946,7 +1946,7 @@ internal static class EventScriptInvocationEngine
 
             return count == 0 || !sum.IsFinite
                 ? EventScriptValue.Nothing
-                : EventScriptValue.Decimal(sum.Value / count);
+                : EventScriptValueFactory.Decimal(sum.Value / count);
         }
 
         private EventScriptValue EvaluateSelectSelector(ExecutionContext context, IEnumerable<EventScriptValue> items, SelectSelectorNode selector)
@@ -1966,7 +1966,7 @@ internal static class EventScriptInvocationEngine
                 }
             }
 
-            return EventScriptValue.List(result);
+            return EventScriptValueFactory.List(result);
         }
 
         private EventScriptValue EvaluateDictionarySelector(ExecutionContext context, IEnumerable<EventScriptValue> items, DictionarySelectorNode selector)
@@ -1995,7 +1995,7 @@ internal static class EventScriptInvocationEngine
                 }
             }
 
-            return EventScriptValue.Dictionary(result);
+            return EventScriptValueFactory.Dictionary(result);
         }
 
         private EventScriptValue EvaluateContainsSelector(ExecutionContext context, EventScriptValue target, ContainsSelectorNode selector)
@@ -2003,10 +2003,10 @@ internal static class EventScriptInvocationEngine
             var value = EvaluateExpression(context, selector.ValueExpression);
             return selector.Mode switch
             {
-                "single" => EventScriptValue.Boolean(EventScriptValueSemantics.Contains(target, value)),
-                "all" => EventScriptValue.Boolean(EnumerateListLikeValue(value).All(item => EventScriptValueSemantics.Contains(target, item))),
-                "any" => EventScriptValue.Boolean(EnumerateListLikeValue(value).Any(item => EventScriptValueSemantics.Contains(target, item))),
-                _ => EventScriptValue.Boolean(false)
+                "single" => EventScriptValueFactory.Boolean(EventScriptValueSemantics.Contains(target, value)),
+                "all" => EventScriptValueFactory.Boolean(EnumerateListLikeValue(value).All(item => EventScriptValueSemantics.Contains(target, item))),
+                "any" => EventScriptValueFactory.Boolean(EnumerateListLikeValue(value).Any(item => EventScriptValueSemantics.Contains(target, item))),
+                _ => EventScriptValueFactory.Boolean(false)
             };
         }
 
@@ -2092,7 +2092,7 @@ internal static class EventScriptInvocationEngine
 
         private bool MatchesObjectPattern(ExecutionContext context, EventScriptValue value, ObjectMatchPatternNode pattern)
         {
-            if (value.Type != EventScriptValueType.Dictionary)
+            if (value.Kind != EventScriptValueKind.Dictionary)
             {
                 return false;
             }
@@ -2196,20 +2196,20 @@ internal static class EventScriptInvocationEngine
                 case "nothing":
                     return EventScriptValue.Nothing;
                 case "tag":
-                    return EventScriptValue.Tag(value.AsText());
+                    return EventScriptValueFactory.Tag(value.AsText());
                 case "text":
-                    return EventScriptValue.Text(value.AsText());
+                    return EventScriptValueFactory.Text(value.AsText());
                 case "percentage":
                     return ConvertToPercentage(value);
                 case "boolean":
-                    return EventScriptValue.Boolean(value.AsBoolean());
+                    return EventScriptValueFactory.Boolean(value.AsBoolean());
                 case "integer":
-                    return EventScriptValue.Integer(value.AsInteger());
+                    return EventScriptValueFactory.Integer(value.AsInteger());
                 case "decimal":
                 {
                     if (!TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
                     {
-                        return EventScriptValue.DecimalNaN();
+                        return EventScriptValueFactory.DecimalNaN();
                     }
 
                     if (TryCoerceNumericForOperation(unwrappedNumber, out var number))
@@ -2217,7 +2217,7 @@ internal static class EventScriptInvocationEngine
                         return ToEventScriptDecimal(number);
                     }
 
-                    return EventScriptValue.DecimalNaN();
+                    return EventScriptValueFactory.DecimalNaN();
                 }
                 case "list":
                     if (!context.TryCheckMaterializedValue(value, "List conversion would materialize more range items than allowed."))
@@ -2225,35 +2225,35 @@ internal static class EventScriptInvocationEngine
                         return EventScriptValue.Nothing;
                     }
 
-                    return EventScriptValue.List(value.AsList());
+                    return EventScriptValueFactory.List(value.AsList());
                 case "range":
-                    return value.isRange() ? value : EventScriptValue.Nothing;
+                    return value.IsRange() ? value : EventScriptValue.Nothing;
                 case "message":
-                    return value.Type == EventScriptValueType.Message
+                    return value.Kind == EventScriptValueKind.Message
                         ? value
                         : EventScriptMessageValueCodec.TryReadMessageValue(value, out var messageValue)
                             ? EventScriptMessageValueCodec.CreateMessageValue(messageValue)
                             : EventScriptValue.Nothing;
                 case "handler":
-                    return value.Type == EventScriptValueType.Handler
+                    return value.Kind == EventScriptValueKind.Handler
                         ? value
                         : EventScriptMessageValueCodec.TryReadHandlerValue(value, out var handlerValue)
                             ? EventScriptMessageValueCodec.CreateHandlerValue(handlerValue)
                             : EventScriptValue.Nothing;
                 case "dictionary":
-                    return EventScriptValue.Dictionary(value.AsDictionary());
+                    return EventScriptValueFactory.Dictionary(value.AsDictionary());
                 case "set":
                     if (!context.TryCheckMaterializedValue(value, "Set conversion would materialize more range items than allowed."))
                     {
                         return EventScriptValue.Nothing;
                     }
 
-                    return EventScriptValue.Set(value.AsSet());
+                    return EventScriptValueFactory.Set(value.AsSet());
                 case "dice":
-                    return EventScriptValue.Dice(value.AsDice());
+                    return EventScriptValueFactory.Dice(value.AsDice());
                 case "optional":
-                    if (value.isOptional()) return value;
-                    return value.isNothing() ? EventScriptValue.OptionalNone() : EventScriptValue.OptionalSome(value);
+                    if (value.IsOptional()) return value;
+                    return value.IsNothing() ? EventScriptValueFactory.OptionalNone() : EventScriptValueFactory.OptionalSome(value);
                 default:
                     return _typeDefinitions.TryGetValue(declaredType, out var typeDefinition)
                         ? ConvertToCustomType(context, value, typeDefinition)
@@ -2265,10 +2265,10 @@ internal static class EventScriptInvocationEngine
         {
             if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
             {
-                return EventScriptValue.DecimalNaN();
+                return EventScriptValueFactory.DecimalNaN();
             }
 
-            if (unwrapped.isPercentage())
+            if (unwrapped.IsPercentage())
             {
                 return unwrapped;
             }
@@ -2277,18 +2277,18 @@ internal static class EventScriptInvocationEngine
             {
                 if (!number.IsFinite)
                 {
-                    return EventScriptValue.DecimalNaN();
+                    return EventScriptValueFactory.DecimalNaN();
                 }
 
-                var ratio = unwrapped.Type == EventScriptValueType.Integer
+                var ratio = unwrapped.Kind == EventScriptValueKind.Integer
                     ? number.Value / 100m
                     : number.Value > 1m || number.Value < -1m
                         ? number.Value / 100m
                         : number.Value;
-                return EventScriptValue.Percentage(ratio);
+                return EventScriptValueFactory.Percentage(ratio);
             }
 
-            return EventScriptValue.DecimalNaN();
+            return EventScriptValueFactory.DecimalNaN();
         }
 
         private EventScriptValue ConvertToCustomType(ExecutionContext context, EventScriptValue value, CompiledTypeDefinition typeDefinition)
@@ -2319,7 +2319,7 @@ internal static class EventScriptInvocationEngine
                 materializedValues[field.Name] = ConvertToDeclaredType(context, computedValue, field.TypeName);
             }
 
-            return EventScriptValue.CustomType(typeDefinition.Name, materializedValues);
+            return EventScriptValueFactory.CustomType(typeDefinition.Name, materializedValues);
         }
 
         private EventScriptValue ApplyFieldClamp(CompiledTypeDefinition typeDefinition, CompiledTypeFieldDefinition field, EventScriptValue fieldValue,
@@ -2343,7 +2343,7 @@ internal static class EventScriptInvocationEngine
             {
                 if (maximumNumber.IsPositiveInfinity && minimumNumber.IsFinite && valueNumber.IsFinite)
                 {
-                    return EventScriptValue.Decimal(Math.Max(valueNumber.Value, minimumNumber.Value));
+                    return EventScriptValueFactory.Decimal(Math.Max(valueNumber.Value, minimumNumber.Value));
                 }
 
                 return fieldValue;
@@ -2351,7 +2351,7 @@ internal static class EventScriptInvocationEngine
 
             var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
             var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-            return EventScriptValue.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper));
+            return EventScriptValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper));
         }
 
         private EventScriptValue EvaluateCustomTypeExpression(CompiledTypeDefinition typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues,
@@ -2383,21 +2383,21 @@ internal static class EventScriptInvocationEngine
         {
             return typeName switch
             {
-                "nothing" => value.isNothing(),
-                "tag" => value.isTag(),
-                "text" => value.isText(),
-                "percentage" => value.isPercentage(),
-                "decimal" => value.isNumber(),
-                "integer" => value.isInteger(),
-                "boolean" => value.Type == EventScriptValueType.Boolean,
-                "optional" => value.isOptional(),
-                "list" => value.isList(),
-                "range" => value.isRange(),
-                "message" => value.Type == EventScriptValueType.Message || EventScriptMessageValueCodec.TryReadMessageValue(value, out _),
-                "handler" => value.Type == EventScriptValueType.Handler || EventScriptMessageValueCodec.TryReadHandlerValue(value, out _),
-                "dictionary" => value.isDictionary(),
-                "set" => value.isSet(),
-                "dice" => value.isDice(),
+                "nothing" => value.IsNothing(),
+                "tag" => value.IsTag(),
+                "text" => value.IsText(),
+                "percentage" => value.IsPercentage(),
+                "decimal" => value.IsNumber(),
+                "integer" => value.IsInteger(),
+                "boolean" => value.Kind == EventScriptValueKind.Boolean,
+                "optional" => value.IsOptional(),
+                "list" => value.IsList(),
+                "range" => value.IsRange(),
+                "message" => value.Kind == EventScriptValueKind.Message || EventScriptMessageValueCodec.TryReadMessageValue(value, out _),
+                "handler" => value.Kind == EventScriptValueKind.Handler || EventScriptMessageValueCodec.TryReadHandlerValue(value, out _),
+                "dictionary" => value.IsDictionary(),
+                "set" => value.IsSet(),
+                "dice" => value.IsDice(),
                 _ => value.TryGetCustomTypeName(out var customTypeName) && string.Equals(customTypeName, typeName, StringComparison.Ordinal)
             };
         }
@@ -2462,34 +2462,34 @@ internal static class EventScriptInvocationEngine
 
         private static string BuildStableSeedText(EventScriptValue value)
         {
-            return value.Type switch
+            return value.Kind switch
             {
-                EventScriptValueType.Nothing => "nothing",
-                EventScriptValueType.Tag => $"tag:{value.AsText()}",
-                EventScriptValueType.Text => $"text:{value.AsText()}",
-                EventScriptValueType.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-                EventScriptValueType.Decimal => value.IsNaN()
+                EventScriptValueKind.Nothing => "nothing",
+                EventScriptValueKind.Tag => $"tag:{value.AsText()}",
+                EventScriptValueKind.Text => $"text:{value.AsText()}",
+                EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+                EventScriptValueKind.Decimal => value.IsNaN()
                     ? "decimal:nan"
                     : value.IsNegativeInfinity()
                         ? "decimal:-infinity"
                         : value.IsInfinity()
                             ? "decimal:infinity"
                             : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-                EventScriptValueType.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
-                EventScriptValueType.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
-                EventScriptValueType.Optional => value.AsOptional().HasValue
+                EventScriptValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
+                EventScriptValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
+                EventScriptValueKind.Optional => value.AsOptional().HasValue
                     ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                     : "optional:none",
-                EventScriptValueType.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
-                EventScriptValueType.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
-                EventScriptValueType.Message =>
+                EventScriptValueKind.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+                EventScriptValueKind.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
+                EventScriptValueKind.Message =>
                     $"message:{((EventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((EventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
-                EventScriptValueType.Handler => $"handler:{((EventScriptHandlerValue)value).Signature.SignatureId}",
-                EventScriptValueType.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
-                EventScriptValueType.Dictionary =>
+                EventScriptValueKind.Handler => $"handler:{((EventScriptHandlerValue)value).Signature.SignatureId}",
+                EventScriptValueKind.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
+                EventScriptValueKind.Dictionary =>
                     $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
-                EventScriptValueType.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",
-                EventScriptValueType.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
+                EventScriptValueKind.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",
+                EventScriptValueKind.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
                 _ => value.ToString()
             };
         }

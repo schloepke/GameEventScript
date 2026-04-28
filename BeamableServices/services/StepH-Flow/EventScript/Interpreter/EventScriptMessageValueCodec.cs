@@ -11,13 +11,13 @@ internal static class EventScriptMessageValueCodec
     public static EventScriptValue CreateHandlerValue(EventScriptMessageSignature signature)
     {
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
-        return EventScriptValue.Handler(signature);
+        return EventScriptValueFactory.Handler(signature);
     }
 
     public static EventScriptValue CreateMessageValue(EventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        return EventScriptValue.Message(message);
+        return EventScriptValueFactory.Message(message);
     }
 
     public static bool TryReadHandlerValue(EventScriptValue value, out EventScriptMessageSignature signature)

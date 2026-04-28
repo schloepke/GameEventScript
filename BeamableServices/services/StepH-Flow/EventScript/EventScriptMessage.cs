@@ -9,7 +9,7 @@ namespace StepH.Flow.EventScript;
 public sealed class EventScriptMessage
 {
     public static EventScriptMessage EmptyMessage = new(string.Empty);
-    
+
     public EventScriptMessage(string name, IReadOnlyDictionary<string, EventScriptValue>? arguments) : this(name, EventScriptNamedArguments.Create(arguments))
     {
     }
@@ -29,15 +29,13 @@ public sealed class EventScriptMessage
 
     public override string ToString() => Arguments.Count == 0 ? Name : $"{Name}({Arguments})";
 
-    public static EventScriptMessage Message(string name)
-        => new(name);
+    public static EventScriptMessage Message(string name) => new(name);
 
-    public static EventScriptMessage Message(string name, IReadOnlyDictionary<string, EventScriptValue>? arguments)
-        => new(name, EventScriptNamedArguments.Create(arguments));
+    public static EventScriptMessage Message(string name, IReadOnlyDictionary<string, EventScriptValue>? arguments) => new(name, EventScriptNamedArguments.Create(arguments));
 
     public static EventScriptMessage Message(string name, params (string name, EventScriptValue value)[] arguments)
         => new(name, arguments.ToDictionary(pair => pair.name, pair => pair.value));
 
     public static EventScriptMessage Message(string name, params (string name, object? value)[] arguments)
-        => new(name, arguments.ToDictionary(pair => pair.name, pair => EventScriptValue.FromClr(pair.value)));
+        => new(name, arguments.ToDictionary(pair => pair.name, pair => EventScriptValueFactory.FromClr(pair.value)));
 }

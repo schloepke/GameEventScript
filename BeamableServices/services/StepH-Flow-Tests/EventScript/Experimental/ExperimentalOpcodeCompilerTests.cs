@@ -103,7 +103,7 @@ public sealed class ExperimentalOpcodeCompilerTests
 
         Assert.HasCount(1, result.EmittedEvents);
         Assert.IsTrue(result.EmittedEvents[0].Arguments["invalid"].IsNaN());
-        Assert.IsTrue(result.EmittedEvents[0].Arguments["missing"].isNothing());
+        Assert.IsTrue(result.EmittedEvents[0].Arguments["missing"].IsNothing());
     }
 
     [TestMethod]
@@ -210,10 +210,10 @@ public sealed class ExperimentalOpcodeCompilerTests
             .EmittedEvents[0]
             .Arguments;
 
-        Assert.AreEqual(EventScriptValueType.Boolean, args["byRuleTwo"].Type);
-        Assert.AreEqual(EventScriptValueType.Boolean, args["byRuleZero"].Type);
-        Assert.AreEqual(EventScriptValueType.Decimal, args["bySelect"].Type);
-        Assert.AreEqual(EventScriptValueType.Boolean, args["byPredicate"].Type);
+        Assert.AreEqual(EventScriptValueKind.Boolean, args["byRuleTwo"].Kind);
+        Assert.AreEqual(EventScriptValueKind.Boolean, args["byRuleZero"].Kind);
+        Assert.AreEqual(EventScriptValueKind.Decimal, args["bySelect"].Kind);
+        Assert.AreEqual(EventScriptValueKind.Boolean, args["byPredicate"].Kind);
         Assert.IsTrue(args["byRuleTwo"].AsBoolean());
         Assert.IsFalse(args["byRuleZero"].AsBoolean());
         Assert.AreEqual(4m, args["bySelect"].AsNumber());

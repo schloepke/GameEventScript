@@ -7,38 +7,66 @@ using System.Linq;
 
 namespace StepH.Flow.EventScript.Types;
 
-internal sealed class EventScriptDictionaryValue : EventScriptValue
+public sealed class EventScriptDictionaryValue : EventScriptValue
 {
-    private readonly ReadOnlyDictionary<string, EventScriptValue> _visibleView;
+    public static readonly EventScriptDictionaryValue Empty = new(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+    public static IReadOnlyDictionary<string, EventScriptValue> EmptyView => Empty.VisibleView;
 
-    public EventScriptDictionaryValue(Dictionary<string, EventScriptValue> storage)
+    public static EventScriptDictionaryValue EventScriptDictionary(IReadOnlyDictionary<string, EventScriptValue>? values)
+    {
+        if (values == null || values.Count == 0) return Empty;
+        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        foreach (var pair in values)
+        {
+            if (pair.Key == null) continue;
+            map[pair.Key] = pair.Value ?? Nothing;
+        }
+        return map.Count == 0 ? Empty : new EventScriptDictionaryValue(map);
+    }
+
+    public static EventScriptDictionaryValue EventScriptCustomType(string? typeName, IReadOnlyDictionary<string, EventScriptValue>? values)
+    {
+        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
+        {
+            [HiddenTypeKey] = EventScriptTagValue.EventScriptTag(typeName)
+        };
+        if (values == null) return new EventScriptDictionaryValue(map);
+        foreach (var pair in values)
+        {
+            if (pair.Key == null || IsHiddenKey(pair.Key)) continue;
+            map[pair.Key] = pair.Value ?? Nothing;
+        }
+        return new EventScriptDictionaryValue(map);
+    }
+    
+    private EventScriptDictionaryValue(Dictionary<string, EventScriptValue> storage)
     {
         Storage = storage;
         var visible = new Dictionary<string, EventScriptValue>(
             storage.Where(pair => !pair.Key.StartsWith("__", StringComparison.Ordinal)),
             StringComparer.Ordinal);
-        _visibleView = new ReadOnlyDictionary<string, EventScriptValue>(visible);
+        VisibleView = new ReadOnlyDictionary<string, EventScriptValue>(visible);
     }
 
-    public Dictionary<string, EventScriptValue> Storage { get; }
-    public ReadOnlyDictionary<string, EventScriptValue> VisibleView => _visibleView;
-    public override EventScriptValueType Type => EventScriptValueType.Dictionary;
+    internal Dictionary<string, EventScriptValue> Storage { get; }
+    public ReadOnlyDictionary<string, EventScriptValue> VisibleView { get; }
 
-    public static EventScriptDictionaryValue Create(IReadOnlyDictionary<string, EventScriptValue>? values)
+    public override EventScriptValueKind Kind => EventScriptValueKind.Dictionary;
+
+    public override IReadOnlyDictionary<string, EventScriptValue> AsDictionary() => VisibleView;
+
+    public override bool TryGetDictionaryMember(string key, out EventScriptValue value)
     {
-        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
-        foreach (var pair in values ?? new Dictionary<string, EventScriptValue>(StringComparer.Ordinal))
-        {
-            if (pair.Key == null) continue;
-            map[pair.Key] = pair.Value ?? EventScriptValue.Nothing;
-        }
+        if (!IsHiddenKey(key)) return Storage.TryGetValue(key, out value);
+        value = Nothing;
+        return false;
 
-        return new EventScriptDictionaryValue(map);
     }
-}
 
-internal static class EmptyDictionaryView
-{
-    public static readonly IReadOnlyDictionary<string, EventScriptValue> Instance =
-        new ReadOnlyDictionary<string, EventScriptValue>(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal));
+    internal override bool TryConvertToDictionary(out EventScriptValue value)
+    {
+        value = this;
+        return true;
+    }
+
 }

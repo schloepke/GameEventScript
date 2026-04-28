@@ -11,12 +11,12 @@ public static class EventScriptCollectionSemantics
 {
     public static bool ContainsSingle(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
     {
-        if (target.Type == EventScriptValueType.Text)
+        if (target.Kind == EventScriptValueKind.Text)
         {
             return target.AsText().Contains(value.AsText(), StringComparison.Ordinal);
         }
 
-        if (target.Type == EventScriptValueType.Dictionary)
+        if (target.Kind == EventScriptValueKind.Dictionary)
         {
             return target.AsDictionary().ContainsKey(value.AsText());
         }
@@ -27,12 +27,12 @@ public static class EventScriptCollectionSemantics
     public static bool ContainsAll(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
     {
         var required = value.AsList();
-        if (target.Type == EventScriptValueType.Text)
+        if (target.Kind == EventScriptValueKind.Text)
         {
             return required.All(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
         }
 
-        if (target.Type == EventScriptValueType.Dictionary)
+        if (target.Kind == EventScriptValueKind.Dictionary)
         {
             return required.All(item => target.AsDictionary().ContainsKey(item.AsText()));
         }
@@ -43,12 +43,12 @@ public static class EventScriptCollectionSemantics
     public static bool ContainsAny(EventScriptValue target, IReadOnlyList<EventScriptValue> items, EventScriptValue value)
     {
         var required = value.AsList();
-        if (target.Type == EventScriptValueType.Text)
+        if (target.Kind == EventScriptValueKind.Text)
         {
             return required.Any(item => target.AsText().Contains(item.AsText(), StringComparison.Ordinal));
         }
 
-        if (target.Type == EventScriptValueType.Dictionary)
+        if (target.Kind == EventScriptValueKind.Dictionary)
         {
             return required.Any(item => target.AsDictionary().ContainsKey(item.AsText()));
         }
@@ -134,9 +134,9 @@ public static class EventScriptCollectionSemantics
             bucket.Add(item);
         }
 
-        return EventScriptValue.Dictionary(groups.ToDictionary(
+        return EventScriptValueFactory.Dictionary(groups.ToDictionary(
             pair => pair.Key,
-            pair => EventScriptValue.List(pair.Value),
+            pair => EventScriptValueFactory.List(pair.Value),
             StringComparer.Ordinal));
     }
 
@@ -147,24 +147,24 @@ public static class EventScriptCollectionSemantics
 
     private static EventScriptValue MaterializeOrderedResult(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
     {
-        return target.Type switch
+        return target.Kind switch
         {
-            EventScriptValueType.Dice => EventScriptValue.List(items),
-            EventScriptValueType.List => EventScriptValue.List(items),
-            EventScriptValueType.Set => EventScriptValue.List(items),
-            EventScriptValueType.Range => EventScriptValue.List(items),
+            EventScriptValueKind.Dice => EventScriptValueFactory.List(items),
+            EventScriptValueKind.List => EventScriptValueFactory.List(items),
+            EventScriptValueKind.Set => EventScriptValueFactory.List(items),
+            EventScriptValueKind.Range => EventScriptValueFactory.List(items),
             _ => EventScriptValue.Nothing
         };
     }
 
     private static EventScriptValue MaterializeDistinctResult(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
     {
-        return target.Type switch
+        return target.Kind switch
         {
-            EventScriptValueType.Set => EventScriptValue.Set(items),
-            EventScriptValueType.List => EventScriptValue.List(items),
-            EventScriptValueType.Dice => EventScriptValue.List(items),
-            EventScriptValueType.Range => EventScriptValue.List(items),
+            EventScriptValueKind.Set => EventScriptValueFactory.Set(items),
+            EventScriptValueKind.List => EventScriptValueFactory.List(items),
+            EventScriptValueKind.Dice => EventScriptValueFactory.List(items),
+            EventScriptValueKind.Range => EventScriptValueFactory.List(items),
             _ => EventScriptValue.Nothing
         };
     }

@@ -9,11 +9,13 @@ namespace StepH.Flow.EventScript;
 
 public sealed class EventScriptMessageSignature
 {
-    public static EventScriptMessageSignature MessageSignature(string name, IEnumerable<string>? parameters)
-        => new(name, parameters);
+    public static readonly EventScriptMessageSignature Empty = new(string.Empty, []);
 
-    public static string NormalizeMessageName(string? name)
-        => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+    public static EventScriptMessageSignature MessageSignature(string name, IEnumerable<string>? parameters) => new(name, parameters);
+
+    public EventScriptMessage CreateMessage(params (string name, EventScriptValue value)[] arguments) => EventScriptMessage.Message(Name, arguments);
+
+    public static string NormalizeMessageName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
 
     public static IReadOnlyList<string> NormalizeParameterNames(IEnumerable<string>? names)
         => names is null
@@ -43,9 +45,6 @@ public sealed class EventScriptMessageSignature
 
     public string SignatureId { get; }
 
-    public bool Matches(EventScriptMessage message)
-        => string.Equals(Name, message.Name, StringComparison.Ordinal) && string.Equals(SignatureId, message.SignatureId, StringComparison.Ordinal);
+    public bool Matches(EventScriptMessage message) => string.Equals(Name, message.Name, StringComparison.Ordinal) && string.Equals(SignatureId, message.SignatureId, StringComparison.Ordinal);
 
-    public EventScriptMessage CreateMessage(params (string name, EventScriptValue value)[] arguments)
-        => EventScriptMessage.Message(Name, arguments);
 }

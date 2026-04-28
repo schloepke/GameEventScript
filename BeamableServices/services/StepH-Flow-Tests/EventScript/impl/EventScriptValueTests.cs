@@ -1,5 +1,6 @@
+using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Types;
-using static StepH.Flow.EventScript.Types.EventScriptValue;
+using static StepH.Flow.EventScript.Types.EventScriptValueFactory;
 
 namespace StepH_Flow_Tests.EventScript;
 
@@ -49,21 +50,34 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void EmptyValuesUseTypedSingletons()
+    {
+        Assert.AreSame(Text(string.Empty), Text(string.Empty));
+        Assert.AreSame(OptionalNone(), OptionalNone());
+        Assert.AreSame(EventScriptValueFactory.List(null), EventScriptValueFactory.List(Array.Empty<EventScriptValue>()));
+        Assert.AreSame(EventScriptValueFactory.Dictionary(null), EventScriptValueFactory.Dictionary(new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)));
+        Assert.AreSame(EventScriptValueFactory.Set(null), EventScriptValueFactory.Set(Array.Empty<EventScriptValue>()));
+        Assert.AreSame(EventScriptValueFactory.Dice(null), EventScriptDiceValue.EventScriptDice(Array.Empty<int>()));
+        Assert.AreSame(EventScriptValueFactory.Message(EventScriptMessage.EmptyMessage), EventScriptValueFactory.Message(new EventScriptMessage(string.Empty)));
+        Assert.AreSame(EventScriptValueFactory.Handler(new EventScriptMessageSignature(string.Empty, [])), EventScriptValueFactory.Handler(new EventScriptMessageSignature(string.Empty, [])));
+    }
+
+    [TestMethod]
     public void StableComparisonOrdersValuesDeterministically()
     {
         var values = new List<EventScriptValue> { Boolean(true), Text("b"), Decimal(2m), Integer(1), OptionalNone(), Text("a") };
 
-        values.Sort(StableComparer);
+        values.Sort(EventScriptValue.StableComparer);
 
         string[] expected = ["1", "2", "a", "b", "True", "Optional.None"];
         CollectionAssert.AreEqual(
             expected,
             values.Select(v => v switch
             {
-                { Type: EventScriptValueType.Text } => v.AsText(),
-                { Type: EventScriptValueType.Decimal } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Type: EventScriptValueType.Integer } => v.AsInteger().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Type: EventScriptValueType.Boolean } => v.AsBoolean().ToString(),
+                { Kind: EventScriptValueKind.Text } => v.AsText(),
+                { Kind: EventScriptValueKind.Decimal } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                { Kind: EventScriptValueKind.Integer } => v.AsInteger().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                { Kind: EventScriptValueKind.Boolean } => v.AsBoolean().ToString(),
                 _ => v.ToString()
             }).ToArray());
     }
@@ -80,10 +94,10 @@ public class EventScriptValueScenarios
             expected,
             ordered.Select(v => v switch
             {
-                { Type: EventScriptValueType.Text } => v.AsText(),
-                { Type: EventScriptValueType.Decimal } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Type: EventScriptValueType.Integer } => v.AsInteger().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Type: EventScriptValueType.Boolean } => v.AsBoolean().ToString(),
+                { Kind: EventScriptValueKind.Text } => v.AsText(),
+                { Kind: EventScriptValueKind.Decimal } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                { Kind: EventScriptValueKind.Integer } => v.AsInteger().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                { Kind: EventScriptValueKind.Boolean } => v.AsBoolean().ToString(),
                 _ => v.ToString()
             }).ToArray());
     }
@@ -91,7 +105,7 @@ public class EventScriptValueScenarios
     [TestMethod]
     public void NegativeDiceKeepOrDropCountsProduceEmptyDice()
     {
-        var dice = EventScriptDiceValue.Create([6, 3, 1]);
+        var dice = EventScriptDiceValue.EventScriptDice([6, 3, 1]);
         var kept = dice.KeepHighest(-1);
         var dropped = dice.DropLowest(-1);
 
@@ -112,9 +126,9 @@ public class EventScriptValueScenarios
     [TestMethod]
     public void ClrDictionariesWithNonTextKeysDoNotThrow()
     {
-        var value = EventScriptValue.FromClr(new Dictionary<int, string> { [1] = "a" });
+        var value = EventScriptValueFactory.FromClr(new Dictionary<int, string> { [1] = "a" });
 
-        Assert.AreEqual(EventScriptValueType.Dictionary, value.Type);
+        Assert.AreEqual(EventScriptValueKind.Dictionary, value.Kind);
         Assert.HasCount(0, value.AsDictionary());
     }
 }

@@ -1,12 +1,29 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using static StepH.Flow.EventScript.Types.EventScriptValueFactory;
 namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptDecimalValue : EventScriptValue
 {
-    private static readonly EventScriptDecimalValue NaNInstance = new(0m, true, false, false);
-    private static readonly EventScriptDecimalValue InfinityInstance = new(0m, false, true, false);
-    private static readonly EventScriptDecimalValue NegativeInfinityInstance = new(0m, false, true, true);
+    public static readonly EventScriptDecimalValue NaN = new(0m, true, false, false);
+    public static readonly EventScriptDecimalValue Infinity = new(0m, false, true, false);
+    public static readonly EventScriptDecimalValue NegativeInfinity = new(0m, false, true, true);
+
+    public static EventScriptDecimalValue EventScriptDecimal(decimal value) => new(value, false, false, false);
+
+    public static EventScriptDecimalValue EventScriptDecimal(double value)
+    {
+        if (double.IsPositiveInfinity(value)) return Infinity;
+        if (double.IsNegativeInfinity(value)) return NegativeInfinity;
+        return double.IsNaN(value) ? NaN : new EventScriptDecimalValue((decimal)value, false, false, false);
+    }
+
+    public static EventScriptDecimalValue EventScriptDecimal(float value)
+    {
+        if (float.IsPositiveInfinity(value)) return Infinity;
+        if (float.IsNegativeInfinity(value)) return NegativeInfinity;
+        return float.IsNaN(value) ? NaN : new EventScriptDecimalValue((decimal)value, false, false, false);
+    }
 
     private EventScriptDecimalValue(decimal value, bool isNaN, bool isInfinity, bool isNegativeInfinity)
     {
@@ -20,25 +37,56 @@ public sealed class EventScriptDecimalValue : EventScriptValue
     public bool IsNaNValue { get; }
     public bool IsInfinityValue { get; }
     public bool IsNegativeInfinityValue { get; }
-    public override EventScriptValueType Type => EventScriptValueType.Decimal;
+    public override EventScriptValueKind Kind => EventScriptValueKind.Decimal;
 
-    public static EventScriptDecimalValue FromDecimal(decimal value) => new(value, false, false, false);
+    public override string AsText() => ToString();
 
-    public static EventScriptDecimalValue FromDouble(double value)
+    public override bool AsBoolean() => !IsNaNValue && AsNumber() != 0;
+
+    public override long AsInteger()
     {
-        if (double.IsPositiveInfinity(value)) return Infinity();
-        if (double.IsNegativeInfinity(value)) return NegativeInfinity();
-        return double.IsNaN(value) ? NaN() : new EventScriptDecimalValue((decimal)value, false, false, false);
+        if (IsNaNValue) return 0;
+        if (IsInfinityValue) return IsNegativeInfinityValue ? long.MinValue : long.MaxValue;
+        return ToIntegerSaturated(Value);
     }
 
-    public static EventScriptDecimalValue FromFloat(float value)
+    public override decimal AsNumber()
+        => IsNaNValue ? 0m : IsInfinityValue ? IsNegativeInfinityValue ? decimal.MinValue : decimal.MaxValue : Value;
+
+    internal override bool TryConvertToNumber(out EventScriptValue value)
     {
-        if (float.IsPositiveInfinity(value)) return Infinity();
-        if (float.IsNegativeInfinity(value)) return NegativeInfinity();
-        return float.IsNaN(value) ? NaN() : new EventScriptDecimalValue((decimal)value, false, false, false);
+        value = this;
+        return true;
     }
 
-    public static EventScriptDecimalValue NaN() => NaNInstance;
-    public static EventScriptDecimalValue Infinity() => InfinityInstance;
-    public static EventScriptDecimalValue NegativeInfinity() => NegativeInfinityInstance;
+    internal override bool TryConvertToInteger(out EventScriptValue value)
+    {
+        if (IsNaNValue)
+        {
+            value = Integer(0);
+            return true;
+        }
+
+        if (IsInfinityValue)
+        {
+            value = Integer(IsNegativeInfinityValue ? long.MinValue : long.MaxValue);
+            return true;
+        }
+
+        value = Integer(ToIntegerSaturated(Value));
+        return true;
+    }
+
+    internal override bool TryConvertToBoolean(out EventScriptValue value)
+    {
+        value = Boolean(!IsNaNValue && AsNumber() != 0);
+        return true;
+    }
+
+    internal override bool TryConvertToText(out EventScriptValue value)
+    {
+        value = Text(ToString());
+        return true;
+    }
+
 }

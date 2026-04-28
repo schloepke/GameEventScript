@@ -384,22 +384,22 @@ internal static class EventScriptLinkOptimizer
         switch (expression)
         {
             case BooleanLiteralExpressionNode booleanLiteral:
-                value = EventScriptValue.Boolean(booleanLiteral.Value);
+                value = EventScriptValueFactory.Boolean(booleanLiteral.Value);
                 return true;
             case IntegerLiteralExpressionNode integerLiteral:
-                value = EventScriptValue.Integer(integerLiteral.Value);
+                value = EventScriptValueFactory.Integer(integerLiteral.Value);
                 return true;
             case DecimalLiteralExpressionNode decimalLiteral:
-                value = EventScriptValue.Decimal(decimalLiteral.Value);
+                value = EventScriptValueFactory.Decimal(decimalLiteral.Value);
                 return true;
             case PercentageLiteralExpressionNode percentageLiteral:
-                value = EventScriptValue.Percentage(percentageLiteral.PercentValue / 100m);
+                value = EventScriptValueFactory.Percentage(percentageLiteral.PercentValue / 100m);
                 return true;
             case TextLiteralExpressionNode textLiteral:
-                value = EventScriptValue.Text(textLiteral.Value);
+                value = EventScriptValueFactory.Text(textLiteral.Value);
                 return true;
             case TagLiteralExpressionNode tagLiteral:
-                value = EventScriptValue.Tag(tagLiteral.Name);
+                value = EventScriptValueFactory.Tag(tagLiteral.Name);
                 return true;
             case ListLiteralExpressionNode listLiteral:
             {
@@ -415,7 +415,7 @@ internal static class EventScriptLinkOptimizer
                     items.Add(item);
                 }
 
-                value = EventScriptValue.List(items);
+                value = EventScriptValueFactory.List(items);
                 return true;
             }
             case SetLiteralExpressionNode setLiteral:
@@ -432,7 +432,7 @@ internal static class EventScriptLinkOptimizer
                     items.Add(item);
                 }
 
-                value = EventScriptValue.Set(items);
+                value = EventScriptValueFactory.Set(items);
                 return true;
             }
             case DictionaryLiteralExpressionNode dictionaryLiteral:
@@ -449,7 +449,7 @@ internal static class EventScriptLinkOptimizer
                     items[entry.Key] = item;
                 }
 
-                value = EventScriptValue.Dictionary(items);
+                value = EventScriptValueFactory.Dictionary(items);
                 return true;
             }
             case TypeCastExpressionNode castExpression:
@@ -488,7 +488,7 @@ internal static class EventScriptLinkOptimizer
         switch (unary.Operator)
         {
             case "-":
-                if (operand.isNothing())
+                if (operand.IsNothing())
                 {
                     value = EventScriptValue.Nothing;
                     return true;
@@ -496,13 +496,13 @@ internal static class EventScriptLinkOptimizer
 
                 if (!TryUnwrapOptional(operand, out var unwrapped))
                 {
-                    value = EventScriptValue.OptionalNone();
+                    value = EventScriptValueFactory.OptionalNone();
                     return true;
                 }
 
-                if (unwrapped.isPercentage())
+                if (unwrapped.IsPercentage())
                 {
-                    value = EventScriptValue.Percentage(-unwrapped.AsNumber());
+                    value = EventScriptValueFactory.Percentage(-unwrapped.AsNumber());
                     return true;
                 }
 
@@ -515,7 +515,7 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(NegateNumeric(numeric));
                 return true;
             case "!":
-                if (operand.isNothing())
+                if (operand.IsNothing())
                 {
                     value = EventScriptValue.Nothing;
                     return true;
@@ -523,17 +523,17 @@ internal static class EventScriptLinkOptimizer
 
                 if (!TryUnwrapOptional(operand, out var unwrappedBool))
                 {
-                    value = EventScriptValue.OptionalNone();
+                    value = EventScriptValueFactory.OptionalNone();
                     return true;
                 }
 
-                value = EventScriptValue.Boolean(!unwrappedBool.AsBoolean());
+                value = EventScriptValueFactory.Boolean(!unwrappedBool.AsBoolean());
                 return true;
             case "has value":
-                value = EventScriptValue.Boolean(EventScriptValueSemantics.HasValue(operand));
+                value = EventScriptValueFactory.Boolean(EventScriptValueSemantics.HasValue(operand));
                 return true;
             case "empty":
-                value = EventScriptValue.Boolean(EventScriptValueSemantics.IsEmpty(operand));
+                value = EventScriptValueFactory.Boolean(EventScriptValueSemantics.IsEmpty(operand));
                 return true;
             default:
                 value = EventScriptValue.Nothing;
@@ -557,7 +557,7 @@ internal static class EventScriptLinkOptimizer
                 return true;
             }
 
-            if (leftRaw.isOptional())
+            if (leftRaw.IsOptional())
             {
                 var optional = leftRaw.AsOptional();
                 value = optional.HasValue ? optional.Value : rightRaw;
@@ -568,7 +568,7 @@ internal static class EventScriptLinkOptimizer
             return true;
         }
 
-        if (leftRaw.isNothing() || rightRaw.isNothing())
+        if (leftRaw.IsNothing() || rightRaw.IsNothing())
         {
             value = EventScriptValue.Nothing;
             return true;
@@ -576,26 +576,26 @@ internal static class EventScriptLinkOptimizer
 
         if (!TryUnwrapOptional(leftRaw, out var left) || !TryUnwrapOptional(rightRaw, out var right))
         {
-            value = EventScriptValue.OptionalNone();
+            value = EventScriptValueFactory.OptionalNone();
             return true;
         }
 
         switch (binary.Operator)
         {
             case "|":
-                value = EventScriptValue.Boolean(left.AsBoolean() || right.AsBoolean());
+                value = EventScriptValueFactory.Boolean(left.AsBoolean() || right.AsBoolean());
                 return true;
             case "^":
-                value = EventScriptValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
+                value = EventScriptValueFactory.Boolean(left.AsBoolean() ^ right.AsBoolean());
                 return true;
             case "&":
-                value = EventScriptValue.Boolean(left.AsBoolean() && right.AsBoolean());
+                value = EventScriptValueFactory.Boolean(left.AsBoolean() && right.AsBoolean());
                 return true;
             case "=":
-                value = EventScriptValue.Boolean(left.Equals(right));
+                value = EventScriptValueFactory.Boolean(left.Equals(right));
                 return true;
             case "<>":
-                value = EventScriptValue.Boolean(!left.Equals(right));
+                value = EventScriptValueFactory.Boolean(!left.Equals(right));
                 return true;
             case "<":
                 value = EvaluateNumericComparison(left, right, comparison => comparison < 0);
@@ -671,10 +671,10 @@ internal static class EventScriptLinkOptimizer
             !TryCoerceNumericForOperation(right, out var rightNumeric) ||
             !TryCompareNumeric(leftNumeric, rightNumeric, out var comparison))
         {
-            return EventScriptValue.Boolean(false);
+            return EventScriptValueFactory.Boolean(false);
         }
 
-        return EventScriptValue.Boolean(predicate(comparison));
+        return EventScriptValueFactory.Boolean(predicate(comparison));
     }
 
     private static bool TryConvertConstantType(EventScriptValue value, string declaredType, ISet<string> knownTypeNames, out EventScriptValue converted)
@@ -685,48 +685,48 @@ internal static class EventScriptLinkOptimizer
                 converted = EventScriptValue.Nothing;
                 return true;
             case "tag":
-                converted = EventScriptValue.Tag(value.AsText());
+                converted = EventScriptValueFactory.Tag(value.AsText());
                 return true;
             case "text":
-                converted = EventScriptValue.Text(value.AsText());
+                converted = EventScriptValueFactory.Text(value.AsText());
                 return true;
             case "percentage":
                 converted = ConvertToPercentage(value);
                 return true;
             case "boolean":
-                converted = EventScriptValue.Boolean(value.AsBoolean());
+                converted = EventScriptValueFactory.Boolean(value.AsBoolean());
                 return true;
             case "integer":
-                converted = EventScriptValue.Integer(value.AsInteger());
+                converted = EventScriptValueFactory.Integer(value.AsInteger());
                 return true;
             case "decimal":
                 converted = ConvertToDecimal(value);
                 return true;
             case "list":
-                converted = EventScriptValue.List(value.AsList());
+                converted = EventScriptValueFactory.List(value.AsList());
                 return true;
             case "range":
-                converted = value.isRange() ? value : EventScriptValue.Nothing;
+                converted = value.IsRange() ? value : EventScriptValue.Nothing;
                 return true;
             case "message":
-                converted = value.Type == EventScriptValueType.Message ? value : EventScriptValue.Nothing;
+                converted = value.Kind == EventScriptValueKind.Message ? value : EventScriptValue.Nothing;
                 return true;
             case "handler":
-                converted = value.Type == EventScriptValueType.Handler ? value : EventScriptValue.Nothing;
+                converted = value.Kind == EventScriptValueKind.Handler ? value : EventScriptValue.Nothing;
                 return true;
             case "dictionary":
-                converted = EventScriptValue.Dictionary(value.AsDictionary());
+                converted = EventScriptValueFactory.Dictionary(value.AsDictionary());
                 return true;
             case "set":
-                converted = EventScriptValue.Set(value.AsSet());
+                converted = EventScriptValueFactory.Set(value.AsSet());
                 return true;
             case "dice":
-                converted = EventScriptValue.Dice(value.AsDice());
+                converted = EventScriptValueFactory.Dice(value.AsDice());
                 return true;
             case "optional":
-                converted = value.isOptional()
+                converted = value.IsOptional()
                     ? value
-                    : value.isNothing() ? EventScriptValue.OptionalNone() : EventScriptValue.OptionalSome(value);
+                    : value.IsNothing() ? EventScriptValueFactory.OptionalNone() : EventScriptValueFactory.OptionalSome(value);
                 return true;
             default:
                 if (knownTypeNames.Contains(declaredType))
@@ -744,57 +744,57 @@ internal static class EventScriptLinkOptimizer
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return EventScriptValue.DecimalNaN();
+            return EventScriptValueFactory.DecimalNaN();
         }
 
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite))
         {
-            return EventScriptValue.DecimalNaN();
+            return EventScriptValueFactory.DecimalNaN();
         }
 
         if (isFinite)
         {
-            return EventScriptValue.Decimal(number);
+            return EventScriptValueFactory.Decimal(number);
         }
 
         if (unwrapped.IsNaN())
         {
-            return EventScriptValue.DecimalNaN();
+            return EventScriptValueFactory.DecimalNaN();
         }
 
         return unwrapped.IsNegativeInfinity()
-            ? EventScriptValue.DecimalNegativeInfinity()
-            : EventScriptValue.DecimalInfinity();
+            ? EventScriptValueFactory.DecimalNegativeInfinity()
+            : EventScriptValueFactory.DecimalInfinity();
     }
 
     private static EventScriptValue ConvertToPercentage(EventScriptValue value)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return EventScriptValue.DecimalNaN();
+            return EventScriptValueFactory.DecimalNaN();
         }
 
-        if (unwrapped.isPercentage())
+        if (unwrapped.IsPercentage())
         {
             return unwrapped;
         }
 
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite) || !isFinite)
         {
-            return EventScriptValue.DecimalNaN();
+            return EventScriptValueFactory.DecimalNaN();
         }
 
-        var ratio = unwrapped.Type == EventScriptValueType.Integer
+        var ratio = unwrapped.Kind == EventScriptValueKind.Integer
             ? number / 100m
             : number > 1m || number < -1m
                 ? number / 100m
                 : number;
-        return EventScriptValue.Percentage(ratio);
+        return EventScriptValueFactory.Percentage(ratio);
     }
 
     private static bool TryUnwrapOptional(EventScriptValue value, out EventScriptValue unwrapped)
     {
-        if (!value.isOptional())
+        if (!value.IsOptional())
         {
             unwrapped = value;
             return true;
@@ -826,13 +826,13 @@ internal static class EventScriptLinkOptimizer
             return true;
         }
 
-        switch (value.Type)
+        switch (value.Kind)
         {
-            case EventScriptValueType.Integer:
+            case EventScriptValueKind.Integer:
                 number = value.AsInteger();
                 isFinite = true;
                 return true;
-            case EventScriptValueType.Decimal:
+            case EventScriptValueKind.Decimal:
                 if (!value.IsNaN() && !value.IsInfinity())
                 {
                     number = value.AsNumber();
@@ -841,19 +841,19 @@ internal static class EventScriptLinkOptimizer
                 }
 
                 return true;
-            case EventScriptValueType.Percentage:
+            case EventScriptValueKind.Percentage:
                 number = value.AsNumber();
                 isFinite = true;
                 return true;
-            case EventScriptValueType.Text:
-            case EventScriptValueType.Tag:
+            case EventScriptValueKind.Text:
+            case EventScriptValueKind.Tag:
                 if (decimal.TryParse(value.AsText(), out var parsed))
                 {
                     number = parsed;
                     isFinite = true;
                 }
                 return true;
-            case EventScriptValueType.Boolean:
+            case EventScriptValueKind.Boolean:
                 number = value.AsBoolean() ? 1m : 0m;
                 isFinite = true;
                 return true;
@@ -886,13 +886,13 @@ internal static class EventScriptLinkOptimizer
 
     private static bool TryCoerceNumericForOperation(EventScriptValue value, out NumericValue number)
     {
-        if (value.isNothing())
+        if (value.IsNothing())
         {
             number = default;
             return false;
         }
 
-        if (value.Type == EventScriptValueType.Decimal)
+        if (value.Kind == EventScriptValueKind.Decimal)
         {
             if (value.IsNaN())
             {
@@ -912,19 +912,19 @@ internal static class EventScriptLinkOptimizer
             return true;
         }
 
-        if (value.Type == EventScriptValueType.Integer)
+        if (value.Kind == EventScriptValueKind.Integer)
         {
             number = NumericValue.Finite(value.AsInteger());
             return true;
         }
 
-        if (value.Type == EventScriptValueType.Percentage)
+        if (value.Kind == EventScriptValueKind.Percentage)
         {
             number = NumericValue.Finite(value.AsNumber());
             return true;
         }
 
-        if (value.isText())
+        if (value.IsText())
         {
             if (decimal.TryParse(value.AsText(), out var parsed))
             {
@@ -936,7 +936,7 @@ internal static class EventScriptLinkOptimizer
             return false;
         }
 
-        if (value.Type == EventScriptValueType.Boolean)
+        if (value.Kind == EventScriptValueKind.Boolean)
         {
             number = NumericValue.Finite(value.AsBoolean() ? 1m : 0m);
             return true;
@@ -949,11 +949,11 @@ internal static class EventScriptLinkOptimizer
     private static EventScriptValue ToEventScriptDecimal(NumericValue number)
         => number.Kind switch
         {
-            NumericKind.Finite => EventScriptValue.Decimal(number.Value),
-            NumericKind.NaN => EventScriptValue.DecimalNaN(),
-            NumericKind.PositiveInfinity => EventScriptValue.DecimalInfinity(),
-            NumericKind.NegativeInfinity => EventScriptValue.DecimalNegativeInfinity(),
-            _ => EventScriptValue.DecimalNaN()
+            NumericKind.Finite => EventScriptValueFactory.Decimal(number.Value),
+            NumericKind.NaN => EventScriptValueFactory.DecimalNaN(),
+            NumericKind.PositiveInfinity => EventScriptValueFactory.DecimalInfinity(),
+            NumericKind.NegativeInfinity => EventScriptValueFactory.DecimalNegativeInfinity(),
+            _ => EventScriptValueFactory.DecimalNaN()
         };
 
     private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
@@ -1188,15 +1188,15 @@ internal static class EventScriptLinkOptimizer
 
     private static bool TryConvertValueToLiteral(EventScriptValue value, out ExpressionNode expression)
     {
-        switch (value.Type)
+        switch (value.Kind)
         {
-            case EventScriptValueType.Boolean:
+            case EventScriptValueKind.Boolean:
                 expression = new BooleanLiteralExpressionNode(value.AsBoolean());
                 return true;
-            case EventScriptValueType.Integer:
+            case EventScriptValueKind.Integer:
                 expression = new IntegerLiteralExpressionNode(value.AsInteger());
                 return true;
-            case EventScriptValueType.Decimal:
+            case EventScriptValueKind.Decimal:
                 if (value.IsNaN() || value.IsInfinity())
                 {
                     expression = default!;
@@ -1205,16 +1205,16 @@ internal static class EventScriptLinkOptimizer
 
                 expression = new DecimalLiteralExpressionNode(value.AsNumber());
                 return true;
-            case EventScriptValueType.Percentage:
+            case EventScriptValueKind.Percentage:
                 expression = new PercentageLiteralExpressionNode(value.AsNumber() * 100m);
                 return true;
-            case EventScriptValueType.Text:
+            case EventScriptValueKind.Text:
                 expression = new TextLiteralExpressionNode(value.AsText());
                 return true;
-            case EventScriptValueType.Tag:
+            case EventScriptValueKind.Tag:
                 expression = new TagLiteralExpressionNode(value.AsText());
                 return true;
-            case EventScriptValueType.List:
+            case EventScriptValueKind.List:
             {
                 var items = new List<ExpressionNode>();
                 foreach (var item in value.AsList())
@@ -1231,7 +1231,7 @@ internal static class EventScriptLinkOptimizer
                 expression = new ListLiteralExpressionNode(items);
                 return true;
             }
-            case EventScriptValueType.Set:
+            case EventScriptValueKind.Set:
             {
                 var items = new List<ExpressionNode>();
                 foreach (var item in value.AsSet())
@@ -1248,7 +1248,7 @@ internal static class EventScriptLinkOptimizer
                 expression = new SetLiteralExpressionNode(items);
                 return true;
             }
-            case EventScriptValueType.Dictionary:
+            case EventScriptValueKind.Dictionary:
             {
                 var entries = new List<DictionaryEntryNode>();
                 foreach (var entry in value.AsDictionary())

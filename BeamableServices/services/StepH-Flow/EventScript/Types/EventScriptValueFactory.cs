@@ -10,11 +10,15 @@ public static class EventScriptValueFactory
 
     public static EventScriptValue Tag(string value) => EventScriptTagValue.EventScriptTag(value);
 
-    public static EventScriptValue Decimal(decimal value) => EventScriptDecimalValue.EventScriptDecimal(value);
+    public static EventScriptValue Decimal(decimal value, EventScriptDecimalUnit? unit = null) => EventScriptDecimalValue.EventScriptDecimal(value, unit);
 
     public static EventScriptValue Percentage(decimal ratio) => EventScriptPercentageValue.EventScriptPercentage(ratio);
 
-    public static EventScriptValue Degree(decimal degrees) => EventScriptDegreeValue.EventScriptDegree(degrees);
+    public static EventScriptValue Degree(decimal degrees) => EventScriptDecimalValue.EventScriptDecimal(degrees, EventScriptDecimalUnit.Degree);
+
+    public static EventScriptValue Meter(decimal meters) => EventScriptDecimalValue.EventScriptDecimal(meters, EventScriptDecimalUnit.Meter);
+
+    public static EventScriptValue Seconds(decimal seconds) => EventScriptDecimalValue.EventScriptDecimal(seconds, EventScriptDecimalUnit.Second);
 
     public static EventScriptValue Vector2(decimal x, decimal y) => EventScriptVector2Value.EventScriptVector2(x, y);
 

@@ -395,8 +395,10 @@ internal static class EventScriptLinkOptimizer
             case PercentageLiteralExpressionNode percentageLiteral:
                 value = EventScriptValueFactory.Percentage(percentageLiteral.PercentValue / 100m);
                 return true;
-            case DegreeLiteralExpressionNode degreeLiteral:
-                value = EventScriptValueFactory.Degree(degreeLiteral.Degrees);
+            case UnitDecimalLiteralExpressionNode unitDecimalLiteral:
+                value = EventScriptDecimalUnits.TryParseTypeName(unitDecimalLiteral.UnitName, out var unit)
+                    ? EventScriptValueFactory.Decimal(unitDecimalLiteral.Value, unit)
+                    : EventScriptValueFactory.DecimalNaN();
                 return true;
             case TextLiteralExpressionNode textLiteral:
                 value = EventScriptValueFactory.Text(textLiteral.Value);
@@ -509,9 +511,9 @@ internal static class EventScriptLinkOptimizer
                     return true;
                 }
 
-                if (unwrapped.IsDegree())
+                if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
                 {
-                    value = EventScriptValueFactory.Degree(-unwrapped.AsNumber());
+                    value = EventScriptValueFactory.Decimal(-unwrapped.AsNumber(), unit);
                     return true;
                 }
 
@@ -622,7 +624,7 @@ internal static class EventScriptLinkOptimizer
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
             case "+":
-                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "+", right, out value))
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out value))
                 {
                     return true;
                 }
@@ -637,7 +639,7 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(AddNumeric(leftNumeric, rightNumeric));
                 return true;
             case "-":
-                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "-", right, out value))
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "-", right, out value))
                 {
                     return true;
                 }
@@ -652,7 +654,7 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
-                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "*", right, out value))
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "*", right, out value))
                 {
                     return true;
                 }
@@ -667,7 +669,7 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
-                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "/", right, out value))
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "/", right, out value))
                 {
                     return true;
                 }
@@ -682,7 +684,7 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case "%":
-                if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "%", right, out value))
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "%", right, out value))
                 {
                     return true;
                 }
@@ -704,7 +706,7 @@ internal static class EventScriptLinkOptimizer
 
     private static EventScriptValue EvaluateNumericComparison(EventScriptValue left, EventScriptValue right, Func<int, bool> predicate)
     {
-        if (!EventScriptValueAlu.TryCompareDegreeAware(left, right, out var comparison))
+        if (!EventScriptValueAlu.TryCompareNumericValues(left, right, out var comparison))
         {
             return EventScriptValueFactory.Boolean(false);
         }
@@ -729,7 +731,13 @@ internal static class EventScriptLinkOptimizer
                 converted = ConvertToPercentage(value);
                 return true;
             case "degree":
-                converted = ConvertToDegree(value);
+                converted = ConvertToDecimalUnit(value, EventScriptDecimalUnit.Degree);
+                return true;
+            case "meter":
+                converted = ConvertToDecimalUnit(value, EventScriptDecimalUnit.Meter);
+                return true;
+            case "second":
+                converted = ConvertToDecimalUnit(value, EventScriptDecimalUnit.Second);
                 return true;
             case "vector2":
                 converted = ConvertToVector2(value);
@@ -791,11 +799,6 @@ internal static class EventScriptLinkOptimizer
             return EventScriptValueFactory.DecimalNaN();
         }
 
-        if (unwrapped.IsDegree())
-        {
-            return EventScriptValueFactory.Decimal(unwrapped.AsNumber());
-        }
-
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite))
         {
             return EventScriptValueFactory.DecimalNaN();
@@ -828,6 +831,11 @@ internal static class EventScriptLinkOptimizer
             return unwrapped;
         }
 
+        if (unwrapped.HasDecimalUnit())
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite) || !isFinite)
         {
             return EventScriptValueFactory.DecimalNaN();
@@ -841,23 +849,18 @@ internal static class EventScriptLinkOptimizer
         return EventScriptValueFactory.Percentage(ratio);
     }
 
-    private static EventScriptValue ConvertToDegree(EventScriptValue value)
+    private static EventScriptValue ConvertToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
             return EventScriptValueFactory.DecimalNaN();
         }
 
-        if (unwrapped.IsDegree())
-        {
-            return unwrapped;
-        }
-
-        if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage &&
+        if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer &&
             TryCoerceNumeric(unwrapped, out var number, out var isFinite) &&
             isFinite)
         {
-            return EventScriptValueFactory.Degree(number);
+            return EventScriptValueFactory.Decimal(number, unit);
         }
 
         return EventScriptValueFactory.DecimalNaN();
@@ -1370,13 +1373,12 @@ internal static class EventScriptLinkOptimizer
                     return false;
                 }
 
-                expression = new DecimalLiteralExpressionNode(value.AsNumber());
+                expression = value is EventScriptDecimalValue { Unit: { } unit }
+                    ? new UnitDecimalLiteralExpressionNode(value.AsNumber(), EventScriptDecimalUnits.ToTypeName(unit))
+                    : new DecimalLiteralExpressionNode(value.AsNumber());
                 return true;
             case EventScriptValueKind.Percentage:
                 expression = new PercentageLiteralExpressionNode(value.AsNumber() * 100m);
-                return true;
-            case EventScriptValueKind.Degree:
-                expression = new DegreeLiteralExpressionNode(value.AsNumber());
                 return true;
             case EventScriptValueKind.Text:
                 expression = new TextLiteralExpressionNode(value.AsText());

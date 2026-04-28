@@ -29,7 +29,7 @@
               "maybe": { "type": ":optional", "hasValue": false },
               "flag": { "type": ":boolean", "value": true },
               "percent": { "type": ":percentage", "value": "0.25" },
-              "heading": { "type": ":degree", "value": "90" },
+              "heading": { "type": ":decimal", "value": "90", "unit": ":degree" },
               "position": { "type": ":vector2", "x": "10.5", "y": "-2" },
               "point": { "type": ":vector3", "x": "1", "y": "2", "z": "3" },
               "category": { "type": ":tag", "value": "Infantry" },
@@ -65,7 +65,7 @@
                 "maybe": { "type": ":optional", "hasValue": false },
                 "flag": { "type": ":boolean", "value": true },
                 "percent": { "type": ":percentage", "value": "0.25" },
-                "heading": { "type": ":degree", "value": "90" },
+                "heading": { "type": ":decimal", "value": "90", "unit": ":degree" },
                 "position": { "type": ":vector2", "x": "10.5", "y": "-2" },
                 "point": { "type": ":vector3", "x": "1", "y": "2", "z": "3" },
                 "category": { "type": ":tag", "value": "Infantry" },
@@ -86,7 +86,7 @@
     {
       "kind": "scriptApi",
       "name": "computed custom type fields are materialized",
-      "script": "record :meter as {\n  current: :decimal clamped between 0 and maximum,\n  maximum: :decimal clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :meter be [current: 125, maximum: 100]\n  publish Done(meter: hp, isMeter: hp is :meter)\n}",
+      "script": "record :gauge as {\n  current: :decimal clamped between 0 and maximum,\n  maximum: :decimal clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  publish Done(meter: hp, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -95,7 +95,7 @@
               "name": "Done",
               "args": {
                 "meter": {
-                  "type": ":meter",
+                  "type": ":gauge",
                   "entries": {
                     "current": { "type": ":decimal", "value": "100" },
                     "maximum": { "type": ":decimal", "value": "100" },
@@ -120,18 +120,18 @@
             {
               "name": "Done",
               "args": {
-                "fromLiteral": { "type": ":degree", "value": "90" },
-                "overLiteral": { "type": ":degree", "value": "360" },
-                "decimalLiteral": { "type": ":degree", "value": "43.9" },
-                "addOpen": { "type": ":degree", "value": "450" },
-                "addOver": { "type": ":degree", "value": "380" },
-                "subtractOpen": { "type": ":degree", "value": "-30" },
-                "negOpen": { "type": ":degree", "value": "-90" },
-                "castOpen": { "type": ":degree", "value": "450" },
-                "wrapNegative": { "type": ":degree", "value": "350" },
-                "wrapOver": { "type": ":degree", "value": "10" },
-                "wrapLarge": { "type": ":degree", "value": "280" },
-                "wrapCast": { "type": ":degree", "value": "90" },
+                "fromLiteral": { "type": ":decimal", "value": "90", "unit": ":degree" },
+                "overLiteral": { "type": ":decimal", "value": "360", "unit": ":degree" },
+                "decimalLiteral": { "type": ":decimal", "value": "43.9", "unit": ":degree" },
+                "addOpen": { "type": ":decimal", "value": "450", "unit": ":degree" },
+                "addOver": { "type": ":decimal", "value": "380", "unit": ":degree" },
+                "subtractOpen": { "type": ":decimal", "value": "-30", "unit": ":degree" },
+                "negOpen": { "type": ":decimal", "value": "-90", "unit": ":degree" },
+                "castOpen": { "type": ":decimal", "value": "450", "unit": ":degree" },
+                "wrapNegative": { "type": ":decimal", "value": "350", "unit": ":degree" },
+                "wrapOver": { "type": ":decimal", "value": "10", "unit": ":degree" },
+                "wrapLarge": { "type": ":decimal", "value": "280", "unit": ":degree" },
+                "wrapCast": { "type": ":decimal", "value": "90", "unit": ":degree" },
                 "textValue": { "type": ":text", "value": "43.9°" },
                 "decimalValue": { "type": ":decimal", "value": "43.9" },
                 "isDegree": { "type": ":boolean", "value": true }
@@ -152,32 +152,66 @@
             {
               "name": "Done",
               "args": {
-                "addNumber": { "type": ":degree", "value": "130" },
-                "subtractNumber": { "type": ":degree", "value": "-30" },
-                "addPercentRight": { "type": ":degree", "value": "132" },
-                "addPercentLeft": { "type": ":degree", "value": "132" },
-                "subtractPercent": { "type": ":degree", "value": "108" },
-                "multiplyPercentRight": { "type": ":degree", "value": "12" },
-                "multiplyPercentLeft": { "type": ":degree", "value": "12" },
-                "multiplyDecimal": { "type": ":degree", "value": "6" },
-                "divideDecimal": { "type": ":degree", "value": "150" },
-                "dividePercent": { "type": ":degree", "value": "1200" },
-                "wrappedDividePercent": { "type": ":degree", "value": "120" },
-                "moduloDegree": { "type": ":degree", "value": "10" },
-                "moduloPercent": { "type": ":degree", "value": "0" },
-                "divideZero": { "type": ":decimal", "value": "NaN" },
+                "addNumber": { "type": ":decimal", "value": "NaN" },
+                "subtractNumber": { "type": ":decimal", "value": "NaN" },
+                "addPercentRight": { "type": ":decimal", "value": "NaN" },
+                "addPercentLeft": { "type": ":decimal", "value": "NaN" },
+                "subtractPercent": { "type": ":decimal", "value": "NaN" },
+                "multiplyPercentRight": { "type": ":decimal", "value": "12", "unit": ":degree" },
+                "multiplyPercentLeft": { "type": ":decimal", "value": "12", "unit": ":degree" },
+                "multiplyDecimal": { "type": ":decimal", "value": "6", "unit": ":degree" },
+                "divideDecimal": { "type": ":decimal", "value": "150", "unit": ":degree" },
+                "dividePercent": { "type": ":decimal", "value": "1200", "unit": ":degree" },
+                "wrappedDividePercent": { "type": ":decimal", "value": "120", "unit": ":degree" },
+                "moduloDegree": { "type": ":decimal", "value": "10", "unit": ":degree" },
+                "moduloPercent": { "type": ":decimal", "value": "NaN" },
+                "divideZero": { "type": ":decimal", "value": "Infinity" },
                 "moduloZero": { "type": ":decimal", "value": "NaN" },
                 "reverseSubtract": { "type": ":decimal", "value": "NaN" },
                 "reverseDivide": { "type": ":decimal", "value": "NaN" },
                 "reverseModulo": { "type": ":decimal", "value": "NaN" },
-                "floorDegree": { "type": ":degree", "value": "43" },
-                "ceilDegree": { "type": ":degree", "value": "44" },
-                "roundEvenDegree": { "type": ":degree", "value": "42" },
-                "minDegree": { "type": ":degree", "value": "10" },
-                "maxDegree": { "type": ":degree", "value": "350" },
+                "floorDegree": { "type": ":decimal", "value": "43", "unit": ":degree" },
+                "ceilDegree": { "type": ":decimal", "value": "44", "unit": ":degree" },
+                "roundEvenDegree": { "type": ":decimal", "value": "42", "unit": ":degree" },
+                "minDegree": { "type": ":decimal", "value": "10", "unit": ":degree" },
+                "maxDegree": { "type": ":decimal", "value": "350", "unit": ":degree" },
                 "greaterDegree": { "type": ":boolean", "value": true },
-                "lessMixed": { "type": ":boolean", "value": true },
+                "lessMixed": { "type": ":boolean", "value": false },
                 "percentCompare": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "decimal unit literals casts and strict arithmetic",
+      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :decimal be castMeter\n  publish Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isDecimal: castMeter is :decimal, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m % 90m, unitModuloScalar: 100m % 3, wrapMeter: :wrapDegree 10m)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "distance": { "type": ":decimal", "value": "100", "unit": ":meter" },
+                "duration": { "type": ":decimal", "value": "15", "unit": ":second" },
+                "castMeter": { "type": ":decimal", "value": "100", "unit": ":meter" },
+                "rawMeter": { "type": ":decimal", "value": "100" },
+                "isMeter": { "type": ":boolean", "value": true },
+                "isSecond": { "type": ":boolean", "value": true },
+                "isDecimal": { "type": ":boolean", "value": true },
+                "sameAdd": { "type": ":decimal", "value": "150", "unit": ":meter" },
+                "mixedAdd": { "type": ":decimal", "value": "NaN" },
+                "wrongAdd": { "type": ":decimal", "value": "NaN" },
+                "scaleLeft": { "type": ":decimal", "value": "200", "unit": ":meter" },
+                "scaleRight": { "type": ":decimal", "value": "200", "unit": ":meter" },
+                "divideScalar": { "type": ":decimal", "value": "50", "unit": ":meter" },
+                "divideSame": { "type": ":decimal", "value": "4" },
+                "unitModulo": { "type": ":decimal", "value": "10", "unit": ":meter" },
+                "unitModuloScalar": { "type": ":decimal", "value": "NaN" },
+                "wrapMeter": { "type": ":decimal", "value": "NaN" }
               }
             }
           ]

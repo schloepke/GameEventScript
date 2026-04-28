@@ -362,8 +362,10 @@ public static class ExperimentalEventScriptCompiler
                 case PercentageLiteralExpressionNode percentage:
                     value = EventScriptValueFactory.Percentage(percentage.PercentValue / 100m);
                     return true;
-                case DegreeLiteralExpressionNode degree:
-                    value = EventScriptValueFactory.Degree(degree.Degrees);
+                case UnitDecimalLiteralExpressionNode unitDecimal:
+                    value = EventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
+                        ? EventScriptValueFactory.Decimal(unitDecimal.Value, unit)
+                        : EventScriptValueFactory.DecimalNaN();
                     return true;
                 case TextLiteralExpressionNode text:
                     value = EventScriptValueFactory.Text(text.Value);
@@ -463,7 +465,13 @@ public static class ExperimentalEventScriptCompiler
                     converted = ConvertConstantToPercentage(value);
                     return true;
                 case "degree":
-                    converted = ConvertConstantToDegree(value);
+                    converted = ConvertConstantToDecimalUnit(value, EventScriptDecimalUnit.Degree);
+                    return true;
+                case "meter":
+                    converted = ConvertConstantToDecimalUnit(value, EventScriptDecimalUnit.Meter);
+                    return true;
+                case "second":
+                    converted = ConvertConstantToDecimalUnit(value, EventScriptDecimalUnit.Second);
                     return true;
                 case "vector2":
                     converted = ConvertConstantToVector2(value);
@@ -533,11 +541,6 @@ public static class ExperimentalEventScriptCompiler
                 return EventScriptValueFactory.DecimalNaN();
             }
 
-            if (unwrapped.IsDegree())
-            {
-                return EventScriptValueFactory.Decimal(unwrapped.AsNumber());
-            }
-
             if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite))
             {
                 return EventScriptValueFactory.DecimalNaN();
@@ -570,6 +573,11 @@ public static class ExperimentalEventScriptCompiler
                 return unwrapped;
             }
 
+            if (unwrapped.HasDecimalUnit())
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
             if (!TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite) || !isFinite)
             {
                 return EventScriptValueFactory.DecimalNaN();
@@ -583,23 +591,18 @@ public static class ExperimentalEventScriptCompiler
             return EventScriptValueFactory.Percentage(ratio);
         }
 
-        private static EventScriptValue ConvertConstantToDegree(EventScriptValue value)
+        private static EventScriptValue ConvertConstantToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
         {
             if (!TryUnwrapOptionalForConstant(value, out var unwrapped))
             {
                 return EventScriptValueFactory.DecimalNaN();
             }
 
-            if (unwrapped.IsDegree())
-            {
-                return unwrapped;
-            }
-
-            if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage &&
+            if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer &&
                 TryCoerceNumericForConstant(unwrapped, out var number, out var isFinite) &&
                 isFinite)
             {
-                return EventScriptValueFactory.Degree(number);
+                return EventScriptValueFactory.Decimal(number, unit);
             }
 
             return EventScriptValueFactory.DecimalNaN();

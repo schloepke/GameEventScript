@@ -227,8 +227,10 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Decimal(number.Value);
                 case PercentageLiteralExpressionNode percentage:
                     return EventScriptValueFactory.Percentage(percentage.PercentValue / 100m);
-                case DegreeLiteralExpressionNode degree:
-                    return EventScriptValueFactory.Degree(degree.Degrees);
+                case UnitDecimalLiteralExpressionNode unitDecimal:
+                    return EventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
+                        ? EventScriptValueFactory.Decimal(unitDecimal.Value, unit)
+                        : EventScriptValueFactory.DecimalNaN();
 
                 case TextLiteralExpressionNode text:
                     return EventScriptValueFactory.Text(text.Value);
@@ -698,9 +700,9 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValueFactory.Percentage(-unwrapped.AsNumber());
             }
 
-            if (unwrapped.IsDegree())
+            if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
             {
-                return EventScriptValueFactory.Degree(-unwrapped.AsNumber());
+                return EventScriptValueFactory.Decimal(-unwrapped.AsNumber(), unit);
             }
 
             if (!TryCoerceNumericForOperation(unwrapped, out var number))
@@ -740,6 +742,13 @@ internal static class EventScriptInvocationEngine
             var minimum = EvaluateExpression(context, clamp.Minimum);
             var maximum = EvaluateExpression(context, clamp.Maximum);
 
+            if (!EventScriptValueAlu.HaveCompatibleNumericUnits(raw, minimum) ||
+                !EventScriptValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
+                !EventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
             if (!TryCoerceNumericForOperation(raw, out var rawNumber) ||
                 !TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
                 !TryCoerceNumericForOperation(maximum, out var maximumNumber))
@@ -754,7 +763,8 @@ internal static class EventScriptInvocationEngine
 
             var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
             var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-            return EventScriptValueFactory.Decimal(Math.Min(Math.Max(rawNumber.Value, lower), upper));
+            EventScriptValue.TryGetDecimalUnit(raw, out var unit);
+            return EventScriptValueFactory.Decimal(Math.Min(Math.Max(rawNumber.Value, lower), upper), raw.HasDecimalUnit() ? unit : null);
         }
 
         private EventScriptValue EvaluateNotUnary(EventScriptValue operand)
@@ -852,7 +862,7 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValue.Nothing;
             }
 
-            if (EventScriptValueAlu.TryEvaluateDegreeRounding(operand, operation, out var degree))
+            if (EventScriptValueAlu.TryEvaluateUnitRounding(operand, operation, out var degree))
             {
                 return degree;
             }
@@ -1032,28 +1042,28 @@ internal static class EventScriptInvocationEngine
                 case "ends with":
                     return EventScriptValueFactory.Boolean(left.EndsWith(right));
                 case "<":
-                    if (!TryCompareDegreeAware(left, right, out var lessComparison))
+                    if (!TryCompareNumericValues(left, right, out var lessComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
 
                     return EventScriptValueFactory.Boolean(lessComparison < 0);
                 case ">":
-                    if (!TryCompareDegreeAware(left, right, out var greaterComparison))
+                    if (!TryCompareNumericValues(left, right, out var greaterComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
 
                     return EventScriptValueFactory.Boolean(greaterComparison > 0);
                 case "<=":
-                    if (!TryCompareDegreeAware(left, right, out var lessOrEqualComparison))
+                    if (!TryCompareNumericValues(left, right, out var lessOrEqualComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
 
                     return EventScriptValueFactory.Boolean(lessOrEqualComparison <= 0);
                 case ">=":
-                    if (!TryCompareDegreeAware(left, right, out var greaterOrEqualComparison))
+                    if (!TryCompareNumericValues(left, right, out var greaterOrEqualComparison))
                     {
                         return EventScriptValueFactory.Boolean(false);
                     }
@@ -1061,7 +1071,7 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Boolean(greaterOrEqualComparison >= 0);
                 case "+":
                 {
-                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "+", right, out var degree))
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out var degree))
                     {
                         return degree;
                     }
@@ -1095,7 +1105,7 @@ internal static class EventScriptInvocationEngine
                 case "zip":
                     return EvaluateCollectionZip(left, right);
                 case "-":
-                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "-", right, out var degreeDifference))
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "-", right, out var degreeDifference))
                     {
                         return degreeDifference;
                     }
@@ -1108,7 +1118,7 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
                 case "*":
-                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "*", right, out var degreeProduct))
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "*", right, out var degreeProduct))
                     {
                         return degreeProduct;
                     }
@@ -1121,7 +1131,7 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
                 case "/":
-                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "/", right, out var degreeQuotient))
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "/", right, out var degreeQuotient))
                     {
                         return degreeQuotient;
                     }
@@ -1134,7 +1144,7 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 case "%":
-                    if (EventScriptValueAlu.TryEvaluateDegreeBinary(left, "%", right, out var degreeModulo))
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "%", right, out var degreeModulo))
                     {
                         return degreeModulo;
                     }
@@ -1867,39 +1877,73 @@ internal static class EventScriptInvocationEngine
 
         private EventScriptValue EvaluateSumSelector(ExecutionContext context, IEnumerable<EventScriptValue> items, SumSelectorNode selector)
         {
-            var sum = NumericValue.Finite(0m);
+            EventScriptValue? sumValue = null;
             var projection = CreateProjectionEvaluator(context);
             foreach (var item in items)
             {
-                if (!TryCoerceNumericForOperation(projection.Evaluate(selector.Identifier, selector.Projection, item), out var number))
+                var projected = projection.Evaluate(selector.Identifier, selector.Projection, item);
+                if (!TryCoerceNumericForOperation(projected, out _))
                 {
                     return EventScriptValueFactory.DecimalNaN();
                 }
 
-                sum = AddNumeric(sum, number);
+                if (sumValue is null)
+                {
+                    sumValue = projected;
+                    continue;
+                }
+
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(sumValue, "+", projected, out var unitSum))
+                {
+                    sumValue = unitSum;
+                    continue;
+                }
+
+                TryCoerceNumericForOperation(sumValue, out var left);
+                TryCoerceNumericForOperation(projected, out var right);
+                sumValue = ToEventScriptDecimal(AddNumeric(left, right));
             }
 
-            return ToEventScriptDecimal(sum);
+            return sumValue ?? EventScriptValueFactory.Decimal(0m);
         }
 
         private EventScriptValue EvaluateAverageSelector(ExecutionContext context, IEnumerable<EventScriptValue> items, AverageSelectorNode selector)
         {
-            var sum = NumericValue.Finite(0m);
+            EventScriptValue? sumValue = null;
             var count = 0;
             var projection = CreateProjectionEvaluator(context);
             foreach (var item in items)
             {
-                if (!TryCoerceNumericForOperation(projection.Evaluate(selector.Identifier, selector.Projection, item), out var number) || !number.IsFinite)
+                var projected = projection.Evaluate(selector.Identifier, selector.Projection, item);
+                if (!TryCoerceNumericForOperation(projected, out var number) || !number.IsFinite)
                 {
                     return EventScriptValue.Nothing;
                 }
 
-                sum = AddNumeric(sum, number);
+                if (sumValue is null)
+                {
+                    sumValue = projected;
+                }
+                else if (EventScriptValueAlu.TryEvaluateUnitBinary(sumValue, "+", projected, out var unitSum))
+                {
+                    sumValue = unitSum;
+                }
+                else
+                {
+                    TryCoerceNumericForOperation(sumValue, out var left);
+                    sumValue = ToEventScriptDecimal(AddNumeric(left, number));
+                }
+
                 count++;
             }
 
-            return count == 0 || !sum.IsFinite
-                ? EventScriptValue.Nothing
+            if (count == 0 || sumValue is null || !TryCoerceNumericForOperation(sumValue, out var sum) || !sum.IsFinite)
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            return EventScriptValueAlu.TryEvaluateUnitBinary(sumValue, "/", EventScriptValueFactory.Integer(count), out var average)
+                ? average
                 : EventScriptValueFactory.Decimal(sum.Value / count);
         }
 
@@ -1964,7 +2008,19 @@ internal static class EventScriptInvocationEngine
                     continue;
                 }
 
-                var comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+                int comparison;
+                if (TryCoerceNumericForOperation(candidateProjection, out _) && TryCoerceNumericForOperation(bestProjection, out _))
+                {
+                    if (!TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
+                    {
+                        return EventScriptValue.Nothing;
+                    }
+                }
+                else
+                {
+                    comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+                }
+
                 if ((isMax && comparison > 0) || (!isMax && comparison < 0))
                 {
                     bestProjection = candidateProjection;
@@ -2078,8 +2134,8 @@ internal static class EventScriptInvocationEngine
         private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
             => EventScriptValueAlu.TryCompareNumeric(left, right, out comparison);
 
-        private static bool TryCompareDegreeAware(EventScriptValue left, EventScriptValue right, out int comparison)
-            => EventScriptValueAlu.TryCompareDegreeAware(left, right, out comparison);
+        private static bool TryCompareNumericValues(EventScriptValue left, EventScriptValue right, out int comparison)
+            => EventScriptValueAlu.TryCompareNumericValues(left, right, out comparison);
 
         private static NumericValue AddNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.AddNumeric(left, right);
 
@@ -2128,7 +2184,11 @@ internal static class EventScriptInvocationEngine
                 case "percentage":
                     return ConvertToPercentage(value);
                 case "degree":
-                    return ConvertToDegree(value);
+                    return ConvertToDecimalUnit(value, EventScriptDecimalUnit.Degree);
+                case "meter":
+                    return ConvertToDecimalUnit(value, EventScriptDecimalUnit.Meter);
+                case "second":
+                    return ConvertToDecimalUnit(value, EventScriptDecimalUnit.Second);
                 case "vector2":
                     return ConvertToVector2(value);
                 case "vector3":
@@ -2142,11 +2202,6 @@ internal static class EventScriptInvocationEngine
                     if (!TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
                     {
                         return EventScriptValueFactory.DecimalNaN();
-                    }
-
-                    if (unwrappedNumber.IsDegree())
-                    {
-                        return EventScriptValueFactory.Decimal(unwrappedNumber.AsNumber());
                     }
 
                     if (TryCoerceNumericForOperation(unwrappedNumber, out var number))
@@ -2210,6 +2265,11 @@ internal static class EventScriptInvocationEngine
                 return unwrapped;
             }
 
+            if (unwrapped.HasDecimalUnit())
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
             if (TryCoerceNumericForOperation(unwrapped, out var number))
             {
                 if (!number.IsFinite)
@@ -2228,23 +2288,18 @@ internal static class EventScriptInvocationEngine
             return EventScriptValueFactory.DecimalNaN();
         }
 
-        private EventScriptValue ConvertToDegree(EventScriptValue value)
+        private EventScriptValue ConvertToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
         {
             if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
             {
                 return EventScriptValueFactory.DecimalNaN();
             }
 
-            if (unwrapped.IsDegree())
-            {
-                return unwrapped;
-            }
-
-            if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer or EventScriptValueKind.Percentage &&
+            if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer &&
                 TryCoerceNumericForOperation(unwrapped, out var number) &&
                 number.IsFinite)
             {
-                return EventScriptValueFactory.Degree(number.Value);
+                return EventScriptValueFactory.Decimal(number.Value, unit);
             }
 
             return EventScriptValueFactory.DecimalNaN();
@@ -2387,6 +2442,13 @@ internal static class EventScriptInvocationEngine
 
             var minimum = EvaluateCustomTypeExpression(typeDefinition, field.MinimumExpression, sourceValues, materializedValues);
             var maximum = EvaluateCustomTypeExpression(typeDefinition, field.MaximumExpression, sourceValues, materializedValues);
+            if (!EventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, minimum) ||
+                !EventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
+                !EventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
             if (!TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
                 !TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
                 !TryCoerceNumericForOperation(maximum, out var maximumNumber))
@@ -2406,7 +2468,8 @@ internal static class EventScriptInvocationEngine
 
             var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
             var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-            return EventScriptValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper));
+            EventScriptValue.TryGetDecimalUnit(fieldValue, out var unit);
+            return EventScriptValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasDecimalUnit() ? unit : null);
         }
 
         private EventScriptValue EvaluateCustomTypeExpression(CompiledTypeDefinition typeDefinition, ExpressionNode expression, IReadOnlyDictionary<string, EventScriptValue> sourceValues,
@@ -2442,7 +2505,9 @@ internal static class EventScriptInvocationEngine
                 "tag" => value.IsTag(),
                 "text" => value.IsText(),
                 "percentage" => value.IsPercentage(),
-                "degree" => value.IsDegree(),
+                "degree" => value.IsDecimalUnit(EventScriptDecimalUnit.Degree),
+                "meter" => value.IsDecimalUnit(EventScriptDecimalUnit.Meter),
+                "second" => value.IsDecimalUnit(EventScriptDecimalUnit.Second),
                 "vector2" => value.IsVector2(),
                 "vector3" => value.IsVector3(),
                 "decimal" => value.IsNumber(),
@@ -2526,7 +2591,6 @@ internal static class EventScriptInvocationEngine
                 EventScriptValueKind.Tag => $"tag:{value.AsText()}",
                 EventScriptValueKind.Text => $"text:{value.AsText()}",
                 EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-                EventScriptValueKind.Degree => $"degree:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Vector2 => $"vector2:{((EventScriptVector2Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector2Value)value).Y.ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Vector3 => $"vector3:{((EventScriptVector3Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Y.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Z.ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Decimal => value.IsNaN()
@@ -2535,7 +2599,9 @@ internal static class EventScriptInvocationEngine
                         ? "decimal:-infinity"
                         : value.IsInfinity()
                             ? "decimal:infinity"
-                            : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+                            : value is EventScriptDecimalValue { Unit: { } unit }
+                                ? $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(unit)}"
+                                : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
                 EventScriptValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
                 EventScriptValueKind.Optional => value.AsOptional().HasValue

@@ -1461,9 +1461,9 @@ public sealed class EventScriptParser
             return WithRange(new PercentageLiteralExpressionNode(Previous.DecimalValue), Previous);
         }
 
-        if (Match(EventScriptTokenKind.Degree))
+        if (Match(EventScriptTokenKind.UnitDecimal))
         {
-            return WithRange(new DegreeLiteralExpressionNode(Previous.DecimalValue), Previous);
+            return WithRange(new UnitDecimalLiteralExpressionNode(Previous.DecimalValue, Previous.UnitName), Previous);
         }
 
         if (Match(Text))

@@ -21,7 +21,7 @@ EventScript is case-sensitive.
 - Keywords are lowercase: `module`, `on`, `publish`, `let`, `if`, `for`, `rule`, `select`.
 - Messages start with an uppercase letter: `Start`, `DamageTaken`, `TurnEnded`.
 - Local variables and identifiers start with a lowercase letter: `hp`, `target`, `woundedUnits`.
-- Type names are written as tags: `:decimal`, `:text`, `:list`, `:message`, `:handler`, `:meter`.
+- Type names are written as tags: `:decimal`, `:text`, `:list`, `:message`, `:handler`, `:gauge`.
 - Tags are also first-class values: `:name`, `:boss`, `:fire`.
 - Collection mini-language lives inside `[...]`.
 - Many failures are represented as `nothing` rather than exceptions.
@@ -49,7 +49,7 @@ Example:
 ```eventscript
 module CombatRules
 
-record :meter as {
+record :gauge as {
     current: :decimal,
     maximum: :decimal
 }
@@ -262,16 +262,18 @@ This is an expression form, not a statement-only special case.
 0%
 ```
 
-### Degrees
+### Decimal Units
 
 ```eventscript
 43.9°
 90°
 360°
 -10°
+100m
+15s
 ```
 
-Degree values use the built-in `:degree` type. A degree is an open angle value, so negative values and values greater than `360°` are preserved. Use `:wrapDegree` to wrap an angle into the canonical `0°` up to, but not including, `360°` range.
+Decimal unit literals are regular `:decimal` values with an attached unit. Built-in units are `:degree`, `:meter`, and `:second`. Unit values preserve their unit in text output. `as :decimal` erases the unit. Use `:wrapDegree` to wrap a unitless decimal or degree value into the canonical `0°` up to, but not including, `360°` range.
 
 ### Text
 
@@ -336,6 +338,8 @@ Built-in type tags:
 - `:text`
 - `:percentage`
 - `:degree`
+- `:meter`
+- `:second`
 - `:vector2`
 - `:vector3`
 - `:decimal`
@@ -370,6 +374,8 @@ if value is :decimal {
 ```eventscript
 let ratio as :percentage be 75
 let heading as :degree be 450
+let distance as :meter be 100
+let duration as :second be 15
 let position as :vector2 be [x: 10, y: 20]
 let point as :vector3 be [x: 10, y: 20, z: 5]
 let amount as :decimal be '12.5'
@@ -968,7 +974,7 @@ let byId be unitsById(units)
 Records define closed custom types.
 
 ```eventscript
-record :meter as {
+record :gauge as {
     current: :decimal,
     maximum: :decimal
 }
@@ -983,7 +989,7 @@ Records may use:
 Example:
 
 ```eventscript
-record :meter as {
+record :gauge as {
     current: :decimal clamped between 0 and maximum,
     maximum: :decimal clamped between 0 and :infinity,
     percentage: :percentage computed by
@@ -995,7 +1001,7 @@ record :meter as {
 Usage:
 
 ```eventscript
-let hp as :meter be [current: 25, maximum: 100]
+let hp as :gauge be [current: 25, maximum: 100]
 let ratio be hp.percentage
 ```
 
@@ -1343,7 +1349,7 @@ on RollAttack {
 ### Example: Custom record type
 
 ```eventscript
-record :meter as {
+record :gauge as {
     current: :decimal clamped between 0 and maximum,
     maximum: :decimal clamped between 0 and :infinity,
     percentage: :percentage computed by
@@ -1352,7 +1358,7 @@ record :meter as {
 }
 
 on Start {
-    let mana as :meter be [current: 30, maximum: 50]
+    let mana as :gauge be [current: 30, maximum: 50]
     if mana.percentage >= 50% {
         publish ReadyToCast
     }

@@ -120,7 +120,7 @@ PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | Varia
 CallExpression ::= Identifier "(" [ Argumentlist ] ")"
 MessageInvocationExpression ::= Message "(" [ NamedArgumentList | ParamList ] ")"
 
-Literal ::= Number | Percentage | Degree | TextLiteral | "true" | "false"
+Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
 TagLiteral ::= ":" Identifier
 
 Message ::= UpperLetter { LowerLetter | UpperLetter | Digit }
@@ -129,7 +129,7 @@ ModuleName ::= Identifier | Message
 Identifier ::= LowerLetter { LowerLetter | UpperLetter | Digit }
 Number ::= Digit { Digit } [ "." Digit { Digit } ]
 Percentage ::= Number "%"
-Degree ::= Number "°"
+UnitDecimal ::= Number ( "°" | "m" | "s" )
 TextLiteral ::= "'" { TextChar } "'"
 TextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
 EscapedSingleQuote ::= "''"
@@ -146,6 +146,8 @@ TypeTag ::= ":text"
           | ":tag"
           | ":percentage"
           | ":degree"
+          | ":meter"
+          | ":second"
           | ":vector2"
           | ":vector3"
           | ":decimal"

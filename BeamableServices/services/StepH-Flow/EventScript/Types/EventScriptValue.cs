@@ -15,7 +15,6 @@ public enum EventScriptValueKind
     Tag,
     Text,
     Percentage,
-    Degree,
     Vector2,
     Vector3,
     Decimal,
@@ -52,7 +51,8 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     public bool IsInteger() => Kind == EventScriptValueKind.Integer;
     public bool IsText() => Kind == EventScriptValueKind.Text;
     public bool IsPercentage() => Kind == EventScriptValueKind.Percentage;
-    public bool IsDegree() => Kind == EventScriptValueKind.Degree;
+    public bool IsDecimalUnit(EventScriptDecimalUnit unit) => this is EventScriptDecimalValue decimalValue && decimalValue.Unit == unit;
+    public bool HasDecimalUnit() => this is EventScriptDecimalValue { Unit: not null };
     public bool IsVector2() => Kind == EventScriptValueKind.Vector2;
     public bool IsVector3() => Kind == EventScriptValueKind.Vector3;
     public bool IsIterator() => Kind == EventScriptValueKind.Iterator;
@@ -165,13 +165,17 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
     public string DescribeType()
     {
+        if (this is EventScriptDecimalValue { Unit: { } unit })
+        {
+            return $":{ToDisplayTypeName(EventScriptDecimalUnits.ToTypeName(unit))}";
+        }
+
         return Kind switch
         {
             EventScriptValueKind.Nothing => ":Nothing",
             EventScriptValueKind.Tag => ":Tag",
             EventScriptValueKind.Text => ":Text",
             EventScriptValueKind.Percentage => ":Percentage",
-            EventScriptValueKind.Degree => ":Degree",
             EventScriptValueKind.Vector2 => ":Vector2",
             EventScriptValueKind.Vector3 => ":Vector3",
             EventScriptValueKind.Decimal => ":Decimal",
@@ -198,10 +202,9 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => $":{AsText()}",
             EventScriptValueKind.Text => AsText(),
             EventScriptValueKind.Percentage => FormatPercentage(((EventScriptPercentageValue)this).Ratio),
-            EventScriptValueKind.Degree => FormatDegree(((EventScriptDegreeValue)this).Degrees),
             EventScriptValueKind.Vector2 => FormatVector2((EventScriptVector2Value)this),
             EventScriptValueKind.Vector3 => FormatVector3((EventScriptVector3Value)this),
-            EventScriptValueKind.Decimal => IsNaN() ? "NaN" : IsInfinity() ? IsNegativeInfinity() ? "-Infinity" : "Infinity" : AsNumber().ToString(CultureInfo.InvariantCulture),
+            EventScriptValueKind.Decimal => FormatDecimalValue((EventScriptDecimalValue)this),
             EventScriptValueKind.Integer => AsInteger().ToString(CultureInfo.InvariantCulture),
             EventScriptValueKind.Boolean => AsBoolean().ToString(),
             EventScriptValueKind.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
@@ -223,6 +226,11 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
         if (ReferenceEquals(this, other)) return true;
         if (IsNumber() && other.IsNumber())
         {
+            if (!HaveCompatibleNumericUnits(this, other))
+            {
+                return false;
+            }
+
             if (IsNaN() || other.IsNaN())
             {
                 return IsNaN() && other.IsNaN();
@@ -243,7 +251,6 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => AsText() == other.AsText(),
             EventScriptValueKind.Text => AsText() == other.AsText(),
             EventScriptValueKind.Percentage => ((EventScriptPercentageValue)this).Ratio == ((EventScriptPercentageValue)other).Ratio,
-            EventScriptValueKind.Degree => ((EventScriptDegreeValue)this).Degrees == ((EventScriptDegreeValue)other).Degrees,
             EventScriptValueKind.Vector2 => ((EventScriptVector2Value)this).X == ((EventScriptVector2Value)other).X &&
                                             ((EventScriptVector2Value)this).Y == ((EventScriptVector2Value)other).Y,
             EventScriptValueKind.Vector3 => ((EventScriptVector3Value)this).X == ((EventScriptVector3Value)other).X &&
@@ -276,6 +283,14 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
         {
             if (IsNaN()) return int.MinValue;
             if (IsInfinity()) return IsNegativeInfinity() ? int.MinValue + 1 : int.MaxValue;
+            if (TryGetDecimalUnit(this, out var unit))
+            {
+                var numberHash = new HashCode();
+                numberHash.Add(AsNumber());
+                numberHash.Add(unit);
+                return numberHash.ToHashCode();
+            }
+
             return AsNumber().GetHashCode();
         }
 
@@ -296,9 +311,6 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 break;
             case EventScriptValueKind.Percentage:
                 hash.Add(((EventScriptPercentageValue)this).Ratio);
-                break;
-            case EventScriptValueKind.Degree:
-                hash.Add(((EventScriptDegreeValue)this).Degrees);
                 break;
             case EventScriptValueKind.Vector2:
                 hash.Add(((EventScriptVector2Value)this).X);
@@ -383,19 +395,18 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Tag => 1,
             EventScriptValueKind.Text => 2,
             EventScriptValueKind.Percentage => 3,
-            EventScriptValueKind.Degree => 4,
-            EventScriptValueKind.Vector2 => 5,
-            EventScriptValueKind.Vector3 => 6,
-            EventScriptValueKind.Boolean => 7,
-            EventScriptValueKind.Optional => 8,
-            EventScriptValueKind.Iterator => 9,
-            EventScriptValueKind.Range => 10,
-            EventScriptValueKind.Message => 11,
-            EventScriptValueKind.Handler => 12,
-            EventScriptValueKind.List => 13,
-            EventScriptValueKind.Dictionary => 14,
-            EventScriptValueKind.Set => 15,
-            EventScriptValueKind.Dice => 16,
+            EventScriptValueKind.Vector2 => 4,
+            EventScriptValueKind.Vector3 => 5,
+            EventScriptValueKind.Boolean => 6,
+            EventScriptValueKind.Optional => 7,
+            EventScriptValueKind.Iterator => 8,
+            EventScriptValueKind.Range => 9,
+            EventScriptValueKind.Message => 10,
+            EventScriptValueKind.Handler => 11,
+            EventScriptValueKind.List => 12,
+            EventScriptValueKind.Dictionary => 13,
+            EventScriptValueKind.Set => 14,
+            EventScriptValueKind.Dice => 15,
             _ => 8
         };
     }
@@ -547,6 +558,12 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             if (right is null) return 1;
             if (left.IsNumber() && right.IsNumber())
             {
+                var unitComparison = CompareNumericUnits(left, right);
+                if (unitComparison != 0)
+                {
+                    return unitComparison;
+                }
+
                 if (left.IsNaN() || right.IsNaN())
                 {
                     return left.IsNaN() && right.IsNaN() ? 0 : left.IsNaN() ? -1 : 1;
@@ -573,7 +590,6 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 EventScriptValueKind.Tag => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 EventScriptValueKind.Text => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 EventScriptValueKind.Percentage => ((EventScriptPercentageValue)left).Ratio.CompareTo(((EventScriptPercentageValue)right).Ratio),
-                EventScriptValueKind.Degree => ((EventScriptDegreeValue)left).Degrees.CompareTo(((EventScriptDegreeValue)right).Degrees),
                 EventScriptValueKind.Vector2 => CompareSequence(left.AsList(), right.AsList()),
                 EventScriptValueKind.Vector3 => CompareSequence(left.AsList(), right.AsList()),
                 EventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
@@ -750,7 +766,79 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
 
     internal static string FormatPercentage(decimal ratio) => $"{(ratio * 100m).ToString("0.############################", CultureInfo.InvariantCulture)}%";
 
-    internal static string FormatDegree(decimal degrees) => $"{degrees.ToString("0.############################", CultureInfo.InvariantCulture)}\u00B0";
+    internal static string FormatDecimalValue(EventScriptDecimalValue value)
+    {
+        if (value.IsNaNValue)
+        {
+            return "NaN";
+        }
+
+        if (value.IsInfinityValue)
+        {
+            return value.IsNegativeInfinityValue ? "-Infinity" : "Infinity";
+        }
+
+        var formatted = value.Value.ToString("0.############################", CultureInfo.InvariantCulture);
+        return value.Unit.HasValue
+            ? $"{formatted}{EventScriptDecimalUnits.ToSuffix(value.Unit.Value)}"
+            : formatted;
+    }
+
+    public static decimal WrapDegrees(decimal degrees)
+    {
+        var wrapped = degrees % 360m;
+        if (wrapped < 0m)
+        {
+            wrapped += 360m;
+        }
+
+        return wrapped == 360m ? 0m : wrapped;
+    }
+
+    internal static bool TryGetDecimalUnit(EventScriptValue value, out EventScriptDecimalUnit unit)
+    {
+        if (value is EventScriptDecimalValue { Unit: { } decimalUnit })
+        {
+            unit = decimalUnit;
+            return true;
+        }
+
+        unit = default;
+        return false;
+    }
+
+    private static bool HaveCompatibleNumericUnits(EventScriptValue left, EventScriptValue right)
+        => TryGetDecimalUnit(left, out var leftUnit) == TryGetDecimalUnit(right, out var rightUnit) &&
+           (!TryGetDecimalUnit(left, out _) || leftUnit == rightUnit);
+
+    private static int CompareNumericUnits(EventScriptValue left, EventScriptValue right)
+    {
+        var leftHasUnit = TryGetDecimalUnit(left, out var leftUnit);
+        var rightHasUnit = TryGetDecimalUnit(right, out var rightUnit);
+        if (!leftHasUnit && !rightHasUnit)
+        {
+            return 0;
+        }
+
+        if (leftHasUnit != rightHasUnit)
+        {
+            return leftHasUnit ? 1 : -1;
+        }
+
+        return leftUnit.CompareTo(rightUnit);
+    }
+
+    private static string ToDisplayTypeName(string typeName)
+        => string.IsNullOrEmpty(typeName)
+            ? typeName
+            : string.Create(typeName.Length, typeName, static (chars, value) =>
+            {
+                chars[0] = char.ToUpperInvariant(value[0]);
+                for (var i = 1; i < value.Length; i++)
+                {
+                    chars[i] = value[i];
+                }
+            });
 
     internal static string FormatVector2(EventScriptVector2Value value)
         => $"vector2[x: {FormatDecimalComponent(value.X)}, y: {FormatDecimalComponent(value.Y)}]";

@@ -141,11 +141,11 @@
       "scripts": [
         {
           "sourceName": "shared.es",
-          "text": "module Shared\nrecord :meter as {\n  current: :decimal,\n  maximum: :decimal\n}\n\nrule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]"
+          "text": "module Shared\nrecord :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\nrule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]"
         },
         {
           "sourceName": "runtime.es",
-          "text": "module Runtime\non Start(unit, units) {\n  let hp as :meter be [current: unit.hp, maximum: unit.maxHp]\n  let anyWounded be wounded(unit)\n  let candidates be woundedUnits(units)\n  publish Done(anyWounded: anyWounded, candidateCount: :len candidates, maximum: hp.maximum)\n}"
+          "text": "module Runtime\non Start(unit, units) {\n  let hp as :gauge be [current: unit.hp, maximum: unit.maxHp]\n  let anyWounded be wounded(unit)\n  let candidates be woundedUnits(units)\n  publish Done(anyWounded: anyWounded, candidateCount: :len candidates, maximum: hp.maximum)\n}"
         }
       ],
       "steps": [

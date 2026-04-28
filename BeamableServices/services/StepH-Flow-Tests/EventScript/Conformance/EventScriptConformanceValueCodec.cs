@@ -71,8 +71,6 @@ internal static class EventScriptConformanceValueCodec
                 return DecodeDecimalValue(element);
             case ":percentage":
                 return EventScriptValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
-            case ":degree":
-                return EventScriptValueFactory.Degree(RequireDecimal(element, "value", "degree value"));
             case ":vector2":
                 return EventScriptValueFactory.Vector2(
                     RequireDecimal(element, "x", "vector2 x component"),
@@ -157,9 +155,8 @@ internal static class EventScriptConformanceValueCodec
             EventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
             EventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
             EventScriptValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
-            EventScriptValueKind.Decimal => new JsonObject { ["type"] = ":decimal", ["value"] = FormatDecimal(value) },
+            EventScriptValueKind.Decimal => ToDecimalJson((EventScriptDecimalValue)value),
             EventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
-            EventScriptValueKind.Degree => new JsonObject { ["type"] = ":degree", ["value"] = FormatDecimal(value.AsNumber()) },
             EventScriptValueKind.Vector2 => ToVector2Json((EventScriptVector2Value)value),
             EventScriptValueKind.Vector3 => ToVector3Json((EventScriptVector3Value)value),
             EventScriptValueKind.Optional => ToOptionalJson(value),
@@ -178,12 +175,34 @@ internal static class EventScriptConformanceValueCodec
     private static EventScriptValue DecodeDecimalValue(JsonElement element)
     {
         var value = RequireString(element, "value", "decimal value");
+        var unit = default(EventScriptDecimalUnit?);
+        if (TryGetProperty(element, "unit", out var unitElement))
+        {
+            if (unitElement.ValueKind != JsonValueKind.String)
+            {
+                throw new InvalidOperationException("Invalid decimal unit.");
+            }
+
+            var unitName = unitElement.GetString()!;
+            if (!unitName.StartsWith(":", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
+            }
+
+            if (!EventScriptDecimalUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
+            {
+                throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
+            }
+
+            unit = parsedUnit;
+        }
+
         return value switch
         {
             "NaN" => EventScriptValueFactory.DecimalNaN(),
             "Infinity" => EventScriptValueFactory.DecimalInfinity(),
             "-Infinity" => EventScriptValueFactory.DecimalNegativeInfinity(),
-            _ => EventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture))
+            _ => EventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
         };
     }
 
@@ -279,6 +298,22 @@ internal static class EventScriptConformanceValueCodec
             ["to"] = GetInternalProperty<long>(value, "To").ToString(CultureInfo.InvariantCulture),
             ["step"] = GetInternalProperty<long>(value, "Step").ToString(CultureInfo.InvariantCulture)
         };
+
+    private static JsonObject ToDecimalJson(EventScriptDecimalValue value)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = ":decimal",
+            ["value"] = FormatDecimal(value)
+        };
+
+        if (value.Unit.HasValue)
+        {
+            node["unit"] = ToCanonicalTypeName(EventScriptDecimalUnits.ToTypeName(value.Unit.Value));
+        }
+
+        return node;
+    }
 
     private static JsonObject ToVector2Json(EventScriptVector2Value value)
         => new()

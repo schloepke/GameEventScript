@@ -28,7 +28,7 @@ public abstract record StatementNode : EventScriptNode;
 [JsonDerivedType(typeof(IntegerLiteralExpressionNode), "integerLiteralExpression")]
 [JsonDerivedType(typeof(DecimalLiteralExpressionNode), "decimalLiteralExpression")]
 [JsonDerivedType(typeof(PercentageLiteralExpressionNode), "percentageLiteralExpression")]
-[JsonDerivedType(typeof(DegreeLiteralExpressionNode), "degreeLiteralExpression")]
+[JsonDerivedType(typeof(UnitDecimalLiteralExpressionNode), "unitDecimalLiteralExpression")]
 [JsonDerivedType(typeof(TextLiteralExpressionNode), "textLiteralExpression")]
 [JsonDerivedType(typeof(ListLiteralExpressionNode), "listLiteralExpression")]
 [JsonDerivedType(typeof(SetLiteralExpressionNode), "setLiteralExpression")]
@@ -133,7 +133,7 @@ public sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
 public sealed record IntegerLiteralExpressionNode(long Value) : ExpressionNode;
 public sealed record DecimalLiteralExpressionNode(decimal Value) : ExpressionNode;
 public sealed record PercentageLiteralExpressionNode(decimal PercentValue) : ExpressionNode;
-public sealed record DegreeLiteralExpressionNode(decimal Degrees) : ExpressionNode;
+public sealed record UnitDecimalLiteralExpressionNode(decimal Value, string UnitName) : ExpressionNode;
 public sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 public sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 public sealed record SetLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;

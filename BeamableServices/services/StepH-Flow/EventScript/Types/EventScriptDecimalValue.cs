@@ -5,35 +5,37 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptDecimalValue : EventScriptValue
 {
-    public static readonly EventScriptDecimalValue NaN = new(0m, true, false, false);
-    public static readonly EventScriptDecimalValue Infinity = new(0m, false, true, false);
-    public static readonly EventScriptDecimalValue NegativeInfinity = new(0m, false, true, true);
+    public static readonly EventScriptDecimalValue NaN = new(0m, null, true, false, false);
+    public static readonly EventScriptDecimalValue Infinity = new(0m, null, false, true, false);
+    public static readonly EventScriptDecimalValue NegativeInfinity = new(0m, null, false, true, true);
 
-    public static EventScriptDecimalValue EventScriptDecimal(decimal value) => new(value, false, false, false);
+    public static EventScriptDecimalValue EventScriptDecimal(decimal value, EventScriptDecimalUnit? unit = null) => new(value, unit, false, false, false);
 
     public static EventScriptDecimalValue EventScriptDecimal(double value)
     {
         if (double.IsPositiveInfinity(value)) return Infinity;
         if (double.IsNegativeInfinity(value)) return NegativeInfinity;
-        return double.IsNaN(value) ? NaN : new EventScriptDecimalValue((decimal)value, false, false, false);
+        return double.IsNaN(value) ? NaN : new EventScriptDecimalValue((decimal)value, null, false, false, false);
     }
 
     public static EventScriptDecimalValue EventScriptDecimal(float value)
     {
         if (float.IsPositiveInfinity(value)) return Infinity;
         if (float.IsNegativeInfinity(value)) return NegativeInfinity;
-        return float.IsNaN(value) ? NaN : new EventScriptDecimalValue((decimal)value, false, false, false);
+        return float.IsNaN(value) ? NaN : new EventScriptDecimalValue((decimal)value, null, false, false, false);
     }
 
-    private EventScriptDecimalValue(decimal value, bool isNaN, bool isInfinity, bool isNegativeInfinity)
+    private EventScriptDecimalValue(decimal value, EventScriptDecimalUnit? unit, bool isNaN, bool isInfinity, bool isNegativeInfinity)
     {
         Value = value;
+        Unit = isNaN || isInfinity ? null : unit;
         IsNaNValue = isNaN;
         IsInfinityValue = isInfinity;
         IsNegativeInfinityValue = isNegativeInfinity;
     }
 
     public decimal Value { get; }
+    public EventScriptDecimalUnit? Unit { get; }
     public bool IsNaNValue { get; }
     public bool IsInfinityValue { get; }
     public bool IsNegativeInfinityValue { get; }
@@ -57,7 +59,7 @@ public sealed class EventScriptDecimalValue : EventScriptValue
 
     internal override bool TryConvertToNumber(out EventScriptValue value)
     {
-        value = this;
+        value = Unit.HasValue ? EventScriptDecimal(AsNumber()) : this;
         return true;
     }
 

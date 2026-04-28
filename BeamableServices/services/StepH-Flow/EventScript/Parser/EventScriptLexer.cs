@@ -17,7 +17,7 @@ public enum EventScriptTokenKind
     Tag,
     Decimal,
     Percentage,
-    Degree,
+    UnitDecimal,
     Text,
     True,
     False,
@@ -95,7 +95,8 @@ public readonly record struct EventScriptToken(
     int Line,
     int Column,
     int EndLine,
-    int EndColumn)
+    int EndColumn,
+    string UnitName = "")
 {
     public EventScriptToken(EventScriptTokenKind kind, string text, int line, int column)
         : this(kind, text, line, column, line, column)
@@ -243,6 +244,9 @@ public sealed class EventScriptLexer
     private EventScriptToken CreateToken(EventScriptTokenKind kind, string text, int startLine, int startColumn)
         => new(kind, text, startLine, startColumn, _line, _column);
 
+    private EventScriptToken CreateUnitDecimalToken(string text, string unitName, int startLine, int startColumn)
+        => new(EventScriptTokenKind.UnitDecimal, text, startLine, startColumn, _line, _column, unitName);
+
     private static EventScriptToken CreateWordToken(string text, int line, int column, int endLine, int endColumn)
     {
         return text switch
@@ -378,7 +382,25 @@ public sealed class EventScriptLexer
                 return CreateToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
             }
 
-            return CreateToken(EventScriptTokenKind.Degree, text, line, column);
+            return CreateUnitDecimalToken(text, "degree", line, column);
+        }
+
+        if (!IsAtEnd && Current is 'm' or 's')
+        {
+            var unitName = Current == 'm' ? "meter" : "second";
+            Advance();
+            text = _input[start..(_index - 1)];
+            if (!IsAtEnd && !IsValidNumberBoundary(Current))
+            {
+                while (!IsAtEnd && !char.IsWhiteSpace(Current))
+                {
+                    Advance();
+                }
+
+                return CreateToken(EventScriptTokenKind.Illegal, _input[start.._index], line, column);
+            }
+
+            return CreateUnitDecimalToken(text, unitName, line, column);
         }
 
         if (!IsAtEnd && !IsValidNumberBoundary(Current))

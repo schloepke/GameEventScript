@@ -93,34 +93,40 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
-    public void DegreeValuesPreserveRawAnglesAndWrapExplicitly()
+    public void DecimalUnitsPreserveValueUnitAndFormatting()
     {
         var over = Degree(450m);
         var negative = Degree(-270m);
         var fullTurn = Degree(360m);
-        var zero = Degree(0m);
+        var distance = Meter(100m);
+        var duration = Seconds(15m);
 
-        Assert.AreEqual(EventScriptValueKind.Degree, over.Kind);
+        Assert.AreEqual(EventScriptValueKind.Decimal, over.Kind);
         Assert.AreEqual(450m, over.AsNumber());
+        Assert.IsTrue(over.IsNumber());
+        Assert.IsTrue(over.IsDecimalUnit(EventScriptDecimalUnit.Degree));
         Assert.AreEqual(-270m, negative.AsNumber());
         Assert.AreEqual(360m, fullTurn.AsNumber());
         Assert.AreNotEqual(over, negative);
-        Assert.AreEqual(90m, EventScriptDegreeValue.WrapDegrees(over.AsNumber()));
-        Assert.AreEqual(90m, EventScriptDegreeValue.WrapDegrees(negative.AsNumber()));
-        Assert.AreEqual(0m, EventScriptDegreeValue.WrapDegrees(fullTurn.AsNumber()));
-        Assert.AreSame(EventScriptDegreeValue.Zero, zero);
+        Assert.AreNotEqual(over, Decimal(450m));
+        Assert.AreEqual(90m, EventScriptValue.WrapDegrees(over.AsNumber()));
+        Assert.AreEqual(90m, EventScriptValue.WrapDegrees(negative.AsNumber()));
+        Assert.AreEqual(0m, EventScriptValue.WrapDegrees(fullTurn.AsNumber()));
         Assert.AreEqual("450°", over.ToString());
+        Assert.AreEqual("100m", distance.ToString());
+        Assert.AreEqual("15s", duration.ToString());
     }
 
     [TestMethod]
-    public void DegreeValuesKeepSeparateTypeIdentity()
+    public void DecimalUnitsParticipateInStableOrderingButNotNumericEquality()
     {
-        var values = new List<EventScriptValue> { Degree(350m), Degree(10m) };
+        var values = new List<EventScriptValue> { Degree(350m), Degree(10m), Decimal(10m), Meter(10m) };
 
         values.Sort(EventScriptValue.StableComparer);
 
-        Assert.IsFalse(Degree(90m).IsNumber());
-        CollectionAssert.AreEqual(new[] { 10m, 350m }, values.Select(value => value.AsNumber()).ToArray());
+        Assert.AreNotEqual(Degree(10m), Decimal(10m));
+        Assert.AreNotEqual(Degree(10m), Meter(10m));
+        CollectionAssert.AreEqual(new[] { "10", "10°", "350°", "10m" }, values.Select(value => value.ToString()).ToArray());
     }
 
     [TestMethod]

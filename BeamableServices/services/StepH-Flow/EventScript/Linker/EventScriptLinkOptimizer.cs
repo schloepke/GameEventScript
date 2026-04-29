@@ -703,8 +703,8 @@ internal static class EventScriptLinkOptimizer
 
                 value = ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 return true;
-            case "%":
-                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "%", right, out value))
+            case "mod":
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "mod", right, out value))
                 {
                     return true;
                 }

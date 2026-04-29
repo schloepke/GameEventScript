@@ -1345,8 +1345,8 @@ internal static class ExperimentalOpcodeInvocationEngine
                 }
 
                 return ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
-            case "%":
-                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "%", right, out var degreeModulo))
+            case "mod":
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "mod", right, out var degreeModulo))
                 {
                     return degreeModulo;
                 }

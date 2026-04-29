@@ -425,7 +425,7 @@ internal static class EventScriptValueAlu
     {
         var leftHasUnit = EventScriptValue.TryGetDecimalUnit(left, out var leftUnit);
         var rightHasUnit = EventScriptValue.TryGetDecimalUnit(right, out var rightUnit);
-        if (operation is not ("+" or "-" or "*" or "/" or "%") || (!leftHasUnit && !rightHasUnit))
+        if (operation is not ("+" or "-" or "*" or "/" or "mod") || (!leftHasUnit && !rightHasUnit))
         {
             value = EventScriptValue.Nothing;
             return false;
@@ -446,7 +446,7 @@ internal static class EventScriptValueAlu
             "/" => leftHasUnit && !rightHasUnit
                 ? SetUnit(leftUnit, out resultUnit)
                 : leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(null, out resultUnit),
-            "%" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
+            "mod" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
             _ => false
         };
 
@@ -462,7 +462,7 @@ internal static class EventScriptValueAlu
             "-" => SubtractNumeric(leftNumber, rightNumber),
             "*" => MultiplyNumeric(leftNumber, rightNumber),
             "/" => DivideNumeric(leftNumber, rightNumber),
-            "%" => ModuloNumeric(leftNumber, rightNumber),
+            "mod" => ModuloNumeric(leftNumber, rightNumber),
             _ => NumericValue.NaN()
         };
 

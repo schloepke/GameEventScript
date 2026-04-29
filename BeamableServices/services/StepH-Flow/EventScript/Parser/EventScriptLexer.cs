@@ -275,6 +275,7 @@ public sealed class EventScriptLexer
             "or" => new EventScriptToken(EventScriptTokenKind.Or, text, line, column, endLine, endColumn),
             "xor" => new EventScriptToken(EventScriptTokenKind.Xor, text, line, column, endLine, endColumn),
             "and" => new EventScriptToken(EventScriptTokenKind.And, text, line, column, endLine, endColumn),
+            "mod" => new EventScriptToken(EventScriptTokenKind.Modulo, text, line, column, endLine, endColumn),
             "not" => new EventScriptToken(EventScriptTokenKind.Not, text, line, column, endLine, endColumn),
             "to" => new EventScriptToken(EventScriptTokenKind.To, text, line, column, endLine, endColumn),
             "true" => new EventScriptToken(EventScriptTokenKind.True, text, line, column, endLine, endColumn),
@@ -486,7 +487,7 @@ public sealed class EventScriptLexer
                     '-' => CreateToken(EventScriptTokenKind.Minus, "-", line, column),
                     '*' => CreateToken(EventScriptTokenKind.Multiply, "*", line, column),
                     '/' => CreateToken(EventScriptTokenKind.Divide, "/", line, column),
-                    '%' => CreateToken(EventScriptTokenKind.Modulo, "%", line, column),
+                    '%' => CreateToken(EventScriptTokenKind.Illegal, "%", line, column),
                     '!' => CreateToken(EventScriptTokenKind.Not, "!", line, column),
                     '~' => CreateToken(EventScriptTokenKind.Not, "~", line, column),
                     _ => CreateToken(EventScriptTokenKind.Illegal, ch.ToString(), line, column)
@@ -532,7 +533,7 @@ public sealed class EventScriptLexer
         => ch is
             '(' or ')' or '{' or '}' or '[' or ']' or
             ',' or ';' or '.' or ':' or
-            '+' or '-' or '*' or '/' or '%' or
+            '+' or '-' or '*' or '/' or
             '!' or '~' or '&' or '|' or '^' or
             '=' or '<' or '>';
 
@@ -545,10 +546,9 @@ public sealed class EventScriptLexer
 
         return Current switch
         {
-            '%' when Peek() is '&' or '|' or '^' or '%' => true,
             '&' when Peek() == '&' => true,
             '|' when Peek() == '|' => true,
-            '^' when Peek() is '&' or '|' or '^' or '%' => true,
+            '^' when Peek() is '&' or '|' or '^' => true,
             _ => false
         };
     }

@@ -200,7 +200,7 @@
     {
       "kind": "scriptApi",
       "name": "degree arithmetic percentages helpers and comparisons",
-      "script": "on Start {\n  publish Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyDecimal: 30° * 0.2, divideDecimal: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :wrapDegree (120° / 10%), moduloDegree: 370° % 90°, moduloPercent: 120° % 10%, divideZero: 120° / 0, moduloZero: 120° % 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 % 120°, floorDegree: :floor 43.9°, ceilDegree: :ceil 43.1°, roundEvenDegree: :roundeven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
+      "script": "on Start {\n  publish Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyDecimal: 30° * 0.2, divideDecimal: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :wrapDegree (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: :floor 43.9°, ceilDegree: :ceil 43.1°, roundEvenDegree: :roundeven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -243,7 +243,7 @@
     {
       "kind": "scriptApi",
       "name": "decimal unit literals casts and strict arithmetic",
-      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :decimal be castMeter\n  publish Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isDecimal: castMeter is :decimal, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m % 90m, unitModuloScalar: 100m % 3, wrapMeter: :wrapDegree 10m)\n}",
+      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :decimal be castMeter\n  publish Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isDecimal: castMeter is :decimal, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :wrapDegree 10m)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -426,7 +426,7 @@
     {
       "kind": "scriptApi",
       "name": "decimal edge values stay observable",
-      "script": "on Start {\n  publish Done(divZero: 1 / 0, modZero: 1 % 0, overflow: 9999999999999999999999999999 * 9999999999999999999999999999)\n}",
+      "script": "on Start {\n  publish Done(divZero: 1 / 0, modZero: 1 mod 0, overflow: 9999999999999999999999999999 * 9999999999999999999999999999)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

@@ -17,7 +17,7 @@
       "script": "module BrokenCombat\nrule unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  publish Done\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Lexer"
       }
     },
     {
@@ -28,6 +28,15 @@
         "phase": "syntax",
         "kind": "Lexer",
         "messageContains": "hello%&some"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy percent modulo operator is rejected",
+      "script": "on Broken {\n  let value be 10 % 3\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Lexer"
       }
     },
     {

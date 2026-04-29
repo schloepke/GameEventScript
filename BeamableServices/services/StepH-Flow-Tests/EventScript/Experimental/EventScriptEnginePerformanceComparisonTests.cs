@@ -24,15 +24,15 @@ public sealed class EventScriptEnginePerformanceComparisonTests
 
         on Start(values) {
           let boostedValues be boosted(values)
-          let oddValues be values[:filter value where value % 2 = 1]
+          let oddValues be values[:filter value where value mod 2 = 1]
           let total be boostedValues[:sum value -> value]
           let average be boostedValues[:average value -> value]
           let scaled be 100m + 5%
           let folded be (15% + 15%) * 2
-          let loopWork be :list[:select item from 1 to 32 -> values[:sum value -> (value + item) * ((item % 7) + 1)]]
+          let loopWork be :list[:select item from 1 to 32 -> values[:sum value -> (value + item) * ((item mod 7) + 1)]]
           for item in loopWork {
             let adjusted be item + 5%
-            let bucket be adjusted % 11
+            let bucket be adjusted mod 11
             let foldedBucket be (bucket + 3) * 2
           }
           let workTotal be loopWork[:sum value -> value]

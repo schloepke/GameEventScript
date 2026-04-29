@@ -467,10 +467,10 @@ a + b
 a - b
 a * b
 a / b
-a % b
+a mod b
 ```
 
-`%` is the modulo operator. Percentage values are written as literals such as `10%`.
+`mod` is the modulo operator. Percentage values are written as literals such as `10%`.
 
 ### Collection combination
 
@@ -911,8 +911,8 @@ EventScript can generate lists and sets from ranges or other iterable sources.
 ### Generated set
 
 ```eventscript
-:set[:select item from 1 to 4 where item >= 2 -> item % 2]
-:set[:select item in values where item >= 2 -> item % 2]
+:set[:select item from 1 to 4 where item >= 2 -> item mod 2]
+:set[:select item in values where item >= 2 -> item mod 2]
 ```
 
 Optional parts:
@@ -925,7 +925,7 @@ Example:
 ```eventscript
 let evens be :list[:select item from 1 to 10 step 2 -> item]
 let doubled be :list[:select item in values -> item * 2]
-let filtered be :list[:select item from 1 to 6 where item % 2 = 0 -> item * item]
+let filtered be :list[:select item from 1 to 6 where item mod 2 = 0 -> item * item]
 ```
 
 If the step direction does not reach the target range, the result is empty.

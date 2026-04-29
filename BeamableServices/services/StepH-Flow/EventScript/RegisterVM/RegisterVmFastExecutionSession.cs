@@ -389,6 +389,9 @@ internal sealed class RegisterVmFastExecutionSession
             case TextLiteralExpressionNode text:
                 value = RegisterFastValue.Reference(Text(text.Value));
                 return true;
+            case TagLiteralExpressionNode tag:
+                value = RegisterFastValue.Reference(Tag(tag.Name));
+                return true;
             case IdentifierExpressionNode identifier:
                 value = Resolve(identifier.Name);
                 return true;
@@ -398,6 +401,8 @@ internal sealed class RegisterVmFastExecutionSession
                 return TryEvaluateRulePredicate(rulePredicate, out value);
             case TypeCastExpressionNode typeCast:
                 return TryEvaluateTypeCast(typeCast, out value);
+            case MemberAccessExpressionNode memberAccess:
+                return TryEvaluateMemberAccess(memberAccess, out value);
             case CollectionAccessExpressionNode collectionAccess:
                 return TryEvaluateCollectionAccess(collectionAccess, out value);
             case MessageLiteralExpressionNode message:
@@ -488,6 +493,16 @@ internal sealed class RegisterVmFastExecutionSession
 
                     break;
 
+                case RegisterFastOpCode.MemberAccess:
+                    _evaluationStack[top - 1] = EvaluateMemberAccess(_evaluationStack[top - 1], instruction.DiagnosticName);
+                    break;
+
+                case RegisterFastOpCode.IndexedAccess:
+                    var selector = _evaluationStack[--top];
+                    var target = _evaluationStack[--top];
+                    _evaluationStack[top++] = EvaluateIndexedAccess(target, selector);
+                    break;
+
                 case RegisterFastOpCode.Pipeline:
                     if (instruction.PipelineProgram is null ||
                         !TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
@@ -507,6 +522,47 @@ internal sealed class RegisterVmFastExecutionSession
 
         value = top > stackBase ? _evaluationStack[top - 1] : RegisterFastValue.Nothing;
         return true;
+    }
+
+    private bool TryEvaluateMemberAccess(MemberAccessExpressionNode memberAccess, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(memberAccess.Target, out var target))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = EvaluateMemberAccess(target, memberAccess.Member);
+        return true;
+    }
+
+    private static RegisterFastValue EvaluateMemberAccess(RegisterFastValue target, string? member)
+    {
+        if (string.IsNullOrEmpty(member))
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        var targetValue = target.ToEventScriptValue();
+        if (targetValue.IsNothing())
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        return targetValue.TryGetDictionaryMember(member, out var value)
+            ? RegisterFastValue.FromEventScriptValue(value)
+            : RegisterFastValue.Nothing;
+    }
+
+    private static RegisterFastValue EvaluateIndexedAccess(RegisterFastValue target, RegisterFastValue selector)
+    {
+        var selectorValue = selector.ToEventScriptValue();
+        if (selectorValue.IsNothing())
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        return RegisterFastValue.FromEventScriptValue(target.ToEventScriptValue().Lookup(selectorValue));
     }
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)
@@ -1109,6 +1165,19 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out RegisterFastValue value)
     {
+        if (expression.Selector is ExpressionSelectorNode expressionSelector)
+        {
+            if (!TryEvaluate(expression.Target, out var target) ||
+                !TryEvaluate(expressionSelector.Expression, out var selector))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            value = EvaluateIndexedAccess(target, selector);
+            return true;
+        }
+
         var selectors = new List<CollectionSelectorNode>();
         ExpressionNode source = expression;
         while (source is CollectionAccessExpressionNode collectionAccess)

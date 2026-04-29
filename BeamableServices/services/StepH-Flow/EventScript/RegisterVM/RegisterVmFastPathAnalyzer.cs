@@ -227,6 +227,7 @@ internal static class RegisterVmFastPathAnalyzer
             case PercentageLiteralExpressionNode:
             case UnitDecimalLiteralExpressionNode:
             case TextLiteralExpressionNode:
+            case TagLiteralExpressionNode:
             case IdentifierExpressionNode:
                 unsupportedReason = string.Empty;
                 return true;
@@ -317,8 +318,25 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case MemberAccessExpressionNode memberAccess:
+                if (!SupportsExpression(memberAccess.Target, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Member access target: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case CollectionAccessExpressionNode collectionAccess:
-                return SupportsPipelinedCollection(collectionAccess, callables, out unsupportedReason);
+                if (SupportsPipelinedCollection(collectionAccess, callables, out unsupportedReason) ||
+                    SupportsIndexedCollectionAccess(collectionAccess, callables, out unsupportedReason))
+                {
+                    unsupportedReason = string.Empty;
+                    return true;
+                }
+
+                return false;
 
             default:
                 unsupportedReason = $"Expression '{expression.GetType().Name}' is not supported by the RegisterVM fast path.";
@@ -374,6 +392,33 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = $"Collection selector {i}: {unsupportedReason}";
                 return false;
             }
+        }
+
+        unsupportedReason = string.Empty;
+        return true;
+    }
+
+    private static bool SupportsIndexedCollectionAccess(
+        CollectionAccessExpressionNode expression,
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        out string unsupportedReason)
+    {
+        if (expression.Selector is not ExpressionSelectorNode selector)
+        {
+            unsupportedReason = $"Collection selector '{expression.Selector.GetType().Name}' is not a direct index/key expression.";
+            return false;
+        }
+
+        if (!SupportsExpression(expression.Target, callables, out unsupportedReason))
+        {
+            unsupportedReason = $"Collection access target: {unsupportedReason}";
+            return false;
+        }
+
+        if (!SupportsExpression(selector.Expression, callables, out unsupportedReason))
+        {
+            unsupportedReason = $"Collection access selector: {unsupportedReason}";
+            return false;
         }
 
         unsupportedReason = string.Empty;
@@ -578,6 +623,10 @@ internal static class RegisterVmFastPathAnalyzer
                     CollectExpression(typeCast.Value);
                     break;
 
+                case MemberAccessExpressionNode memberAccess:
+                    CollectExpression(memberAccess.Target);
+                    break;
+
                 case CollectionAccessExpressionNode collectionAccess:
                     CollectCollectionAccess(collectionAccess);
                     break;
@@ -586,6 +635,13 @@ internal static class RegisterVmFastPathAnalyzer
 
         private void CollectCollectionAccess(CollectionAccessExpressionNode expression)
         {
+            if (expression.Selector is ExpressionSelectorNode selector)
+            {
+                CollectExpression(expression.Target);
+                CollectExpression(selector.Expression);
+                return;
+            }
+
             var selectors = new List<CollectionSelectorNode>();
             ExpressionNode source = expression;
             while (source is CollectionAccessExpressionNode collectionAccess)
@@ -596,9 +652,9 @@ internal static class RegisterVmFastPathAnalyzer
 
             CollectExpression(source);
             selectors.Reverse();
-            foreach (var selector in selectors)
+            foreach (var pipelineSelector in selectors)
             {
-                CollectSelector(selector);
+                CollectSelector(pipelineSelector);
             }
         }
 
@@ -824,6 +880,10 @@ internal static class RegisterVmFastPathAnalyzer
                         EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Text(text.Value)));
                         return;
 
+                    case TagLiteralExpressionNode tag:
+                        EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Tag(tag.Name)));
+                        return;
+
                     case IdentifierExpressionNode identifier:
                         if (!compiler.TryGetSlot(identifier.Name, out var slot))
                         {
@@ -872,7 +932,23 @@ internal static class RegisterVmFastPathAnalyzer
                         instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Cast, CastKind: castKind));
                         return;
 
+                    case MemberAccessExpressionNode memberAccess:
+                        EmitExpression(memberAccess.Target);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.MemberAccess,
+                            DiagnosticName: memberAccess.Member));
+                        return;
+
                     case CollectionAccessExpressionNode collectionAccess:
+                        if (collectionAccess.Selector is ExpressionSelectorNode selector)
+                        {
+                            EmitExpression(collectionAccess.Target);
+                            EmitExpression(selector.Expression);
+                            instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.IndexedAccess));
+                            Pop();
+                            return;
+                        }
+
                         instructions.Add(new RegisterFastInstruction(
                             RegisterFastOpCode.Pipeline,
                             PipelineProgram: CompilePipeline(collectionAccess)));

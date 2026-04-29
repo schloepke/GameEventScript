@@ -310,6 +310,68 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
+    public void RegisterVmFallbackModeThrowRunsMemberAndIndexedAccessFastPath()
+    {
+        const string script =
+            """
+            module Access
+
+            on Start(player, key, items, index, units) {
+              publish Done(
+                hpByMember: player.hp,
+                hpByTagKey: player[:hp],
+                hpByVariableKey: player[key],
+                itemByIndex: items[index],
+                nestedName: units[2].name,
+                missingMember: player.missing,
+                missingIndex: items[99])
+            }
+            """;
+
+        var unitOne = EventScriptValueFactory.Dictionary(new Dictionary<string, EventScriptValue>
+        {
+            ["name"] = EventScriptValueFactory.Text("Scout")
+        });
+        var unitTwo = EventScriptValueFactory.Dictionary(new Dictionary<string, EventScriptValue>
+        {
+            ["name"] = EventScriptValueFactory.Text("Knight")
+        });
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(EventScriptManager.CompileRegisterVM(
+                script,
+                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+
+        host.Publish(Message(
+            "Start",
+            ("player", EventScriptValueFactory.Dictionary(new Dictionary<string, EventScriptValue>
+            {
+                ["hp"] = EventScriptValueFactory.Integer(12)
+            })),
+            ("key", EventScriptValueFactory.Text("hp")),
+            ("items", EventScriptValueFactory.List(
+            [
+                EventScriptValueFactory.Integer(10),
+                EventScriptValueFactory.Integer(20),
+                EventScriptValueFactory.Integer(30)
+            ])),
+            ("index", EventScriptValueFactory.Integer(2)),
+            ("units", EventScriptValueFactory.List([unitOne, unitTwo]))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Integer(12), published[0].Arguments["hpByMember"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(12), published[0].Arguments["hpByTagKey"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(12), published[0].Arguments["hpByVariableKey"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(20), published[0].Arguments["itemByIndex"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Knight"), published[0].Arguments["nestedName"]);
+        Assert.AreEqual(EventScriptValue.Nothing, published[0].Arguments["missingMember"]);
+        Assert.AreEqual(EventScriptValue.Nothing, published[0].Arguments["missingIndex"]);
+    }
+
+    [TestMethod]
     public void RegisterVmFastPathEmitsDiagnosticsWhenEnabled()
     {
         const string script =

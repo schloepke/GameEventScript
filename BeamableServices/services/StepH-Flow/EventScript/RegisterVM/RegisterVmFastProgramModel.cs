@@ -22,6 +22,8 @@ internal enum RegisterFastOpCode
     Modulo,
     Cast,
     RulePredicate,
+    MemberAccess,
+    IndexedAccess,
     Pipeline
 }
 

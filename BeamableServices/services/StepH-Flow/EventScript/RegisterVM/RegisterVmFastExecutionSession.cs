@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
@@ -25,6 +26,8 @@ internal sealed class RegisterVmFastExecutionSession
     private readonly bool _diagnosticsEnabled;
     private readonly List<LocalChange> _changes = [];
     private readonly List<int> _scopeMarks = [];
+    private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
+    private bool _halted;
 
     private RegisterVmFastExecutionSession(
         RegisterCompiledEventScript compiledScript,
@@ -39,6 +42,7 @@ internal sealed class RegisterVmFastExecutionSession
         _locals = new RegisterFastValue[plan.SlotCount];
         _assignedSlots = new bool[plan.SlotCount];
         _evaluationStack = new RegisterFastValue[Math.Max(16, plan.MaxStackDepth + 16)];
+        _randomScopes.Push(context.Random);
     }
 
     public static bool TryInvokeHandler(
@@ -93,10 +97,20 @@ internal sealed class RegisterVmFastExecutionSession
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
         {
             var statement = statements[statementIndex];
-            if (!TryConsumeExecutionStep("Statement execution budget exhausted.") ||
-                !TryExecuteStatement(statement))
+            if (!TryConsumeExecutionStep("Statement execution budget exhausted."))
+            {
+                _halted = true;
+                return true;
+            }
+
+            if (!TryExecuteStatement(statement))
             {
                 return false;
+            }
+
+            if (_halted)
+            {
+                return true;
             }
         }
 
@@ -146,8 +160,29 @@ internal sealed class RegisterVmFastExecutionSession
                 RecordExpressionStatementEvaluatedToNothing(expressionStatement.Expression, expressionValue);
                 return true;
 
+            case SeededRandomStatementNode seededRandom:
+                return TryExecuteSeededRandomStatement(seededRandom);
+
             default:
                 return false;
+        }
+    }
+
+    private bool TryExecuteSeededRandomStatement(SeededRandomStatementNode seededRandom)
+    {
+        if (!TryEvaluate(seededRandom.SeedExpression, out var seed))
+        {
+            return false;
+        }
+
+        PushSeededRandomScope(seed.ToEventScriptValue());
+        try
+        {
+            return TryExecuteStatementBody(seededRandom.Body);
+        }
+        finally
+        {
+            PopSeededRandomScope();
         }
     }
 
@@ -225,6 +260,11 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
+                if (_halted)
+                {
+                    break;
+                }
+
                 if (long.MaxValue - item < step)
                 {
                     break;
@@ -238,6 +278,11 @@ internal sealed class RegisterVmFastExecutionSession
                 if (!TryExecuteLoopIteration(forStatement, item))
                 {
                     return false;
+                }
+
+                if (_halted)
+                {
+                    break;
                 }
 
                 if (long.MinValue - item > step)
@@ -270,6 +315,11 @@ internal sealed class RegisterVmFastExecutionSession
             {
                 return false;
             }
+
+            if (_halted)
+            {
+                break;
+            }
         }
 
         return true;
@@ -282,6 +332,7 @@ internal sealed class RegisterVmFastExecutionSession
     {
         if (!_context.RuntimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
+            _halted = true;
             return true;
         }
 
@@ -426,10 +477,25 @@ internal sealed class RegisterVmFastExecutionSession
             case IdentifierExpressionNode identifier:
                 value = Resolve(identifier.Name);
                 return true;
+            case UnaryExpressionNode unary:
+                return TryEvaluateUnary(unary, out value);
+            case VariadicTaggedExpressionNode variadic:
+                return TryEvaluateVariadic(variadic, out value);
+            case ClampExpressionNode clamp:
+                return TryEvaluateClamp(clamp, out value);
+            case RandomExpressionNode random:
+                return TryEvaluateRandom(random, out value);
+            case RangeExpressionNode range:
+                return TryEvaluateRange(range, out value);
+            case DiceExpressionNode dice:
+                value = EvaluateDiceExpression(dice.DiceCount, dice.SideCount);
+                return true;
+            case SeededRandomExpressionNode seededRandom:
+                return TryEvaluateSeededRandomExpression(seededRandom, out value);
             case BinaryExpressionNode binary:
                 return TryEvaluateBinary(binary, out value);
-                case RulePredicateExpressionNode rulePredicate:
-                    return TryEvaluateRulePredicate(rulePredicate, out value);
+            case RulePredicateExpressionNode rulePredicate:
+                return TryEvaluateRulePredicate(rulePredicate, out value);
             case CallExpressionNode call:
                 return TryEvaluateCall(call, out value);
             case TypeCastExpressionNode typeCast:
@@ -465,15 +531,15 @@ internal sealed class RegisterVmFastExecutionSession
 
         var top = stackBase;
         var instructions = program.Instructions;
+        if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
+        {
+            value = RegisterFastValue.Nothing;
+            return true;
+        }
+
         for (var instructionIndex = 0; instructionIndex < instructions.Length; instructionIndex++)
         {
             var instruction = instructions[instructionIndex];
-            if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
-            {
-                value = RegisterFastValue.Nothing;
-                return true;
-            }
-
             switch (instruction.OpCode)
             {
                 case RegisterFastOpCode.LoadConstant:
@@ -494,11 +560,83 @@ internal sealed class RegisterVmFastExecutionSession
                 case RegisterFastOpCode.LessOrEqual:
                 case RegisterFastOpCode.GreaterOrEqual:
                 case RegisterFastOpCode.Add:
+                case RegisterFastOpCode.Subtract:
                 case RegisterFastOpCode.Multiply:
+                case RegisterFastOpCode.Divide:
                 case RegisterFastOpCode.Modulo:
+                case RegisterFastOpCode.Default:
+                case RegisterFastOpCode.Contains:
+                case RegisterFastOpCode.ContainsValue:
+                case RegisterFastOpCode.StartsWith:
+                case RegisterFastOpCode.EndsWith:
+                case RegisterFastOpCode.Intersect:
+                case RegisterFastOpCode.Combine:
+                case RegisterFastOpCode.Except:
+                case RegisterFastOpCode.Zip:
                     var right = _evaluationStack[--top];
                     var left = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateProgramBinary(instruction.OpCode, left, right);
+                    break;
+
+                case RegisterFastOpCode.Unary:
+                    if (!TryEvaluateUnaryOperation(instruction.DiagnosticName, _evaluationStack[top - 1], out var unaryValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top - 1] = unaryValue;
+                    break;
+
+                case RegisterFastOpCode.Variadic:
+                    top -= instruction.A;
+                    if (!TryEvaluateVariadicOperation(instruction.DiagnosticName, _evaluationStack, top, instruction.A, out var variadicValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = variadicValue;
+                    break;
+
+                case RegisterFastOpCode.Clamp:
+                    top -= 3;
+                    _evaluationStack[top] = EvaluateClamp(
+                        _evaluationStack[top],
+                        _evaluationStack[top + 1],
+                        _evaluationStack[top + 2]);
+                    top++;
+                    break;
+
+                case RegisterFastOpCode.Random:
+                    var to = _evaluationStack[--top];
+                    var from = _evaluationStack[--top];
+                    _evaluationStack[top++] = EvaluateRandomExpression(from, to);
+                    break;
+
+                case RegisterFastOpCode.Range:
+                    top -= instruction.A;
+                    _evaluationStack[top] = EvaluateRangeExpression(
+                        _evaluationStack[top],
+                        _evaluationStack[top + 1],
+                        instruction.A == 3 ? _evaluationStack[top + 2] : RegisterFastValue.Integer(1));
+                    top++;
+                    break;
+
+                case RegisterFastOpCode.Dice:
+                    _evaluationStack[top++] = EvaluateDiceExpression(instruction.A, instruction.B);
+                    break;
+
+                case RegisterFastOpCode.SeededRandom:
+                    var seed = _evaluationStack[--top];
+                    if (instruction.ExpressionProgram is null ||
+                        !TryEvaluateSeededRandomExpression(seed, instruction.ExpressionProgram, top, out var seededValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = seededValue;
                     break;
 
                 case RegisterFastOpCode.Cast:
@@ -838,22 +976,49 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)
-        => opCode switch
+    {
+        if (opCode != RegisterFastOpCode.Default &&
+            (left.IsNothingLike() || right.IsNothingLike()))
         {
-            RegisterFastOpCode.Or => RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean()),
-            RegisterFastOpCode.Xor => RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
-            RegisterFastOpCode.And => RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean()),
-            RegisterFastOpCode.Equal => RegisterFastValue.Boolean(RegisterFastValue.AreEqual(left, right)),
-            RegisterFastOpCode.NotEqual => RegisterFastValue.Boolean(!RegisterFastValue.AreEqual(left, right)),
-            RegisterFastOpCode.Less => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) < 0),
-            RegisterFastOpCode.Greater => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) > 0),
-            RegisterFastOpCode.LessOrEqual => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) <= 0),
-            RegisterFastOpCode.GreaterOrEqual => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) >= 0),
-            RegisterFastOpCode.Add => RegisterFastValue.Add(left, right),
-            RegisterFastOpCode.Multiply => RegisterFastValue.Multiply(left, right),
-            RegisterFastOpCode.Modulo => RegisterFastValue.Modulo(left, right),
-            _ => RegisterFastValue.Unsupported()
-        };
+            return RegisterFastValue.Nothing;
+        }
+
+        switch (opCode)
+        {
+            case RegisterFastOpCode.Or:
+                return RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean());
+            case RegisterFastOpCode.Xor:
+                return RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
+            case RegisterFastOpCode.And:
+                return RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean());
+            case RegisterFastOpCode.Equal:
+                return RegisterFastValue.Boolean(RegisterFastValue.AreEqual(left, right));
+            case RegisterFastOpCode.NotEqual:
+                return RegisterFastValue.Boolean(!RegisterFastValue.AreEqual(left, right));
+            case RegisterFastOpCode.Less:
+                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
+            case RegisterFastOpCode.Greater:
+                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var greaterComparison) && greaterComparison > 0);
+            case RegisterFastOpCode.LessOrEqual:
+                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var lessOrEqualComparison) && lessOrEqualComparison <= 0);
+            case RegisterFastOpCode.GreaterOrEqual:
+                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var greaterOrEqualComparison) && greaterOrEqualComparison >= 0);
+            case RegisterFastOpCode.Add:
+                return RegisterFastValue.Add(left, right);
+            case RegisterFastOpCode.Subtract:
+                return RegisterFastValue.Subtract(left, right);
+            case RegisterFastOpCode.Multiply:
+                return RegisterFastValue.Multiply(left, right);
+            case RegisterFastOpCode.Divide:
+                return RegisterFastValue.Divide(left, right);
+            case RegisterFastOpCode.Modulo:
+                return RegisterFastValue.Modulo(left, right);
+            default:
+                return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
+                    ? value
+                    : RegisterFastValue.Unsupported();
+        }
+    }
 
     private RegisterFastValue EvaluateProgramCast(RegisterFastCastKind castKind, RegisterFastValue input)
         => TryConvertDeclaredType(GetCastTypeName(castKind), input, out var value)
@@ -910,25 +1075,702 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        value = binary.Operator switch
+        return TryEvaluateBinaryOperation(binary.Operator, left, right, out value);
+    }
+
+    private bool TryEvaluateUnary(UnaryExpressionNode unary, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(unary.Operand, out var operand))
         {
-            "|" => RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean()),
-            "^" => RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
-            "&" => RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean()),
-            "=" or "==" => RegisterFastValue.Boolean(RegisterFastValue.AreEqual(left, right)),
-            "<>" => RegisterFastValue.Boolean(!RegisterFastValue.AreEqual(left, right)),
-            "<" => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) < 0),
-            ">" => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) > 0),
-            "<=" => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) <= 0),
-            ">=" => RegisterFastValue.Boolean(RegisterFastValue.CompareNumeric(left, right) >= 0),
-            "+" => RegisterFastValue.Add(left, right),
-            "*" => RegisterFastValue.Multiply(left, right),
-            "mod" => RegisterFastValue.Modulo(left, right),
-            _ => RegisterFastValue.Nothing
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        return TryEvaluateUnaryOperation(unary.Operator, operand, out value);
+    }
+
+    private bool TryEvaluateVariadic(VariadicTaggedExpressionNode variadic, out RegisterFastValue value)
+    {
+        var values = new RegisterFastValue[variadic.Arguments.Count];
+        for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
+        {
+            if (!TryEvaluate(variadic.Arguments[argumentIndex], out values[argumentIndex]))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+        }
+
+        return TryEvaluateVariadicOperation(variadic.Operator, values, 0, values.Length, out value);
+    }
+
+    private bool TryEvaluateClamp(ClampExpressionNode clamp, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(clamp.Value, out var raw) ||
+            !TryEvaluate(clamp.Minimum, out var minimum) ||
+            !TryEvaluate(clamp.Maximum, out var maximum))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = EvaluateClamp(raw, minimum, maximum);
+        return true;
+    }
+
+    private bool TryEvaluateRandom(RandomExpressionNode random, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(random.FromExpression, out var from) ||
+            !TryEvaluate(random.ToExpression, out var to))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = EvaluateRandomExpression(from, to);
+        return true;
+    }
+
+    private bool TryEvaluateRange(RangeExpressionNode range, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(range.FromExpression, out var from) ||
+            !TryEvaluate(range.ToExpression, out var to))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        if (range.StepExpression is not null)
+        {
+            if (!TryEvaluate(range.StepExpression, out var step))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            value = EvaluateRangeExpression(from, to, step);
+            return true;
+        }
+
+        value = EvaluateRangeExpression(from, to, RegisterFastValue.Integer(1));
+        return true;
+    }
+
+    private bool TryEvaluateSeededRandomExpression(SeededRandomExpressionNode seededRandom, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(seededRandom.SeedExpression, out var seed) ||
+            !_plan.TryGetExpressionProgram(seededRandom.BodyExpression, out var bodyProgram))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        return TryEvaluateSeededRandomExpression(seed, bodyProgram, 0, out value);
+    }
+
+    private bool TryEvaluateSeededRandomExpression(
+        RegisterFastValue seed,
+        RegisterFastExpressionProgram bodyProgram,
+        int stackBase,
+        out RegisterFastValue value)
+    {
+        PushSeededRandomScope(seed.ToEventScriptValue());
+        try
+        {
+            return TryExecuteExpressionProgram(bodyProgram, stackBase, out value);
+        }
+        finally
+        {
+            PopSeededRandomScope();
+        }
+    }
+
+    private RegisterFastValue EvaluateRandomExpression(RegisterFastValue fromValue, RegisterFastValue toValue)
+    {
+        var fromRaw = fromValue.ToEventScriptValue();
+        var toRaw = toValue.ToEventScriptValue();
+
+        if (EventScriptValueAlu.TryUnwrapOptionalForOperation(fromRaw, out var unwrappedFrom) &&
+            EventScriptValueAlu.TryUnwrapOptionalForOperation(toRaw, out var unwrappedTo) &&
+            unwrappedFrom.Kind == EventScriptValueKind.Integer &&
+            unwrappedTo.Kind == EventScriptValueKind.Integer)
+        {
+            var from = ToIntSaturated(unwrappedFrom.AsInteger());
+            var to = ToIntSaturated(unwrappedTo.AsInteger());
+            if (from > to)
+            {
+                (from, to) = (to, from);
+            }
+
+            return TryNextInclusiveInt(from, to, out var next)
+                ? RegisterFastValue.Integer(next)
+                : RegisterFastValue.Nothing;
+        }
+
+        if (!EventScriptValueAlu.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(toRaw, out var toNumber) ||
+            !fromNumber.IsFinite ||
+            !toNumber.IsFinite)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        var lower = Math.Min(fromNumber.Value, toNumber.Value);
+        var upper = Math.Max(fromNumber.Value, toNumber.Value);
+        if (lower == upper)
+        {
+            return RegisterFastValue.Decimal(lower);
+        }
+
+        return TryNextInclusiveDecimal(lower, upper, out var nextDecimal)
+            ? RegisterFastValue.Decimal(nextDecimal)
+            : RegisterFastValue.Nothing;
+    }
+
+    private static RegisterFastValue EvaluateRangeExpression(RegisterFastValue fromValue, RegisterFastValue toValue, RegisterFastValue stepValue)
+    {
+        if (!EventScriptValueAlu.TryCoerceNumericForOperation(fromValue.ToEventScriptValue(), out var fromNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(toValue.ToEventScriptValue(), out var toNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(stepValue.ToEventScriptValue(), out var stepNumber) ||
+            !fromNumber.IsFinite ||
+            !toNumber.IsFinite ||
+            !stepNumber.IsFinite)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        return RegisterFastValue.Reference(Range(
+            EventScriptValueAlu.ToIntegerSaturated(fromNumber.Value),
+            EventScriptValueAlu.ToIntegerSaturated(toNumber.Value),
+            EventScriptValueAlu.ToIntegerSaturated(stepNumber.Value)));
+    }
+
+    private RegisterFastValue EvaluateDiceExpression(int diceCount, int sideCount)
+    {
+        if (diceCount <= 0 || sideCount <= 0)
+        {
+            return RegisterFastValue.Reference(Dice(EventScriptDiceValue.Empty));
+        }
+
+        if (!_context.RuntimeBudget.TryCheckDice(new DiceExpressionNode(diceCount, sideCount)))
+        {
+            return RegisterFastValue.Reference(Dice(EventScriptDiceValue.Empty));
+        }
+
+        var rolls = new int[diceCount];
+        for (var i = 0; i < rolls.Length; i++)
+        {
+            if (!TryNextInclusiveInt(1, sideCount, out var roll))
+            {
+                return RegisterFastValue.Reference(Dice(EventScriptDiceValue.Empty));
+            }
+
+            rolls[i] = roll;
+        }
+
+        return RegisterFastValue.Reference(Dice(EventScriptDiceValue.EventScriptDice(rolls)));
+    }
+
+    private bool TryEvaluateUnaryOperation(string? operation, RegisterFastValue operand, out RegisterFastValue value)
+    {
+        var boxed = operand.ToEventScriptValue();
+        value = operation switch
+        {
+            "-" => RegisterFastValue.FromEventScriptValue(EvaluateNegateUnary(boxed)),
+            "!" => RegisterFastValue.FromEventScriptValue(EvaluateNotUnary(boxed)),
+            "has value" => RegisterFastValue.Boolean(boxed.HasSemanticValue()),
+            "empty" => RegisterFastValue.Boolean(boxed.IsSemanticallyEmpty()),
+            "len" => RegisterFastValue.FromEventScriptValue(EvaluateLenUnary(boxed)),
+            "chance" => RegisterFastValue.FromEventScriptValue(EvaluateChanceUnary(boxed)),
+            "keys" => RegisterFastValue.Reference(Keys(boxed)),
+            "values" => RegisterFastValue.Reference(Values(boxed)),
+            "entries" => RegisterFastValue.Reference(Entries(boxed)),
+            "abs" => RegisterFastValue.FromEventScriptValue(EvaluateAbsUnary(boxed)),
+            "floor" or "ceil" or "round" or "rounddown" or "roundup" or "roundeven" => RegisterFastValue.FromEventScriptValue(EvaluateRoundingUnary(boxed, operation!)),
+            "wrapDegree" => RegisterFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateWrapDegree(boxed)),
+            _ => RegisterFastValue.Unsupported()
         };
 
         return value.Kind != RegisterFastValueKind.Unsupported;
     }
+
+    private bool TryEvaluateVariadicOperation(
+        string? operation,
+        RegisterFastValue[] stack,
+        int start,
+        int count,
+        out RegisterFastValue value)
+    {
+        if (count == 0)
+        {
+            value = RegisterFastValue.Nothing;
+            return true;
+        }
+
+        var boxedValues = new EventScriptValue[count];
+        for (var i = 0; i < count; i++)
+        {
+            boxedValues[i] = stack[start + i].ToEventScriptValue();
+        }
+
+        value = operation switch
+        {
+            "min" => RegisterFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
+            "max" => RegisterFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
+            _ => RegisterFastValue.Unsupported()
+        };
+
+        return value.Kind != RegisterFastValueKind.Unsupported;
+    }
+
+    private bool TryEvaluateBinaryOperation(string operation, RegisterFastValue leftRawFast, RegisterFastValue rightRawFast, out RegisterFastValue value)
+    {
+        var leftRaw = leftRawFast.ToEventScriptValue();
+        var rightRaw = rightRawFast.ToEventScriptValue();
+
+        if (operation == "default")
+        {
+            value = RegisterFastValue.FromEventScriptValue(EvaluateDefaultBinary(leftRaw, rightRaw));
+            return true;
+        }
+
+        if (leftRaw.IsNothing() || rightRaw.IsNothing())
+        {
+            value = RegisterFastValue.Nothing;
+            return true;
+        }
+
+        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
+            !EventScriptValueAlu.TryUnwrapOptionalForOperation(rightRaw, out var right))
+        {
+            value = RegisterFastValue.Reference(OptionalNone());
+            return true;
+        }
+
+        value = operation switch
+        {
+            "|" => RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean()),
+            "^" => RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
+            "&" => RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean()),
+            "=" or "==" => RegisterFastValue.Boolean(EventScriptValueAlu.AreEqual(left, right)),
+            "<>" => RegisterFastValue.Boolean(!EventScriptValueAlu.AreEqual(left, right)),
+            "in" => RegisterFastValue.Boolean(right.Contains(left)),
+            "value in" => RegisterFastValue.Boolean(right.ContainsValue(left)),
+            "starts with" => RegisterFastValue.Boolean(left.StartsWith(right)),
+            "ends with" => RegisterFastValue.Boolean(left.EndsWith(right)),
+            "<" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison < 0)),
+            ">" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison > 0)),
+            "<=" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison <= 0)),
+            ">=" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison >= 0)),
+            "+" => RegisterFastValue.FromEventScriptValue(EvaluateAddBinary(left, right)),
+            "-" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "-", right)),
+            "*" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "*", right)),
+            "/" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "/", right)),
+            "mod" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
+            "intersect" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionIntersect(left, right)),
+            "combine" or "merge" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionCombine(left, right)),
+            "except" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionExcept(left, right)),
+            "zip" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionZip(left, right)),
+            _ => RegisterFastValue.Unsupported()
+        };
+
+        return value.Kind != RegisterFastValueKind.Unsupported;
+    }
+
+    private static string GetBinaryOperator(RegisterFastOpCode opCode)
+        => opCode switch
+        {
+            RegisterFastOpCode.Or => "|",
+            RegisterFastOpCode.Xor => "^",
+            RegisterFastOpCode.And => "&",
+            RegisterFastOpCode.Equal => "=",
+            RegisterFastOpCode.NotEqual => "<>",
+            RegisterFastOpCode.Less => "<",
+            RegisterFastOpCode.Greater => ">",
+            RegisterFastOpCode.LessOrEqual => "<=",
+            RegisterFastOpCode.GreaterOrEqual => ">=",
+            RegisterFastOpCode.Add => "+",
+            RegisterFastOpCode.Subtract => "-",
+            RegisterFastOpCode.Multiply => "*",
+            RegisterFastOpCode.Divide => "/",
+            RegisterFastOpCode.Modulo => "mod",
+            RegisterFastOpCode.Default => "default",
+            RegisterFastOpCode.Contains => "in",
+            RegisterFastOpCode.ContainsValue => "value in",
+            RegisterFastOpCode.StartsWith => "starts with",
+            RegisterFastOpCode.EndsWith => "ends with",
+            RegisterFastOpCode.Intersect => "intersect",
+            RegisterFastOpCode.Combine => "combine",
+            RegisterFastOpCode.Except => "except",
+            RegisterFastOpCode.Zip => "zip",
+            _ => string.Empty
+        };
+
+    private static EventScriptValue EvaluateDefaultBinary(EventScriptValue leftRaw, EventScriptValue rightRaw)
+    {
+        if (!leftRaw.HasSemanticValue())
+        {
+            return rightRaw;
+        }
+
+        if (leftRaw.IsOptional())
+        {
+            var optional = leftRaw.AsOptional();
+            return optional.HasValue ? optional.Value : rightRaw;
+        }
+
+        return leftRaw;
+    }
+
+    private static bool TryCompare(EventScriptValue left, EventScriptValue right, Func<int, bool> predicate)
+        => EventScriptValueAlu.TryCompareNumericValues(left, right, out var comparison) &&
+           predicate(comparison);
+
+    private static EventScriptValue EvaluateAddBinary(EventScriptValue left, EventScriptValue right)
+    {
+        if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
+        {
+            return percentage;
+        }
+
+        if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out var unit))
+        {
+            return unit;
+        }
+
+        if (EventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) &&
+            EventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
+        {
+            return EventScriptValueAlu.ToEventScriptDecimal(EventScriptValueAlu.AddNumeric(leftNumeric, rightNumeric));
+        }
+
+        if (EventScriptValueAlu.TryCombineWithPlus(left, right, out var combined))
+        {
+            return combined;
+        }
+
+        return left.IsText() || right.IsText()
+            ? Text($"{EventScriptValueAlu.ToText(left)}{EventScriptValueAlu.ToText(right)}")
+            : DecimalNaN();
+    }
+
+    private static EventScriptValue EvaluateNumericBinary(EventScriptValue left, string operation, EventScriptValue right)
+    {
+        if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
+        {
+            return percentage;
+        }
+
+        if (EventScriptValueAlu.TryEvaluateUnitBinary(left, operation, right, out var unit))
+        {
+            return unit;
+        }
+
+        if (!EventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
+        {
+            return DecimalNaN();
+        }
+
+        var result = operation switch
+        {
+            "-" => EventScriptValueAlu.SubtractNumeric(leftNumeric, rightNumeric),
+            "*" => EventScriptValueAlu.MultiplyNumeric(leftNumeric, rightNumeric),
+            "/" => EventScriptValueAlu.DivideNumeric(leftNumeric, rightNumeric),
+            "mod" => EventScriptValueAlu.ModuloNumeric(leftNumeric, rightNumeric),
+            _ => EventScriptValueAlu.NumericValue.NaN()
+        };
+        return EventScriptValueAlu.ToEventScriptDecimal(result);
+    }
+
+    private static EventScriptValue EvaluateNegateUnary(EventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        {
+            return OptionalNone();
+        }
+
+        if (unwrapped.IsPercentage())
+        {
+            return Percentage(-unwrapped.AsNumber());
+        }
+
+        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
+        {
+            return Decimal(-unwrapped.AsNumber(), unit);
+        }
+
+        return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number)
+            ? EventScriptValueAlu.ToEventScriptDecimal(EventScriptValueAlu.NegateNumeric(number))
+            : EventScriptValue.Nothing;
+    }
+
+    private static EventScriptValue EvaluateNotUnary(EventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped)
+            ? Boolean(!unwrapped.AsBoolean())
+            : OptionalNone();
+    }
+
+    private EventScriptValue EvaluateLenUnary(EventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return Integer(0);
+        }
+
+        return operand.Kind switch
+        {
+            EventScriptValueKind.Text => Integer(operand.AsText().Length),
+            EventScriptValueKind.Iterator => CountEnumerableWithBudget(operand.AsEnumerable(), "Iterator length evaluation budget exhausted."),
+            EventScriptValueKind.Range => EvaluateRangeLength(operand),
+            EventScriptValueKind.List => Integer(operand.AsList().Count),
+            EventScriptValueKind.Dictionary => Integer(operand.AsDictionary().Count),
+            EventScriptValueKind.Set => Integer(operand.AsSet().Count),
+            EventScriptValueKind.Dice => Integer(operand.AsDice().Rolls.Count),
+            EventScriptValueKind.Optional => Integer(operand.AsOptional().HasValue ? 1 : 0),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private EventScriptValue EvaluateRangeLength(EventScriptValue operand)
+    {
+        if (!EventScriptRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return _context.RuntimeBudget.TryCheckRangeLength(length, "Range length exceeds the configured limit.")
+            ? Integer(length)
+            : EventScriptValue.Nothing;
+    }
+
+    private EventScriptValue CountEnumerableWithBudget(IEnumerable<EventScriptValue> values, string detail)
+    {
+        long count = 0;
+        foreach (var _ in values)
+        {
+            if (!_context.RuntimeBudget.TryConsumeLoopIteration(detail))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            count++;
+        }
+
+        return Integer(count);
+    }
+
+    private EventScriptValue EvaluateChanceUnary(EventScriptValue operand)
+    {
+        var percentage = ConvertToPercentage(operand);
+        if (!percentage.IsPercentage())
+        {
+            return Boolean(false);
+        }
+
+        var ratio = percentage.AsNumber();
+        if (ratio <= 0m)
+        {
+            return Boolean(false);
+        }
+
+        if (ratio >= 1m)
+        {
+            return Boolean(true);
+        }
+
+        return TryNextInclusiveDecimal(0m, 1m, out var randomValue)
+            ? Boolean(randomValue < ratio)
+            : Boolean(false);
+    }
+
+    private static EventScriptValue EvaluateRoundingUnary(EventScriptValue operand, string operation)
+    {
+        if (operand.IsNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (EventScriptValueAlu.TryEvaluateUnitRounding(operand, operation, out var unitRounded))
+        {
+            return unitRounded;
+        }
+
+        if (!EventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) || number.IsNaN)
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return Integer(long.MaxValue);
+        }
+
+        if (number.IsNegativeInfinity)
+        {
+            return Integer(long.MinValue);
+        }
+
+        return operation switch
+        {
+            "floor" or "rounddown" => Integer(EventScriptValueAlu.ToIntegerSaturated(Math.Floor(number.Value))),
+            "ceil" or "roundup" => Integer(EventScriptValueAlu.ToIntegerSaturated(Math.Ceiling(number.Value))),
+            "round" or "roundeven" => Integer(EventScriptValueAlu.ToIntegerSaturated(Math.Round(number.Value, 0, MidpointRounding.ToEven))),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private static EventScriptValue EvaluateAbsUnary(EventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
+            ? Decimal(Math.Abs(number.Value))
+            : EventScriptValue.Nothing;
+    }
+
+    private static RegisterFastValue EvaluateClamp(RegisterFastValue rawValue, RegisterFastValue minimumValue, RegisterFastValue maximumValue)
+    {
+        var raw = rawValue.ToEventScriptValue();
+        var minimum = minimumValue.ToEventScriptValue();
+        var maximum = maximumValue.ToEventScriptValue();
+
+        if (!EventScriptValueAlu.HaveCompatibleNumericUnits(raw, minimum) ||
+            !EventScriptValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
+            !EventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+        {
+            return RegisterFastValue.NaN();
+        }
+
+        if (!EventScriptValueAlu.TryCoerceNumericForOperation(raw, out var rawNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber) ||
+            !rawNumber.IsFinite ||
+            !minimumNumber.IsFinite ||
+            !maximumNumber.IsFinite)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
+        var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
+        EventScriptValue.TryGetDecimalUnit(raw, out var unit);
+        return RegisterFastValue.FromEventScriptValue(Decimal(
+            Math.Min(Math.Max(rawNumber.Value, lower), upper),
+            raw.HasDecimalUnit() ? unit : null));
+    }
+
+    private bool TryNextInclusiveDecimal(decimal minInclusive, decimal maxInclusive, out decimal value)
+    {
+        try
+        {
+            value = _randomScopes.Peek().NextInclusiveDecimal(minInclusive, maxInclusive);
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private bool TryNextInclusiveInt(int minInclusive, int maxInclusive, out int value)
+    {
+        try
+        {
+            value = _randomScopes.Peek().NextInclusiveInt(minInclusive, maxInclusive);
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private void PushSeededRandomScope(EventScriptValue seedValue)
+        => _randomScopes.Push(EventScriptRandomGenerator.FromSeed(DeriveStableSeed(seedValue)));
+
+    private void PopSeededRandomScope()
+    {
+        if (_randomScopes.Count > 1)
+        {
+            _randomScopes.Pop();
+        }
+    }
+
+    private static int ToIntSaturated(long value)
+    {
+        if (value > int.MaxValue) return int.MaxValue;
+        if (value < int.MinValue) return int.MinValue;
+        return (int)value;
+    }
+
+    private static int DeriveStableSeed(EventScriptValue value)
+    {
+        var canonical = BuildStableSeedText(value);
+        unchecked
+        {
+            uint hash = 2166136261;
+            foreach (var ch in canonical)
+            {
+                hash ^= ch;
+                hash *= 16777619;
+            }
+
+            return (int)hash;
+        }
+    }
+
+    private static string BuildStableSeedText(EventScriptValue value)
+        => value.Kind switch
+        {
+            EventScriptValueKind.Nothing => "nothing",
+            EventScriptValueKind.Tag => $"tag:{value.AsText()}",
+            EventScriptValueKind.Text => $"text:{value.AsText()}",
+            EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueKind.Vector2 => $"vector2:{((EventScriptVector2Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector2Value)value).Y.ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueKind.Vector3 => $"vector3:{((EventScriptVector3Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Y.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Z.ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueKind.Decimal => value.IsNaN()
+                ? "decimal:nan"
+                : value.IsNegativeInfinity()
+                    ? "decimal:-infinity"
+                    : value.IsInfinity()
+                        ? "decimal:infinity"
+                        : value is EventScriptDecimalValue { Unit: { } unit }
+                            ? $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(unit)}"
+                            : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
+            EventScriptValueKind.Optional => value.AsOptional().HasValue
+                ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
+                : "optional:none",
+            EventScriptValueKind.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+            EventScriptValueKind.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
+            EventScriptValueKind.Message =>
+                $"message:{((EventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((EventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
+            EventScriptValueKind.Handler => $"handler:{((EventScriptHandlerValue)value).Signature.SignatureId}",
+            EventScriptValueKind.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
+            EventScriptValueKind.Dictionary =>
+                $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
+            EventScriptValueKind.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",
+            EventScriptValueKind.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
+            _ => value.ToString()
+        };
 
     private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterFastValue value)
     {
@@ -1021,13 +1863,31 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
+        if (instruction.A >= 0)
+        {
+            try
+            {
+                RecordRuleCalled(instruction, input);
+                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, input, instruction.ExpressionProgram, stackBase, out value))
+                {
+                    value = RegisterFastValue.Nothing;
+                    return false;
+                }
+
+                value = RegisterFastValue.Boolean(value.AsBoolean());
+                return true;
+            }
+            finally
+            {
+                _context.RuntimeBudget.ExitCall();
+            }
+        }
+
         EnterScope();
         try
         {
             RecordRuleCalled(instruction, input);
-            var parameterDefined = instruction.A >= 0
-                ? DefineSlot(instruction.A, input)
-                : !string.IsNullOrEmpty(parameterName) && Define(parameterName!, input);
+            var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, input);
             if (!parameterDefined ||
                 !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
             {
@@ -1600,23 +2460,7 @@ internal sealed class RegisterVmFastExecutionSession
         RegisterFastExpressionProgram expressionProgram,
         RegisterFastValue item,
         out RegisterFastValue value)
-    {
-        EnterScope();
-        try
-        {
-            if (!DefineSlot(identifierSlot, item))
-            {
-                value = RegisterFastValue.Nothing;
-                return false;
-            }
-
-            return TryExecuteExpressionProgram(expressionProgram, 0, out value);
-        }
-        finally
-        {
-            ExitScope();
-        }
-    }
+        => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
 
     private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out RegisterFastValue value)
     {
@@ -1826,20 +2670,70 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateProjection(string identifier, ExpressionNode expression, RegisterFastValue item, out RegisterFastValue value)
     {
-        EnterScope();
+        if (!_plan.TryGetSlot(identifier, out var slot))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        if ((uint)slot >= (uint)_locals.Length)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var hadValue = _assignedSlots[slot];
+        var previous = _locals[slot];
+        _locals[slot] = item;
+        _assignedSlots[slot] = true;
         try
         {
-            if (!Define(identifier, item))
-            {
-                value = RegisterFastValue.Nothing;
-                return false;
-            }
-
             return TryEvaluate(expression, out value);
         }
         finally
         {
-            ExitScope();
+            RestoreSlot(slot, hadValue, previous);
+        }
+    }
+
+    private bool TryExecuteExpressionProgramWithTemporarySlot(
+        int slot,
+        RegisterFastValue slotValue,
+        RegisterFastExpressionProgram expressionProgram,
+        int stackBase,
+        out RegisterFastValue value)
+    {
+        if ((uint)slot >= (uint)_locals.Length)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var hadValue = _assignedSlots[slot];
+        var previous = _locals[slot];
+        _locals[slot] = slotValue;
+        _assignedSlots[slot] = true;
+        try
+        {
+            return TryExecuteExpressionProgram(expressionProgram, stackBase, out value);
+        }
+        finally
+        {
+            RestoreSlot(slot, hadValue, previous);
+        }
+    }
+
+    private void RestoreSlot(int slot, bool hadValue, RegisterFastValue previous)
+    {
+        if (hadValue)
+        {
+            _locals[slot] = previous;
+            _assignedSlots[slot] = true;
+        }
+        else
+        {
+            _locals[slot] = RegisterFastValue.Nothing;
+            _assignedSlots[slot] = false;
         }
     }
 
@@ -1904,7 +2798,26 @@ internal sealed class RegisterVmFastExecutionSession
             : RegisterFastValue.Nothing;
 
     private bool TryConsumeExecutionStep(string detail)
-        => _context.RuntimeBudget.TryConsumeExecutionStep(detail);
+    {
+        if (_context.RuntimeBudget.TryConsumeExecutionStep(detail))
+        {
+            return true;
+        }
+
+        _halted = true;
+        return false;
+    }
+
+    private bool TryConsumeExecutionSteps(int count, string detail)
+    {
+        if (_context.RuntimeBudget.TryConsumeExecutionSteps(count, detail))
+        {
+            return true;
+        }
+
+        _halted = true;
+        return false;
+    }
 
     private void RecordParameterBound(string parameter, EventScriptValue value)
     {
@@ -2129,18 +3042,14 @@ internal readonly record struct RegisterFastValue(
 
     public bool TryGetFiniteNumber(out decimal value)
     {
-        value = Kind switch
+        if (TryGetPrimitiveFiniteNumber(out value) ||
+            TryGetNumeric(out var number, out _, out _) && number.IsFinite && SetNumber(number.Value, out value))
         {
-            RegisterFastValueKind.Boolean => BooleanValue ? 1m : 0m,
-            RegisterFastValueKind.Integer => IntegerValue,
-            RegisterFastValueKind.Decimal => Number,
-            RegisterFastValueKind.Percentage => Number,
-            RegisterFastValueKind.Reference => ReferenceValue is { } reference && reference.IsNumber() ? reference.AsNumber() : 0m,
-            _ => 0m
-        };
+            return true;
+        }
 
-        return Kind is RegisterFastValueKind.Boolean or RegisterFastValueKind.Integer or RegisterFastValueKind.Decimal or RegisterFastValueKind.Percentage ||
-               ReferenceValue is { } referenceValue && referenceValue.IsNumber() && referenceValue.HasSemanticValue();
+        value = 0m;
+        return false;
     }
 
     public EventScriptValue ToEventScriptValue()
@@ -2157,9 +3066,25 @@ internal readonly record struct RegisterFastValue(
 
     public static bool AreEqual(RegisterFastValue left, RegisterFastValue right)
     {
-        if (left.TryGetFiniteNumber(out var leftNumber) && right.TryGetFiniteNumber(out var rightNumber))
+        if (left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) &&
+            right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
-            return left.Unit == right.Unit && leftNumber == rightNumber;
+            if (leftUnit != rightUnit)
+            {
+                return false;
+            }
+
+            if (leftNumber.IsNaN || rightNumber.IsNaN)
+            {
+                return leftNumber.IsNaN && rightNumber.IsNaN;
+            }
+
+            if (leftNumber.IsInfinity || rightNumber.IsInfinity)
+            {
+                return leftNumber.Kind == rightNumber.Kind;
+            }
+
+            return leftNumber.Value == rightNumber.Value;
         }
 
         return left.ToEventScriptValue().Equals(right.ToEventScriptValue());
@@ -2167,100 +3092,437 @@ internal readonly record struct RegisterFastValue(
 
     public static int CompareNumeric(RegisterFastValue left, RegisterFastValue right)
     {
-        if (!left.TryGetFiniteNumber(out var leftNumber) || !right.TryGetFiniteNumber(out var rightNumber))
+        return TryCompareNumeric(left, right, out var comparison) ? comparison : 0;
+    }
+
+    public static bool TryCompareNumeric(RegisterFastValue left, RegisterFastValue right, out int comparison)
+    {
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
         {
-            return 0;
+            if (left.Unit != right.Unit)
+            {
+                comparison = default;
+                return false;
+            }
+
+            comparison = leftPrimitive.CompareTo(rightPrimitive);
+            return true;
         }
 
-        return leftNumber.CompareTo(rightNumber);
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _) ||
+            leftUnit != rightUnit)
+        {
+            comparison = default;
+            return false;
+        }
+
+        return EventScriptValueAlu.TryCompareNumeric(leftNumber, rightNumber, out comparison);
     }
 
     public static RegisterFastValue Add(RegisterFastValue left, RegisterFastValue right)
     {
-        if (left.Kind == RegisterFastValueKind.Percentage || right.Kind == RegisterFastValueKind.Percentage)
+        if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return AddPercentage(left, right);
         }
 
-        if (!left.TryGetFiniteNumber(out var leftNumber) || !right.TryGetFiniteNumber(out var rightNumber))
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (left.Unit != right.Unit)
+            {
+                return NaN();
+            }
+
+            return EventScriptValueAlu.TryAddFinite(leftPrimitive, rightPrimitive, out var sum)
+                ? Decimal(sum, left.Unit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.AddNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    left.Unit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
+        {
+            var leftValue = left.ToEventScriptValue();
+            var rightValue = right.ToEventScriptValue();
+            if (EventScriptValueAlu.TryCombineWithPlus(leftValue, rightValue, out var combined))
+            {
+                return FromEventScriptValue(combined);
+            }
+
+            return leftValue.IsText() || rightValue.IsText()
+                ? Reference(Text($"{EventScriptValueAlu.ToText(leftValue)}{EventScriptValueAlu.ToText(rightValue)}"))
+                : NaN();
+        }
+
+        if (leftUnit != rightUnit)
         {
             return NaN();
         }
 
-        if (left.Unit != right.Unit)
+        return FromDecimalNumeric(EventScriptValueAlu.AddNumeric(leftNumber, rightNumber), leftUnit);
+    }
+
+    public static RegisterFastValue Subtract(RegisterFastValue left, RegisterFastValue right)
+    {
+        if (left.IsPercentageLike() || right.IsPercentageLike())
+        {
+            return SubtractPercentage(left, right);
+        }
+
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (left.Unit != right.Unit)
+            {
+                return NaN();
+            }
+
+            return EventScriptValueAlu.TryNegateFinite(rightPrimitive, out var negatedRight) &&
+                   EventScriptValueAlu.TryAddFinite(leftPrimitive, negatedRight, out var difference)
+                ? Decimal(difference, left.Unit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.SubtractNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    left.Unit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
             return NaN();
         }
 
-        return Decimal(leftNumber + rightNumber, left.Unit);
+        if (leftUnit != rightUnit)
+        {
+            return NaN();
+        }
+
+        return FromDecimalNumeric(EventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static RegisterFastValue Multiply(RegisterFastValue left, RegisterFastValue right)
     {
-        if (left.Kind == RegisterFastValueKind.Percentage || right.Kind == RegisterFastValueKind.Percentage)
+        if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return MultiplyPercentage(left, right);
         }
 
-        if (!left.TryGetFiniteNumber(out var leftNumber) || !right.TryGetFiniteNumber(out var rightNumber))
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (left.Unit.HasValue && right.Unit.HasValue)
+            {
+                return NaN();
+            }
+
+            return EventScriptValueAlu.TryMultiplyFinite(leftPrimitive, rightPrimitive, out var product)
+                ? Decimal(product, left.Unit ?? right.Unit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.MultiplyNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    left.Unit ?? right.Unit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
             return NaN();
         }
 
-        return Decimal(leftNumber * rightNumber, left.Unit ?? right.Unit);
+        if (leftUnit.HasValue && rightUnit.HasValue)
+        {
+            return NaN();
+        }
+
+        return FromDecimalNumeric(EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
+    }
+
+    public static RegisterFastValue Divide(RegisterFastValue left, RegisterFastValue right)
+    {
+        if (left.IsPercentageLike() || right.IsPercentageLike())
+        {
+            return DividePercentage(left, right);
+        }
+
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (!TryGetDivideResultUnit(left.Unit, right.Unit, out var primitiveResultUnit))
+            {
+                return NaN();
+            }
+
+            return rightPrimitive != 0m && EventScriptValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
+                ? Decimal(quotient, primitiveResultUnit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.DivideNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    primitiveResultUnit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
+        {
+            return NaN();
+        }
+
+        if (!TryGetDivideResultUnit(leftUnit, rightUnit, out var resultUnit))
+        {
+            return NaN();
+        }
+
+        return FromDecimalNumeric(EventScriptValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
     public static RegisterFastValue Modulo(RegisterFastValue left, RegisterFastValue right)
     {
-        if (!left.TryGetFiniteNumber(out var leftNumber) ||
-            !right.TryGetFiniteNumber(out var rightNumber) ||
-            rightNumber == 0m)
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (left.Unit.HasValue != right.Unit.HasValue ||
+                left.Unit.HasValue && right.Unit.HasValue && left.Unit != right.Unit)
+            {
+                return NaN();
+            }
+
+            return rightPrimitive != 0m && EventScriptValueAlu.TryModuloFinite(leftPrimitive, rightPrimitive, out var modulo)
+                ? Decimal(modulo, left.Unit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.ModuloNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    left.Unit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
             return NaN();
         }
 
-        return Decimal(leftNumber % rightNumber, left.Unit);
+        if (leftUnit.HasValue != rightUnit.HasValue ||
+            leftUnit.HasValue && rightUnit.HasValue && leftUnit != rightUnit)
+        {
+            return NaN();
+        }
+
+        return FromDecimalNumeric(EventScriptValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
+    }
+
+    private static bool TryGetDivideResultUnit(
+        EventScriptDecimalUnit? leftUnit,
+        EventScriptDecimalUnit? rightUnit,
+        out EventScriptDecimalUnit? resultUnit)
+    {
+        if (!leftUnit.HasValue && !rightUnit.HasValue)
+        {
+            resultUnit = null;
+            return true;
+        }
+
+        if (leftUnit.HasValue && !rightUnit.HasValue)
+        {
+            resultUnit = leftUnit;
+            return true;
+        }
+
+        if (leftUnit.HasValue && rightUnit.HasValue && leftUnit == rightUnit)
+        {
+            resultUnit = null;
+            return true;
+        }
+
+        resultUnit = null;
+        return false;
     }
 
     private static RegisterFastValue AddPercentage(RegisterFastValue left, RegisterFastValue right)
     {
-        if (!left.TryGetFiniteNumber(out var leftNumber) || !right.TryGetFiniteNumber(out var rightNumber))
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
+            !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
         {
             return NaN();
         }
 
-        if (left.Kind == RegisterFastValueKind.Percentage && right.Kind == RegisterFastValueKind.Percentage)
+        if (leftIsPercentage && rightIsPercentage)
         {
-            return Percentage(leftNumber + rightNumber);
+            return FromPercentageNumeric(EventScriptValueAlu.AddNumeric(leftNumber, rightNumber));
         }
 
-        if (left.Kind == RegisterFastValueKind.Percentage)
+        if (leftIsPercentage)
         {
             return NaN();
         }
 
-        return Decimal(leftNumber + leftNumber * rightNumber, left.Unit);
+        var delta = EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        return FromDecimalNumeric(EventScriptValueAlu.AddNumeric(leftNumber, delta), leftUnit);
+    }
+
+    private static RegisterFastValue SubtractPercentage(RegisterFastValue left, RegisterFastValue right)
+    {
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
+            !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
+        {
+            return NaN();
+        }
+
+        if (leftIsPercentage && rightIsPercentage)
+        {
+            return FromPercentageNumeric(EventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber));
+        }
+
+        if (leftIsPercentage)
+        {
+            return NaN();
+        }
+
+        var delta = EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        return FromDecimalNumeric(EventScriptValueAlu.SubtractNumeric(leftNumber, delta), leftUnit);
     }
 
     private static RegisterFastValue MultiplyPercentage(RegisterFastValue left, RegisterFastValue right)
     {
-        if (!left.TryGetFiniteNumber(out var leftNumber) || !right.TryGetFiniteNumber(out var rightNumber))
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
         {
             return NaN();
         }
 
-        var result = leftNumber * rightNumber;
-        if (left.Kind == RegisterFastValueKind.Percentage && right.Kind == RegisterFastValueKind.Percentage)
+        var result = EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        if (leftIsPercentage && rightIsPercentage)
         {
-            return Percentage(result);
+            return FromPercentageNumeric(result);
         }
 
-        if (left.Kind == RegisterFastValueKind.Percentage)
+        if (leftIsPercentage)
         {
-            return right.Unit is { } unit ? Decimal(result, unit) : Percentage(result);
+            return rightUnit is { } unit
+                ? FromDecimalNumeric(result, unit)
+                : FromPercentageNumeric(result);
         }
 
-        return Decimal(result, left.Unit);
+        return FromDecimalNumeric(result, leftUnit);
+    }
+
+    private static RegisterFastValue DividePercentage(RegisterFastValue left, RegisterFastValue right)
+    {
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
+        {
+            return NaN();
+        }
+
+        if (leftIsPercentage && rightUnit.HasValue)
+        {
+            return NaN();
+        }
+
+        var result = EventScriptValueAlu.DivideNumeric(leftNumber, rightNumber);
+        if (leftIsPercentage && rightIsPercentage)
+        {
+            return FromDecimalNumeric(result);
+        }
+
+        if (leftIsPercentage)
+        {
+            return FromPercentageNumeric(result);
+        }
+
+        return FromDecimalNumeric(result, leftUnit);
+    }
+
+    private bool TryGetNumeric(
+        out EventScriptValueAlu.NumericValue number,
+        out EventScriptDecimalUnit? unit,
+        out bool isPercentage)
+    {
+        switch (Kind)
+        {
+            case RegisterFastValueKind.Boolean:
+                number = EventScriptValueAlu.NumericValue.Finite(BooleanValue ? 1m : 0m);
+                unit = null;
+                isPercentage = false;
+                return true;
+            case RegisterFastValueKind.Integer:
+                number = EventScriptValueAlu.NumericValue.Finite(IntegerValue);
+                unit = null;
+                isPercentage = false;
+                return true;
+            case RegisterFastValueKind.Decimal:
+                number = EventScriptValueAlu.NumericValue.Finite(Number);
+                unit = Unit;
+                isPercentage = false;
+                return true;
+            case RegisterFastValueKind.Percentage:
+                number = EventScriptValueAlu.NumericValue.Finite(Number);
+                unit = null;
+                isPercentage = true;
+                return true;
+            case RegisterFastValueKind.Reference when ReferenceValue is { } reference &&
+                                                       EventScriptValueAlu.TryCoerceNumericForOperation(reference, out var referenceNumber):
+                number = referenceNumber;
+                unit = EventScriptValue.TryGetDecimalUnit(reference, out var referenceUnit) ? referenceUnit : null;
+                isPercentage = reference.IsPercentage();
+                return true;
+            default:
+                number = default;
+                unit = null;
+                isPercentage = false;
+                return false;
+        }
+    }
+
+    private bool TryGetPrimitiveFiniteNumber(out decimal number)
+    {
+        switch (Kind)
+        {
+            case RegisterFastValueKind.Boolean:
+                number = BooleanValue ? 1m : 0m;
+                return true;
+            case RegisterFastValueKind.Integer:
+                number = IntegerValue;
+                return true;
+            case RegisterFastValueKind.Decimal:
+            case RegisterFastValueKind.Percentage:
+                number = Number;
+                return true;
+            default:
+                number = default;
+                return false;
+        }
+    }
+
+    private bool IsPercentageLike()
+        => Kind == RegisterFastValueKind.Percentage ||
+           ReferenceValue is { } reference && reference.IsPercentage();
+
+    public bool IsNothingLike()
+        => Kind == RegisterFastValueKind.Nothing ||
+           ReferenceValue is { } reference && reference.IsNothing();
+
+    private static RegisterFastValue FromDecimalNumeric(EventScriptValueAlu.NumericValue number, EventScriptDecimalUnit? unit = null)
+        => number.IsFinite
+            ? Decimal(number.Value, unit)
+            : Reference(EventScriptValueAlu.ToEventScriptDecimal(number));
+
+    private static RegisterFastValue FromPercentageNumeric(EventScriptValueAlu.NumericValue number)
+        => number.IsFinite
+            ? Percentage(number.Value)
+            : FromDecimalNumeric(number);
+
+    private static bool SetNumber(decimal input, out decimal output)
+    {
+        output = input;
+        return true;
     }
 
     private static long ToLongSaturated(decimal value)

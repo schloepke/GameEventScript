@@ -22,11 +22,32 @@ public sealed class RegisterVmNoFallbackConformanceTests
         "RuntimeControlFlow/processing limit stops event loops",
         "RuntimeControlFlow/if and for single statements run without blocks",
         "RuntimeControlFlow/nested block scopes may shadow outer variables",
+        "RuntimeControlFlow/block scopes do not leak variables",
         "RuntimeMessagesHandlers/handler binding creates message values and publishable calls",
         "RuntimeMessagesHandlers/direct message literal creates first class message value",
+        "RuntimeMessagesHandlers/empty uppercase invocation creates handler value",
         "RuntimeMessagesHandlers/untyped handler literal and bind create first class values",
         "RuntimeMessagesHandlers/invalid handler binding and non message publish are lenient no ops",
-        "RuntimeRulesSelects/rules coerce to boolean while selects keep original value"
+        "RuntimeMessagesHandlers/message and handler values expose members without becoming dictionaries",
+        "RuntimeRandomDiceRanges/sequential steps share random sequence",
+        "RuntimeRandomDiceRanges/random can produce integer decimal and mixed values",
+        "RuntimeRandomDiceRanges/random upper bound keeps arithmetic together",
+        "RuntimeRandomDiceRanges/range direct lookup is not capped by materialization limit",
+        "RuntimeRandomDiceRanges/range limit diagnostics",
+        "RuntimeRandomDiceRanges/loop budget stops run after published iterations",
+        "RuntimeRandomDiceRanges/dice limit diagnostics",
+        "RuntimeRulesSelects/rules coerce to boolean while selects keep original value",
+        "RuntimeTypesAndValues/percentage arithmetic keeps ratios and applies relative bases",
+        "RuntimeTypesAndValues/percentage arithmetic preserves compatible decimal units",
+        "RuntimeTypesAndValues/degree literals preserve raw angles and wrap explicitly",
+        "RuntimeTypesAndValues/degree arithmetic percentages helpers and comparisons",
+        "RuntimeTypesAndValues/decimal unit literals casts and strict arithmetic",
+        "RuntimeTypesAndValues/inline literals escaped quotes and numeric helpers",
+        "RuntimeTypesAndValues/lookup and empty checks are runtime-visible",
+        "RuntimeTypesAndValues/decimal edge values stay observable",
+        "RuntimeTypesAndValues/value checks defaults and optionals",
+        "RuntimeTypesAndValues/type conversions length checks and type tags",
+        "RuntimeTypesAndValues/missing invalid and overflowing values remain lenient"
     };
 
     public TestContext TestContext { get; set; } = null!;

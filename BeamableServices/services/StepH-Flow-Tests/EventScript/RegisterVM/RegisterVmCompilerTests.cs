@@ -69,9 +69,8 @@ public sealed class RegisterVmCompilerTests
             module Fallback
 
             on Start {
-              :random with 'seed' {
-                publish Done
-              }
+              let values be :list[:select item from 1 to 3 -> item]
+              publish Done(count: :len values)
             }
             """;
 
@@ -85,6 +84,7 @@ public sealed class RegisterVmCompilerTests
 
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
+        Assert.AreEqual(EventScriptValueFactory.Integer(3), published[0].Arguments["count"]);
     }
 
     [TestMethod]
@@ -95,9 +95,8 @@ public sealed class RegisterVmCompilerTests
             module Fallback
 
             on Start {
-              :random with 'seed' {
-                publish Done
-              }
+              let values be :list[:select item from 1 to 3 -> item]
+              publish Done(count: :len values)
             }
             """;
 
@@ -120,7 +119,7 @@ public sealed class RegisterVmCompilerTests
         Assert.IsNotNull(exception);
         Assert.AreEqual("Start", exception.MessageName);
         StringAssert.Contains(exception.HandlerSignatureId, "Start");
-        StringAssert.Contains(exception.Reason, nameof(SeededRandomStatementNode));
+        StringAssert.Contains(exception.Reason, nameof(GeneratedCollectionExpressionNode));
     }
 
     [TestMethod]

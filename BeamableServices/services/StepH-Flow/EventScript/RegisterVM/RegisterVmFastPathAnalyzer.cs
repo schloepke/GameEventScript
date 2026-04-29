@@ -174,6 +174,22 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case SeededRandomStatementNode seededRandom:
+                if (!SupportsExpression(seededRandom.SeedExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Seeded random seed: {unsupportedReason}";
+                    return false;
+                }
+
+                if (!SupportsHandler(seededRandom.Body.Statements, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Seeded random body: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             default:
                 unsupportedReason = $"Statement '{statement.GetType().Name}' is not supported by the RegisterVM fast path.";
                 return false;
@@ -299,6 +315,102 @@ internal static class RegisterVmFastPathAnalyzer
                         unsupportedReason = $"Dictionary entry '{entry.Key}': {unsupportedReason}";
                         return false;
                     }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case UnaryExpressionNode unary:
+                if (!SupportsUnaryOperator(unary.Operator))
+                {
+                    unsupportedReason = $"Unary operator '{unary.Operator}' is not supported by the RegisterVM fast path.";
+                    return false;
+                }
+
+                if (!SupportsExpression(unary.Operand, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Unary operand: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case VariadicTaggedExpressionNode variadic:
+                if (!SupportsVariadicTaggedOperator(variadic.Operator))
+                {
+                    unsupportedReason = $"Variadic operator '{variadic.Operator}' is not supported by the RegisterVM fast path.";
+                    return false;
+                }
+
+                for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
+                {
+                    if (!SupportsExpression(variadic.Arguments[argumentIndex], callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Variadic argument {argumentIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case ClampExpressionNode clamp:
+                if (!SupportsExpression(clamp.Value, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Clamp value: {unsupportedReason}";
+                    return false;
+                }
+
+                if (!SupportsExpression(clamp.Minimum, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Clamp minimum: {unsupportedReason}";
+                    return false;
+                }
+
+                if (!SupportsExpression(clamp.Maximum, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Clamp maximum: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case RandomExpressionNode random:
+                if (!SupportsExpression(random.FromExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Random start: {unsupportedReason}";
+                    return false;
+                }
+
+                if (!SupportsExpression(random.ToExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Random end: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case RangeExpressionNode range:
+                return SupportsRange(range, callables, out unsupportedReason);
+
+            case DiceExpressionNode:
+                unsupportedReason = string.Empty;
+                return true;
+
+            case SeededRandomExpressionNode seededRandom:
+                if (!SupportsExpression(seededRandom.SeedExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Seeded random seed: {unsupportedReason}";
+                    return false;
+                }
+
+                if (!SupportsExpression(seededRandom.BodyExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Seeded random body: {unsupportedReason}";
+                    return false;
                 }
 
                 unsupportedReason = string.Empty;
@@ -444,7 +556,20 @@ internal static class RegisterVmFastPathAnalyzer
     }
 
     private static bool SupportsBinaryOperator(string operation)
-        => operation is "+" or "*" or "mod" or "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" or "&" or "|" or "^";
+        => operation is "+" or "-" or "*" or "/" or "mod" or
+            "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" or
+            "&" or "|" or "^" or "default" or "in" or "value in" or
+            "starts with" or "ends with" or
+            "intersect" or "combine" or "merge" or "except" or "zip";
+
+    private static bool SupportsUnaryOperator(string operation)
+        => operation is "-" or "!" or "has value" or "empty" or
+            "len" or "chance" or "keys" or "values" or "entries" or
+            "abs" or "floor" or "ceil" or "round" or "rounddown" or
+            "roundup" or "roundeven" or "wrapDegree";
+
+    private static bool SupportsVariadicTaggedOperator(string operation)
+        => operation is "min" or "max";
 
     private static bool SupportsTypeCast(string typeName)
         => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second";
@@ -666,6 +791,15 @@ internal static class RegisterVmFastPathAnalyzer
                 case ExpressionStatementNode expressionStatement:
                     CollectExpression(expressionStatement.Expression);
                     break;
+
+                case SeededRandomStatementNode seededRandom:
+                    CollectExpression(seededRandom.SeedExpression);
+                    foreach (var nested in seededRandom.Body.Statements)
+                    {
+                        CollectStatement(nested);
+                    }
+
+                    break;
             }
         }
 
@@ -726,6 +860,38 @@ internal static class RegisterVmFastPathAnalyzer
                         CollectExpression(entry.Value);
                     }
 
+                    break;
+
+                case UnaryExpressionNode unary:
+                    CollectExpression(unary.Operand);
+                    break;
+
+                case VariadicTaggedExpressionNode variadic:
+                    foreach (var argument in variadic.Arguments)
+                    {
+                        CollectExpression(argument);
+                    }
+
+                    break;
+
+                case ClampExpressionNode clamp:
+                    CollectExpression(clamp.Value);
+                    CollectExpression(clamp.Minimum);
+                    CollectExpression(clamp.Maximum);
+                    break;
+
+                case RandomExpressionNode random:
+                    CollectExpression(random.FromExpression);
+                    CollectExpression(random.ToExpression);
+                    break;
+
+                case RangeExpressionNode range:
+                    CollectRange(range);
+                    break;
+
+                case SeededRandomExpressionNode seededRandom:
+                    CollectExpression(seededRandom.SeedExpression);
+                    CollectExpression(seededRandom.BodyExpression);
                     break;
 
                 case BinaryExpressionNode binary:
@@ -928,6 +1094,15 @@ internal static class RegisterVmFastPathAnalyzer
                 case ExpressionStatementNode expressionStatement:
                     CompileExpression(expressionStatement.Expression);
                     break;
+
+                case SeededRandomStatementNode seededRandom:
+                    CompileExpression(seededRandom.SeedExpression);
+                    foreach (var nested in seededRandom.Body.Statements)
+                    {
+                        CompileStatementPrograms(nested);
+                    }
+
+                    break;
             }
         }
 
@@ -1125,6 +1300,72 @@ internal static class RegisterVmFastPathAnalyzer
 
                         instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.LoadSlot, slot));
                         Push();
+                        return;
+
+                    case UnaryExpressionNode unary:
+                        EmitExpression(unary.Operand);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.Unary,
+                            DiagnosticName: unary.Operator));
+                        return;
+
+                    case VariadicTaggedExpressionNode variadic:
+                        foreach (var argument in variadic.Arguments)
+                        {
+                            EmitExpression(argument);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.Variadic,
+                            A: variadic.Arguments.Count,
+                            DiagnosticName: variadic.Operator));
+                        CollapseValuesToSingle(variadic.Arguments.Count);
+                        return;
+
+                    case ClampExpressionNode clamp:
+                        EmitExpression(clamp.Value);
+                        EmitExpression(clamp.Minimum);
+                        EmitExpression(clamp.Maximum);
+                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Clamp));
+                        CollapseValuesToSingle(3);
+                        return;
+
+                    case RandomExpressionNode random:
+                        EmitExpression(random.FromExpression);
+                        EmitExpression(random.ToExpression);
+                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Random));
+                        Pop();
+                        return;
+
+                    case RangeExpressionNode range:
+                        EmitExpression(range.FromExpression);
+                        EmitExpression(range.ToExpression);
+                        var rangeValueCount = 2;
+                        if (range.StepExpression is not null)
+                        {
+                            EmitExpression(range.StepExpression);
+                            rangeValueCount = 3;
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Range, A: rangeValueCount));
+                        CollapseValuesToSingle(rangeValueCount);
+                        return;
+
+                    case DiceExpressionNode dice:
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.Dice,
+                            A: dice.DiceCount,
+                            B: dice.SideCount));
+                        Push();
+                        return;
+
+                    case SeededRandomExpressionNode seededRandom:
+                        EmitExpression(seededRandom.SeedExpression);
+                        var seededBodyProgram = compiler.CompileExpression(seededRandom.BodyExpression);
+                        AccountNestedProgram(argumentCount: 1, seededBodyProgram);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.SeededRandom,
+                            ExpressionProgram: seededBodyProgram));
                         return;
 
                     case BinaryExpressionNode binary:
@@ -1360,8 +1601,19 @@ internal static class RegisterVmFastPathAnalyzer
                     "<=" => RegisterFastOpCode.LessOrEqual,
                     ">=" => RegisterFastOpCode.GreaterOrEqual,
                     "+" => RegisterFastOpCode.Add,
+                    "-" => RegisterFastOpCode.Subtract,
                     "*" => RegisterFastOpCode.Multiply,
+                    "/" => RegisterFastOpCode.Divide,
                     "mod" => RegisterFastOpCode.Modulo,
+                    "default" => RegisterFastOpCode.Default,
+                    "in" => RegisterFastOpCode.Contains,
+                    "value in" => RegisterFastOpCode.ContainsValue,
+                    "starts with" => RegisterFastOpCode.StartsWith,
+                    "ends with" => RegisterFastOpCode.EndsWith,
+                    "intersect" => RegisterFastOpCode.Intersect,
+                    "combine" or "merge" => RegisterFastOpCode.Combine,
+                    "except" => RegisterFastOpCode.Except,
+                    "zip" => RegisterFastOpCode.Zip,
                     _ => throw new InvalidOperationException($"Unsupported RegisterVM binary operator '{operation}'.")
                 };
         }

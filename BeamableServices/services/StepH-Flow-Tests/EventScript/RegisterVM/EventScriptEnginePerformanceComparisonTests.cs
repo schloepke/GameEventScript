@@ -55,7 +55,7 @@ public sealed class EventScriptEnginePerformanceComparisonTests
 
         var linked = LinkPerformanceScript();
         var interpreterCompile = Measure<IEventScriptMessageHandlerCollection>("interpreter compile", () => new CompiledEventScript(linked));
-        var registerVmCompile = Measure<IEventScriptMessageHandlerCollection>("registervm compile", () => RegisterEventScriptCompiler.Compile(linked));
+        var registerVmCompile = Measure<IEventScriptMessageHandlerCollection>("registervm compile", () => CompileRegisterVm(linked));
 
         var interpreterRun = MeasureRun(interpreterCompile.Value, input, MeasuredRuns);
         var registerVmRun = MeasureRun(registerVmCompile.Value, input, MeasuredRuns);
@@ -70,18 +70,26 @@ public sealed class EventScriptEnginePerformanceComparisonTests
         TestContext.WriteLine("registervm/interpreter runtime allocation ratio: {0:0.00}x", (double)registerVmRun.AllocatedBytes / Math.Max(1L, interpreterRun.AllocatedBytes));
         TestContext.WriteLine("allocation values are cumulative thread allocations, not peak live memory.");
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(RegisterEventScriptCompiler.Compile(linked)));
+        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(CompileRegisterVm(linked)));
     }
 
     private static void WarmUp(EventScriptMessage input)
     {
         var linked = LinkPerformanceScript();
         MeasureRun(new CompiledEventScript(linked), input, WarmupRuns);
-        MeasureRun(RegisterEventScriptCompiler.Compile(linked), input, WarmupRuns);
+        MeasureRun(CompileRegisterVm(linked), input, WarmupRuns);
     }
 
     private static LinkedEventScriptModule LinkPerformanceScript()
         => EventScriptManager.LinkModules(EventScriptManager.ParseModule(PerformanceScript, "engine-performance.es"));
+
+    private static RegisterCompiledEventScript CompileRegisterVm(LinkedEventScriptModule linked)
+        => RegisterEventScriptCompiler.Compile(
+            linked,
+            new RegisterEventScriptCompilationOptions
+            {
+                FallbackMode = RegisterVmFallbackMode.Throw
+            });
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {

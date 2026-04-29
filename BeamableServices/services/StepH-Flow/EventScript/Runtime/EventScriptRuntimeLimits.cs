@@ -55,6 +55,29 @@ internal sealed class EventScriptRuntimeBudget(EventScriptContext context, Event
         return true;
     }
 
+    public bool TryConsumeExecutionSteps(int count, string detail)
+    {
+        if (count <= 1)
+        {
+            return TryConsumeExecutionStep(detail);
+        }
+
+        if (_exhausted)
+        {
+            return false;
+        }
+
+        var limit = Limits.MaxExecutionSteps;
+        if (limit > 0 && _executionSteps > limit - count)
+        {
+            MarkExhausted("MaxExecutionSteps", detail, limit);
+            return false;
+        }
+
+        _executionSteps += count;
+        return true;
+    }
+
     public bool TryConsumeLoopIteration(string detail)
     {
         if (_exhausted)

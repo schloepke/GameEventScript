@@ -22,8 +22,11 @@ public sealed class RegisterVmNoFallbackConformanceTests
         "RuntimeControlFlow/processing limit stops event loops",
         "RuntimeControlFlow/if and for single statements run without blocks",
         "RuntimeControlFlow/nested block scopes may shadow outer variables",
+        "RuntimeMessagesHandlers/handler binding creates message values and publishable calls",
         "RuntimeMessagesHandlers/direct message literal creates first class message value",
-        "RuntimeMessagesHandlers/untyped handler literal and bind create first class values"
+        "RuntimeMessagesHandlers/untyped handler literal and bind create first class values",
+        "RuntimeMessagesHandlers/invalid handler binding and non message publish are lenient no ops",
+        "RuntimeRulesSelects/rules coerce to boolean while selects keep original value"
     };
 
     public TestContext TestContext { get; set; } = null!;

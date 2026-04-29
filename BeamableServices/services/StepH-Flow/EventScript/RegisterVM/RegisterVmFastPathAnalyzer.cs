@@ -93,23 +93,17 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
-            case PublishStatementNode { MessageExpression: MessageLiteralExpressionNode message }:
-                for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
+            case PublishStatementNode publish:
+                if (!SupportsExpression(publish.MessageExpression, callables, out unsupportedReason))
                 {
-                    var argument = message.Arguments[argumentIndex];
-                    if (!SupportsExpression(argument.Expression, callables, out unsupportedReason))
-                    {
-                        unsupportedReason = $"Publish argument '{argument.Name}': {unsupportedReason}";
-                        return false;
-                    }
+                    unsupportedReason = publish.MessageExpression is MessageLiteralExpressionNode
+                        ? $"Publish message expression: {unsupportedReason}"
+                        : $"Publish expression: {unsupportedReason}";
+                    return false;
                 }
 
                 unsupportedReason = string.Empty;
                 return true;
-
-            case PublishStatementNode publish:
-                unsupportedReason = $"Publish expression '{publish.MessageExpression.GetType().Name}' is not supported by the RegisterVM fast path.";
-                return false;
 
             case IfStatementNode ifStatement:
                 if (!SupportsExpression(ifStatement.Condition, callables, out unsupportedReason))
@@ -366,6 +360,37 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case CallExpressionNode call:
+                if (!callables.TryGetValue(call.Name, out var called))
+                {
+                    unsupportedReason = $"Callable '{call.Name}' was not found.";
+                    return false;
+                }
+
+                if (called.Parameters.Count != call.Arguments.Count)
+                {
+                    unsupportedReason = $"Callable '{call.Name}' expects {called.Parameters.Count} arguments but received {call.Arguments.Count}.";
+                    return false;
+                }
+
+                for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
+                {
+                    if (!SupportsExpression(call.Arguments[argumentIndex], callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Call argument {argumentIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                if (!SupportsExpression(called.Expression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Callable '{call.Name}' expression: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case TypeCastExpressionNode typeCast:
                 if (!SupportsExpression(typeCast.Value, callables, out unsupportedReason))
                 {
@@ -614,12 +639,8 @@ internal static class RegisterVmFastPathAnalyzer
 
                     break;
 
-                case PublishStatementNode { MessageExpression: MessageLiteralExpressionNode message }:
-                    foreach (var argument in message.Arguments)
-                    {
-                        CollectExpression(argument.Expression);
-                    }
-
+                case PublishStatementNode publish:
+                    CollectExpression(publish.MessageExpression);
                     break;
 
                 case ForStatementNode { Source: RangeIterationSourceNode range } forStatement:
@@ -722,6 +743,24 @@ internal static class RegisterVmFastPathAnalyzer
                         }
 
                         CollectExpression(callable.Expression);
+                    }
+
+                    break;
+
+                case CallExpressionNode call:
+                    foreach (var argument in call.Arguments)
+                    {
+                        CollectExpression(argument);
+                    }
+
+                    if (callables.TryGetValue(call.Name, out var called))
+                    {
+                        foreach (var parameter in called.Parameters)
+                        {
+                            AddSlot(parameter);
+                        }
+
+                        CollectExpression(called.Expression);
                     }
 
                     break;
@@ -836,8 +875,12 @@ internal static class RegisterVmFastPathAnalyzer
                     CompileExpression(let.Expression);
                     break;
 
-                case PublishStatementNode publish:
+                case PublishStatementNode { MessageExpression: MessageLiteralExpressionNode } publish:
                     CompilePublishLayout(publish);
+                    break;
+
+                case PublishStatementNode publish:
+                    CompileExpression(publish.MessageExpression);
                     break;
 
                 case IfStatementNode ifStatement:
@@ -1104,12 +1147,49 @@ internal static class RegisterVmFastPathAnalyzer
                         }
 
                         EmitExpression(rulePredicate.Value);
+                        var rulePredicateProgram = compiler.CompileExpression(callable.Expression);
+                        AccountNestedProgram(argumentCount: 1, rulePredicateProgram);
                         instructions.Add(new RegisterFastInstruction(
                             RegisterFastOpCode.RulePredicate,
                             parameterSlot,
-                            ExpressionProgram: compiler.CompileExpression(callable.Expression),
+                            ExpressionProgram: rulePredicateProgram,
                             DiagnosticName: callable.Name,
                             DiagnosticArgumentName: callable.Parameters[0]));
+                        return;
+
+                    case CallExpressionNode call:
+                        if (!compiler._callables.TryGetValue(call.Name, out var called))
+                        {
+                            throw new InvalidOperationException($"Unsupported RegisterVM callable '{call.Name}'.");
+                        }
+
+                        var parameterSlots = new int[called.Parameters.Count];
+                        for (var parameterIndex = 0; parameterIndex < called.Parameters.Count; parameterIndex++)
+                        {
+                            if (!compiler.TryGetSlot(called.Parameters[parameterIndex], out parameterSlots[parameterIndex]))
+                            {
+                                throw new InvalidOperationException($"Missing RegisterVM callable parameter slot '{called.Parameters[parameterIndex]}'.");
+                            }
+                        }
+
+                        foreach (var argument in call.Arguments)
+                        {
+                            EmitExpression(argument);
+                        }
+
+                        var callableProgram = compiler.CompileExpression(called.Expression);
+                        AccountNestedProgram(call.Arguments.Count, callableProgram);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.Call,
+                            A: call.Arguments.Count,
+                            CallableKind: called.Kind == LinkedCallableKind.Rule
+                                ? RegisterFastCallableKind.Rule
+                                : RegisterFastCallableKind.Select,
+                            ExpressionProgram: callableProgram,
+                            DiagnosticName: called.Name,
+                            Names: called.Parameters.ToArray(),
+                            Slots: parameterSlots));
+                        CollapseValuesToSingle(call.Arguments.Count);
                         return;
 
                     case TypeCastExpressionNode typeCast:
@@ -1249,6 +1329,12 @@ internal static class RegisterVmFastPathAnalyzer
             }
 
             private void Pop() => _stackDepth = Math.Max(0, _stackDepth - 1);
+
+            private void AccountNestedProgram(int argumentCount, RegisterFastExpressionProgram program)
+            {
+                var nestedStackBaseDepth = Math.Max(0, _stackDepth - argumentCount);
+                MaxStackDepth = Math.Max(MaxStackDepth, nestedStackBaseDepth + program.MaxStackDepth);
+            }
 
             private void CollapseValuesToSingle(int valueCount)
             {

@@ -29,8 +29,15 @@ internal enum RegisterFastOpCode
     BuildDictionary,
     BuildMessage,
     BindHandler,
+    Call,
     TypeCheck,
     Pipeline
+}
+
+internal enum RegisterFastCallableKind
+{
+    Rule,
+    Select
 }
 
 internal enum RegisterFastCastKind
@@ -50,11 +57,13 @@ internal readonly record struct RegisterFastInstruction(
     int A = -1,
     RegisterFastValue Constant = default,
     RegisterFastCastKind CastKind = default,
+    RegisterFastCallableKind CallableKind = default,
     RegisterFastExpressionProgram? ExpressionProgram = null,
     RegisterFastPipelineProgram? PipelineProgram = null,
     string? DiagnosticName = null,
     string? DiagnosticArgumentName = null,
-    string[]? Names = null);
+    string[]? Names = null,
+    int[]? Slots = null);
 
 internal sealed class RegisterFastExpressionProgram(
     RegisterFastInstruction[] instructions,

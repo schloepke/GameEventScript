@@ -14,6 +14,8 @@ namespace StepH.Flow.EventScript.RegisterVM;
 
 internal sealed class RegisterVmFastExecutionSession
 {
+    private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
+
     private readonly RegisterCompiledEventScript _compiledScript;
     private readonly EventScriptContext _context;
     private readonly RegisterVmFastPathPlan _plan;
@@ -122,8 +124,9 @@ internal sealed class RegisterVmFastExecutionSession
                 return Define(let.Identifier, letValue);
 
             case PublishStatementNode publish:
-                return _plan.TryGetPublishLayout(publish, out var layout) &&
-                       TryPublish(layout);
+                return _plan.TryGetPublishLayout(publish, out var layout)
+                    ? TryPublish(layout)
+                    : TryPublish(publish.MessageExpression);
 
             case IfStatementNode ifStatement:
                 return TryExecuteIf(ifStatement);
@@ -354,6 +357,22 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
+    private bool TryPublish(ExpressionNode messageExpression)
+    {
+        if (!TryEvaluate(messageExpression, out var publishValue))
+        {
+            return false;
+        }
+
+        var boxed = publishValue.ToEventScriptValue();
+        if (EventScriptMessageValueCodec.TryReadMessageValue(boxed, out var message))
+        {
+            _context.Publish(message);
+        }
+
+        return true;
+    }
+
     private bool TryEvaluate(ExpressionNode expression, out RegisterFastValue value)
     {
         if (_plan.TryGetExpressionProgram(expression, out var program))
@@ -409,8 +428,10 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             case BinaryExpressionNode binary:
                 return TryEvaluateBinary(binary, out value);
-            case RulePredicateExpressionNode rulePredicate:
-                return TryEvaluateRulePredicate(rulePredicate, out value);
+                case RulePredicateExpressionNode rulePredicate:
+                    return TryEvaluateRulePredicate(rulePredicate, out value);
+            case CallExpressionNode call:
+                return TryEvaluateCall(call, out value);
             case TypeCastExpressionNode typeCast:
                 return TryEvaluateTypeCast(typeCast, out value);
             case TypeCheckExpressionNode typeCheck:
@@ -492,25 +513,24 @@ internal sealed class RegisterVmFastExecutionSession
 
                 case RegisterFastOpCode.RulePredicate:
                     var input = _evaluationStack[--top];
-                    RecordRuleCalled(instruction, input);
-                    EnterScope();
-                    try
+                    if (!TryEvaluateRulePredicate(instruction, input, top, out var predicateValue))
                     {
-                        if (!DefineSlot(instruction.A, input) ||
-                            instruction.ExpressionProgram is null ||
-                            !TryExecuteExpressionProgram(instruction.ExpressionProgram, top, out var predicateValue))
-                        {
-                            value = RegisterFastValue.Nothing;
-                            return false;
-                        }
-
-                        _evaluationStack[top++] = predicateValue;
-                    }
-                    finally
-                    {
-                        ExitScope();
+                        value = RegisterFastValue.Nothing;
+                        return false;
                     }
 
+                    _evaluationStack[top++] = predicateValue;
+                    break;
+
+                case RegisterFastOpCode.Call:
+                    top -= instruction.A;
+                    if (!TryEvaluateCallable(instruction, _evaluationStack, top, instruction.A, out var callValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = callValue;
                     break;
 
                 case RegisterFastOpCode.MemberAccess:
@@ -921,20 +941,162 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
+        var instruction = new RegisterFastInstruction(
+            RegisterFastOpCode.RulePredicate,
+            A: -1,
+            ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
+                ? expressionProgram
+                : null,
+            DiagnosticName: callable.Name,
+            DiagnosticArgumentName: callable.Parameters[0]);
+
+        if (!TryEvaluateRulePredicate(instruction, input, stackBase: 0, out value, callable.Parameters[0]))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryEvaluateCall(CallExpressionNode call, out RegisterFastValue value)
+    {
+        if (!_compiledScript.Callables.TryGetValue(call.Name, out var callable) ||
+            callable.Parameters.Count != call.Arguments.Count)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var arguments = new RegisterFastValue[call.Arguments.Count];
+        for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
+        {
+            if (!TryEvaluate(call.Arguments[argumentIndex], out arguments[argumentIndex]))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+        }
+
+        var slots = new int[callable.Parameters.Count];
+        for (var parameterIndex = 0; parameterIndex < callable.Parameters.Count; parameterIndex++)
+        {
+            if (!_plan.TryGetSlot(callable.Parameters[parameterIndex], out slots[parameterIndex]))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+        }
+
+        var instruction = new RegisterFastInstruction(
+            RegisterFastOpCode.Call,
+            A: call.Arguments.Count,
+            CallableKind: callable.Kind == LinkedCallableKind.Rule
+                ? RegisterFastCallableKind.Rule
+                : RegisterFastCallableKind.Select,
+            ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
+                ? expressionProgram
+                : null,
+            DiagnosticName: callable.Name,
+            Names: callable.Parameters.ToArray(),
+            Slots: slots);
+
+        return TryEvaluateCallable(instruction, arguments, 0, arguments.Length, out value);
+    }
+
+    private bool TryEvaluateRulePredicate(
+        RegisterFastInstruction instruction,
+        RegisterFastValue input,
+        int stackBase,
+        out RegisterFastValue value,
+        string? parameterName = null)
+    {
+        value = RegisterFastValue.Nothing;
+        if (instruction.ExpressionProgram is null)
+        {
+            return false;
+        }
+
+        if (!_context.RuntimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        {
+            return true;
+        }
+
         EnterScope();
         try
         {
-            if (!Define(callable.Parameters[0], input))
+            RecordRuleCalled(instruction, input);
+            var parameterDefined = instruction.A >= 0
+                ? DefineSlot(instruction.A, input)
+                : !string.IsNullOrEmpty(parameterName) && Define(parameterName!, input);
+            if (!parameterDefined ||
+                !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
             {
                 value = RegisterFastValue.Nothing;
                 return false;
             }
 
-            return TryEvaluate(callable.Expression, out value);
+            value = RegisterFastValue.Boolean(value.AsBoolean());
+            return true;
         }
         finally
         {
             ExitScope();
+            _context.RuntimeBudget.ExitCall();
+        }
+    }
+
+    private bool TryEvaluateCallable(
+        RegisterFastInstruction instruction,
+        RegisterFastValue[] stack,
+        int start,
+        int count,
+        out RegisterFastValue value)
+    {
+        value = RegisterFastValue.Nothing;
+        if (instruction.ExpressionProgram is null ||
+            instruction.Slots is null ||
+            instruction.Names is null ||
+            instruction.Slots.Length != count ||
+            instruction.Names.Length != count)
+        {
+            return false;
+        }
+
+        var callableName = instruction.DiagnosticName ?? string.Empty;
+        if (!_context.RuntimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        {
+            return true;
+        }
+
+        EnterScope();
+        try
+        {
+            RecordCallableCalled(instruction, stack, start, count);
+            for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+            {
+                if (!DefineSlot(instruction.Slots[argumentIndex], stack[start + argumentIndex]))
+                {
+                    value = RegisterFastValue.Nothing;
+                    return false;
+                }
+            }
+
+            if (!TryExecuteExpressionProgram(instruction.ExpressionProgram, start, out value))
+            {
+                return false;
+            }
+
+            if (instruction.CallableKind == RegisterFastCallableKind.Rule)
+            {
+                value = RegisterFastValue.Boolean(value.AsBoolean());
+            }
+
+            return true;
+        }
+        finally
+        {
+            ExitScope();
+            _context.RuntimeBudget.ExitCall();
         }
     }
 
@@ -1800,6 +1962,34 @@ internal sealed class RegisterVmFastExecutionSession
             ruleName,
             CreateSingleArgument(argumentName, input.ToEventScriptValue()),
             $"rule '{ruleName}' called");
+    }
+
+    private void RecordCallableCalled(RegisterFastInstruction instruction, RegisterFastValue[] stack, int start, int count)
+    {
+        if (!_diagnosticsEnabled)
+        {
+            return;
+        }
+
+        var callableName = instruction.DiagnosticName ?? string.Empty;
+        var parameters = instruction.Names ?? [];
+        var pairs = new KeyValuePair<string, EventScriptValue>[Math.Min(parameters.Length, count)];
+        for (var argumentIndex = 0; argumentIndex < pairs.Length; argumentIndex++)
+        {
+            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+                parameters[argumentIndex],
+                stack[start + argumentIndex].ToEventScriptValue());
+        }
+
+        var kind = instruction.CallableKind == RegisterFastCallableKind.Rule
+            ? EventScriptDiagnosticEventKind.RuleCalled
+            : EventScriptDiagnosticEventKind.SelectCalled;
+        var kindText = instruction.CallableKind == RegisterFastCallableKind.Rule ? "rule" : "select";
+        RecordDiagnostic(
+            kind,
+            callableName,
+            EventScriptNamedArguments.CreateOrdered(pairs),
+            $"{kindText} '{callableName}' called");
     }
 
     private void RecordLetExpressionEvaluatedToNothing(string identifier, RegisterFastValue value)

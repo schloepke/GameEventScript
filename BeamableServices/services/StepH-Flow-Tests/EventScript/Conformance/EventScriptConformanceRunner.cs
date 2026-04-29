@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using StepH.Flow.EventScript;
-using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.RegisterVM;
@@ -17,10 +16,9 @@ namespace StepH_Flow_Tests.EventScript.Conformance;
 internal static class EventScriptConformanceRunner
 {
     internal const string InterpreterEngine = "interpreter";
-    internal const string ExperimentalEngine = "experimental";
     internal const string RegisterVmEngine = "registervm";
 
-    private static readonly string[] RuntimeEngines = [InterpreterEngine, ExperimentalEngine, RegisterVmEngine];
+    private static readonly string[] RuntimeEngines = [InterpreterEngine, RegisterVmEngine];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -129,9 +127,6 @@ internal static class EventScriptConformanceRunner
             InterpreterEngine => new CompiledEventScript(
                 linked,
                 new EventScriptInterpreterCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
-            ExperimentalEngine => ExperimentalEventScriptCompiler.Compile(
-                linked,
-                new ExperimentalEventScriptCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
             RegisterVmEngine => RegisterEventScriptCompiler.Compile(
                 linked,
                 new RegisterEventScriptCompilationOptions
@@ -200,11 +195,6 @@ internal static class EventScriptConformanceRunner
         catch (EventScriptLinkageException exception)
         {
             AssertLinkageError(testCase, expected, exception);
-            return;
-        }
-        catch (EventScriptOpcodeCompilationException exception)
-        {
-            AssertOpcodeCompilationError(testCase, expected, exception);
             return;
         }
         catch (EventScriptCompilationException exception)
@@ -494,29 +484,6 @@ internal static class EventScriptConformanceRunner
         {
             Assert.Fail($"{testCase}: generic compilation error expectation did not match.{Environment.NewLine}{exception.Message}");
         }
-    }
-
-    private static void AssertOpcodeCompilationError(
-        EventScriptConformanceCase testCase,
-        EventScriptExpectedCompileErrorSpec expected,
-        EventScriptOpcodeCompilationException exception)
-    {
-        if (!PhaseMatches(expected, "compilation"))
-        {
-            Assert.Fail($"{testCase}: expected phase '{expected.Phase}', but got opcode compilation error: {exception.Message}");
-        }
-
-        if (exception.Errors.Any(error =>
-                Matches(expected.Kind, error.Kind.ToString()) &&
-                Matches(expected.Symbol, error.Symbol) &&
-                Matches(expected.SymbolKind, error.SymbolKind.ToString()) &&
-                Matches(expected.ModuleName, error.ModuleName) &&
-                MessageMatches(expected.MessageContains, error.Message, exception.Message)))
-        {
-            return;
-        }
-
-        Assert.Fail($"{testCase}: opcode compilation error expectation did not match.{Environment.NewLine}{exception.Message}");
     }
 
     private static LinkedEventScriptModule LinkScripts(EventScriptConformanceTest test)

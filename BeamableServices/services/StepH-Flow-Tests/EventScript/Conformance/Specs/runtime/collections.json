@@ -45,7 +45,7 @@
               "args": {
                 "nameCount": { "type": ":integer", "value": "3" },
                 "positiveCount": { "type": ":integer", "value": "2" },
-                "total": { "type": ":decimal", "value": "6" },
+                "total": { "type": ":integer", "value": "6" },
                 "counted": { "type": ":integer", "value": "2" },
                 "average": { "type": ":decimal", "value": "2" },
                 "highest": { "type": ":text", "value": "c" },
@@ -80,11 +80,11 @@
             {
               "name": "Done",
               "args": {
-                "filterSelectSum": { "type": ":decimal", "value": "21" },
+                "filterSelectSum": { "type": ":integer", "value": "21" },
                 "filterCount": { "type": ":integer", "value": "1" },
-                "firstSelected": { "type": ":decimal", "value": "13" },
-                "lastSelected": { "type": ":decimal", "value": "14" },
-                "singleSelected": { "type": ":decimal", "value": "13" },
+                "firstSelected": { "type": ":integer", "value": "13" },
+                "lastSelected": { "type": ":integer", "value": "14" },
+                "singleSelected": { "type": ":integer", "value": "13" },
                 "sorted1": { "type": ":decimal", "value": "-4" },
                 "sorted2": { "type": ":decimal", "value": "-3" },
                 "sorted3": { "type": ":decimal", "value": "-2" }

@@ -339,6 +339,32 @@ internal static class EventScriptValueAlu
         };
     }
 
+    public static EventScriptValue ToEventScriptNumericResult(
+        EventScriptValue left,
+        string operation,
+        EventScriptValue right,
+        NumericValue number,
+        EventScriptDecimalUnit? unit = null)
+    {
+        if (unit is null &&
+            operation == "div" &&
+            TryToInteger(number, out var quotient))
+        {
+            return EventScriptValueFactory.Integer(quotient);
+        }
+
+        if (unit is null &&
+            operation is "+" or "-" or "*" or "mod" or "rem" &&
+            left.Kind == EventScriptValueKind.Integer &&
+            right.Kind == EventScriptValueKind.Integer &&
+            TryToInteger(number, out var integer))
+        {
+            return EventScriptValueFactory.Integer(integer);
+        }
+
+        return ToEventScriptDecimal(number, unit);
+    }
+
     public static bool TryEvaluatePercentageBinary(EventScriptValue left, string operation, EventScriptValue right, out EventScriptValue value)
     {
         var leftIsPercentage = left.IsPercentage();
@@ -425,7 +451,7 @@ internal static class EventScriptValueAlu
     {
         var leftHasUnit = EventScriptValue.TryGetDecimalUnit(left, out var leftUnit);
         var rightHasUnit = EventScriptValue.TryGetDecimalUnit(right, out var rightUnit);
-        if (operation is not ("+" or "-" or "*" or "/" or "mod") || (!leftHasUnit && !rightHasUnit))
+        if (operation is not ("+" or "-" or "*" or "/" or "div" or "mod" or "rem") || (!leftHasUnit && !rightHasUnit))
         {
             value = EventScriptValue.Nothing;
             return false;
@@ -443,10 +469,10 @@ internal static class EventScriptValueAlu
         {
             "+" or "-" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
             "*" => leftHasUnit != rightHasUnit && SetUnit(leftHasUnit ? leftUnit : rightUnit, out resultUnit),
-            "/" => leftHasUnit && !rightHasUnit
+            "/" or "div" => leftHasUnit && !rightHasUnit
                 ? SetUnit(leftUnit, out resultUnit)
                 : leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(null, out resultUnit),
-            "mod" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
+            "mod" or "rem" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
             _ => false
         };
 
@@ -462,11 +488,13 @@ internal static class EventScriptValueAlu
             "-" => SubtractNumeric(leftNumber, rightNumber),
             "*" => MultiplyNumeric(leftNumber, rightNumber),
             "/" => DivideNumeric(leftNumber, rightNumber),
+            "div" => IntegerDivideNumeric(leftNumber, rightNumber),
             "mod" => ModuloNumeric(leftNumber, rightNumber),
+            "rem" => RemainderNumeric(leftNumber, rightNumber),
             _ => NumericValue.NaN()
         };
 
-        value = ToEventScriptDecimal(result, resultUnit);
+        value = ToEventScriptNumericResult(left, operation, right, result, resultUnit);
         return true;
     }
 
@@ -697,6 +725,17 @@ internal static class EventScriptValueAlu
             : NumericValue.NegativeInfinity();
     }
 
+    public static NumericValue IntegerDivideNumeric(NumericValue left, NumericValue right)
+    {
+        var quotient = DivideNumeric(left, right);
+        if (!quotient.IsFinite)
+        {
+            return quotient;
+        }
+
+        return NumericValue.Finite(Math.Floor(quotient.Value));
+    }
+
     public static NumericValue ModuloNumeric(NumericValue left, NumericValue right)
     {
         if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
@@ -709,6 +748,23 @@ internal static class EventScriptValueAlu
         if (TryModuloFinite(left.Value, right.Value, out var modulo))
         {
             return NumericValue.Finite(modulo);
+        }
+
+        return NumericValue.NaN();
+    }
+
+    public static NumericValue RemainderNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+
+        if (left.IsInfinity) return NumericValue.NaN();
+        if (right.IsInfinity) return left.IsFinite ? NumericValue.Finite(left.Value) : NumericValue.NaN();
+
+        if (right.Value == 0m) return NumericValue.NaN();
+
+        if (TryRemainderFinite(left.Value, right.Value, out var remainder))
+        {
+            return NumericValue.Finite(remainder);
         }
 
         return NumericValue.NaN();
@@ -745,7 +801,7 @@ internal static class EventScriptValueAlu
             value = left + right;
             return true;
         }
-        catch (OverflowException)
+        catch (Exception exception) when (exception is OverflowException or DivideByZeroException)
         {
             value = default;
             return false;
@@ -759,7 +815,7 @@ internal static class EventScriptValueAlu
             value = left * right;
             return true;
         }
-        catch (OverflowException)
+        catch (Exception exception) when (exception is OverflowException or DivideByZeroException)
         {
             value = default;
             return false;
@@ -781,6 +837,27 @@ internal static class EventScriptValueAlu
     }
 
     public static bool TryModuloFinite(decimal left, decimal right, out decimal value)
+    {
+        try
+        {
+            var remainder = left % right;
+            if (remainder != 0m &&
+                (remainder < 0m && right > 0m || remainder > 0m && right < 0m))
+            {
+                remainder += right;
+            }
+
+            value = remainder;
+            return true;
+        }
+        catch (OverflowException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    public static bool TryRemainderFinite(decimal left, decimal right, out decimal value)
     {
         try
         {
@@ -834,5 +911,20 @@ internal static class EventScriptValueAlu
             < long.MinValue => long.MinValue,
             _ => (long)truncated
         };
+    }
+
+    private static bool TryToInteger(NumericValue number, out long integer)
+    {
+        if (!number.IsFinite ||
+            number.Value != decimal.Truncate(number.Value) ||
+            number.Value > long.MaxValue ||
+            number.Value < long.MinValue)
+        {
+            integer = default;
+            return false;
+        }
+
+        integer = (long)number.Value;
+        return true;
     }
 }

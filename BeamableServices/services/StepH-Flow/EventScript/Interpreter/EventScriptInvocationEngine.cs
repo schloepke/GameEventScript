@@ -1084,7 +1084,7 @@ internal static class EventScriptInvocationEngine
                     if (TryCoerceNumericForOperation(left, out var leftNumeric) &&
                         TryCoerceNumericForOperation(right, out var rightNumeric))
                     {
-                        return ToEventScriptDecimal(AddNumeric(leftNumeric, rightNumeric));
+                        return EventScriptValueAlu.ToEventScriptNumericResult(left, "+", right, AddNumeric(leftNumeric, rightNumeric));
                     }
 
                     if (TryCombineWithPlus(left, right, out var combined))
@@ -1126,7 +1126,7 @@ internal static class EventScriptInvocationEngine
                         return EventScriptValueFactory.DecimalNaN();
                     }
 
-                    return ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
+                    return EventScriptValueAlu.ToEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 case "*":
                     if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out var percentageProduct))
                     {
@@ -1144,7 +1144,7 @@ internal static class EventScriptInvocationEngine
                         return EventScriptValueFactory.DecimalNaN();
                     }
 
-                    return ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
+                    return EventScriptValueAlu.ToEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 case "/":
                     if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out var percentageQuotient))
                     {
@@ -1175,7 +1175,33 @@ internal static class EventScriptInvocationEngine
                         return EventScriptValueFactory.DecimalNaN();
                     }
 
-                    return ToEventScriptDecimal(ModuloNumeric(leftModulo, rightModulo));
+                    return EventScriptValueAlu.ToEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
+                case "div":
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "div", right, out var unitIntegerDivide))
+                    {
+                        return unitIntegerDivide;
+                    }
+
+                    if (!TryCoerceNumericForOperation(left, out var leftIntegerDivide) ||
+                        !TryCoerceNumericForOperation(right, out var rightIntegerDivide))
+                    {
+                        return EventScriptValueFactory.DecimalNaN();
+                    }
+
+                    return EventScriptValueAlu.ToEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
+                case "rem":
+                    if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "rem", right, out var unitRemainder))
+                    {
+                        return unitRemainder;
+                    }
+
+                    if (!TryCoerceNumericForOperation(left, out var leftRemainder) ||
+                        !TryCoerceNumericForOperation(right, out var rightRemainder))
+                    {
+                        return EventScriptValueFactory.DecimalNaN();
+                    }
+
+                    return EventScriptValueAlu.ToEventScriptNumericResult(left, "rem", right, RemainderNumeric(leftRemainder, rightRemainder));
                 default:
                     return EventScriptValue.Nothing;
             }
@@ -2007,7 +2033,7 @@ internal static class EventScriptInvocationEngine
 
                 TryCoerceNumericForOperation(sumValue, out var left);
                 TryCoerceNumericForOperation(projected, out var right);
-                sumValue = ToEventScriptDecimal(AddNumeric(left, right));
+                sumValue = EventScriptValueAlu.ToEventScriptNumericResult(sumValue, "+", projected, AddNumeric(left, right));
             }
 
             return sumValue ?? EventScriptValueFactory.Decimal(0m);
@@ -2037,7 +2063,7 @@ internal static class EventScriptInvocationEngine
                 else
                 {
                     TryCoerceNumericForOperation(sumValue, out var left);
-                    sumValue = ToEventScriptDecimal(AddNumeric(left, number));
+                    sumValue = EventScriptValueAlu.ToEventScriptNumericResult(sumValue, "+", projected, AddNumeric(left, number));
                 }
 
                 count++;
@@ -2251,7 +2277,11 @@ internal static class EventScriptInvocationEngine
 
         private static NumericValue DivideNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.DivideNumeric(left, right);
 
+        private static NumericValue IntegerDivideNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.IntegerDivideNumeric(left, right);
+
         private static NumericValue ModuloNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.ModuloNumeric(left, right);
+
+        private static NumericValue RemainderNumeric(NumericValue left, NumericValue right) => EventScriptValueAlu.RemainderNumeric(left, right);
 
         private static NumericValue NegateNumeric(NumericValue value) => EventScriptValueAlu.NegateNumeric(value);
 

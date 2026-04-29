@@ -80,7 +80,7 @@ IsOperation ::= "is" TypeTag
 AsOperation ::= "as" TypeTag
 RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
 AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" ) MultiplicativeExpression }
-MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "mod" ) UnaryExpression }
+MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "div" | "mod" | "rem" ) UnaryExpression }
 UnaryExpression ::= "-" UnaryExpression
                   | "!" UnaryExpression
                   | "~" UnaryExpression

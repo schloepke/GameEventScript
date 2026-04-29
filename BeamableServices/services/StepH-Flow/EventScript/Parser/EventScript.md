@@ -467,10 +467,12 @@ a + b
 a - b
 a * b
 a / b
+a div b
 a mod b
+a rem b
 ```
 
-`mod` is the modulo operator. Percentage values are written as literals such as `10%`.
+`/` is numeric division. `div` is floor division. `mod` is mathematical modulo, and `rem` is the truncating remainder. Percentage values are written as literals such as `10%`.
 
 ### Collection combination
 

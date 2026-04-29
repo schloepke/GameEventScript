@@ -195,6 +195,23 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void NumericAluDistinguishesModuloAndRemainder()
+    {
+        var seven = EventScriptValueAlu.NumericValue.Finite(7m);
+        var minusSeven = EventScriptValueAlu.NumericValue.Finite(-7m);
+        var three = EventScriptValueAlu.NumericValue.Finite(3m);
+        var minusThree = EventScriptValueAlu.NumericValue.Finite(-3m);
+
+        Assert.AreEqual(-3m, EventScriptValueAlu.IntegerDivideNumeric(minusSeven, three).Value);
+        Assert.AreEqual(-3m, EventScriptValueAlu.IntegerDivideNumeric(seven, minusThree).Value);
+        Assert.AreEqual(3m, EventScriptValueAlu.IntegerDivideNumeric(EventScriptValueAlu.NumericValue.Finite(7.5m), EventScriptValueAlu.NumericValue.Finite(2m)).Value);
+        Assert.AreEqual(2m, EventScriptValueAlu.ModuloNumeric(minusSeven, three).Value);
+        Assert.AreEqual(-2m, EventScriptValueAlu.ModuloNumeric(seven, minusThree).Value);
+        Assert.AreEqual(-1m, EventScriptValueAlu.RemainderNumeric(minusSeven, three).Value);
+        Assert.AreEqual(1m, EventScriptValueAlu.RemainderNumeric(seven, minusThree).Value);
+    }
+
+    [TestMethod]
     public void SetsStayCanonicallySorted()
     {
         var setValue = Set([Decimal(3m), Text("z"), Integer(1), Text("a"), Boolean(false), Decimal(2m)]);

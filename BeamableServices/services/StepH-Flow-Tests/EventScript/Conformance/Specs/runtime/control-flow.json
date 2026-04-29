@@ -46,7 +46,7 @@
               "args": {
                 "lines": { "type": ":integer", "value": "10" },
                 "values": { "type": ":integer", "value": "20" },
-                "result": { "type": ":decimal", "value": "3" }
+                "result": { "type": ":integer", "value": "3" }
               }
             }
           ]

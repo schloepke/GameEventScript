@@ -947,7 +947,7 @@ public sealed class EventScriptParser
     {
         var expression = ParseUnaryExpression();
 
-        while (Match(Multiply, Divide, Modulo))
+        while (Match(Multiply, Divide, IntegerDivide, Modulo, Remainder))
         {
             var op = Previous.Text;
             SkipNewLines();

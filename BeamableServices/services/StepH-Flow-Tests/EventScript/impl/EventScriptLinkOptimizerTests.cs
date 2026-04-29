@@ -49,7 +49,7 @@ public class EventScriptLinkOptimizerTests
         var handler = linked.Handlers.Values.SelectMany(handlers => handlers).Single();
         var let = handler.Statements.OfType<LetStatementNode>().Single();
 
-        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(let.Expression);
-        Assert.AreEqual(42m, ((DecimalLiteralExpressionNode)let.Expression).Value);
+        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(let.Expression);
+        Assert.AreEqual(42, ((IntegerLiteralExpressionNode)let.Expression).Value);
     }
 }

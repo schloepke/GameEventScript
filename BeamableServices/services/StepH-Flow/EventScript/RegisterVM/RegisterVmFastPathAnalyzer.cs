@@ -608,7 +608,7 @@ internal static class RegisterVmFastPathAnalyzer
     }
 
     private static bool SupportsBinaryOperator(string operation)
-        => operation is "+" or "-" or "*" or "/" or "mod" or
+        => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or
             "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" or
             "&" or "|" or "^" or "default" or "in" or "value in" or
             "starts with" or "ends with" or
@@ -2224,7 +2224,9 @@ internal static class RegisterVmFastPathAnalyzer
                     "-" => RegisterFastOpCode.Subtract,
                     "*" => RegisterFastOpCode.Multiply,
                     "/" => RegisterFastOpCode.Divide,
+                    "div" => RegisterFastOpCode.IntegerDivide,
                     "mod" => RegisterFastOpCode.Modulo,
+                    "rem" => RegisterFastOpCode.Remainder,
                     "default" => RegisterFastOpCode.Default,
                     "in" => RegisterFastOpCode.Contains,
                     "value in" => RegisterFastOpCode.ContainsValue,

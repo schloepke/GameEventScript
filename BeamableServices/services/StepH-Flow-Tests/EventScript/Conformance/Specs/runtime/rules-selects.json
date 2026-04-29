@@ -127,7 +127,7 @@
               "args": {
                 "byRuleTwo": { "type": ":boolean", "value": true },
                 "byRuleZero": { "type": ":boolean", "value": false },
-                "bySelect": { "type": ":decimal", "value": "4" },
+                "bySelect": { "type": ":integer", "value": "4" },
                 "byPredicate": { "type": ":boolean", "value": true }
               }
             }

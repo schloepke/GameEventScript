@@ -641,7 +641,7 @@ internal static class EventScriptLinkOptimizer
                     return false;
                 }
 
-                value = ToEventScriptDecimal(AddNumeric(leftNumeric, rightNumeric));
+                value = ToEventScriptNumericResult(left, "+", right, AddNumeric(leftNumeric, rightNumeric));
                 return true;
             case "-":
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "-", right, out value))
@@ -661,7 +661,7 @@ internal static class EventScriptLinkOptimizer
                     return false;
                 }
 
-                value = ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
+                value = ToEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out value))
@@ -681,7 +681,7 @@ internal static class EventScriptLinkOptimizer
                     return false;
                 }
 
-                value = ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
+                value = ToEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out value))
@@ -716,7 +716,37 @@ internal static class EventScriptLinkOptimizer
                     return false;
                 }
 
-                value = ToEventScriptDecimal(ModuloNumeric(leftModulo, rightModulo));
+                value = ToEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
+                return true;
+            case "div":
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "div", right, out value))
+                {
+                    return true;
+                }
+
+                if (!TryCoerceNumericForOperation(left, out var leftIntegerDivide) ||
+                    !TryCoerceNumericForOperation(right, out var rightIntegerDivide))
+                {
+                    value = EventScriptValue.Nothing;
+                    return false;
+                }
+
+                value = ToEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
+                return true;
+            case "rem":
+                if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "rem", right, out value))
+                {
+                    return true;
+                }
+
+                if (!TryCoerceNumericForOperation(left, out var leftRemainder) ||
+                    !TryCoerceNumericForOperation(right, out var rightRemainder))
+                {
+                    value = EventScriptValue.Nothing;
+                    return false;
+                }
+
+                value = ToEventScriptNumericResult(left, "rem", right, RemainderNumeric(leftRemainder, rightRemainder));
                 return true;
             default:
                 value = EventScriptValue.Nothing;
@@ -1146,6 +1176,29 @@ internal static class EventScriptLinkOptimizer
             _ => EventScriptValueFactory.DecimalNaN()
         };
 
+    private static EventScriptValue ToEventScriptNumericResult(
+        EventScriptValue left,
+        string operation,
+        EventScriptValue right,
+        NumericValue number)
+    {
+        if (operation == "div" &&
+            TryToInteger(number, out var quotient))
+        {
+            return EventScriptValueFactory.Integer(quotient);
+        }
+
+        if (operation is "+" or "-" or "*" or "mod" or "rem" &&
+            left.Kind == EventScriptValueKind.Integer &&
+            right.Kind == EventScriptValueKind.Integer &&
+            TryToInteger(number, out var integer))
+        {
+            return EventScriptValueFactory.Integer(integer);
+        }
+
+        return ToEventScriptDecimal(number);
+    }
+
     private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
     {
         if (left.IsNaN || right.IsNaN)
@@ -1267,6 +1320,17 @@ internal static class EventScriptLinkOptimizer
             : NumericValue.NegativeInfinity();
     }
 
+    private static NumericValue IntegerDivideNumeric(NumericValue left, NumericValue right)
+    {
+        var quotient = DivideNumeric(left, right);
+        if (!quotient.IsFinite)
+        {
+            return quotient;
+        }
+
+        return NumericValue.Finite(Math.Floor(quotient.Value));
+    }
+
     private static NumericValue ModuloNumeric(NumericValue left, NumericValue right)
     {
         if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
@@ -1281,6 +1345,22 @@ internal static class EventScriptLinkOptimizer
 
         return NumericValue.NaN();
     }
+
+    private static NumericValue RemainderNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+        if (left.IsInfinity) return NumericValue.NaN();
+        if (right.IsInfinity) return left.IsFinite ? NumericValue.Finite(left.Value) : NumericValue.NaN();
+        if (right.Value == 0m) return NumericValue.NaN();
+
+        if (TryRemainderFinite(left.Value, right.Value, out var remainder))
+        {
+            return NumericValue.Finite(remainder);
+        }
+
+        return NumericValue.NaN();
+    }
+
 
     private static NumericValue NegateNumeric(NumericValue value)
     {
@@ -1305,6 +1385,21 @@ internal static class EventScriptLinkOptimizer
     }
 
     private static bool IsZero(NumericValue value) => value.IsFinite && value.Value == 0m;
+
+    private static bool TryToInteger(NumericValue number, out long integer)
+    {
+        if (!number.IsFinite ||
+            number.Value != decimal.Truncate(number.Value) ||
+            number.Value > long.MaxValue ||
+            number.Value < long.MinValue)
+        {
+            integer = default;
+            return false;
+        }
+
+        integer = (long)number.Value;
+        return true;
+    }
 
     private static bool TryAddFinite(decimal left, decimal right, out decimal value)
     {
@@ -1352,10 +1447,17 @@ internal static class EventScriptLinkOptimizer
     {
         try
         {
-            value = left % right;
+            var remainder = left % right;
+            if (remainder != 0m &&
+                (remainder < 0m && right > 0m || remainder > 0m && right < 0m))
+            {
+                remainder += right;
+            }
+
+            value = remainder;
             return true;
         }
-        catch (OverflowException)
+        catch (Exception exception) when (exception is OverflowException or DivideByZeroException)
         {
             value = default;
             return false;
@@ -1459,7 +1561,21 @@ internal static class EventScriptLinkOptimizer
             }
             default:
                 expression = default!;
-                return false;
+            return false;
+        }
+    }
+
+    private static bool TryRemainderFinite(decimal left, decimal right, out decimal value)
+    {
+        try
+        {
+            value = left % right;
+            return true;
+        }
+        catch (Exception exception) when (exception is OverflowException or DivideByZeroException)
+        {
+            value = default;
+            return false;
         }
     }
 }

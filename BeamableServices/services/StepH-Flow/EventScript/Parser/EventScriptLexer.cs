@@ -85,7 +85,9 @@ public enum EventScriptTokenKind
     Minus,
     Multiply,
     Divide,
+    IntegerDivide,
     Modulo,
+    Remainder,
     Not
 }
 
@@ -275,7 +277,9 @@ public sealed class EventScriptLexer
             "or" => new EventScriptToken(EventScriptTokenKind.Or, text, line, column, endLine, endColumn),
             "xor" => new EventScriptToken(EventScriptTokenKind.Xor, text, line, column, endLine, endColumn),
             "and" => new EventScriptToken(EventScriptTokenKind.And, text, line, column, endLine, endColumn),
+            "div" => new EventScriptToken(EventScriptTokenKind.IntegerDivide, text, line, column, endLine, endColumn),
             "mod" => new EventScriptToken(EventScriptTokenKind.Modulo, text, line, column, endLine, endColumn),
+            "rem" => new EventScriptToken(EventScriptTokenKind.Remainder, text, line, column, endLine, endColumn),
             "not" => new EventScriptToken(EventScriptTokenKind.Not, text, line, column, endLine, endColumn),
             "to" => new EventScriptToken(EventScriptTokenKind.To, text, line, column, endLine, endColumn),
             "true" => new EventScriptToken(EventScriptTokenKind.True, text, line, column, endLine, endColumn),

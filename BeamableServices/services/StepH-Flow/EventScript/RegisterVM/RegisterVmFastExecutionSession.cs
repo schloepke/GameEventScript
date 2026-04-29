@@ -566,7 +566,9 @@ internal sealed class RegisterVmFastExecutionSession
                 case RegisterFastOpCode.Subtract:
                 case RegisterFastOpCode.Multiply:
                 case RegisterFastOpCode.Divide:
+                case RegisterFastOpCode.IntegerDivide:
                 case RegisterFastOpCode.Modulo:
+                case RegisterFastOpCode.Remainder:
                 case RegisterFastOpCode.Default:
                 case RegisterFastOpCode.Contains:
                 case RegisterFastOpCode.ContainsValue:
@@ -1036,8 +1038,12 @@ internal sealed class RegisterVmFastExecutionSession
                 return RegisterFastValue.Multiply(left, right);
             case RegisterFastOpCode.Divide:
                 return RegisterFastValue.Divide(left, right);
+            case RegisterFastOpCode.IntegerDivide:
+                return RegisterFastValue.IntegerDivide(left, right);
             case RegisterFastOpCode.Modulo:
                 return RegisterFastValue.Modulo(left, right);
+            case RegisterFastOpCode.Remainder:
+                return RegisterFastValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
                     ? value
@@ -1591,7 +1597,9 @@ internal sealed class RegisterVmFastExecutionSession
             "-" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "-", right)),
             "*" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "*", right)),
             "/" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "/", right)),
+            "div" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "div", right)),
             "mod" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
+            "rem" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
             "intersect" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionIntersect(left, right)),
             "combine" or "merge" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionCombine(left, right)),
             "except" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionExcept(left, right)),
@@ -1618,7 +1626,9 @@ internal sealed class RegisterVmFastExecutionSession
             RegisterFastOpCode.Subtract => "-",
             RegisterFastOpCode.Multiply => "*",
             RegisterFastOpCode.Divide => "/",
+            RegisterFastOpCode.IntegerDivide => "div",
             RegisterFastOpCode.Modulo => "mod",
+            RegisterFastOpCode.Remainder => "rem",
             RegisterFastOpCode.Default => "default",
             RegisterFastOpCode.Contains => "in",
             RegisterFastOpCode.ContainsValue => "value in",
@@ -1666,7 +1676,7 @@ internal sealed class RegisterVmFastExecutionSession
         if (EventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) &&
             EventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
-            return EventScriptValueAlu.ToEventScriptDecimal(EventScriptValueAlu.AddNumeric(leftNumeric, rightNumeric));
+            return EventScriptValueAlu.ToEventScriptNumericResult(left, "+", right, EventScriptValueAlu.AddNumeric(leftNumeric, rightNumeric));
         }
 
         if (EventScriptValueAlu.TryCombineWithPlus(left, right, out var combined))
@@ -1702,10 +1712,12 @@ internal sealed class RegisterVmFastExecutionSession
             "-" => EventScriptValueAlu.SubtractNumeric(leftNumeric, rightNumeric),
             "*" => EventScriptValueAlu.MultiplyNumeric(leftNumeric, rightNumeric),
             "/" => EventScriptValueAlu.DivideNumeric(leftNumeric, rightNumeric),
+            "div" => EventScriptValueAlu.IntegerDivideNumeric(leftNumeric, rightNumeric),
             "mod" => EventScriptValueAlu.ModuloNumeric(leftNumeric, rightNumeric),
+            "rem" => EventScriptValueAlu.RemainderNumeric(leftNumeric, rightNumeric),
             _ => EventScriptValueAlu.NumericValue.NaN()
         };
-        return EventScriptValueAlu.ToEventScriptDecimal(result);
+        return EventScriptValueAlu.ToEventScriptNumericResult(left, operation, right, result);
     }
 
     private static EventScriptValue EvaluateNegateUnary(EventScriptValue operand)
@@ -4765,7 +4777,7 @@ internal readonly record struct RegisterFastValue(
             }
 
             return EventScriptValueAlu.TryAddFinite(leftPrimitive, rightPrimitive, out var sum)
-                ? Decimal(sum, left.Unit)
+                ? FromFinitePrimitiveNumericResult(left, "+", right, sum, left.Unit)
                 : FromDecimalNumeric(
                     EventScriptValueAlu.AddNumeric(
                         EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
@@ -4813,7 +4825,7 @@ internal readonly record struct RegisterFastValue(
 
             return EventScriptValueAlu.TryNegateFinite(rightPrimitive, out var negatedRight) &&
                    EventScriptValueAlu.TryAddFinite(leftPrimitive, negatedRight, out var difference)
-                ? Decimal(difference, left.Unit)
+                ? FromFinitePrimitiveNumericResult(left, "-", right, difference, left.Unit)
                 : FromDecimalNumeric(
                     EventScriptValueAlu.SubtractNumeric(
                         EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
@@ -4851,7 +4863,7 @@ internal readonly record struct RegisterFastValue(
             }
 
             return EventScriptValueAlu.TryMultiplyFinite(leftPrimitive, rightPrimitive, out var product)
-                ? Decimal(product, left.Unit ?? right.Unit)
+                ? FromFinitePrimitiveNumericResult(left, "*", right, product, left.Unit ?? right.Unit)
                 : FromDecimalNumeric(
                     EventScriptValueAlu.MultiplyNumeric(
                         EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
@@ -4911,6 +4923,42 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(EventScriptValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
+    public static RegisterFastValue IntegerDivide(RegisterFastValue left, RegisterFastValue right)
+    {
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (!TryGetDivideResultUnit(left.Unit, right.Unit, out var primitiveResultUnit))
+            {
+                return NaN();
+            }
+
+            return rightPrimitive != 0m && EventScriptValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
+                ? FromFinitePrimitiveNumericResult(left, "div", right, Math.Floor(quotient), primitiveResultUnit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.IntegerDivideNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    primitiveResultUnit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
+        {
+            return NaN();
+        }
+
+        if (!TryGetDivideResultUnit(leftUnit, rightUnit, out var resultUnit))
+        {
+            return NaN();
+        }
+
+        var result = EventScriptValueAlu.IntegerDivideNumeric(leftNumber, rightNumber);
+        return resultUnit is null && result.IsFinite && TryToInteger(result.Value, out var integer)
+            ? Integer(integer)
+            : FromDecimalNumeric(result, resultUnit);
+    }
+
     public static RegisterFastValue Modulo(RegisterFastValue left, RegisterFastValue right)
     {
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
@@ -4923,7 +4971,7 @@ internal readonly record struct RegisterFastValue(
             }
 
             return rightPrimitive != 0m && EventScriptValueAlu.TryModuloFinite(leftPrimitive, rightPrimitive, out var modulo)
-                ? Decimal(modulo, left.Unit)
+                ? FromFinitePrimitiveNumericResult(left, "mod", right, modulo, left.Unit)
                 : FromDecimalNumeric(
                     EventScriptValueAlu.ModuloNumeric(
                         EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
@@ -4944,6 +4992,41 @@ internal readonly record struct RegisterFastValue(
         }
 
         return FromDecimalNumeric(EventScriptValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
+    }
+
+    public static RegisterFastValue Remainder(RegisterFastValue left, RegisterFastValue right)
+    {
+        if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
+            right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
+        {
+            if (left.Unit.HasValue != right.Unit.HasValue ||
+                left.Unit.HasValue && right.Unit.HasValue && left.Unit != right.Unit)
+            {
+                return NaN();
+            }
+
+            return rightPrimitive != 0m && EventScriptValueAlu.TryRemainderFinite(leftPrimitive, rightPrimitive, out var remainder)
+                ? FromFinitePrimitiveNumericResult(left, "rem", right, remainder, left.Unit)
+                : FromDecimalNumeric(
+                    EventScriptValueAlu.RemainderNumeric(
+                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
+                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    left.Unit);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
+        {
+            return NaN();
+        }
+
+        if (leftUnit.HasValue != rightUnit.HasValue ||
+            leftUnit.HasValue && rightUnit.HasValue && leftUnit != rightUnit)
+        {
+            return NaN();
+        }
+
+        return FromDecimalNumeric(EventScriptValueAlu.RemainderNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     private static bool TryGetDivideResultUnit(
@@ -5142,6 +5225,24 @@ internal readonly record struct RegisterFastValue(
             ? Decimal(number.Value, unit)
             : Reference(EventScriptValueAlu.ToEventScriptDecimal(number));
 
+    private static RegisterFastValue FromFinitePrimitiveNumericResult(
+        RegisterFastValue left,
+        string operation,
+        RegisterFastValue right,
+        decimal value,
+        EventScriptDecimalUnit? unit = null)
+        => unit is null &&
+           operation == "div" &&
+           TryToInteger(value, out var quotient)
+            ? Integer(quotient)
+            : unit is null &&
+           operation is "+" or "-" or "*" or "mod" or "rem" &&
+           left.Kind == RegisterFastValueKind.Integer &&
+           right.Kind == RegisterFastValueKind.Integer &&
+           TryToInteger(value, out var integer)
+            ? Integer(integer)
+            : Decimal(value, unit);
+
     private static RegisterFastValue FromPercentageNumeric(EventScriptValueAlu.NumericValue number)
         => number.IsFinite
             ? Percentage(number.Value)
@@ -5150,6 +5251,20 @@ internal readonly record struct RegisterFastValue(
     private static bool SetNumber(decimal input, out decimal output)
     {
         output = input;
+        return true;
+    }
+
+    private static bool TryToInteger(decimal value, out long integer)
+    {
+        if (value != decimal.Truncate(value) ||
+            value > long.MaxValue ||
+            value < long.MinValue)
+        {
+            integer = default;
+            return false;
+        }
+
+        integer = (long)value;
         return true;
     }
 

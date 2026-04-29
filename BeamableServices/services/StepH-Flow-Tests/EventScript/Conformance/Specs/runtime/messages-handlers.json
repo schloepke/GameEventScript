@@ -68,7 +68,7 @@
                 "name": { "type": ":text", "value": "Success" },
                 "signature": { "type": ":text", "value": "Success(message,value)" },
                 "text": { "type": ":text", "value": "world" },
-                "value": { "type": ":decimal", "value": "42" }
+                "value": { "type": ":integer", "value": "42" }
               }
             }
           ]

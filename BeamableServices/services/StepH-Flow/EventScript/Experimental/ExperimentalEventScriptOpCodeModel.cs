@@ -15,9 +15,11 @@ internal readonly record struct ExperimentalInstruction(
     int C = -1,
     int D = -1);
 
-internal sealed class ExperimentalEventScript(IReadOnlyList<ExperimentalInstruction> instructions)
+internal sealed class ExperimentalEventScript(IReadOnlyList<ExperimentalInstruction> instructions, bool createsScope = false)
 {
     public IReadOnlyList<ExperimentalInstruction> Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
+
+    public bool CreatesScope { get; } = createsScope;
 }
 
 internal sealed class ExperimentalCompiledExpression(ExpressionNode expressionNode, EventScriptValue? constantValue = null)

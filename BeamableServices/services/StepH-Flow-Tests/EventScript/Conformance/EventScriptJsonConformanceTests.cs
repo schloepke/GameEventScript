@@ -6,7 +6,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using StepH.Flow.EventScript;
+using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Interpreter;
+using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
@@ -15,6 +17,9 @@ namespace StepH_Flow_Tests.EventScript.Conformance;
 [TestClass]
 public sealed class EventScriptJsonConformanceTests
 {
+    private const string InterpreterEngine = "interpreter";
+    private const string ExperimentalEngine = "experimental";
+    private static readonly string[] RuntimeEngines = [InterpreterEngine, ExperimentalEngine];
     private static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -33,10 +38,24 @@ public sealed class EventScriptJsonConformanceTests
             {
                 ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
                 ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
-                yield return [new EventScriptConformanceCase(file, suite.Name!, test)];
+                foreach (var engine in GetEngines(test))
+                {
+                    yield return [new EventScriptConformanceCase(file, suite.Name!, test, engine)];
+                }
             }
         }
     }
+
+    private static IReadOnlyList<string?> GetEngines(EventScriptConformanceTest test)
+        => UsesRuntimeEngine(test.Kind) ? RuntimeEngines : new string?[] { null };
+
+    private static bool UsesRuntimeEngine(string? kind)
+        => string.Equals(kind, "scriptApi", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(kind, "compileError", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(kind, "compileMetadata", StringComparison.OrdinalIgnoreCase);
+
+    private static string RequireEngine(EventScriptConformanceCase testCase)
+        => testCase.Engine ?? throw new InvalidOperationException($"{testCase}: test kind requires a conformance engine.");
 
     [TestMethod]
     [DynamicData(nameof(ConformanceCases))]
@@ -65,7 +84,7 @@ public sealed class EventScriptJsonConformanceTests
     private static void RunScriptApiTest(EventScriptConformanceCase testCase)
     {
         var test = testCase.Test;
-        var compiled = CompileScripts(test);
+        var compiled = CompileScripts(test, RequireEngine(testCase));
         var collector = new EventScriptDiagnosticTraceCollector();
         var published = new List<EventScriptMessage>();
         var builder = EventScriptHost.CreateBuilder()
@@ -109,7 +128,7 @@ public sealed class EventScriptJsonConformanceTests
 
         try
         {
-            CompileScripts(testCase.Test);
+            CompileScripts(testCase.Test, RequireEngine(testCase));
         }
         catch (EventScriptSyntaxException exception)
         {
@@ -119,6 +138,11 @@ public sealed class EventScriptJsonConformanceTests
         catch (EventScriptLinkageException exception)
         {
             AssertLinkageError(testCase, expected, exception);
+            return;
+        }
+        catch (EventScriptOpcodeCompilationException exception)
+        {
+            AssertOpcodeCompilationError(testCase, expected, exception);
             return;
         }
         catch (EventScriptCompilationException exception)
@@ -162,11 +186,12 @@ public sealed class EventScriptJsonConformanceTests
             Assert.Fail($"{testCase}: compileMetadata tests require expectedMessageDefinitions.");
         }
 
-        var compiled = CompileScripts(testCase.Test);
+        var compiled = CompileScripts(testCase.Test, RequireEngine(testCase));
+        var messageDefinitions = GetMessageDefinitions(compiled);
         foreach (var expected in expectedDefinitions)
         {
             ValidateRequired(expected.Name, "expected message definition name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-            if (!compiled.MessageDefinitions.TryGetValue(expected.Name!, out var definitions))
+            if (!messageDefinitions.TryGetValue(expected.Name!, out var definitions))
             {
                 Assert.Fail($"{testCase}: expected compiled message definition '{expected.Name}' was not found.");
             }
@@ -409,12 +434,62 @@ public sealed class EventScriptJsonConformanceTests
         }
     }
 
-    private static CompiledEventScript CompileScripts(EventScriptConformanceTest test)
+    private static void AssertOpcodeCompilationError(
+        EventScriptConformanceCase testCase,
+        EventScriptExpectedCompileErrorSpec expected,
+        EventScriptOpcodeCompilationException exception)
     {
-        var sources = GetSources(test).Select(source => source.Text!).ToArray();
-        return EventScriptManager.Compile(
-            new EventScriptInterpreterCompilationOptions { EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false },
-            sources);
+        if (!PhaseMatches(expected, "compilation"))
+        {
+            Assert.Fail($"{testCase}: expected phase '{expected.Phase}', but got opcode compilation error: {exception.Message}");
+        }
+
+        if (exception.Errors.Any(error =>
+                Matches(expected.Kind, error.Kind.ToString()) &&
+                Matches(expected.Symbol, error.Symbol) &&
+                Matches(expected.SymbolKind, error.SymbolKind.ToString()) &&
+                Matches(expected.ModuleName, error.ModuleName) &&
+                MessageMatches(expected.MessageContains, error.Message, exception.Message)))
+        {
+            return;
+        }
+
+        Assert.Fail($"{testCase}: opcode compilation error expectation did not match.{Environment.NewLine}{exception.Message}");
+    }
+
+    private static IEventScriptMessageHandlerCollection CompileScripts(EventScriptConformanceTest test, string engine)
+    {
+        var linked = LinkScripts(test);
+        var diagnosticsEnabled = test.CompileOptions?.EnableDiagnostics ?? false;
+        return engine switch
+        {
+            InterpreterEngine => new CompiledEventScript(
+                linked,
+                new EventScriptInterpreterCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
+            ExperimentalEngine => ExperimentalEventScriptCompiler.Compile(
+                linked,
+                new ExperimentalEventScriptCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
+            _ => throw new InvalidOperationException($"Unsupported conformance engine '{engine}'.")
+        };
+    }
+
+    private static LinkedEventScriptModule LinkScripts(EventScriptConformanceTest test)
+    {
+        var modules = GetSources(test)
+            .Select(source => EventScriptManager.ParseModule(source.Text!, source.SourceName))
+            .ToArray();
+        return EventScriptManager.LinkModules(modules);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<EventScriptMessageSignature>> GetMessageDefinitions(
+        IEventScriptMessageHandlerCollection compiled)
+    {
+        return compiled.Handlers
+            .GroupBy(handler => handler.Signature.Name, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EventScriptMessageSignature>)group.Select(handler => handler.Signature).ToArray(),
+                StringComparer.Ordinal);
     }
 
     private static IEnumerable<EventScriptSourceSpec> GetSources(EventScriptConformanceTest test)

@@ -162,7 +162,8 @@ public sealed class EventScriptExpectedCompileErrorSpec
 public sealed class EventScriptConformanceCase(
     string suiteFile,
     string suiteName,
-    EventScriptConformanceTest test)
+    EventScriptConformanceTest test,
+    string? engine)
 {
     public string SuiteFile { get; } = suiteFile;
 
@@ -170,5 +171,9 @@ public sealed class EventScriptConformanceCase(
 
     public EventScriptConformanceTest Test { get; } = test;
 
-    public override string ToString() => $"{SuiteName}/{Test.Name}";
+    public string? Engine { get; } = engine;
+
+    public override string ToString() => string.IsNullOrWhiteSpace(Engine)
+        ? $"{SuiteName}/{Test.Name}"
+        : $"{SuiteName}/{Test.Name} [{Engine}]";
 }

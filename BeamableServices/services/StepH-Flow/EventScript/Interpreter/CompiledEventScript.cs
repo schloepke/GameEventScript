@@ -6,7 +6,6 @@ using System.Linq;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
-using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Interpreter;
 
@@ -54,12 +53,6 @@ public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
     public EventScriptInterpreterCompilationOptions Options { get; }
 
     public IReadOnlyDictionary<string, IReadOnlyList<CompiledEventScriptHandler>> Handlers { get; }
-
-    public IReadOnlyDictionary<string, IReadOnlyList<EventScriptMessageSignature>> MessageDefinitions
-        => Handlers.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<EventScriptMessageSignature>)pair.Value.Select(handler => handler.Definition).ToArray(),
-            StringComparer.Ordinal);
 
     internal IReadOnlyDictionary<string, CompiledCallableDefinition> Callables { get; }
 

@@ -158,7 +158,7 @@ public static class ExperimentalEventScriptCompiler
             }
         }
 
-        private int CompileStatements(string symbolName, IReadOnlyList<StatementNode> statements, ScopeFrame scope)
+        private int CompileStatements(string symbolName, IReadOnlyList<StatementNode> statements, ScopeFrame scope, bool createsScope = false)
         {
             var instructions = new List<ExperimentalInstruction>(statements.Count);
             foreach (var statement in statements)
@@ -167,7 +167,7 @@ public static class ExperimentalEventScriptCompiler
             }
 
             var programIndex = _programs.Count;
-            _programs.Add(new ExperimentalEventScript(instructions.ToArray()));
+            _programs.Add(new ExperimentalEventScript(instructions.ToArray(), createsScope));
             return programIndex;
         }
 
@@ -224,20 +224,6 @@ public static class ExperimentalEventScriptCompiler
                 case IfStatementNode ifStatement:
                 {
                     var conditionExpression = CompileExpression(ifStatement.Condition);
-                    if (TryGetBooleanConstant(conditionExpression, out var conditionConstant))
-                    {
-                        if (conditionConstant)
-                        {
-                            CompileBodyIntoInstructions(symbolName, ifStatement.ThenBody, scope, instructions);
-                        }
-                        else if (ifStatement.ElseBody is not null)
-                        {
-                            CompileBodyIntoInstructions(symbolName, ifStatement.ElseBody, scope, instructions);
-                        }
-
-                        return;
-                    }
-
                     var thenProgramIndex = CompileStatementBody(symbolName, ifStatement.ThenBody, scope);
                     var elseProgramIndex = ifStatement.ElseBody is null
                         ? -1
@@ -298,7 +284,7 @@ public static class ExperimentalEventScriptCompiler
         private int CompileStatementBody(string symbolName, StatementBodyNode body, ScopeFrame parentScope)
         {
             var scope = body.IsBlock ? parentScope.CreateChild() : parentScope;
-            return CompileStatements(symbolName, body.Statements, scope);
+            return CompileStatements(symbolName, body.Statements, scope, body.IsBlock);
         }
 
         private void CompileBodyIntoInstructions(

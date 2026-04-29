@@ -146,6 +146,26 @@ internal static class ExperimentalOpcodeInvocationEngine
         }
 
         var program = _compiledScript.Programs[programIndex];
+        if (program.CreatesScope)
+        {
+            context.PushScope();
+            try
+            {
+                ExecuteProgramInstructions(context, program);
+            }
+            finally
+            {
+                context.PopScope();
+            }
+
+            return;
+        }
+
+        ExecuteProgramInstructions(context, program);
+    }
+
+    private void ExecuteProgramInstructions(ExperimentalCompiledExecutionContext context, ExperimentalEventScript program)
+    {
         foreach (var instruction in program.Instructions)
         {
             ExecuteInstruction(context, instruction);

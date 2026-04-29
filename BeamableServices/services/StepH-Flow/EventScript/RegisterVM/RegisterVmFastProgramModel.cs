@@ -27,6 +27,7 @@ internal enum RegisterFastOpCode
     BuildList,
     BuildSet,
     BuildDictionary,
+    TypeCheck,
     Pipeline
 }
 

@@ -440,6 +440,85 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
+    public void RegisterVmFallbackModeThrowRunsTypeCheckFastPath()
+    {
+        const string script =
+            """
+            module TypeChecks
+
+            on Start(custom, msg, handler) {
+              let integerValue be 12
+              let percentValue be 5%
+              let degreeValue be 90°
+              let meterValue be 100m
+              let secondValue be 15s
+              let listValue be [1]
+              let dictValue be [name: 'Ada']
+              let setValue be :set[1, 1, 2]
+
+              publish Done(
+                intIsInteger: integerValue is :integer,
+                intIsDecimal: integerValue is :decimal,
+                percentIsDecimal: percentValue is :decimal,
+                degreeIsDecimal: degreeValue is :decimal,
+                degreeIsDegree: degreeValue is :degree,
+                meterIsMeter: meterValue is :meter,
+                secondIsSecond: secondValue is :second,
+                textIsText: 'x' is :text,
+                tagIsTag: :ready is :tag,
+                boolIsBoolean: true is :boolean,
+                listIsList: listValue is :list,
+                dictIsDictionary: dictValue is :dictionary,
+                setIsSet: setValue is :set,
+                customIsGauge: custom is :gauge,
+                customIsDictionary: custom is :dictionary,
+                msgIsMessage: msg is :message,
+                msgIsDictionary: msg is :dictionary,
+                handlerIsHandler: handler is :handler,
+                missingIsNothing: missing is :nothing)
+            }
+            """;
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(EventScriptManager.CompileRegisterVM(
+                script,
+                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+
+        host.Publish(Message(
+            "Start",
+            ("custom", EventScriptValueFactory.CustomType("gauge", new Dictionary<string, EventScriptValue>
+            {
+                ["current"] = EventScriptValueFactory.Integer(5)
+            })),
+            ("msg", EventScriptValueFactory.Message(Message("Ping", ("value", EventScriptValueFactory.Integer(1))))),
+            ("handler", EventScriptValueFactory.Handler(EventScriptMessageSignature.MessageSignature("Ping", ["value"])))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["intIsInteger"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["intIsDecimal"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["percentIsDecimal"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["degreeIsDecimal"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["degreeIsDegree"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["meterIsMeter"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["secondIsSecond"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["textIsText"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["tagIsTag"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["boolIsBoolean"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["listIsList"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["dictIsDictionary"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["setIsSet"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["customIsGauge"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["customIsDictionary"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["msgIsMessage"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(false), published[0].Arguments["msgIsDictionary"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["handlerIsHandler"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["missingIsNothing"]);
+    }
+
+    [TestMethod]
     public void RegisterVmFastPathEmitsDiagnosticsWhenEnabled()
     {
         const string script =

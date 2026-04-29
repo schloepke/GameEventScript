@@ -407,6 +407,8 @@ internal sealed class RegisterVmFastExecutionSession
                 return TryEvaluateRulePredicate(rulePredicate, out value);
             case TypeCastExpressionNode typeCast:
                 return TryEvaluateTypeCast(typeCast, out value);
+            case TypeCheckExpressionNode typeCheck:
+                return TryEvaluateTypeCheck(typeCheck, out value);
             case MemberAccessExpressionNode memberAccess:
                 return TryEvaluateMemberAccess(memberAccess, out value);
             case CollectionAccessExpressionNode collectionAccess:
@@ -474,6 +476,12 @@ internal sealed class RegisterVmFastExecutionSession
 
                 case RegisterFastOpCode.Cast:
                     _evaluationStack[top - 1] = EvaluateProgramCast(instruction.CastKind, _evaluationStack[top - 1]);
+                    break;
+
+                case RegisterFastOpCode.TypeCheck:
+                    _evaluationStack[top - 1] = RegisterFastValue.Boolean(IsValueOfType(
+                        _evaluationStack[top - 1],
+                        instruction.DiagnosticName));
                     break;
 
                 case RegisterFastOpCode.RulePredicate:
@@ -545,6 +553,18 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         value = top > stackBase ? _evaluationStack[top - 1] : RegisterFastValue.Nothing;
+        return true;
+    }
+
+    private bool TryEvaluateTypeCheck(TypeCheckExpressionNode typeCheck, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(typeCheck.Value, out var input))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Boolean(IsValueOfType(input, typeCheck.TypeName));
         return true;
     }
 
@@ -703,6 +723,47 @@ internal sealed class RegisterVmFastExecutionSession
         => TryConvertDeclaredType(GetCastTypeName(castKind), input, out var value)
             ? value
             : RegisterFastValue.Unsupported();
+
+    private static bool IsValueOfType(RegisterFastValue value, string? typeName)
+    {
+        if (string.IsNullOrEmpty(typeName))
+        {
+            return false;
+        }
+
+        return typeName switch
+        {
+            "nothing" => value.Kind == RegisterFastValueKind.Nothing || (value.ReferenceValue?.IsNothing() ?? false),
+            "tag" => value.ReferenceValue?.IsTag() ?? false,
+            "text" => value.ReferenceValue?.IsText() ?? false,
+            "percentage" => value.Kind == RegisterFastValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
+            "degree" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == EventScriptDecimalUnit.Degree ||
+                        (value.ReferenceValue?.IsDecimalUnit(EventScriptDecimalUnit.Degree) ?? false),
+            "meter" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == EventScriptDecimalUnit.Meter ||
+                       (value.ReferenceValue?.IsDecimalUnit(EventScriptDecimalUnit.Meter) ?? false),
+            "second" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == EventScriptDecimalUnit.Second ||
+                        (value.ReferenceValue?.IsDecimalUnit(EventScriptDecimalUnit.Second) ?? false),
+            "vector2" => value.ReferenceValue?.IsVector2() ?? false,
+            "vector3" => value.ReferenceValue?.IsVector3() ?? false,
+            "decimal" => value.Kind is RegisterFastValueKind.Integer or RegisterFastValueKind.Decimal or RegisterFastValueKind.Percentage ||
+                         (value.ReferenceValue?.IsNumber() ?? false),
+            "integer" => value.Kind == RegisterFastValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
+            "boolean" => value.Kind == RegisterFastValueKind.Boolean || value.ReferenceValue?.Kind == EventScriptValueKind.Boolean,
+            "optional" => value.ReferenceValue?.IsOptional() ?? false,
+            "list" => value.ReferenceValue?.IsList() ?? false,
+            "range" => value.ReferenceValue?.IsRange() ?? false,
+            "message" => value.ReferenceValue is { } messageValue &&
+                         (messageValue.Kind == EventScriptValueKind.Message || EventScriptMessageValueCodec.TryReadMessageValue(messageValue, out _)),
+            "handler" => value.ReferenceValue is { } handlerValue &&
+                         (handlerValue.Kind == EventScriptValueKind.Handler || EventScriptMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
+            "dictionary" => value.ReferenceValue?.IsDictionary() ?? false,
+            "set" => value.ReferenceValue?.IsSet() ?? false,
+            "dice" => value.ReferenceValue?.IsDice() ?? false,
+            _ => value.ReferenceValue is { } customValue &&
+                 customValue.TryGetCustomTypeName(out var customTypeName) &&
+                 string.Equals(customTypeName, typeName, StringComparison.Ordinal)
+        };
+    }
 
     private bool TryEvaluateBinary(BinaryExpressionNode binary, out RegisterFastValue value)
     {

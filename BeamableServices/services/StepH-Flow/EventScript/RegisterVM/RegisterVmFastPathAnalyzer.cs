@@ -358,6 +358,16 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case TypeCheckExpressionNode typeCheck:
+                if (!SupportsExpression(typeCheck.Value, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Type check value: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case MemberAccessExpressionNode memberAccess:
                 if (!SupportsExpression(memberAccess.Target, callables, out unsupportedReason))
                 {
@@ -685,6 +695,10 @@ internal static class RegisterVmFastPathAnalyzer
 
                 case TypeCastExpressionNode typeCast:
                     CollectExpression(typeCast.Value);
+                    break;
+
+                case TypeCheckExpressionNode typeCheck:
+                    CollectExpression(typeCheck.Value);
                     break;
 
                 case MemberAccessExpressionNode memberAccess:
@@ -1030,6 +1044,13 @@ internal static class RegisterVmFastPathAnalyzer
 
                         EmitExpression(typeCast.Value);
                         instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Cast, CastKind: castKind));
+                        return;
+
+                    case TypeCheckExpressionNode typeCheck:
+                        EmitExpression(typeCheck.Value);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.TypeCheck,
+                            DiagnosticName: typeCheck.TypeName));
                         return;
 
                     case MemberAccessExpressionNode memberAccess:

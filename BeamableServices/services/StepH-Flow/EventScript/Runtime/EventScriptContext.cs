@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.Runtime;

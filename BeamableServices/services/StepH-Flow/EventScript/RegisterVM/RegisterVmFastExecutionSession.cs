@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
@@ -492,6 +491,10 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             case SeededRandomExpressionNode seededRandom:
                 return TryEvaluateSeededRandomExpression(seededRandom, out value);
+            case GeneratedCollectionExpressionNode generatedCollection:
+                return TryEvaluateGeneratedCollectionExpression(generatedCollection, out value);
+            case GuardedChoiceExpressionNode guardedChoice:
+                return TryEvaluateGuardedChoiceExpression(guardedChoice, out value);
             case BinaryExpressionNode binary:
                 return TryEvaluateBinary(binary, out value);
             case RulePredicateExpressionNode rulePredicate:
@@ -731,6 +734,28 @@ internal sealed class RegisterVmFastExecutionSession
                     }
 
                     _evaluationStack[top++] = pipelineValue;
+                    break;
+
+                case RegisterFastOpCode.GeneratedCollection:
+                    if (instruction.GeneratedCollectionProgram is null ||
+                        !TryExecuteGeneratedCollectionProgram(instruction.GeneratedCollectionProgram, out var generatedValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = generatedValue;
+                    break;
+
+                case RegisterFastOpCode.GuardedChoice:
+                    if (instruction.GuardedChoiceProgram is null ||
+                        !TryExecuteGuardedChoiceProgram(instruction.GuardedChoiceProgram, out var guardedValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = guardedValue;
                     break;
 
                 default:
@@ -1183,6 +1208,206 @@ internal sealed class RegisterVmFastExecutionSession
         {
             PopSeededRandomScope();
         }
+    }
+
+    private bool TryEvaluateGeneratedCollectionExpression(
+        GeneratedCollectionExpressionNode generatedCollection,
+        out RegisterFastValue value)
+    {
+        if (!_plan.TryGetSlot(generatedCollection.Identifier, out var identifierSlot))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        if (!TryMaterializeIterationSource(generatedCollection.Source, out var sourceItems))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var values = new List<EventScriptValue>();
+        foreach (var item in sourceItems)
+        {
+            if (!_context.RuntimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
+            {
+                break;
+            }
+
+            var fastItem = RegisterFastValue.FromEventScriptValue(item);
+            if (generatedCollection.Predicate is not null)
+            {
+                if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Predicate, out var predicate))
+                {
+                    value = RegisterFastValue.Nothing;
+                    return false;
+                }
+
+                if (!predicate.AsBoolean())
+                {
+                    continue;
+                }
+            }
+
+            if (!_context.RuntimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
+            {
+                break;
+            }
+
+            if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Projection, out var projected))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            values.Add(projected.ToEventScriptValue());
+        }
+
+        value = RegisterFastValue.Reference(generatedCollection.CollectionType == "set"
+            ? EventScriptValueFactory.Set(values)
+            : EventScriptValueFactory.List(values));
+        return true;
+    }
+
+    private bool TryExecuteGeneratedCollectionProgram(RegisterFastGeneratedCollectionProgram program, out RegisterFastValue value)
+    {
+        if (!TryMaterializeIterationSource(program.Source, out var sourceItems))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var values = new List<EventScriptValue>();
+        foreach (var item in sourceItems)
+        {
+            if (!_context.RuntimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
+            {
+                break;
+            }
+
+            var fastItem = RegisterFastValue.FromEventScriptValue(item);
+            if (program.PredicateProgram is not null)
+            {
+                if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.PredicateProgram, 0, out var predicate))
+                {
+                    value = RegisterFastValue.Nothing;
+                    return false;
+                }
+
+                if (!predicate.AsBoolean())
+                {
+                    continue;
+                }
+            }
+
+            if (!_context.RuntimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
+            {
+                break;
+            }
+
+            if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.ProjectionProgram, 0, out var projected))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            values.Add(projected.ToEventScriptValue());
+        }
+
+        value = RegisterFastValue.Reference(program.CollectionType == "set"
+            ? EventScriptValueFactory.Set(values)
+            : EventScriptValueFactory.List(values));
+        return true;
+    }
+
+    private bool TryMaterializeIterationSource(IterationSourceNode source, out EventScriptValue[] items)
+    {
+        switch (source)
+        {
+            case CollectionIterationSourceNode collection:
+                if (!TryEvaluate(collection.Expression, out var collectionValue))
+                {
+                    items = [];
+                    return false;
+                }
+
+                var boxedCollection = collectionValue.ToEventScriptValue();
+                if (!TryCheckMaterializedValue(boxedCollection, "Iteration source would enumerate more range items than allowed."))
+                {
+                    items = [];
+                    return true;
+                }
+
+                items = boxedCollection.AsEnumerable().ToArray();
+                return true;
+
+            case RangeIterationSourceNode range:
+                if (!TryEvaluateRange(range.RangeExpression, out var rangeValue))
+                {
+                    items = [];
+                    return false;
+                }
+
+                var boxedRange = rangeValue.ToEventScriptValue();
+                if (!TryCheckMaterializedValue(boxedRange, "Range item count exceeds the configured limit."))
+                {
+                    items = [];
+                    return true;
+                }
+
+                items = boxedRange.AsEnumerable().ToArray();
+                return true;
+
+            default:
+                items = [];
+                return false;
+        }
+    }
+
+    private bool TryEvaluateGuardedChoiceExpression(GuardedChoiceExpressionNode guardedChoice, out RegisterFastValue value)
+    {
+        foreach (var branch in guardedChoice.Branches)
+        {
+            if (!TryEvaluate(branch.ConditionExpression, out var condition))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            if (condition.AsBoolean())
+            {
+                return TryEvaluate(branch.ValueExpression, out value);
+            }
+        }
+
+        return TryEvaluate(guardedChoice.OtherwiseExpression, out value);
+    }
+
+    private bool TryExecuteGuardedChoiceProgram(RegisterFastGuardedChoiceProgram program, out RegisterFastValue value)
+    {
+        var conditions = program.ConditionPrograms;
+        var values = program.ValuePrograms;
+        if (conditions.Length != values.Length)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        for (var branchIndex = 0; branchIndex < conditions.Length; branchIndex++)
+        {
+            if (!TryExecuteExpressionProgram(conditions[branchIndex], 0, out var condition))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            if (condition.AsBoolean())
+            {
+                return TryExecuteExpressionProgram(values[branchIndex], 0, out value);
+            }
+        }
+
+        return TryExecuteExpressionProgram(program.OtherwiseProgram, 0, out value);
     }
 
     private RegisterFastValue EvaluateRandomExpression(RegisterFastValue fromValue, RegisterFastValue toValue)
@@ -2017,7 +2242,9 @@ internal sealed class RegisterVmFastExecutionSession
                 : boxed.IsNothing()
                     ? RegisterFastValue.Reference(OptionalNone())
                     : RegisterFastValue.Reference(OptionalSome(boxed)),
-            _ => RegisterFastValue.Unsupported()
+            _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
+                ? RegisterFastValue.FromEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
+                : input
         };
 
         return value.Kind != RegisterFastValueKind.Unsupported;
@@ -2171,6 +2398,121 @@ internal sealed class RegisterVmFastExecutionSession
         return EventScriptValue.Nothing;
     }
 
+    private EventScriptValue ConvertToCustomType(EventScriptValue value, RegisterVmTypeDefinition typeDefinition)
+    {
+        if (value.TryGetCustomTypeName(out var existingTypeName) &&
+            string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
+        {
+            return value;
+        }
+
+        var sourceValues = value.AsDictionary().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        var materializedValues = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+
+        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is null))
+        {
+            sourceValues.TryGetValue(field.Name, out var rawValue);
+            rawValue ??= EventScriptValue.Nothing;
+
+            var fieldValue = ConvertValueToDeclaredType(rawValue, field.TypeName);
+            fieldValue = ApplyFieldClamp(typeDefinition, field, fieldValue, sourceValues, materializedValues);
+            fieldValue = ConvertValueToDeclaredType(fieldValue, field.TypeName);
+            materializedValues[field.Name] = fieldValue;
+        }
+
+        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is not null))
+        {
+            var computedValue = EvaluateCustomTypeExpression(field.ComputedExpression!, sourceValues, materializedValues);
+            materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
+        }
+
+        return EventScriptValueFactory.CustomType(typeDefinition.Name, materializedValues);
+    }
+
+    private EventScriptValue ConvertValueToDeclaredType(EventScriptValue value, string declaredType)
+        => TryConvertDeclaredType(declaredType, RegisterFastValue.FromEventScriptValue(value), out var converted)
+            ? converted.ToEventScriptValue()
+            : EventScriptValue.Nothing;
+
+    private EventScriptValue ApplyFieldClamp(
+        RegisterVmTypeDefinition typeDefinition,
+        RegisterVmTypeFieldDefinition field,
+        EventScriptValue fieldValue,
+        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
+        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    {
+        _ = typeDefinition;
+        if (field.MinimumExpression is null || field.MaximumExpression is null)
+        {
+            return fieldValue;
+        }
+
+        var minimum = EvaluateCustomTypeExpression(field.MinimumExpression, sourceValues, materializedValues);
+        var maximum = EvaluateCustomTypeExpression(field.MaximumExpression, sourceValues, materializedValues);
+        if (!EventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, minimum) ||
+            !EventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
+            !EventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        if (!EventScriptValueAlu.TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !EventScriptValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber))
+        {
+            return fieldValue;
+        }
+
+        if (!valueNumber.IsFinite || !minimumNumber.IsFinite || !maximumNumber.IsFinite)
+        {
+            if (maximumNumber.IsPositiveInfinity && minimumNumber.IsFinite && valueNumber.IsFinite)
+            {
+                return EventScriptValueFactory.Decimal(Math.Max(valueNumber.Value, minimumNumber.Value));
+            }
+
+            return fieldValue;
+        }
+
+        var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
+        var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
+        EventScriptValue.TryGetDecimalUnit(fieldValue, out var unit);
+        return EventScriptValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasDecimalUnit() ? unit : null);
+    }
+
+    private EventScriptValue EvaluateCustomTypeExpression(
+        ExpressionNode expression,
+        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
+        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+    {
+        EnterScope();
+        try
+        {
+            foreach (var pair in sourceValues)
+            {
+                if (!Define(pair.Key, RegisterFastValue.FromEventScriptValue(pair.Value)))
+                {
+                    return EventScriptValue.Nothing;
+                }
+            }
+
+            foreach (var pair in materializedValues)
+            {
+                if (!Define(pair.Key, RegisterFastValue.FromEventScriptValue(pair.Value)))
+                {
+                    return EventScriptValue.Nothing;
+                }
+            }
+
+            return TryEvaluate(expression, out var value)
+                ? value.ToEventScriptValue()
+                : EventScriptValue.Nothing;
+        }
+        finally
+        {
+            ExitScope();
+        }
+    }
+
     private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
     {
         if (source.TryGetDictionaryMember(key, out var component) &&
@@ -2205,15 +2547,180 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var sourceItems = sourceValue.ToEventScriptValue().AsList();
+        var sourceTarget = sourceValue.ToEventScriptValue();
+        if (!TryCheckMaterializedValue(sourceTarget, "Collection access would enumerate more range items than allowed."))
+        {
+            value = RegisterFastValue.Nothing;
+            return true;
+        }
+
+        var sourceItems = MaterializeListLikeValue(sourceTarget);
+        var terminalTarget = pipeline.PrefixSelectors.Length == 0
+            ? sourceTarget
+            : EventScriptListValue.Empty;
         return pipeline.TerminalSelector.Kind switch
         {
+            RegisterFastSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
+            RegisterFastSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
+            RegisterFastSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
             RegisterFastSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
             RegisterFastSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
             RegisterFastSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
             RegisterFastSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
+            RegisterFastSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
+                ? TryExecuteProgramPattern(terminalTarget, patternItems, pipeline.TerminalSelector, out value)
+                : false,
+            RegisterFastSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
+                ? TryExecuteProgramObjectMatch(terminalTarget, objectItems, pipeline.TerminalSelector, out value)
+                : false,
+            RegisterFastSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
+                ? TryExecuteProgramTakePattern(terminalTarget, takePatternItems, pipeline.TerminalSelector, out value)
+                : false,
+            RegisterFastSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
+            RegisterFastSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
+            RegisterFastSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
+            RegisterFastSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
+            RegisterFastSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
+                ? TryExecuteProgramChoose(chooseItems, pipeline.TerminalSelector, out value)
+                : false,
+            RegisterFastSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
+                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
+                : false,
+            RegisterFastSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
+                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
+                : false,
+            RegisterFastSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
+                ? SetValue(RegisterFastValue.FromEventScriptValue(EventScriptCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
+                : false,
+            RegisterFastSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
+            RegisterFastSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
+            RegisterFastSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
+            RegisterFastSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
+                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
+                : false,
+            RegisterFastSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
+                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
+                : false,
             _ => Fail(out value)
         };
+    }
+
+    private bool TryExecuteProgramFilter(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var result = new List<EventScriptValue>();
+        if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
+            {
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate))
+                {
+                    return false;
+                }
+
+                if (predicate.AsBoolean())
+                {
+                    result.Add(item.ToEventScriptValue());
+                }
+
+                return true;
+            }))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.List(result));
+        return true;
+    }
+
+    private bool TryExecuteProgramSelect(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var result = new List<EventScriptValue>();
+        if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
+            {
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var selected))
+                {
+                    return false;
+                }
+
+                result.Add(selected.ToEventScriptValue());
+                return true;
+            }))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.List(result));
+        return true;
+    }
+
+    private bool TryExecuteProgramPredicate(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var isAny = string.Equals(terminal.EdgeMode, "any", StringComparison.Ordinal);
+        if (!isAny && !string.Equals(terminal.EdgeMode, "all", StringComparison.Ordinal))
+        {
+            value = RegisterFastValue.Boolean(false);
+            return true;
+        }
+
+        var result = !isAny;
+        if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
+            {
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate))
+                {
+                    return false;
+                }
+
+                if (isAny && predicate.AsBoolean())
+                {
+                    result = true;
+                    return true;
+                }
+
+                if (!isAny && !predicate.AsBoolean())
+                {
+                    result = false;
+                    return true;
+                }
+
+                return true;
+            }, stopWhen: () => isAny ? result : !result))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Boolean(result);
+        return true;
     }
 
     private bool TryExecuteProgramSum(
@@ -2405,6 +2912,1101 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
+    private bool TryExecuteProgramExtrema(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        bool isMax,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        RegisterFastValue bestItem = RegisterFastValue.Nothing;
+        EventScriptValue? bestProjection = null;
+        if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
+            {
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projection))
+                {
+                    return false;
+                }
+
+                var candidateProjection = projection.ToEventScriptValue();
+                if (bestProjection is null)
+                {
+                    bestProjection = candidateProjection;
+                    bestItem = item;
+                    return true;
+                }
+
+                int comparison;
+                if (EventScriptValueAlu.TryCoerceNumericForOperation(candidateProjection, out _) &&
+                    EventScriptValueAlu.TryCoerceNumericForOperation(bestProjection, out _))
+                {
+                    if (!EventScriptValueAlu.TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+                }
+
+                if ((isMax && comparison > 0) || (!isMax && comparison < 0))
+                {
+                    bestProjection = candidateProjection;
+                    bestItem = item;
+                }
+
+                return true;
+            }))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = bestProjection is null ? RegisterFastValue.Nothing : bestItem;
+        return true;
+    }
+
+    private bool TryExecuteProgramDictionary(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
+            {
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var keyValue))
+                {
+                    return false;
+                }
+
+                var key = keyValue.ToEventScriptValue().AsText();
+                if (string.IsNullOrEmpty(key))
+                {
+                    return true;
+                }
+
+                if (terminal.SecondaryExpressionProgram is null)
+                {
+                    result[key] = item.ToEventScriptValue();
+                    return true;
+                }
+
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.SecondaryExpressionProgram, item, out var projectedValue))
+                {
+                    return false;
+                }
+
+                result[key] = projectedValue.ToEventScriptValue();
+                return true;
+            }))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(result));
+        return true;
+    }
+
+    private bool TryExecuteProgramContains(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        EventScriptValue terminalTarget,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null ||
+            !TryExecuteExpressionProgram(terminal.ExpressionProgram, 0, out var needle))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        EventScriptValue target;
+        if (pipeline.PrefixSelectors.Length == 0)
+        {
+            target = terminalTarget;
+        }
+        else
+        {
+            if (!TryMaterializePipelineItems(sourceItems, pipeline.PrefixSelectors, out var targetItems, out value))
+            {
+                return false;
+            }
+
+            target = EventScriptValueFactory.List(targetItems);
+        }
+
+        var boxedNeedle = needle.ToEventScriptValue();
+        value = terminal.EdgeMode switch
+        {
+            "single" => RegisterFastValue.Boolean(target.Contains(boxedNeedle)),
+            "all" => RegisterFastValue.Boolean(EnumerateListLikeValue(boxedNeedle).All(target.Contains)),
+            "any" => RegisterFastValue.Boolean(EnumerateListLikeValue(boxedNeedle).Any(target.Contains)),
+            _ => RegisterFastValue.Boolean(false)
+        };
+        return true;
+    }
+
+    private bool TryExecuteProgramDistinct(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        EventScriptValue terminalTarget,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (!TryMaterializePipelineItems(sourceItems, pipeline, out var items, out value))
+        {
+            return false;
+        }
+
+        var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : EventScriptListValue.Empty;
+        if (terminal.ExpressionProgram is null || terminal.IdentifierSlot < 0)
+        {
+            value = RegisterFastValue.FromEventScriptValue(EventScriptCollectionOperators.Distinct(target, items));
+            return true;
+        }
+
+        var distinctItems = new List<EventScriptValue>();
+        var seenKeys = new HashSet<EventScriptValue>();
+        foreach (var item in items)
+        {
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromEventScriptValue(item), out var key))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            if (seenKeys.Add(key.ToEventScriptValue()))
+            {
+                distinctItems.Add(item);
+            }
+        }
+
+        value = RegisterFastValue.FromEventScriptValue(MaterializeDistinctItems(target, distinctItems));
+        return true;
+    }
+
+    private bool TryExecuteProgramGroupBy(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var groups = new Dictionary<string, List<EventScriptValue>>(StringComparer.Ordinal);
+        if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
+            {
+                if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var keyValue))
+                {
+                    return false;
+                }
+
+                var key = keyValue.ToEventScriptValue().AsText();
+                if (!groups.TryGetValue(key, out var bucket))
+                {
+                    bucket = [];
+                    groups[key] = bucket;
+                }
+
+                bucket.Add(item.ToEventScriptValue());
+                return true;
+            }))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(groups.ToDictionary(
+            pair => pair.Key,
+            pair => EventScriptValueFactory.List(pair.Value),
+            StringComparer.Ordinal)));
+        return true;
+    }
+
+    private bool TryExecuteProgramOrderBy(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        EventScriptValue terminalTarget,
+        RegisterFastPipelineProgram pipeline,
+        out RegisterFastValue value)
+    {
+        var terminal = pipeline.TerminalSelector;
+        if (terminal.ExpressionProgram is null ||
+            !TryMaterializePipelineItems(sourceItems, pipeline, out var items, out value))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var pairs = new List<(EventScriptValue Item, EventScriptValue Key)>(items.Length);
+        foreach (var item in items)
+        {
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromEventScriptValue(item), out var key))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            pairs.Add((Item: item, Key: key.ToEventScriptValue()));
+        }
+
+        var comparer = string.Equals(terminal.EdgeMode, "descending", StringComparison.Ordinal)
+            ? Comparer<EventScriptValue>.Create((left, right) => EventScriptValue.StableComparer.Compare(right, left))
+            : EventScriptValue.StableComparer;
+        var ordered = pairs.OrderBy(pair => pair.Key, comparer).Select(pair => pair.Item).ToArray();
+        var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : EventScriptListValue.Empty;
+        value = RegisterFastValue.FromEventScriptValue(target.Kind switch
+        {
+            EventScriptValueKind.Dice or EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Range => EventScriptValueFactory.List(ordered),
+            _ => EventScriptValue.Nothing
+        });
+        return true;
+    }
+
+    private bool TryExecuteProgramPattern(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        RegisterFastSelectorProgram selector,
+        out RegisterFastValue value)
+    {
+        if (selector.DicePattern is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        if (!TryEvaluateSequencePattern(target, items, selector.DicePattern, out var matches))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Boolean(matches);
+        return true;
+    }
+
+    private bool TryExecuteProgramObjectMatch(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        RegisterFastSelectorProgram selector,
+        out RegisterFastValue value)
+    {
+        if (selector.ObjectPattern is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        if (!TryEvaluateObjectMatchSelector(target, items, selector.ObjectPattern, out var matches))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.Boolean(matches);
+        return true;
+    }
+
+    private bool TryExecuteProgramTakePattern(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        RegisterFastSelectorProgram selector,
+        out RegisterFastValue value)
+    {
+        if (selector.DicePattern is null)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        if (!TryEvaluateTakePattern(target, items, selector.DicePattern, out var result))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        value = RegisterFastValue.FromEventScriptValue(result);
+        return true;
+    }
+
+    private bool TryExecuteProgramChoose(
+        IReadOnlyList<EventScriptValue> items,
+        RegisterFastSelectorProgram selector,
+        out RegisterFastValue value)
+    {
+        if (!TryFilterChooseCandidates(items, selector, out var candidates))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        IReadOnlyList<EventScriptValue> chosen;
+        if (selector.SecondaryExpressionProgram is not null && selector.SecondaryIdentifierSlot >= 0)
+        {
+            if (!TryChooseWeightedItems(candidates, selector.Count, selector.SecondaryIdentifierSlot, selector.SecondaryExpressionProgram, out chosen))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+        }
+        else if (selector.Flag)
+        {
+            chosen = ChooseRandomItems(candidates, selector.Count);
+        }
+        else
+        {
+            chosen = candidates.Take(selector.Count).ToArray();
+        }
+
+        if (selector.Count == 1)
+        {
+            value = chosen.Count == 0
+                ? RegisterFastValue.Nothing
+                : RegisterFastValue.FromEventScriptValue(chosen[0]);
+            return true;
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.List(chosen));
+        return true;
+    }
+
+    private bool TryFilterChooseCandidates(
+        IReadOnlyList<EventScriptValue> items,
+        RegisterFastSelectorProgram selector,
+        out IReadOnlyList<EventScriptValue> candidates)
+    {
+        if (selector.ExpressionProgram is null || selector.IdentifierSlot < 0)
+        {
+            candidates = items.ToArray();
+            return true;
+        }
+
+        var filtered = new List<EventScriptValue>();
+        foreach (var item in items)
+        {
+            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, RegisterFastValue.FromEventScriptValue(item), out var predicate))
+            {
+                candidates = [];
+                return false;
+            }
+
+            if (predicate.AsBoolean())
+            {
+                filtered.Add(item);
+            }
+        }
+
+        candidates = filtered;
+        return true;
+    }
+
+    private bool TryChooseWeightedItems(
+        IReadOnlyList<EventScriptValue> candidates,
+        int count,
+        int identifierSlot,
+        RegisterFastExpressionProgram weightProgram,
+        out IReadOnlyList<EventScriptValue> chosen)
+    {
+        var remaining = candidates.ToList();
+        var result = new List<EventScriptValue>();
+
+        while (result.Count < count && remaining.Count > 0)
+        {
+            var weightedItems = new List<(EventScriptValue Item, decimal Weight)>();
+            decimal totalWeight = 0m;
+
+            foreach (var candidate in remaining)
+            {
+                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, RegisterFastValue.FromEventScriptValue(candidate), out var weightValue))
+                {
+                    chosen = [];
+                    return false;
+                }
+
+                var weight = EvaluatePositiveWeight(weightValue.ToEventScriptValue());
+                if (weight <= 0m)
+                {
+                    continue;
+                }
+
+                weightedItems.Add((candidate, weight));
+                totalWeight += weight;
+            }
+
+            if (weightedItems.Count == 0 || totalWeight <= 0m)
+            {
+                break;
+            }
+
+            if (!TryNextInclusiveDecimal(0m, totalWeight, out var threshold))
+            {
+                break;
+            }
+
+            decimal cumulative = 0m;
+            var selected = weightedItems[^1].Item;
+            foreach (var weightedItem in weightedItems)
+            {
+                cumulative += weightedItem.Weight;
+                if (threshold < cumulative)
+                {
+                    selected = weightedItem.Item;
+                    break;
+                }
+            }
+
+            result.Add(selected);
+            remaining.Remove(selected);
+        }
+
+        chosen = result;
+        return true;
+    }
+
+    private static decimal EvaluatePositiveWeight(EventScriptValue value)
+        => EventScriptValueAlu.TryCoerceNumericForOperation(value, out var number) && number.IsFinite
+            ? Math.Max(0m, number.Value)
+            : 0m;
+
+    private IReadOnlyList<EventScriptValue> ChooseRandomItems(IReadOnlyList<EventScriptValue> items, int count)
+    {
+        var pool = items.ToList();
+        var result = new List<EventScriptValue>(Math.Min(count, pool.Count));
+        for (var i = 0; i < count && pool.Count > 0; i++)
+        {
+            if (!TryNextInclusiveInt(0, pool.Count - 1, out var index))
+            {
+                break;
+            }
+
+            result.Add(pool[index]);
+            pool.RemoveAt(index);
+        }
+
+        return result;
+    }
+
+    private bool TryForEachIncludedPipelineItem(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastSelectorProgram[] prefixSelectors,
+        Func<RegisterFastValue, bool> action,
+        Func<bool>? stopWhen = null)
+    {
+        for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
+        {
+            if (!TryApplyProgramPipelinePrefix(
+                    RegisterFastValue.FromEventScriptValue(sourceItems[itemIndex]),
+                    prefixSelectors,
+                    out var item,
+                    out var include))
+            {
+                return false;
+            }
+
+            if (!include)
+            {
+                continue;
+            }
+
+            if (!action(item))
+            {
+                return false;
+            }
+
+            if (stopWhen?.Invoke() == true)
+            {
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    private bool TryMaterializePipelineItems(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastPipelineProgram pipeline,
+        out EventScriptValue[] items,
+        out RegisterFastValue value)
+        => TryMaterializePipelineItems(sourceItems, pipeline.PrefixSelectors, out items, out value);
+
+    private bool TryMaterializePipelineItems(
+        IReadOnlyList<EventScriptValue> sourceItems,
+        RegisterFastSelectorProgram[] prefixSelectors,
+        out EventScriptValue[] items,
+        out RegisterFastValue value)
+    {
+        var result = new List<EventScriptValue>(sourceItems.Count);
+        if (!TryForEachIncludedPipelineItem(sourceItems, prefixSelectors, item =>
+            {
+                result.Add(item.ToEventScriptValue());
+                return true;
+            }))
+        {
+            items = [];
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        items = result.ToArray();
+        value = RegisterFastValue.Nothing;
+        return true;
+    }
+
+    private static IEnumerable<EventScriptValue> EnumerateListLikeValue(EventScriptValue value)
+    {
+        if (value.Kind == EventScriptValueKind.Optional)
+        {
+            var optional = value.AsOptional();
+            return optional.HasValue
+                ? EnumerateListLikeValue(optional.Value)
+                : Array.Empty<EventScriptValue>();
+        }
+
+        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Iterator
+            ? value.AsEnumerable()
+            : value.AsList();
+    }
+
+    private static IReadOnlyList<EventScriptValue> MaterializeListLikeValue(EventScriptValue value)
+    {
+        if (value.Kind == EventScriptValueKind.Optional)
+        {
+            var optional = value.AsOptional();
+            return optional.HasValue
+                ? MaterializeListLikeValue(optional.Value)
+                : Array.Empty<EventScriptValue>();
+        }
+
+        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Iterator
+            ? value.AsEnumerable().ToArray()
+            : value.AsList();
+    }
+
+    private static bool SetValue(RegisterFastValue input, out RegisterFastValue value)
+    {
+        value = input;
+        return true;
+    }
+
+    private static EventScriptValue EvaluateReverseSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        return EventScriptValueFactory.List(items.Reverse().ToArray());
+    }
+
+    private static EventScriptValue EvaluateDrawSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items, int count)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var drawn = items.Take(count).ToArray();
+        if (count == 1)
+        {
+            return drawn.Length == 0 ? EventScriptValue.Nothing : drawn[0];
+        }
+
+        return target.Kind == EventScriptValueKind.Dice
+            ? EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(drawn.Select(item => (int)item.AsInteger())))
+            : EventScriptValueFactory.List(drawn);
+    }
+
+    private EventScriptValue EvaluateShuffleSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    {
+        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        {
+            return EventScriptValue.Nothing;
+        }
+
+        var shuffled = items.ToArray();
+        for (var i = shuffled.Length - 1; i > 0; i--)
+        {
+            if (!TryNextInclusiveInt(0, i, out var swapIndex))
+            {
+                return EventScriptValueFactory.List(shuffled);
+            }
+
+            (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
+        }
+
+        return EventScriptValueFactory.List(shuffled);
+    }
+
+    private bool TryEvaluateTakePattern(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        DicePatternNode pattern,
+        out EventScriptValue value)
+    {
+        if (!IsPatternSequence(target))
+        {
+            value = EventScriptValue.Nothing;
+            return true;
+        }
+
+        if (!TryTakeSequencePattern(items, pattern, out var takenItems))
+        {
+            value = EventScriptValue.Nothing;
+            return true;
+        }
+
+        value = target.Kind == EventScriptValueKind.Dice
+            ? EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(takenItems.Select(item => (int)item.AsInteger())))
+            : EventScriptValueFactory.List(takenItems);
+        return true;
+    }
+
+    private bool TryEvaluateSequencePattern(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        DicePatternNode? pattern,
+        out bool matches)
+    {
+        if (pattern is null || !IsPatternSequence(target))
+        {
+            matches = false;
+            return true;
+        }
+
+        var counts = items
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        switch (pattern)
+        {
+            case DiceCountPatternNode countPattern:
+                return TryMatchDiceCountPattern(counts, countPattern, out matches);
+
+            case DiceFullHousePatternNode:
+                matches = counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 });
+                return true;
+
+            case DiceStraightPatternNode:
+                matches = MatchStraight(items);
+                return true;
+
+            default:
+                matches = false;
+                return true;
+        }
+    }
+
+    private bool TryMatchDiceCountPattern(
+        IReadOnlyDictionary<EventScriptValue, int> counts,
+        DiceCountPatternNode pattern,
+        out bool matches)
+    {
+        if (pattern.Face is not null)
+        {
+            if (!TryEvaluate(pattern.Face, out var face))
+            {
+                matches = false;
+                return false;
+            }
+
+            matches = counts.TryGetValue(face.ToEventScriptValue(), out var count) && count >= pattern.Count;
+            return true;
+        }
+
+        matches = counts.Values.Any(count => count >= pattern.Count);
+        return true;
+    }
+
+    private static bool MatchStraight(IReadOnlyList<EventScriptValue> items)
+    {
+        var unique = items
+            .Select(item => item.AsInteger())
+            .Distinct()
+            .OrderByDescending(x => x)
+            .ToArray();
+        if (unique.Length < 2)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < unique.Length - 1; i++)
+        {
+            if (unique[i] - 1 != unique[i + 1])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsPatternSequence(EventScriptValue value)
+        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice;
+
+    private bool TryTakeSequencePattern(
+        IReadOnlyList<EventScriptValue> items,
+        DicePatternNode pattern,
+        out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        var counts = items
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        switch (pattern)
+        {
+            case DiceCountPatternNode countPattern:
+                return TryTakeCountPattern(items, counts, countPattern, out takenItems);
+
+            case DiceFullHousePatternNode:
+                return TryTakeFullHouse(items, counts, out takenItems);
+
+            case DiceStraightPatternNode:
+                return TryTakeStraight(items, out takenItems);
+
+            default:
+                takenItems = Array.Empty<EventScriptValue>();
+                return false;
+        }
+    }
+
+    private bool TryTakeCountPattern(
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyDictionary<EventScriptValue, int> counts,
+        DiceCountPatternNode pattern,
+        out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        if (pattern.Face is not null)
+        {
+            if (!TryEvaluate(pattern.Face, out var face))
+            {
+                takenItems = Array.Empty<EventScriptValue>();
+                return false;
+            }
+
+            var boxedFace = face.ToEventScriptValue();
+            if (counts.TryGetValue(boxedFace, out var faceCount) && faceCount >= pattern.Count)
+            {
+                takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int> { [boxedFace] = pattern.Count });
+                return true;
+            }
+
+            takenItems = Array.Empty<EventScriptValue>();
+            return false;
+        }
+
+        foreach (var candidate in EnumerateDistinctInSourceOrder(items))
+        {
+            if (counts.TryGetValue(candidate, out var candidateCount) && candidateCount >= pattern.Count)
+            {
+                takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int> { [candidate] = pattern.Count });
+                return true;
+            }
+        }
+
+        takenItems = Array.Empty<EventScriptValue>();
+        return false;
+    }
+
+    private static bool TryTakeFullHouse(
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyDictionary<EventScriptValue, int> counts,
+        out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        foreach (var tripleCandidate in EnumerateDistinctInSourceOrder(items))
+        {
+            if (!counts.TryGetValue(tripleCandidate, out var tripleCount) || tripleCount < 3)
+            {
+                continue;
+            }
+
+            foreach (var pairCandidate in EnumerateDistinctInSourceOrder(items))
+            {
+                if (EventScriptValueAlu.AreEqual(pairCandidate, tripleCandidate))
+                {
+                    continue;
+                }
+
+                if (counts.TryGetValue(pairCandidate, out var pairCount) && pairCount >= 2)
+                {
+                    takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int>
+                    {
+                        [tripleCandidate] = 3,
+                        [pairCandidate] = 2
+                    });
+                    return true;
+                }
+            }
+        }
+
+        takenItems = Array.Empty<EventScriptValue>();
+        return false;
+    }
+
+    private static bool TryTakeStraight(IReadOnlyList<EventScriptValue> items, out IReadOnlyList<EventScriptValue> takenItems)
+    {
+        var distinctValues = new List<EventScriptValue>();
+        var seenIntegers = new HashSet<long>();
+        foreach (var item in items)
+        {
+            var value = item.AsInteger();
+            if (seenIntegers.Add(value))
+            {
+                distinctValues.Add(item);
+            }
+        }
+
+        var uniqueIntegers = distinctValues
+            .Select(item => item.AsInteger())
+            .OrderByDescending(value => value)
+            .ToArray();
+        if (uniqueIntegers.Length < 2)
+        {
+            takenItems = Array.Empty<EventScriptValue>();
+            return false;
+        }
+
+        for (var i = 0; i < uniqueIntegers.Length - 1; i++)
+        {
+            if (uniqueIntegers[i] - 1 != uniqueIntegers[i + 1])
+            {
+                takenItems = Array.Empty<EventScriptValue>();
+                return false;
+            }
+        }
+
+        takenItems = distinctValues;
+        return true;
+    }
+
+    private static IReadOnlyList<EventScriptValue> TakeItemsByCounts(
+        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyDictionary<EventScriptValue, int> requiredCounts)
+    {
+        var remaining = requiredCounts.ToDictionary(pair => pair.Key, pair => pair.Value);
+        var takenItems = new List<EventScriptValue>();
+
+        foreach (var item in items)
+        {
+            if (!remaining.TryGetValue(item, out var remainingCount) || remainingCount <= 0)
+            {
+                continue;
+            }
+
+            takenItems.Add(item);
+            remaining[item] = remainingCount - 1;
+        }
+
+        return takenItems;
+    }
+
+    private static IEnumerable<EventScriptValue> EnumerateDistinctInSourceOrder(IReadOnlyList<EventScriptValue> items)
+    {
+        var seen = new HashSet<EventScriptValue>();
+        foreach (var item in items)
+        {
+            if (seen.Add(item))
+            {
+                yield return item;
+            }
+        }
+    }
+
+    private bool TryEvaluateObjectMatchSelector(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        ObjectMatchPatternNode? pattern,
+        out bool matches)
+    {
+        if (pattern is null || target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Dice))
+        {
+            matches = false;
+            return true;
+        }
+
+        foreach (var item in items)
+        {
+            if (!TryMatchesObjectPattern(item, pattern, out var itemMatches))
+            {
+                matches = false;
+                return false;
+            }
+
+            if (itemMatches)
+            {
+                matches = true;
+                return true;
+            }
+        }
+
+        matches = false;
+        return true;
+    }
+
+    private bool TryMatchesObjectPattern(EventScriptValue value, ObjectMatchPatternNode pattern, out bool matches)
+    {
+        if (value.Kind != EventScriptValueKind.Dictionary)
+        {
+            matches = false;
+            return true;
+        }
+
+        var dictionary = value.AsDictionary();
+        foreach (var entry in pattern.Entries)
+        {
+            if (!dictionary.TryGetValue(entry.Key, out var actual))
+            {
+                matches = false;
+                return true;
+            }
+
+            switch (entry.Value)
+            {
+                case ObjectMatchExpressionValueNode expressionValue:
+                    if (!TryEvaluate(expressionValue.Expression, out var expected))
+                    {
+                        matches = false;
+                        return false;
+                    }
+
+                    if (!EventScriptValueAlu.AreEqual(actual, expected.ToEventScriptValue()))
+                    {
+                        matches = false;
+                        return true;
+                    }
+
+                    break;
+
+                case ObjectMatchNestedValueNode nestedValue:
+                    if (!TryMatchesObjectPattern(actual, nestedValue.Pattern, out var nestedMatches))
+                    {
+                        matches = false;
+                        return false;
+                    }
+
+                    if (!nestedMatches)
+                    {
+                        matches = false;
+                        return true;
+                    }
+
+                    break;
+            }
+        }
+
+        matches = true;
+        return true;
+    }
+
+    private static EventScriptValue EvaluateSequenceSliceSelector(
+        EventScriptValue target,
+        IReadOnlyList<EventScriptValue> items,
+        RegisterFastSelectorProgram selector)
+    {
+        if (selector.Count <= 0)
+        {
+            return target.Kind == EventScriptValueKind.Dice
+                ? EventScriptValueFactory.Dice(EventScriptDiceValue.Empty)
+                : EventScriptValueFactory.List(Array.Empty<EventScriptValue>());
+        }
+
+        var selectedItems = selector.SecondaryMode switch
+        {
+            "first" => TakeFirst(items, selector.Count),
+            "last" => TakeLast(items, selector.Count),
+            "highest" => TakeHighest(items, selector.Count),
+            "lowest" => TakeLowest(items, selector.Count),
+            _ => Array.Empty<EventScriptValue>()
+        };
+
+        if (string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal))
+        {
+            selectedItems = DropSelection(items, selectedItems);
+        }
+
+        return target.Kind switch
+        {
+            EventScriptValueKind.Dice => EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(selectedItems.Select(item => (int)item.AsInteger()))),
+            EventScriptValueKind.List => EventScriptValueFactory.List(selectedItems),
+            EventScriptValueKind.Set => EventScriptValueFactory.List(selectedItems),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private static EventScriptValue MaterializeDistinctItems(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    {
+        return target.Kind switch
+        {
+            EventScriptValueKind.Set => EventScriptValueFactory.Set(items),
+            EventScriptValueKind.List => EventScriptValueFactory.List(items),
+            EventScriptValueKind.Dice => EventScriptValueFactory.List(items),
+            EventScriptValueKind.Range => EventScriptValueFactory.List(items),
+            _ => EventScriptValue.Nothing
+        };
+    }
+
+    private static EventScriptValue[] TakeFirst(IReadOnlyList<EventScriptValue> items, int count)
+        => items.Take(count).ToArray();
+
+    private static EventScriptValue[] TakeLast(IReadOnlyList<EventScriptValue> items, int count)
+        => items.Skip(Math.Max(0, items.Count - count)).ToArray();
+
+    private static EventScriptValue[] TakeHighest(IReadOnlyList<EventScriptValue> items, int count)
+        => items
+            .OrderByDescending(item => item, EventScriptValue.StableComparer)
+            .Take(count)
+            .ToArray();
+
+    private static EventScriptValue[] TakeLowest(IReadOnlyList<EventScriptValue> items, int count)
+        => items
+            .OrderBy(item => item, EventScriptValue.StableComparer)
+            .Take(count)
+            .ToArray();
+
+    private static EventScriptValue[] DropSelection(IReadOnlyList<EventScriptValue> items, IReadOnlyList<EventScriptValue> selection)
+    {
+        if (selection.Count == 0)
+        {
+            return items.ToArray();
+        }
+
+        var remainingSelections = selection
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var result = new List<EventScriptValue>(items.Count);
+
+        foreach (var item in items)
+        {
+            if (remainingSelections.TryGetValue(item, out var remainingCount) && remainingCount > 0)
+            {
+                remainingSelections[item] = remainingCount - 1;
+                continue;
+            }
+
+            result.Add(item);
+        }
+
+        return result.ToArray();
+    }
+
     private bool TryApplyProgramPipelinePrefix(
         RegisterFastValue item,
         RegisterFastSelectorProgram[] prefixSelectors,
@@ -2461,6 +4063,32 @@ internal sealed class RegisterVmFastExecutionSession
         RegisterFastValue item,
         out RegisterFastValue value)
         => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
+
+    private bool TryEvaluateExpressionWithTemporarySlot(
+        int slot,
+        RegisterFastValue slotValue,
+        ExpressionNode expression,
+        out RegisterFastValue value)
+    {
+        if ((uint)slot >= (uint)_locals.Length)
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var hadValue = _assignedSlots[slot];
+        var previous = _locals[slot];
+        _locals[slot] = slotValue;
+        _assignedSlots[slot] = true;
+        try
+        {
+            return TryEvaluate(expression, out value);
+        }
+        finally
+        {
+            RestoreSlot(slot, hadValue, previous);
+        }
+    }
 
     private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out RegisterFastValue value)
     {

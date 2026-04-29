@@ -84,12 +84,7 @@ public sealed class EventScriptEnginePerformanceComparisonTests
         => EventScriptManager.LinkModules(EventScriptManager.ParseModule(PerformanceScript, "engine-performance.es"));
 
     private static RegisterCompiledEventScript CompileRegisterVm(LinkedEventScriptModule linked)
-        => RegisterEventScriptCompiler.Compile(
-            linked,
-            new RegisterEventScriptCompilationOptions
-            {
-                FallbackMode = RegisterVmFallbackMode.Throw
-            });
+        => RegisterEventScriptCompiler.Compile(linked);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {

@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using StepH.Flow.EventScript.Interpreter;
+using System.Linq;
 using StepH.Flow.EventScript.Parser;
 
 namespace StepH.Flow.EventScript.RegisterVM;
@@ -16,18 +16,16 @@ public sealed class RegisterCompiledEventScriptHandler
         int declarationOrder,
         int programIndex,
         bool diagnosticsEnabled,
-        CompiledEventScriptHandler compatibilityHandler,
         IReadOnlyList<StatementNode> statements,
         RegisterVmFastPathPlan fastPathPlan)
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));
-        Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        Parameters = parameters?.ToArray() ?? throw new ArgumentNullException(nameof(parameters));
         SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
         DeclarationOrder = declarationOrder;
         ProgramIndex = programIndex;
         DiagnosticsEnabled = diagnosticsEnabled;
-        CompatibilityHandler = compatibilityHandler ?? throw new ArgumentNullException(nameof(compatibilityHandler));
-        Statements = statements ?? throw new ArgumentNullException(nameof(statements));
+        Statements = statements?.ToArray() ?? throw new ArgumentNullException(nameof(statements));
         FastPathPlan = fastPathPlan ?? throw new ArgumentNullException(nameof(fastPathPlan));
         Definition = new EventScriptMessageSignature(message, parameters);
     }
@@ -45,8 +43,6 @@ public sealed class RegisterCompiledEventScriptHandler
     internal int ProgramIndex { get; }
 
     internal bool DiagnosticsEnabled { get; }
-
-    internal CompiledEventScriptHandler CompatibilityHandler { get; }
 
     internal IReadOnlyList<StatementNode> Statements { get; }
 

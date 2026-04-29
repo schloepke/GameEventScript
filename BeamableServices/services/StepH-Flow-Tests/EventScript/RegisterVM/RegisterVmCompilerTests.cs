@@ -1,6 +1,4 @@
 using StepH.Flow.EventScript;
-using StepH.Flow.EventScript.Interpreter;
-using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
@@ -62,11 +60,11 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmAllowsCompatibilityFallbackByDefault()
+    public void RegisterVmRunsGeneratedCollectionsByDefault()
     {
         const string script =
             """
-            module Fallback
+            module Collections
 
             on Start {
               let values be :list[:select item from 1 to 3 -> item]
@@ -88,42 +86,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowSurfacesUnsupportedFastPath()
-    {
-        const string script =
-            """
-            module Fallback
-
-            on Start {
-              let values be :list[:select item from 1 to 3 -> item]
-              publish Done(count: :len values)
-            }
-            """;
-
-        var host = EventScriptHost.CreateBuilder()
-            .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
-
-        RegisterVmFallbackException? exception = null;
-        try
-        {
-            host.Publish(Message("Start"));
-        }
-        catch (RegisterVmFallbackException caught)
-        {
-            exception = caught;
-        }
-
-        Assert.IsNotNull(exception);
-        Assert.AreEqual("Start", exception.MessageName);
-        StringAssert.Contains(exception.HandlerSignatureId, "Start");
-        StringAssert.Contains(exception.Reason, nameof(GeneratedCollectionExpressionNode));
-    }
-
-    [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsIfElseFastPath()
+    public void RegisterVmRunsIfElseFastPath()
     {
         const string script =
             """
@@ -147,9 +110,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message("Start", ("first", EventScriptValueFactory.Boolean(true)), ("second", EventScriptValueFactory.Boolean(false))));
         host.Publish(Message("Start", ("first", EventScriptValueFactory.Boolean(false)), ("second", EventScriptValueFactory.Boolean(true))));
@@ -181,9 +142,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message("Start", ("flag", EventScriptValueFactory.Boolean(true))));
 
@@ -192,7 +151,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsCollectionForFastPath()
+    public void RegisterVmRunsCollectionForFastPath()
     {
         const string script =
             """
@@ -211,9 +170,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message(
             "Start",
@@ -249,9 +206,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message(
             "Start",
@@ -266,7 +221,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsTypedLetFastPath()
+    public void RegisterVmRunsTypedLetFastPath()
     {
         const string script =
             """
@@ -290,9 +245,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message("Start"));
 
@@ -309,7 +262,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsMemberAndIndexedAccessFastPath()
+    public void RegisterVmRunsMemberAndIndexedAccessFastPath()
     {
         const string script =
             """
@@ -340,9 +293,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message(
             "Start",
@@ -371,7 +322,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsCollectionLiteralsFastPath()
+    public void RegisterVmRunsCollectionLiteralsFastPath()
     {
         const string script =
             """
@@ -406,9 +357,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message("Start", ("seed", EventScriptValueFactory.Integer(7))));
 
@@ -439,7 +388,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsTypeCheckFastPath()
+    public void RegisterVmRunsTypeCheckFastPath()
     {
         const string script =
             """
@@ -482,9 +431,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message(
             "Start",
@@ -518,7 +465,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsDirectMessageLiteralExpressionFastPath()
+    public void RegisterVmRunsDirectMessageLiteralExpressionFastPath()
     {
         const string script =
             """
@@ -541,9 +488,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message("Start", ("value", EventScriptValueFactory.Integer(21))));
 
@@ -556,7 +501,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFallbackModeThrowRunsHandlerLiteralAndBindFastPath()
+    public void RegisterVmRunsHandlerLiteralAndBindFastPath()
     {
         const string script =
             """
@@ -585,9 +530,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
-                script,
-                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+            .Load(EventScriptManager.CompileRegisterVM(script));
 
         host.Publish(Message("Start", ("success", EventScriptValueFactory.Boolean(true))));
 

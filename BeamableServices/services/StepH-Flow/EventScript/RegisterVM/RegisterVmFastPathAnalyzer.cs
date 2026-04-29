@@ -15,18 +15,21 @@ internal static class RegisterVmFastPathAnalyzer
     public static RegisterVmFastPathPlan CreateHandlerPlan(
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables)
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null)
     {
         if (!SupportsHandler(statements, callables, out var unsupportedReason))
         {
             return RegisterVmFastPathPlan.Unsupported(unsupportedReason);
         }
 
-        var slotCollector = new SlotCollector(callables);
+        var slotCollector = new SlotCollector(callables, typeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal));
         foreach (var parameter in parameters)
         {
             slotCollector.AddSlot(parameter);
         }
+
+        slotCollector.CollectTypeDefinitions();
 
         foreach (var statement in statements)
         {
@@ -416,6 +419,55 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case GeneratedCollectionExpressionNode generatedCollection:
+                if (!SupportsIterationSource(generatedCollection.Source, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Generated collection source: {unsupportedReason}";
+                    return false;
+                }
+
+                if (generatedCollection.Predicate is not null &&
+                    !SupportsExpression(generatedCollection.Predicate, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Generated collection predicate: {unsupportedReason}";
+                    return false;
+                }
+
+                if (!SupportsExpression(generatedCollection.Projection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Generated collection projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case GuardedChoiceExpressionNode guardedChoice:
+                for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
+                {
+                    var branch = guardedChoice.Branches[branchIndex];
+                    if (!SupportsExpression(branch.ConditionExpression, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Guarded choice branch {branchIndex} condition: {unsupportedReason}";
+                        return false;
+                    }
+
+                    if (!SupportsExpression(branch.ValueExpression, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Guarded choice branch {branchIndex} value: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                if (!SupportsExpression(guardedChoice.OtherwiseExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Guarded choice otherwise: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case BinaryExpressionNode binary:
                 if (!SupportsBinaryOperator(binary.Operator))
                 {
@@ -580,7 +632,34 @@ internal static class RegisterVmFastPathAnalyzer
             "vector2" or "vector3" or
             "boolean" or "integer" or "decimal" or "number" or
             "list" or "range" or "message" or "handler" or
-            "dictionary" or "set" or "dice" or "optional";
+            "dictionary" or "set" or "dice" or "optional" ||
+            !string.IsNullOrWhiteSpace(typeName);
+
+    private static bool SupportsIterationSource(
+        IterationSourceNode source,
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        out string unsupportedReason)
+    {
+        switch (source)
+        {
+            case CollectionIterationSourceNode collection:
+                if (!SupportsExpression(collection.Expression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Collection source expression: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case RangeIterationSourceNode range:
+                return SupportsRange(range.RangeExpression, callables, out unsupportedReason);
+
+            default:
+                unsupportedReason = $"Iteration source '{source.GetType().Name}' is not supported.";
+                return false;
+        }
+    }
 
     private static bool SupportsPipelinedCollection(
         CollectionAccessExpressionNode expression,
@@ -657,7 +736,7 @@ internal static class RegisterVmFastPathAnalyzer
     {
         switch (selector)
         {
-            case FilterSelectorNode filter when !isTerminal:
+            case FilterSelectorNode filter:
                 if (!SupportsExpression(filter.Predicate, callables, out unsupportedReason))
                 {
                     unsupportedReason = $"Filter predicate: {unsupportedReason}";
@@ -667,10 +746,20 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
-            case SelectSelectorNode select when !isTerminal:
+            case SelectSelectorNode select:
                 if (!SupportsExpression(select.Projection, callables, out unsupportedReason))
                 {
                     unsupportedReason = $"Select projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case PredicateSelectorNode predicate when isTerminal:
+                if (!SupportsExpression(predicate.Predicate, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Predicate selector predicate: {unsupportedReason}";
                     return false;
                 }
 
@@ -718,17 +807,227 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case PatternSelectorNode pattern when isTerminal:
+                if (!SupportsDicePattern(pattern.Pattern, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Pattern selector: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case ObjectMatchSelectorNode objectMatch when isTerminal:
+                if (!SupportsObjectMatchPattern(objectMatch.Pattern, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Object match selector: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case TakePatternSelectorNode takePattern when isTerminal:
+                if (!SupportsDicePattern(takePattern.Pattern, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Take pattern selector: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case MinSelectorNode min when isTerminal:
+                if (!SupportsExpression(min.Projection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Min projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case MaxSelectorNode max when isTerminal:
+                if (!SupportsExpression(max.Projection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Max projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case DictionarySelectorNode dictionary when isTerminal:
+                if (!SupportsExpression(dictionary.KeyProjection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Dictionary key projection: {unsupportedReason}";
+                    return false;
+                }
+
+                if (dictionary.ValueProjection is not null &&
+                    !SupportsExpression(dictionary.ValueProjection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Dictionary value projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case ContainsSelectorNode contains when isTerminal:
+                if (!SupportsExpression(contains.ValueExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Contains value: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case ChooseSelectorNode choose when isTerminal:
+                if (choose.Predicate is not null &&
+                    !SupportsExpression(choose.Predicate, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Choose predicate: {unsupportedReason}";
+                    return false;
+                }
+
+                if (choose.WeightExpression is not null &&
+                    !SupportsExpression(choose.WeightExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Choose weight: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case DrawSelectorNode when isTerminal:
+            case ShuffleSelectorNode when isTerminal:
+            case SortSelectorNode when isTerminal:
+            case ReverseSelectorNode when isTerminal:
+            case SequenceSliceSelectorNode when isTerminal:
+                unsupportedReason = string.Empty;
+                return true;
+
+            case DistinctSelectorNode distinct when isTerminal:
+                if (distinct.Projection is not null &&
+                    !SupportsExpression(distinct.Projection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Distinct projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case GroupBySelectorNode groupBy when isTerminal:
+                if (!SupportsExpression(groupBy.Projection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Group projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case OrderBySelectorNode orderBy when isTerminal:
+                if (!SupportsExpression(orderBy.Projection, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Order projection: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             default:
                 unsupportedReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} RegisterVM fast-path selector.";
                 return false;
         }
     }
 
-    private sealed class SlotCollector(IReadOnlyDictionary<string, LinkedCallableDefinition> callables)
+    private static bool SupportsDicePattern(
+        DicePatternNode pattern,
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        out string unsupportedReason)
+    {
+        if (pattern is DiceCountPatternNode { Face: { } face } &&
+            !SupportsExpression(face, callables, out unsupportedReason))
+        {
+            unsupportedReason = $"Dice count face: {unsupportedReason}";
+            return false;
+        }
+
+        unsupportedReason = string.Empty;
+        return true;
+    }
+
+    private static bool SupportsObjectMatchPattern(
+        ObjectMatchPatternNode pattern,
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        out string unsupportedReason)
+    {
+        foreach (var entry in pattern.Entries)
+        {
+            switch (entry.Value)
+            {
+                case ObjectMatchExpressionValueNode expressionValue:
+                    if (!SupportsExpression(expressionValue.Expression, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Object field '{entry.Key}': {unsupportedReason}";
+                        return false;
+                    }
+
+                    break;
+
+                case ObjectMatchNestedValueNode nestedValue:
+                    if (!SupportsObjectMatchPattern(nestedValue.Pattern, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Object field '{entry.Key}': {unsupportedReason}";
+                        return false;
+                    }
+
+                    break;
+            }
+        }
+
+        unsupportedReason = string.Empty;
+        return true;
+    }
+
+    private sealed class SlotCollector(
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
         private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
 
         public IReadOnlyDictionary<string, int> Slots => _slots;
+
+        public void CollectTypeDefinitions()
+        {
+            foreach (var typeDefinition in typeDefinitions.Values)
+            {
+                foreach (var field in typeDefinition.Fields)
+                {
+                    AddSlot(field.Name);
+                    if (field.MinimumExpression is not null)
+                    {
+                        CollectExpression(field.MinimumExpression);
+                    }
+
+                    if (field.MaximumExpression is not null)
+                    {
+                        CollectExpression(field.MaximumExpression);
+                    }
+
+                    if (field.ComputedExpression is not null)
+                    {
+                        CollectExpression(field.ComputedExpression);
+                    }
+                }
+            }
+        }
 
         public void AddSlot(string name)
         {
@@ -894,6 +1193,27 @@ internal static class RegisterVmFastPathAnalyzer
                     CollectExpression(seededRandom.BodyExpression);
                     break;
 
+                case GeneratedCollectionExpressionNode generatedCollection:
+                    AddSlot(generatedCollection.Identifier);
+                    CollectIterationSource(generatedCollection.Source);
+                    if (generatedCollection.Predicate is not null)
+                    {
+                        CollectExpression(generatedCollection.Predicate);
+                    }
+
+                    CollectExpression(generatedCollection.Projection);
+                    break;
+
+                case GuardedChoiceExpressionNode guardedChoice:
+                    foreach (var branch in guardedChoice.Branches)
+                    {
+                        CollectExpression(branch.ConditionExpression);
+                        CollectExpression(branch.ValueExpression);
+                    }
+
+                    CollectExpression(guardedChoice.OtherwiseExpression);
+                    break;
+
                 case BinaryExpressionNode binary:
                     CollectExpression(binary.Left);
                     CollectExpression(binary.Right);
@@ -945,6 +1265,20 @@ internal static class RegisterVmFastPathAnalyzer
 
                 case CollectionAccessExpressionNode collectionAccess:
                     CollectCollectionAccess(collectionAccess);
+                    break;
+            }
+        }
+
+        private void CollectIterationSource(IterationSourceNode source)
+        {
+            switch (source)
+            {
+                case CollectionIterationSourceNode collection:
+                    CollectExpression(collection.Expression);
+                    break;
+
+                case RangeIterationSourceNode range:
+                    CollectRange(range.RangeExpression);
                     break;
             }
         }
@@ -1003,6 +1337,11 @@ internal static class RegisterVmFastPathAnalyzer
                     CollectExpression(count.Predicate);
                     break;
 
+                case PredicateSelectorNode predicate:
+                    AddSlot(predicate.Identifier);
+                    CollectExpression(predicate.Predicate);
+                    break;
+
                 case EdgeSelectorNode edge:
                     if (!string.IsNullOrEmpty(edge.Identifier))
                     {
@@ -1015,6 +1354,113 @@ internal static class RegisterVmFastPathAnalyzer
                     }
 
                     break;
+
+                case PatternSelectorNode pattern:
+                    CollectDicePattern(pattern.Pattern);
+                    break;
+
+                case ObjectMatchSelectorNode objectMatch:
+                    CollectObjectMatchPattern(objectMatch.Pattern);
+                    break;
+
+                case TakePatternSelectorNode takePattern:
+                    CollectDicePattern(takePattern.Pattern);
+                    break;
+
+                case MinSelectorNode min:
+                    AddSlot(min.Identifier);
+                    CollectExpression(min.Projection);
+                    break;
+
+                case MaxSelectorNode max:
+                    AddSlot(max.Identifier);
+                    CollectExpression(max.Projection);
+                    break;
+
+                case DictionarySelectorNode dictionary:
+                    AddSlot(dictionary.Identifier);
+                    CollectExpression(dictionary.KeyProjection);
+                    if (dictionary.ValueProjection is not null)
+                    {
+                        CollectExpression(dictionary.ValueProjection);
+                    }
+
+                    break;
+
+                case ContainsSelectorNode contains:
+                    CollectExpression(contains.ValueExpression);
+                    break;
+
+                case ChooseSelectorNode choose:
+                    if (!string.IsNullOrEmpty(choose.Identifier))
+                    {
+                        AddSlot(choose.Identifier!);
+                    }
+
+                    if (choose.Predicate is not null)
+                    {
+                        CollectExpression(choose.Predicate);
+                    }
+
+                    if (!string.IsNullOrEmpty(choose.WeightIdentifier))
+                    {
+                        AddSlot(choose.WeightIdentifier!);
+                    }
+
+                    if (choose.WeightExpression is not null)
+                    {
+                        CollectExpression(choose.WeightExpression);
+                    }
+
+                    break;
+
+                case DistinctSelectorNode distinct:
+                    if (!string.IsNullOrEmpty(distinct.Identifier))
+                    {
+                        AddSlot(distinct.Identifier!);
+                    }
+
+                    if (distinct.Projection is not null)
+                    {
+                        CollectExpression(distinct.Projection);
+                    }
+
+                    break;
+
+                case GroupBySelectorNode groupBy:
+                    AddSlot(groupBy.Identifier);
+                    CollectExpression(groupBy.Projection);
+                    break;
+
+                case OrderBySelectorNode orderBy:
+                    AddSlot(orderBy.Identifier);
+                    CollectExpression(orderBy.Projection);
+                    break;
+            }
+        }
+
+        private void CollectDicePattern(DicePatternNode pattern)
+        {
+            if (pattern is DiceCountPatternNode { Face: { } face })
+            {
+                CollectExpression(face);
+            }
+        }
+
+        private void CollectObjectMatchPattern(ObjectMatchPatternNode pattern)
+        {
+            foreach (var entry in pattern.Entries)
+            {
+                switch (entry.Value)
+                {
+                    case ObjectMatchExpressionValueNode expressionValue:
+                        CollectExpression(expressionValue.Expression);
+                        break;
+
+                    case ObjectMatchNestedValueNode nestedValue:
+                        CollectObjectMatchPattern(nestedValue.Pattern);
+                        break;
+                }
             }
         }
     }
@@ -1368,6 +1814,20 @@ internal static class RegisterVmFastPathAnalyzer
                             ExpressionProgram: seededBodyProgram));
                         return;
 
+                    case GeneratedCollectionExpressionNode generatedCollection:
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.GeneratedCollection,
+                            GeneratedCollectionProgram: CompileGeneratedCollection(generatedCollection)));
+                        Push();
+                        return;
+
+                    case GuardedChoiceExpressionNode guardedChoice:
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.GuardedChoice,
+                            GuardedChoiceProgram: CompileGuardedChoice(guardedChoice)));
+                        Push();
+                        return;
+
                     case BinaryExpressionNode binary:
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
@@ -1478,6 +1938,44 @@ internal static class RegisterVmFastPathAnalyzer
                 }
             }
 
+            private RegisterFastGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
+            {
+                var predicateProgram = generatedCollection.Predicate is null
+                    ? null
+                    : compiler.CompileExpression(generatedCollection.Predicate);
+                var projectionProgram = compiler.CompileExpression(generatedCollection.Projection);
+                if (predicateProgram is not null)
+                {
+                    AccountNestedProgram(0, predicateProgram);
+                }
+
+                AccountNestedProgram(0, projectionProgram);
+                return new RegisterFastGeneratedCollectionProgram(
+                    generatedCollection.CollectionType,
+                    RequireSlot(generatedCollection.Identifier),
+                    generatedCollection.Source,
+                    predicateProgram,
+                    projectionProgram);
+            }
+
+            private RegisterFastGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
+            {
+                var valuePrograms = new RegisterFastExpressionProgram[guardedChoice.Branches.Count];
+                var conditionPrograms = new RegisterFastExpressionProgram[guardedChoice.Branches.Count];
+                for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
+                {
+                    var branch = guardedChoice.Branches[branchIndex];
+                    conditionPrograms[branchIndex] = compiler.CompileExpression(branch.ConditionExpression);
+                    valuePrograms[branchIndex] = compiler.CompileExpression(branch.ValueExpression);
+                    AccountNestedProgram(0, conditionPrograms[branchIndex]);
+                    AccountNestedProgram(0, valuePrograms[branchIndex]);
+                }
+
+                var otherwiseProgram = compiler.CompileExpression(guardedChoice.OtherwiseExpression);
+                AccountNestedProgram(0, otherwiseProgram);
+                return new RegisterFastGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
+            }
+
             private RegisterFastPipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
             {
                 var selectors = new List<CollectionSelectorNode>();
@@ -1505,17 +2003,24 @@ internal static class RegisterVmFastPathAnalyzer
             {
                 switch (selector)
                 {
-                    case FilterSelectorNode filter when !isTerminal:
+                    case FilterSelectorNode filter:
                         return new RegisterFastSelectorProgram(
                             RegisterFastSelectorKind.Filter,
                             RequireSlot(filter.Identifier),
                             compiler.CompileExpression(filter.Predicate));
 
-                    case SelectSelectorNode select when !isTerminal:
+                    case SelectSelectorNode select:
                         return new RegisterFastSelectorProgram(
                             RegisterFastSelectorKind.Select,
                             RequireSlot(select.Identifier),
                             compiler.CompileExpression(select.Projection));
+
+                    case PredicateSelectorNode predicate when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Predicate,
+                            RequireSlot(predicate.Identifier),
+                            compiler.CompileExpression(predicate.Predicate),
+                            predicate.Operator);
 
                     case SumSelectorNode sum when isTerminal:
                         return new RegisterFastSelectorProgram(
@@ -1541,6 +2046,121 @@ internal static class RegisterVmFastPathAnalyzer
                             string.IsNullOrEmpty(edge.Identifier) ? -1 : RequireSlot(edge.Identifier!),
                             edge.Predicate is null ? null : compiler.CompileExpression(edge.Predicate),
                             edge.Mode);
+
+                    case PatternSelectorNode pattern when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Pattern,
+                            -1,
+                            null,
+                            dicePattern: pattern.Pattern);
+
+                    case ObjectMatchSelectorNode objectMatch when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.ObjectMatch,
+                            -1,
+                            null,
+                            objectPattern: objectMatch.Pattern);
+
+                    case TakePatternSelectorNode takePattern when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.TakePattern,
+                            -1,
+                            null,
+                            dicePattern: takePattern.Pattern);
+
+                    case MinSelectorNode min when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Min,
+                            RequireSlot(min.Identifier),
+                            compiler.CompileExpression(min.Projection));
+
+                    case MaxSelectorNode max when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Max,
+                            RequireSlot(max.Identifier),
+                            compiler.CompileExpression(max.Projection));
+
+                    case DictionarySelectorNode dictionary when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Dictionary,
+                            RequireSlot(dictionary.Identifier),
+                            compiler.CompileExpression(dictionary.KeyProjection),
+                            secondaryExpressionProgram: dictionary.ValueProjection is null
+                                ? null
+                                : compiler.CompileExpression(dictionary.ValueProjection));
+
+                    case ContainsSelectorNode contains when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Contains,
+                            -1,
+                            compiler.CompileExpression(contains.ValueExpression),
+                            contains.Mode);
+
+                    case ChooseSelectorNode choose when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Choose,
+                            string.IsNullOrEmpty(choose.Identifier) ? -1 : RequireSlot(choose.Identifier!),
+                            choose.Predicate is null ? null : compiler.CompileExpression(choose.Predicate),
+                            count: choose.Count,
+                            secondaryExpressionProgram: choose.WeightExpression is null
+                                ? null
+                                : compiler.CompileExpression(choose.WeightExpression),
+                            secondaryIdentifierSlot: string.IsNullOrEmpty(choose.WeightIdentifier) ? -1 : RequireSlot(choose.WeightIdentifier!),
+                            flag: choose.AtRandom);
+
+                    case DrawSelectorNode draw when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Draw,
+                            -1,
+                            null,
+                            count: draw.Count);
+
+                    case ShuffleSelectorNode when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Shuffle,
+                            -1,
+                            null);
+
+                    case SortSelectorNode sort when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Sort,
+                            -1,
+                            null,
+                            sort.Direction);
+
+                    case DistinctSelectorNode distinct when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Distinct,
+                            string.IsNullOrEmpty(distinct.Identifier) ? -1 : RequireSlot(distinct.Identifier!),
+                            distinct.Projection is null ? null : compiler.CompileExpression(distinct.Projection));
+
+                    case GroupBySelectorNode groupBy when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.GroupBy,
+                            RequireSlot(groupBy.Identifier),
+                            compiler.CompileExpression(groupBy.Projection));
+
+                    case OrderBySelectorNode orderBy when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.OrderBy,
+                            RequireSlot(orderBy.Identifier),
+                            compiler.CompileExpression(orderBy.Projection),
+                            orderBy.Direction);
+
+                    case ReverseSelectorNode when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.Reverse,
+                            -1,
+                            null);
+
+                    case SequenceSliceSelectorNode slice when isTerminal:
+                        return new RegisterFastSelectorProgram(
+                            RegisterFastSelectorKind.SequenceSlice,
+                            -1,
+                            null,
+                            slice.Operation,
+                            secondaryMode: slice.Scope,
+                            count: slice.Count);
 
                     default:
                         throw new InvalidOperationException($"Unsupported RegisterVM selector program node '{selector.GetType().Name}'.");

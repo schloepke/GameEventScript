@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.Flow.EventScript.Types;
 
-namespace StepH.Flow.EventScript.Interpreter;
+namespace StepH.Flow.EventScript.Runtime;
 
 public enum EventScriptDiagnosticEventKind
 {

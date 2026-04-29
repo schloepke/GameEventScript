@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.Flow.EventScript.Interpreter;
 
 namespace StepH.Flow.EventScript.Runtime;
 

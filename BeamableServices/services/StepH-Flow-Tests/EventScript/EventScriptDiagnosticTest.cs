@@ -1,5 +1,4 @@
 using StepH.Flow.EventScript;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;

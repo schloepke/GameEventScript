@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using StepH.Flow.EventScript.Types;
 
-namespace StepH.Flow.EventScript.Interpreter;
+namespace StepH.Flow.EventScript.Runtime;
 
 internal static class EventScriptMessageValueCodec
 {

@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Types;
@@ -19,17 +18,13 @@ public static class RegisterEventScriptCompiler
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new RegisterEventScriptCompilationOptions();
-        var compatibilityRuntime = new CompiledEventScript(
-            module,
-            new EventScriptInterpreterCompilationOptions { EnableDiagnostics = compileOptions.EnableDiagnostics });
-        var builder = new CompilerBuilder(module, compileOptions, compatibilityRuntime);
+        var builder = new CompilerBuilder(module, compileOptions);
         return builder.Build();
     }
 
     private sealed class CompilerBuilder(
         LinkedEventScriptModule module,
-        RegisterEventScriptCompilationOptions options,
-        CompiledEventScript compatibilityRuntime)
+        RegisterEventScriptCompilationOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
@@ -51,6 +46,7 @@ public static class RegisterEventScriptCompiler
             CompileHandlers();
 
             var handlers = BuildHandlers();
+            var typeDefinitions = BuildTypeDefinitions();
             var bytecode = new RegisterBytecodeModule(
                 options,
                 _stringPool.ToArray(),
@@ -60,7 +56,7 @@ public static class RegisterEventScriptCompiler
                 _typeMetadata.ToArray(),
                 _programs.ToArray());
 
-            return new RegisterCompiledEventScript(options, bytecode, handlers, module.Callables, compatibilityRuntime);
+            return new RegisterCompiledEventScript(options, bytecode, handlers, module.Callables, typeDefinitions);
         }
 
         private void CompileMetadata()
@@ -107,11 +103,11 @@ public static class RegisterEventScriptCompiler
                 {
                     var handler = pair.Value[declarationOrder];
                     var programIndex = CompileStatements(
-                        $"handler:{handler.Message}#{declarationOrder}",
+                        $"handler:{pair.Key}#{declarationOrder}",
                         handler.Statements,
                         createsScope: false);
-                    _handlerProgramIndices[(handler.Message, declarationOrder)] = programIndex;
-                    AddSignature(EventScriptMessageSignature.CreateSignatureId(handler.Message, handler.Parameters));
+                    _handlerProgramIndices[(pair.Key, declarationOrder)] = programIndex;
+                    AddSignature(EventScriptMessageSignature.CreateSignatureId(pair.Key, handler.Parameters));
                 }
             }
         }
@@ -203,20 +199,27 @@ public static class RegisterEventScriptCompiler
 
         private IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledEventScriptHandler>> BuildHandlers()
         {
-            return compatibilityRuntime.Handlers.ToDictionary(
+            return module.Handlers.ToDictionary(
                 pair => pair.Key,
                 pair => (IReadOnlyList<RegisterCompiledEventScriptHandler>)pair.Value
-                    .Select(handler => new RegisterCompiledEventScriptHandler(
-                        handler.Message,
+                    .Select((handler, index) => new RegisterCompiledEventScriptHandler(
+                        pair.Key,
                         handler.Parameters,
-                        handler.SignatureId,
-                        handler.DeclarationOrder,
-                        _handlerProgramIndices.TryGetValue((handler.Message, handler.DeclarationOrder), out var programIndex) ? programIndex : -1,
+                        EventScriptMessageSignature.CreateSignatureId(pair.Key, handler.Parameters),
+                        index,
+                        _handlerProgramIndices.TryGetValue((pair.Key, index), out var programIndex) ? programIndex : -1,
                         options.EnableDiagnostics,
-                        handler,
                         handler.Statements,
-                        RegisterVmFastPathAnalyzer.CreateHandlerPlan(handler.Parameters, handler.Statements, module.Callables)))
+                        RegisterVmFastPathAnalyzer.CreateHandlerPlan(handler.Parameters, handler.Statements, module.Callables, module.TypeDefinitions)))
                     .ToArray(),
+                StringComparer.Ordinal);
+        }
+
+        private IReadOnlyDictionary<string, RegisterVmTypeDefinition> BuildTypeDefinitions()
+        {
+            return module.TypeDefinitions.ToDictionary(
+                pair => pair.Key,
+                pair => new RegisterVmTypeDefinition(pair.Value),
                 StringComparer.Ordinal);
         }
 

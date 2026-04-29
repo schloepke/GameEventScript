@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Types;
 using StepH.Flow.Extensions;
 using static StepH.Flow.EventScript.EventScriptMessageSignature;

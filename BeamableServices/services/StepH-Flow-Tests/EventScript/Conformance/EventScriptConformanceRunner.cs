@@ -113,12 +113,6 @@ internal static class EventScriptConformanceRunner
     }
 
     internal static IEventScriptMessageHandlerCollection CompileScripts(EventScriptConformanceTest test, string engine)
-        => CompileScripts(test, engine, null);
-
-    internal static IEventScriptMessageHandlerCollection CompileScripts(
-        EventScriptConformanceTest test,
-        string engine,
-        RegisterVmFallbackMode? registerVmFallbackMode)
     {
         var linked = LinkScripts(test);
         var diagnosticsEnabled = test.CompileOptions?.EnableDiagnostics ?? false;
@@ -131,8 +125,7 @@ internal static class EventScriptConformanceRunner
                 linked,
                 new RegisterEventScriptCompilationOptions
                 {
-                    EnableDiagnostics = diagnosticsEnabled,
-                    FallbackMode = registerVmFallbackMode ?? RegisterVmFallbackMode.Allow
+                    EnableDiagnostics = diagnosticsEnabled
                 }),
             _ => throw new InvalidOperationException($"Unsupported conformance engine '{engine}'.")
         };

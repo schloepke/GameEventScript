@@ -4,9 +4,9 @@ using StepH.Flow.EventScript.Runtime;
 
 namespace StepH.Flow.EventScript.RegisterVM;
 
-public sealed class RegisterVmFallbackException : EventScriptFatalRuntimeException
+public sealed class RegisterVmUnsupportedException : EventScriptFatalRuntimeException
 {
-    internal RegisterVmFallbackException(
+    internal RegisterVmUnsupportedException(
         string messageName,
         string handlerSignatureId,
         int declarationOrder,
@@ -32,5 +32,5 @@ public sealed class RegisterVmFallbackException : EventScriptFatalRuntimeExcepti
         string handlerSignatureId,
         int declarationOrder,
         string reason)
-        => $"RegisterVM compatibility fallback disabled for message '{messageName}', handler '{handlerSignatureId}' #{declarationOrder}: {reason}";
+        => $"RegisterVM cannot execute message '{messageName}', handler '{handlerSignatureId}' #{declarationOrder}: {reason}";
 }

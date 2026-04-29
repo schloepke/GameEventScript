@@ -3,8 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
+using StepH.Flow.EventScript.Parser;
 using StepH.Flow.EventScript.Runtime;
 
 namespace StepH.Flow.EventScript.RegisterVM;
@@ -19,13 +19,13 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
         RegisterBytecodeModule bytecodeModule,
         IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledEventScriptHandler>> handlers,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        CompiledEventScript compatibilityRuntime)
+        IReadOnlyDictionary<string, RegisterVmTypeDefinition> typeDefinitions)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         BytecodeModule = bytecodeModule ?? throw new ArgumentNullException(nameof(bytecodeModule));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
-        CompatibilityRuntime = compatibilityRuntime ?? throw new ArgumentNullException(nameof(compatibilityRuntime));
+        TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
 
         var handlerList = Handlers.Values.SelectMany(handlerGroup => handlerGroup).ToArray();
         _dispatchIndex = EventScriptInvocationKernel.BuildDispatchIndex(handlerList, handler => handler.SignatureId, handler => handler.DeclarationOrder);
@@ -44,7 +44,7 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
 
     internal IReadOnlyDictionary<string, LinkedCallableDefinition> Callables { get; }
 
-    internal CompiledEventScript CompatibilityRuntime { get; }
+    internal IReadOnlyDictionary<string, RegisterVmTypeDefinition> TypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledEventScriptHandler>> DispatchIndex => _dispatchIndex;
 
@@ -56,4 +56,41 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
 
     internal void InvokeHandler(RegisterCompiledEventScriptHandler handler, EventScriptMessage message, EventScriptContext context)
         => RegisterVmInvocationEngine.InvokeHandler(this, context, handler, message);
+}
+
+internal sealed class RegisterVmTypeDefinition
+{
+    public RegisterVmTypeDefinition(TypeDefinitionNode syntax)
+    {
+        _ = syntax ?? throw new ArgumentNullException(nameof(syntax));
+        Name = syntax.Name;
+        Fields = syntax.Fields.Select(field => new RegisterVmTypeFieldDefinition(field)).ToArray();
+    }
+
+    public string Name { get; }
+
+    public IReadOnlyList<RegisterVmTypeFieldDefinition> Fields { get; }
+}
+
+internal sealed class RegisterVmTypeFieldDefinition
+{
+    public RegisterVmTypeFieldDefinition(TypeFieldDefinitionNode syntax)
+    {
+        _ = syntax ?? throw new ArgumentNullException(nameof(syntax));
+        Name = syntax.Name;
+        TypeName = syntax.TypeName;
+        MinimumExpression = syntax.MinimumExpression;
+        MaximumExpression = syntax.MaximumExpression;
+        ComputedExpression = syntax.ComputedExpression;
+    }
+
+    public string Name { get; }
+
+    public string TypeName { get; }
+
+    public ExpressionNode? MinimumExpression { get; }
+
+    public ExpressionNode? MaximumExpression { get; }
+
+    public ExpressionNode? ComputedExpression { get; }
 }

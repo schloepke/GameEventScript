@@ -1381,6 +1381,11 @@ internal static class ExperimentalOpcodeInvocationEngine
 
     private EventScriptValue EvaluateCollectionAccess(ExperimentalCompiledExecutionContext context, CollectionAccessExpressionNode collectionAccess)
     {
+        if (TryEvaluatePipelinedCollectionAccess(context, collectionAccess, out var pipelinedValue))
+        {
+            return pipelinedValue;
+        }
+
         var target = EvaluateExpression(context, collectionAccess.Target);
         if (target.IsNothing())
         {
@@ -1507,6 +1512,87 @@ internal static class ExperimentalOpcodeInvocationEngine
                 return EventScriptValue.Nothing;
         }
     }
+
+    private bool TryEvaluatePipelinedCollectionAccess(ExperimentalCompiledExecutionContext context, CollectionAccessExpressionNode collectionAccess, out EventScriptValue value)
+    {
+        if (!EventScriptCollectionPipeline.TryCreate(collectionAccess, out var pipeline))
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        var sourceTarget = EvaluateExpression(context, pipeline.SourceExpression);
+        if (sourceTarget.IsNothing())
+        {
+            value = EventScriptValue.Nothing;
+            return true;
+        }
+
+        if (!TryEnumerateCollectionAccessTarget(context, sourceTarget, out var sourceItems))
+        {
+            value = EventScriptValue.Nothing;
+            return true;
+        }
+
+        var projection = CreateProjectionEvaluator(context);
+        var items = pipeline.ApplyPrefix(sourceItems, projection);
+        value = EvaluatePipelinedTerminalSelector(context, items, pipeline.TerminalSelector, projection);
+        return true;
+    }
+
+    private EventScriptValue EvaluatePipelinedTerminalSelector(
+        ExperimentalCompiledExecutionContext context,
+        IEnumerable<EventScriptValue> items,
+        CollectionSelectorNode selector,
+        EventScriptProjectionEvaluator projection)
+    {
+        var listTarget = EventScriptListValue.Empty;
+        switch (selector)
+        {
+            case PredicateSelectorNode predicateSelector:
+                return EvaluatePredicateSelector(context, items, predicateSelector);
+            case CountSelectorNode countSelector:
+                return EvaluateCountSelector(context, items, countSelector);
+            case EdgeSelectorNode edgeSelector:
+                return EvaluateEdgeSelector(context, items, edgeSelector);
+            case FilterSelectorNode:
+            case SelectSelectorNode:
+                return EventScriptValueFactory.List(EventScriptCollectionPipeline.ApplyComposableSelector(items, selector, projection));
+            case SumSelectorNode sumSelector:
+                return EvaluateSumSelector(context, items, sumSelector);
+            case AverageSelectorNode averageSelector:
+                return EvaluateAverageSelector(context, items, averageSelector);
+            case MinSelectorNode minSelector:
+                return EvaluateExtremaSelector(context, items, minSelector.Identifier, minSelector.Projection, isMax: false);
+            case MaxSelectorNode maxSelector:
+                return EvaluateExtremaSelector(context, items, maxSelector.Identifier, maxSelector.Projection, isMax: true);
+            case DictionarySelectorNode dictionarySelector:
+                return EvaluateDictionarySelector(context, items, dictionarySelector);
+            case SortSelectorNode sortSelector:
+                return EvaluateSortSelector(context, listTarget, items, sortSelector);
+            case DistinctSelectorNode distinctSelector:
+                return EvaluateDistinctSelector(context, listTarget, items, distinctSelector);
+            case GroupBySelectorNode groupBySelector:
+                return EvaluateGroupBySelector(context, items, groupBySelector);
+            case OrderBySelectorNode orderBySelector:
+                return EvaluateOrderBySelector(context, listTarget, items, orderBySelector);
+            case ChooseSelectorNode chooseSelector:
+                return EvaluateChooseSelector(context, MaterializePipelineItems(items), chooseSelector);
+            case DrawSelectorNode drawSelector:
+                return EvaluateDrawSelector(listTarget, MaterializePipelineItems(items), drawSelector);
+            case ShuffleSelectorNode:
+                return EvaluateShuffleSelector(listTarget, MaterializePipelineItems(items));
+            case ReverseSelectorNode:
+                return EvaluateReverseSelector(listTarget, MaterializePipelineItems(items));
+            case SequenceSliceSelectorNode sliceSelector:
+                return EvaluateSequenceSliceSelector(listTarget, MaterializePipelineItems(items), sliceSelector);
+            default:
+                return EventScriptValue.Nothing;
+        }
+    }
+
+    private static IReadOnlyList<EventScriptValue> MaterializePipelineItems(IEnumerable<EventScriptValue> items)
+        => items as IReadOnlyList<EventScriptValue> ?? items.ToList();
 
     private static bool TryMaterializeCollectionAccessTarget(ExperimentalCompiledExecutionContext context, EventScriptValue target, out IReadOnlyList<EventScriptValue> items)
     {

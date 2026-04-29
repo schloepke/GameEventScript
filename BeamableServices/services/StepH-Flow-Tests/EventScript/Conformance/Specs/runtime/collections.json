@@ -58,6 +58,44 @@
     },
     {
       "kind": "scriptApi",
+      "name": "streamable selector chains preserve observable results",
+      "script": "on Start(values) {\n  let sorted be values[:filter value where value > 1][:select value -> value * -1][:sort ascending]\n  publish Done(filterSelectSum: values[:filter value where value > 2][:select value -> value * 3][:sum value -> value], filterCount: values[:filter value where value mod 2 = 0][:count value where value > 2], firstSelected: values[:select value -> value + 10][:first value where value > 12], lastSelected: values[:select value -> value + 10][:last value where value < 15], singleSelected: values[:select value -> value + 10][:single value where value = 13], sorted1: sorted[1], sorted2: sorted[2], sorted3: sorted[3])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "values": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "1" },
+                  { "type": ":integer", "value": "2" },
+                  { "type": ":integer", "value": "3" },
+                  { "type": ":integer", "value": "4" }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "filterSelectSum": { "type": ":decimal", "value": "21" },
+                "filterCount": { "type": ":integer", "value": "1" },
+                "firstSelected": { "type": ":decimal", "value": "13" },
+                "lastSelected": { "type": ":decimal", "value": "14" },
+                "singleSelected": { "type": ":decimal", "value": "13" },
+                "sorted1": { "type": ":decimal", "value": "-4" },
+                "sorted2": { "type": ":decimal", "value": "-3" },
+                "sorted3": { "type": ":decimal", "value": "-2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "selector variants are observable through runtime behavior",
       "script": "on Start(items) {\n  let hasAny be items[:any item where item.points > 10]\n  let allValid be items[:all item where item.points >= 0]\n  let firstTwo be items[:take first 2]\n  let withoutLast be items[:drop last 1]\n  let firstAlive be items[:first item where item.alive]\n  let lastAlive be items[:last item where item.alive]\n  let singleBoss be items[:single item where item.role = :boss]\n  let weakest be items[:min item -> item.points]\n  let strongest be items[:max item -> item.points]\n  let topItem be items[:highest item -> item.points]\n  let lowItem be items[:lowest item -> item.points]\n  publish Done(hasAny: hasAny, allValid: allValid, firstTwoCount: :len firstTwo, withoutLastCount: :len withoutLast, firstAlive: firstAlive.name, lastAlive: lastAlive.name, singleBoss: singleBoss.name, weakest: weakest.name, strongest: strongest.name, topItem: topItem.name, lowItem: lowItem.name)\n}",
       "steps": [

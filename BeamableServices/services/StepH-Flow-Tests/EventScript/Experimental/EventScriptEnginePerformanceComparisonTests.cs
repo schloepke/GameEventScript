@@ -20,23 +20,20 @@ public sealed class EventScriptEnginePerformanceComparisonTests
         module EnginePerformance
 
         rule high(value) means value >= 10
-        select boosted(values) means values[:filter value where value is high][:select value -> value + 5%]
 
         on Start(values) {
-          let boostedValues be boosted(values)
-          let oddValues be values[:filter value where value mod 2 = 1]
-          let total be boostedValues[:sum value -> value]
-          let average be boostedValues[:average value -> value]
+          let total be values[:filter value where value is high][:select value -> value + 5%][:sum value -> value]
+          let average be values[:filter value where value is high][:select value -> value + 5%][:average value -> value]
+          let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
+          let firstBoosted be values[:filter value where value is high][:select value -> value + 5%][:first]
           let scaled be 100m + 5%
           let folded be (15% + 15%) * 2
-          let loopWork be :list[:select item from 1 to 32 -> values[:sum value -> (value + item) * ((item mod 7) + 1)]]
-          for item in loopWork {
-            let adjusted be item + 5%
-            let bucket be adjusted mod 11
-            let foldedBucket be (bucket + 3) * 2
+          let directOddScaled be values[:filter value where value mod 2 = 1][:select value -> value * 2][:count value where value > 10]
+          for item from 1 to 16 {
+            let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value -> (value + item) * 2][:sum value -> value]
           }
-          let workTotal be loopWork[:sum value -> value]
-          publish Done(total: total, average: average, oddCount: :len oddValues, first: boostedValues[1], scaled: scaled, folded: folded, workTotal: workTotal)
+          let workTotal be values[:filter value where value >= 10][:select value -> value + 5%][:select value -> value * 2][:sum value -> value]
+          publish Done(total: total, average: average, oddCount: oddCount, directOddScaled: directOddScaled, first: firstBoosted, scaled: scaled, folded: folded, workTotal: workTotal)
         }
         """;
 

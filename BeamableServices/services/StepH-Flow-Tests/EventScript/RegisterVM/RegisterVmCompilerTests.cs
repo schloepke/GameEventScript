@@ -372,6 +372,74 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
+    public void RegisterVmFallbackModeThrowRunsCollectionLiteralsFastPath()
+    {
+        const string script =
+            """
+            module Literals
+
+            on Start(seed) {
+              let doubled be seed * 2
+              let list be [seed, doubled, [label: 'nested']]
+              let setValues be :set[seed, seed, 3]
+              let dict be [hp: seed + 5, name: 'Scout', nested: [values: [1, 2]], tags: setValues]
+              let emptyList be []
+              let emptySet be :set[]
+              let emptyDict be [:]
+
+              publish Done(
+                list: list,
+                listFirst: list[1],
+                listSecond: list[2],
+                nestedLabel: list[3].label,
+                setValues: setValues,
+                dict: dict,
+                hp: dict.hp,
+                nestedSecond: dict.nested.values[2],
+                tagValues: dict.tags,
+                emptyList: emptyList,
+                emptySet: emptySet,
+                emptyDict: emptyDict)
+            }
+            """;
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(EventScriptManager.CompileRegisterVM(
+                script,
+                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+
+        host.Publish(Message("Start", ("seed", EventScriptValueFactory.Integer(7))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Integer(7), published[0].Arguments["listFirst"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(14), published[0].Arguments["listSecond"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("nested"), published[0].Arguments["nestedLabel"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(12), published[0].Arguments["hp"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(2), published[0].Arguments["nestedSecond"]);
+
+        var list = published[0].Arguments["list"].AsList();
+        Assert.HasCount(3, list);
+
+        var set = published[0].Arguments["setValues"].AsSet();
+        Assert.HasCount(2, set);
+        CollectionAssert.Contains(set.ToList(), EventScriptValueFactory.Integer(3));
+        CollectionAssert.Contains(set.ToList(), EventScriptValueFactory.Integer(7));
+
+        var dictionary = published[0].Arguments["dict"].AsDictionary();
+        Assert.AreEqual(EventScriptValueFactory.Text("Scout"), dictionary["name"]);
+        Assert.AreEqual(EventScriptValueFactory.Integer(12), dictionary["hp"]);
+
+        var tagValues = published[0].Arguments["tagValues"].AsSet();
+        Assert.HasCount(2, tagValues);
+        Assert.AreEqual(EventScriptValueFactory.List([]), published[0].Arguments["emptyList"]);
+        Assert.AreEqual(EventScriptValueFactory.Set([]), published[0].Arguments["emptySet"]);
+        Assert.AreEqual(EventScriptValueFactory.Dictionary(new Dictionary<string, EventScriptValue>()), published[0].Arguments["emptyDict"]);
+    }
+
+    [TestMethod]
     public void RegisterVmFastPathEmitsDiagnosticsWhenEnabled()
     {
         const string script =

@@ -392,6 +392,12 @@ internal sealed class RegisterVmFastExecutionSession
             case TagLiteralExpressionNode tag:
                 value = RegisterFastValue.Reference(Tag(tag.Name));
                 return true;
+            case ListLiteralExpressionNode list:
+                return TryEvaluateListLiteral(list, out value);
+            case SetLiteralExpressionNode set:
+                return TryEvaluateSetLiteral(set, out value);
+            case DictionaryLiteralExpressionNode dictionary:
+                return TryEvaluateDictionaryLiteral(dictionary, out value);
             case IdentifierExpressionNode identifier:
                 value = Resolve(identifier.Name);
                 return true;
@@ -503,6 +509,24 @@ internal sealed class RegisterVmFastExecutionSession
                     _evaluationStack[top++] = EvaluateIndexedAccess(target, selector);
                     break;
 
+                case RegisterFastOpCode.BuildList:
+                    top -= instruction.A;
+                    _evaluationStack[top] = BuildListValue(_evaluationStack, top, instruction.A);
+                    top++;
+                    break;
+
+                case RegisterFastOpCode.BuildSet:
+                    top -= instruction.A;
+                    _evaluationStack[top] = BuildSetValue(_evaluationStack, top, instruction.A);
+                    top++;
+                    break;
+
+                case RegisterFastOpCode.BuildDictionary:
+                    top -= instruction.A;
+                    _evaluationStack[top] = BuildDictionaryValue(_evaluationStack, top, instruction.A, instruction.Names);
+                    top++;
+                    break;
+
                 case RegisterFastOpCode.Pipeline:
                     if (instruction.PipelineProgram is null ||
                         !TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
@@ -521,6 +545,60 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         value = top > stackBase ? _evaluationStack[top - 1] : RegisterFastValue.Nothing;
+        return true;
+    }
+
+    private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out RegisterFastValue value)
+    {
+        var items = new EventScriptValue[list.Items.Count];
+        for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
+        {
+            if (!TryEvaluate(list.Items[itemIndex], out var item))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            items[itemIndex] = item.ToEventScriptValue();
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.List(items));
+        return true;
+    }
+
+    private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out RegisterFastValue value)
+    {
+        var items = new EventScriptValue[set.Items.Count];
+        for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
+        {
+            if (!TryEvaluate(set.Items[itemIndex], out var item))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            items[itemIndex] = item.ToEventScriptValue();
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.Set(items));
+        return true;
+    }
+
+    private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out RegisterFastValue value)
+    {
+        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        foreach (var entry in dictionary.Entries)
+        {
+            if (!TryEvaluate(entry.Value, out var entryValue))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            map[entry.Key] = entryValue.ToEventScriptValue();
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(map));
         return true;
     }
 
@@ -563,6 +641,44 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         return RegisterFastValue.FromEventScriptValue(target.ToEventScriptValue().Lookup(selectorValue));
+    }
+
+    private static RegisterFastValue BuildListValue(RegisterFastValue[] stack, int start, int count)
+    {
+        var items = new EventScriptValue[count];
+        for (var itemIndex = 0; itemIndex < count; itemIndex++)
+        {
+            items[itemIndex] = stack[start + itemIndex].ToEventScriptValue();
+        }
+
+        return RegisterFastValue.Reference(EventScriptValueFactory.List(items));
+    }
+
+    private static RegisterFastValue BuildSetValue(RegisterFastValue[] stack, int start, int count)
+    {
+        var items = new EventScriptValue[count];
+        for (var itemIndex = 0; itemIndex < count; itemIndex++)
+        {
+            items[itemIndex] = stack[start + itemIndex].ToEventScriptValue();
+        }
+
+        return RegisterFastValue.Reference(EventScriptValueFactory.Set(items));
+    }
+
+    private static RegisterFastValue BuildDictionaryValue(RegisterFastValue[] stack, int start, int count, string[]? names)
+    {
+        if (names is null || names.Length != count)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        var map = new Dictionary<string, EventScriptValue>(count, StringComparer.Ordinal);
+        for (var entryIndex = 0; entryIndex < count; entryIndex++)
+        {
+            map[names[entryIndex]] = stack[start + entryIndex].ToEventScriptValue();
+        }
+
+        return RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(map));
     }
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)

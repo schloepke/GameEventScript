@@ -246,6 +246,46 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case ListLiteralExpressionNode list:
+                for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
+                {
+                    if (!SupportsExpression(list.Items[itemIndex], callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"List item {itemIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case SetLiteralExpressionNode set:
+                for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
+                {
+                    if (!SupportsExpression(set.Items[itemIndex], callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Set item {itemIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case DictionaryLiteralExpressionNode dictionary:
+                for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
+                {
+                    var entry = dictionary.Entries[entryIndex];
+                    if (!SupportsExpression(entry.Value, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Dictionary entry '{entry.Key}': {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case BinaryExpressionNode binary:
                 if (!SupportsBinaryOperator(binary.Operator))
                 {
@@ -600,6 +640,30 @@ internal static class RegisterVmFastPathAnalyzer
 
                     break;
 
+                case ListLiteralExpressionNode list:
+                    foreach (var item in list.Items)
+                    {
+                        CollectExpression(item);
+                    }
+
+                    break;
+
+                case SetLiteralExpressionNode set:
+                    foreach (var item in set.Items)
+                    {
+                        CollectExpression(item);
+                    }
+
+                    break;
+
+                case DictionaryLiteralExpressionNode dictionary:
+                    foreach (var entry in dictionary.Entries)
+                    {
+                        CollectExpression(entry.Value);
+                    }
+
+                    break;
+
                 case BinaryExpressionNode binary:
                     CollectExpression(binary.Left);
                     CollectExpression(binary.Right);
@@ -884,6 +948,42 @@ internal static class RegisterVmFastPathAnalyzer
                         EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Tag(tag.Name)));
                         return;
 
+                    case ListLiteralExpressionNode list:
+                        foreach (var item in list.Items)
+                        {
+                            EmitExpression(item);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildList, A: list.Items.Count));
+                        CollapseValuesToSingle(list.Items.Count);
+                        return;
+
+                    case SetLiteralExpressionNode set:
+                        foreach (var item in set.Items)
+                        {
+                            EmitExpression(item);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildSet, A: set.Items.Count));
+                        CollapseValuesToSingle(set.Items.Count);
+                        return;
+
+                    case DictionaryLiteralExpressionNode dictionary:
+                        var names = new string[dictionary.Entries.Count];
+                        for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
+                        {
+                            var entry = dictionary.Entries[entryIndex];
+                            names[entryIndex] = entry.Key;
+                            EmitExpression(entry.Value);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.BuildDictionary,
+                            A: dictionary.Entries.Count,
+                            Names: names));
+                        CollapseValuesToSingle(dictionary.Entries.Count);
+                        return;
+
                     case IdentifierExpressionNode identifier:
                         if (!compiler.TryGetSlot(identifier.Name, out var slot))
                         {
@@ -1052,6 +1152,17 @@ internal static class RegisterVmFastPathAnalyzer
             }
 
             private void Pop() => _stackDepth = Math.Max(0, _stackDepth - 1);
+
+            private void CollapseValuesToSingle(int valueCount)
+            {
+                if (valueCount == 0)
+                {
+                    Push();
+                    return;
+                }
+
+                _stackDepth = Math.Max(1, _stackDepth - valueCount + 1);
+            }
 
             private static RegisterFastOpCode ToBinaryOpCode(string operation)
                 => operation switch

@@ -327,6 +327,28 @@ public static class RegisterEventScriptCompiler
                 case TagLiteralExpressionNode tag:
                     AddConstant(Tag(tag.Name));
                     return "literal:tag";
+                case ListLiteralExpressionNode list:
+                    foreach (var item in list.Items)
+                    {
+                        GetExpressionDebugName(item);
+                    }
+
+                    return "literal:list";
+                case SetLiteralExpressionNode set:
+                    foreach (var item in set.Items)
+                    {
+                        GetExpressionDebugName(item);
+                    }
+
+                    return "literal:set";
+                case DictionaryLiteralExpressionNode dictionary:
+                    foreach (var entry in dictionary.Entries)
+                    {
+                        AddString(entry.Key);
+                        GetExpressionDebugName(entry.Value);
+                    }
+
+                    return "literal:dictionary";
                 case IdentifierExpressionNode identifier:
                     AddString(identifier.Name);
                     return "identifier";

@@ -24,6 +24,9 @@ internal enum RegisterFastOpCode
     RulePredicate,
     MemberAccess,
     IndexedAccess,
+    BuildList,
+    BuildSet,
+    BuildDictionary,
     Pipeline
 }
 
@@ -47,7 +50,8 @@ internal readonly record struct RegisterFastInstruction(
     RegisterFastExpressionProgram? ExpressionProgram = null,
     RegisterFastPipelineProgram? PipelineProgram = null,
     string? DiagnosticName = null,
-    string? DiagnosticArgumentName = null);
+    string? DiagnosticArgumentName = null,
+    string[]? Names = null);
 
 internal sealed class RegisterFastExpressionProgram(
     RegisterFastInstruction[] instructions,

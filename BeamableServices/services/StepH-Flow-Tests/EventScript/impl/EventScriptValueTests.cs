@@ -3,7 +3,7 @@ using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.Types.EventScriptValueFactory;
 
-namespace StepH_Flow_Tests.EventScript;
+namespace StepH_Flow_Tests.EventScript.impl;
 
 [TestClass]
 public class EventScriptValueScenarios

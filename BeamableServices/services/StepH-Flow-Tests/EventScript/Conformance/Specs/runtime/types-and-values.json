@@ -111,6 +111,62 @@
     },
     {
       "kind": "scriptApi",
+      "name": "percentage arithmetic keeps ratios and applies relative bases",
+      "script": "on Start {\n  publish Done(addToBase: 100 + 5%, subtractFromBase: 100 - 5%, multiplyBaseRight: 100 * 5%, divideBaseByPercent: 100 / 5%, reverseAdd: 5% + 100, reverseSubtract: 5% - 100, percentAdd: 15% + 15%, percentSubtract: 15% - 5%, percentScaleRight: 15% * 2, percentDivideScalar: 15% / 3, scalarScaleLeft: 2 * 15%, percentProduct: 15% * 15%, percentRatio: 15% / 15%, percentDivideZero: 15% / 0)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "addToBase": { "type": ":decimal", "value": "105" },
+                "subtractFromBase": { "type": ":decimal", "value": "95" },
+                "multiplyBaseRight": { "type": ":decimal", "value": "5" },
+                "divideBaseByPercent": { "type": ":decimal", "value": "2000" },
+                "reverseAdd": { "type": ":decimal", "value": "NaN" },
+                "reverseSubtract": { "type": ":decimal", "value": "NaN" },
+                "percentAdd": { "type": ":percentage", "value": "0.30" },
+                "percentSubtract": { "type": ":percentage", "value": "0.10" },
+                "percentScaleRight": { "type": ":percentage", "value": "0.30" },
+                "percentDivideScalar": { "type": ":percentage", "value": "0.05" },
+                "scalarScaleLeft": { "type": ":decimal", "value": "0.30" },
+                "percentProduct": { "type": ":percentage", "value": "0.0225" },
+                "percentRatio": { "type": ":decimal", "value": "1" },
+                "percentDivideZero": { "type": ":decimal", "value": "Infinity" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "percentage arithmetic preserves compatible decimal units",
+      "script": "on Start {\n  publish Done(meterAddPercent: 100m + 5%, meterSubtractPercent: 100m - 5%, meterMultiplyPercentRight: 100m * 5%, meterMultiplyPercentLeft: 5% * 100m, meterDividePercent: 100m / 5%, reverseMeterAdd: 5% + 100m, reverseMeterSubtract: 5% - 100m, percentDivideMeter: 5% / 100m)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "meterAddPercent": { "type": ":decimal", "value": "105", "unit": ":meter" },
+                "meterSubtractPercent": { "type": ":decimal", "value": "95", "unit": ":meter" },
+                "meterMultiplyPercentRight": { "type": ":decimal", "value": "5", "unit": ":meter" },
+                "meterMultiplyPercentLeft": { "type": ":decimal", "value": "5", "unit": ":meter" },
+                "meterDividePercent": { "type": ":decimal", "value": "2000", "unit": ":meter" },
+                "reverseMeterAdd": { "type": ":decimal", "value": "NaN" },
+                "reverseMeterSubtract": { "type": ":decimal", "value": "NaN" },
+                "percentDivideMeter": { "type": ":decimal", "value": "NaN" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "degree literals preserve raw angles and wrap explicitly",
       "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :wrapDegree -10°\n  let wrapOver be :wrapDegree 370°\n  let wrapLarge be :wrapDegree 1000°\n  let wrapCast be :wrapDegree castOpen\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  publish Done(fromLiteral: fromLiteral, overLiteral: overLiteral, decimalLiteral: decimalLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
       "steps": [
@@ -154,9 +210,9 @@
               "args": {
                 "addNumber": { "type": ":decimal", "value": "NaN" },
                 "subtractNumber": { "type": ":decimal", "value": "NaN" },
-                "addPercentRight": { "type": ":decimal", "value": "NaN" },
+                "addPercentRight": { "type": ":decimal", "value": "132", "unit": ":degree" },
                 "addPercentLeft": { "type": ":decimal", "value": "NaN" },
-                "subtractPercent": { "type": ":decimal", "value": "NaN" },
+                "subtractPercent": { "type": ":decimal", "value": "108", "unit": ":degree" },
                 "multiplyPercentRight": { "type": ":decimal", "value": "12", "unit": ":degree" },
                 "multiplyPercentLeft": { "type": ":decimal", "value": "12", "unit": ":degree" },
                 "multiplyDecimal": { "type": ":decimal", "value": "6", "unit": ":degree" },

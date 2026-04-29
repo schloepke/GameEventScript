@@ -624,6 +624,11 @@ internal static class EventScriptLinkOptimizer
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
             case "+":
+                if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out value))
                 {
                     return true;
@@ -639,6 +644,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(AddNumeric(leftNumeric, rightNumeric));
                 return true;
             case "-":
+                if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "-", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "-", right, out value))
                 {
                     return true;
@@ -654,6 +664,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
+                if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "*", right, out value))
                 {
                     return true;
@@ -669,6 +684,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
+                if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "/", right, out value))
                 {
                     return true;

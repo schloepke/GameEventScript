@@ -262,6 +262,23 @@ This is an expression form, not a statement-only special case.
 0%
 ```
 
+Percentages are ratios, not decimal units. `5%` is the ratio `0.05`.
+When a percentage appears on the right side of `+` or `-`, it is relative to the left base value:
+
+```eventscript
+100 + 5%  // 105
+100 - 5%  // 95
+100m + 5% // 105m
+```
+
+Percentage arithmetic keeps percentages when the percentage is the subject:
+
+```eventscript
+15% + 15% // 30%
+15% * 2   // 30%
+2 * 15%   // 0.3
+```
+
 ### Decimal Units
 
 ```eventscript

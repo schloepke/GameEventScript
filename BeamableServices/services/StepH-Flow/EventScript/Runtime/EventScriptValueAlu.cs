@@ -339,6 +339,88 @@ internal static class EventScriptValueAlu
         };
     }
 
+    public static bool TryEvaluatePercentageBinary(EventScriptValue left, string operation, EventScriptValue right, out EventScriptValue value)
+    {
+        var leftIsPercentage = left.IsPercentage();
+        var rightIsPercentage = right.IsPercentage();
+        if (operation is not ("+" or "-" or "*" or "/") || (!leftIsPercentage && !rightIsPercentage))
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        if (!TryCoerceNumericForOperation(left, out var leftNumber) ||
+            !TryCoerceNumericForOperation(right, out var rightNumber))
+        {
+            value = EventScriptValueFactory.DecimalNaN();
+            return true;
+        }
+
+        var leftHasUnit = EventScriptValue.TryGetDecimalUnit(left, out var leftUnit);
+        var rightHasUnit = EventScriptValue.TryGetDecimalUnit(right, out var rightUnit);
+        if (leftIsPercentage && rightHasUnit && operation is "+" or "-" or "/")
+        {
+            value = EventScriptValueFactory.DecimalNaN();
+            return true;
+        }
+
+        if (leftIsPercentage && rightIsPercentage)
+        {
+            value = operation switch
+            {
+                "+" => ToEventScriptPercentage(AddNumeric(leftNumber, rightNumber)),
+                "-" => ToEventScriptPercentage(SubtractNumeric(leftNumber, rightNumber)),
+                "*" => ToEventScriptPercentage(MultiplyNumeric(leftNumber, rightNumber)),
+                "/" => ToEventScriptDecimal(DivideNumeric(leftNumber, rightNumber)),
+                _ => EventScriptValueFactory.DecimalNaN()
+            };
+            return true;
+        }
+
+        if (operation is "+" or "-")
+        {
+            if (leftIsPercentage)
+            {
+                value = EventScriptValueFactory.DecimalNaN();
+                return true;
+            }
+
+            var delta = MultiplyNumeric(leftNumber, rightNumber);
+            var result = operation == "+"
+                ? AddNumeric(leftNumber, delta)
+                : SubtractNumeric(leftNumber, delta);
+            value = ToEventScriptDecimal(result, leftHasUnit ? leftUnit : null);
+            return true;
+        }
+
+        if (operation == "*")
+        {
+            var result = MultiplyNumeric(leftNumber, rightNumber);
+            if (leftIsPercentage)
+            {
+                value = rightHasUnit
+                    ? ToEventScriptDecimal(result, rightUnit)
+                    : ToEventScriptPercentage(result);
+                return true;
+            }
+
+            value = ToEventScriptDecimal(result, leftHasUnit ? leftUnit : null);
+            return true;
+        }
+
+        if (operation == "/")
+        {
+            var result = DivideNumeric(leftNumber, rightNumber);
+            value = leftIsPercentage
+                ? ToEventScriptPercentage(result)
+                : ToEventScriptDecimal(result, leftHasUnit ? leftUnit : null);
+            return true;
+        }
+
+        value = EventScriptValue.Nothing;
+        return false;
+    }
+
     public static bool TryEvaluateUnitBinary(EventScriptValue left, string operation, EventScriptValue right, out EventScriptValue value)
     {
         var leftHasUnit = EventScriptValue.TryGetDecimalUnit(left, out var leftUnit);
@@ -489,6 +571,11 @@ internal static class EventScriptValueAlu
         unit = value;
         return true;
     }
+
+    private static EventScriptValue ToEventScriptPercentage(NumericValue number)
+        => number.IsFinite
+            ? EventScriptValueFactory.Percentage(number.Value)
+            : ToEventScriptDecimal(number);
 
     public static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
     {

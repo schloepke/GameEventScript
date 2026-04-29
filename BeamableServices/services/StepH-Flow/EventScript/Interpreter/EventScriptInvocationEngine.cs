@@ -1071,6 +1071,11 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Boolean(greaterOrEqualComparison >= 0);
                 case "+":
                 {
+                    if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
+                    {
+                        return percentage;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out var degree))
                     {
                         return degree;
@@ -1105,6 +1110,11 @@ internal static class EventScriptInvocationEngine
                 case "zip":
                     return EvaluateCollectionZip(left, right);
                 case "-":
+                    if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "-", right, out var percentageDifference))
+                    {
+                        return percentageDifference;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "-", right, out var degreeDifference))
                     {
                         return degreeDifference;
@@ -1118,6 +1128,11 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(SubtractNumeric(leftMinus, rightMinus));
                 case "*":
+                    if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out var percentageProduct))
+                    {
+                        return percentageProduct;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "*", right, out var degreeProduct))
                     {
                         return degreeProduct;
@@ -1131,6 +1146,11 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(MultiplyNumeric(leftMultiply, rightMultiply));
                 case "/":
+                    if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out var percentageQuotient))
+                    {
+                        return percentageQuotient;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "/", right, out var degreeQuotient))
                     {
                         return degreeQuotient;

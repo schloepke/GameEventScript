@@ -1,4 +1,5 @@
 using StepH.Flow.EventScript;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.Types.EventScriptValueFactory;
 
@@ -159,6 +160,41 @@ public class EventScriptValueScenarios
     }
 
     [TestMethod]
+    public void PercentageBinaryAluAppliesRelativeBases()
+    {
+        AssertDecimal(105m, EvaluatePercentageBinary(Decimal(100m), "+", Percentage(0.05m)));
+        AssertDecimal(95m, EvaluatePercentageBinary(Integer(100), "-", Percentage(0.05m)));
+        AssertDecimal(5m, EvaluatePercentageBinary(Decimal(100m), "*", Percentage(0.05m)));
+        AssertDecimal(2000m, EvaluatePercentageBinary(Integer(100), "/", Percentage(0.05m)));
+        AssertNaN(EvaluatePercentageBinary(Percentage(0.05m), "+", Decimal(100m)));
+        AssertNaN(EvaluatePercentageBinary(Percentage(0.05m), "-", Meter(100m)));
+    }
+
+    [TestMethod]
+    public void PercentageBinaryAluPreservesPercentageWhenPercentageIsSubject()
+    {
+        AssertPercentage(0.30m, EvaluatePercentageBinary(Percentage(0.15m), "+", Percentage(0.15m)));
+        AssertPercentage(0.10m, EvaluatePercentageBinary(Percentage(0.15m), "-", Percentage(0.05m)));
+        AssertPercentage(0.30m, EvaluatePercentageBinary(Percentage(0.15m), "*", Integer(2)));
+        AssertPercentage(0.05m, EvaluatePercentageBinary(Percentage(0.15m), "/", Integer(3)));
+        AssertDecimal(0.30m, EvaluatePercentageBinary(Integer(2), "*", Percentage(0.15m)));
+        AssertPercentage(0.0225m, EvaluatePercentageBinary(Percentage(0.15m), "*", Percentage(0.15m)));
+        AssertDecimal(1m, EvaluatePercentageBinary(Percentage(0.15m), "/", Percentage(0.15m)));
+        AssertInfinity(EvaluatePercentageBinary(Percentage(0.15m), "/", Integer(0)));
+    }
+
+    [TestMethod]
+    public void PercentageBinaryAluPreservesUnitsForRelativeBases()
+    {
+        AssertDecimalUnit(105m, EventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "+", Percentage(0.05m)));
+        AssertDecimalUnit(95m, EventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "-", Percentage(0.05m)));
+        AssertDecimalUnit(5m, EventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "*", Percentage(0.05m)));
+        AssertDecimalUnit(5m, EventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Percentage(0.05m), "*", Meter(100m)));
+        AssertDecimalUnit(2000m, EventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "/", Percentage(0.05m)));
+        AssertNaN(EvaluatePercentageBinary(Percentage(0.05m), "/", Meter(100m)));
+    }
+
+    [TestMethod]
     public void SetsStayCanonicallySorted()
     {
         var setValue = Set([Decimal(3m), Text("z"), Integer(1), Text("a"), Boolean(false), Decimal(2m)]);
@@ -206,5 +242,44 @@ public class EventScriptValueScenarios
 
         Assert.AreEqual(EventScriptValueKind.Dictionary, value.Kind);
         Assert.HasCount(0, value.AsDictionary());
+    }
+
+    private static EventScriptValue EvaluatePercentageBinary(EventScriptValue left, string operation, EventScriptValue right)
+    {
+        Assert.IsTrue(EventScriptValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var value));
+        return value;
+    }
+
+    private static void AssertDecimal(decimal expected, EventScriptValue actual)
+    {
+        Assert.AreEqual(EventScriptValueKind.Decimal, actual.Kind);
+        Assert.AreEqual(expected, actual.AsNumber());
+        Assert.IsFalse(actual.HasDecimalUnit());
+    }
+
+    private static void AssertDecimalUnit(decimal expected, EventScriptDecimalUnit unit, EventScriptValue actual)
+    {
+        Assert.AreEqual(EventScriptValueKind.Decimal, actual.Kind);
+        Assert.AreEqual(expected, actual.AsNumber());
+        Assert.IsTrue(actual.IsDecimalUnit(unit));
+    }
+
+    private static void AssertPercentage(decimal expectedRatio, EventScriptValue actual)
+    {
+        Assert.AreEqual(EventScriptValueKind.Percentage, actual.Kind);
+        Assert.AreEqual(expectedRatio, actual.AsNumber());
+    }
+
+    private static void AssertNaN(EventScriptValue actual)
+    {
+        Assert.AreEqual(EventScriptValueKind.Decimal, actual.Kind);
+        Assert.IsTrue(actual.IsNaN());
+    }
+
+    private static void AssertInfinity(EventScriptValue actual)
+    {
+        Assert.AreEqual(EventScriptValueKind.Decimal, actual.Kind);
+        Assert.IsTrue(actual.IsInfinity());
+        Assert.IsFalse(actual.IsNegativeInfinity());
     }
 }

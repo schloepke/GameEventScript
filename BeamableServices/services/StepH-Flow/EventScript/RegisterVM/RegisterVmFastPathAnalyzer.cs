@@ -246,6 +246,30 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case HandlerLiteralExpressionNode:
+                unsupportedReason = string.Empty;
+                return true;
+
+            case HandlerBindExpressionNode handlerBind:
+                if (!SupportsExpression(handlerBind.CalleeExpression, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Handler bind callee: {unsupportedReason}";
+                    return false;
+                }
+
+                for (var argumentIndex = 0; argumentIndex < handlerBind.Arguments.Count; argumentIndex++)
+                {
+                    var argument = handlerBind.Arguments[argumentIndex];
+                    if (!SupportsExpression(argument.Expression, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Handler bind argument '{argument.Name}': {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case ListLiteralExpressionNode list:
                 for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
                 {
@@ -650,6 +674,15 @@ internal static class RegisterVmFastPathAnalyzer
 
                     break;
 
+                case HandlerBindExpressionNode handlerBind:
+                    CollectExpression(handlerBind.CalleeExpression);
+                    foreach (var argument in handlerBind.Arguments)
+                    {
+                        CollectExpression(argument.Expression);
+                    }
+
+                    break;
+
                 case ListLiteralExpressionNode list:
                     foreach (var item in list.Items)
                     {
@@ -960,6 +993,49 @@ internal static class RegisterVmFastPathAnalyzer
 
                     case TagLiteralExpressionNode tag:
                         EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Tag(tag.Name)));
+                        return;
+
+                    case HandlerLiteralExpressionNode handler:
+                    {
+                        var parameterNames = handler.Parameters.ToArray();
+                        EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Handler(
+                            new EventScriptMessageSignature(handler.Message, parameterNames))));
+                        return;
+                    }
+
+                    case MessageLiteralExpressionNode message:
+                        var argumentNames = new string[message.Arguments.Count];
+                        for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
+                        {
+                            var argument = message.Arguments[argumentIndex];
+                            argumentNames[argumentIndex] = argument.Name;
+                            EmitExpression(argument.Expression);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.BuildMessage,
+                            A: message.Arguments.Count,
+                            DiagnosticName: EventScriptMessageSignature.NormalizeMessageName(message.Message),
+                            DiagnosticArgumentName: EventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
+                            Names: argumentNames));
+                        CollapseValuesToSingle(message.Arguments.Count);
+                        return;
+
+                    case HandlerBindExpressionNode handlerBind:
+                        var bindArgumentNames = new string[handlerBind.Arguments.Count];
+                        EmitExpression(handlerBind.CalleeExpression);
+                        for (var argumentIndex = 0; argumentIndex < handlerBind.Arguments.Count; argumentIndex++)
+                        {
+                            var argument = handlerBind.Arguments[argumentIndex];
+                            bindArgumentNames[argumentIndex] = argument.Name;
+                            EmitExpression(argument.Expression);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.BindHandler,
+                            A: handlerBind.Arguments.Count,
+                            Names: bindArgumentNames));
+                        CollapseValuesToSingle(handlerBind.Arguments.Count + 1);
                         return;
 
                     case ListLiteralExpressionNode list:

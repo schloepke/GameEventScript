@@ -392,6 +392,12 @@ internal sealed class RegisterVmFastExecutionSession
             case TagLiteralExpressionNode tag:
                 value = RegisterFastValue.Reference(Tag(tag.Name));
                 return true;
+            case HandlerLiteralExpressionNode handler:
+                value = RegisterFastValue.Reference(EventScriptValueFactory.Handler(
+                    new EventScriptMessageSignature(handler.Message, handler.Parameters)));
+                return true;
+            case HandlerBindExpressionNode handlerBind:
+                return TryEvaluateHandlerBind(handlerBind, out value);
             case ListLiteralExpressionNode list:
                 return TryEvaluateListLiteral(list, out value);
             case SetLiteralExpressionNode set:
@@ -535,6 +541,29 @@ internal sealed class RegisterVmFastExecutionSession
                     top++;
                     break;
 
+                case RegisterFastOpCode.BuildMessage:
+                    top -= instruction.A;
+                    _evaluationStack[top] = BuildMessageValue(
+                        _evaluationStack,
+                        top,
+                        instruction.A,
+                        instruction.Names,
+                        instruction.DiagnosticName,
+                        instruction.DiagnosticArgumentName);
+                    top++;
+                    break;
+
+                case RegisterFastOpCode.BindHandler:
+                    top -= instruction.A + 1;
+                    _evaluationStack[top] = BindHandlerValue(
+                        _evaluationStack[top],
+                        _evaluationStack,
+                        top + 1,
+                        instruction.A,
+                        instruction.Names);
+                    top++;
+                    break;
+
                 case RegisterFastOpCode.Pipeline:
                     if (instruction.PipelineProgram is null ||
                         !TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
@@ -553,6 +582,32 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         value = top > stackBase ? _evaluationStack[top - 1] : RegisterFastValue.Nothing;
+        return true;
+    }
+
+    private bool TryEvaluateHandlerBind(HandlerBindExpressionNode handlerBind, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(handlerBind.CalleeExpression, out var callee))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var arguments = new Dictionary<string, EventScriptValue>(handlerBind.Arguments.Count, StringComparer.Ordinal);
+        foreach (var argument in handlerBind.Arguments)
+        {
+            if (!TryEvaluate(argument.Expression, out var argumentValue))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            arguments[argument.Name] = argumentValue.ToEventScriptValue();
+        }
+
+        value = EventScriptMessageValueCodec.TryBindHandlerValue(callee.ToEventScriptValue(), arguments, out var message)
+            ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+            : RegisterFastValue.Nothing;
         return true;
     }
 
@@ -699,6 +754,67 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         return RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(map));
+    }
+
+    private static RegisterFastValue BuildMessageValue(
+        RegisterFastValue[] stack,
+        int start,
+        int count,
+        string[]? names,
+        string? messageName,
+        string? signatureId)
+    {
+        if (string.IsNullOrEmpty(messageName) ||
+            string.IsNullOrEmpty(signatureId) ||
+            names is null ||
+            names.Length != count)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        if (count == 0)
+        {
+            return RegisterFastValue.Reference(Message(EventScriptMessage.CreatePrecomputed(
+                messageName,
+                EventScriptNamedArguments.Empty,
+                signatureId)));
+        }
+
+        var pairs = new KeyValuePair<string, EventScriptValue>[count];
+        for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+        {
+            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+                names[argumentIndex],
+                stack[start + argumentIndex].ToEventScriptValue());
+        }
+
+        return RegisterFastValue.Reference(Message(EventScriptMessage.CreatePrecomputed(
+            messageName,
+            EventScriptNamedArguments.CreateOrdered(pairs),
+            signatureId)));
+    }
+
+    private static RegisterFastValue BindHandlerValue(
+        RegisterFastValue callee,
+        RegisterFastValue[] stack,
+        int start,
+        int count,
+        string[]? names)
+    {
+        if (names is null || names.Length != count)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        var arguments = new Dictionary<string, EventScriptValue>(count, StringComparer.Ordinal);
+        for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+        {
+            arguments[names[argumentIndex]] = stack[start + argumentIndex].ToEventScriptValue();
+        }
+
+        return EventScriptMessageValueCodec.TryBindHandlerValue(callee.ToEventScriptValue(), arguments, out var message)
+            ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+            : RegisterFastValue.Nothing;
     }
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)

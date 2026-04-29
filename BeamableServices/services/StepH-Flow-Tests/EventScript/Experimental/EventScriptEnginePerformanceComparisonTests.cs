@@ -32,9 +32,9 @@ public sealed class EventScriptEnginePerformanceComparisonTests
           let directOddScaled be values[:filter value where value mod 2 = 1][:select value -> value * 2][:count value where value > 10]
           if scaled > 100m {
             let success be scaled + folded
-            // let myHandler be Success(message, value)
-            // let myMessage be myHandler(message: 'hello', value: success)
-            // let myMessageDirect be Success(message: 'world', value: scaled)
+            let myHandler be Success(message, value)
+            let myMessage be myHandler(message: 'hello', value: success)
+            let myMessageDirect be Success(message: 'world', value: scaled)
           }
           for item from 1 to 16 {
             let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value -> (value + item) * 2][:sum value -> value]

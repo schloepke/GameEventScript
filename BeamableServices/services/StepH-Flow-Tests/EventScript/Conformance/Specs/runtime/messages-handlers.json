@@ -50,6 +50,33 @@
     },
     {
       "kind": "scriptApi",
+      "name": "direct message literal creates first class message value",
+      "script": "module DirectMessageLiteral\non Start(value) {\n  let scaled be value * 2\n  let myMessageDirect be Success(message: 'world', value: scaled)\n  publish Done(isMessage: myMessageDirect is :message, name: myMessageDirect.name, signature: myMessageDirect.signatureid, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":integer", "value": "21" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "isMessage": { "type": ":boolean", "value": true },
+                "name": { "type": ":text", "value": "Success" },
+                "signature": { "type": ":text", "value": "Success(message,value)" },
+                "text": { "type": ":text", "value": "world" },
+                "value": { "type": ":decimal", "value": "42" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "empty uppercase invocation creates handler value",
       "script": "on Start {\n  let handler as :handler be Shoot()\n  publish Done(name: handler.name, parameterCount: :len handler[:parameters])\n}",
       "steps": [
@@ -61,6 +88,38 @@
               "args": {
                 "name": { "type": ":text", "value": "Shoot" },
                 "parameterCount": { "type": ":integer", "value": "0" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "untyped handler literal and bind create first class values",
+      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  publish Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signatureid, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signatureid, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is :nothing)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "success": { "type": ":boolean", "value": true }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "handlerIsHandler": { "type": ":boolean", "value": true },
+                "handlerName": { "type": ":text", "value": "Success" },
+                "handlerSignature": { "type": ":text", "value": "Success(message,value)" },
+                "secondParameter": { "type": ":text", "value": "value" },
+                "messageIsMessage": { "type": ":boolean", "value": true },
+                "messageName": { "type": ":text", "value": "Success" },
+                "messageSignature": { "type": ":text", "value": "Success(message,value)" },
+                "text": { "type": ":text", "value": "hello" },
+                "value": { "type": ":boolean", "value": true },
+                "invalidIsNothing": { "type": ":boolean", "value": true }
               }
             }
           ]

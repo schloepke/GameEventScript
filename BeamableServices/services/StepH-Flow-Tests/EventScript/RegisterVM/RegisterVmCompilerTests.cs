@@ -519,6 +519,93 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
+    public void RegisterVmFallbackModeThrowRunsDirectMessageLiteralExpressionFastPath()
+    {
+        const string script =
+            """
+            module MessageExpressions
+
+            on Start(value) {
+              let scaled be value * 2
+              let myMessageDirect be Success(message: 'world', value: scaled)
+
+              publish Done(
+                isMessage: myMessageDirect is :message,
+                name: myMessageDirect.name,
+                signature: myMessageDirect.signatureid,
+                text: myMessageDirect.arguments.message,
+                value: myMessageDirect.arguments.value)
+            }
+            """;
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(EventScriptManager.CompileRegisterVM(
+                script,
+                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+
+        host.Publish(Message("Start", ("value", EventScriptValueFactory.Integer(21))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["isMessage"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Success"), published[0].Arguments["name"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Success(message,value)"), published[0].Arguments["signature"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("world"), published[0].Arguments["text"]);
+        Assert.AreEqual(EventScriptValueFactory.Decimal(42m), published[0].Arguments["value"]);
+    }
+
+    [TestMethod]
+    public void RegisterVmFallbackModeThrowRunsHandlerLiteralAndBindFastPath()
+    {
+        const string script =
+            """
+            module HandlerExpressions
+
+            on Start(success) {
+              let myHandler be Success(message, value)
+              let myMessage be myHandler(message: 'hello', value: success)
+              let invalidMessage be myHandler(message: 'hello', other: success)
+
+              publish Done(
+                handlerIsHandler: myHandler is :handler,
+                handlerName: myHandler.name,
+                handlerSignature: myHandler.signatureid,
+                secondParameter: myHandler.parameters[2],
+                messageIsMessage: myMessage is :message,
+                messageName: myMessage.name,
+                messageSignature: myMessage.signatureid,
+                text: myMessage.arguments.message,
+                value: myMessage.arguments.value,
+                invalidIsNothing: invalidMessage is :nothing)
+            }
+            """;
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(EventScriptManager.CompileRegisterVM(
+                script,
+                new RegisterEventScriptCompilationOptions { FallbackMode = RegisterVmFallbackMode.Throw }));
+
+        host.Publish(Message("Start", ("success", EventScriptValueFactory.Boolean(true))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["handlerIsHandler"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Success"), published[0].Arguments["handlerName"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Success(message,value)"), published[0].Arguments["handlerSignature"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("value"), published[0].Arguments["secondParameter"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["messageIsMessage"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Success"), published[0].Arguments["messageName"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("Success(message,value)"), published[0].Arguments["messageSignature"]);
+        Assert.AreEqual(EventScriptValueFactory.Text("hello"), published[0].Arguments["text"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["value"]);
+        Assert.AreEqual(EventScriptValueFactory.Boolean(true), published[0].Arguments["invalidIsNothing"]);
+    }
+
+    [TestMethod]
     public void RegisterVmFastPathEmitsDiagnosticsWhenEnabled()
     {
         const string script =

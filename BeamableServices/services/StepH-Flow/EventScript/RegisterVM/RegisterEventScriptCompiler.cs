@@ -356,6 +356,23 @@ public static class RegisterEventScriptCompiler
                     AddString(message.Message);
                     AddNamedArgumentLayout(message);
                     return "message";
+                case HandlerLiteralExpressionNode handler:
+                    AddString(handler.Message);
+                    foreach (var parameter in handler.Parameters)
+                    {
+                        AddString(parameter);
+                    }
+
+                    return "handler";
+                case HandlerBindExpressionNode handlerBind:
+                    GetExpressionDebugName(handlerBind.CalleeExpression);
+                    foreach (var argument in handlerBind.Arguments)
+                    {
+                        AddString(argument.Name);
+                        GetExpressionDebugName(argument.Expression);
+                    }
+
+                    return "handlerBind";
                 case CallExpressionNode call:
                     AddString(call.Name);
                     return "call";

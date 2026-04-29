@@ -148,6 +148,10 @@ public sealed class EventScriptHost
                 state.RecordDiagnostic(EventScriptDiagnosticEventKind.SubscriberInvoked, queuedEvent.Name, queuedEvent.Arguments, "Subscriber invoked");
                 subscription.Handler(queuedEvent, state.Context);
             }
+            catch (EventScriptFatalRuntimeException)
+            {
+                throw;
+            }
             catch
             {
                 // Runtime dispatch must remain lenient.

@@ -3,6 +3,7 @@ using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
+using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.EventScriptMessage;
@@ -26,9 +27,15 @@ public sealed class EventScriptEnginePerformanceComparisonTests
           let average be values[:filter value where value is high][:select value -> value + 5%][:average value -> value]
           let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
           let firstBoosted be values[:filter value where value is high][:select value -> value + 5%][:first]
-          let scaled be 100m + 5%
+          let scaled as :meter be 100m + 5%
           let folded be (15% + 15%) * 2
           let directOddScaled be values[:filter value where value mod 2 = 1][:select value -> value * 2][:count value where value > 10]
+          if scaled > 100m {
+            let success be scaled + folded
+            // let myHandler be Success(message, value)
+            // let myMessage be myHandler(message: 'hello', value: success)
+            // let myMessageDirect be Success(message: 'world', value: scaled)
+          }
           for item from 1 to 16 {
             let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value -> (value + item) * 2][:sum value -> value]
           }
@@ -40,7 +47,7 @@ public sealed class EventScriptEnginePerformanceComparisonTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void InterpreterAndExperimentalEnginesCanBeComparedForRuntimeCost()
+    public void EventScriptEnginesCanBeComparedForRuntimeCost()
     {
         var input = Message("Start", ("values", EventScriptValueFactory.List(
             Enumerable.Range(1, 50).Select(value => EventScriptValueFactory.Integer(value)))));
@@ -48,25 +55,30 @@ public sealed class EventScriptEnginePerformanceComparisonTests
         WarmUp(input);
 
         var linked = LinkPerformanceScript();
-        var interpreterCompile = Measure("interpreter compile", () => (IEventScriptMessageHandlerCollection)new CompiledEventScript(linked));
-        var experimentalCompile = Measure("experimental compile", () => (IEventScriptMessageHandlerCollection)ExperimentalEventScriptCompiler.Compile(linked));
+        var interpreterCompile = Measure<IEventScriptMessageHandlerCollection>("interpreter compile", () => new CompiledEventScript(linked));
+        var experimentalCompile = Measure<IEventScriptMessageHandlerCollection>("experimental compile", () => ExperimentalEventScriptCompiler.Compile(linked));
+        var registerVmCompile = Measure<IEventScriptMessageHandlerCollection>("registervm compile", () => RegisterEventScriptCompiler.Compile(linked));
 
         var interpreterRun = MeasureRun(interpreterCompile.Value, input, MeasuredRuns);
         var experimentalRun = MeasureRun(experimentalCompile.Value, input, MeasuredRuns);
+        var registerVmRun = MeasureRun(registerVmCompile.Value, input, MeasuredRuns);
 
         AssertEquivalentOutput(interpreterRun.LastMessage, experimentalRun.LastMessage);
+        AssertEquivalentOutput(interpreterRun.LastMessage, registerVmRun.LastMessage);
         Assert.AreEqual(MeasuredRuns, interpreterRun.PublishedMessages);
         Assert.AreEqual(MeasuredRuns, experimentalRun.PublishedMessages);
+        Assert.AreEqual(MeasuredRuns, registerVmRun.PublishedMessages);
 
         WriteReport("interpreter", interpreterCompile, interpreterRun);
         WriteReport("experimental", experimentalCompile, experimentalRun);
-        TestContext.WriteLine(
-            "experimental/interpreter runtime ratio: {0:0.00}x",
-            experimentalRun.Elapsed.TotalMilliseconds / Math.Max(0.001d, interpreterRun.Elapsed.TotalMilliseconds));
-        TestContext.WriteLine(
-            "experimental/interpreter runtime allocation ratio: {0:0.00}x",
-            (double)experimentalRun.AllocatedBytes / Math.Max(1L, interpreterRun.AllocatedBytes));
+        WriteReport("registervm", registerVmCompile, registerVmRun);
+        TestContext.WriteLine("experimental/interpreter runtime ratio: {0:0.00}x", experimentalRun.Elapsed.TotalMilliseconds / Math.Max(0.001d, interpreterRun.Elapsed.TotalMilliseconds));
+        TestContext.WriteLine("experimental/interpreter runtime allocation ratio: {0:0.00}x", (double)experimentalRun.AllocatedBytes / Math.Max(1L, interpreterRun.AllocatedBytes));
+        TestContext.WriteLine("registervm/interpreter runtime ratio: {0:0.00}x", registerVmRun.Elapsed.TotalMilliseconds / Math.Max(0.001d, interpreterRun.Elapsed.TotalMilliseconds));
+        TestContext.WriteLine("registervm/interpreter runtime allocation ratio: {0:0.00}x", (double)registerVmRun.AllocatedBytes / Math.Max(1L, interpreterRun.AllocatedBytes));
         TestContext.WriteLine("allocation values are cumulative thread allocations, not peak live memory.");
+        TestContext.WriteLine("-----");
+        TestContext.WriteLine("RegisterVM Dump:\n"+RegisterBytecodeDumper.ToDebugText(RegisterEventScriptCompiler.Compile(linked)));
     }
 
     private static void WarmUp(EventScriptMessage input)
@@ -74,6 +86,7 @@ public sealed class EventScriptEnginePerformanceComparisonTests
         var linked = LinkPerformanceScript();
         MeasureRun(new CompiledEventScript(linked), input, WarmupRuns);
         MeasureRun(ExperimentalEventScriptCompiler.Compile(linked), input, WarmupRuns);
+        MeasureRun(RegisterEventScriptCompiler.Compile(linked), input, WarmupRuns);
     }
 
     private static LinkedEventScriptModule LinkPerformanceScript()

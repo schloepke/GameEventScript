@@ -14,6 +14,8 @@ public enum EventScriptDiagnosticEventKind
     DispatchCompleted,
     HandlerInvoked,
     ParameterBound,
+    LetEvaluated,
+    ExpressionEvaluatedToNothing,
     RuleCalled,
     SelectCalled,
     EventPublished,

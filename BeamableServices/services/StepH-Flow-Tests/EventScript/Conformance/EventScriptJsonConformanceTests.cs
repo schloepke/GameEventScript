@@ -9,6 +9,7 @@ using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Experimental;
 using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
+using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
@@ -19,7 +20,8 @@ public sealed class EventScriptJsonConformanceTests
 {
     private const string InterpreterEngine = "interpreter";
     private const string ExperimentalEngine = "experimental";
-    private static readonly string[] RuntimeEngines = [InterpreterEngine, ExperimentalEngine];
+    private const string RegisterVmEngine = "registervm";
+    private static readonly string[] RuntimeEngines = [InterpreterEngine, ExperimentalEngine, RegisterVmEngine];
     private static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -469,6 +471,9 @@ public sealed class EventScriptJsonConformanceTests
             ExperimentalEngine => ExperimentalEventScriptCompiler.Compile(
                 linked,
                 new ExperimentalEventScriptCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
+            RegisterVmEngine => RegisterEventScriptCompiler.Compile(
+                linked,
+                new RegisterEventScriptCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
             _ => throw new InvalidOperationException($"Unsupported conformance engine '{engine}'.")
         };
     }

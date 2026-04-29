@@ -21,6 +21,13 @@ public sealed class EventScriptMessage
         SignatureId = EventScriptMessageSignature.CreateSignatureId(Name, Arguments.Keys);
     }
 
+    private EventScriptMessage(string normalizedName, EventScriptNamedArguments arguments, string signatureId)
+    {
+        Name = normalizedName;
+        Arguments = arguments;
+        SignatureId = signatureId;
+    }
+
     public string Name { get; }
 
     public EventScriptNamedArguments Arguments { get; }
@@ -38,4 +45,7 @@ public sealed class EventScriptMessage
 
     public static EventScriptMessage Message(string name, params (string name, object? value)[] arguments)
         => new(name, arguments.ToDictionary(pair => pair.name, pair => EventScriptValueFactory.FromClr(pair.value)));
+
+    internal static EventScriptMessage CreatePrecomputed(string normalizedName, EventScriptNamedArguments arguments, string signatureId)
+        => new(normalizedName, arguments, signatureId);
 }

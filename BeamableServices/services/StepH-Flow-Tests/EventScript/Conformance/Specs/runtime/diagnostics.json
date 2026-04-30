@@ -35,7 +35,7 @@
       "kind": "scriptApi",
       "name": "compile diagnostics record rule and select calls",
       "compileOptions": { "enableDiagnostics": true },
-      "script": "rule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  publish Done(byRule: byRule, count: :len bySelect)\n}",
+      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  publish Done(byRule: byRule, count: :len bySelect)\n}",
       "steps": [
         {
           "input": {

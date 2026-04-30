@@ -46,10 +46,12 @@ internal enum RegisterFastOpCode
     MemberAccess,
     IndexedAccess,
     BuildList,
+    BuildSequence,
     BuildSet,
     BuildDictionary,
     BuildMessage,
     BindHandler,
+    CallExtension,
     Call,
     TypeCheck,
     Pipeline,
@@ -72,7 +74,8 @@ internal enum RegisterFastCastKind
     Percentage,
     Degree,
     Meter,
-    Second
+    Second,
+    Sequence
 }
 
 internal readonly record struct RegisterFastInstruction(

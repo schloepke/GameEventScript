@@ -167,7 +167,7 @@ internal static class EventScriptConformanceValueCodec
             EventScriptValueKind.Range => ToRangeJson(value),
             EventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<EventScriptMessage>(value, "Value")) },
             EventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
-            EventScriptValueKind.Iterator => throw new NotSupportedException("Iterator values are not part of the conformance JSON value wire format."),
+            EventScriptValueKind.Sequence => throw new NotSupportedException("Sequence values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported EventScript value type '{value.Kind}'.")
         };
     }

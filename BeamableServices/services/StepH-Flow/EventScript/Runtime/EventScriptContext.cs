@@ -15,7 +15,8 @@ public sealed class EventScriptContext
         Action<EventScriptMessage> publish,
         IEventScriptDiagnosticCollector? diagnosticCollector = null,
         bool publishCallbackRecordsDiagnostics = false,
-        EventScriptRuntimeLimits? runtimeLimits = null)
+        EventScriptRuntimeLimits? runtimeLimits = null,
+        IEventScriptExtensionRegistry? extensionRegistry = null)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
@@ -23,6 +24,7 @@ public sealed class EventScriptContext
         PublishCallbackRecordsDiagnostics = publishCallbackRecordsDiagnostics;
         RuntimeLimits = runtimeLimits ?? EventScriptRuntimeLimits.Default;
         RuntimeBudget = new EventScriptRuntimeBudget(this, RuntimeLimits);
+        ExtensionRegistry = extensionRegistry ?? EventScriptEmptyExtensionRegistry.Instance;
     }
 
     public EventScriptRandomGenerator Random { get; }
@@ -30,6 +32,8 @@ public sealed class EventScriptContext
     public IEventScriptDiagnosticCollector? DiagnosticCollector { get; }
 
     public EventScriptRuntimeLimits RuntimeLimits { get; }
+
+    public IEventScriptExtensionRegistry ExtensionRegistry { get; }
 
     internal bool PublishCallbackRecordsDiagnostics { get; }
 

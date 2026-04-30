@@ -173,7 +173,7 @@
                 "handlerIsHandler": { "type": ":boolean", "value": true },
                 "handlerIsDictionary": { "type": ":boolean", "value": false },
                 "msgName": { "type": ":text", "value": "Shoot" },
-                "msgSignature": { "type": ":text", "value": "Shoot(target,unit)" },
+                "msgSignature": { "type": ":text", "value": "Shoot(unit,target)" },
                 "handlerName": { "type": ":text", "value": "Shoot" },
                 "handlerParameterCount": { "type": ":integer", "value": "2" },
                 "messageArgumentCount": { "type": ":integer", "value": "2" }

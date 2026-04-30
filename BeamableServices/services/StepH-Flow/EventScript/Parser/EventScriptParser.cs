@@ -315,21 +315,34 @@ public sealed class EventScriptParser
         return WithRange(new SelectDefinitionNode(name, parameters, expression), startToken);
     }
 
-    private IReadOnlyList<string> ParseDefinitionParameters()
+    private IReadOnlyList<ParameterNode> ParseDefinitionParameters()
     {
-        var parameters = new List<string>();
+        var parameters = new List<ParameterNode>();
         Expect(LeftParen);
         if (!Is(RightParen))
         {
-            parameters.Add(ExpectIdentifier());
+            parameters.Add(ParseParameter());
             while (Match(Comma))
             {
-                parameters.Add(ExpectIdentifier());
+                parameters.Add(ParseParameter());
             }
         }
 
         Expect(RightParen);
         return parameters;
+    }
+
+    private ParameterNode ParseParameter()
+    {
+        var startToken = Current;
+        if (Match(Underscore))
+        {
+            SkipNewLines();
+            return WithRange(new ParameterNode(null, ExpectIdentifier()), startToken);
+        }
+
+        var name = ExpectIdentifier();
+        return WithRange(new ParameterNode(name, name), startToken);
     }
 
     private EventHandlerNode ParseEventHandler()
@@ -339,15 +352,15 @@ public sealed class EventScriptParser
         SkipNewLines();
         var message = Expect(Message).Text;
 
-        var parameters = new List<string>();
+        var parameters = new List<ParameterNode>();
         if (Match(LeftParen))
         {
             if (!Is(RightParen))
             {
-                parameters.Add(ExpectIdentifier());
+                parameters.Add(ParseParameter());
                 while (Match(Comma))
                 {
-                    parameters.Add(ExpectIdentifier());
+                    parameters.Add(ParseParameter());
                 }
             }
 
@@ -443,13 +456,91 @@ public sealed class EventScriptParser
         return ParseExpression();
     }
 
-    private NamedArgumentNode ParseNamedArgument()
+    private ArgumentNode ParseArgument()
     {
         var startToken = Current;
-        var name = ExpectIdentifier();
-        Expect(Colon);
-        var expression = ParseExpression();
-        return WithRange(new NamedArgumentNode(name, expression), startToken);
+        if (IsArgumentLabelStart())
+        {
+            var label = ExpectArgumentLabel();
+            SkipNewLines();
+            if (Match(Colon))
+            {
+                SkipNewLines();
+                var expression = ParseExpression();
+                return WithRange(new ArgumentNode(label, expression), startToken);
+            }
+        }
+
+        var value = ParseExpression();
+        return WithRange(new ArgumentNode(null, value), startToken);
+    }
+
+    private ArgumentListNode ParseArgumentListAfterLeftParen()
+    {
+        SkipNewLines();
+        if (Match(RightParen))
+        {
+            return ArgumentListNode.Empty;
+        }
+
+        var arguments = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
+        Expect(RightParen);
+        return arguments;
+    }
+
+    private ArgumentListNode ParseArgumentListAfterFirstArgument(ArgumentNode firstArgument, EventScriptTokenKind closingKind)
+    {
+        var arguments = new List<ArgumentNode> { firstArgument };
+        while (true)
+        {
+            SkipNewLines();
+            if (Match(Comma))
+            {
+                SkipNewLines();
+                arguments.Add(ParseArgument());
+                continue;
+            }
+
+            if (!Is(closingKind) && IsArgumentLabelStart())
+            {
+                arguments.Add(ParseArgument());
+                continue;
+            }
+
+            return new ArgumentListNode(arguments);
+        }
+    }
+
+    private ArgumentListNode ParseUngroupedLabeledArgumentList()
+    {
+        if (!IsArgumentLabelStart())
+        {
+            return ArgumentListNode.Empty;
+        }
+
+        var arguments = new List<ArgumentNode>();
+        do
+        {
+            arguments.Add(ParseArgument());
+        }
+        while (IsArgumentLabelStart());
+
+        return new ArgumentListNode(arguments);
+    }
+
+    private ArgumentListNode ParseOfArgumentList()
+    {
+        var arguments = new List<ArgumentNode>();
+        ExpectWord("of");
+        SkipNewLines();
+        arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
+        while (Match(And))
+        {
+            SkipNewLines();
+            arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
+        }
+
+        return new ArgumentListNode(arguments);
     }
 
     private LetStatementNode ParseLetStatement()
@@ -828,6 +919,13 @@ public sealed class EventScriptParser
             if (Match(EventScriptTokenKind.Is))
             {
                 SkipNewLines();
+                if (IsExtensionCallStart())
+                {
+                    var (extensionName, functionName, _) = ParseExtensionSymbol();
+                    expression = WithRange(new ExtensionPredicateExpressionNode(expression, extensionName, functionName), expression);
+                    continue;
+                }
+
                 if (Is(Tag))
                 {
                     var typeName = ParseTypeName();
@@ -991,6 +1089,11 @@ public sealed class EventScriptParser
         {
             if (!TryParseTaggedUnaryOperator(out var taggedOperator))
             {
+                if (IsExtensionCallStart())
+                {
+                    return ParseExtensionCallExpression();
+                }
+
                 if (MatchTag(":clamp"))
                 {
                     return ParseClampExpression();
@@ -1418,6 +1521,11 @@ public sealed class EventScriptParser
 
     private ExpressionNode ParsePrimaryExpression()
     {
+        if (MatchWord("of"))
+        {
+            return ParseSequenceLiteralExpressionCore(Previous);
+        }
+
         if (MatchWord("from"))
         {
             return ParseRangeExpressionCore();
@@ -1543,18 +1651,18 @@ public sealed class EventScriptParser
         SkipNewLines();
         var startToken = Current;
         var message = Expect(Message).Text;
-        var parameters = new List<string>();
+        var parameters = new List<ParameterNode>();
 
         if (Match(LeftParen))
         {
             SkipNewLines();
             if (!Is(RightParen))
             {
-                parameters.Add(ExpectIdentifier());
+                parameters.Add(ParseParameter());
                 while (Match(Comma))
                 {
                     SkipNewLines();
-                    parameters.Add(ExpectIdentifier());
+                    parameters.Add(ParseParameter());
                 }
             }
 
@@ -1570,22 +1678,10 @@ public sealed class EventScriptParser
         SkipNewLines();
         var startToken = Current;
         var message = Expect(Message).Text;
-        var arguments = new List<NamedArgumentNode>();
+        var arguments = ArgumentListNode.Empty;
         if (Match(LeftParen))
         {
-            SkipNewLines();
-            if (!Is(RightParen))
-            {
-                arguments.Add(ParseNamedArgument());
-                while (Match(Comma))
-                {
-                    SkipNewLines();
-                    arguments.Add(ParseNamedArgument());
-                }
-            }
-
-            SkipNewLines();
-            Expect(RightParen);
+            arguments = ParseArgumentListAfterLeftParen();
         }
 
         return WithRange(new MessageLiteralExpressionNode(message, arguments), startToken);
@@ -1602,33 +1698,26 @@ public sealed class EventScriptParser
         {
             Expect(RightParen);
             return isMessageCallee
-                ? WithRange(new HandlerLiteralExpressionNode(name, []), startToken)
-                : WithRange(new CallExpressionNode(name, []), startToken);
+                ? WithRange(new HandlerLiteralExpressionNode(name, Array.Empty<ParameterNode>()), startToken)
+                : WithRange(new CallExpressionNode(name, ArgumentListNode.Empty), startToken);
         }
 
-        if (IsNamedArgumentStart())
+        if (IsArgumentLabelStart())
         {
-            var namedArguments = new List<NamedArgumentNode> { ParseNamedArgument() };
-            while (Match(Comma))
-            {
-                SkipNewLines();
-                namedArguments.Add(ParseNamedArgument());
-            }
-
-            SkipNewLines();
+            var labeledArguments = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
             Expect(RightParen);
             return isMessageCallee
-                ? WithRange(new MessageLiteralExpressionNode(name, namedArguments), startToken)
-                : WithRange(new HandlerBindExpressionNode(WithRange(new IdentifierExpressionNode(name), startToken), namedArguments), startToken);
+                ? WithRange(new MessageLiteralExpressionNode(name, labeledArguments), startToken)
+                : WithRange(new CallExpressionNode(name, labeledArguments), startToken);
         }
 
         if (isMessageCallee)
         {
-            var parameters = new List<string> { ExpectIdentifier() };
+            var parameters = new List<ParameterNode> { ParseParameter() };
             while (Match(Comma))
             {
                 SkipNewLines();
-                parameters.Add(ExpectIdentifier());
+                parameters.Add(ParseParameter());
             }
 
             SkipNewLines();
@@ -1636,16 +1725,16 @@ public sealed class EventScriptParser
             return WithRange(new HandlerLiteralExpressionNode(name, parameters), startToken);
         }
 
-        var arguments = new List<ExpressionNode> { ParseExpression() };
+        var arguments = new List<ArgumentNode> { new(null, ParseExpression()) };
         while (Match(Comma))
         {
             SkipNewLines();
-            arguments.Add(ParseExpression());
+            arguments.Add(new ArgumentNode(null, ParseExpression()));
         }
 
         SkipNewLines();
         Expect(RightParen);
-        return WithRange(new CallExpressionNode(name, arguments), startToken);
+        return WithRange(new CallExpressionNode(name, new ArgumentListNode(arguments)), startToken);
     }
 
     private ListLiteralExpressionNode ParseListLiteralExpression()
@@ -1995,6 +2084,50 @@ public sealed class EventScriptParser
         return WithRange(new ChooseSelectorNode(count, atRandom, identifier, predicate, weightIdentifier, weightExpression), startToken);
     }
 
+    private ExtensionCallExpressionNode ParseExtensionCallExpression()
+    {
+        var startToken = Current;
+        var (extensionName, functionName, _) = ParseExtensionSymbol();
+        SkipNewLines();
+
+        ArgumentListNode arguments;
+        if (Match(LeftParen))
+        {
+            arguments = ParseArgumentListAfterLeftParen();
+        }
+        else if (Current.Kind == Identifier && string.Equals(Current.Text, "of", StringComparison.Ordinal))
+        {
+            arguments = ParseOfArgumentList();
+        }
+        else if (IsArgumentLabelStart())
+        {
+            arguments = ParseUngroupedLabeledArgumentList();
+        }
+        else if (IsExtensionUnaryArgumentStart())
+        {
+            arguments = new ArgumentListNode([new ArgumentNode(null, ParseUnaryExpression())]);
+        }
+        else
+        {
+            arguments = ArgumentListNode.Empty;
+        }
+
+        return WithRange(new ExtensionCallExpressionNode(extensionName, functionName, arguments), startToken);
+    }
+
+    private SequenceLiteralExpressionNode ParseSequenceLiteralExpressionCore(EventScriptToken startToken)
+    {
+        SkipNewLines();
+        var items = new List<ExpressionNode> { ParseEqualityExpression() };
+        while (Match(And))
+        {
+            SkipNewLines();
+            items.Add(ParseEqualityExpression());
+        }
+
+        return WithRange(new SequenceLiteralExpressionNode(items), startToken);
+    }
+
     private ExpressionNode ParseClampExpression()
     {
         var startToken = Previous;
@@ -2018,12 +2151,10 @@ public sealed class EventScriptParser
         ExpectWord("of");
         SkipNewLines();
         var arguments = new List<ExpressionNode> { ParseEqualityExpression() };
-        SkipNewLines();
         while (Match(And))
         {
             SkipNewLines();
             arguments.Add(ParseEqualityExpression());
-            SkipNewLines();
         }
 
         return WithRange(new VariadicTaggedExpressionNode(op, arguments), startToken);
@@ -2182,9 +2313,49 @@ public sealed class EventScriptParser
         return lookahead < _tokens.Count && _tokens[lookahead].Kind == LeftParen;
     }
 
-    private bool IsNamedArgumentStart()
+    private bool IsExtensionCallStart()
     {
-        if (Current.Kind != Identifier)
+        if (Current.Kind != Tag)
+        {
+            return false;
+        }
+
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != Dot)
+        {
+            return false;
+        }
+
+        lookahead++;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Identifier;
+    }
+
+    private (string ExtensionName, string FunctionName, EventScriptToken EndToken) ParseExtensionSymbol()
+    {
+        var extensionToken = Expect(Tag);
+        SkipNewLines();
+        Expect(Dot);
+        SkipNewLines();
+        var functionToken = Expect(Identifier);
+        return (extensionToken.Text[1..], functionToken.Text, functionToken);
+    }
+
+    private bool IsExtensionUnaryArgumentStart()
+        => Current.Kind is Identifier or Message or Tag or EventScriptTokenKind.Decimal or Percentage or UnitDecimal or Text or True or False or LeftBracket or LeftParen or Minus or Has or Empty or Not;
+
+    private bool IsArgumentLabelStart()
+    {
+        if (Current.Kind is not (Identifier or To))
         {
             return false;
         }
@@ -2196,6 +2367,17 @@ public sealed class EventScriptParser
         }
 
         return lookahead < _tokens.Count && _tokens[lookahead].Kind == Colon;
+    }
+
+    private string ExpectArgumentLabel()
+    {
+        if (Current.Kind is Identifier or To)
+        {
+            return Advance().Text;
+        }
+
+        var token = Current;
+        throw new EventScriptParseException($"Expected argument label but found {token.Kind}", token);
     }
 
     private string ParseTypeName()

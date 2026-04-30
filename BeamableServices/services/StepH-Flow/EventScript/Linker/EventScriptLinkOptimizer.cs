@@ -60,7 +60,7 @@ internal static class EventScriptLinkOptimizer
             optimized = EnsureBooleanRuleExpression(optimized);
         }
 
-        return new LinkedCallableDefinition(definition.Name, definition.Parameters, optimized, definition.Kind, definition.SourceRange);
+        return new LinkedCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
     private static EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)
@@ -188,6 +188,10 @@ internal static class EventScriptLinkOptimizer
             {
                 Value = OptimizeExpression(rulePredicate.Value, knownTypeNames)
             },
+            ExtensionPredicateExpressionNode extensionPredicate => extensionPredicate with
+            {
+                Value = OptimizeExpression(extensionPredicate.Value, knownTypeNames)
+            },
             TypeCheckExpressionNode typeCheck => typeCheck with
             {
                 Value = OptimizeExpression(typeCheck.Value, knownTypeNames)
@@ -222,22 +226,36 @@ internal static class EventScriptLinkOptimizer
             },
             MessageLiteralExpressionNode message => message with
             {
-                Arguments = message.Arguments.Select(argument => argument with
+                ArgumentList = new ArgumentListNode(message.Arguments.Select(argument => argument with
                 {
                     Expression = OptimizeExpression(argument.Expression, knownTypeNames)
-                }).ToArray()
+                }).ToArray())
             },
             HandlerBindExpressionNode bind => bind with
             {
                 CalleeExpression = OptimizeExpression(bind.CalleeExpression, knownTypeNames),
-                Arguments = bind.Arguments.Select(argument => argument with
+                ArgumentList = new ArgumentListNode(bind.Arguments.Select(argument => argument with
                 {
                     Expression = OptimizeExpression(argument.Expression, knownTypeNames)
-                }).ToArray()
+                }).ToArray())
             },
             CallExpressionNode call => call with
             {
-                Arguments = call.Arguments.Select(argument => OptimizeExpression(argument, knownTypeNames)).ToArray()
+                ArgumentList = new ArgumentListNode(call.ArgumentList.Arguments.Select(argument => argument with
+                {
+                    Expression = OptimizeExpression(argument.Expression, knownTypeNames)
+                }).ToArray())
+            },
+            ExtensionCallExpressionNode extensionCall => extensionCall with
+            {
+                ArgumentList = new ArgumentListNode(extensionCall.Arguments.Select(argument => argument with
+                {
+                    Expression = OptimizeExpression(argument.Expression, knownTypeNames)
+                }).ToArray())
+            },
+            SequenceLiteralExpressionNode sequence => sequence with
+            {
+                Items = sequence.Items.Select(item => OptimizeExpression(item, knownTypeNames)).ToArray()
             },
             _ => expression
         };

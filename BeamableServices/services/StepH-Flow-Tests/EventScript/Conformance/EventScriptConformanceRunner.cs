@@ -83,6 +83,7 @@ internal static class EventScriptConformanceRunner
         var published = new List<EventScriptMessage>();
         var builder = EventScriptHost.CreateBuilder()
             .WithRandom(CreateRandom(test.RandomSequence))
+            .WithRegistry(EventScriptConformanceExtensionRegistry.Instance)
             .WithRuntimeLimits(CreateRuntimeLimits(test.RuntimeLimits))
             .WithDiagnosticCollector(collector)
             .WithPublishedMessageObserver(published.Add);
@@ -628,5 +629,111 @@ internal static class EventScriptConformanceRunner
 
         var context = test is null ? suite : $"{suite}/{test}";
         throw new InvalidOperationException($"{file}: missing {description} in {context}.");
+    }
+}
+
+internal sealed class EventScriptConformanceExtensionRegistry : IEventScriptExtensionRegistry
+{
+    public static readonly EventScriptConformanceExtensionRegistry Instance = new();
+
+    private static readonly IEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
+        args.Length == 1
+            ? EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.Decimal(Math.Floor(args[0].ToEventScriptValue().AsNumber())))
+            : EventScriptFastValue.Nothing);
+
+    private static readonly IEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
+    {
+        if (args.Length == 0)
+        {
+            return EventScriptFastValue.Nothing;
+        }
+
+        var max = args[0].ToEventScriptValue().AsNumber();
+        for (var index = 1; index < args.Length; index++)
+        {
+            max = Math.Max(max, args[index].ToEventScriptValue().AsNumber());
+        }
+
+        return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.Decimal(max));
+    });
+
+    private static readonly IEventScriptExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
+    {
+        if (args.Length != 2)
+        {
+            return EventScriptFastValue.Nothing;
+        }
+
+        var from = args[0].ToEventScriptValue().AsNumber();
+        var to = args[1].ToEventScriptValue().AsNumber();
+        var delta = (to - from + 540m) % 360m - 180m;
+        return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.Degree(delta));
+    });
+
+    private static readonly IEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
+    {
+        if (args.Length != 1)
+        {
+            return EventScriptFastValue.FromBoolean(false);
+        }
+
+        var value = args[0].ToEventScriptValue().AsNumber();
+        var wrapped = ((value % 360m) + 360m) % 360m;
+        return EventScriptFastValue.FromBoolean(wrapped is <= 45m or >= 315m);
+    });
+
+    private EventScriptConformanceExtensionRegistry()
+    {
+    }
+
+    public bool TryResolve(EventScriptExtensionReference reference, out IEventScriptExtensionFunction function)
+    {
+        if (string.Equals(reference.ExtensionName, "math", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "floor", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count == 1 &&
+            IsUnlabeled(reference.ArgumentLabels[0]))
+        {
+            function = MathFloor;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "math", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "max", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count > 0 &&
+            reference.ArgumentLabels.All(IsUnlabeled))
+        {
+            function = MathMax;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "nav", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "shortestTurn", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.SequenceEqual(["from", "to"], StringComparer.Ordinal))
+        {
+            function = NavShortestTurn;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "nav", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "isNorth", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count == 1)
+        {
+            function = NavIsNorth;
+            return true;
+        }
+
+        function = default!;
+        return false;
+    }
+
+    private static bool IsUnlabeled(string label)
+        => string.Equals(label, EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
+
+    private delegate EventScriptFastValue ExtensionInvoke(EventScriptExtensionContext context, ReadOnlySpan<EventScriptFastValue> arguments);
+
+    private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IEventScriptExtensionFunction
+    {
+        public EventScriptFastValue Invoke(EventScriptExtensionContext context, ReadOnlySpan<EventScriptFastValue> arguments)
+            => invoke(context, arguments);
     }
 }

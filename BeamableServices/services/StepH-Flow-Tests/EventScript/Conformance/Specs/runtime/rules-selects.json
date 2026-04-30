@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "rules and selects are reusable in expressions and collections",
-      "script": "rule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  publish Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList, first: woundedList[1].name, second: woundedList[2].name)\n}",
+      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  publish Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList, first: woundedList[1].name, second: woundedList[2].name)\n}",
       "steps": [
         {
           "input": {
@@ -68,7 +68,7 @@
     {
       "kind": "scriptApi",
       "name": "rules and selects are lenient when expected keys are missing",
-      "script": "rule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  publish Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList)\n}",
+      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  publish Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList)\n}",
       "steps": [
         {
           "input": {
@@ -117,7 +117,7 @@
     {
       "kind": "scriptApi",
       "name": "rules coerce to boolean while selects keep original value",
-      "script": "rule numeric(value) means value * 2\nselect numericSelect(value) means value * 2\n\non Start {\n  let byRuleTwo be numeric(2)\n  let byRuleZero be numeric(0)\n  let bySelect be numericSelect(2)\n  let byPredicate be 2 is numeric\n  publish Done(byRuleTwo: byRuleTwo, byRuleZero: byRuleZero, bySelect: bySelect, byPredicate: byPredicate)\n}",
+      "script": "rule numeric(_ value) means value * 2\nselect numericSelect(_ value) means value * 2\n\non Start {\n  let byRuleTwo be numeric(2)\n  let byRuleZero be numeric(0)\n  let bySelect be numericSelect(2)\n  let byPredicate be 2 is numeric\n  publish Done(byRuleTwo: byRuleTwo, byRuleZero: byRuleZero, bySelect: bySelect, byPredicate: byPredicate)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -141,7 +141,7 @@
       "scripts": [
         {
           "sourceName": "shared.es",
-          "text": "module Shared\nrecord :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\nrule wounded(unit) means unit.hp < unit.maxHp\nselect woundedUnits(units) means units[:filter unit where unit is wounded]"
+          "text": "module Shared\nrecord :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\nrule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]"
         },
         {
           "sourceName": "runtime.es",

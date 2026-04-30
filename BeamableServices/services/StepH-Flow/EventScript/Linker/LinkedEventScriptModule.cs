@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using StepH.Flow.EventScript.Parser;
 
 namespace StepH.Flow.EventScript.Linker;
@@ -14,14 +15,28 @@ public enum LinkedCallableKind
 
 public sealed class LinkedCallableDefinition(
     string name,
-    IReadOnlyList<string> parameters,
+    IReadOnlyList<ParameterNode> parameterList,
     ExpressionNode expression,
     LinkedCallableKind kind,
     EventScriptSourceLocation? sourceRange = null)
 {
+    public LinkedCallableDefinition(
+        string name,
+        IReadOnlyList<string> parameters,
+        ExpressionNode expression,
+        LinkedCallableKind kind,
+        EventScriptSourceLocation? sourceRange = null)
+        : this(name, Array.ConvertAll(parameters is null ? [] : parameters.ToArray(), parameter => new ParameterNode(parameter, parameter)), expression, kind, sourceRange)
+    {
+    }
+
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
-    public IReadOnlyList<string> Parameters { get; } = parameters ?? throw new ArgumentNullException(nameof(parameters));
+    public IReadOnlyList<ParameterNode> ParameterList { get; } = parameterList ?? throw new ArgumentNullException(nameof(parameterList));
+
+    public IReadOnlyList<string> Parameters { get; } = parameterList.Select(parameter => parameter.LocalName).ToArray();
+
+    public IReadOnlyList<string> SignatureLabels { get; } = parameterList.Select(parameter => parameter.SignatureLabel).ToArray();
 
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 

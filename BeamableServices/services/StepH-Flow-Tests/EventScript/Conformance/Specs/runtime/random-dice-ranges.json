@@ -116,7 +116,6 @@
           "input": {
             "name": "Start",
             "args": {
-              "seed": { "type": ":integer", "value": "42" },
               "enemies": {
                 "type": ":list",
                 "items": [
@@ -149,7 +148,8 @@
                     }
                   }
                 ]
-              }
+              },
+              "seed": { "type": ":integer", "value": "42" }
             }
           },
           "expectedPublished": [

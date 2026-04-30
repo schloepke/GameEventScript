@@ -23,7 +23,9 @@ public sealed class CompiledEventScript : IEventScriptMessageHandlerCollection
             pair => pair.Key,
             pair => new CompiledCallableDefinition(
                 pair.Value.Name,
+                pair.Value.ParameterList,
                 pair.Value.Parameters,
+                pair.Value.SignatureLabels,
                 pair.Value.Expression,
                 pair.Value.Kind == LinkedCallableKind.Rule ? CallableKind.Rule : CallableKind.Select,
                 Options.EnableDiagnostics),
@@ -78,11 +80,15 @@ internal enum CallableKind
     Select
 }
 
-internal sealed class CompiledCallableDefinition(string name, IReadOnlyList<string> parameters, ExpressionNode expression, CallableKind kind, bool diagnosticsEnabled)
+internal sealed class CompiledCallableDefinition(string name, IReadOnlyList<ParameterNode> parameterList, IReadOnlyList<string> parameters, IReadOnlyList<string> signatureLabels, ExpressionNode expression, CallableKind kind, bool diagnosticsEnabled)
 {
     public string Name { get; } = name;
 
+    public IReadOnlyList<ParameterNode> ParameterList { get; } = parameterList.ToArray();
+
     public IReadOnlyList<string> Parameters { get; } = parameters.ToArray();
+
+    public IReadOnlyList<string> SignatureLabels { get; } = signatureLabels.ToArray();
 
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
@@ -137,9 +143,10 @@ public sealed class CompiledEventScriptHandler
         Parameters = syntax.Parameters.ToArray();
         Statements = syntax.Statements.ToArray();
         DeclarationOrder = declarationOrder;
-        SignatureId = EventScriptMessageSignature.CreateSignatureId(Message, Parameters);
+        SignatureLabels = syntax.SignatureLabels.ToArray();
+        SignatureId = EventScriptMessageSignature.CreateSignatureId(Message, SignatureLabels);
         DiagnosticsEnabled = diagnosticsEnabled;
-        Definition = new EventScriptMessageSignature(Message, Parameters);
+        Definition = new EventScriptMessageSignature(Message, SignatureLabels);
     }
 
     internal IReadOnlyList<StatementNode> Statements { get; }
@@ -151,6 +158,8 @@ public sealed class CompiledEventScriptHandler
     public int DeclarationOrder { get; }
 
     public IReadOnlyList<string> Parameters { get; }
+
+    public IReadOnlyList<string> SignatureLabels { get; }
 
     public string SignatureId { get; }
 

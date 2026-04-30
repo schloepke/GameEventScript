@@ -25,7 +25,7 @@
     {
       "kind": "compileError",
       "name": "invalid rule predicate requires unary rule",
-      "script": "select wounded(unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
+      "script": "select wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
       "expectedError": {
         "phase": "linkage",
         "kind": "InvalidRulePredicate",
@@ -36,7 +36,7 @@
     {
       "kind": "compileError",
       "name": "wrong rule arity fails linkage",
-      "script": "rule wounded(unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
+      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
       "expectedError": {
         "phase": "linkage",
         "kind": "WrongRuleArity",
@@ -47,7 +47,7 @@
     {
       "kind": "compileError",
       "name": "wrong select arity fails linkage",
-      "script": "select woundedUnits(units) means units[:filter unit where unit.hp < unit.maxHp]\n\non Start(units) {\n  let x be woundedUnits()\n}",
+      "script": "select woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]\n\non Start(units) {\n  let x be woundedUnits()\n}",
       "expectedError": {
         "phase": "linkage",
         "kind": "WrongSelectArity",
@@ -122,7 +122,7 @@
       "expectedError": {
         "phase": "linkage",
         "kind": "DuplicatePublishArgument",
-        "symbol": "handler bind",
+        "symbol": "myHandler",
         "moduleName": "DuplicateHandlerBindArgs"
       }
     },
@@ -144,11 +144,11 @@
       "scripts": [
         {
           "sourceName": "a.es",
-          "text": "module A\nrule wounded(unit) means unit.hp < unit.maxHp"
+          "text": "module A\nrule wounded(_ unit) means unit.hp < unit.maxHp"
         },
         {
           "sourceName": "b.es",
-          "text": "module B\nselect wounded(unit) means unit.hp < unit.maxHp"
+          "text": "module B\nselect wounded(_ unit) means unit.hp < unit.maxHp"
         }
       ],
       "expectedError": {

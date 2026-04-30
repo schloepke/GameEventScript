@@ -21,7 +21,7 @@ public enum EventScriptValueKind
     Integer,
     Boolean,
     Optional,
-    Iterator,
+    Sequence,
     Range,
     Message,
     Handler,
@@ -55,7 +55,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
     public bool HasDecimalUnit() => this is EventScriptDecimalValue { Unit: not null };
     public bool IsVector2() => Kind == EventScriptValueKind.Vector2;
     public bool IsVector3() => Kind == EventScriptValueKind.Vector3;
-    public bool IsIterator() => Kind == EventScriptValueKind.Iterator;
+    public bool IsSequence() => Kind == EventScriptValueKind.Sequence;
     public bool IsList() => Kind == EventScriptValueKind.List;
     public bool IsDictionary() => Kind == EventScriptValueKind.Dictionary;
     public bool IsOptional() => Kind == EventScriptValueKind.Optional;
@@ -182,7 +182,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Integer => ":Integer",
             EventScriptValueKind.Boolean => ":Boolean",
             EventScriptValueKind.Optional => ":Optional",
-            EventScriptValueKind.Iterator => ":Iterator",
+            EventScriptValueKind.Sequence => ":Sequence",
             EventScriptValueKind.Range => ":Range",
             EventScriptValueKind.Message => ":Message",
             EventScriptValueKind.Handler => ":Handler",
@@ -208,7 +208,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Integer => AsInteger().ToString(CultureInfo.InvariantCulture),
             EventScriptValueKind.Boolean => AsBoolean().ToString(),
             EventScriptValueKind.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
-            EventScriptValueKind.Iterator => $"iterator[{string.Join(", ", AsEnumerable().Select(x => x.ToString()))}]",
+            EventScriptValueKind.Sequence => $"sequence[{string.Join(", ", AsEnumerable().Select(x => x.ToString()))}]",
             EventScriptValueKind.Range => $"range[{((EventScriptRangeValue)this).From} to {((EventScriptRangeValue)this).To} step {((EventScriptRangeValue)this).Step}]",
             EventScriptValueKind.Message => ((EventScriptMessageValue)this).Value.ToString(),
             EventScriptValueKind.Handler => $"handler {((EventScriptHandlerValue)this).Signature.SignatureId}",
@@ -260,7 +260,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
             EventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
             EventScriptValueKind.Optional => EqualsOptional(AsOptional(), other.AsOptional()),
-            EventScriptValueKind.Iterator => AsEnumerable().SequenceEqual(other.AsEnumerable()),
+            EventScriptValueKind.Sequence => AsEnumerable().SequenceEqual(other.AsEnumerable()),
             EventScriptValueKind.Range => ((EventScriptRangeValue)this).From == ((EventScriptRangeValue)other).From &&
                                           ((EventScriptRangeValue)this).To == ((EventScriptRangeValue)other).To &&
                                           ((EventScriptRangeValue)this).Step == ((EventScriptRangeValue)other).Step,
@@ -328,7 +328,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 if (optional.HasValue) hash.Add(optional.Value);
                 break;
             }
-            case EventScriptValueKind.Iterator:
+            case EventScriptValueKind.Sequence:
                 foreach (var item in AsEnumerable()) hash.Add(item);
                 break;
             case EventScriptValueKind.Range:
@@ -399,7 +399,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Vector3 => 5,
             EventScriptValueKind.Boolean => 6,
             EventScriptValueKind.Optional => 7,
-            EventScriptValueKind.Iterator => 8,
+            EventScriptValueKind.Sequence => 8,
             EventScriptValueKind.Range => 9,
             EventScriptValueKind.Message => 10,
             EventScriptValueKind.Handler => 11,
@@ -594,7 +594,7 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
                 EventScriptValueKind.Vector3 => CompareSequence(left.AsList(), right.AsList()),
                 EventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
                 EventScriptValueKind.Optional => CompareOptional(left.AsOptional(), right.AsOptional()),
-                EventScriptValueKind.Iterator => CompareSequence(left.AsEnumerable().ToArray(), right.AsEnumerable().ToArray()),
+                EventScriptValueKind.Sequence => CompareSequence(left.AsEnumerable().ToArray(), right.AsEnumerable().ToArray()),
                 EventScriptValueKind.Range => CompareRange((EventScriptRangeValue)left, (EventScriptRangeValue)right),
                 EventScriptValueKind.Message => CompareMessage((EventScriptMessageValue)left, (EventScriptMessageValue)right),
                 EventScriptValueKind.Handler => CompareHandler((EventScriptHandlerValue)left, (EventScriptHandlerValue)right),

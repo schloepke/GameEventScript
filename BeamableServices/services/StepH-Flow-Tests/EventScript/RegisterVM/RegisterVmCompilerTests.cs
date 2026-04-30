@@ -587,4 +587,77 @@ public sealed class RegisterVmCompilerTests
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == EventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing && diagnostic.Name == "missingValue"));
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == EventScriptDiagnosticEventKind.RuleCalled && diagnostic.Name == "high"));
     }
+
+    [TestMethod]
+    public void RegisterVmDynamicLinkBindsExtensionReferencesOnHostLoad()
+    {
+        const string script =
+            """
+            module Extensions
+
+            on Start(values) {
+              let floored be values[:select item -> :math.floor item]
+              publish Done(first: floored[1])
+            }
+            """;
+
+        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var dump = RegisterBytecodeDumper.ToDebugText(compiled);
+
+        StringAssert.Contains(dump, "externalReferences[1]");
+        StringAssert.Contains(dump, "math.floor(_)");
+        var exception = Assert.ThrowsExactly<EventScriptDynamicLinkException>(() =>
+            EventScriptHost.CreateBuilder().Build().Load(compiled));
+        StringAssert.Contains(exception.Message, "math.floor(_)");
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithRegistry(TestExtensionRegistry.Instance)
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(compiled);
+
+        host.Publish(Message(
+            "Start",
+            ("values", EventScriptValueFactory.List(
+            [
+                EventScriptValueFactory.Decimal(2.9m),
+                EventScriptValueFactory.Decimal(5.1m)
+            ]))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Decimal(2m), published[0].Arguments["first"]);
+    }
+
+    private sealed class TestExtensionRegistry : IEventScriptExtensionRegistry
+    {
+        public static readonly TestExtensionRegistry Instance = new();
+
+        private static readonly IEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
+            EventScriptFastValue.FromDecimal(Math.Floor(args[0].Number)));
+
+        private TestExtensionRegistry()
+        {
+        }
+
+        public bool TryResolve(EventScriptExtensionReference reference, out IEventScriptExtensionFunction function)
+        {
+            if (reference.SignatureId == "math.floor(_)")
+            {
+                function = MathFloor;
+                return true;
+            }
+
+            function = default!;
+            return false;
+        }
+    }
+
+    private delegate EventScriptFastValue ExtensionInvoke(EventScriptExtensionContext context, ReadOnlySpan<EventScriptFastValue> arguments);
+
+    private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IEventScriptExtensionFunction
+    {
+        public EventScriptFastValue Invoke(EventScriptExtensionContext context, ReadOnlySpan<EventScriptFastValue> arguments)
+            => invoke(context, arguments);
+    }
 }

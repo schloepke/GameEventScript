@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Types;
 using StepH.Flow.Extensions;
 using static StepH.Flow.EventScript.EventScriptMessageSignature;
@@ -14,6 +15,7 @@ public sealed class EventScriptHost
     private readonly EventScriptRandomGenerator _random;
     private readonly IEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly Action<EventScriptMessage>? _publishedMessageObserver;
+    private readonly IEventScriptExtensionRegistry _extensionRegistry;
     private readonly EventScriptRuntimeLimits _runtimeLimits;
     private readonly int _maxProcessedEventsPerRun;
     private readonly int _defaultScriptHandlerPriority;
@@ -22,12 +24,14 @@ public sealed class EventScriptHost
     private long _nextRegistrationOrder;
 
     internal EventScriptHost(EventScriptRandomGenerator random, IEventScriptDiagnosticCollector? diagnosticCollector, Action<EventScriptMessage>? publishedMessageObserver,
+        IEventScriptExtensionRegistry extensionRegistry,
         EventScriptRuntimeLimits runtimeLimits, int maxProcessedEventsPerRun,
         int defaultScriptHandlerPriority, int defaultExternalHandlerPriority)
     {
         _random = random;
         _diagnosticCollector = diagnosticCollector;
         _publishedMessageObserver = publishedMessageObserver;
+        _extensionRegistry = extensionRegistry ?? EventScriptEmptyExtensionRegistry.Instance;
         _runtimeLimits = runtimeLimits ?? EventScriptRuntimeLimits.Default;
         _maxProcessedEventsPerRun = maxProcessedEventsPerRun <= 0 ? EventScriptHostBuilder.DefaultMaxProcessedEventsPerRun : maxProcessedEventsPerRun;
         _defaultScriptHandlerPriority = defaultScriptHandlerPriority;
@@ -41,6 +45,11 @@ public sealed class EventScriptHost
     public EventScriptHost Load(IEventScriptMessageHandlerCollection handlers, int? priority = null)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        if (handlers is RegisterCompiledEventScript registerCompiled)
+        {
+            EventScriptDynamicLinker.Bind(registerCompiled, _extensionRegistry);
+        }
+
         foreach (var handler in handlers.Handlers)
         {
             Register(new MessageSubscription(
@@ -82,7 +91,7 @@ public sealed class EventScriptHost
             return;
         }
 
-        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector, _publishedMessageObserver, _runtimeLimits);
+        var state = new EventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits);
         state.Enqueue(message);
         Drain(state);
     }
@@ -191,11 +200,12 @@ public sealed class EventScriptHost
             EventScriptRandomGenerator random,
             IEventScriptDiagnosticCollector? diagnosticCollector,
             Action<EventScriptMessage>? publishedMessageObserver,
+            IEventScriptExtensionRegistry extensionRegistry,
             EventScriptRuntimeLimits runtimeLimits)
         {
             _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
             PublishedMessageObserver = publishedMessageObserver;
-            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true, runtimeLimits: runtimeLimits);
+            Context = new EventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true, runtimeLimits: runtimeLimits, extensionRegistry: extensionRegistry);
         }
 
         public EventScriptContext Context { get; }

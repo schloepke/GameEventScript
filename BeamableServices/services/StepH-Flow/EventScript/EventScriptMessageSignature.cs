@@ -9,6 +9,8 @@ namespace StepH.Flow.EventScript;
 
 public sealed class EventScriptMessageSignature
 {
+    public const string UnlabeledParameterName = "_";
+
     public static readonly EventScriptMessageSignature Empty = new(string.Empty, []);
 
     public static EventScriptMessageSignature MessageSignature(string name, IEnumerable<string>? parameters) => new(name, parameters);
@@ -17,19 +19,29 @@ public sealed class EventScriptMessageSignature
 
     public static string NormalizeMessageName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
 
+    public static string NormalizeParameterName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return UnlabeledParameterName;
+        }
+
+        var trimmed = name.Trim();
+        return trimmed.Length == 0 ? UnlabeledParameterName : trimmed;
+    }
+
     public static IReadOnlyList<string> NormalizeParameterNames(IEnumerable<string>? names)
         => names is null
             ? []
             : names
-                .Select(name => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim())
-                .Where(name => !string.IsNullOrEmpty(name))
+                .Select(NormalizeParameterName)
                 .ToArray();
 
     public static string CreateSignatureId(string name, IEnumerable<string>? parameterNames)
     {
         var normalizedName = NormalizeMessageName(name);
         var normalizedParameters = NormalizeParameterNames(parameterNames);
-        return $"{normalizedName}({string.Join(",", normalizedParameters.OrderBy(parameter => parameter, StringComparer.Ordinal))})";
+        return $"{normalizedName}({string.Join(",", normalizedParameters)})";
     }
 
     public EventScriptMessageSignature(string name, IEnumerable<string>? parameters)

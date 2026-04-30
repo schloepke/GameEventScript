@@ -140,8 +140,8 @@
     },
     {
       "kind": "compileError",
-      "name": "publish rejects positional message arguments",
-      "script": "on Start(unit, target) {\n  publish Shoot(unit, target)\n}",
+      "name": "publish rejects incomplete labeled message arguments",
+      "script": "on Start(unit, target) {\n  publish Shoot(unit:)\n}",
       "expectedError": {
         "phase": "syntax",
         "kind": "Parser"

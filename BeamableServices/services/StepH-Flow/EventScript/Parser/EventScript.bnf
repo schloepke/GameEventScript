@@ -19,7 +19,9 @@ StatementSeparator ::= [ Trivia ] ( ";" [ Trivia ] | NewLine { TriviaOrNewLine }
 TriviaOrNewLine ::= Trivia | NewLine
 NewLine ::= "\n" | "\r\n"
 
-ParamList ::= Identifier { "," Identifier }
+ParamList ::= Parameter { "," Parameter }
+Parameter ::= Identifier
+            | "_" Identifier
 
 Statement ::= PublishStatement
              | LetStatement
@@ -29,7 +31,7 @@ Statement ::= PublishStatement
              | ExpressionStatement
 
 PublishStatement ::= "publish" PublishMessageExpression
-PublishMessageExpression ::= Message [ "(" [ NamedArgumentList ] ")" ]
+PublishMessageExpression ::= Message [ ParenthesizedArgumentList ]
                          | Expression
 LetStatement ::= "let" Identifier [ "as" TypeTag ] LetAssignmentOperator LetValue
 LetAssignmentOperator ::= "be"
@@ -43,9 +45,14 @@ StatementOrBlock ::= Statement | StatementBlock
 StatementBlock ::= "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
 ExpressionStatement ::= Expression
 
-Argumentlist ::= Expression { "," Expression }
-NamedArgumentList ::= NamedArgument { "," NamedArgument }
-NamedArgument ::= Identifier ":" Expression
+ExpressionList ::= Expression { "," Expression }
+ParenthesizedArgumentList ::= "(" [ ArgumentList ] ")"
+ArgumentList ::= Argument { "," Argument | LabeledArgument }
+Argument ::= LabeledArgument | Expression
+LabeledArgument ::= ArgumentLabel ":" Expression
+UngroupedLabeledArgumentList ::= LabeledArgument { LabeledArgument }
+OfArgumentList ::= "of" Expression { "and" Expression }
+ArgumentLabel ::= Identifier | "to"
 
 Expression ::= GuardedChoiceExpression
 GuardedChoiceExpression ::= DefaultExpression [ "when" Expression { "," [ "or" ] Expression "when" Expression } "otherwise" Expression ]
@@ -75,6 +82,7 @@ IsOperation ::= "is" TypeTag
               | "is" AdditiveExpression "or" "less"
               | "is" AdditiveExpression "or" "more"
               | "is" AdditiveExpression "or" "greater"
+              | "is" ExtensionReference
               | "is" Identifier
               | "is" AdditiveExpression
 AsOperation ::= "as" TypeTag
@@ -107,7 +115,7 @@ ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expressi
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }
 PostfixSuffix ::= "." Identifier
                 | "[" CollectionSelector "]"
-PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | "(" Expression ")"
+PrimaryExpression ::= Literal | CallExpression | ExtensionCallExpression | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | SequenceLiteral | "(" Expression ")"
                     | BracketLiteral
                     | SetLiteral
                     | GeneratedListExpression
@@ -117,8 +125,11 @@ PrimaryExpression ::= Literal | CallExpression | Identifier | TagLiteral | Varia
                     | SeededRandomExpression
                     | DiceExpression
                     | MessageInvocationExpression
-CallExpression ::= Identifier "(" [ Argumentlist ] ")"
-MessageInvocationExpression ::= Message "(" [ NamedArgumentList | ParamList ] ")"
+CallExpression ::= Identifier ParenthesizedArgumentList
+MessageInvocationExpression ::= Message [ ParenthesizedArgumentList ]
+ExtensionCallExpression ::= ExtensionReference [ ParenthesizedArgumentList | OfArgumentList | UngroupedLabeledArgumentList | UnaryExpression ]
+ExtensionReference ::= ":" Identifier "." Identifier
+SequenceLiteral ::= OfArgumentList
 
 Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
 TagLiteral ::= ":" Identifier
@@ -157,6 +168,7 @@ TypeTag ::= ":text"
           | ":range"
           | ":message"
           | ":handler"
+          | ":sequence"
           | ":list"
           | ":dictionary"
           | ":set"
@@ -240,8 +252,8 @@ CollectionIterationExpression ::= Expression
 DiceExpression ::= ":dice" Number "d" Number
 
 BracketLiteral ::= ListLiteral | DictionaryLiteral
-ListLiteral ::= "[" [ Argumentlist ] "]"
-SetLiteral ::= ":set" "[" [ Argumentlist ] "]"
+ListLiteral ::= "[" [ ExpressionList ] "]"
+SetLiteral ::= ":set" "[" [ ExpressionList ] "]"
 DictionaryLiteral ::= "[" ":" "]"
                     | "[" DictionaryEntry { "," DictionaryEntry } "]"
 DictionaryEntry ::= Identifier ":" Expression

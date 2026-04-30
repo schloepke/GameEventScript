@@ -18,7 +18,7 @@ public sealed class EventScriptMessage
     {
         Name = EventScriptMessageSignature.NormalizeMessageName(name);
         Arguments = arguments ?? EventScriptNamedArguments.Empty;
-        SignatureId = EventScriptMessageSignature.CreateSignatureId(Name, Arguments.Keys);
+        SignatureId = EventScriptMessageSignature.CreateSignatureId(Name, Arguments.SignatureLabels);
     }
 
     private EventScriptMessage(string normalizedName, EventScriptNamedArguments arguments, string signatureId)
@@ -41,10 +41,14 @@ public sealed class EventScriptMessage
     public static EventScriptMessage Message(string name, IReadOnlyDictionary<string, EventScriptValue>? arguments) => new(name, EventScriptNamedArguments.Create(arguments));
 
     public static EventScriptMessage Message(string name, params (string name, EventScriptValue value)[] arguments)
-        => new(name, arguments.ToDictionary(pair => pair.name, pair => pair.value));
+        => new(name, EventScriptNamedArguments.CreateOrdered(arguments
+            .Select(pair => new KeyValuePair<string, EventScriptValue>(pair.name, pair.value))
+            .ToArray()));
 
     public static EventScriptMessage Message(string name, params (string name, object? value)[] arguments)
-        => new(name, arguments.ToDictionary(pair => pair.name, pair => EventScriptValueFactory.FromClr(pair.value)));
+        => new(name, EventScriptNamedArguments.CreateOrdered(arguments
+            .Select(pair => new KeyValuePair<string, EventScriptValue>(pair.name, EventScriptValueFactory.FromClr(pair.value)))
+            .ToArray()));
 
     internal static EventScriptMessage CreatePrecomputed(string normalizedName, EventScriptNamedArguments arguments, string signatureId)
         => new(normalizedName, arguments, signatureId);

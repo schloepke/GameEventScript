@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 using static StepH.Flow.EventScript.Types.EventScriptValueFactory;
 
@@ -32,6 +33,8 @@ public static class RegisterEventScriptCompiler
         private readonly List<EventScriptValue> _constantPool = [];
         private readonly Dictionary<string, int> _signatureIndex = new(StringComparer.Ordinal);
         private readonly List<string> _signatures = [];
+        private readonly Dictionary<string, EventScriptExtensionReference> _externalReferenceIndex = new(StringComparer.Ordinal);
+        private readonly List<EventScriptExtensionReference> _externalReferences = [];
         private readonly Dictionary<string, int> _namedArgumentLayoutIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
@@ -52,6 +55,7 @@ public static class RegisterEventScriptCompiler
                 _stringPool.ToArray(),
                 _constantPool.ToArray(),
                 _signatures.ToArray(),
+                _externalReferences.ToArray(),
                 _namedArgumentLayouts.ToArray(),
                 _typeMetadata.ToArray(),
                 _programs.ToArray());
@@ -69,7 +73,17 @@ public static class RegisterEventScriptCompiler
             foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
             {
                 AddString(callable.Name);
-                AddSignature(EventScriptMessageSignature.CreateSignatureId(callable.Name, callable.Parameters));
+                AddSignature(EventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
+            }
+
+            foreach (var type in module.TypeDefinitions.Values)
+            {
+                foreach (var field in type.Fields)
+                {
+                    CollectExternalReferences(field.MinimumExpression);
+                    CollectExternalReferences(field.MaximumExpression);
+                    CollectExternalReferences(field.ComputedExpression);
+                }
             }
         }
 
@@ -107,7 +121,7 @@ public static class RegisterEventScriptCompiler
                         handler.Statements,
                         createsScope: false);
                     _handlerProgramIndices[(pair.Key, declarationOrder)] = programIndex;
-                    AddSignature(EventScriptMessageSignature.CreateSignatureId(pair.Key, handler.Parameters));
+                    AddSignature(EventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
                 }
             }
         }
@@ -205,12 +219,13 @@ public static class RegisterEventScriptCompiler
                     .Select((handler, index) => new RegisterCompiledEventScriptHandler(
                         pair.Key,
                         handler.Parameters,
-                        EventScriptMessageSignature.CreateSignatureId(pair.Key, handler.Parameters),
+                        handler.SignatureLabels,
+                        EventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels),
                         index,
                         _handlerProgramIndices.TryGetValue((pair.Key, index), out var programIndex) ? programIndex : -1,
                         options.EnableDiagnostics,
                         handler.Statements,
-                        RegisterVmFastPathAnalyzer.CreateHandlerPlan(handler.Parameters, handler.Statements, module.Callables, module.TypeDefinitions)))
+                        RegisterVmFastPathAnalyzer.CreateHandlerPlan(handler.Parameters, handler.Statements, module.Callables, module.TypeDefinitions, AddExternalReference)))
                     .ToArray(),
                 StringComparer.Ordinal);
         }
@@ -264,6 +279,26 @@ public static class RegisterEventScriptCompiler
             return index;
         }
 
+        private int AddExternalReference(EventScriptExtensionReference reference)
+        {
+            if (_externalReferenceIndex.TryGetValue(reference.SignatureId, out var existing))
+            {
+                return _externalReferences.IndexOf(existing);
+            }
+
+            var index = _externalReferences.Count;
+            _externalReferences.Add(reference);
+            _externalReferenceIndex[reference.SignatureId] = reference;
+            AddString(reference.ExtensionName);
+            AddString(reference.FunctionName);
+            foreach (var label in reference.ArgumentLabels)
+            {
+                AddString(label);
+            }
+
+            return index;
+        }
+
         private int AddTypeMetadata(string value)
         {
             if (_typeMetadataIndex.TryGetValue(value, out var index))
@@ -285,7 +320,7 @@ public static class RegisterEventScriptCompiler
                 return -1;
             }
 
-            var orderedNames = message.Arguments.Select(argument => argument.Name).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+            var orderedNames = message.Arguments.Select(argument => argument.Name).ToArray();
             var key = string.Join("\u001f", orderedNames);
             if (_namedArgumentLayoutIndex.TryGetValue(key, out var index))
             {
@@ -305,6 +340,7 @@ public static class RegisterEventScriptCompiler
 
         private string GetExpressionDebugName(ExpressionNode expression)
         {
+            CollectExternalReferences(expression);
             switch (expression)
             {
                 case BooleanLiteralExpressionNode boolean:
@@ -337,6 +373,13 @@ public static class RegisterEventScriptCompiler
                     }
 
                     return "literal:list";
+                case SequenceLiteralExpressionNode sequence:
+                    foreach (var item in sequence.Items)
+                    {
+                        GetExpressionDebugName(item);
+                    }
+
+                    return "literal:sequence";
                 case SetLiteralExpressionNode set:
                     foreach (var item in set.Items)
                     {
@@ -378,7 +421,19 @@ public static class RegisterEventScriptCompiler
                     return "handlerBind";
                 case CallExpressionNode call:
                     AddString(call.Name);
+                    foreach (var argument in call.ArgumentList.Arguments)
+                    {
+                        GetExpressionDebugName(argument.Expression);
+                    }
+
                     return "call";
+                case ExtensionCallExpressionNode extensionCall:
+                    foreach (var argument in extensionCall.Arguments)
+                    {
+                        GetExpressionDebugName(argument.Expression);
+                    }
+
+                    return "extensionCall";
                 case BinaryExpressionNode binary:
                     AddString(binary.Operator);
                     return "binary";
@@ -396,12 +451,245 @@ public static class RegisterEventScriptCompiler
                 case RulePredicateExpressionNode rulePredicate:
                     AddString(rulePredicate.RuleName);
                     return "rulePredicate";
+                case ExtensionPredicateExpressionNode extensionPredicate:
+                    return "extensionPredicate";
                 case RangeExpressionNode:
                     return "range";
                 case DiceExpressionNode dice:
                     return $"dice:{dice.DiceCount}d{dice.SideCount}";
                 default:
                     return expression.GetType().Name;
+            }
+        }
+
+        private void CollectExternalReferences(ExpressionNode? expression)
+        {
+            if (expression is null)
+            {
+                return;
+            }
+
+            switch (expression)
+            {
+                case ExtensionCallExpressionNode extensionCall:
+                    AddExternalReference(new EventScriptExtensionReference(
+                        extensionCall.ExtensionName,
+                        extensionCall.FunctionName,
+                        extensionCall.Arguments.Select(argument => argument.Name).ToArray()));
+                    foreach (var argument in extensionCall.Arguments)
+                    {
+                        CollectExternalReferences(argument.Expression);
+                    }
+
+                    return;
+                case ExtensionPredicateExpressionNode extensionPredicate:
+                    AddExternalReference(new EventScriptExtensionReference(
+                        extensionPredicate.ExtensionName,
+                        extensionPredicate.FunctionName,
+                        [EventScriptMessageSignature.UnlabeledParameterName]));
+                    CollectExternalReferences(extensionPredicate.Value);
+                    return;
+                case UnaryExpressionNode unary:
+                    CollectExternalReferences(unary.Operand);
+                    return;
+                case VariadicTaggedExpressionNode variadic:
+                    foreach (var argument in variadic.Arguments)
+                    {
+                        CollectExternalReferences(argument);
+                    }
+
+                    return;
+                case ClampExpressionNode clamp:
+                    CollectExternalReferences(clamp.Value);
+                    CollectExternalReferences(clamp.Minimum);
+                    CollectExternalReferences(clamp.Maximum);
+                    return;
+                case BinaryExpressionNode binary:
+                    CollectExternalReferences(binary.Left);
+                    CollectExternalReferences(binary.Right);
+                    return;
+                case GuardedChoiceExpressionNode guarded:
+                    foreach (var branch in guarded.Branches)
+                    {
+                        CollectExternalReferences(branch.ValueExpression);
+                        CollectExternalReferences(branch.ConditionExpression);
+                    }
+
+                    CollectExternalReferences(guarded.OtherwiseExpression);
+                    return;
+                case CallExpressionNode call:
+                    foreach (var argument in call.ArgumentList.Arguments)
+                    {
+                        CollectExternalReferences(argument.Expression);
+                    }
+
+                    return;
+                case MessageLiteralExpressionNode message:
+                    foreach (var argument in message.Arguments)
+                    {
+                        CollectExternalReferences(argument.Expression);
+                    }
+
+                    return;
+                case HandlerBindExpressionNode bind:
+                    CollectExternalReferences(bind.CalleeExpression);
+                    foreach (var argument in bind.Arguments)
+                    {
+                        CollectExternalReferences(argument.Expression);
+                    }
+
+                    return;
+                case ListLiteralExpressionNode list:
+                    foreach (var item in list.Items) CollectExternalReferences(item);
+                    return;
+                case SequenceLiteralExpressionNode sequence:
+                    foreach (var item in sequence.Items) CollectExternalReferences(item);
+                    return;
+                case SetLiteralExpressionNode set:
+                    foreach (var item in set.Items) CollectExternalReferences(item);
+                    return;
+                case DictionaryLiteralExpressionNode dictionary:
+                    foreach (var entry in dictionary.Entries) CollectExternalReferences(entry.Value);
+                    return;
+                case TypeCastExpressionNode cast:
+                    CollectExternalReferences(cast.Value);
+                    return;
+                case TypeCheckExpressionNode check:
+                    CollectExternalReferences(check.Value);
+                    return;
+                case MemberAccessExpressionNode member:
+                    CollectExternalReferences(member.Target);
+                    return;
+                case CollectionAccessExpressionNode access:
+                    CollectExternalReferences(access.Target);
+                    CollectExternalReferences(access.Selector);
+                    return;
+                case RangeExpressionNode range:
+                    CollectExternalReferences(range.FromExpression);
+                    CollectExternalReferences(range.ToExpression);
+                    CollectExternalReferences(range.StepExpression);
+                    return;
+                case RandomExpressionNode random:
+                    CollectExternalReferences(random.FromExpression);
+                    CollectExternalReferences(random.ToExpression);
+                    return;
+                case SeededRandomExpressionNode seededRandom:
+                    CollectExternalReferences(seededRandom.SeedExpression);
+                    CollectExternalReferences(seededRandom.BodyExpression);
+                    return;
+                case GeneratedCollectionExpressionNode generated:
+                    CollectExternalReferences(generated.Source);
+                    CollectExternalReferences(generated.Predicate);
+                    CollectExternalReferences(generated.Projection);
+                    return;
+            }
+        }
+
+        private void CollectExternalReferences(IterationSourceNode source)
+        {
+            switch (source)
+            {
+                case CollectionIterationSourceNode collection:
+                    CollectExternalReferences(collection.Expression);
+                    return;
+                case RangeIterationSourceNode range:
+                    CollectExternalReferences(range.RangeExpression);
+                    return;
+            }
+        }
+
+        private void CollectExternalReferences(CollectionSelectorNode selector)
+        {
+            switch (selector)
+            {
+                case ExpressionSelectorNode expression:
+                    CollectExternalReferences(expression.Expression);
+                    return;
+                case PatternSelectorNode pattern:
+                    CollectExternalReferences(pattern.Pattern);
+                    return;
+                case ObjectMatchSelectorNode objectMatch:
+                    CollectExternalReferences(objectMatch.Pattern);
+                    return;
+                case TakePatternSelectorNode takePattern:
+                    CollectExternalReferences(takePattern.Pattern);
+                    return;
+                case PredicateSelectorNode predicate:
+                    CollectExternalReferences(predicate.Predicate);
+                    return;
+                case CountSelectorNode count:
+                    CollectExternalReferences(count.Predicate);
+                    return;
+                case ChooseSelectorNode choose:
+                    CollectExternalReferences(choose.Predicate);
+                    CollectExternalReferences(choose.WeightExpression);
+                    return;
+                case EdgeSelectorNode edge:
+                    CollectExternalReferences(edge.Predicate);
+                    return;
+                case FilterSelectorNode filter:
+                    CollectExternalReferences(filter.Predicate);
+                    return;
+                case SumSelectorNode sum:
+                    CollectExternalReferences(sum.Projection);
+                    return;
+                case AverageSelectorNode average:
+                    CollectExternalReferences(average.Projection);
+                    return;
+                case SelectSelectorNode select:
+                    CollectExternalReferences(select.Projection);
+                    return;
+                case DictionarySelectorNode dictionary:
+                    CollectExternalReferences(dictionary.KeyProjection);
+                    CollectExternalReferences(dictionary.ValueProjection);
+                    return;
+                case MinSelectorNode min:
+                    CollectExternalReferences(min.Projection);
+                    return;
+                case MaxSelectorNode max:
+                    CollectExternalReferences(max.Projection);
+                    return;
+                case ContainsSelectorNode contains:
+                    CollectExternalReferences(contains.ValueExpression);
+                    return;
+                case DistinctSelectorNode distinct:
+                    CollectExternalReferences(distinct.Projection);
+                    return;
+                case GroupBySelectorNode group:
+                    CollectExternalReferences(group.Projection);
+                    return;
+                case OrderBySelectorNode order:
+                    CollectExternalReferences(order.Projection);
+                    return;
+            }
+        }
+
+        private void CollectExternalReferences(DicePatternNode pattern)
+        {
+            if (pattern is DiceCountPatternNode diceCount)
+            {
+                CollectExternalReferences(diceCount.Face);
+            }
+        }
+
+        private void CollectExternalReferences(ObjectMatchPatternNode pattern)
+        {
+            foreach (var entry in pattern.Entries)
+            {
+                CollectExternalReferences(entry.Value);
+            }
+        }
+
+        private void CollectExternalReferences(ObjectMatchValueNode value)
+        {
+            switch (value)
+            {
+                case ObjectMatchExpressionValueNode expression:
+                    CollectExternalReferences(expression.Expression);
+                    return;
+                case ObjectMatchNestedValueNode nested:
+                    CollectExternalReferences(nested.Pattern);
+                    return;
             }
         }
 

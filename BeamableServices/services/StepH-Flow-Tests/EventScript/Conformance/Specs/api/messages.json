@@ -4,7 +4,7 @@
   "tests": [
     {
       "kind": "messageApi",
-      "name": "message signatures match unordered arguments",
+      "name": "message signatures are ordered",
       "signature": {
         "name": "Start",
         "parameters": ["a", "b"]
@@ -18,13 +18,13 @@
       },
       "expectedMessageName": "Start",
       "expectedSignatureId": "Start(a,b)",
-      "expectedMessageSignatureId": "Start(a,b)",
-      "expectedMatches": true,
+      "expectedMessageSignatureId": "Start(b,a)",
+      "expectedMatches": false,
       "expectedArgumentCount": 2
     },
     {
       "kind": "messageApi",
-      "name": "signature ids trim message names normalize parameter order and include name",
+      "name": "signature ids trim message names preserve parameter order and include name",
       "signature": {
         "name": " Shoot ",
         "parameters": ["unit", "target"]
@@ -37,9 +37,9 @@
         }
       },
       "expectedMessageName": "Shoot",
-      "expectedSignatureId": "Shoot(target,unit)",
+      "expectedSignatureId": "Shoot(unit,target)",
       "expectedMessageSignatureId": "Shoot(target,unit)",
-      "expectedMatches": true,
+      "expectedMatches": false,
       "expectedArgumentCount": 2
     },
     {

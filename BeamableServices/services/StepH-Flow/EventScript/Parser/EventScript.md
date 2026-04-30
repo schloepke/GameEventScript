@@ -54,8 +54,8 @@ record :gauge as {
     maximum: :decimal
 }
 
-rule wounded(unit) means unit.hp < unit.maxHp
-select woundedUnits(units) means units[:filter unit where unit is wounded]
+rule wounded(_ unit) means unit.hp < unit.maxHp
+select woundedUnits(_ units) means units[:filter unit where unit is wounded]
 
 on Start(unit, units) {
     if unit is wounded {
@@ -111,8 +111,18 @@ Handlers:
 - may have multiple handlers for the same message
 - run in declaration order
 
-Multiple handlers for the same message may use different parameter-name sets.
-Dispatch matches by exact argument names.
+Parameters are labeled positional slots. `on DamageTaken(unit, amount)` subscribes to
+`DamageTaken(unit,amount)`, so the matching message must use those labels in that order.
+Use `_ localName` for an unlabeled slot:
+
+```eventscript
+on Point(_ x, _ y) {
+    publish PointSeen(x: x, y: y)
+}
+```
+
+Multiple handlers for the same message may use different ordered signatures.
+Dispatch matches by exact `SignatureId`, including label order.
 
 ## Publishing Events
 
@@ -120,6 +130,8 @@ Use `publish` to send a message.
 
 ```eventscript
 publish UnitDied(unit: unit.id)
+publish Travel(from: here to: there)
+publish Point(10, 20)
 publish TurnEnded
 ```
 
@@ -337,10 +349,16 @@ The language is not case-insensitive.
 Call/message disambiguation is case-based:
 
 - `wounded(unit)` is a `rule/select` call (`wounded` is lowercase).
-- `Shot(unit, target)` is a handler literal (`Shot` is uppercase, positional identifiers).
-- `Shot(unit: source, target: victim)` is a message literal (`Shot` is uppercase, named args).
-- `Shot(unit + 1)` is invalid (uppercase positional arguments must be identifier names).
+- `Shot(unit, target)` is a handler literal in expression position (`Shot` is uppercase, parameter names).
+- `Shot(unit: source, target: victim)` is a message literal (`Shot` is uppercase, labeled args).
+- `publish Shot(source, victim)` publishes an unlabeled positional message in publish position.
+- `Shot(unit + 1)` is invalid in expression position because uppercase positional forms define handler parameters.
 - Prefix literal forms are removed: `:handler Shot(...)` and `:message Shot(...)` are not valid.
+
+Argument labels are positional, not reorderable. `Travel(from: a, to: b)` and
+`Travel(to: b, from: a)` have different signatures. A labeled parameter must be
+called with the same label at the same position; an `_` parameter must be called
+without a label.
 
 Naming rules are strict:
 
@@ -366,6 +384,7 @@ Built-in type tags:
 - `:range`
 - `:message`
 - `:handler`
+- `:sequence`
 - `:list`
 - `:dictionary`
 - `:set`
@@ -582,12 +601,13 @@ For dictionaries:
 
 ## Collections
 
-EventScript has four main collection-like data shapes:
+EventScript has five main collection-like data shapes:
 
 - `:list`
 - `:dictionary`
 - `:set`
 - `:dice`
+- `:sequence`
 
 ### List literals
 
@@ -611,6 +631,18 @@ EventScript has four main collection-like data shapes:
 ```
 
 Sets deduplicate values and are sorted with the stable EventScript value order.
+
+### Sequence literals
+
+Use `of ... and ...` for a repeatable sequence value:
+
+```eventscript
+let values be of 10 and 20 and 30
+let materialized as :list be of 10 and 20 and 30
+```
+
+Sequences are useful for readable argument-like value lists and can be materialized
+with `as :list` when a concrete list value is needed.
 
 ### Dice
 
@@ -952,7 +984,8 @@ for item from 1 to 9 step 2 publish Seen(value: item)
 Rules define reusable predicates.
 
 ```eventscript
-rule wounded(unit) means unit.hp < unit.maxHp
+rule wounded(_ unit) means unit.hp < unit.maxHp
+rule intersects(first, second) means first.id <> second.id
 rule defeated(unit) means unit.hp is 0 or less
 ```
 
@@ -962,6 +995,7 @@ Use rules in two ways:
 
 ```eventscript
 wounded(unit)
+intersects(first: source, second: target)
 ```
 
 ### Predicate syntax for single-parameter rules
@@ -971,14 +1005,17 @@ unit is wounded
 ```
 
 The `is ruleName` form only works for rules with exactly one parameter.
+It binds the tested value to the first parameter, whether that parameter is labeled
+or `_`.
 
 ## Select Definitions
 
 Select definitions define reusable expressions.
 
 ```eventscript
-select woundedUnits(units) means units[:filter unit where unit is wounded]
-select unitsById(units) means units[:dictionary unit by unit.id]
+select woundedUnits(_ units) means units[:filter unit where unit is wounded]
+select unitsById(_ units) means units[:dictionary unit by unit.id]
+select travelTime(from, to) means from.distanceTo / to.speed
 ```
 
 Use them with normal call syntax:
@@ -986,6 +1023,7 @@ Use them with normal call syntax:
 ```eventscript
 let choices be woundedUnits(units)
 let byId be unitsById(units)
+let eta be travelTime(from: start, to: destination)
 ```
 
 ## Records
@@ -1216,7 +1254,7 @@ for unit in units publish UnitReady(arg1: unit.id)
 for index from 1 to 5 publish Tick(value: index)
 ```
 
-Use `in` for collection or iterator expressions.
+Use `in` for collection or sequence expressions.
 Use `from ... to ... [step ...]` for direct range loops.
 
 `for unit in from 1 to 5 ...` is not valid.
@@ -1239,6 +1277,27 @@ For explicit intent, prefer readable forms such as:
 - `has value x`
 - `empty x`
 - `x is 0 or less`
+
+## Extensions
+
+Host-provided functions use `:extension.function` syntax and are dynamically bound
+when a RegisterVM script is loaded into an `EventScriptHost`.
+
+```eventscript
+let floored be :math.floor value
+let best be :math.max of a and b and c
+let turn be :nav.shortestTurn from: current to: target
+let sameTurn be :nav.shortestTurn(from: current, to: target)
+
+if heading is :nav.isNorth {
+    publish FacingNorth
+}
+```
+
+Extension arguments use the same labeled positional rules as rules, selects, and
+messages. The `of ... and ...` form is for repeatable unlabeled argument lists.
+Missing extension bindings are dynamic-link errors when the host loads a
+RegisterVM script.
 
 ## External Bindings
 
@@ -1295,6 +1354,7 @@ Examples:
 - a name defined as both rule and select
 - unknown called rule/select
 - wrong rule/select arity
+- wrong rule/select argument labels
 - using `x is ruleName` with a non-rule or with a rule that does not have exactly one parameter
 
 ## Current Limitations
@@ -1303,7 +1363,7 @@ At the current language stage:
 
 - line comments use `//`
 - there are no user-defined mutable variables
-- there are no traditional functions beyond `rule` and `select`
+- host functions must be exposed through `:extension.function`
 - there is no direct mutation of collections or dictionaries
 
 ## Practical Examples

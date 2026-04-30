@@ -13,6 +13,9 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
 {
     private readonly IReadOnlyList<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> _messageHandlers;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledEventScriptHandler>> _dispatchIndex;
+    private IEventScriptExtensionRegistry _extensionRegistry = EventScriptEmptyExtensionRegistry.Instance;
+    private IReadOnlyDictionary<string, IEventScriptExtensionFunction> _boundExtensions = new Dictionary<string, IEventScriptExtensionFunction>(StringComparer.Ordinal);
+    private IEventScriptExtensionFunction[] _boundExtensionSlots = [];
 
     internal RegisterCompiledEventScript(
         RegisterEventScriptCompilationOptions options,
@@ -48,6 +51,8 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
 
     internal IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledEventScriptHandler>> DispatchIndex => _dispatchIndex;
 
+    internal IEventScriptExtensionRegistry ExtensionRegistry => _extensionRegistry;
+
     IEnumerable<(EventScriptMessageSignature Signature, Action<EventScriptMessage, EventScriptContext> Handler)> IEventScriptMessageHandlerCollection.Handlers
         => _messageHandlers;
 
@@ -56,6 +61,49 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
 
     internal void InvokeHandler(RegisterCompiledEventScriptHandler handler, EventScriptMessage message, EventScriptContext context)
         => RegisterVmInvocationEngine.InvokeHandler(this, context, handler, message);
+
+    internal void BindExtensions(IEventScriptExtensionRegistry registry)
+    {
+        _extensionRegistry = registry ?? EventScriptEmptyExtensionRegistry.Instance;
+        if (BytecodeModule.ExternalReferences.Count == 0)
+        {
+            _boundExtensions = new Dictionary<string, IEventScriptExtensionFunction>(StringComparer.Ordinal);
+            _boundExtensionSlots = [];
+            return;
+        }
+
+        var bound = new Dictionary<string, IEventScriptExtensionFunction>(StringComparer.Ordinal);
+        var slots = new IEventScriptExtensionFunction[BytecodeModule.ExternalReferences.Count];
+        for (var index = 0; index < BytecodeModule.ExternalReferences.Count; index++)
+        {
+            var reference = BytecodeModule.ExternalReferences[index];
+            if (!_extensionRegistry.TryResolve(reference, out var function))
+            {
+                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' is not registered.");
+            }
+
+            bound[reference.SignatureId] = function;
+            slots[index] = function;
+        }
+
+        _boundExtensions = bound;
+        _boundExtensionSlots = slots;
+    }
+
+    internal bool TryGetBoundExtension(EventScriptExtensionReference reference, out IEventScriptExtensionFunction function)
+        => _boundExtensions.TryGetValue(reference.SignatureId, out function!);
+
+    internal bool TryGetBoundExtension(int referenceIndex, out IEventScriptExtensionFunction function)
+    {
+        if ((uint)referenceIndex < (uint)_boundExtensionSlots.Length)
+        {
+            function = _boundExtensionSlots[referenceIndex];
+            return true;
+        }
+
+        function = default!;
+        return false;
+    }
 }
 
 internal sealed class RegisterVmTypeDefinition

@@ -6,6 +6,7 @@ using System.Linq;
 using StepH.Flow.EventScript;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.Parser;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.RegisterVM;
@@ -16,7 +17,8 @@ internal static class RegisterVmFastPathAnalyzer
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null)
+        IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
+        Func<EventScriptExtensionReference, int>? externalReferenceResolver = null)
     {
         if (!SupportsHandler(statements, callables, out var unsupportedReason))
         {
@@ -36,7 +38,7 @@ internal static class RegisterVmFastPathAnalyzer
             slotCollector.CollectStatement(statement);
         }
 
-        var programCompiler = new ProgramCompiler(slotCollector.Slots, callables);
+        var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver);
         foreach (var statement in statements)
         {
             programCompiler.CompileStatementPrograms(statement);
@@ -283,12 +285,38 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case ExtensionCallExpressionNode extensionCall:
+                for (var argumentIndex = 0; argumentIndex < extensionCall.Arguments.Count; argumentIndex++)
+                {
+                    if (!SupportsExpression(extensionCall.Arguments[argumentIndex].Expression, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Extension argument {argumentIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case ListLiteralExpressionNode list:
                 for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
                 {
                     if (!SupportsExpression(list.Items[itemIndex], callables, out unsupportedReason))
                     {
                         unsupportedReason = $"List item {itemIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
+            case SequenceLiteralExpressionNode sequence:
+                for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
+                {
+                    if (!SupportsExpression(sequence.Items[itemIndex], callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Sequence item {itemIndex}: {unsupportedReason}";
                         return false;
                     }
                 }
@@ -524,11 +552,30 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case ExtensionPredicateExpressionNode extensionPredicate:
+                if (!SupportsExpression(extensionPredicate.Value, callables, out unsupportedReason))
+                {
+                    unsupportedReason = $"Extension predicate value: {unsupportedReason}";
+                    return false;
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case CallExpressionNode call:
                 if (!callables.TryGetValue(call.Name, out var called))
                 {
-                    unsupportedReason = $"Callable '{call.Name}' was not found.";
-                    return false;
+                    foreach (var argument in call.ArgumentList.Arguments)
+                    {
+                        if (!SupportsExpression(argument.Expression, callables, out unsupportedReason))
+                        {
+                            unsupportedReason = $"Handler bind argument: {unsupportedReason}";
+                            return false;
+                        }
+                    }
+
+                    unsupportedReason = string.Empty;
+                    return true;
                 }
 
                 if (called.Parameters.Count != call.Arguments.Count)
@@ -624,14 +671,14 @@ internal static class RegisterVmFastPathAnalyzer
         => operation is "min" or "max";
 
     private static bool SupportsTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second";
+        => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second" or "sequence";
 
     private static bool SupportsDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
             "vector2" or "vector3" or
             "boolean" or "integer" or "decimal" or "number" or
-            "list" or "range" or "message" or "handler" or
+            "sequence" or "list" or "range" or "message" or "handler" or
             "dictionary" or "set" or "dice" or "optional" ||
             !string.IsNullOrWhiteSpace(typeName);
 
@@ -1467,9 +1514,11 @@ internal static class RegisterVmFastPathAnalyzer
 
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables)
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        Func<EventScriptExtensionReference, int>? externalReferenceResolver)
     {
         private readonly IReadOnlyDictionary<string, LinkedCallableDefinition> _callables = callables;
+        private readonly Func<EventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
         private readonly Dictionary<ExpressionNode, RegisterFastExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
         private readonly Dictionary<PublishStatementNode, RegisterFastPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
 
@@ -1613,6 +1662,7 @@ internal static class RegisterVmFastPathAnalyzer
                 "degree" => RegisterFastCastKind.Degree,
                 "meter" => RegisterFastCastKind.Meter,
                 "second" => RegisterFastCastKind.Second,
+                "sequence" => RegisterFastCastKind.Sequence,
                 _ => default
             };
 
@@ -1661,7 +1711,7 @@ internal static class RegisterVmFastPathAnalyzer
 
                     case HandlerLiteralExpressionNode handler:
                     {
-                        var parameterNames = handler.Parameters.ToArray();
+                        var parameterNames = handler.SignatureLabels.ToArray();
                         EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Handler(
                             new EventScriptMessageSignature(handler.Message, parameterNames))));
                         return;
@@ -1702,6 +1752,29 @@ internal static class RegisterVmFastPathAnalyzer
                         CollapseValuesToSingle(handlerBind.Arguments.Count + 1);
                         return;
 
+                    case ExtensionCallExpressionNode extensionCall:
+                        var extensionArgumentNames = new string[extensionCall.Arguments.Count];
+                        for (var argumentIndex = 0; argumentIndex < extensionCall.Arguments.Count; argumentIndex++)
+                        {
+                            var argument = extensionCall.Arguments[argumentIndex];
+                            extensionArgumentNames[argumentIndex] = argument.Name;
+                            EmitExpression(argument.Expression);
+                        }
+
+                        var extensionReferenceIndex = ResolveExternalReference(
+                            extensionCall.ExtensionName,
+                            extensionCall.FunctionName,
+                            extensionArgumentNames);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.CallExtension,
+                            A: extensionCall.Arguments.Count,
+                            B: extensionReferenceIndex,
+                            DiagnosticName: extensionCall.ExtensionName,
+                            DiagnosticArgumentName: extensionCall.FunctionName,
+                            Names: extensionArgumentNames));
+                        CollapseValuesToSingle(extensionCall.Arguments.Count);
+                        return;
+
                     case ListLiteralExpressionNode list:
                         foreach (var item in list.Items)
                         {
@@ -1710,6 +1783,16 @@ internal static class RegisterVmFastPathAnalyzer
 
                         instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildList, A: list.Items.Count));
                         CollapseValuesToSingle(list.Items.Count);
+                        return;
+
+                    case SequenceLiteralExpressionNode sequence:
+                        foreach (var item in sequence.Items)
+                        {
+                            EmitExpression(item);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildSequence, A: sequence.Items.Count));
+                        CollapseValuesToSingle(sequence.Items.Count);
                         return;
 
                     case SetLiteralExpressionNode set:
@@ -1858,10 +1941,45 @@ internal static class RegisterVmFastPathAnalyzer
                             DiagnosticArgumentName: callable.Parameters[0]));
                         return;
 
+                    case ExtensionPredicateExpressionNode extensionPredicate:
+                        EmitExpression(extensionPredicate.Value);
+                        var predicateExtensionReferenceIndex = ResolveExternalReference(
+                            extensionPredicate.ExtensionName,
+                            extensionPredicate.FunctionName,
+                            [EventScriptMessageSignature.UnlabeledParameterName]);
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.CallExtension,
+                            A: 1,
+                            B: predicateExtensionReferenceIndex,
+                            DiagnosticName: extensionPredicate.ExtensionName,
+                            DiagnosticArgumentName: extensionPredicate.FunctionName,
+                            Names: [EventScriptMessageSignature.UnlabeledParameterName]));
+                        return;
+
                     case CallExpressionNode call:
                         if (!compiler._callables.TryGetValue(call.Name, out var called))
                         {
-                            throw new InvalidOperationException($"Unsupported RegisterVM callable '{call.Name}'.");
+                            if (!compiler.TryGetSlot(call.Name, out var handlerSlot))
+                            {
+                                throw new InvalidOperationException($"Unsupported RegisterVM callable '{call.Name}'.");
+                            }
+
+                            var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
+                            instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.LoadSlot, A: handlerSlot));
+                            Push();
+                            for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
+                            {
+                                var argument = call.ArgumentList.Arguments[argumentIndex];
+                                dynamicBindArgumentNames[argumentIndex] = argument.Name;
+                                EmitExpression(argument.Expression);
+                            }
+
+                            instructions.Add(new RegisterFastInstruction(
+                                RegisterFastOpCode.BindHandler,
+                                A: call.ArgumentList.Count,
+                                Names: dynamicBindArgumentNames));
+                            CollapseValuesToSingle(call.ArgumentList.Count + 1);
+                            return;
                         }
 
                         var parameterSlots = new int[called.Parameters.Count];
@@ -2196,6 +2314,9 @@ internal static class RegisterVmFastPathAnalyzer
                 var nestedStackBaseDepth = Math.Max(0, _stackDepth - argumentCount);
                 MaxStackDepth = Math.Max(MaxStackDepth, nestedStackBaseDepth + program.MaxStackDepth);
             }
+
+            private int ResolveExternalReference(string extensionName, string functionName, IReadOnlyList<string> argumentLabels)
+                => compiler._externalReferenceResolver?.Invoke(new EventScriptExtensionReference(extensionName, functionName, argumentLabels)) ?? -1;
 
             private void CollapseValuesToSingle(int valueCount)
             {

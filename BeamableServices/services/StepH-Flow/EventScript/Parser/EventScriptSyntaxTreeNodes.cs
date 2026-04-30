@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using StepH.Flow.EventScript;
 
@@ -24,6 +25,7 @@ public abstract record StatementNode : EventScriptNode;
 [JsonDerivedType(typeof(MessageLiteralExpressionNode), "messageLiteralExpression")]
 [JsonDerivedType(typeof(HandlerBindExpressionNode), "handlerBindExpression")]
 [JsonDerivedType(typeof(CallExpressionNode), "callExpression")]
+[JsonDerivedType(typeof(ExtensionCallExpressionNode), "extensionCallExpression")]
 [JsonDerivedType(typeof(BooleanLiteralExpressionNode), "booleanLiteralExpression")]
 [JsonDerivedType(typeof(IntegerLiteralExpressionNode), "integerLiteralExpression")]
 [JsonDerivedType(typeof(DecimalLiteralExpressionNode), "decimalLiteralExpression")]
@@ -44,10 +46,12 @@ public abstract record StatementNode : EventScriptNode;
 [JsonDerivedType(typeof(GuardedChoiceExpressionNode), "guardedChoiceExpression")]
 [JsonDerivedType(typeof(BinaryExpressionNode), "binaryExpression")]
 [JsonDerivedType(typeof(RulePredicateExpressionNode), "rulePredicateExpression")]
+[JsonDerivedType(typeof(ExtensionPredicateExpressionNode), "extensionPredicateExpression")]
 [JsonDerivedType(typeof(TypeCheckExpressionNode), "typeCheckExpression")]
 [JsonDerivedType(typeof(TypeCastExpressionNode), "typeCastExpression")]
 [JsonDerivedType(typeof(MemberAccessExpressionNode), "memberAccessExpression")]
 [JsonDerivedType(typeof(CollectionAccessExpressionNode), "collectionAccessExpression")]
+[JsonDerivedType(typeof(SequenceLiteralExpressionNode), "sequenceLiteralExpression")]
 public abstract record ExpressionNode : EventScriptNode;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
@@ -104,16 +108,70 @@ public sealed record EventScriptModule(string ModuleName, string SourceName, IRe
 
 // Type/Rule/Select/Handler nodes
 
-public sealed record EventHandlerNode(string Message, IReadOnlyList<string> Parameters, IReadOnlyList<StatementNode> Statements) : EventScriptNode;
+public sealed record ParameterNode(string? ExternalLabel, string LocalName) : EventScriptNode
+{
+    public bool IsLabeled => ExternalLabel is not null;
+
+    public string SignatureLabel => ExternalLabel ?? EventScriptMessageSignature.UnlabeledParameterName;
+}
+
+public sealed record ArgumentNode(string? Label, ExpressionNode Expression) : EventScriptNode
+{
+    public string Name => Label ?? EventScriptMessageSignature.UnlabeledParameterName;
+}
+
+public sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) : EventScriptNode
+{
+    public static readonly ArgumentListNode Empty = new([]);
+
+    public int Count => Arguments.Count;
+
+    public IReadOnlyList<ExpressionNode> Expressions => Arguments.Select(argument => argument.Expression).ToArray();
+
+    public IReadOnlyList<string> SignatureLabels => Arguments.Select(argument => argument.Name).ToArray();
+}
+
+public sealed record EventHandlerNode(string Message, IReadOnlyList<ParameterNode> ParameterList, IReadOnlyList<StatementNode> Statements) : EventScriptNode
+{
+    public EventHandlerNode(string Message, IReadOnlyList<string> Parameters, IReadOnlyList<StatementNode> Statements)
+        : this(Message, Parameters.Select(parameter => new ParameterNode(parameter, parameter)).ToArray(), Statements)
+    {
+    }
+
+    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+
+    public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+}
+
 public sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : EventScriptNode;
 public sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression) : EventScriptNode;
-public sealed record RuleDefinitionNode(string Name, IReadOnlyList<string> Parameters, ExpressionNode Expression) : EventScriptNode;
-public sealed record SelectDefinitionNode(string Name, IReadOnlyList<string> Parameters, ExpressionNode Expression) : EventScriptNode;
+public sealed record RuleDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : EventScriptNode
+{
+    public RuleDefinitionNode(string Name, IReadOnlyList<string> Parameters, ExpressionNode Expression)
+        : this(Name, Parameters.Select(parameter => new ParameterNode(parameter, parameter)).ToArray(), Expression)
+    {
+    }
+
+    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+
+    public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+}
+
+public sealed record SelectDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : EventScriptNode
+{
+    public SelectDefinitionNode(string Name, IReadOnlyList<string> Parameters, ExpressionNode Expression)
+        : this(Name, Parameters.Select(parameter => new ParameterNode(parameter, parameter)).ToArray(), Expression)
+    {
+    }
+
+    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+
+    public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+}
 
 // Statement nodes
 
 public sealed record PublishStatementNode(ExpressionNode MessageExpression) : StatementNode;
-public sealed record NamedArgumentNode(string Name, ExpressionNode Expression) : EventScriptNode;
 public sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
 public sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : EventScriptNode;
 public sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;
@@ -125,10 +183,43 @@ public sealed record ExpressionStatementNode(ExpressionNode Expression) : Statem
 
 public sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 public sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
-public sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<string> Parameters) : ExpressionNode;
-public sealed record MessageLiteralExpressionNode(string Message, IReadOnlyList<NamedArgumentNode> Arguments) : ExpressionNode;
-public sealed record HandlerBindExpressionNode(ExpressionNode CalleeExpression, IReadOnlyList<NamedArgumentNode> Arguments) : ExpressionNode;
-public sealed record CallExpressionNode(string Name, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
+public sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<ParameterNode> ParameterList) : ExpressionNode
+{
+    public HandlerLiteralExpressionNode(string Message, IReadOnlyList<string> Parameters)
+        : this(Message, Parameters.Select(parameter => new ParameterNode(parameter, parameter)).ToArray())
+    {
+    }
+
+    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+
+    public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+}
+
+public sealed record MessageLiteralExpressionNode(string Message, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
+public sealed record HandlerBindExpressionNode(ExpressionNode CalleeExpression, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
+public sealed record CallExpressionNode(string Name, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public CallExpressionNode(string Name, IReadOnlyList<ExpressionNode> Arguments)
+        : this(Name, new ArgumentListNode(Arguments.Select(argument => new ArgumentNode(null, argument)).ToArray()))
+    {
+    }
+
+    public IReadOnlyList<ExpressionNode> Arguments => ArgumentList.Expressions;
+}
+
+public sealed record ExtensionCallExpressionNode(string ExtensionName, string FunctionName, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
 public sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
 public sealed record IntegerLiteralExpressionNode(long Value) : ExpressionNode;
 public sealed record DecimalLiteralExpressionNode(decimal Value) : ExpressionNode;
@@ -138,6 +229,7 @@ public sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 public sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 public sealed record SetLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 public sealed record DictionaryLiteralExpressionNode(IReadOnlyList<DictionaryEntryNode> Entries) : ExpressionNode;
+public sealed record SequenceLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 public sealed record DictionaryEntryNode(string Key, ExpressionNode Value) : EventScriptNode;
 public sealed record UnaryExpressionNode(string Operator, ExpressionNode Operand) : ExpressionNode;
 public sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
@@ -151,6 +243,7 @@ public sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBran
 public sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : EventScriptNode;
 public sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
 public sealed record RulePredicateExpressionNode(ExpressionNode Value, string RuleName) : ExpressionNode;
+public sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
 public sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 public sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 public sealed record DiceCountPatternNode(int Count, ExpressionNode? Face) : DicePatternNode;

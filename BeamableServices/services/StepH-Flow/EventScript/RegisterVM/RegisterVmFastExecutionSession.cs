@@ -68,7 +68,7 @@ internal sealed class RegisterVmFastExecutionSession
             for (var parameterIndex = 0; parameterIndex < parameters.Count; parameterIndex++)
             {
                 var parameter = parameters[parameterIndex];
-                if (!args.TryGetValue(parameter, out var value))
+                if (!TryGetArgumentValue(args, parameter, parameterIndex, out var value))
                 {
                     return false;
                 }
@@ -89,6 +89,17 @@ internal sealed class RegisterVmFastExecutionSession
         {
             ExitScope();
         }
+    }
+
+    private static bool TryGetArgumentValue(IReadOnlyDictionary<string, EventScriptValue> args, string parameter, int parameterIndex, out EventScriptValue value)
+    {
+        if (args is EventScriptNamedArguments namedArguments && parameterIndex >= 0 && parameterIndex < namedArguments.Count)
+        {
+            value = namedArguments[parameterIndex];
+            return true;
+        }
+
+        return args.TryGetValue(parameter, out value!);
     }
 
     private bool TryExecuteStatements(IReadOnlyList<StatementNode> statements)
@@ -463,12 +474,14 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             case HandlerLiteralExpressionNode handler:
                 value = RegisterFastValue.Reference(EventScriptValueFactory.Handler(
-                    new EventScriptMessageSignature(handler.Message, handler.Parameters)));
+                    new EventScriptMessageSignature(handler.Message, handler.SignatureLabels)));
                 return true;
             case HandlerBindExpressionNode handlerBind:
                 return TryEvaluateHandlerBind(handlerBind, out value);
             case ListLiteralExpressionNode list:
                 return TryEvaluateListLiteral(list, out value);
+            case SequenceLiteralExpressionNode sequence:
+                return TryEvaluateSequenceLiteral(sequence, out value);
             case SetLiteralExpressionNode set:
                 return TryEvaluateSetLiteral(set, out value);
             case DictionaryLiteralExpressionNode dictionary:
@@ -499,8 +512,12 @@ internal sealed class RegisterVmFastExecutionSession
                 return TryEvaluateBinary(binary, out value);
             case RulePredicateExpressionNode rulePredicate:
                 return TryEvaluateRulePredicate(rulePredicate, out value);
+            case ExtensionPredicateExpressionNode extensionPredicate:
+                return TryEvaluateExtensionPredicate(extensionPredicate, out value);
             case CallExpressionNode call:
                 return TryEvaluateCall(call, out value);
+            case ExtensionCallExpressionNode extensionCall:
+                return TryEvaluateExtensionCall(extensionCall, out value);
             case TypeCastExpressionNode typeCast:
                 return TryEvaluateTypeCast(typeCast, out value);
             case TypeCheckExpressionNode typeCheck:
@@ -692,6 +709,12 @@ internal sealed class RegisterVmFastExecutionSession
                     top++;
                     break;
 
+                case RegisterFastOpCode.BuildSequence:
+                    top -= instruction.A;
+                    _evaluationStack[top] = BuildSequenceValue(_evaluationStack, top, instruction.A);
+                    top++;
+                    break;
+
                 case RegisterFastOpCode.BuildSet:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSetValue(_evaluationStack, top, instruction.A);
@@ -725,6 +748,25 @@ internal sealed class RegisterVmFastExecutionSession
                         instruction.A,
                         instruction.Names);
                     top++;
+                    break;
+
+                case RegisterFastOpCode.CallExtension:
+                    top -= instruction.A;
+                    if (!TryCallExtension(
+                            instruction.DiagnosticName,
+                            instruction.DiagnosticArgumentName,
+                            instruction.Names,
+                            instruction.B,
+                            _evaluationStack,
+                            top,
+                            instruction.A,
+                            out var extensionValue))
+                    {
+                        value = RegisterFastValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = extensionValue;
                     break;
 
                 case RegisterFastOpCode.Pipeline:
@@ -826,6 +868,24 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
+    private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out RegisterFastValue value)
+    {
+        var items = new EventScriptValue[sequence.Items.Count];
+        for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
+        {
+            if (!TryEvaluate(sequence.Items[itemIndex], out var item))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            items[itemIndex] = item.ToEventScriptValue();
+        }
+
+        value = RegisterFastValue.Reference(EventScriptValueFactory.Sequence(items));
+        return true;
+    }
+
     private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out RegisterFastValue value)
     {
         var items = new EventScriptValue[set.Items.Count];
@@ -914,6 +974,17 @@ internal sealed class RegisterVmFastExecutionSession
         return RegisterFastValue.Reference(EventScriptValueFactory.List(items));
     }
 
+    private static RegisterFastValue BuildSequenceValue(RegisterFastValue[] stack, int start, int count)
+    {
+        var items = new EventScriptValue[count];
+        for (var itemIndex = 0; itemIndex < count; itemIndex++)
+        {
+            items[itemIndex] = stack[start + itemIndex].ToEventScriptValue();
+        }
+
+        return RegisterFastValue.Reference(EventScriptValueFactory.Sequence(items));
+    }
+
     private static RegisterFastValue BuildSetValue(RegisterFastValue[] stack, int start, int count)
     {
         var items = new EventScriptValue[count];
@@ -991,15 +1062,65 @@ internal sealed class RegisterVmFastExecutionSession
             return RegisterFastValue.Nothing;
         }
 
-        var arguments = new Dictionary<string, EventScriptValue>(count, StringComparer.Ordinal);
+        var pairs = new KeyValuePair<string, EventScriptValue>[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            arguments[names[argumentIndex]] = stack[start + argumentIndex].ToEventScriptValue();
+            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+                names[argumentIndex],
+                stack[start + argumentIndex].ToEventScriptValue());
         }
 
+        var arguments = EventScriptNamedArguments.CreateOrdered(pairs, names);
         return EventScriptMessageValueCodec.TryBindHandlerValue(callee.ToEventScriptValue(), arguments, out var message)
             ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
             : RegisterFastValue.Nothing;
+    }
+
+    private bool TryCallExtension(
+        string? extensionName,
+        string? functionName,
+        string[]? labels,
+        int referenceIndex,
+        RegisterFastValue[] stack,
+        int start,
+        int count,
+        out RegisterFastValue value)
+    {
+        value = RegisterFastValue.Nothing;
+        if (string.IsNullOrWhiteSpace(extensionName) ||
+            string.IsNullOrWhiteSpace(functionName))
+        {
+            return true;
+        }
+
+        IEventScriptExtensionFunction function;
+        if (referenceIndex >= 0)
+        {
+            if (!_compiledScript.TryGetBoundExtension(referenceIndex, out function))
+            {
+                throw new EventScriptDynamicLinkException($"EventScript extension reference slot '{referenceIndex}' was not dynamically bound.");
+            }
+        }
+        else
+        {
+            var argumentLabels = labels is { Length: var labelCount } && labelCount == count
+                ? labels
+                : Enumerable.Repeat(EventScriptMessageSignature.UnlabeledParameterName, count).ToArray();
+            var reference = new EventScriptExtensionReference(extensionName, functionName, argumentLabels);
+            if (!_compiledScript.TryGetBoundExtension(reference, out function))
+            {
+                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' was not dynamically bound.");
+            }
+        }
+
+        var arguments = new EventScriptFastValue[count];
+        for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+        {
+            arguments[argumentIndex] = EventScriptFastValue.FromEventScriptValue(stack[start + argumentIndex].ToEventScriptValue());
+        }
+
+        value = RegisterFastValue.FromEventScriptValue(function.Invoke(new EventScriptExtensionContext(_context), arguments).ToEventScriptValue());
+        return true;
     }
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)
@@ -1082,6 +1203,7 @@ internal sealed class RegisterVmFastExecutionSession
             "integer" => value.Kind == RegisterFastValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
             "boolean" => value.Kind == RegisterFastValueKind.Boolean || value.ReferenceValue?.Kind == EventScriptValueKind.Boolean,
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
+            "sequence" => value.ReferenceValue?.IsSequence() ?? false,
             "list" => value.ReferenceValue?.IsList() ?? false,
             "range" => value.ReferenceValue?.IsRange() ?? false,
             "message" => value.ReferenceValue is { } messageValue &&
@@ -1769,7 +1891,7 @@ internal sealed class RegisterVmFastExecutionSession
         return operand.Kind switch
         {
             EventScriptValueKind.Text => Integer(operand.AsText().Length),
-            EventScriptValueKind.Iterator => CountEnumerableWithBudget(operand.AsEnumerable(), "Iterator length evaluation budget exhausted."),
+            EventScriptValueKind.Sequence => CountEnumerableWithBudget(operand.AsEnumerable(), "Sequence length evaluation budget exhausted."),
             EventScriptValueKind.Range => EvaluateRangeLength(operand),
             EventScriptValueKind.List => Integer(operand.AsList().Count),
             EventScriptValueKind.Dictionary => Integer(operand.AsDictionary().Count),
@@ -1996,7 +2118,7 @@ internal sealed class RegisterVmFastExecutionSession
             EventScriptValueKind.Optional => value.AsOptional().HasValue
                 ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                 : "optional:none",
-            EventScriptValueKind.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+            EventScriptValueKind.Sequence => $"sequence:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
             EventScriptValueKind.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
             EventScriptValueKind.Message =>
                 $"message:{((EventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((EventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
@@ -2039,8 +2161,38 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateCall(CallExpressionNode call, out RegisterFastValue value)
     {
-        if (!_compiledScript.Callables.TryGetValue(call.Name, out var callable) ||
-            callable.Parameters.Count != call.Arguments.Count)
+        if (!_compiledScript.Callables.TryGetValue(call.Name, out var callable))
+        {
+            var handlerValue = Resolve(call.Name);
+            if (handlerValue.IsNothingLike())
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+
+            var dynamicPairs = new KeyValuePair<string, EventScriptValue>[call.ArgumentList.Count];
+            var dynamicLabels = new string[call.ArgumentList.Count];
+            for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
+            {
+                var argument = call.ArgumentList.Arguments[argumentIndex];
+                if (!TryEvaluate(argument.Expression, out var argumentValue))
+                {
+                    value = RegisterFastValue.Nothing;
+                    return false;
+                }
+
+                dynamicLabels[argumentIndex] = argument.Name;
+                dynamicPairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(argument.Name, argumentValue.ToEventScriptValue());
+            }
+
+            var dynamicArguments = EventScriptNamedArguments.CreateOrdered(dynamicPairs, dynamicLabels);
+            value = EventScriptMessageValueCodec.TryBindHandlerValue(handlerValue.ToEventScriptValue(), dynamicArguments, out var message)
+                ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+                : RegisterFastValue.Nothing;
+            return true;
+        }
+
+        if (callable.Parameters.Count != call.Arguments.Count)
         {
             value = RegisterFastValue.Nothing;
             return false;
@@ -2080,6 +2232,52 @@ internal sealed class RegisterVmFastExecutionSession
             Slots: slots);
 
         return TryEvaluateCallable(instruction, arguments, 0, arguments.Length, out value);
+    }
+
+    private bool TryEvaluateExtensionCall(ExtensionCallExpressionNode extensionCall, out RegisterFastValue value)
+    {
+        var arguments = new RegisterFastValue[extensionCall.ArgumentList.Count];
+        var labels = new string[extensionCall.ArgumentList.Count];
+        for (var argumentIndex = 0; argumentIndex < extensionCall.ArgumentList.Count; argumentIndex++)
+        {
+            var argument = extensionCall.ArgumentList.Arguments[argumentIndex];
+            labels[argumentIndex] = argument.Name;
+            if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+        }
+
+        return TryCallExtension(
+            extensionCall.ExtensionName,
+            extensionCall.FunctionName,
+            labels,
+            -1,
+            arguments,
+            0,
+            arguments.Length,
+            out value);
+    }
+
+    private bool TryEvaluateExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, out RegisterFastValue value)
+    {
+        if (!TryEvaluate(extensionPredicate.Value, out var input))
+        {
+            value = RegisterFastValue.Nothing;
+            return false;
+        }
+
+        var arguments = new[] { input };
+        return TryCallExtension(
+            extensionPredicate.ExtensionName,
+            extensionPredicate.FunctionName,
+            [EventScriptMessageSignature.UnlabeledParameterName],
+            -1,
+            arguments,
+            0,
+            1,
+            out value);
     }
 
     private bool TryEvaluateRulePredicate(
@@ -2230,6 +2428,7 @@ internal sealed class RegisterVmFastExecutionSession
             "boolean" => RegisterFastValue.Boolean(boxed.AsBoolean()),
             "integer" => RegisterFastValue.Integer(boxed.AsInteger()),
             "decimal" or "number" => RegisterFastValue.FromEventScriptValue(ConvertToDecimal(boxed)),
+            "sequence" => RegisterFastValue.Reference(boxed.IsSequence() ? boxed : EventScriptValueFactory.Sequence(boxed.AsEnumerable())),
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
                 ? RegisterFastValue.Reference(List(boxed.AsList()))
                 : RegisterFastValue.Nothing,
@@ -2277,6 +2476,7 @@ internal sealed class RegisterVmFastExecutionSession
             RegisterFastCastKind.Degree => "degree",
             RegisterFastCastKind.Meter => "meter",
             RegisterFastCastKind.Second => "second",
+            RegisterFastCastKind.Sequence => "sequence",
             _ => string.Empty
         };
 
@@ -3493,7 +3693,7 @@ internal sealed class RegisterVmFastExecutionSession
                 : Array.Empty<EventScriptValue>();
         }
 
-        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Iterator
+        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Sequence
             ? value.AsEnumerable()
             : value.AsList();
     }
@@ -3508,7 +3708,7 @@ internal sealed class RegisterVmFastExecutionSession
                 : Array.Empty<EventScriptValue>();
         }
 
-        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Iterator
+        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Sequence
             ? value.AsEnumerable().ToArray()
             : value.AsList();
     }

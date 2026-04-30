@@ -464,7 +464,7 @@
     {
       "kind": "scriptApi",
       "name": "keys values and entries iterate through public output",
-      "script": "on Start(player, values, maybeTarget) {\n  let dictKeys be :keys player\n  let valueIterator be :values values\n  let maybeValues be :values maybeTarget\n  let entries be :entries player\n  for key in dictKeys {\n    publish SeenKey(key: key, value: player[key])\n  }\n  for item in valueIterator {\n    publish SeenValue(value: item)\n  }\n  for target in maybeValues {\n    publish SeenMaybe(value: target)\n  }\n  for entry in entries {\n    publish SeenEntry(key: entry.key, value: entry[:value])\n  }\n  publish Done(keyCount: :len dictKeys, valueCount: :len valueIterator, maybeCount: :len maybeValues, entryCount: :len entries)\n}",
+      "script": "on Start(player, values, maybeTarget) {\n  let dictKeys be :keys player\n  let valueSequence be :values values\n  let maybeValues be :values maybeTarget\n  let entries be :entries player\n  for key in dictKeys {\n    publish SeenKey(key: key, value: player[key])\n  }\n  for item in valueSequence {\n    publish SeenValue(value: item)\n  }\n  for target in maybeValues {\n    publish SeenMaybe(value: target)\n  }\n  for entry in entries {\n    publish SeenEntry(key: entry.key, value: entry[:value])\n  }\n  publish Done(keyCount: :len dictKeys, valueCount: :len valueSequence, maybeCount: :len maybeValues, entryCount: :len entries)\n}",
       "steps": [
         {
           "input": {

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.Flow.EventScript.Runtime;
 using StepH.Flow.EventScript.Types;
 
 namespace StepH.Flow.EventScript.RegisterVM;
@@ -11,6 +12,7 @@ internal sealed class RegisterBytecodeModule(
     IReadOnlyList<string> stringPool,
     IReadOnlyList<EventScriptValue> constantPool,
     IReadOnlyList<string> signatures,
+    IReadOnlyList<EventScriptExtensionReference> externalReferences,
     IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
     IReadOnlyList<string> typeMetadata,
     IReadOnlyList<RegisterProgram> programs)
@@ -22,6 +24,8 @@ internal sealed class RegisterBytecodeModule(
     public IReadOnlyList<EventScriptValue> ConstantPool { get; } = constantPool ?? throw new ArgumentNullException(nameof(constantPool));
 
     public IReadOnlyList<string> Signatures { get; } = signatures ?? throw new ArgumentNullException(nameof(signatures));
+
+    public IReadOnlyList<EventScriptExtensionReference> ExternalReferences { get; } = externalReferences ?? throw new ArgumentNullException(nameof(externalReferences));
 
     public IReadOnlyList<IReadOnlyList<string>> NamedArgumentLayouts { get; } = namedArgumentLayouts ?? throw new ArgumentNullException(nameof(namedArgumentLayouts));
 

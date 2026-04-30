@@ -38,7 +38,9 @@ public static class EventScriptValueFactory
 
     public static EventScriptValue OptionalNone() => EventScriptOptionalValue.None;
 
-    public static EventScriptValue Iterator(EventScriptIteratorMode mode, EventScriptValue source) => EventScriptIteratorValue.EventScriptIterator(mode, source);
+    public static EventScriptValue Sequence(EventScriptSequenceMode mode, EventScriptValue source) => EventScriptSequenceValue.EventScriptSequence(mode, source);
+
+    public static EventScriptValue Sequence(IEnumerable<EventScriptValue>? values) => EventScriptSequenceValue.EventScriptSequence(EventScriptSequenceMode.Values, List(values));
 
     public static EventScriptValue Range(long from, long to, long step = 1) => EventScriptRangeValue.EventScriptRange(from, to, step);
 
@@ -46,11 +48,11 @@ public static class EventScriptValueFactory
 
     public static EventScriptValue Handler(EventScriptMessageSignature signature) => EventScriptHandlerValue.EventScriptHandler(signature);
 
-    public static EventScriptValue Values(EventScriptValue source) => Iterator(EventScriptIteratorMode.Values, source);
+    public static EventScriptValue Values(EventScriptValue source) => Sequence(EventScriptSequenceMode.Values, source);
 
-    public static EventScriptValue Keys(EventScriptValue source) => Iterator(EventScriptIteratorMode.Keys, source);
+    public static EventScriptValue Keys(EventScriptValue source) => Sequence(EventScriptSequenceMode.Keys, source);
 
-    public static EventScriptValue Entries(EventScriptValue source) => Iterator(EventScriptIteratorMode.Entries, source);
+    public static EventScriptValue Entries(EventScriptValue source) => Sequence(EventScriptSequenceMode.Entries, source);
 
     public static EventScriptValue List(IEnumerable<EventScriptValue>? values) => EventScriptListValue.EventScriptList(values);
 

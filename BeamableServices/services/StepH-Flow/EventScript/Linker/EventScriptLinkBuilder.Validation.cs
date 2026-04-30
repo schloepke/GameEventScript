@@ -301,10 +301,22 @@ public sealed partial class EventScriptLinkBuilder
                         EventScriptSymbolKind.GlobalDefinition,
                         $"Call target '{call.Name}' must use identifier casing (rule/select names start lowercase)",
                         errors);
+                    ValidateDuplicateNamedArguments(moduleContext, call.Name, call.ArgumentList.Arguments, errors);
                     ValidateCallExpression(moduleContext, call, callables, errors);
-                    foreach (var argument in call.Arguments)
+                    foreach (var argument in call.ArgumentList.Arguments)
                     {
-                        ValidateExpressionReferences(moduleContext, argument, callables, errors);
+                        if (argument.Label is not null)
+                        {
+                            ValidateIdentifierCase(
+                                moduleContext,
+                                argument.Label,
+                                call.Name,
+                                EventScriptSymbolKind.GlobalDefinition,
+                                $"Call argument label '{argument.Label}' must use identifier casing",
+                                errors);
+                        }
+
+                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
                     }
 
                     return;
@@ -341,13 +353,17 @@ public sealed partial class EventScriptLinkBuilder
                     ValidateDuplicateNamedArguments(moduleContext, messageLiteral.Message, messageLiteral.Arguments, errors);
                     foreach (var argument in messageLiteral.Arguments)
                     {
-                        ValidateIdentifierCase(
-                            moduleContext,
-                            argument.Name,
-                            messageLiteral.Message,
-                            EventScriptSymbolKind.Message,
-                            $"Message literal '{messageLiteral.Message}' declares invalid argument name '{argument.Name}'",
-                            errors);
+                        if (argument.Label is not null)
+                        {
+                            ValidateIdentifierCase(
+                                moduleContext,
+                                argument.Label,
+                                messageLiteral.Message,
+                                EventScriptSymbolKind.Message,
+                                $"Message literal '{messageLiteral.Message}' declares invalid argument name '{argument.Label}'",
+                                errors);
+                        }
+
                         ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
                     }
 
@@ -358,13 +374,25 @@ public sealed partial class EventScriptLinkBuilder
                     ValidateExpressionReferences(moduleContext, handlerBind.CalleeExpression, callables, errors);
                     foreach (var argument in handlerBind.Arguments)
                     {
-                        ValidateIdentifierCase(
-                            moduleContext,
-                            argument.Name,
-                            "handler bind",
-                            EventScriptSymbolKind.Handler,
-                            $"Handler binding declares invalid argument name '{argument.Name}'",
-                            errors);
+                        if (argument.Label is not null)
+                        {
+                            ValidateIdentifierCase(
+                                moduleContext,
+                                argument.Label,
+                                "handler bind",
+                                EventScriptSymbolKind.Handler,
+                                $"Handler binding declares invalid argument name '{argument.Label}'",
+                                errors);
+                        }
+
+                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
+                    }
+
+                    return;
+
+                case ExtensionCallExpressionNode extensionCall:
+                    foreach (var argument in extensionCall.Arguments)
+                    {
                         ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
                     }
 
@@ -391,6 +419,10 @@ public sealed partial class EventScriptLinkBuilder
                     }
 
                     expression = rulePredicate.Value;
+                    continue;
+
+                case ExtensionPredicateExpressionNode extensionPredicate:
+                    expression = extensionPredicate.Value;
                     continue;
 
                 case UnaryExpressionNode unary:
@@ -491,6 +523,14 @@ public sealed partial class EventScriptLinkBuilder
 
                 case SetLiteralExpressionNode set:
                     foreach (var item in set.Items)
+                    {
+                        ValidateExpressionReferences(moduleContext, item, callables, errors);
+                    }
+
+                    return;
+
+                case SequenceLiteralExpressionNode sequence:
+                    foreach (var item in sequence.Items)
                     {
                         ValidateExpressionReferences(moduleContext, item, callables, errors);
                     }
@@ -727,16 +767,48 @@ public sealed partial class EventScriptLinkBuilder
     {
         if (!callables.TryGetValue(call.Name, out var callable))
         {
-            errors.Add(CreateError(
-                moduleContext,
-                $"No rule or select named '{call.Name}' exists",
-                call.Name,
-                EventScriptSymbolKind.GlobalDefinition,
-                EventScriptLinkageErrorKind.MissingRuleOrSelect));
+            if (call.ArgumentList.Arguments.All(argument => argument.Label is null))
+            {
+                errors.Add(CreateError(
+                    moduleContext,
+                    $"No rule or select named '{call.Name}' exists",
+                    call.Name,
+                    EventScriptSymbolKind.GlobalDefinition,
+                    EventScriptLinkageErrorKind.MissingRuleOrSelect));
+            }
+
             return;
         }
 
         ValidateCallArity(moduleContext, callable.Kind, call.Name, callable.Parameters.Count, call.Arguments.Count, errors);
+        ValidateCallLabels(moduleContext, callable.Kind, call.Name, callable.SignatureLabels, call.ArgumentList.Arguments, errors);
+    }
+
+    private static void ValidateCallLabels(
+        EventScriptModule moduleContext,
+        LinkedCallableKind kind,
+        string name,
+        IReadOnlyList<string> expectedLabels,
+        IReadOnlyList<ArgumentNode> arguments,
+        List<EventScriptLinkageError> errors)
+    {
+        var count = Math.Min(expectedLabels.Count, arguments.Count);
+        for (var index = 0; index < count; index++)
+        {
+            var expected = expectedLabels[index];
+            var actual = arguments[index].Name;
+            if (string.Equals(expected, actual, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            errors.Add(CreateError(
+                moduleContext,
+                $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
+                name,
+                kind == LinkedCallableKind.Rule ? EventScriptSymbolKind.Rule : EventScriptSymbolKind.Select,
+                kind == LinkedCallableKind.Rule ? EventScriptLinkageErrorKind.WrongRuleArity : EventScriptLinkageErrorKind.WrongSelectArity));
+        }
     }
 
     private static void ValidateCallArity(
@@ -761,10 +833,11 @@ public sealed partial class EventScriptLinkBuilder
     private static void ValidateDuplicateNamedArguments(
         EventScriptModule moduleContext,
         string symbolName,
-        IReadOnlyList<NamedArgumentNode> arguments,
+        IReadOnlyList<ArgumentNode> arguments,
         List<EventScriptLinkageError> errors)
     {
         var duplicateArguments = arguments
+            .Where(argument => argument.Label is not null)
             .GroupBy(argument => argument.Name, StringComparer.Ordinal)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key);
@@ -976,7 +1049,7 @@ public sealed partial class EventScriptLinkBuilder
         {
             map[pair.Key] = new LinkedCallableDefinition(
                 pair.Key,
-                pair.Value.Parameters.ToArray(),
+                pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
                 LinkedCallableKind.Rule,
                 pair.Value.SourceRange);
@@ -986,7 +1059,7 @@ public sealed partial class EventScriptLinkBuilder
         {
             map[pair.Key] = new LinkedCallableDefinition(
                 pair.Key,
-                pair.Value.Parameters.ToArray(),
+                pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
                 LinkedCallableKind.Select,
                 pair.Value.SourceRange);

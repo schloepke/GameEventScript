@@ -7,29 +7,29 @@ using System.Linq;
 
 namespace StepH.Flow.EventScript.Types;
 
-public enum EventScriptIteratorMode
+public enum EventScriptSequenceMode
 {
     Values,
     Keys,
     Entries
 }
 
-public sealed class EventScriptIteratorValue : EventScriptValue
+public sealed class EventScriptSequenceValue : EventScriptValue
 {
-    public static readonly EventScriptIteratorValue Empty = new(EventScriptIteratorMode.Values, Nothing);
+    public static readonly EventScriptSequenceValue Empty = new(EventScriptSequenceMode.Values, Nothing);
 
-    public static EventScriptIteratorValue EventScriptIterator(EventScriptIteratorMode mode, EventScriptValue? source)
-        => mode == EventScriptIteratorMode.Values && (source == null || source.IsNothing()) ? Empty : new EventScriptIteratorValue(mode, source ?? Nothing);
+    public static EventScriptSequenceValue EventScriptSequence(EventScriptSequenceMode mode, EventScriptValue? source)
+        => mode == EventScriptSequenceMode.Values && (source == null || source.IsNothing()) ? Empty : new EventScriptSequenceValue(mode, source ?? Nothing);
 
-    private EventScriptIteratorValue(EventScriptIteratorMode mode, EventScriptValue source)
+    private EventScriptSequenceValue(EventScriptSequenceMode mode, EventScriptValue source)
     {
         Mode = mode;
         Source = source;
     }
 
-    public EventScriptIteratorMode Mode { get; }
+    public EventScriptSequenceMode Mode { get; }
     public EventScriptValue Source { get; }
-    public override EventScriptValueKind Kind => EventScriptValueKind.Iterator;
+    public override EventScriptValueKind Kind => EventScriptValueKind.Sequence;
 
     public override string AsText() => ToString();
 
@@ -57,7 +57,7 @@ public sealed class EventScriptIteratorValue : EventScriptValue
                 yield break;
             }
 
-            foreach (var item in EventScriptIterator(Mode, optional.Value).AsEnumerable())
+            foreach (var item in EventScriptSequence(Mode, optional.Value).AsEnumerable())
             {
                 yield return item;
             }
@@ -65,7 +65,7 @@ public sealed class EventScriptIteratorValue : EventScriptValue
             yield break;
         }
 
-        if (Mode == EventScriptIteratorMode.Keys)
+        if (Mode == EventScriptSequenceMode.Keys)
         {
             if (Source is not EventScriptDictionaryValue dictionarySource)
             {
@@ -80,7 +80,7 @@ public sealed class EventScriptIteratorValue : EventScriptValue
             yield break;
         }
 
-        if (Mode == EventScriptIteratorMode.Entries)
+        if (Mode == EventScriptSequenceMode.Entries)
         {
             if (Source is not EventScriptDictionaryValue dictionarySource)
             {
@@ -113,7 +113,7 @@ public sealed class EventScriptIteratorValue : EventScriptValue
             case EventScriptListValue:
             case EventScriptSetValue:
             case EventScriptDiceValue:
-            case EventScriptIteratorValue:
+            case EventScriptSequenceValue:
                 foreach (var item in Source.AsEnumerable())
                 {
                     yield return item;

@@ -58,7 +58,7 @@ internal static class EventScriptInvocationEngine
         public void InvokeHandler(CompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
         {
             _ = handler ?? throw new ArgumentNullException(nameof(handler));
-            args = EventScriptNamedArguments.Normalize(args);
+            args = args is EventScriptNamedArguments ? args : EventScriptNamedArguments.Create(args);
             var context = new ExecutionContext(_context, _diagnosticsEnabled);
             ExecuteHandler(context, handler, args);
         }
@@ -71,18 +71,23 @@ internal static class EventScriptInvocationEngine
             context.PushScope();
             try
             {
-                foreach (var parameter in handler.Parameters)
+                for (var parameterIndex = 0; parameterIndex < handler.Parameters.Count; parameterIndex++)
                 {
+                    var parameter = handler.Parameters[parameterIndex];
+                    var parameterValue = TryGetArgumentValue(args, parameter, parameterIndex, out var value)
+                        ? value
+                        : EventScriptValue.Nothing;
+
                     if (handler.DiagnosticsEnabled)
                     {
                         context.RecordDiagnostic(
                             EventScriptDiagnosticEventKind.ParameterBound,
                             parameter,
-                            new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { [parameter] = args[parameter] },
+                            new Dictionary<string, EventScriptValue>(StringComparer.Ordinal) { [parameter] = parameterValue },
                             $"Bound '{parameter}'");
                     }
 
-                    context.Define(parameter, args[parameter]);
+                    context.Define(parameter, parameterValue);
                 }
 
                 if (handler.DiagnosticsEnabled)
@@ -100,6 +105,17 @@ internal static class EventScriptInvocationEngine
             {
                 context.PopScope();
             }
+        }
+
+        private static bool TryGetArgumentValue(IReadOnlyDictionary<string, EventScriptValue> args, string parameter, int parameterIndex, out EventScriptValue value)
+        {
+            if (args is EventScriptNamedArguments namedArguments && parameterIndex >= 0 && parameterIndex < namedArguments.Count)
+            {
+                value = namedArguments[parameterIndex];
+                return true;
+            }
+
+            return args.TryGetValue(parameter, out value!);
         }
 
         private void ExecuteStatements(ExecutionContext context, IReadOnlyList<StatementNode> statements)
@@ -265,6 +281,9 @@ internal static class EventScriptInvocationEngine
                 case CallExpressionNode call:
                     return EvaluateCallExpression(context, call);
 
+                case ExtensionCallExpressionNode extensionCall:
+                    return EvaluateExtensionCallExpression(context, extensionCall);
+
                 case UnaryExpressionNode unary:
                     return EvaluateUnaryExpression(context, unary);
 
@@ -306,6 +325,9 @@ internal static class EventScriptInvocationEngine
                 case RulePredicateExpressionNode rulePredicate:
                     return EvaluateRulePredicateExpression(context, rulePredicate);
 
+                case ExtensionPredicateExpressionNode extensionPredicate:
+                    return EvaluateExtensionPredicateExpression(context, extensionPredicate);
+
                 case TypeCheckExpressionNode typeCheck:
                     return EventScriptValueFactory.Boolean(IsValueOfType(EvaluateExpression(context, typeCheck.Value), typeCheck.TypeName));
                 case TypeCastExpressionNode typeCast:
@@ -316,6 +338,9 @@ internal static class EventScriptInvocationEngine
 
                 case CollectionAccessExpressionNode collectionAccess:
                     return EvaluateCollectionAccess(context, collectionAccess);
+
+                case SequenceLiteralExpressionNode sequence:
+                    return EventScriptValueFactory.Sequence(sequence.Items.Select(item => EvaluateExpression(context, item)));
 
                 default:
                     return EventScriptValue.Nothing;
@@ -463,42 +488,47 @@ internal static class EventScriptInvocationEngine
 
         private EventScriptValue EvaluateCallExpression(ExecutionContext context, CallExpressionNode call)
         {
-            var arguments = call.Arguments.Select(argument => EvaluateExpression(context, argument)).ToArray();
+            var arguments = call.ArgumentList.Arguments.Select(argument => EvaluateExpression(context, argument.Expression)).ToArray();
 
             if (_callables.TryGetValue(call.Name, out var callable))
             {
+                if (!ArgumentsMatch(call.ArgumentList.Arguments, callable.SignatureLabels))
+                {
+                    return EventScriptValue.Nothing;
+                }
+
                 var result = EvaluateCallableDefinition(context, callable, arguments);
                 return callable.Kind == CallableKind.Rule
                     ? EventScriptValueFactory.Boolean(AsBool(result))
                     : result;
             }
 
+            var handlerValue = context.Resolve(call.Name);
+            if (!handlerValue.IsNothing())
+            {
+                var namedArguments = EvaluateArgumentList(context, call.ArgumentList);
+                if (EventScriptMessageValueCodec.TryBindHandlerValue(handlerValue, namedArguments, out var message))
+                {
+                    return EventScriptMessageValueCodec.CreateMessageValue(message);
+                }
+            }
+
             return EventScriptValue.Nothing;
         }
 
         private static EventScriptValue EvaluateHandlerLiteralExpression(HandlerLiteralExpressionNode handlerLiteral)
-            => EventScriptMessageValueCodec.CreateHandlerValue(new EventScriptMessageSignature(handlerLiteral.Message, handlerLiteral.Parameters));
+            => EventScriptMessageValueCodec.CreateHandlerValue(new EventScriptMessageSignature(handlerLiteral.Message, handlerLiteral.SignatureLabels));
 
         private EventScriptValue EvaluateMessageLiteralExpression(ExecutionContext context, MessageLiteralExpressionNode messageLiteral)
         {
-            var arguments = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
-            foreach (var argument in messageLiteral.Arguments)
-            {
-                arguments[argument.Name] = EvaluateExpression(context, argument.Expression);
-            }
-
-            var message = new EventScriptMessage(messageLiteral.Message, arguments);
+            var message = new EventScriptMessage(messageLiteral.Message, EvaluateArgumentList(context, messageLiteral.ArgumentList));
             return EventScriptMessageValueCodec.CreateMessageValue(message);
         }
 
         private EventScriptValue EvaluateHandlerBindExpression(ExecutionContext context, HandlerBindExpressionNode handlerBind)
         {
             var handlerValue = EvaluateExpression(context, handlerBind.CalleeExpression);
-            var arguments = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
-            foreach (var argument in handlerBind.Arguments)
-            {
-                arguments[argument.Name] = EvaluateExpression(context, argument.Expression);
-            }
+            var arguments = EvaluateArgumentList(context, handlerBind.ArgumentList);
 
             if (!EventScriptMessageValueCodec.TryBindHandlerValue(handlerValue, arguments, out var message))
             {
@@ -520,6 +550,74 @@ internal static class EventScriptInvocationEngine
             var value = EvaluateExpression(context, rulePredicate.Value);
             var result = EvaluateCallableDefinition(context, callable, new[] { value });
             return EventScriptValueFactory.Boolean(AsBool(result));
+        }
+
+        private EventScriptValue EvaluateExtensionCallExpression(ExecutionContext context, ExtensionCallExpressionNode extensionCall)
+        {
+            var arguments = extensionCall.Arguments
+                .Select(argument => EventScriptFastValue.FromEventScriptValue(EvaluateExpression(context, argument.Expression)))
+                .ToArray();
+            var reference = new EventScriptExtensionReference(
+                extensionCall.ExtensionName,
+                extensionCall.FunctionName,
+                extensionCall.Arguments.Select(argument => argument.Name).ToArray());
+            return _context.ExtensionRegistry.TryResolve(reference, out var function)
+                ? function.Invoke(new EventScriptExtensionContext(_context), arguments).ToEventScriptValue()
+                : EventScriptValue.Nothing;
+        }
+
+        private EventScriptValue EvaluateExtensionPredicateExpression(ExecutionContext context, ExtensionPredicateExpressionNode extensionPredicate)
+        {
+            var reference = new EventScriptExtensionReference(
+                extensionPredicate.ExtensionName,
+                extensionPredicate.FunctionName,
+                [EventScriptMessageSignature.UnlabeledParameterName]);
+            if (!_context.ExtensionRegistry.TryResolve(reference, out var function))
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            var input = EventScriptFastValue.FromEventScriptValue(EvaluateExpression(context, extensionPredicate.Value));
+            return EventScriptValueFactory.Boolean(function.Invoke(new EventScriptExtensionContext(_context), [input]).ToEventScriptValue().AsBoolean());
+        }
+
+        private EventScriptNamedArguments EvaluateArgumentList(ExecutionContext context, ArgumentListNode argumentList)
+        {
+            if (argumentList.Count == 0)
+            {
+                return EventScriptNamedArguments.Empty;
+            }
+
+            var pairs = new KeyValuePair<string, EventScriptValue>[argumentList.Count];
+            var labels = new string[argumentList.Count];
+            for (var index = 0; index < argumentList.Count; index++)
+            {
+                var argument = argumentList.Arguments[index];
+                labels[index] = argument.Name;
+                pairs[index] = new KeyValuePair<string, EventScriptValue>(
+                    argument.Name,
+                    EvaluateExpression(context, argument.Expression));
+            }
+
+            return EventScriptNamedArguments.CreateOrdered(pairs, labels);
+        }
+
+        private static bool ArgumentsMatch(IReadOnlyList<ArgumentNode> arguments, IReadOnlyList<string> signatureLabels)
+        {
+            if (arguments.Count != signatureLabels.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                if (!string.Equals(arguments[index].Name, signatureLabels[index], StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private EventScriptValue EvaluateCallableDefinition(ExecutionContext context, CompiledCallableDefinition definition, IReadOnlyList<EventScriptValue> arguments)
@@ -792,7 +890,7 @@ internal static class EventScriptInvocationEngine
             return operand.Kind switch
             {
                 EventScriptValueKind.Text => EventScriptValueFactory.Integer(operand.AsText().Length),
-                EventScriptValueKind.Iterator => CountEnumerableWithBudget(context, operand.AsEnumerable(), "Iterator length evaluation budget exhausted."),
+                EventScriptValueKind.Sequence => CountEnumerableWithBudget(context, operand.AsEnumerable(), "Sequence length evaluation budget exhausted."),
                 EventScriptValueKind.Range => EvaluateRangeLength(context, operand),
                 EventScriptValueKind.List => EventScriptValueFactory.Integer(operand.AsList().Count),
                 EventScriptValueKind.Dictionary => EventScriptValueFactory.Integer(operand.AsDictionary().Count),
@@ -1472,7 +1570,7 @@ internal static class EventScriptInvocationEngine
                     : Array.Empty<EventScriptValue>();
             }
 
-            return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Iterator
+            return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Sequence
                 ? value.AsEnumerable()
                 : value.AsList();
         }
@@ -2354,6 +2452,8 @@ internal static class EventScriptInvocationEngine
                     }
 
                     return EventScriptValueFactory.List(value.AsList());
+                case "sequence":
+                    return value.IsSequence() ? value : EventScriptValueFactory.Sequence(value.AsEnumerable());
                 case "range":
                     return value.IsRange() ? value : EventScriptValue.Nothing;
                 case "message":
@@ -2650,6 +2750,7 @@ internal static class EventScriptInvocationEngine
                 "integer" => value.IsInteger(),
                 "boolean" => value.Kind == EventScriptValueKind.Boolean,
                 "optional" => value.IsOptional(),
+                "sequence" => value.IsSequence(),
                 "list" => value.IsList(),
                 "range" => value.IsRange(),
                 "message" => value.Kind == EventScriptValueKind.Message || EventScriptMessageValueCodec.TryReadMessageValue(value, out _),
@@ -2743,7 +2844,7 @@ internal static class EventScriptInvocationEngine
                 EventScriptValueKind.Optional => value.AsOptional().HasValue
                     ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                     : "optional:none",
-                EventScriptValueKind.Iterator => $"iterator:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+                EventScriptValueKind.Sequence => $"sequence:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
                 EventScriptValueKind.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
                 EventScriptValueKind.Message =>
                     $"message:{((EventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((EventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",

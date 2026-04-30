@@ -12,6 +12,7 @@ public sealed class RegisterCompiledEventScriptHandler
     internal RegisterCompiledEventScriptHandler(
         string message,
         IReadOnlyList<string> parameters,
+        IReadOnlyList<string> signatureLabels,
         string signatureId,
         int declarationOrder,
         int programIndex,
@@ -21,18 +22,21 @@ public sealed class RegisterCompiledEventScriptHandler
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));
         Parameters = parameters?.ToArray() ?? throw new ArgumentNullException(nameof(parameters));
+        SignatureLabels = signatureLabels?.ToArray() ?? throw new ArgumentNullException(nameof(signatureLabels));
         SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
         DeclarationOrder = declarationOrder;
         ProgramIndex = programIndex;
         DiagnosticsEnabled = diagnosticsEnabled;
         Statements = statements?.ToArray() ?? throw new ArgumentNullException(nameof(statements));
         FastPathPlan = fastPathPlan ?? throw new ArgumentNullException(nameof(fastPathPlan));
-        Definition = new EventScriptMessageSignature(message, parameters);
+        Definition = new EventScriptMessageSignature(message, SignatureLabels);
     }
 
     public string Message { get; }
 
     public IReadOnlyList<string> Parameters { get; }
+
+    public IReadOnlyList<string> SignatureLabels { get; }
 
     public string SignatureId { get; }
 

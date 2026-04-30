@@ -19,6 +19,13 @@ public static class RegisterBytecodeDumper
         AppendPool(builder, "signatures", module.Signatures);
         AppendPool(builder, "types", module.TypeMetadata);
 
+        builder.Append("externalReferences[").Append(module.ExternalReferences.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.ExternalReferences.Count; i++)
+        {
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture)).Append(": ")
+                .AppendLine(module.ExternalReferences[i].SignatureId);
+        }
+
         builder.Append("constants[").Append(module.ConstantPool.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
         for (var i = 0; i < module.ConstantPool.Count; i++)
         {

@@ -1,224 +1,333 @@
 # EventScript Language Guide
 
+EventScript is a compact scripting language for event-driven game logic. It is
+designed for rules that react to messages, inspect immutable data, publish new
+messages, and delegate specialized calculations to host-provided extensions.
+
+This guide describes the current language as implemented by the RegisterVM
+runtime.
+
+## Contents
+
+- [Overview](#overview)
+- [Program Structure](#program-structure)
+- [Runtime Semantics](#runtime-semantics)
+- [Language Semantics](#language-semantics)
+- [Types and Conversions](#types-and-conversions)
+- [Collection Language](#collection-language)
+- [Extensions](#extensions)
+- [Host API](#host-api)
+- [Errors and Limits](#errors-and-limits)
+- [Practical Examples](#practical-examples)
+
 ## Overview
 
-EventScript is a small, domain-oriented scripting language for event-driven game logic.
-
-It is designed around a few core ideas:
-
-- Scripts react to messages with `on Message { ... }`.
-- Scripts publish new messages with `publish Message(name: value, ...)`.
-- The runtime uses a FIFO pub/sub model.
-- The language is intentionally lenient:
-  missing data often becomes `nothing` instead of throwing.
-- Dictionaries and immutable collections are first-class.
-- The syntax favors readable, domain-like expressions over technical ceremony.
-
-EventScript is case-sensitive.
-
-## Design Principles
-
-- Keywords are lowercase: `module`, `on`, `publish`, `let`, `if`, `for`, `rule`, `select`.
-- Messages start with an uppercase letter: `Start`, `DamageTaken`, `TurnEnded`.
-- Local variables and identifiers start with a lowercase letter: `hp`, `target`, `woundedUnits`.
-- Type names are written as tags: `:decimal`, `:text`, `:list`, `:message`, `:handler`, `:gauge`.
-- Tags are also first-class values: `:name`, `:boss`, `:fire`.
-- Collection mini-language lives inside `[...]`.
-- Many failures are represented as `nothing` rather than exceptions.
-
-## Hello World
+At its core, an EventScript is a set of message handlers. A handler subscribes
+to one message shape, reads the message arguments, and may publish follow-up
+messages.
 
 ```eventscript
-on Start {
-    publish Hello(arg1: 'world')
+on Start(playerName) {
+    publish Greeting(text: 'Hello ' + playerName)
 }
 ```
 
-## Top-Level Structure
+The runtime is intentionally message-oriented and resultless. A handler does not
+return a value to its caller. Observable behavior flows through `publish`.
 
-An EventScript can contain:
-
-- an optional `module` declaration at the top
-- `record` definitions for custom types
-- `rule` definitions for reusable predicates
-- `select` definitions for reusable expressions
-- event handlers with `on`
-
-Example:
+The language favors readable domain expressions:
 
 ```eventscript
-module CombatRules
-
-record :gauge as {
-    current: :decimal,
-    maximum: :decimal
-}
-
 rule wounded(_ unit) means unit.hp < unit.maxHp
 select woundedUnits(_ units) means units[:filter unit where unit is wounded]
 
-on Start(unit, units) {
-    if unit is wounded {
-        publish HealRequested(arg1: unit)
+on BeginTurn(units) {
+    let candidates be woundedUnits(units)
+
+    if candidates is empty {
+        publish NoHealingNeeded
+    } else {
+        publish HealRequested(unit: candidates[:first])
     }
-
-    let choices be woundedUnits(units)
-    publish Done(arg1: :len choices)
 }
 ```
 
-## Module Declaration
+Important design choices:
 
-Use `module Name` to declare the module name inside the script.
+- EventScript is case-sensitive.
+- Values are immutable.
+- Missing data is usually represented as `nothing`, not as an exception.
+- Numeric invalidity is usually represented as decimal `NaN`.
+- Messages, handlers, collections, records, vectors, dice, ranges, and tags are
+  first-class values.
+- Runtime behavior is defined by the JSON conformance tests and executed by
+  RegisterVM.
+
+## Program Structure
+
+An EventScript file may contain a module declaration, custom record types,
+rules, selects, and event handlers.
 
 ```eventscript
-module CombatRules
+module Combat
 
-on Start {
-    publish Done
+record :gauge as {
+    current: :decimal clamped between 0 and maximum,
+    maximum: :decimal clamped between 0 and :infinity,
+    percentage: :percentage computed by
+        0% when maximum <= 0,
+        otherwise (current / maximum) as :percentage
 }
-```
 
-Rules:
+rule defeated(_ unit) means unit.hp is 0 or less
+select livingUnits(_ units) means units[:filter unit where not (unit is defeated)]
 
-- `module` is optional
-- if omitted, the parser generates an anonymous module name
-- the declaration must appear at the top level before handlers and definitions
-- module names can use either identifier style or message style names
-
-Examples:
-
-```eventscript
-module combatRules
-module CombatRules
-```
-
-## Event Handlers
-
-Event handlers subscribe to a message.
-
-```eventscript
 on DamageTaken(unit, amount) {
-    let remainingHp be unit.hp - amount
-    publish HpChanged(arg1: unit.id, arg2: remainingHp)
+    let hp as :gauge be [current: unit.hp - amount, maximum: unit.maxHp]
+    publish HpChanged(unit: unit.id, hp: hp)
 }
 ```
 
-Handlers:
+### Comments and separators
 
-- are matched by message name
-- may declare zero or more parameters
-- may have multiple handlers for the same message
-- run in declaration order
-
-Parameters are labeled positional slots. `on DamageTaken(unit, amount)` subscribes to
-`DamageTaken(unit,amount)`, so the matching message must use those labels in that order.
-Use `_ localName` for an unlabeled slot:
+Line comments start with `//` and continue to the end of the line.
 
 ```eventscript
-on Point(_ x, _ y) {
-    publish PointSeen(x: x, y: y)
-}
-```
-
-Multiple handlers for the same message may use different ordered signatures.
-Dispatch matches by exact `SignatureId`, including label order.
-
-## Publishing Events
-
-Use `publish` to send a message.
-
-```eventscript
-publish UnitDied(unit: unit.id)
-publish Travel(from: here to: there)
-publish Point(10, 20)
-publish TurnEnded
-```
-
-Publishing is lenient:
-
-- publishing an unknown message is allowed
-- publishing a message with no subscribers is a valid no-op
-- the event is still considered published
-
-## Runtime Model
-
-The runtime uses FIFO pub/sub semantics.
-
-When an event is published:
-
-1. it is appended to the FIFO queue
-2. it is processed by the queue drain loop
-3. follow-up publishes are appended to the same active run
-
-For each queued event:
-
-1. all subscribers with the exact `SignatureId` are matched
-2. matched subscribers run by priority
-3. subscribers with the same priority run in registration order
-
-This means publish chains are not recursive direct calls. They are queued message deliveries.
-There is no fixed script-before-external rule; host priority controls the order.
-
-## Public Runtime API
-
-EventScript runtime is message/context driven and resultless.
-
-Direct compiled invocation:
-
-```csharp
-var compiled = EventScriptManager.Compile(script);
-var published = new List<EventScriptMessage>();
-
-var context = new EventScriptContext(
-    EventScriptRandomGenerator.Create(),
-    message => published.Add(message));
-
-compiled.Invoke(
-    EventScriptMessage.Message("Start", ("value", EventScriptValue.Integer(3))),
-    context);
-```
-
-Host orchestration (queue + subscriptions):
-
-```csharp
-var host = EventScriptHost.CreateBuilder()
-    .WithRandom(EventScriptRandomGenerator.Create())
-    .Build()
-    .Load(compiled);
-
-host.Publish(EventScriptMessage.Message("Start", ("value", EventScriptValue.Integer(3))));
-```
-
-Compilation paths:
-
-- `EventScriptManager.Compile(...)` compiles scripts to RegisterVM bytecode.
-- The compiled script exposes the `IEventScriptMessageHandlerCollection` host contract.
-
-## Comments
-
-EventScript supports line comments with `//`.
-
-Comments may appear on their own line or at the end of a line.
-
-```eventscript
-// Runs once at startup
+// This handler runs when combat starts.
 on Start {
-    let hp be 10 // base hit points
-    publish Done
+    let round be 1 // inline comments are allowed
+    publish RoundStarted(value: round)
 }
 ```
 
-Rules:
+Statements are separated by newlines or semicolons. Block comments are not part
+of the language.
 
-- comments run from `//` to the end of the line
-- block comments are not supported
-- the line break after a comment still acts as a normal statement separator
+```eventscript
+on Start {
+    let a be 1; let b be 2
+    publish Done(value: a + b)
+}
+```
 
-`#...` directives are not part of the language syntax at the moment.
-They are reserved for possible future pragma-style preprocessing, but are not currently supported.
+### Naming
 
-## Variables and `let`
+EventScript uses casing to keep the grammar readable.
+
+- Keywords are lowercase: `module`, `record`, `rule`, `select`, `on`, `let`.
+- Local names are lowercase identifiers: `unit`, `targetId`, `currentHp`.
+- Rule and select names are lowercase identifiers: `wounded`, `bestTarget`.
+- Message and handler names start uppercase: `Start`, `DamageTaken`, `Done`.
+- Type names are tags: `:decimal`, `:vector2`, `:gauge`.
+- Tags are also values: `:boss`, `:ready`, `:fire`.
+
+This casing matters. `Start` and `start` are different tokens with different
+roles.
+
+### Modules
+
+A file may start with `module Name`.
+
+```eventscript
+module CombatRules
+
+on Start {
+    publish Ready
+}
+```
+
+The module declaration is optional. If it is omitted, the parser creates an
+anonymous module name. Module names may use either lowercase identifier style or
+uppercase message style.
+
+Multiple scripts can be compiled together. Rules, selects, record types, and
+handlers from all modules are linked into one runtime module.
+
+### Top-level declarations
+
+Top-level declarations are:
+
+```eventscript
+record :typeName as { ... }
+rule name(parameters) means expression
+select name(parameters) means expression
+on Message(parameters) { statements }
+```
+
+Rules and selects are callable definitions. Records define custom value shapes.
+Handlers subscribe to messages.
+
+## Runtime Semantics
+
+### FIFO message dispatch
+
+The host runtime is a FIFO pub/sub queue.
+
+When a message is published:
+
+1. The message is appended to the current run queue.
+2. The queue is drained in order.
+3. For each message, subscribers with the exact same signature are invoked.
+4. Follow-up messages published by subscribers are appended to the same queue.
+
+Publish chains are not recursive direct calls.
+
+```eventscript
+on Start {
+    publish Step(value: 1)
+    publish Step(value: 2)
+}
+
+on Step(value) {
+    publish Seen(value: value)
+}
+```
+
+The external input message passed to `host.Publish(...)` is not considered a
+published output. Messages emitted through `publish` are observable outputs.
+
+### Subscriber order
+
+Subscribers are matched by message signature. Matching subscribers run by host
+priority, then by registration order for equal priority.
+
+Script handlers are subscribers. Host callbacks registered with `Subscribe` are
+also subscribers. They participate in the same dispatch order.
+
+### Messages and ordered signatures
+
+Message arguments are labeled positional slots. Labels are part of the signature
+at their position. They are not sorted and cannot be reordered.
+
+```eventscript
+publish Travel(from: current, to: target)
+publish Travel(to: target, from: current)
+```
+
+These produce different signatures:
+
+```text
+Travel(from,to)
+Travel(to,from)
+```
+
+The order is intentional. It lets signatures remain stable and readable.
+
+Unlabeled slots use `_` in the signature.
+
+```eventscript
+publish Point(10, 20) // Point(_,_)
+```
+
+### Parameters and arguments
+
+Parameters use the same labeled positional model.
+
+```eventscript
+on Travel(from, to) {
+    publish Seen(start: from, finish: to)
+}
+
+on Point(_ x, _ y) {
+    publish Seen(x: x, y: y)
+}
+```
+
+A labeled parameter must be called with the same label at the same position. An
+unlabeled `_` parameter must be called without a label.
+
+```eventscript
+rule wounded(_ unit) means unit.hp < unit.maxHp
+rule withinRange(source, target) means source.range >= target.distance
+
+on Start(unit, source, target) {
+    let a be wounded(unit)                    // ok, unlabeled
+    let b be withinRange(source: source, target: target) // ok
+}
+```
+
+Labels do not allow argument reordering:
+
+```eventscript
+withinRange(target: target, source: source) // different labels at positions
+```
+
+The `x is ruleName` and `x is :extension.predicate` forms are the only special
+case. They are allowed only for single-parameter callables and bind `x` to the
+first parameter, regardless of whether that parameter is labeled or `_`.
+
+### Publishing
+
+Use `publish` with a message literal or with an expression that evaluates to a
+message value.
+
+```eventscript
+publish Done
+publish Damage(unit: unit.id, amount: 5)
+publish Point(10, 20)
+
+let msg be Done(value: 10)
+publish msg
+```
+
+Publishing an unknown message or a message with no subscribers is a valid no-op.
+The message is still considered published.
+
+Publishing a non-message expression is lenient and does nothing.
+
+### Message and handler values
+
+Messages and handlers are first-class values.
+
+Uppercase calls are disambiguated by argument shape:
+
+```eventscript
+let handler be Success(message, value)
+let message be Success(message: 'hello', value: true)
+```
+
+`Success(message, value)` is a handler value with two labeled parameters.
+`Success(message: 'hello', value: true)` is a message value.
+
+Handlers can be bound to message values:
+
+```eventscript
+on Start(success) {
+    let successHandler be Success(message, value)
+    let msg be successHandler(message: 'ok', value: success)
+
+    publish msg
+    publish successHandler(message: 'again', value: success)
+}
+```
+
+If the binding labels do not match the handler signature, the binding evaluates
+to `nothing`.
+
+Messages expose:
+
+- `name`
+- `signatureid`
+- `arguments`
+
+Handlers expose:
+
+- `name`
+- `signatureid`
+- `parameters`
+
+These members are available through `.` and `[:]`.
+
+```eventscript
+let msg be Success(message: 'world', value: 42)
+publish Debug(name: msg.name, signature: msg[:signatureid], text: msg.arguments.message)
+```
+
+Message and handler values are not dictionaries for type checks.
+
+## Language Semantics
+
+### Variables and scope
 
 Variables are introduced with `let`.
 
@@ -228,248 +337,160 @@ let name be 'Ada'
 let alive be true
 ```
 
-Optional explicit typing:
+A `let` may declare a target type:
 
 ```eventscript
-let hp as :decimal be 10
-let name as :text be 'Ada'
-let tags as :set be :set[:select item from 1 to 3 -> item]
-```
-
-Blocks create a child variable scope. Values declared inside a block do not leak outside that block.
-This applies to blocks used by `if`, `else`, `for`, and `:random with ... { ... }`.
-
-Single-statement control flow forms do not introduce an extra block scope on their own.
-
-Typed `let` uses conversion semantics where possible.
-
-## Guarded Assignment
-
-`let` can use guarded choices.
-
-```eventscript
-let score be 12 when x = 10,
-    or 20 when x = 15,
-    otherwise 5
-```
-
-This is an expression form, not a statement-only special case.
-
-## Primitive Literals
-
-### Decimal numbers
-
-```eventscript
-12
-12.5
-0.75
-```
-
-### Percentages
-
-```eventscript
-25%
-75%
-0%
-```
-
-Percentages are ratios, not decimal units. `5%` is the ratio `0.05`.
-When a percentage appears on the right side of `+` or `-`, it is relative to the left base value:
-
-```eventscript
-100 + 5%  // 105
-100 - 5%  // 95
-100m + 5% // 105m
-```
-
-Percentage arithmetic keeps percentages when the percentage is the subject:
-
-```eventscript
-15% + 15% // 30%
-15% * 2   // 30%
-2 * 15%   // 0.3
-```
-
-### Decimal Units
-
-```eventscript
-43.9°
-90°
-360°
--10°
-100m
-15s
-```
-
-Decimal unit literals are regular `:decimal` values with an attached unit. Built-in units are `:degree`, `:meter`, and `:second`. Unit
-values preserve their unit in text output. `as :decimal` erases the unit. Unit casts such as `as :meter` or `:meter(value)` apply the
-unit to unitless numeric values, keep matching units, and return `NaN` for mismatched units. Use `:degree.wrap` to wrap a unitless
-decimal or degree value into the canonical `0°` up to, but not including, `360°` range.
-
-### Text
-
-```eventscript
-'hello'
-'Ada''s turn'
-```
-
-Single quotes are escaped by doubling them.
-
-### Booleans
-
-```eventscript
-true
-false
-```
-
-### Tags
-
-```eventscript
-:name
-:boss
-:fire
-```
-
-Tags are values. They are not strings, although they can often be converted to text as needed.
-
-## Messages, Identifiers, and Case
-
-Examples:
-
-```eventscript
-on Start {
-    let playerId be 10
-    publish TurnStarted(arg1: playerId)
-}
-```
-
-- `Start` and `TurnStarted` are messages
-- `playerId` is a local identifier
-
-The language is not case-insensitive.
-
-Call/message disambiguation is case-based:
-
-- `wounded(unit)` is a `rule/select` call (`wounded` is lowercase).
-- `Shot(unit, target)` is a handler literal in expression position (`Shot` is uppercase, parameter names).
-- `Shot(unit: source, target: victim)` is a message literal (`Shot` is uppercase, labeled args).
-- `publish Shot(source, victim)` publishes an unlabeled positional message in publish position.
-- `Shot(unit + 1)` is invalid in expression position because uppercase positional forms define handler parameters.
-- Prefix literal forms are removed: `:handler Shot(...)` and `:message Shot(...)` are not valid.
-
-Argument labels are positional, not reorderable. `Travel(from: a, to: b)` and
-`Travel(to: b, from: a)` have different signatures. A labeled parameter must be
-called with the same label at the same position; an `_` parameter must be called
-without a label.
-
-Naming rules are strict:
-
-- variable-style names are lowercase identifiers (`let`, parameters, loop vars, selector bind names, rule/select names, call targets)
-- message/handler names are uppercase message lexemes
-
-## Built-In Types
-
-Built-in type tags:
-
-- `:tag`
-- `:text`
-- `:percentage`
-- `:degree`
-- `:meter`
-- `:second`
-- `:vector2`
-- `:vector3`
-- `:decimal`
-- `:integer`
-- `:boolean`
-- `:optional`
-- `:range`
-- `:message`
-- `:handler`
-- `:sequence`
-- `:list`
-- `:dictionary`
-- `:set`
-- `:dice`
-- `:nothing`
-
-`message` and `handler` are first-class built-in types.
-They expose read-only members (`name`, `signatureid`, plus `arguments`/`parameters`) via both `.` and `[:]`,
-but they are not treated as `:dictionary` for type checks.
-
-## Type Checks and Type Casts
-
-### Type checks
-
-```eventscript
-if value is :decimal {
-    publish Numeric
-}
-```
-
-### Type casts
-
-```eventscript
-let ratio as :percentage be 75
+let hp as :decimal be '12.5'
 let heading as :degree be 450
-let distance as :meter be 100
-let duration as :second be 15
-let position as :vector2 be [x: 10, y: 20]
-let point as :vector3 be [x: 10, y: 20, z: 5]
-let amount as :decimal be '12.5'
-let flags as :list be 'abc'
+let tags as :set be [1, 2, 2, 3]
 ```
 
-The same conversion can be written inline with `:type(value)`.
+Typed `let` applies the same conversion semantics as `value as :type`.
+
+Blocks create child scopes. Variables declared inside `{ ... }` do not leak
+outside the block. This applies to `if`, `else`, `for`, and seeded random
+blocks.
 
 ```eventscript
-let scaled be :decimal(90°) * :decimal(100m)
-let heading be :degree(180)
-let distance be :meter(100)
-let duration be :second(15)
-let rawMove be :decimal(:vector2(10m, 20m))
-let meterMove be :meter(rawMove)
+on Start(value) {
+    if value > 0 {
+        let label be 'positive'
+        publish Seen(label: label)
+    }
+
+    // label is not visible here
+}
 ```
 
-`vector2` exposes `x` and `y`; `vector3` exposes `x`, `y`, and `z`.
-Both can be cast from dictionaries with matching component names or from lists in component order.
+Duplicate local variables in the same scope are linkage errors.
 
-Vector constructors use component arguments:
+### Control flow
+
+`if` supports block bodies and single-statement bodies.
 
 ```eventscript
-let position be :vector2(10, 20)
-let labeledPosition be :vector2(x: 10, y: 20)
-let yOnly be :vector2(y: 20m)
-let point be :vector3(10, 20, 5)
-let labeledPoint be :vector3(x: 10, y: 20, z: 5)
-let zOnly be :vector3(z: 5m)
-let offset be :vector2(3m, 4m)
-let lifted be :vector3(position)
-let liftedWithHeight be :vector3(position, 5)
-let flattened be :vector2(point)
+if unit.hp <= 0 {
+    publish Defeated(unit: unit.id)
+} else {
+    publish StillAlive(unit: unit.id)
+}
 ```
-
-Labels must follow component order, but labeled vector constructors may omit components.
-Missing components default to `0` in the common unit of the provided components.
-For example, `:vector2(y: 20m)` is `vector2[x: 0m, y: 20m]`.
-`:vector2(y: 20, x: 10)` is invalid because the labels are out of order.
-Single-argument vector constructors are conversions: `:vector3(vector2)` adds `z: 0`,
-and `:vector2(vector3)` drops `z`.
-`:vector3(vector2, z)` lifts a 2D vector with an explicit z component.
-
-Vectors may have one shared decimal unit. Component access, `as :list`, and `as :dictionary`
-preserve that unit:
 
 ```eventscript
-let offset be :vector2(3m, 4m)
-offset.x // 3m
-:decimal(offset) // vector2[x: 3, y: 4]
-:meter(:decimal(offset)) // vector2[x: 3m, y: 4m]
+if unit is defeated publish Defeated(unit: unit.id)
+else publish StillAlive(unit: unit.id)
 ```
 
-Mixed component units such as `:vector2(3m, 4s)` or `:vector2(3, 4m)` evaluate to `NaN`.
+`else if` chains are just nested single-statement `if` forms.
 
-Custom record constructors are labeled-only:
+```eventscript
+if score >= 100 publish Rank(value: :gold)
+else if score >= 50 publish Rank(value: :silver)
+else publish Rank(value: :bronze)
+```
+
+`for` iterates collections, sequences, dice, sets, and ranges.
+
+```eventscript
+for unit in units {
+    publish UnitSeen(id: unit.id)
+}
+
+for index from 1 to 5 step 2 {
+    publish Tick(value: index)
+}
+```
+
+Direct range syntax is used without `in`:
+
+```eventscript
+for index from 1 to 5 publish Tick(value: index)
+```
+
+This is invalid:
+
+```eventscript
+for index in from 1 to 5 publish Tick(value: index)
+```
+
+### Guarded choices
+
+Guarded choices are expression forms. They pick the first value whose condition
+is true, otherwise the `otherwise` value.
+
+```eventscript
+let label be
+    'critical' when hp <= 0,
+    or 'wounded' when hp < maxHp,
+    otherwise 'healthy'
+```
+
+They are especially useful in computed record fields:
+
+```eventscript
+percentage: :percentage computed by
+    0% when maximum <= 0,
+    otherwise (current / maximum) as :percentage
+```
+
+### Rules
+
+Rules define reusable predicates. The rule result is converted to boolean.
+
+```eventscript
+rule wounded(_ unit) means unit.hp < unit.maxHp
+rule numeric(_ value) means value * 2
+
+on Start(unit) {
+    let a be wounded(unit)
+    let b be unit is wounded
+    let c be numeric(2) // true, because 4 is truthy
+}
+```
+
+Rules are called like functions, or with `is` when the rule has exactly one
+parameter.
+
+```eventscript
+unit is wounded
+wounded(unit)
+```
+
+Calling an unknown rule, using the wrong arity, or using `x is rule` with a
+non-unary rule is a linkage error.
+
+### Selects
+
+Selects define reusable expressions. Unlike rules, selects keep the original
+result value.
+
+```eventscript
+select woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]
+select byId(_ units) means units[:dictionary unit by unit.id]
+
+on Start(units) {
+    let wounded be woundedUnits(units)
+    let lookup be byId(units)
+    publish Done(count: :len wounded, firstName: wounded[1].name)
+}
+```
+
+Rules and selects share one callable namespace. A rule and a select cannot have
+the same name.
+
+### Records and custom types
+
+Records define closed custom types.
+
+```eventscript
+record :gauge as {
+    current: :decimal,
+    maximum: :decimal
+}
+```
+
+A record field has a name and a type. It may also have a clamp and it may be
+computed.
 
 ```eventscript
 record :gauge as {
@@ -479,63 +500,62 @@ record :gauge as {
         0% when maximum <= 0,
         otherwise (current / maximum) as :percentage
 }
+```
 
+Materialization converts each source field to the declared field type. Clamped
+fields are clamped after conversion, then converted again to the declared type.
+Computed fields are evaluated after non-computed fields have been materialized.
+
+```eventscript
+on Start {
+    let hp as :gauge be [current: 125, maximum: 100]
+    publish Done(current: hp.current, ratio: hp.percentage)
+}
+```
+
+Custom type constructors are labeled-only:
+
+```eventscript
 let hp be :gauge(current: 125, maximum: 100)
 ```
 
-Custom constructors use the same clamp and computed-field semantics as typed record
-materialization. Positional custom construction such as `:gauge(10, 20)` is invalid.
-
-## Domain-Style Boolean Phrases
-
-The language supports readable boolean phrases.
+This is invalid:
 
 ```eventscript
-if hp is 0 or less { ... }
-if mana is at least 3 { ... }
-if hand is empty { ... }
-if target has value { ... }
+let hp be :gauge(125, 100)
 ```
 
-These map to existing runtime semantics:
+Custom records expose their fields through member access and dictionary-style
+lookup, but `hp is :dictionary` is false unless the value is actually a
+dictionary.
 
-- `x is 0 or less` -> `x <= 0`
-- `x is at least 3` -> `x >= 3`
-- `x is empty` -> `empty x`
-- `x has value` -> `has value x`
+### Operators
 
-Related forms:
+EventScript operators are grouped roughly like C-style operators, with readable
+aliases where helpful.
 
-```eventscript
-if hp is at most 10 { ... }
-if value is 5 or more { ... }
-if value is 5 or greater { ... }
-```
-
-## Operators
-
-### Equality
+Equality:
 
 ```eventscript
 x = y
 x <> y
 ```
 
-### Logical operators
+Logical operators:
 
 ```eventscript
+not a
+!a
+~a
 a and b
 a & b
 a xor b
 a ^ b
 a or b
 a | b
-not a
-!a
-~a
 ```
 
-### Comparison
+Relational operators:
 
 ```eventscript
 x < y
@@ -544,7 +564,7 @@ x > y
 x >= y
 ```
 
-### Arithmetic
+Arithmetic operators:
 
 ```eventscript
 a + b
@@ -556,10 +576,523 @@ a mod b
 a rem b
 ```
 
-`/` is numeric division. `div` is floor division. `mod` is mathematical modulo, and `rem` is the truncating remainder.
-Percentage values are written as literals such as `10%`.
+`/` is numeric division. `div` is floor division. `mod` is mathematical modulo.
+`rem` is truncating remainder. The `%` token is reserved for percentage literals
+such as `10%`; it is not the modulo operator.
 
-Vectors support basic vector arithmetic:
+Integer `+`, `-`, `*`, `div`, `mod`, and `rem` preserve integer results when
+both operands are integers and the result fits the integer operation. Integer
+`/` returns a decimal when needed.
+
+```eventscript
+6 * 7      // 42 as :integer
+7 / 2      // 3.5 as :decimal
+7 div 2    // 3 as :integer
+7 mod 3    // 1 as :integer
+0 - 7 rem 3 // -1 as :integer
+```
+
+Collection combination operators:
+
+```eventscript
+a :combine b
+a :merge b
+a :intersect b
+a :except b
+a :zip b
+```
+
+`+` also has collection behavior for lists and dictionaries:
+
+```eventscript
+[1, 2] + 3
+[1, 2] + [3, 4]
+[name: 'Ada'] + [hp: 10]
+```
+
+### Prefix helpers
+
+These prefix helpers are built into the language:
+
+```eventscript
+:len value
+:chance percentage
+:keys dictionary
+:values value
+:entries dictionary
+:abs value
+:clamp value between min and max
+:min of a and b and c
+:max of a and b and c
+```
+
+Examples:
+
+```eventscript
+let count be :len units
+let hit be :chance 25%
+let keys be :keys stats
+let entries be :entries stats
+let distance be :abs :vector2(3m, 4m)
+let bounded be :clamp hp between 0 and maxHp
+let best be :max of 4 and 9 and 2
+```
+
+`:min` and `:max` work on any values using numeric comparison when all values
+are numeric-compatible, otherwise using the stable EventScript value order.
+
+### Domain-style boolean phrases
+
+These phrases are equivalent to simpler operators but often read better in
+rules.
+
+```eventscript
+hp is 0 or less
+hp is at most 10
+hp is at least 3
+hp is 5 or more
+hp is 5 or greater
+hand is empty
+target has value
+```
+
+They map to:
+
+```eventscript
+hp <= 0
+hp <= 10
+hp >= 3
+hp >= 5
+empty hand
+has value target
+```
+
+### Presence, emptiness, and defaulting
+
+`nothing` is the language absence value. Missing lookups, unknown identifiers,
+out-of-range indexes, and many unsupported operations evaluate to `nothing`.
+
+```eventscript
+let missingName be unit['name']
+let missingItem be values[99]
+let unknownVariable be doesNotExist
+```
+
+Use `has value` and `empty` for explicit checks.
+
+```eventscript
+has value target
+target has value
+empty values
+values is empty
+```
+
+The main rules are:
+
+- `nothing` has no value and is empty.
+- `optional none` has no value and is empty.
+- Empty text, list, dictionary, set, dice, range, and sequence have no value and
+  are empty.
+- `NaN` and infinity have no semantic value, but are not considered empty.
+- `0` and `false` are valid values.
+
+Use `:default` for fallback values.
+
+```eventscript
+let hp be unit.hp :default 0
+let name be entry['name'] :default 'unknown'
+let first be (items :default [1])[1]
+```
+
+`:default` uses the right value when the left value has no semantic value.
+
+### Truthiness
+
+Conditions use boolean conversion.
+
+Examples:
+
+- `true` is true.
+- `false` is false.
+- `0` is false.
+- Non-zero numbers are true.
+- Empty values are generally false.
+- `nothing` is false.
+- `NaN` is false.
+
+Prefer explicit forms in user-facing logic:
+
+```eventscript
+if target has value { ... }
+if values is empty { ... }
+if hp is 0 or less { ... }
+```
+
+### Randomness
+
+Random numbers:
+
+```eventscript
+:random 1 to 6
+:random from 1 to 6
+:random from 0.0 to 1.0
+```
+
+If both bounds are integers, the result is an integer. If either bound is a
+decimal, the result is a decimal. Reversed bounds are normalized.
+
+Dice:
+
+```eventscript
+let roll be :dice 4d6
+```
+
+Dice rolls are stored in descending order. Dice convert to numbers as the sum of
+their rolls.
+
+Chance:
+
+```eventscript
+if :chance 25% {
+    publish Hit
+}
+```
+
+Seeded random scopes derive a deterministic local random stream from a seed.
+
+Expression form:
+
+```eventscript
+let rolls be :random with seed :list[:select item from 1 to 3 -> :random from 1 to 6]
+```
+
+Statement form:
+
+```eventscript
+:random with seed {
+    let roll be :random from 1 to 6
+    publish Rolled(value: roll)
+}
+```
+
+The seeded random block does not disturb the outer random stream.
+
+## Types and Conversions
+
+Types are written as tags. Built-in public type tags are:
+
+- `:nothing`
+- `:tag`
+- `:text`
+- `:boolean`
+- `:integer`
+- `:decimal`
+- `:percentage`
+- `:degree`
+- `:meter`
+- `:second`
+- `:vector2`
+- `:vector3`
+- `:optional`
+- `:sequence`
+- `:range`
+- `:message`
+- `:handler`
+- `:list`
+- `:dictionary`
+- `:set`
+- `:dice`
+
+Custom record types are also written as tags, for example `:gauge`.
+
+### Conversion syntax
+
+There are two equivalent conversion forms:
+
+```eventscript
+let distance as :meter be 100
+let distance2 be :meter(100)
+
+let raw as :decimal be 90°
+let raw2 be :decimal(90°)
+```
+
+`value as :type` is useful in declarations and readable expressions.
+`:type(value)` is useful inline.
+
+```eventscript
+let scaled be :decimal(90°) * :decimal(100m)
+```
+
+Type constructors use the same syntax, but may accept more than one argument for
+types that define construction shapes.
+
+```eventscript
+let position be :vector2(10m, 20m)
+let hp be :gauge(current: 10, maximum: 20)
+```
+
+### `:nothing`
+
+`nothing` is the absence value. It has no literal keyword of its own in script
+code; it is produced by missing data and failed lenient operations.
+
+```eventscript
+let missing be unit.unknown
+let none as :optional be missing
+```
+
+Converting `nothing` to primitive containers produces empty values in many
+places, while converting it to an optional produces `optional none`.
+
+### `:tag`
+
+Tags are symbolic values written with a leading colon.
+
+```eventscript
+:ready
+:boss
+:fire
+```
+
+Tags are not text, but they convert to text using their name. Special tags
+`:infinity`, `:negativeinfinity`, and `:nan` convert to decimal non-finite
+values.
+
+```eventscript
+let limit as :decimal be :infinity
+```
+
+### `:text`
+
+Text uses single quotes. Escape a single quote by doubling it.
+
+```eventscript
+'hello'
+'Ada''s turn'
+```
+
+Text converts to numbers and booleans when it can be parsed. Text converts to a
+list as a list of one-character text values.
+
+```eventscript
+let amount as :decimal be '12.5'
+let flag as :boolean be 'true'
+let chars as :list be 'abc'
+```
+
+### `:boolean`
+
+Boolean literals are:
+
+```eventscript
+true
+false
+```
+
+Booleans convert to numbers as `1` and `0`.
+
+### `:integer` and `:decimal`
+
+Numbers are written without a suffix.
+
+```eventscript
+12
+12.5
+0.75
+```
+
+Whole-number literals become `:integer`. Decimal literals become `:decimal`.
+
+`:integer(value)` truncates toward zero. Use the standard integer extensions for
+other rounding modes.
+
+```eventscript
+:integer(10.9)          // 10
+:integer.truncate -10.4 // -10
+:integer.floor -10.4    // -11
+```
+
+`:decimal(value)` erases units and converts numeric-compatible values to a
+unitless decimal.
+
+```eventscript
+:decimal(90°)   // 90
+:decimal(25%)   // 0.25
+:decimal(true)  // 1
+```
+
+### Decimal units: `:degree`, `:meter`, and `:second`
+
+`degree`, `meter`, and `second` are decimal units. They are not separate value
+kinds. They are `:decimal` values with an attached unit.
+
+```eventscript
+90°
+-10°
+100m
+15s
+```
+
+The built-in unit type tags are:
+
+- `:degree`
+- `:meter`
+- `:second`
+
+`as :degree`, `as :meter`, and `as :second` apply a unit to a unitless number,
+keep a matching unit, and return `NaN` for incompatible units.
+
+```eventscript
+let heading as :degree be 450
+let distance as :meter be 100
+let rawHeading as :decimal be heading
+```
+
+Unit arithmetic is intentionally strict.
+
+```eventscript
+100m + 50m // 150m
+100m + 50  // NaN
+100m + 5s  // NaN
+100m * 2   // 200m
+2 * 100m   // 200m
+100m / 2   // 50m
+100m / 25m // 4
+370m mod 90m // 10m
+100m mod 3   // NaN
+```
+
+Degree values are open decimal units. Arithmetic does not automatically wrap.
+
+```eventscript
+360° + 90° // 450°
+10° - 40°  // -30°
+```
+
+Use `:degree.wrap` for compass-style wrapping.
+
+```eventscript
+:degree.wrap -10° // 350°
+:degree.wrap 370  // 10°
+```
+
+### `:percentage`
+
+Percentages are ratios, not units. `5%` stores the ratio `0.05`.
+
+```eventscript
+5%
+25%
+100%
+```
+
+Percentage arithmetic has special rules so that right-hand percentages can be
+relative to a left base value.
+
+```eventscript
+100 + 5%  // 105
+100 - 5%  // 95
+100 * 5%  // 5
+100 / 5%  // 2000
+
+100m + 5% // 105m
+100m * 5% // 5m
+5% * 100m // 5m
+```
+
+Pure percentage arithmetic keeps percentages where that is meaningful.
+
+```eventscript
+15% + 15% // 30%
+15% - 5%  // 10%
+15% * 2   // 30%
+15% / 3   // 5%
+15% * 15% // 2.25%
+15% / 15% // 1
+```
+
+Left-hand percentage addition and subtraction against a base are invalid.
+
+```eventscript
+5% + 100  // NaN
+5% - 100m // NaN
+```
+
+`:percentage(value)` treats integers as percent notation, so
+`:percentage(25)` is `25%`. Unit values cannot be converted to percentages.
+
+### `:vector2` and `:vector3`
+
+Vectors store two or three decimal components. They may also have one shared
+unit for all components.
+
+```eventscript
+let a be :vector2(10, 20)
+let b be :vector2(10m, 20m)
+let c be :vector3(1, 2, 3)
+```
+
+Component members are:
+
+- `x`, `y` for `:vector2`
+- `x`, `y`, `z` for `:vector3`
+
+```eventscript
+let offset be :vector2(3m, 4m)
+offset.x // 3m
+offset.y // 4m
+```
+
+Constructors support positional and labeled component forms.
+
+```eventscript
+:vector2(10, 20)
+:vector2(x: 10, y: 20)
+:vector2(y: 20m) // x defaults to 0m
+
+:vector3(1, 2, 3)
+:vector3(x: 1, y: 2, z: 3)
+:vector3(z: 5m) // x and y default to 0m
+```
+
+Labeled component order must be `x`, then `y`, then `z`. Labels may be omitted,
+but they cannot be reordered.
+
+Vector conversion between dimensions is supported.
+
+```eventscript
+let p2 be :vector2(10m, 20m)
+let p3 be :vector3(p2)       // z defaults to 0m
+let p3b be :vector3(p2, 5m)  // explicit z
+let flat be :vector2(p3b)    // drops z
+```
+
+Vectors can also be converted from lists or dictionaries with matching
+components.
+
+```eventscript
+let fromList as :vector3 be [1, 2, 3]
+let fromDict as :vector2 be [x: 10, y: 20]
+```
+
+`:decimal(vector)` erases a vector's unit. `:meter(vector)` and other unit
+conversions apply a unit to a unitless vector or keep a matching vector unit.
+
+```eventscript
+let v be :vector2(3m, 4m)
+let raw be :decimal(v) // vector2[x: 3, y: 4]
+let remetered be :meter(raw)
+```
+
+Mixed component units evaluate to `NaN`.
+
+```eventscript
+:vector2(3m, 4s) // NaN
+:vector2(3, 4m)  // NaN
+```
+
+Vector arithmetic:
 
 ```eventscript
 :vector2(1m, 2m) + :vector2(3m, 4m) // vector2[x: 4m, y: 6m]
@@ -569,130 +1102,66 @@ Vectors support basic vector arithmetic:
 2 * :vector2(1m, 2m)                // vector2[x: 2m, y: 4m]
 :vector2(3m, 4m) / 2                // vector2[x: 1.5m, y: 2m]
 :abs :vector2(3m, 4m)               // 5m
+:abs :vector3(1, 2, 2)              // 3
 ```
 
-Vector addition and subtraction require the same dimension and the same shared unit.
-`vector * vector`, `scalar / vector`, vector `div`/`mod`/`rem`, mixed dimensions, and
-incompatible scalar units evaluate to `NaN`. Dot/cross/normalize are intentionally left
-for explicit helpers or extensions.
+Vector addition and subtraction require the same dimension and same unit.
+`vector * vector`, `scalar / vector`, vector `div`, vector `mod`, vector `rem`,
+mixed dimensions, division by zero, and incompatible units evaluate to `NaN`.
 
-### Collection combination
+### `:optional`
+
+Optional values represent either `some(value)` or `none`. Script code usually
+encounters optionals through the host API or typed input values.
 
 ```eventscript
-a :intersect b
-a :combine b
-a :merge b
-a :except b
-a :zip b
+on Start(maybeTarget) {
+    let target be maybeTarget :default [name: 'none']
+    publish Seen(name: target.name)
+}
 ```
 
-Semantics depend on the operand kinds.
+Converting `nothing` to `:optional` creates an empty optional. Converting any
+other value creates an optional containing that value.
 
-## `nothing` and Lenient Evaluation
+### `:sequence`
 
-`nothing` is the language's absence value.
+A sequence is a repeatable iterable value.
 
-Typical sources of `nothing`:
-
-- unknown identifier
-- missing dictionary key
-- out-of-range list access
-- unsupported operator for a type
-- missing optional value in some operations
-
-Examples:
+Use `of ... and ...` to create one directly:
 
 ```eventscript
-let missing be unit['unknown']
-let alsoMissing be values[99]
-let unknownVariable be doesNotExist
+let values be of 10 and 20 and 30
+let listValues as :list be of 10 and 20 and 30
 ```
 
-These do not throw script exceptions. They become `nothing`.
+Sequences are also produced by helpers such as `:keys`, `:values`, and
+`:entries`. They can be materialized as lists, sets, or dice when needed.
 
-This leniency is intentional.
+### `:range`
 
-## Defaulting
-
-Use `:default` to provide a fallback.
+Ranges are iterable integer ranges.
 
 ```eventscript
-let hp be unit.hp :default 0
-let name be entry['name'] :default 'unknown'
-let hand be maybeHand :default [1, 2, 3]
+let odds as :range be from 1 to 9 step 2
+let descending be from 5 to 1 step (0 - 2)
 ```
 
-`x :default y` uses `y` when `x` has no value.
-
-This includes:
-
-- `nothing`
-- empty text
-- empty list
-- empty dictionary
-- empty set
-- empty dice
-- `optional none`
-- `NaN`
-- infinity
-
-## Presence and Emptiness
-
-Use:
+Ranges support one-based lookup and containment without full materialization.
 
 ```eventscript
-has value x
-empty x
+odds[1]     // 1
+odds[3]     // 5
+5 in odds   // true
+1.5 in odds // false
 ```
 
-or their domain-style equivalents:
+A step of `0`, or a step direction that cannot reach the target, produces an
+empty range.
 
-```eventscript
-x has value
-x is empty
-```
+### `:list`
 
-Behavior:
-
-- non-empty text/list/dictionary/set/dice -> has value
-- empty containers -> no value
-- `nothing` -> no value
-- `optional none` -> no value
-- `NaN` and infinity -> no value
-
-## Membership and Boundary Checks
-
-```eventscript
-'name' in entry
-'Ada' value in entry
-'ab' in 'cabin'
-[1, 2] starts with [1]
-[1, 2, 3] ends with [2, 3]
-```
-
-Supported operators:
-
-- `in`
-- `value in`
-- `starts with`
-- `ends with`
-
-For dictionaries:
-
-- `x in dict` checks keys
-- `x value in dict` checks values
-
-## Collections
-
-EventScript has five main collection-like data shapes:
-
-- `:list`
-- `:dictionary`
-- `:set`
-- `:dice`
-- `:sequence`
-
-### List literals
+Lists are ordered immutable collections.
 
 ```eventscript
 [1, 2, 3]
@@ -700,180 +1169,141 @@ EventScript has five main collection-like data shapes:
 []
 ```
 
-### Dictionary literals
-
-```eventscript
-[name: 'Ada', age: 25]
-[:]
-```
-
-### Set literals
-
-```eventscript
-:set[1, 2, 2, 3]
-```
-
-Sets deduplicate values and are sorted with the stable EventScript value order.
-
-### Sequence literals
-
-Use `of ... and ...` for a repeatable sequence value:
-
-```eventscript
-let values be of 10 and 20 and 30
-let materialized as :list be of 10 and 20 and 30
-```
-
-Sequences are useful for readable argument-like value lists and can be materialized
-with `as :list` when a concrete list value is needed.
-
-### Dice
-
-```eventscript
-:dice 4d6
-```
-
-Dice are ordered descending by value.
-
-## Indexing and Lookup
-
-### One-based sequential indexing
-
-Lists and dice use one-based indexing:
+Lists use one-based indexing.
 
 ```eventscript
 let values be [10, 20, 30]
-let first be values[1]
-let third be values[3]
+values[1] // 10
+values[3] // 30
+values[0] // nothing
 ```
 
-Out of range returns `nothing`:
+### `:dictionary`
+
+Dictionaries use text keys. Literal keys are written without quotes.
 
 ```eventscript
-values[0]
-values[99]
+[name: 'Ada', hp: 10]
+[:]
 ```
 
-### Dictionary lookup
+Lookup can use text, tags, variables, or member syntax.
 
 ```eventscript
-let entry be [name: 'Ada', age: 25]
+let unit be [name: 'Ada', hp: 10]
 
-let a be entry['name']
-let b be entry[:name]
-let key be :name
-let c be entry[key]
-let d be entry.name
+unit['name']
+unit[:name]
+unit.name
 ```
 
 Missing keys return `nothing`.
 
-## Collection Mini-Language
+### `:set`
 
-The `[...]` syntax after a value is also used for collection selectors.
-
-Example:
+Sets are immutable, deduplicated, and ordered by the stable EventScript value
+order.
 
 ```eventscript
-units[:filter unit where unit.hp > 0]
+:set[1, 2, 2, 3] // set containing 1, 2, 3
 ```
 
-This is distinct from plain indexed lookup:
+Sets are useful for membership checks and set operations.
+
+### `:dice`
+
+Dice values are ordered descending.
+
+```eventscript
+let roll be :dice 4d6
+roll[1] // highest roll
+```
+
+Dice convert to a number as the sum of their rolls and to a list as the ordered
+roll values.
+
+### `:message` and `:handler`
+
+Message and handler values are first-class values with specialized members.
+
+```eventscript
+let h as :handler be Done(value)
+let m as :message be h(value: 42)
+```
+
+They can be passed as arguments, stored in dictionaries, published, and
+inspected. They are not dictionaries for type checks.
+
+## Collection Language
+
+Collections are central in EventScript. A value followed by `[...]` either does
+a lookup or applies a collection selector.
 
 ```eventscript
 values[1]
+unit[:name]
+units[:filter unit where unit.hp > 0]
 ```
 
-## Collection Predicates
+### Lookup
 
-### `:any` and `:all`
+For lists, dice, ranges, and sequences, numeric lookup is one-based.
 
 ```eventscript
-units[:any unit where unit.hp <= 0]
-units[:all unit where unit.alive]
+[10, 20, 30][2] // 20
 ```
 
-### `:count`
+For dictionaries and custom record values, lookup uses keys.
 
 ```eventscript
-units[:count unit where unit.hp < unit.maxHp]
+unit[:hp]
+unit['hp']
+unit.hp
 ```
 
-## Filtering, Projection, and Dictionary Building
+For vectors, lookup and member access expose components.
 
-### Filter
+```eventscript
+position.x
+position[:y]
+```
+
+### Generated collections
+
+Generated collections produce lists or sets from ranges or iterable values.
+
+```eventscript
+let squares be :list[:select item from 1 to 5 -> item * item]
+let evens be :list[:select item from 1 to 10 where item mod 2 = 0 -> item]
+let doubled be :list[:select item in values -> item * 2]
+let residues be :set[:select item in values where item > 3 -> item mod 2]
+```
+
+Use `from ... to ... [step ...]` directly inside generated collections. Do not
+write `in from ...`.
+
+### Filtering and projection
 
 ```eventscript
 units[:filter unit where unit.alive]
-```
-
-### Select
-
-```eventscript
 units[:select unit -> unit.name]
-```
-
-### Dictionary projection
-
-```eventscript
 units[:dictionary unit by unit.id]
 units[:dictionary unit by unit.id -> unit.name]
 ```
 
-If duplicate keys occur, the last value wins.
+Dictionary projection uses last-wins semantics when duplicate keys occur.
 
-## First, Last, and Single
-
-```eventscript
-units[:first]
-units[:last]
-units[:single]
-```
-
-With predicate:
+### Quantifiers and count
 
 ```eventscript
-units[:first unit where unit.alive]
-units[:last unit where unit.alive]
-units[:single unit where unit.role = :boss]
+units[:any unit where unit.hp <= 0]
+units[:all unit where unit.alive]
+units[:count unit where unit.hp < unit.maxHp]
 ```
 
-`[:single ...]` returns `nothing` unless exactly one item matches.
+`:any` and `:all` return booleans. `:count` returns an integer.
 
-## Sorting and Ordering
-
-### Stable value sort
-
-```eventscript
-items[:sort ascending]
-items[:sort descending]
-```
-
-### Projection-based order
-
-```eventscript
-units[:order by unit -> unit.initiative descending]
-items[:order by item -> item.name ascending]
-```
-
-## Distinct and Grouping
-
-### Distinct
-
-```eventscript
-items[:distinct]
-items[:distinct by item -> item.id]
-```
-
-### Group by
-
-```eventscript
-units[:group by unit -> unit.team]
-```
-
-The result is a dictionary where each group key maps to a list of matching items.
-
-## Sum, Average, Min, Max, Highest, Lowest
+### Aggregates and extrema
 
 ```eventscript
 units[:sum unit -> unit.hp]
@@ -884,13 +1314,40 @@ units[:highest unit -> unit.hp]
 units[:lowest unit -> unit.hp]
 ```
 
-Notes:
+`:sum` and `:average` aggregate projected numeric values. `:min`, `:max`,
+`:highest`, and `:lowest` return the original item whose projection is the
+smallest or largest.
 
-- `:sum` and `:average` compute numeric results
-- `:min`, `:max`, `:highest`, and `:lowest` return the original item, not the projected value
-- empty collections usually return `nothing`
+### First, last, and single
 
-## Contains
+```eventscript
+units[:first]
+units[:last]
+units[:single]
+
+units[:first unit where unit.alive]
+units[:last unit where unit.alive]
+units[:single unit where unit.role = :boss]
+```
+
+`:single` returns `nothing` unless exactly one item matches.
+
+### Sorting, ordering, distinct, and grouping
+
+```eventscript
+items[:sort ascending]
+items[:sort descending]
+
+units[:order by unit -> unit.initiative descending]
+items[:distinct]
+units[:distinct by unit -> unit.faction]
+units[:group by unit -> unit.faction]
+```
+
+`:group by` returns a dictionary whose keys are projected group values and whose
+values are lists of matching items.
+
+### Contains
 
 ```eventscript
 items[:contains 2]
@@ -908,53 +1365,28 @@ For text:
 
 For dictionaries, `:contains` checks keys.
 
-## Sequence Operations
+### Membership operators
 
-### Reverse
+Membership and boundary checks can be written as infix expressions.
+
+```eventscript
+:boss in unitTags
+'name' in unit
+'Ada' value in unit
+'tt' in 'battle'
+[1, 2, 3] starts with [1, 2]
+[1, 2, 3] ends with [2, 3]
+```
+
+For dictionaries, `x in dict` checks keys and `x value in dict` checks values.
+
+### Sequence operations
 
 ```eventscript
 items[:reverse]
-```
+items[:shuffle]
+items[:draw 3]
 
-Supported for ordered collections:
-
-- `list`
-- `dice`
-
-For `dice`, reversing returns a list.
-
-### Shuffle
-
-```eventscript
-deck[:shuffle]
-```
-
-Supported for:
-
-- `list`
-- `dice`
-
-Not supported for sets and dictionaries.
-
-### Draw
-
-```eventscript
-deck[:draw 3]
-```
-
-Because EventScript is immutable, `:draw` returns the drawn value(s) but does not mutate the original source.
-
-Typical usage:
-
-```eventscript
-let cards be [1, 2, 3, 4, 5][:shuffle]
-let hand be cards[:draw 3]
-let restCards be cards[:drop first 3]
-```
-
-### Take and Drop
-
-```eventscript
 items[:take first 3]
 items[:take last 2]
 items[:take highest 2]
@@ -966,9 +1398,35 @@ items[:drop highest 1]
 items[:drop lowest 1]
 ```
 
-## Dice and Pattern Matching
+Because values are immutable, `:draw` returns drawn items but does not mutate the
+source.
 
-Patterns are written with `:has` and `:take`.
+```eventscript
+let cards be [1, 2, 3, 4, 5][:shuffle]
+let hand be cards[:draw 3]
+let rest be cards[:drop first 3]
+```
+
+`:shuffle` and `:draw` are supported for ordered collections such as lists and
+dice. They are lenient no-ops for unordered sets and dictionaries.
+
+### Choosing
+
+`:choose` selects items from a collection.
+
+```eventscript
+units[:choose 1]
+units[:choose 1 unit where unit.alive]
+units[:choose 2 at random unit where unit.alive]
+units[:choose 1 weighted by unit -> unit.weight]
+```
+
+Without `at random`, the first matching items are chosen. With `at random`, the
+runtime random generator is used. Weighted choices use the projected weight.
+
+### Dice and pattern matching
+
+Dice and list-like collections support pattern checks.
 
 ```eventscript
 roll[:has pair]
@@ -979,16 +1437,10 @@ roll[:has full house]
 roll[:has straight]
 ```
 
-Supported count patterns:
+Supported count patterns are `pair`, `three`, `four`, `five`, `six`, and
+`seven`.
 
-- `pair`
-- `three`
-- `four`
-- `five`
-- `six`
-- `seven`
-
-Extraction:
+Pattern extraction uses `:take`.
 
 ```eventscript
 roll[:take pair]
@@ -998,9 +1450,9 @@ cards[:take straight]
 
 For straight checks, duplicates are ignored.
 
-## Object and Dictionary Matching
+### Object matching
 
-Collections can match dictionary-shaped items with subset semantics.
+Object matching uses dictionary-shaped subset patterns.
 
 ```eventscript
 units[:has [faction: 'orc', alive: true]]
@@ -1009,298 +1461,32 @@ units[:has [owner: [team: 'red']]]
 
 Rules:
 
-- extra keys in the actual object are allowed
-- all specified keys must exist
-- nested matches are recursive
-- non-dictionary items do not match
+- Extra keys in the actual object are allowed.
+- All specified keys must exist.
+- Nested patterns match recursively.
+- Non-dictionary items do not match.
 
-## Generated Collections
+### Collection combination
 
-EventScript can generate lists and sets from ranges or other iterable sources.
+The collection operators work by collection kind.
 
-### Generated list
-
-```eventscript
-:list[:select item from 1 to 5 -> item * item]
-:list[:select item in values -> item * item]
-```
-
-### Generated set
+Lists and dice:
 
 ```eventscript
-:set[:select item from 1 to 4 where item >= 2 -> item mod 2]
-:set[:select item in values where item >= 2 -> item mod 2]
+[1, 2] :combine [3, 4]  // [1, 2, 3, 4]
+[1, 2, 3] :except [2]   // [1, 3]
+[1, 2] :zip ['a', 'b']  // [{ left: 1, right: 'a' }, ...]
 ```
 
-Optional parts:
-
-- `step`
-- `where`
-
-Example:
+Dictionaries:
 
 ```eventscript
-let evens be :list[:select item from 1 to 10 step 2 -> item]
-let doubled be :list[:select item in values -> item * 2]
-let filtered be :list[:select item from 1 to 6 where item mod 2 = 0 -> item * item]
+[name: 'Ada'] :merge [hp: 10]
+[name: 'Ada', hp: 5] :merge [hp: 10] // right side wins
+[a: 1, b: 2] :intersect [b: 9]       // [b: 2]
 ```
 
-If the step direction does not reach the target range, the result is empty.
-
-## Ranges
-
-Ranges are reusable iterable values.
-
-```eventscript
-let odds as :range be from 1 to 9 step 2
-for item in odds publish Seen(value: item)
-```
-
-You can also iterate a range directly in `for`:
-
-```eventscript
-for item from 1 to 9 step 2 publish Seen(value: item)
-```
-
-## Rules
-
-Rules define reusable predicates.
-
-```eventscript
-rule wounded(_ unit) means unit.hp < unit.maxHp
-rule intersects(first, second) means first.id <> second.id
-rule defeated(unit) means unit.hp is 0 or less
-```
-
-Use rules in two ways:
-
-### Call syntax
-
-```eventscript
-wounded(unit)
-intersects(first: source, second: target)
-```
-
-### Predicate syntax for single-parameter rules
-
-```eventscript
-unit is wounded
-```
-
-The `is ruleName` form only works for rules with exactly one parameter.
-It binds the tested value to the first parameter, whether that parameter is labeled
-or `_`.
-
-## Select Definitions
-
-Select definitions define reusable expressions.
-
-```eventscript
-select woundedUnits(_ units) means units[:filter unit where unit is wounded]
-select unitsById(_ units) means units[:dictionary unit by unit.id]
-select travelTime(from, to) means from.distanceTo / to.speed
-```
-
-Use them with normal call syntax:
-
-```eventscript
-let choices be woundedUnits(units)
-let byId be unitsById(units)
-let eta be travelTime(from: start, to: destination)
-```
-
-## Records
-
-Records define closed custom types.
-
-```eventscript
-record :gauge as {
-    current: :decimal,
-    maximum: :decimal
-}
-```
-
-Records may use:
-
-- typed fields
-- field clamping
-- computed fields
-
-Example:
-
-```eventscript
-record :gauge as {
-    current: :decimal clamped between 0 and maximum,
-    maximum: :decimal clamped between 0 and :infinity,
-    percentage: :percentage computed by
-        0% when maximum <= 0,
-        otherwise (current / maximum) as :percentage
-}
-```
-
-Usage:
-
-```eventscript
-let hp as :gauge be [current: 25, maximum: 100]
-let ratio be hp.percentage
-```
-
-Custom records expose dictionary-like lookup behavior for their defined fields.
-
-## Prefix Value Operators
-
-Current prefix tag operators:
-
-- `:len`
-- `:chance`
-- `:keys`
-- `:values`
-- `:entries`
-- `:abs`
-
-Examples:
-
-```eventscript
-let count be :len items
-let hit be :chance 25%
-let keys be :keys entry
-let values be :values items
-let entries be :entries entry
-let penalty be -12
-let debt be -12.5
-let distance be :abs -5
-```
-
-Negative values can be written directly with unary minus, such as `-12` or `-12.34`.
-
-## Required Standard Extensions
-
-The standard extension namespace is parsed like any other extension call, but these functions are intrinsic and do not require a host registry:
-
-- `:integer.floor value`
-- `:integer.ceil value`
-- `:integer.truncate value`
-- `:integer.halfEven value`
-- `:integer.halfUp value`
-- `:integer.halfDown value`
-- `:degree.wrap value`
-- `:degree.toRadians value`
-- `:degree.fromRadians value`
-
-Examples:
-
-```eventscript
-let roundedDown be :integer.floor 12.9
-let roundedUp be :integer.ceil(12.1)
-let heading be :degree.wrap -10°
-let radians be :degree.toRadians 180°
-let degrees be :degree.fromRadians 3.1415926535897932384626433833
-```
-
-## Keys, Values, and Entries
-
-### `:keys`
-
-```eventscript
-for key in :keys entry {
-    publish Seen(arg1: key)
-}
-```
-
-### `:values`
-
-```eventscript
-for value in :values items {
-    publish Seen(arg1: value)
-}
-```
-
-### `:entries`
-
-```eventscript
-for item in :entries entry {
-    publish Pair(arg1: item.key, arg2: item.value)
-}
-```
-
-Entry values behave like dictionary-like objects with `key` and `value`.
-
-## Randomness
-
-### Integer range
-
-```eventscript
-:random from 1 to 6
-:random from 0.0 to 1.0
-```
-
-If both bounds are integers, the result is an integer.
-If either bound is decimal, the result is a decimal.
-
-### Seeded random scope
-
-Use `:random with ...` when you need a deterministic local random sequence derived from a seed value.
-
-Expression form:
-
-```eventscript
-let values be :random with gameSeed :list[:select item from 1 to 3 -> :random from 1 to 6]
-```
-
-Statement form:
-
-```eventscript
-:random with gameSeed {
-    let roll be :random from 1 to 6
-    publish Rolled(value: roll)
-}
-```
-
-Inside the seeded scope, all `:random ...` evaluations use the local deterministic generator.
-Outside the scope, the outer random context is unchanged.
-
-The expression form returns the value of its body expression.
-The block form is statement-only and does not produce a value.
-
-### Dice
-
-```eventscript
-:dice 4d6
-```
-
-### Chance
-
-```eventscript
-:chance 25%
-```
-
-### Random choice
-
-```eventscript
-units[:choose 1 at random]
-units[:choose 1 at random unit where unit.alive]
-units[:choose 1 weighted by unit -> unit.weight]
-```
-
-## Combining Collections
-
-### Lists
-
-```eventscript
-[1, 2, 3] + 4
-[1, 2, 3] + [4, 5]
-```
-
-### Dictionaries
-
-```eventscript
-[name: 'Mark', age: 32] + [city: 'Somewhere']
-[name: 'Mark', age: 32] :merge [age: 33]
-```
-
-For dictionaries, overlapping keys are overwritten by the right-hand side.
-
-### Sets
+Sets:
 
 ```eventscript
 :set[1, 2] :merge :set[2, 3]
@@ -1308,78 +1494,12 @@ For dictionaries, overlapping keys are overwritten by the right-hand side.
 :set[1, 2, 3] :except :set[2]
 ```
 
-## Flow Control
-
-### `if`
-
-```eventscript
-if unit is wounded {
-    publish HealRequested(arg1: unit)
-} else {
-    publish Continue
-}
-```
-
-Single-statement forms are also valid:
-
-```eventscript
-if unit is wounded publish HealRequested(arg1: unit)
-else publish Continue
-```
-
-This also enables `else if` chains:
-
-```eventscript
-if first publish One
-else if second publish Two
-else publish Three
-```
-
-### `for`
-
-```eventscript
-for unit in units {
-    if unit.alive {
-        publish UnitReady(arg1: unit.id)
-    }
-}
-```
-
-Single-statement loops are also valid:
-
-```eventscript
-for unit in units publish UnitReady(arg1: unit.id)
-for index from 1 to 5 publish Tick(value: index)
-```
-
-Use `in` for collection or sequence expressions.
-Use `from ... to ... [step ...]` for direct range loops.
-
-`for unit in from 1 to 5 ...` is not valid.
-
-`if` and `for` are control-flow statements, not expressions.
-
-## Truthiness
-
-Many conditions are evaluated through boolean conversion.
-
-Examples:
-
-- `true` is true
-- `false` is false
-- `nothing` is false
-- empty values often become false in meaningful contexts
-
-For explicit intent, prefer readable forms such as:
-
-- `has value x`
-- `empty x`
-- `x is 0 or less`
+Unsupported combinations evaluate to `nothing`.
 
 ## Extensions
 
-Host-provided functions use `:extension.function` syntax and are dynamically bound
-when a RegisterVM script is loaded into an `EventScriptHost`.
+Extensions let the host provide functions without making every function a core
+language keyword. Extension calls use `:extension.function` syntax.
 
 ```eventscript
 let floored be :math.floor value
@@ -1392,122 +1512,421 @@ if heading is :nav.isNorth {
 }
 ```
 
-Extension arguments use the same labeled positional rules as rules, selects, and
-messages. The `of ... and ...` form is for repeatable unlabeled argument lists.
-Missing extension bindings are dynamic-link errors when the host loads a
-RegisterVM script.
+### Extension call forms
 
-## External Bindings
+Extensions support four call shapes.
 
-The runtime can attach external bindings to messages through the host API.
+Unary sugar:
 
-Important behavior:
+```eventscript
+:math.floor value
+:math.floor(value)
+```
 
-- external bindings are subscribers, like script handlers
-- they run by priority and registration order, just like script handlers
-- exceptions from external bindings are swallowed
-- multiple bindings per message are allowed
+Repeatable `of ... and ...` arguments:
 
-This makes external integration compatible with the same pub/sub message model.
+```eventscript
+:math.max of a and b and c
+```
 
-## Event Queue Limits
+Ungrouped labeled arguments:
 
-The runtime prevents infinite event loops with a per-run processed event limit.
+```eventscript
+:nav.shortestTurn from: current to: target
+```
 
-The relevant host-side setting is:
+Grouped arguments:
 
-- `MaxProcessedEventsPerRun`
+```eventscript
+:nav.shortestTurn(from: current, to: target)
+:nav.shortestTurn(from: current to: target)
+```
 
-If the limit is reached, processing stops silently.
+Arguments are labeled positional. The signature includes labels in order.
 
-No script exception is thrown.
+```text
+math.floor(_)
+math.max(_,_,_)
+nav.shortestTurn(from,to)
+```
 
-## Common Lenient Behaviors
+Label order is not flexible. `from: a to: b` and `to: b from: a` are different
+signatures.
 
-The following are intentionally allowed:
+### Predicate extension sugar
 
-- unknown published messages
-- events without listeners
-- missing dictionary keys
-- out-of-range list access
-- rules that evaluate through missing data and yield `nothing`
-- external binding exceptions
+Single-argument predicate extensions can be used with `is`.
+
+```eventscript
+if heading is :nav.isNorth {
+    publish FacingNorth
+}
+```
+
+This binds `heading` as the first argument.
+
+### Required standard extensions
+
+Some extension-looking functions are required standard intrinsics. They are
+parsed as extension calls, but they are built into the runtime and do not need a
+host registry.
+
+Integer rounding:
+
+```eventscript
+:integer.floor value
+:integer.ceil value
+:integer.truncate value
+:integer.halfEven value
+:integer.halfUp value
+:integer.halfDown value
+```
 
 Examples:
 
 ```eventscript
-let missingName be unit['name']
-let missingItem be values[99]
-publish UnknownMessage(arg1: 1, arg2: 2, arg3: 3)
+:integer.floor 10.9      // 10
+:integer.floor -10.4     // -11
+:integer.ceil -10.4      // -10
+:integer.truncate -10.4  // -10
+:integer.halfEven 12.5   // 12
+:integer.halfEven 13.5   // 14
+:integer.halfUp -12.5    // -13
+:integer.halfDown -12.5  // -12
 ```
 
-## Compilation Errors
+Degree helpers:
 
-Some things fail at compile time instead of returning `nothing`.
+```eventscript
+:degree.wrap value
+:degree.toRadians value
+:degree.fromRadians value
+```
 
 Examples:
 
-- duplicate rule names
-- duplicate select names
-- a name defined as both rule and select
-- unknown called rule/select
+```eventscript
+:degree.wrap -10°       // 350°
+:degree.wrap 370        // 10°
+:degree.toRadians 180°  // 3.1415926535897932384626433833
+:degree.fromRadians 3.1415926535897932384626433833 // 180°
+```
+
+`:degree.wrap` and `:degree.toRadians` accept unitless numeric values or degree
+values. Other units produce `NaN`. `:degree.fromRadians` accepts only unitless
+numeric values.
+
+Standard intrinsics are not host-overridable and do not appear in compiled
+external references.
+
+### Host-provided extensions
+
+Host extensions are dynamically bound when a compiled script is loaded into an
+`EventScriptHost`.
+
+The runtime records each external reference as:
+
+- extension name
+- function name
+- ordered argument labels
+- signature id
+
+For example:
+
+```eventscript
+let turn be :nav.shortestTurn from: current to: target
+```
+
+requires:
+
+```text
+nav.shortestTurn(from,to)
+```
+
+If the compiled script contains external references, the host must provide a
+registry. Missing registries or missing functions are dynamic-link errors during
+host load, not late runtime lookups.
+
+The extension API uses `EventScriptFastValue` to avoid boxing primitive values at
+the runtime boundary.
+
+```csharp
+public interface IEventScriptExtensionFunction
+{
+    EventScriptFastValue Invoke(
+        EventScriptExtensionContext context,
+        ReadOnlySpan<EventScriptFastValue> arguments);
+}
+
+public interface IEventScriptExtensionRegistry
+{
+    bool TryResolve(
+        EventScriptExtensionReference reference,
+        out IEventScriptExtensionFunction function);
+}
+```
+
+`EventScriptFastValue` exposes unboxed primitives for common values:
+
+- `Kind`
+- `Integer`
+- `Number`
+- `Boolean`
+- `Text`
+- `Unit`
+- `X`, `Y`, `Z`
+- `IsReferenceBacked`
+- `ToEventScriptValue()`
+
+Host functions should use the fast properties when possible and only call
+`ToEventScriptValue()` for complex values or when full boxed semantics are
+needed.
+
+Minimal registry example:
+
+```csharp
+public sealed class MathFloorFunction : IEventScriptExtensionFunction
+{
+    public EventScriptFastValue Invoke(
+        EventScriptExtensionContext context,
+        ReadOnlySpan<EventScriptFastValue> arguments)
+        => EventScriptFastValue.FromDecimal(Math.Floor(arguments[0].Number));
+}
+
+public sealed class GameExtensionRegistry : IEventScriptExtensionRegistry
+{
+    public bool TryResolve(
+        EventScriptExtensionReference reference,
+        out IEventScriptExtensionFunction function)
+    {
+        if (reference.SignatureId == "math.floor(_)")
+        {
+            function = new MathFloorFunction();
+            return true;
+        }
+
+        function = default!;
+        return false;
+    }
+}
+```
+
+Load with a registry:
+
+```csharp
+var compiled = EventScriptManager.Compile(script);
+
+var host = EventScriptHost.CreateBuilder()
+    .WithRegistry(new GameExtensionRegistry())
+    .Build()
+    .Load(compiled);
+```
+
+## Host API
+
+Compile with `EventScriptManager.Compile(...)`.
+
+```csharp
+var compiled = EventScriptManager.Compile(script);
+```
+
+Compile options use RegisterVM options:
+
+```csharp
+var compiled = EventScriptManager.Compile(
+    script,
+    new RegisterEventScriptCompilationOptions
+    {
+        EnableDiagnostics = true
+    });
+```
+
+The compiled script implements `IEventScriptMessageHandlerCollection`, so it can
+be loaded into a host.
+
+```csharp
+var published = new List<EventScriptMessage>();
+
+var host = EventScriptHost.CreateBuilder()
+    .WithPublishedMessageObserver(message => published.Add(message))
+    .Build()
+    .Load(compiled);
+
+host.Publish(EventScriptMessage.Message(
+    "Start",
+    ("value", EventScriptValueFactory.Integer(3))));
+```
+
+You can also invoke a compiled script directly with an `EventScriptContext`.
+Host orchestration is preferred for normal runtime behavior because it handles
+queueing, dynamic extension binding, subscribers, priorities, diagnostics, and
+runtime limits.
+
+```csharp
+var emitted = new List<EventScriptMessage>();
+var context = new EventScriptContext(
+    EventScriptRandomGenerator.Create(),
+    message => emitted.Add(message));
+
+compiled.Invoke(
+    EventScriptMessage.Message("Start"),
+    context);
+```
+
+### Host builder options
+
+`EventScriptHostBuilder` supports:
+
+- `WithRandom(...)`
+- `WithRegistry(...)`
+- `WithDiagnosticCollector(...)`
+- `WithPublishedMessageObserver(...)`
+- `WithRuntimeLimits(...)`
+- `WithMaxProcessedEventsPerRun(...)`
+- `WithScriptHandlerPriority(...)`
+- `WithExternalHandlerPriority(...)`
+
+External subscribers can be registered with `Subscribe`.
+
+```csharp
+host.Subscribe(
+    EventScriptMessageSignature.MessageSignature("Done", ["value"]),
+    (message, context) =>
+    {
+        // host callback
+    });
+```
+
+External subscriber exceptions are swallowed by runtime dispatch so that host
+callbacks remain lenient like script handlers.
+
+### Diagnostics
+
+Diagnostics are collected through `IEventScriptDiagnosticCollector`.
+
+```csharp
+var diagnostics = new EventScriptDiagnosticTraceCollector();
+
+var compiled = EventScriptManager.Compile(
+    script,
+    new RegisterEventScriptCompilationOptions { EnableDiagnostics = true });
+
+var host = EventScriptHost.CreateBuilder()
+    .WithDiagnosticCollector(diagnostics)
+    .Build()
+    .Load(compiled);
+```
+
+Diagnostic event kinds include:
+
+- `DispatchStarted`
+- `SubscriberMatched`
+- `SubscriberInvoked`
+- `DispatchCompleted`
+- `HandlerInvoked`
+- `ParameterBound`
+- `LetEvaluated`
+- `ExpressionEvaluatedToNothing`
+- `RuleCalled`
+- `SelectCalled`
+- `EventPublished`
+- `RuntimeLimitReached`
+
+Host publish diagnostics are recorded independently of compile diagnostics.
+
+## Errors and Limits
+
+EventScript is lenient at runtime, but it still rejects malformed programs at
+compile or link time.
+
+Syntax errors include malformed tokens, missing expressions, legacy removed
+syntax, invalid handler headers, invalid dice counts, and invalid selector
+syntax.
+
+Linkage errors include:
+
+- missing rule/select calls
 - wrong rule/select arity
-- wrong rule/select argument labels
-- using `x is ruleName` with a non-rule or with a rule that does not have exactly one parameter
+- wrong argument labels
+- duplicate variables in a scope
+- duplicate handler/rule/select parameters
+- rule/select name conflicts
+- invalid type constructors
+- custom type constructor fields that do not exist
 
-## Current Limitations
+Dynamic-link errors occur when a script references host extensions that cannot
+be bound by the configured registry.
 
-At the current language stage:
+### Runtime limits
 
-- line comments use `//`
-- there are no user-defined mutable variables
-- host functions must be exposed through `:extension.function`
-- there is no direct mutation of collections or dictionaries
+Runtime limits prevent runaway scripts.
+
+```csharp
+var limits = new EventScriptRuntimeLimits
+{
+    MaxExecutionSteps = 100_000,
+    MaxLoopIterations = 100_000,
+    MaxCallDepth = 64,
+    MaxRangeItems = 10_000,
+    MaxGeneratedCollectionItems = 10_000,
+    MaxDiceCount = 1_000,
+    MaxDiceSides = 1_000_000
+};
+```
+
+`MaxProcessedEventsPerRun` is a host setting that limits how many queued events
+one `Publish` call may process.
+
+When a runtime budget is reached, execution stops leniently and a
+`RuntimeLimitReached` diagnostic is recorded when diagnostics are available.
+
+Range lookup and range containment can be checked without materializing the
+whole range. Materializing a range as a list or set is subject to range limits.
 
 ## Practical Examples
 
-### Example: Damage and defeat
+### Damage and defeat
 
 ```eventscript
-rule defeated(unit) means unit.hp is 0 or less
+rule defeated(_ unit) means unit.hp is 0 or less
 
 on DamageTaken(unit, amount) {
     let hp be unit.hp - amount
 
     if hp is 0 or less {
-        publish UnitDefeated(arg1: unit.id)
+        publish UnitDefeated(unit: unit.id)
     } else {
-        publish UnitHpChanged(arg1: unit.id, arg2: hp)
+        publish UnitHpChanged(unit: unit.id, hp: hp)
     }
 }
 ```
 
-### Example: Filtering candidates
+### Filtering candidates
 
 ```eventscript
-rule targetable(unit) means unit.alive and not unit.hidden
-select targetableUnits(units) means units[:filter unit where unit is targetable]
+rule targetable(_ unit) means unit.alive and not unit.hidden
+select targetableUnits(_ units) means units[:filter unit where unit is targetable]
 
 on ChooseTarget(units) {
     let candidates be targetableUnits(units)
     let target be candidates[:choose 1 at random]
-    publish TargetChosen(arg1: target.id)
+    publish TargetChosen(unit: target.id)
 }
 ```
 
-### Example: Building a lookup dictionary
+### Building a lookup dictionary
 
 ```eventscript
-select unitsById(units) means units[:dictionary unit by unit.id]
+select unitsById(_ units) means units[:dictionary unit by unit.id]
 
 on Start(units) {
     let byId be unitsById(units)
     let hero be byId[:hero]
-    publish Ready(arg1: hero.name :default 'Unknown')
+    publish Ready(name: hero.name :default 'Unknown')
 }
 ```
 
-### Example: Dice logic
+### Dice logic
 
 ```eventscript
 on RollAttack {
@@ -1516,14 +1935,29 @@ on RollAttack {
     let total be roll[:sum die -> die]
 
     if crit {
-        publish CriticalHit(arg1: total)
+        publish CriticalHit(total: total)
     } else {
-        publish NormalHit(arg1: total)
+        publish NormalHit(total: total)
     }
 }
 ```
 
-### Example: Custom record type
+### Navigation with units and vectors
+
+```eventscript
+on Move(position, offset) {
+    let next be position + offset
+    publish PositionChanged(value: next)
+}
+
+on Aim(heading, targetHeading) {
+    let current be :degree.wrap heading
+    let target be :degree.wrap targetHeading
+    publish HeadingSeen(current: current, target: target)
+}
+```
+
+### Custom record type
 
 ```eventscript
 record :gauge as {
@@ -1536,22 +1970,14 @@ record :gauge as {
 
 on Start {
     let mana as :gauge be [current: 30, maximum: 50]
+
     if mana.percentage >= 50% {
         publish ReadyToCast
     }
 }
 ```
 
-## Summary
+## Grammar Reference
 
-EventScript is a readable, immutable, lenient, event-driven scripting language with:
-
-- FIFO pub/sub execution
-- dictionary-first data modeling
-- strong collection tooling
-- reusable predicates with `rule`
-- reusable expressions with `select`
-- custom structured types with `record`
-- graceful `nothing`-based failure semantics
-
-For the exact grammar, see [EventScript.bnf](./EventScript.bnf).
+This document explains the language semantically. For the compact grammar, see
+[EventScript.bnf](./EventScript.bnf).

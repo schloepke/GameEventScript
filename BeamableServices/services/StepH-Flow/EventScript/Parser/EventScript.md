@@ -302,7 +302,7 @@ Percentage arithmetic keeps percentages when the percentage is the subject:
 15s
 ```
 
-Decimal unit literals are regular `:decimal` values with an attached unit. Built-in units are `:degree`, `:meter`, and `:second`. Unit values preserve their unit in text output. `as :decimal` erases the unit. Use `:wrapDegree` to wrap a unitless decimal or degree value into the canonical `0°` up to, but not including, `360°` range.
+Decimal unit literals are regular `:decimal` values with an attached unit. Built-in units are `:degree`, `:meter`, and `:second`. Unit values preserve their unit in text output. `as :decimal` erases the unit. Unit casts such as `as :meter` or `:meter(value)` apply the unit to unitless numeric values, keep matching units, and return `NaN` for mismatched units. Use `:wrapDegree` to wrap a unitless decimal or degree value into the canonical `0°` up to, but not including, `360°` range.
 
 ### Text
 
@@ -425,6 +425,8 @@ let scaled be :decimal(90°) * :decimal(100m)
 let heading be :degree(180)
 let distance be :meter(100)
 let duration be :second(15)
+let rawMove be :decimal(:vector2(10m, 20m))
+let meterMove be :meter(rawMove)
 ```
 
 `vector2` exposes `x` and `y`; `vector3` exposes `x`, `y`, and `z`.
@@ -435,13 +437,23 @@ Vector constructors use component arguments:
 ```eventscript
 let position be :vector2(10, 20)
 let labeledPosition be :vector2(x: 10, y: 20)
+let yOnly be :vector2(y: 20m)
 let point be :vector3(10, 20, 5)
 let labeledPoint be :vector3(x: 10, y: 20, z: 5)
+let zOnly be :vector3(z: 5m)
 let offset be :vector2(3m, 4m)
+let lifted be :vector3(position)
+let liftedWithHeight be :vector3(position, 5)
+let flattened be :vector2(point)
 ```
 
-Labels are positional and must match the component names exactly. `:vector2(y: 20, x: 10)`
-is invalid.
+Labels must follow component order, but labeled vector constructors may omit components.
+Missing components default to `0` in the common unit of the provided components.
+For example, `:vector2(y: 20m)` is `vector2[x: 0m, y: 20m]`.
+`:vector2(y: 20, x: 10)` is invalid because the labels are out of order.
+Single-argument vector constructors are conversions: `:vector3(vector2)` adds `z: 0`,
+and `:vector2(vector3)` drops `z`.
+`:vector3(vector2, z)` lifts a 2D vector with an explicit z component.
 
 Vectors may have one shared decimal unit. Component access, `as :list`, and `as :dictionary`
 preserve that unit:
@@ -449,6 +461,8 @@ preserve that unit:
 ```eventscript
 let offset be :vector2(3m, 4m)
 offset.x // 3m
+:decimal(offset) // vector2[x: 3, y: 4]
+:meter(:decimal(offset)) // vector2[x: 3m, y: 4m]
 ```
 
 Mixed component units such as `:vector2(3m, 4s)` or `:vector2(3, 4m)` evaluate to `NaN`.

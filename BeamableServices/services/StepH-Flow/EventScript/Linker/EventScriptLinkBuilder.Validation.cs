@@ -910,13 +910,15 @@ public sealed partial class EventScriptLinkBuilder
         IReadOnlyList<string> labels,
         List<EventScriptLinkageError> errors)
     {
-        if (constructor.Arguments.Count != labels.Count)
+        if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
         {
-            AddTypeConstructorError(
-                moduleContext,
-                constructor.TypeName,
-                $"Type constructor ':{constructor.TypeName}' expects {labels.Count} component arguments",
-                errors);
+            return;
+        }
+
+        if (constructor.TypeName == "vector3" &&
+            constructor.Arguments.Count == 2 &&
+            constructor.Arguments.All(argument => argument.Label is null))
+        {
             return;
         }
 
@@ -931,22 +933,68 @@ public sealed partial class EventScriptLinkBuilder
             return;
         }
 
-        if (labeledCount == 0)
+        if (labeledCount > 0 || constructor.Arguments.Count == 0)
         {
+            ValidateLabeledVectorConstructor(moduleContext, constructor, labels, errors);
             return;
         }
 
-        for (var index = 0; index < labels.Count; index++)
+        if (constructor.Arguments.Count != labels.Count)
         {
-            if (!string.Equals(constructor.Arguments[index].Label, labels[index], StringComparison.Ordinal))
+            AddTypeConstructorError(
+                moduleContext,
+                constructor.TypeName,
+                $"Type constructor ':{constructor.TypeName}' expects {labels.Count} component arguments",
+                errors);
+        }
+    }
+
+    private static void ValidateLabeledVectorConstructor(
+        EventScriptModule moduleContext,
+        TypeConstructorExpressionNode constructor,
+        IReadOnlyList<string> labels,
+        List<EventScriptLinkageError> errors)
+    {
+        var previousIndex = -1;
+        for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
+        {
+            var label = constructor.Arguments[argumentIndex].Label;
+            var componentIndex = IndexOf(labels, label);
+            if (componentIndex < 0)
             {
                 AddTypeConstructorError(
                     moduleContext,
                     constructor.TypeName,
-                    $"Type constructor ':{constructor.TypeName}' argument {index + 1} expects label '{labels[index]}'",
+                    $"Type constructor ':{constructor.TypeName}' has unknown component label '{label}'",
                     errors);
+                return;
+            }
+
+            if (componentIndex <= previousIndex)
+            {
+                AddTypeConstructorError(
+                    moduleContext,
+                    constructor.TypeName,
+                    $"Type constructor ':{constructor.TypeName}' component labels must follow x, y, z order",
+                    errors);
+                return;
+            }
+
+            previousIndex = componentIndex;
+        }
+    }
+
+    private static int IndexOf(IReadOnlyList<string> values, string? value)
+    {
+        for (var index = 0; index < values.Count; index++)
+        {
+            if (string.Equals(values[index], value, StringComparison.Ordinal))
+            {
+                return index;
             }
         }
+
+        return -1;
     }
 
     private static bool IsBuiltinConstructorType(string typeName)

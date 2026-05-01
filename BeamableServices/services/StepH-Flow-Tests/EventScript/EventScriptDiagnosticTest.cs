@@ -29,11 +29,12 @@ public class EventScriptDiagnosticTest
         }
         
         on AreaScanned(_ x, _ y) {
-            let pos be :vector2(x: x, y: y)
-            publish Done(pos, x: x, y: y)
+            let move2d be :vector2(x: x, y: y)
+            let move3d be :meter(:vector3(:decimal(move2d))) + :vector3(z: 10m)
+            publish Done(move3d, x: x, y: y)
         }
         
-        on Done(_ pos, x, y) {
+        on Done(_ move3d, x, y) {
             publish Finished
         }
         """;

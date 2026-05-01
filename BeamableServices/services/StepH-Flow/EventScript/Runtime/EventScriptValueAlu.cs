@@ -598,6 +598,115 @@ internal static class EventScriptValueAlu
     public static bool TryCreateVector3(EventScriptValue x, EventScriptValue y, EventScriptValue z, out EventScriptValue value)
         => TryCreateVectorFromComponents([x, y, z], 3, out value);
 
+    public static bool TryCreateVectorFromLabeledComponents(
+        string typeName,
+        IReadOnlyDictionary<string, EventScriptValue> components,
+        out EventScriptValue value)
+    {
+        var labels = typeName switch
+        {
+            "vector2" => new[] { "x", "y" },
+            "vector3" => new[] { "x", "y", "z" },
+            _ => []
+        };
+
+        if (labels.Length == 0)
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        var values = new decimal[labels.Length];
+        var unit = default(EventScriptDecimalUnit?);
+        var initialized = false;
+
+        foreach (var pair in components)
+        {
+            var index = Array.IndexOf(labels, pair.Key);
+            if (index < 0)
+            {
+                value = EventScriptValue.Nothing;
+                return false;
+            }
+
+            if (!TryReadVectorComponent(pair.Value, out values[index], out var componentUnit, out var invalid))
+            {
+                value = invalid ? EventScriptValueFactory.DecimalNaN() : EventScriptValue.Nothing;
+                return invalid;
+            }
+
+            if (!initialized)
+            {
+                unit = componentUnit;
+                initialized = true;
+                continue;
+            }
+
+            if (unit != componentUnit)
+            {
+                value = EventScriptValueFactory.DecimalNaN();
+                return true;
+            }
+        }
+
+        value = labels.Length == 2
+            ? EventScriptValueFactory.Vector2(values[0], values[1], unit)
+            : EventScriptValueFactory.Vector3(values[0], values[1], values[2], unit);
+        return true;
+    }
+
+    public static bool TryCreateVector3(EventScriptValue xy, EventScriptValue z, out EventScriptValue value)
+    {
+        if (!TryUnwrapOptionalForOperation(xy, out var unwrapped) ||
+            unwrapped is not EventScriptVector2Value vector2)
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        return TryCreateVector3(
+            EventScriptValueFactory.Decimal(vector2.X, vector2.Unit),
+            EventScriptValueFactory.Decimal(vector2.Y, vector2.Unit),
+            z,
+            out value);
+    }
+
+    public static bool TryEraseVectorUnit(EventScriptValue value, out EventScriptValue converted)
+    {
+        switch (value)
+        {
+            case EventScriptVector2Value vector2:
+                converted = EventScriptValueFactory.Vector2(vector2.X, vector2.Y);
+                return true;
+            case EventScriptVector3Value vector3:
+                converted = EventScriptValueFactory.Vector3(vector3.X, vector3.Y, vector3.Z);
+                return true;
+            default:
+                converted = EventScriptValue.Nothing;
+                return false;
+        }
+    }
+
+    public static bool TryApplyVectorUnit(EventScriptValue value, EventScriptDecimalUnit unit, out EventScriptValue converted)
+    {
+        switch (value)
+        {
+            case EventScriptVector2Value vector2:
+                converted = vector2.Unit.HasValue && vector2.Unit.Value != unit
+                    ? EventScriptValueFactory.DecimalNaN()
+                    : EventScriptValueFactory.Vector2(vector2.X, vector2.Y, unit);
+                return true;
+            case EventScriptVector3Value vector3:
+                converted = vector3.Unit.HasValue && vector3.Unit.Value != unit
+                    ? EventScriptValueFactory.DecimalNaN()
+                    : EventScriptValueFactory.Vector3(vector3.X, vector3.Y, vector3.Z, unit);
+                return true;
+            default:
+                converted = EventScriptValue.Nothing;
+                return false;
+        }
+    }
+
     public static bool TryEvaluateUnitRounding(EventScriptValue operand, string operation, out EventScriptValue value)
     {
         if (!EventScriptValue.TryGetDecimalUnit(operand, out var unit))

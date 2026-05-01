@@ -2486,6 +2486,11 @@ internal static class EventScriptInvocationEngine
                         return EventScriptValueFactory.DecimalNaN();
                     }
 
+                    if (EventScriptValueAlu.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
+                    {
+                        return vectorWithoutUnit;
+                    }
+
                     if (TryCoerceNumericForOperation(unwrappedNumber, out var number))
                     {
                         return ToEventScriptDecimal(number);
@@ -2570,6 +2575,35 @@ internal static class EventScriptInvocationEngine
 
         private EventScriptValue EvaluateVectorConstructorExpression(ExecutionContext context, TypeConstructorExpressionNode constructor)
         {
+            if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
+            {
+                return ConvertToDeclaredType(context, EvaluateExpression(context, constructor.Arguments[0].Expression), constructor.TypeName);
+            }
+
+            if (constructor.TypeName == "vector3" &&
+                constructor.Arguments.Count == 2 &&
+                constructor.Arguments.All(argument => argument.Label is null))
+            {
+                var xy = EvaluateExpression(context, constructor.Arguments[0].Expression);
+                var z = EvaluateExpression(context, constructor.Arguments[1].Expression);
+                return EventScriptValueAlu.TryCreateVector3(xy, z, out var lifted)
+                    ? lifted
+                    : EventScriptValue.Nothing;
+            }
+
+            if (constructor.Arguments.Count == 0 || constructor.Arguments.All(argument => argument.Label is not null))
+            {
+                var labeledComponents = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+                foreach (var argument in constructor.Arguments)
+                {
+                    labeledComponents[argument.Label!] = EvaluateExpression(context, argument.Expression);
+                }
+
+                return EventScriptValueAlu.TryCreateVectorFromLabeledComponents(constructor.TypeName, labeledComponents, out var vector)
+                    ? vector
+                    : EventScriptValue.Nothing;
+            }
+
             var expectedCount = constructor.TypeName == "vector2" ? 2 : 3;
             if (constructor.Arguments.Count != expectedCount)
             {
@@ -2623,6 +2657,16 @@ internal static class EventScriptInvocationEngine
         private EventScriptValue ConvertToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
         {
             if (!TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
+            if (EventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+            {
+                return vectorWithUnit;
+            }
+
+            if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
             {
                 return EventScriptValueFactory.DecimalNaN();
             }

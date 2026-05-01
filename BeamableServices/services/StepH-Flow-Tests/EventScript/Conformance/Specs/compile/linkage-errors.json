@@ -170,8 +170,8 @@
     },
     {
       "kind": "compileError",
-      "name": "vector2 constructor requires both components",
-      "script": "on Start {\n  let position be :vector2(1)\n}",
+      "name": "vector2 constructor rejects too many components",
+      "script": "on Start {\n  let position be :vector2(1, 2, 3)\n}",
       "expectedError": {
         "phase": "linkage",
         "kind": "InvalidTypeConstructor",
@@ -181,8 +181,8 @@
     },
     {
       "kind": "compileError",
-      "name": "vector3 constructor requires all components",
-      "script": "on Start {\n  let point be :vector3(x: 1, y: 2)\n}",
+      "name": "vector3 constructor rejects component labels out of order",
+      "script": "on Start {\n  let point be :vector3(z: 1, y: 2)\n}",
       "expectedError": {
         "phase": "linkage",
         "kind": "InvalidTypeConstructor",

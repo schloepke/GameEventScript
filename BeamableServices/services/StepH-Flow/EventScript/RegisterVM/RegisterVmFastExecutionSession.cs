@@ -2526,6 +2526,44 @@ internal sealed class RegisterVmFastExecutionSession
         int start,
         int count)
     {
+        if (count == 1 &&
+            labels is { Length: > 0 } &&
+            string.Equals(labels[0], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        {
+            return TryConvertDeclaredType(typeName, stack[start], out var converted)
+                ? converted
+                : RegisterFastValue.Nothing;
+        }
+
+        if (typeName == "vector3" &&
+            count == 2 &&
+            labels is { Length: >= 2 } &&
+            string.Equals(labels[0], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
+            string.Equals(labels[1], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        {
+            return EventScriptValueAlu.TryCreateVector3(
+                stack[start].ToEventScriptValue(),
+                stack[start + 1].ToEventScriptValue(),
+                out var lifted)
+                ? RegisterFastValue.FromEventScriptValue(lifted)
+                : RegisterFastValue.Nothing;
+        }
+
+        if (count == 0 || labels is { Length: var labelCount } &&
+            labelCount >= count &&
+            Enumerable.Range(0, count).All(index => !string.Equals(labels[index], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)))
+        {
+            var labeledComponents = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+            for (var index = 0; index < count; index++)
+            {
+                labeledComponents[labels![index]] = stack[start + index].ToEventScriptValue();
+            }
+
+            return EventScriptValueAlu.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
+                ? RegisterFastValue.FromEventScriptValue(vector)
+                : RegisterFastValue.Nothing;
+        }
+
         var expectedCount = typeName == "vector2" ? 2 : 3;
         if (count != expectedCount)
         {
@@ -2624,6 +2662,11 @@ internal sealed class RegisterVmFastExecutionSession
             return DecimalNaN();
         }
 
+        if (EventScriptValueAlu.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
+        {
+            return vectorWithoutUnit;
+        }
+
         return EventScriptValueAlu.TryCoerceNumericForOperation(unwrappedNumber, out var number)
             ? EventScriptValueAlu.ToEventScriptDecimal(number)
             : DecimalNaN();
@@ -2663,6 +2706,16 @@ internal sealed class RegisterVmFastExecutionSession
     private static EventScriptValue ConvertToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
     {
         if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        {
+            return DecimalNaN();
+        }
+
+        if (EventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+        {
+            return vectorWithUnit;
+        }
+
+        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
         {
             return DecimalNaN();
         }

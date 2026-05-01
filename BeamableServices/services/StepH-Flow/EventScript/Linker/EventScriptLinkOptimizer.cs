@@ -552,6 +552,40 @@ internal static class EventScriptLinkOptimizer
     private static bool TryEvaluateConstantVectorConstructor(TypeConstructorExpressionNode constructor, out EventScriptValue value)
     {
         value = EventScriptValue.Nothing;
+        if (constructor.Arguments.Count == 1 &&
+            constructor.Arguments[0].Label is null &&
+            TryEvaluateConstant(constructor.Arguments[0].Expression, out var source))
+        {
+            value = constructor.TypeName == "vector2" ? ConvertToVector2(source) : ConvertToVector3(source);
+            return !value.IsNothing();
+        }
+
+        if (constructor.TypeName == "vector3" &&
+            constructor.Arguments.Count == 2 &&
+            constructor.Arguments.All(argument => argument.Label is null) &&
+            TryEvaluateConstant(constructor.Arguments[0].Expression, out var xy) &&
+            TryEvaluateConstant(constructor.Arguments[1].Expression, out var z))
+        {
+            return EventScriptValueAlu.TryCreateVector3(xy, z, out value) && !value.IsNothing();
+        }
+
+        if (constructor.Arguments.Count == 0 || constructor.Arguments.All(argument => argument.Label is not null))
+        {
+            var labeledComponents = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+            foreach (var argument in constructor.Arguments)
+            {
+                if (!TryEvaluateConstant(argument.Expression, out var component))
+                {
+                    return false;
+                }
+
+                labeledComponents[argument.Label!] = component;
+            }
+
+            return EventScriptValueAlu.TryCreateVectorFromLabeledComponents(constructor.TypeName, labeledComponents, out value) &&
+                   !value.IsNothing();
+        }
+
         var expectedCount = constructor.TypeName == "vector2" ? 2 : 3;
         if (constructor.Arguments.Count != expectedCount)
         {
@@ -987,6 +1021,11 @@ internal static class EventScriptLinkOptimizer
             return EventScriptValueFactory.DecimalNaN();
         }
 
+        if (EventScriptValueAlu.TryEraseVectorUnit(unwrapped, out var vectorWithoutUnit))
+        {
+            return vectorWithoutUnit;
+        }
+
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite))
         {
             return EventScriptValueFactory.DecimalNaN();
@@ -1040,6 +1079,16 @@ internal static class EventScriptLinkOptimizer
     private static EventScriptValue ConvertToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        if (EventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+        {
+            return vectorWithUnit;
+        }
+
+        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
         {
             return EventScriptValueFactory.DecimalNaN();
         }

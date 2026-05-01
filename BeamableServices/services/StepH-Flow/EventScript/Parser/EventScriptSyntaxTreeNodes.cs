@@ -26,6 +26,7 @@ public abstract record StatementNode : EventScriptNode;
 [JsonDerivedType(typeof(HandlerBindExpressionNode), "handlerBindExpression")]
 [JsonDerivedType(typeof(CallExpressionNode), "callExpression")]
 [JsonDerivedType(typeof(ExtensionCallExpressionNode), "extensionCallExpression")]
+[JsonDerivedType(typeof(TypeConstructorExpressionNode), "typeConstructorExpression")]
 [JsonDerivedType(typeof(BooleanLiteralExpressionNode), "booleanLiteralExpression")]
 [JsonDerivedType(typeof(IntegerLiteralExpressionNode), "integerLiteralExpression")]
 [JsonDerivedType(typeof(DecimalLiteralExpressionNode), "decimalLiteralExpression")]
@@ -216,6 +217,11 @@ public sealed record CallExpressionNode(string Name, ArgumentListNode ArgumentLi
 }
 
 public sealed record ExtensionCallExpressionNode(string ExtensionName, string FunctionName, ArgumentListNode ArgumentList) : ExpressionNode
+{
+    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
+}
+
+public sealed record TypeConstructorExpressionNode(string TypeName, ArgumentListNode ArgumentList) : ExpressionNode
 {
     public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
 }

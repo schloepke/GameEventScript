@@ -115,7 +115,7 @@ ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expressi
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }
 PostfixSuffix ::= "." Identifier
                 | "[" CollectionSelector "]"
-PrimaryExpression ::= Literal | CallExpression | ExtensionCallExpression | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | SequenceLiteral | "(" Expression ")"
+PrimaryExpression ::= Literal | CallExpression | ExtensionCallExpression | TypeConstructorExpression | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | SequenceLiteral | "(" Expression ")"
                     | BracketLiteral
                     | SetLiteral
                     | GeneratedListExpression
@@ -129,6 +129,7 @@ CallExpression ::= Identifier ParenthesizedArgumentList
 MessageInvocationExpression ::= Message [ ParenthesizedArgumentList ]
 ExtensionCallExpression ::= ExtensionReference [ ParenthesizedArgumentList | OfArgumentList | UngroupedLabeledArgumentList | UnaryExpression ]
 ExtensionReference ::= ":" Identifier "." Identifier
+TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
 SequenceLiteral ::= OfArgumentList
 
 Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"

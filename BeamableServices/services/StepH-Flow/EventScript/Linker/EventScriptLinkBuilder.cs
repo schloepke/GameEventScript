@@ -67,7 +67,7 @@ public sealed partial class EventScriptLinkBuilder
 
         foreach (var module in _modules)
         {
-            ValidateModule(module, callableDefinitions, errors);
+            ValidateModule(module, callableDefinitions, typeDefinitions, errors);
         }
 
         if (errors.Count > 0)

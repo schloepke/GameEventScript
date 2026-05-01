@@ -284,6 +284,9 @@ internal static class EventScriptInvocationEngine
                 case ExtensionCallExpressionNode extensionCall:
                     return EvaluateExtensionCallExpression(context, extensionCall);
 
+                case TypeConstructorExpressionNode typeConstructor:
+                    return EvaluateTypeConstructorExpression(context, typeConstructor);
+
                 case UnaryExpressionNode unary:
                     return EvaluateUnaryExpression(context, unary);
 
@@ -2487,6 +2490,60 @@ internal static class EventScriptInvocationEngine
                         ? ConvertToCustomType(context, value, typeDefinition)
                         : value;
             }
+        }
+
+        private EventScriptValue EvaluateTypeConstructorExpression(ExecutionContext context, TypeConstructorExpressionNode constructor)
+        {
+            if (constructor.TypeName is "vector2" or "vector3")
+            {
+                return EvaluateVectorConstructorExpression(context, constructor);
+            }
+
+            if (_typeDefinitions.TryGetValue(constructor.TypeName, out var typeDefinition))
+            {
+                var values = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+                foreach (var argument in constructor.Arguments)
+                {
+                    if (argument.Label is null)
+                    {
+                        return EventScriptValue.Nothing;
+                    }
+
+                    values[argument.Label] = EvaluateExpression(context, argument.Expression);
+                }
+
+                return ConvertToCustomType(context, EventScriptValueFactory.Dictionary(values), typeDefinition);
+            }
+
+            if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            return ConvertToDeclaredType(context, EvaluateExpression(context, constructor.Arguments[0].Expression), constructor.TypeName);
+        }
+
+        private EventScriptValue EvaluateVectorConstructorExpression(ExecutionContext context, TypeConstructorExpressionNode constructor)
+        {
+            var expectedCount = constructor.TypeName == "vector2" ? 2 : 3;
+            if (constructor.Arguments.Count != expectedCount)
+            {
+                return EventScriptValue.Nothing;
+            }
+
+            var components = new decimal[expectedCount];
+            for (var index = 0; index < expectedCount; index++)
+            {
+                var component = EvaluateExpression(context, constructor.Arguments[index].Expression);
+                if (!TryReadVectorComponent(component, out components[index]))
+                {
+                    return EventScriptValue.Nothing;
+                }
+            }
+
+            return expectedCount == 2
+                ? EventScriptValueFactory.Vector2(components[0], components[1])
+                : EventScriptValueFactory.Vector3(components[0], components[1], components[2]);
         }
 
         private EventScriptValue ConvertToPercentage(EventScriptValue value)

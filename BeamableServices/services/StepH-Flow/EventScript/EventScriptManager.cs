@@ -93,7 +93,8 @@ public enum EventScriptLinkageErrorKind
     DuplicatePublishArgument,
     DuplicateVariable,
     InvalidIdentifierCase,
-    InvalidMessageCase
+    InvalidMessageCase,
+    InvalidTypeConstructor
 }
 
 public enum EventScriptSymbolKind

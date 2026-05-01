@@ -111,6 +111,83 @@
     },
     {
       "kind": "scriptApi",
+      "name": "type constructors convert inline and construct units",
+      "script": "on Start {\n  let heading be :degree(180)\n  let distance be :meter(100)\n  let duration be :second(15)\n  let product be :decimal(90°) * :decimal(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  publish Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :degree)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "heading": { "type": ":decimal", "value": "180", "unit": ":degree" },
+                "distance": { "type": ":decimal", "value": "100", "unit": ":meter" },
+                "duration": { "type": ":decimal", "value": "15", "unit": ":second" },
+                "product": { "type": ":decimal", "value": "9000" },
+                "ratio": { "type": ":percentage", "value": "0.25" },
+                "textValue": { "type": ":text", "value": "180°" },
+                "headingIsDegree": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "vector type constructors expose components",
+      "script": "on Start {\n  let position be :vector2(10.5, -2)\n  let labeledPosition be :vector2(x: 3, y: 4)\n  let point be :vector3(1, 2, 3)\n  let labeledPoint be :vector3(x: 4, y: 5, z: 6)\n  publish Done(position: position, labeledPosition: labeledPosition, point: point, labeledPoint: labeledPoint, x: position.x, y: labeledPosition.y, z: point.z, labeledX: labeledPoint.x)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "position": { "type": ":vector2", "x": "10.5", "y": "-2" },
+                "labeledPosition": { "type": ":vector2", "x": "3", "y": "4" },
+                "point": { "type": ":vector3", "x": "1", "y": "2", "z": "3" },
+                "labeledPoint": { "type": ":vector3", "x": "4", "y": "5", "z": "6" },
+                "x": { "type": ":decimal", "value": "10.5" },
+                "y": { "type": ":decimal", "value": "4" },
+                "z": { "type": ":decimal", "value": "3" },
+                "labeledX": { "type": ":decimal", "value": "4" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "custom type constructors apply clamp and computed fields",
+      "script": "record :gauge as {\n  current: :decimal clamped between 0 and maximum,\n  maximum: :decimal clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  publish Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "meter": {
+                  "type": ":gauge",
+                  "entries": {
+                    "current": { "type": ":decimal", "value": "100" },
+                    "maximum": { "type": ":decimal", "value": "100" },
+                    "percentage": { "type": ":percentage", "value": "1" }
+                  }
+                },
+                "current": { "type": ":decimal", "value": "100" },
+                "percentage": { "type": ":percentage", "value": "1" },
+                "isMeter": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "integer arithmetic preserves integer results",
       "script": "on Start {\n  publish Done(add: 1 + 2, subtract: 5 - 3, multiply: 6 * 7, modulo: 7 mod 4, divide: 7 / 2, mixed: 7 * 0.5)\n}",
       "steps": [

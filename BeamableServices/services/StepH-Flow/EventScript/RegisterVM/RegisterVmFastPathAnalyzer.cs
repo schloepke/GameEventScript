@@ -298,6 +298,19 @@ internal static class RegisterVmFastPathAnalyzer
                 unsupportedReason = string.Empty;
                 return true;
 
+            case TypeConstructorExpressionNode typeConstructor:
+                for (var argumentIndex = 0; argumentIndex < typeConstructor.Arguments.Count; argumentIndex++)
+                {
+                    if (!SupportsExpression(typeConstructor.Arguments[argumentIndex].Expression, callables, out unsupportedReason))
+                    {
+                        unsupportedReason = $"Type constructor argument {argumentIndex}: {unsupportedReason}";
+                        return false;
+                    }
+                }
+
+                unsupportedReason = string.Empty;
+                return true;
+
             case ListLiteralExpressionNode list:
                 for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
                 {
@@ -1302,6 +1315,14 @@ internal static class RegisterVmFastPathAnalyzer
                     CollectExpression(typeCast.Value);
                     break;
 
+                case TypeConstructorExpressionNode typeConstructor:
+                    foreach (var argument in typeConstructor.Arguments)
+                    {
+                        CollectExpression(argument.Expression);
+                    }
+
+                    break;
+
                 case TypeCheckExpressionNode typeCheck:
                     CollectExpression(typeCheck.Value);
                     break;
@@ -2019,6 +2040,32 @@ internal static class RegisterVmFastPathAnalyzer
 
                         EmitExpression(typeCast.Value);
                         instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Cast, CastKind: castKind));
+                        return;
+
+                    case TypeConstructorExpressionNode typeConstructor:
+                        if (typeConstructor.Arguments.Count == 1 &&
+                            typeConstructor.Arguments[0].Label is null &&
+                            compiler.TryGetCastKind(typeConstructor.TypeName, out var constructorCastKind))
+                        {
+                            EmitExpression(typeConstructor.Arguments[0].Expression);
+                            instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Cast, CastKind: constructorCastKind));
+                            return;
+                        }
+
+                        var constructorArgumentNames = new string[typeConstructor.Arguments.Count];
+                        for (var argumentIndex = 0; argumentIndex < typeConstructor.Arguments.Count; argumentIndex++)
+                        {
+                            var argument = typeConstructor.Arguments[argumentIndex];
+                            constructorArgumentNames[argumentIndex] = argument.Name;
+                            EmitExpression(argument.Expression);
+                        }
+
+                        instructions.Add(new RegisterFastInstruction(
+                            RegisterFastOpCode.TypeConstructor,
+                            A: typeConstructor.Arguments.Count,
+                            DiagnosticName: typeConstructor.TypeName,
+                            Names: constructorArgumentNames));
+                        CollapseValuesToSingle(typeConstructor.Arguments.Count);
                         return;
 
                     case TypeCheckExpressionNode typeCheck:

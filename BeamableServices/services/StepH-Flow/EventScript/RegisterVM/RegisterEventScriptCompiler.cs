@@ -434,6 +434,15 @@ public static class RegisterEventScriptCompiler
                     }
 
                     return "extensionCall";
+                case TypeConstructorExpressionNode typeConstructor:
+                    AddTypeMetadata(typeConstructor.TypeName);
+                    foreach (var argument in typeConstructor.Arguments)
+                    {
+                        AddString(argument.Name);
+                        GetExpressionDebugName(argument.Expression);
+                    }
+
+                    return "typeConstructor";
                 case BinaryExpressionNode binary:
                     AddString(binary.Operator);
                     return "binary";
@@ -534,6 +543,13 @@ public static class RegisterEventScriptCompiler
                 case HandlerBindExpressionNode bind:
                     CollectExternalReferences(bind.CalleeExpression);
                     foreach (var argument in bind.Arguments)
+                    {
+                        CollectExternalReferences(argument.Expression);
+                    }
+
+                    return;
+                case TypeConstructorExpressionNode typeConstructor:
+                    foreach (var argument in typeConstructor.Arguments)
                     {
                         CollectExternalReferences(argument.Expression);
                     }

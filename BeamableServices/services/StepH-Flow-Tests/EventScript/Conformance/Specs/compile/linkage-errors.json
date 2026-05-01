@@ -156,6 +156,61 @@
         "kind": "RuleSelectConflict",
         "symbol": "wounded"
       }
+    },
+    {
+      "kind": "compileError",
+      "name": "vector2 constructor requires positional label order",
+      "script": "on Start {\n  let position be :vector2(y: 2, x: 1)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "vector2",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "vector2 constructor requires both components",
+      "script": "on Start {\n  let position be :vector2(1)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "vector2",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "vector3 constructor requires all components",
+      "script": "on Start {\n  let point be :vector3(x: 1, y: 2)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "vector3",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "custom type constructor requires labels",
+      "script": "record :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\non Start {\n  let hp be :gauge(10, 20)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "gauge",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "custom type constructor rejects unknown fields",
+      "script": "record :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\non Start {\n  let hp be :gauge(current: 10, unknown: 20)\n}",
+      "expectedError": {
+        "phase": "linkage",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "gauge",
+        "symbolKind": "Type"
+      }
     }
   ]
 }

@@ -518,6 +518,8 @@ internal sealed class RegisterVmFastExecutionSession
                 return TryEvaluateCall(call, out value);
             case ExtensionCallExpressionNode extensionCall:
                 return TryEvaluateExtensionCall(extensionCall, out value);
+            case TypeConstructorExpressionNode typeConstructor:
+                return TryEvaluateTypeConstructor(typeConstructor, out value);
             case TypeCastExpressionNode typeCast:
                 return TryEvaluateTypeCast(typeCast, out value);
             case TypeCheckExpressionNode typeCheck:
@@ -663,6 +665,17 @@ internal sealed class RegisterVmFastExecutionSession
 
                 case RegisterFastOpCode.Cast:
                     _evaluationStack[top - 1] = EvaluateProgramCast(instruction.CastKind, _evaluationStack[top - 1]);
+                    break;
+
+                case RegisterFastOpCode.TypeConstructor:
+                    top -= instruction.A;
+                    _evaluationStack[top] = EvaluateTypeConstructor(
+                        instruction.DiagnosticName,
+                        instruction.Names,
+                        _evaluationStack,
+                        top,
+                        instruction.A);
+                    top++;
                     break;
 
                 case RegisterFastOpCode.TypeCheck:
@@ -2409,6 +2422,98 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         return value.Kind != RegisterFastValueKind.Unsupported;
+    }
+
+    private bool TryEvaluateTypeConstructor(TypeConstructorExpressionNode constructor, out RegisterFastValue value)
+    {
+        var arguments = new RegisterFastValue[constructor.Arguments.Count];
+        var labels = new string[constructor.Arguments.Count];
+        for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
+        {
+            var argument = constructor.Arguments[argumentIndex];
+            labels[argumentIndex] = argument.Name;
+            if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
+            {
+                value = RegisterFastValue.Nothing;
+                return false;
+            }
+        }
+
+        value = EvaluateTypeConstructor(constructor.TypeName, labels, arguments, 0, arguments.Length);
+        return true;
+    }
+
+    private RegisterFastValue EvaluateTypeConstructor(
+        string? typeName,
+        string[]? labels,
+        RegisterFastValue[] stack,
+        int start,
+        int count)
+    {
+        if (string.IsNullOrEmpty(typeName))
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        if (typeName is "vector2" or "vector3")
+        {
+            return EvaluateVectorConstructor(typeName, labels, stack, start, count);
+        }
+
+        if (_compiledScript.TypeDefinitions.TryGetValue(typeName, out var typeDefinition))
+        {
+            var values = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+            for (var index = 0; index < count; index++)
+            {
+                var label = labels is { Length: var labelCount } && index < labelCount
+                    ? labels[index]
+                    : EventScriptMessageSignature.UnlabeledParameterName;
+                if (string.Equals(label, EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+                {
+                    return RegisterFastValue.Nothing;
+                }
+
+                values[label] = stack[start + index].ToEventScriptValue();
+            }
+
+            return RegisterFastValue.FromEventScriptValue(ConvertToCustomType(Dictionary(values), typeDefinition));
+        }
+
+        if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        return TryConvertDeclaredType(typeName, stack[start], out var converted)
+            ? converted
+            : RegisterFastValue.Nothing;
+    }
+
+    private RegisterFastValue EvaluateVectorConstructor(
+        string typeName,
+        string[]? labels,
+        RegisterFastValue[] stack,
+        int start,
+        int count)
+    {
+        var expectedCount = typeName == "vector2" ? 2 : 3;
+        if (count != expectedCount)
+        {
+            return RegisterFastValue.Nothing;
+        }
+
+        var components = new decimal[expectedCount];
+        for (var index = 0; index < expectedCount; index++)
+        {
+            if (!TryReadVectorComponent(stack[start + index].ToEventScriptValue(), out components[index]))
+            {
+                return RegisterFastValue.Nothing;
+            }
+        }
+
+        return RegisterFastValue.Reference(expectedCount == 2
+            ? Vector2(components[0], components[1])
+            : Vector3(components[0], components[1], components[2]));
     }
 
     private bool TryConvertDeclaredType(string declaredType, RegisterFastValue input, out RegisterFastValue value)

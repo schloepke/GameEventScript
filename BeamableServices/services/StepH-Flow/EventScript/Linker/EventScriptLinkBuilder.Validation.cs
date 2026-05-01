@@ -30,6 +30,7 @@ public sealed partial class EventScriptLinkBuilder
     private static void ValidateModule(
         EventScriptModule eventScriptModule,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors)
     {
         foreach (var typeDefinition in eventScriptModule.TypeDefinitions)
@@ -46,17 +47,17 @@ public sealed partial class EventScriptLinkBuilder
 
                 if (field.MinimumExpression is not null)
                 {
-                    ValidateExpressionReferences(eventScriptModule, field.MinimumExpression, callables, errors);
+                    ValidateExpressionReferences(eventScriptModule, field.MinimumExpression, callables, typeDefinitions, errors);
                 }
 
                 if (field.MaximumExpression is not null)
                 {
-                    ValidateExpressionReferences(eventScriptModule, field.MaximumExpression, callables, errors);
+                    ValidateExpressionReferences(eventScriptModule, field.MaximumExpression, callables, typeDefinitions, errors);
                 }
 
                 if (field.ComputedExpression is not null)
                 {
-                    ValidateExpressionReferences(eventScriptModule, field.ComputedExpression, callables, errors);
+                    ValidateExpressionReferences(eventScriptModule, field.ComputedExpression, callables, typeDefinitions, errors);
                 }
             }
         }
@@ -97,7 +98,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptLinkageErrorKind.DuplicateDefinitionParameter));
             }
 
-            ValidateExpressionReferences(eventScriptModule, ruleDefinition.Expression, callables, errors);
+            ValidateExpressionReferences(eventScriptModule, ruleDefinition.Expression, callables, typeDefinitions, errors);
         }
 
         foreach (var selectDefinition in eventScriptModule.SelectDefinitions)
@@ -136,7 +137,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptLinkageErrorKind.DuplicateDefinitionParameter));
             }
 
-            ValidateExpressionReferences(eventScriptModule, selectDefinition.Expression, callables, errors);
+            ValidateExpressionReferences(eventScriptModule, selectDefinition.Expression, callables, typeDefinitions, errors);
         }
 
         foreach (var handler in eventScriptModule.Handlers)
@@ -178,7 +179,7 @@ public sealed partial class EventScriptLinkBuilder
             var handlerScope = new ValidationScope(handler.Parameters);
             foreach (var statement in handler.Statements)
             {
-                ValidateStatementReferences(eventScriptModule, statement, callables, errors, handlerScope);
+                ValidateStatementReferences(eventScriptModule, statement, callables, typeDefinitions, errors, handlerScope);
             }
         }
     }
@@ -187,17 +188,18 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptModule moduleContext,
         StatementNode statement,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors,
         ValidationScope scope)
     {
         switch (statement)
         {
             case PublishStatementNode publish:
-                ValidateExpressionReferences(moduleContext, publish.MessageExpression, callables, errors);
+                ValidateExpressionReferences(moduleContext, publish.MessageExpression, callables, typeDefinitions, errors);
                 return;
 
             case LetStatementNode let:
-                ValidateExpressionReferences(moduleContext, let.Expression, callables, errors);
+                ValidateExpressionReferences(moduleContext, let.Expression, callables, typeDefinitions, errors);
                 ValidateIdentifierCase(
                     moduleContext,
                     let.Identifier,
@@ -220,20 +222,20 @@ public sealed partial class EventScriptLinkBuilder
                 return;
 
             case IfStatementNode ifStatement:
-                ValidateExpressionReferences(moduleContext, ifStatement.Condition, callables, errors);
-                ValidateStatementBodyReferences(moduleContext, ifStatement.ThenBody, callables, errors, scope);
+                ValidateExpressionReferences(moduleContext, ifStatement.Condition, callables, typeDefinitions, errors);
+                ValidateStatementBodyReferences(moduleContext, ifStatement.ThenBody, callables, typeDefinitions, errors, scope);
 
                 if (ifStatement.ElseBody is null)
                 {
                     return;
                 }
 
-                ValidateStatementBodyReferences(moduleContext, ifStatement.ElseBody, callables, errors, scope);
+                ValidateStatementBodyReferences(moduleContext, ifStatement.ElseBody, callables, typeDefinitions, errors, scope);
 
                 return;
 
             case ForStatementNode forStatement:
-                ValidateIterationSourceReferences(moduleContext, forStatement.Source, callables, errors);
+                ValidateIterationSourceReferences(moduleContext, forStatement.Source, callables, typeDefinitions, errors);
                 ValidateIdentifierCase(
                     moduleContext,
                     forStatement.Identifier,
@@ -243,18 +245,18 @@ public sealed partial class EventScriptLinkBuilder
                     errors);
                 var loopScope = scope.CreateChild();
                 loopScope.Declare(forStatement.Identifier);
-                ValidateStatementBodyReferences(moduleContext, forStatement.Body, callables, errors, loopScope);
+                ValidateStatementBodyReferences(moduleContext, forStatement.Body, callables, typeDefinitions, errors, loopScope);
 
                 return;
 
             case SeededRandomStatementNode seededRandom:
-                ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, callables, errors);
-                ValidateStatementBodyReferences(moduleContext, seededRandom.Body, callables, errors, scope);
+                ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, callables, typeDefinitions, errors);
+                ValidateStatementBodyReferences(moduleContext, seededRandom.Body, callables, typeDefinitions, errors, scope);
 
                 return;
 
             case ExpressionStatementNode expressionStatement:
-                ValidateExpressionReferences(moduleContext, expressionStatement.Expression, callables, errors);
+                ValidateExpressionReferences(moduleContext, expressionStatement.Expression, callables, typeDefinitions, errors);
                 return;
         }
     }
@@ -263,13 +265,14 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptModule moduleContext,
         StatementBodyNode body,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors,
         ValidationScope parentScope)
     {
         var bodyScope = body.IsBlock ? parentScope.CreateChild() : parentScope;
         foreach (var nested in body.Statements)
         {
-            ValidateStatementReferences(moduleContext, nested, callables, errors, bodyScope);
+            ValidateStatementReferences(moduleContext, nested, callables, typeDefinitions, errors, bodyScope);
         }
     }
 
@@ -277,6 +280,7 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptModule moduleContext,
         ExpressionNode expression,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors)
     {
         while (true)
@@ -302,7 +306,7 @@ public sealed partial class EventScriptLinkBuilder
                         $"Call target '{call.Name}' must use identifier casing (rule/select names start lowercase)",
                         errors);
                     ValidateDuplicateNamedArguments(moduleContext, call.Name, call.ArgumentList.Arguments, errors);
-                    ValidateCallExpression(moduleContext, call, callables, errors);
+                    ValidateCallExpression(moduleContext, call, callables, typeDefinitions, errors);
                     foreach (var argument in call.ArgumentList.Arguments)
                     {
                         if (argument.Label is not null)
@@ -316,7 +320,7 @@ public sealed partial class EventScriptLinkBuilder
                                 errors);
                         }
 
-                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
+                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, typeDefinitions, errors);
                     }
 
                     return;
@@ -364,14 +368,14 @@ public sealed partial class EventScriptLinkBuilder
                                 errors);
                         }
 
-                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
+                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, typeDefinitions, errors);
                     }
 
                     return;
 
                 case HandlerBindExpressionNode handlerBind:
                     ValidateDuplicateNamedArguments(moduleContext, "handler bind", handlerBind.Arguments, errors);
-                    ValidateExpressionReferences(moduleContext, handlerBind.CalleeExpression, callables, errors);
+                    ValidateExpressionReferences(moduleContext, handlerBind.CalleeExpression, callables, typeDefinitions, errors);
                     foreach (var argument in handlerBind.Arguments)
                     {
                         if (argument.Label is not null)
@@ -385,7 +389,7 @@ public sealed partial class EventScriptLinkBuilder
                                 errors);
                         }
 
-                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
+                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, typeDefinitions, errors);
                     }
 
                     return;
@@ -393,9 +397,13 @@ public sealed partial class EventScriptLinkBuilder
                 case ExtensionCallExpressionNode extensionCall:
                     foreach (var argument in extensionCall.Arguments)
                     {
-                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, errors);
+                        ValidateExpressionReferences(moduleContext, argument.Expression, callables, typeDefinitions, errors);
                     }
 
+                    return;
+
+                case TypeConstructorExpressionNode typeConstructor:
+                    ValidateTypeConstructorExpression(moduleContext, typeConstructor, callables, typeDefinitions, errors);
                     return;
 
                 case RulePredicateExpressionNode rulePredicate:
@@ -432,20 +440,20 @@ public sealed partial class EventScriptLinkBuilder
                 case VariadicTaggedExpressionNode variadic:
                     foreach (var argument in variadic.Arguments)
                     {
-                        ValidateExpressionReferences(moduleContext, argument, callables, errors);
+                        ValidateExpressionReferences(moduleContext, argument, callables, typeDefinitions, errors);
                     }
 
                     return;
 
                 case ClampExpressionNode clamp:
-                    ValidateExpressionReferences(moduleContext, clamp.Value, callables, errors);
-                    ValidateExpressionReferences(moduleContext, clamp.Minimum, callables, errors);
+                    ValidateExpressionReferences(moduleContext, clamp.Value, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(moduleContext, clamp.Minimum, callables, typeDefinitions, errors);
                     expression = clamp.Maximum;
                     continue;
 
                 case RangeExpressionNode rangeExpression:
-                    ValidateExpressionReferences(moduleContext, rangeExpression.FromExpression, callables, errors);
-                    ValidateExpressionReferences(moduleContext, rangeExpression.ToExpression, callables, errors);
+                    ValidateExpressionReferences(moduleContext, rangeExpression.FromExpression, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(moduleContext, rangeExpression.ToExpression, callables, typeDefinitions, errors);
                     if (rangeExpression.StepExpression is not null)
                     {
                         expression = rangeExpression.StepExpression;
@@ -455,12 +463,12 @@ public sealed partial class EventScriptLinkBuilder
                     return;
 
                 case RandomExpressionNode random:
-                    ValidateExpressionReferences(moduleContext, random.FromExpression, callables, errors);
+                    ValidateExpressionReferences(moduleContext, random.FromExpression, callables, typeDefinitions, errors);
                     expression = random.ToExpression;
                     continue;
 
                 case SeededRandomExpressionNode seededRandom:
-                    ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, callables, errors);
+                    ValidateExpressionReferences(moduleContext, seededRandom.SeedExpression, callables, typeDefinitions, errors);
                     expression = seededRandom.BodyExpression;
                     continue;
 
@@ -472,10 +480,10 @@ public sealed partial class EventScriptLinkBuilder
                         EventScriptSymbolKind.Variable,
                         $"Generated collection identifier '{generatedCollection.Identifier}' must use identifier casing (start lowercase)",
                         errors);
-                    ValidateIterationSourceReferences(moduleContext, generatedCollection.Source, callables, errors);
+                    ValidateIterationSourceReferences(moduleContext, generatedCollection.Source, callables, typeDefinitions, errors);
                     if (generatedCollection.Predicate is not null)
                     {
-                        ValidateExpressionReferences(moduleContext, generatedCollection.Predicate, callables, errors);
+                        ValidateExpressionReferences(moduleContext, generatedCollection.Predicate, callables, typeDefinitions, errors);
                     }
 
                     expression = generatedCollection.Projection;
@@ -484,15 +492,15 @@ public sealed partial class EventScriptLinkBuilder
                 case GuardedChoiceExpressionNode guardedChoice:
                     foreach (var branch in guardedChoice.Branches)
                     {
-                        ValidateExpressionReferences(moduleContext, branch.ValueExpression, callables, errors);
-                        ValidateExpressionReferences(moduleContext, branch.ConditionExpression, callables, errors);
+                        ValidateExpressionReferences(moduleContext, branch.ValueExpression, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(moduleContext, branch.ConditionExpression, callables, typeDefinitions, errors);
                     }
 
                     expression = guardedChoice.OtherwiseExpression;
                     continue;
 
                 case BinaryExpressionNode binary:
-                    ValidateExpressionReferences(moduleContext, binary.Left, callables, errors);
+                    ValidateExpressionReferences(moduleContext, binary.Left, callables, typeDefinitions, errors);
                     expression = binary.Right;
                     continue;
 
@@ -509,14 +517,14 @@ public sealed partial class EventScriptLinkBuilder
                     continue;
 
                 case CollectionAccessExpressionNode collectionAccess:
-                    ValidateExpressionReferences(moduleContext, collectionAccess.Target, callables, errors);
-                    ValidateCollectionSelectorReferences(moduleContext, collectionAccess.Selector, callables, errors);
+                    ValidateExpressionReferences(moduleContext, collectionAccess.Target, callables, typeDefinitions, errors);
+                    ValidateCollectionSelectorReferences(moduleContext, collectionAccess.Selector, callables, typeDefinitions, errors);
                     return;
 
                 case ListLiteralExpressionNode list:
                     foreach (var item in list.Items)
                     {
-                        ValidateExpressionReferences(moduleContext, item, callables, errors);
+                        ValidateExpressionReferences(moduleContext, item, callables, typeDefinitions, errors);
                     }
 
                     return;
@@ -524,7 +532,7 @@ public sealed partial class EventScriptLinkBuilder
                 case SetLiteralExpressionNode set:
                     foreach (var item in set.Items)
                     {
-                        ValidateExpressionReferences(moduleContext, item, callables, errors);
+                        ValidateExpressionReferences(moduleContext, item, callables, typeDefinitions, errors);
                     }
 
                     return;
@@ -532,7 +540,7 @@ public sealed partial class EventScriptLinkBuilder
                 case SequenceLiteralExpressionNode sequence:
                     foreach (var item in sequence.Items)
                     {
-                        ValidateExpressionReferences(moduleContext, item, callables, errors);
+                        ValidateExpressionReferences(moduleContext, item, callables, typeDefinitions, errors);
                     }
 
                     return;
@@ -540,7 +548,7 @@ public sealed partial class EventScriptLinkBuilder
                 case DictionaryLiteralExpressionNode dictionary:
                     foreach (var entry in dictionary.Entries)
                     {
-                        ValidateExpressionReferences(moduleContext, entry.Value, callables, errors);
+                        ValidateExpressionReferences(moduleContext, entry.Value, callables, typeDefinitions, errors);
                     }
 
                     return;
@@ -554,15 +562,16 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptModule moduleContext,
         IterationSourceNode source,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors)
     {
         switch (source)
         {
             case CollectionIterationSourceNode collectionSource:
-                ValidateExpressionReferences(moduleContext, collectionSource.Expression, callables, errors);
+                ValidateExpressionReferences(moduleContext, collectionSource.Expression, callables, typeDefinitions, errors);
                 return;
             case RangeIterationSourceNode rangeSource:
-                ValidateExpressionReferences(moduleContext, rangeSource.RangeExpression, callables, errors);
+                ValidateExpressionReferences(moduleContext, rangeSource.RangeExpression, callables, typeDefinitions, errors);
                 return;
         }
     }
@@ -571,12 +580,13 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptModule moduleContext,
         CollectionSelectorNode selector,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors)
     {
         switch (selector)
         {
             case ExpressionSelectorNode expressionSelector:
-                ValidateExpressionReferences(moduleContext, expressionSelector.Expression, callables, errors);
+                ValidateExpressionReferences(moduleContext, expressionSelector.Expression, callables, typeDefinitions, errors);
                 return;
             case PredicateSelectorNode predicateSelector:
                 ValidateIdentifierCase(
@@ -586,7 +596,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{predicateSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, predicateSelector.Predicate, callables, errors);
+                ValidateExpressionReferences(moduleContext, predicateSelector.Predicate, callables, typeDefinitions, errors);
                 return;
             case CountSelectorNode countSelector:
                 ValidateIdentifierCase(
@@ -596,7 +606,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{countSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, countSelector.Predicate, callables, errors);
+                ValidateExpressionReferences(moduleContext, countSelector.Predicate, callables, typeDefinitions, errors);
                 return;
             case ChooseSelectorNode chooseSelector:
                 if (chooseSelector.Identifier is not null)
@@ -612,7 +622,7 @@ public sealed partial class EventScriptLinkBuilder
 
                 if (chooseSelector.Predicate is not null)
                 {
-                    ValidateExpressionReferences(moduleContext, chooseSelector.Predicate, callables, errors);
+                    ValidateExpressionReferences(moduleContext, chooseSelector.Predicate, callables, typeDefinitions, errors);
                 }
 
                 if (chooseSelector.WeightIdentifier is not null)
@@ -628,7 +638,7 @@ public sealed partial class EventScriptLinkBuilder
 
                 if (chooseSelector.WeightExpression is not null)
                 {
-                    ValidateExpressionReferences(moduleContext, chooseSelector.WeightExpression, callables, errors);
+                    ValidateExpressionReferences(moduleContext, chooseSelector.WeightExpression, callables, typeDefinitions, errors);
                 }
 
                 return;
@@ -643,7 +653,7 @@ public sealed partial class EventScriptLinkBuilder
                         $"Selector identifier '{edgeSelector.Identifier}' must use identifier casing (start lowercase)",
                         errors);
                 }
-                ValidateExpressionReferences(moduleContext, edgeSelector.Predicate, callables, errors);
+                ValidateExpressionReferences(moduleContext, edgeSelector.Predicate, callables, typeDefinitions, errors);
                 return;
             case FilterSelectorNode filterSelector:
                 ValidateIdentifierCase(
@@ -653,7 +663,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{filterSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, filterSelector.Predicate, callables, errors);
+                ValidateExpressionReferences(moduleContext, filterSelector.Predicate, callables, typeDefinitions, errors);
                 return;
             case SumSelectorNode sumSelector:
                 ValidateIdentifierCase(
@@ -663,7 +673,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{sumSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, sumSelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, sumSelector.Projection, callables, typeDefinitions, errors);
                 return;
             case AverageSelectorNode averageSelector:
                 ValidateIdentifierCase(
@@ -673,7 +683,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{averageSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, averageSelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, averageSelector.Projection, callables, typeDefinitions, errors);
                 return;
             case SelectSelectorNode selectSelector:
                 ValidateIdentifierCase(
@@ -683,7 +693,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{selectSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, selectSelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, selectSelector.Projection, callables, typeDefinitions, errors);
                 return;
             case DictionarySelectorNode dictionarySelector:
                 ValidateIdentifierCase(
@@ -693,10 +703,10 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{dictionarySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, dictionarySelector.KeyProjection, callables, errors);
+                ValidateExpressionReferences(moduleContext, dictionarySelector.KeyProjection, callables, typeDefinitions, errors);
                 if (dictionarySelector.ValueProjection is not null)
                 {
-                    ValidateExpressionReferences(moduleContext, dictionarySelector.ValueProjection, callables, errors);
+                    ValidateExpressionReferences(moduleContext, dictionarySelector.ValueProjection, callables, typeDefinitions, errors);
                 }
 
                 return;
@@ -708,7 +718,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{minSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, minSelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, minSelector.Projection, callables, typeDefinitions, errors);
                 return;
             case MaxSelectorNode maxSelector:
                 ValidateIdentifierCase(
@@ -718,10 +728,10 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{maxSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, maxSelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, maxSelector.Projection, callables, typeDefinitions, errors);
                 return;
             case ContainsSelectorNode containsSelector:
-                ValidateExpressionReferences(moduleContext, containsSelector.ValueExpression, callables, errors);
+                ValidateExpressionReferences(moduleContext, containsSelector.ValueExpression, callables, typeDefinitions, errors);
                 return;
             case DistinctSelectorNode { Projection: not null } distinctSelector:
                 if (distinctSelector.Identifier is not null)
@@ -734,7 +744,7 @@ public sealed partial class EventScriptLinkBuilder
                         $"Selector identifier '{distinctSelector.Identifier}' must use identifier casing (start lowercase)",
                         errors);
                 }
-                ValidateExpressionReferences(moduleContext, distinctSelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, distinctSelector.Projection, callables, typeDefinitions, errors);
                 return;
             case GroupBySelectorNode groupBySelector:
                 ValidateIdentifierCase(
@@ -744,7 +754,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{groupBySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, groupBySelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, groupBySelector.Projection, callables, typeDefinitions, errors);
                 return;
             case OrderBySelectorNode orderBySelector:
                 ValidateIdentifierCase(
@@ -754,7 +764,7 @@ public sealed partial class EventScriptLinkBuilder
                     EventScriptSymbolKind.Variable,
                     $"Selector identifier '{orderBySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(moduleContext, orderBySelector.Projection, callables, errors);
+                ValidateExpressionReferences(moduleContext, orderBySelector.Projection, callables, typeDefinitions, errors);
                 return;
         }
     }
@@ -763,6 +773,7 @@ public sealed partial class EventScriptLinkBuilder
         EventScriptModule moduleContext,
         CallExpressionNode call,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         List<EventScriptLinkageError> errors)
     {
         if (!callables.TryGetValue(call.Name, out var callable))
@@ -810,6 +821,150 @@ public sealed partial class EventScriptLinkBuilder
                 kind == LinkedCallableKind.Rule ? EventScriptLinkageErrorKind.WrongRuleArity : EventScriptLinkageErrorKind.WrongSelectArity));
         }
     }
+
+    private static void ValidateTypeConstructorExpression(
+        EventScriptModule moduleContext,
+        TypeConstructorExpressionNode constructor,
+        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        List<EventScriptLinkageError> errors)
+    {
+        ValidateDuplicateNamedArguments(moduleContext, constructor.TypeName, constructor.Arguments, errors);
+        foreach (var argument in constructor.Arguments)
+        {
+            if (argument.Label is not null)
+            {
+                ValidateIdentifierCase(
+                    moduleContext,
+                    argument.Label,
+                    constructor.TypeName,
+                    EventScriptSymbolKind.Type,
+                    $"Type constructor ':{constructor.TypeName}' declares invalid argument label '{argument.Label}'",
+                    errors);
+            }
+
+            ValidateExpressionReferences(moduleContext, argument.Expression, callables, typeDefinitions, errors);
+        }
+
+        if (IsBuiltinConstructorType(constructor.TypeName))
+        {
+            ValidateBuiltinTypeConstructor(moduleContext, constructor, errors);
+            return;
+        }
+
+        if (!typeDefinitions.TryGetValue(constructor.TypeName, out var typeDefinition))
+        {
+            AddTypeConstructorError(moduleContext, constructor.TypeName, $"Unknown type constructor ':{constructor.TypeName}'", errors);
+            return;
+        }
+
+        if (constructor.Arguments.Any(argument => argument.Label is null))
+        {
+            AddTypeConstructorError(moduleContext, constructor.TypeName, $"Custom type constructor ':{constructor.TypeName}' requires labeled field arguments", errors);
+        }
+
+        var fieldNames = new HashSet<string>(typeDefinition.Fields.Select(field => field.Name), StringComparer.Ordinal);
+        foreach (var argument in constructor.Arguments.Where(argument => argument.Label is not null))
+        {
+            if (!fieldNames.Contains(argument.Label!))
+            {
+                AddTypeConstructorError(
+                    moduleContext,
+                    constructor.TypeName,
+                    $"Custom type constructor ':{constructor.TypeName}' has unknown field '{argument.Label}'",
+                    errors);
+            }
+        }
+    }
+
+    private static void ValidateBuiltinTypeConstructor(
+        EventScriptModule moduleContext,
+        TypeConstructorExpressionNode constructor,
+        List<EventScriptLinkageError> errors)
+    {
+        switch (constructor.TypeName)
+        {
+            case "vector2":
+                ValidateVectorConstructor(moduleContext, constructor, ["x", "y"], errors);
+                return;
+            case "vector3":
+                ValidateVectorConstructor(moduleContext, constructor, ["x", "y", "z"], errors);
+                return;
+            default:
+                if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
+                {
+                    AddTypeConstructorError(
+                        moduleContext,
+                        constructor.TypeName,
+                        $"Type conversion ':{constructor.TypeName}' expects exactly one unlabeled argument",
+                        errors);
+                }
+
+                return;
+        }
+    }
+
+    private static void ValidateVectorConstructor(
+        EventScriptModule moduleContext,
+        TypeConstructorExpressionNode constructor,
+        IReadOnlyList<string> labels,
+        List<EventScriptLinkageError> errors)
+    {
+        if (constructor.Arguments.Count != labels.Count)
+        {
+            AddTypeConstructorError(
+                moduleContext,
+                constructor.TypeName,
+                $"Type constructor ':{constructor.TypeName}' expects {labels.Count} component arguments",
+                errors);
+            return;
+        }
+
+        var labeledCount = constructor.Arguments.Count(argument => argument.Label is not null);
+        if (labeledCount is not 0 && labeledCount != constructor.Arguments.Count)
+        {
+            AddTypeConstructorError(
+                moduleContext,
+                constructor.TypeName,
+                $"Type constructor ':{constructor.TypeName}' cannot mix labeled and unlabeled component arguments",
+                errors);
+            return;
+        }
+
+        if (labeledCount == 0)
+        {
+            return;
+        }
+
+        for (var index = 0; index < labels.Count; index++)
+        {
+            if (!string.Equals(constructor.Arguments[index].Label, labels[index], StringComparison.Ordinal))
+            {
+                AddTypeConstructorError(
+                    moduleContext,
+                    constructor.TypeName,
+                    $"Type constructor ':{constructor.TypeName}' argument {index + 1} expects label '{labels[index]}'",
+                    errors);
+            }
+        }
+    }
+
+    private static bool IsBuiltinConstructorType(string typeName)
+        => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
+            "vector2" or "vector3" or "boolean" or "integer" or "decimal" or "number" or "sequence" or
+            "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
+
+    private static void AddTypeConstructorError(
+        EventScriptModule moduleContext,
+        string typeName,
+        string message,
+        List<EventScriptLinkageError> errors)
+        => errors.Add(CreateError(
+            moduleContext,
+            message,
+            typeName,
+            EventScriptSymbolKind.Type,
+            EventScriptLinkageErrorKind.InvalidTypeConstructor));
 
     private static void ValidateCallArity(
         EventScriptModule moduleContext,

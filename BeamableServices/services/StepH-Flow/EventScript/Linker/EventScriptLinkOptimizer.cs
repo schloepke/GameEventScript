@@ -200,6 +200,13 @@ internal static class EventScriptLinkOptimizer
             {
                 Value = OptimizeExpression(typeCast.Value, knownTypeNames)
             },
+            TypeConstructorExpressionNode typeConstructor => typeConstructor with
+            {
+                ArgumentList = new ArgumentListNode(typeConstructor.Arguments.Select(argument => argument with
+                {
+                    Expression = OptimizeExpression(argument.Expression, knownTypeNames)
+                }).ToArray())
+            },
             MemberAccessExpressionNode member => member with
             {
                 Target = OptimizeExpression(member.Target, knownTypeNames)
@@ -269,6 +276,12 @@ internal static class EventScriptLinkOptimizer
             TryFoldConstantTypeCast(typeCastExpression, knownTypeNames, out var folded))
         {
             return folded with { SourceRange = optimized.SourceRange };
+        }
+
+        if (optimized is TypeConstructorExpressionNode typeConstructorExpression &&
+            TryFoldConstantTypeConstructor(typeConstructorExpression, knownTypeNames, out var constructed))
+        {
+            return constructed with { SourceRange = optimized.SourceRange };
         }
 
         return optimized;
@@ -397,6 +410,17 @@ internal static class EventScriptLinkOptimizer
         return TryConvertValueToLiteral(converted, out folded);
     }
 
+    private static bool TryFoldConstantTypeConstructor(TypeConstructorExpressionNode constructor, ISet<string> knownTypeNames, out ExpressionNode folded)
+    {
+        folded = constructor;
+        if (!TryEvaluateConstantTypeConstructor(constructor, knownTypeNames, out var value))
+        {
+            return false;
+        }
+
+        return TryConvertValueToLiteral(value, out folded);
+    }
+
     private static bool TryEvaluateConstant(ExpressionNode expression, out EventScriptValue value)
     {
         switch (expression)
@@ -490,6 +514,8 @@ internal static class EventScriptLinkOptimizer
 
                 return true;
             }
+            case TypeConstructorExpressionNode constructorExpression:
+                return TryEvaluateConstantTypeConstructor(constructorExpression, EmptyTypeNames, out value);
             case UnaryExpressionNode unaryExpression:
                 return TryEvaluateConstantUnary(unaryExpression, out value);
             case BinaryExpressionNode binaryExpression:
@@ -498,6 +524,54 @@ internal static class EventScriptLinkOptimizer
                 value = EventScriptValue.Nothing;
                 return false;
         }
+    }
+
+    private static bool TryEvaluateConstantTypeConstructor(TypeConstructorExpressionNode constructor, ISet<string> knownTypeNames, out EventScriptValue value)
+    {
+        value = EventScriptValue.Nothing;
+        if (constructor.TypeName is "vector2" or "vector3")
+        {
+            return TryEvaluateConstantVectorConstructor(constructor, out value);
+        }
+
+        if (knownTypeNames.Contains(constructor.TypeName))
+        {
+            return false;
+        }
+
+        if (constructor.Arguments.Count != 1 ||
+            constructor.Arguments[0].Label is not null ||
+            !TryEvaluateConstant(constructor.Arguments[0].Expression, out var source))
+        {
+            return false;
+        }
+
+        return TryConvertConstantType(source, constructor.TypeName, knownTypeNames, out value);
+    }
+
+    private static bool TryEvaluateConstantVectorConstructor(TypeConstructorExpressionNode constructor, out EventScriptValue value)
+    {
+        value = EventScriptValue.Nothing;
+        var expectedCount = constructor.TypeName == "vector2" ? 2 : 3;
+        if (constructor.Arguments.Count != expectedCount)
+        {
+            return false;
+        }
+
+        var components = new decimal[expectedCount];
+        for (var index = 0; index < expectedCount; index++)
+        {
+            if (!TryEvaluateConstant(constructor.Arguments[index].Expression, out var component) ||
+                !TryReadVectorComponent(component, out components[index]))
+            {
+                return false;
+            }
+        }
+
+        value = expectedCount == 2
+            ? EventScriptValueFactory.Vector2(components[0], components[1])
+            : EventScriptValueFactory.Vector3(components[0], components[1], components[2]);
+        return true;
     }
 
     private static bool TryEvaluateConstantUnary(UnaryExpressionNode unary, out EventScriptValue value)
@@ -1526,6 +1600,29 @@ internal static class EventScriptLinkOptimizer
             case EventScriptValueKind.Tag:
                 expression = new TagLiteralExpressionNode(value.AsText());
                 return true;
+            case EventScriptValueKind.Vector2:
+            {
+                var vector = (EventScriptVector2Value)value;
+                expression = new TypeConstructorExpressionNode(
+                    "vector2",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.X)),
+                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.Y))
+                    ]));
+                return true;
+            }
+            case EventScriptValueKind.Vector3:
+            {
+                var vector = (EventScriptVector3Value)value;
+                expression = new TypeConstructorExpressionNode(
+                    "vector3",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.X)),
+                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.Y)),
+                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.Z))
+                    ]));
+                return true;
+            }
             case EventScriptValueKind.List:
             {
                 var items = new List<ExpressionNode>();

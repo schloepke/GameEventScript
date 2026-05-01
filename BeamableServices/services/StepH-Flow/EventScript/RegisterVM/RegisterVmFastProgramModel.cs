@@ -42,6 +42,7 @@ internal enum RegisterFastOpCode
     Dice,
     SeededRandom,
     Cast,
+    TypeConstructor,
     RulePredicate,
     MemberAccess,
     IndexedAccess,

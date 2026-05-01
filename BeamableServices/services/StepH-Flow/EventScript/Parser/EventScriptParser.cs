@@ -1521,6 +1521,11 @@ public sealed class EventScriptParser
 
     private ExpressionNode ParsePrimaryExpression()
     {
+        if (IsTypeConstructorStart())
+        {
+            return ParseTypeConstructorExpression();
+        }
+
         if (MatchWord("of"))
         {
             return ParseSequenceLiteralExpressionCore(Previous);
@@ -2115,6 +2120,16 @@ public sealed class EventScriptParser
         return WithRange(new ExtensionCallExpressionNode(extensionName, functionName, arguments), startToken);
     }
 
+    private TypeConstructorExpressionNode ParseTypeConstructorExpression()
+    {
+        var startToken = Current;
+        var typeName = ParseTypeName();
+        SkipNewLines();
+        Expect(LeftParen);
+        var arguments = ParseArgumentListAfterLeftParen();
+        return WithRange(new TypeConstructorExpressionNode(typeName, arguments), startToken);
+    }
+
     private SequenceLiteralExpressionNode ParseSequenceLiteralExpressionCore(EventScriptToken startToken)
     {
         SkipNewLines();
@@ -2338,6 +2353,22 @@ public sealed class EventScriptParser
         }
 
         return lookahead < _tokens.Count && _tokens[lookahead].Kind == Identifier;
+    }
+
+    private bool IsTypeConstructorStart()
+    {
+        if (Current.Kind != Tag)
+        {
+            return false;
+        }
+
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == LeftParen;
     }
 
     private (string ExtensionName, string FunctionName, EventScriptToken EndToken) ParseExtensionSymbol()

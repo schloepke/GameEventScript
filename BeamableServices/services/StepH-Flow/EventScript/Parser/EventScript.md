@@ -418,8 +418,46 @@ let amount as :decimal be '12.5'
 let flags as :list be 'abc'
 ```
 
+The same conversion can be written inline with `:type(value)`.
+
+```eventscript
+let scaled be :decimal(90°) * :decimal(100m)
+let heading be :degree(180)
+let distance be :meter(100)
+let duration be :second(15)
+```
+
 `vector2` exposes `x` and `y`; `vector3` exposes `x`, `y`, and `z`.
 Both can be cast from dictionaries with matching component names or from lists in component order.
+
+Vector constructors use component arguments:
+
+```eventscript
+let position be :vector2(10, 20)
+let labeledPosition be :vector2(x: 10, y: 20)
+let point be :vector3(10, 20, 5)
+let labeledPoint be :vector3(x: 10, y: 20, z: 5)
+```
+
+Labels are positional and must match the component names exactly. `:vector2(y: 20, x: 10)`
+is invalid.
+
+Custom record constructors are labeled-only:
+
+```eventscript
+record :gauge as {
+    current: :decimal clamped between 0 and maximum,
+    maximum: :decimal clamped between 0 and :infinity,
+    percentage: :percentage computed by
+        0% when maximum <= 0,
+        otherwise (current / maximum) as :percentage
+}
+
+let hp be :gauge(current: 125, maximum: 100)
+```
+
+Custom constructors use the same clamp and computed-field semantics as typed record
+materialization. Positional custom construction such as `:gauge(10, 20)` is invalid.
 
 ## Domain-Style Boolean Phrases
 

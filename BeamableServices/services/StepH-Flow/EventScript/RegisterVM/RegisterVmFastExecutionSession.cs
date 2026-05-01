@@ -1113,12 +1113,12 @@ internal sealed class RegisterVmFastExecutionSession
         var arguments = new EventScriptFastValue[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            arguments[argumentIndex] = EventScriptFastValue.FromEventScriptValue(stack[start + argumentIndex].ToEventScriptValue());
+            arguments[argumentIndex] = ToEventScriptFastValue(stack[start + argumentIndex]);
         }
 
         if (EventScriptStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
         {
-            value = RegisterFastValue.FromEventScriptValue(standardValue.ToEventScriptValue());
+            value = RegisterFastValue.FromEventScriptFastValue(standardValue);
             return true;
         }
 
@@ -1127,7 +1127,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!_compiledScript.TryGetBoundExtension(referenceIndex, out function))
             {
-                throw new EventScriptDynamicLinkException($"EventScript extension reference slot '{referenceIndex}' was not dynamically bound.");
+                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' was not dynamically bound to reference slot '{referenceIndex}'.");
             }
         }
         else
@@ -1138,9 +1138,21 @@ internal sealed class RegisterVmFastExecutionSession
             }
         }
 
-        value = RegisterFastValue.FromEventScriptValue(function.Invoke(new EventScriptExtensionContext(_context), arguments).ToEventScriptValue());
+        value = RegisterFastValue.FromEventScriptFastValue(function.Invoke(new EventScriptExtensionContext(_context), arguments));
         return true;
     }
+
+    private static EventScriptFastValue ToEventScriptFastValue(RegisterFastValue value)
+        => value.Kind switch
+        {
+            RegisterFastValueKind.Nothing => EventScriptFastValue.Nothing,
+            RegisterFastValueKind.Boolean => EventScriptFastValue.FromBoolean(value.BooleanValue),
+            RegisterFastValueKind.Integer => EventScriptFastValue.FromInteger(value.IntegerValue),
+            RegisterFastValueKind.Decimal => EventScriptFastValue.FromDecimal(value.Number, value.Unit),
+            RegisterFastValueKind.Percentage => EventScriptFastValue.FromPercentage(value.Number),
+            RegisterFastValueKind.Reference => EventScriptFastValue.FromEventScriptValue(value.ReferenceValue ?? EventScriptValue.Nothing),
+            _ => EventScriptFastValue.Nothing
+        };
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)
     {
@@ -5012,6 +5024,17 @@ internal readonly record struct RegisterFastValue(
             EventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => Decimal(decimalValue.Value, decimalValue.Unit),
             EventScriptPercentageValue percentage => Percentage(percentage.Ratio),
             _ => Reference(value)
+        };
+
+    public static RegisterFastValue FromEventScriptFastValue(EventScriptFastValue value)
+        => value.Kind switch
+        {
+            EventScriptValueKind.Nothing => Nothing,
+            EventScriptValueKind.Boolean => Boolean(value.Boolean),
+            EventScriptValueKind.Integer => Integer(value.Integer),
+            EventScriptValueKind.Decimal when !value.IsReferenceBacked => Decimal(value.Number, value.Unit),
+            EventScriptValueKind.Percentage when !value.IsReferenceBacked => Percentage(value.Number),
+            _ => FromEventScriptValue(value.ToEventScriptValue())
         };
 
     public bool AsBoolean()

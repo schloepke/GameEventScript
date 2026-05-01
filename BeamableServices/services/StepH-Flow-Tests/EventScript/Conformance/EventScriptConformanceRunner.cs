@@ -638,7 +638,7 @@ internal sealed class EventScriptConformanceExtensionRegistry : IEventScriptExte
 
     private static readonly IEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
         args.Length == 1
-            ? EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.Decimal(Math.Floor(args[0].ToEventScriptValue().AsNumber())))
+            ? EventScriptFastValue.FromDecimal(Math.Floor(args[0].Number), args[0].Unit)
             : EventScriptFastValue.Nothing);
 
     private static readonly IEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
@@ -648,13 +648,13 @@ internal sealed class EventScriptConformanceExtensionRegistry : IEventScriptExte
             return EventScriptFastValue.Nothing;
         }
 
-        var max = args[0].ToEventScriptValue().AsNumber();
+        var max = args[0].Number;
         for (var index = 1; index < args.Length; index++)
         {
-            max = Math.Max(max, args[index].ToEventScriptValue().AsNumber());
+            max = Math.Max(max, args[index].Number);
         }
 
-        return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.Decimal(max));
+        return EventScriptFastValue.FromDecimal(max);
     });
 
     private static readonly IEventScriptExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
@@ -664,10 +664,10 @@ internal sealed class EventScriptConformanceExtensionRegistry : IEventScriptExte
             return EventScriptFastValue.Nothing;
         }
 
-        var from = args[0].ToEventScriptValue().AsNumber();
-        var to = args[1].ToEventScriptValue().AsNumber();
+        var from = args[0].Number;
+        var to = args[1].Number;
         var delta = (to - from + 540m) % 360m - 180m;
-        return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.Degree(delta));
+        return EventScriptFastValue.FromDecimal(delta, EventScriptDecimalUnit.Degree);
     });
 
     private static readonly IEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
@@ -677,9 +677,24 @@ internal sealed class EventScriptConformanceExtensionRegistry : IEventScriptExte
             return EventScriptFastValue.FromBoolean(false);
         }
 
-        var value = args[0].ToEventScriptValue().AsNumber();
+        var value = args[0].Number;
         var wrapped = ((value % 360m) + 360m) % 360m;
         return EventScriptFastValue.FromBoolean(wrapped is <= 45m or >= 315m);
+    });
+
+    private static readonly IEventScriptExtensionFunction TestVectorSum = new DelegateExtensionFunction((_, args) =>
+    {
+        if (args.Length != 1)
+        {
+            return EventScriptFastValue.Nothing;
+        }
+
+        return args[0].Kind switch
+        {
+            EventScriptValueKind.Vector2 => EventScriptFastValue.FromDecimal(args[0].X + args[0].Y, args[0].Unit),
+            EventScriptValueKind.Vector3 => EventScriptFastValue.FromDecimal(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
+            _ => EventScriptFastValue.Nothing
+        };
     });
 
     private EventScriptConformanceExtensionRegistry()
@@ -719,6 +734,15 @@ internal sealed class EventScriptConformanceExtensionRegistry : IEventScriptExte
             reference.ArgumentLabels.Count == 1)
         {
             function = NavIsNorth;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "vectorSum", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count == 1 &&
+            IsUnlabeled(reference.ArgumentLabels[0]))
+        {
+            function = TestVectorSum;
             return true;
         }
 

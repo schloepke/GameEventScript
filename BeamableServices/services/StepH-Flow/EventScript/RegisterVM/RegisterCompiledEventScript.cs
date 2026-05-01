@@ -77,9 +77,14 @@ public sealed class RegisterCompiledEventScript : IEventScriptMessageHandlerColl
         for (var index = 0; index < BytecodeModule.ExternalReferences.Count; index++)
         {
             var reference = BytecodeModule.ExternalReferences[index];
+            if (ReferenceEquals(_extensionRegistry, EventScriptEmptyExtensionRegistry.Instance))
+            {
+                throw new EventScriptDynamicLinkException($"EventScript extension registry is required to bind '{reference.SignatureId}'.");
+            }
+
             if (!_extensionRegistry.TryResolve(reference, out var function))
             {
-                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' is not registered.");
+                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' is not registered in the configured registry.");
             }
 
             bound[reference.SignatureId] = function;

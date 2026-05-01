@@ -644,6 +644,7 @@ public sealed class RegisterVmCompilerTests
         var exception = Assert.ThrowsExactly<EventScriptDynamicLinkException>(() =>
             EventScriptHost.CreateBuilder().Build().Load(compiled));
         StringAssert.Contains(exception.Message, "math.floor(_)");
+        StringAssert.Contains(exception.Message, "registry is required");
 
         var published = new List<EventScriptMessage>();
         var host = EventScriptHost.CreateBuilder()
@@ -664,6 +665,80 @@ public sealed class RegisterVmCompilerTests
         Assert.AreEqual(EventScriptValueFactory.Decimal(2m), published[0].Arguments["first"]);
     }
 
+    [TestMethod]
+    public void RegisterVmDynamicLinkReportsMissingExtensionFunctionWithSignature()
+    {
+        const string script =
+            """
+            module MissingExtensions
+
+            on Start {
+              let value be :missing.floor 10.4
+              publish Done(value: value)
+            }
+            """;
+
+        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var exception = Assert.ThrowsExactly<EventScriptDynamicLinkException>(() =>
+            EventScriptHost.CreateBuilder()
+                .WithRegistry(TestExtensionRegistry.Instance)
+                .Build()
+                .Load(compiled));
+
+        StringAssert.Contains(exception.Message, "missing.floor(_)");
+        StringAssert.Contains(exception.Message, "not registered in the configured registry");
+    }
+
+    [TestMethod]
+    public void RegisterVmDynamicLinkKeepsLabeledArgumentsPositional()
+    {
+        const string script =
+            """
+            module OrderedLabels
+
+            on Start(heading, target) {
+              let turn be :nav.shortestTurn to: target from: heading
+              publish Done(turn: turn)
+            }
+            """;
+
+        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var dump = RegisterBytecodeDumper.ToDebugText(compiled);
+
+        StringAssert.Contains(dump, "nav.shortestTurn(to,from)");
+        var exception = Assert.ThrowsExactly<EventScriptDynamicLinkException>(() =>
+            EventScriptHost.CreateBuilder()
+                .WithRegistry(NavExtensionRegistry.Instance)
+                .Build()
+                .Load(compiled));
+        StringAssert.Contains(exception.Message, "nav.shortestTurn(to,from)");
+    }
+
+    [TestMethod]
+    public void RegisterVmStandardExtensionsCannotBeOverriddenByRegistry()
+    {
+        const string script =
+            """
+            module StandardOverride
+
+            on Start(value) {
+              publish Done(floor: :integer.floor value)
+            }
+            """;
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithRegistry(StandardOverrideRegistry.Instance)
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(EventScriptManager.CompileRegisterVM(script));
+
+        host.Publish(Message("Start", ("value", EventScriptValueFactory.Decimal(10.9m))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Integer(10), published[0].Arguments["floor"]);
+    }
+
     private sealed class TestExtensionRegistry : IEventScriptExtensionRegistry
     {
         public static readonly TestExtensionRegistry Instance = new();
@@ -680,6 +755,57 @@ public sealed class RegisterVmCompilerTests
             if (reference.SignatureId == "math.floor(_)")
             {
                 function = MathFloor;
+                return true;
+            }
+
+            function = default!;
+            return false;
+        }
+    }
+
+    private sealed class NavExtensionRegistry : IEventScriptExtensionRegistry
+    {
+        public static readonly NavExtensionRegistry Instance = new();
+
+        private static readonly IEventScriptExtensionFunction ShortestTurn = new DelegateExtensionFunction((_, args) =>
+        {
+            var delta = (args[1].Number - args[0].Number + 540m) % 360m - 180m;
+            return EventScriptFastValue.FromDecimal(delta, EventScriptDecimalUnit.Degree);
+        });
+
+        private NavExtensionRegistry()
+        {
+        }
+
+        public bool TryResolve(EventScriptExtensionReference reference, out IEventScriptExtensionFunction function)
+        {
+            if (reference.SignatureId == "nav.shortestTurn(from,to)")
+            {
+                function = ShortestTurn;
+                return true;
+            }
+
+            function = default!;
+            return false;
+        }
+    }
+
+    private sealed class StandardOverrideRegistry : IEventScriptExtensionRegistry
+    {
+        public static readonly StandardOverrideRegistry Instance = new();
+
+        private static readonly IEventScriptExtensionFunction FakeIntegerFloor = new DelegateExtensionFunction((_, _) =>
+            EventScriptFastValue.FromInteger(999));
+
+        private StandardOverrideRegistry()
+        {
+        }
+
+        public bool TryResolve(EventScriptExtensionReference reference, out IEventScriptExtensionFunction function)
+        {
+            if (reference.SignatureId == "integer.floor(_)")
+            {
+                function = FakeIntegerFloor;
                 return true;
             }
 

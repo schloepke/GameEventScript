@@ -23,20 +23,14 @@ internal static class EventScriptStandardExtensions
             return false;
         }
 
-        var input = arguments[0].ToEventScriptValue();
         var result = reference.ExtensionName switch
         {
-            "integer" => EvaluateInteger(reference.FunctionName, input),
-            "degree" => EvaluateDegree(reference.FunctionName, input),
-            _ => null
+            "integer" => EvaluateInteger(reference.FunctionName, arguments[0]),
+            "degree" => EvaluateDegree(reference.FunctionName, arguments[0]),
+            _ => EventScriptFastValue.Nothing
         };
 
-        if (result is null)
-        {
-            return false;
-        }
-
-        value = EventScriptFastValue.FromEventScriptValue(result);
+        value = result;
         return true;
     }
 
@@ -54,26 +48,26 @@ internal static class EventScriptStandardExtensions
             EventScriptMessageSignature.UnlabeledParameterName,
             StringComparison.Ordinal);
 
-    private static EventScriptValue? EvaluateInteger(string functionName, EventScriptValue input)
+    private static EventScriptFastValue EvaluateInteger(string functionName, EventScriptFastValue input)
     {
         if (!TryReadNumeric(input, out var number))
         {
-            return EventScriptValueFactory.Integer(input.AsInteger());
+            return EventScriptFastValue.FromInteger(input.Integer);
         }
 
         if (number.IsNaN)
         {
-            return EventScriptValueFactory.Integer(0);
+            return EventScriptFastValue.FromInteger(0);
         }
 
         if (number.IsPositiveInfinity)
         {
-            return EventScriptValueFactory.Integer(long.MaxValue);
+            return EventScriptFastValue.FromInteger(long.MaxValue);
         }
 
         if (number.IsNegativeInfinity)
         {
-            return EventScriptValueFactory.Integer(long.MinValue);
+            return EventScriptFastValue.FromInteger(long.MinValue);
         }
 
         var rounded = functionName switch
@@ -84,100 +78,159 @@ internal static class EventScriptStandardExtensions
             "halfEven" => Math.Round(number.Value, 0, MidpointRounding.ToEven),
             "halfUp" => Math.Round(number.Value, 0, MidpointRounding.AwayFromZero),
             "halfDown" => RoundHalfTowardZero(number.Value),
-            _ => (decimal?)null
+            _ => 0m
         };
 
-        return rounded.HasValue
-            ? EventScriptValueFactory.Integer(EventScriptValueAlu.ToIntegerSaturated(rounded.Value))
-            : null;
+        return EventScriptFastValue.FromInteger(EventScriptValueAlu.ToIntegerSaturated(rounded));
     }
 
-    private static EventScriptValue? EvaluateDegree(string functionName, EventScriptValue input)
+    private static EventScriptFastValue EvaluateDegree(string functionName, EventScriptFastValue input)
         => functionName switch
         {
-            "wrap" => EventScriptValueAlu.EvaluateWrapDegree(input),
+            "wrap" => EvaluateDegreeWrap(input),
             "toRadians" => EvaluateDegreeToRadians(input),
             "fromRadians" => EvaluateDegreeFromRadians(input),
-            _ => null
+            _ => EventScriptFastValue.Nothing
         };
 
-    private static EventScriptValue EvaluateDegreeToRadians(EventScriptValue input)
+    private static EventScriptFastValue EvaluateDegreeWrap(EventScriptFastValue input)
+    {
+        if (input.IsReferenceBacked)
+        {
+            return EventScriptFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateWrapDegree(input.ToEventScriptValue()));
+        }
+
+        if (input.Unit.HasValue && input.Unit.Value != EventScriptDecimalUnit.Degree)
+        {
+            return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.DecimalNaN());
+        }
+
+        if (input.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer)
+        {
+            return EventScriptFastValue.FromDecimal(EventScriptValue.WrapDegrees(input.Number), EventScriptDecimalUnit.Degree);
+        }
+
+        return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.DecimalNaN());
+    }
+
+    private static EventScriptFastValue EvaluateDegreeToRadians(EventScriptFastValue input)
     {
         if (!TryReadUnitlessOrDegreeNumeric(input, out var number) || !number.IsFinite)
         {
-            return EventScriptValueFactory.DecimalNaN();
+            return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.DecimalNaN());
         }
 
         try
         {
-            return EventScriptValueFactory.Decimal(number.Value / 180m * Pi);
+            return EventScriptFastValue.FromDecimal(number.Value / 180m * Pi);
         }
         catch (OverflowException)
         {
-            return EventScriptValueFactory.DecimalNaN();
+            return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.DecimalNaN());
         }
     }
 
-    private static EventScriptValue EvaluateDegreeFromRadians(EventScriptValue input)
+    private static EventScriptFastValue EvaluateDegreeFromRadians(EventScriptFastValue input)
     {
         if (!TryReadUnitlessNumeric(input, out var number) || !number.IsFinite)
         {
-            return EventScriptValueFactory.DecimalNaN();
+            return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.DecimalNaN());
         }
 
         try
         {
-            return EventScriptValueFactory.Degree(number.Value / Pi * 180m);
+            return EventScriptFastValue.FromDecimal(number.Value / Pi * 180m, EventScriptDecimalUnit.Degree);
         }
         catch (OverflowException)
         {
-            return EventScriptValueFactory.DecimalNaN();
+            return EventScriptFastValue.FromEventScriptValue(EventScriptValueFactory.DecimalNaN());
         }
     }
 
-    private static bool TryReadUnitlessOrDegreeNumeric(EventScriptValue input, out EventScriptValueAlu.NumericValue number)
+    private static bool TryReadUnitlessOrDegreeNumeric(EventScriptFastValue input, out EventScriptValueAlu.NumericValue number)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(input, out var unwrapped))
+        if (input.IsReferenceBacked)
         {
-            number = EventScriptValueAlu.NumericValue.NaN();
-            return true;
+            var value = input.ToEventScriptValue();
+            if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                number = EventScriptValueAlu.NumericValue.NaN();
+                return true;
+            }
+
+            if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit) && unit != EventScriptDecimalUnit.Degree)
+            {
+                number = EventScriptValueAlu.NumericValue.NaN();
+                return false;
+            }
+
+            return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
-        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit) && unit != EventScriptDecimalUnit.Degree)
+        if (input.Unit.HasValue && input.Unit.Value != EventScriptDecimalUnit.Degree)
         {
             number = EventScriptValueAlu.NumericValue.NaN();
             return false;
         }
 
-        return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
+        return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadUnitlessNumeric(EventScriptValue input, out EventScriptValueAlu.NumericValue number)
+    private static bool TryReadUnitlessNumeric(EventScriptFastValue input, out EventScriptValueAlu.NumericValue number)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(input, out var unwrapped))
+        if (input.IsReferenceBacked)
         {
-            number = EventScriptValueAlu.NumericValue.NaN();
-            return true;
+            var value = input.ToEventScriptValue();
+            if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                number = EventScriptValueAlu.NumericValue.NaN();
+                return true;
+            }
+
+            if (EventScriptValue.TryGetDecimalUnit(unwrapped, out _))
+            {
+                number = EventScriptValueAlu.NumericValue.NaN();
+                return false;
+            }
+
+            return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
-        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out _))
+        if (input.Unit.HasValue)
         {
             number = EventScriptValueAlu.NumericValue.NaN();
             return false;
         }
 
-        return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
+        return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadNumeric(EventScriptValue input, out EventScriptValueAlu.NumericValue number)
+    private static bool TryReadNumeric(EventScriptFastValue input, out EventScriptValueAlu.NumericValue number)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(input, out var unwrapped))
+        if (input.IsReferenceBacked)
         {
-            number = EventScriptValueAlu.NumericValue.NaN();
-            return true;
+            var value = input.ToEventScriptValue();
+            if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+            {
+                number = EventScriptValueAlu.NumericValue.NaN();
+                return true;
+            }
+
+            return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
-        return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
+        switch (input.Kind)
+        {
+            case EventScriptValueKind.Decimal:
+            case EventScriptValueKind.Integer:
+            case EventScriptValueKind.Percentage:
+            case EventScriptValueKind.Boolean:
+                number = EventScriptValueAlu.NumericValue.Finite(input.Number);
+                return true;
+            default:
+                number = default;
+                return false;
+        }
     }
 
     private static decimal RoundHalfTowardZero(decimal value)

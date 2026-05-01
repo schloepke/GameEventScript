@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using StepH.Flow.EventScript;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Runtime;
@@ -15,10 +14,7 @@ namespace StepH_Flow_Tests.EventScript.Conformance;
 
 internal static class EventScriptConformanceRunner
 {
-    internal const string InterpreterEngine = "interpreter";
     internal const string RegisterVmEngine = "registervm";
-
-    private static readonly string[] RuntimeEngines = [InterpreterEngine, RegisterVmEngine];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -75,10 +71,10 @@ internal static class EventScriptConformanceRunner
 
     internal static void RunScriptApiTest(
         EventScriptConformanceCase testCase,
-        Func<EventScriptConformanceTest, string, IEventScriptMessageHandlerCollection>? compileScripts = null)
+        Func<EventScriptConformanceTest, IEventScriptMessageHandlerCollection>? compileScripts = null)
     {
         var test = testCase.Test;
-        var compiled = (compileScripts ?? CompileScripts)(test, RequireEngine(testCase));
+        var compiled = (compileScripts ?? CompileScripts)(test);
         var collector = new EventScriptDiagnosticTraceCollector();
         var published = new List<EventScriptMessage>();
         var builder = EventScriptHost.CreateBuilder()
@@ -113,23 +109,16 @@ internal static class EventScriptConformanceRunner
         }
     }
 
-    internal static IEventScriptMessageHandlerCollection CompileScripts(EventScriptConformanceTest test, string engine)
+    internal static IEventScriptMessageHandlerCollection CompileScripts(EventScriptConformanceTest test)
     {
         var linked = LinkScripts(test);
         var diagnosticsEnabled = test.CompileOptions?.EnableDiagnostics ?? false;
-        return engine switch
-        {
-            InterpreterEngine => new CompiledEventScript(
-                linked,
-                new EventScriptInterpreterCompilationOptions { EnableDiagnostics = diagnosticsEnabled }),
-            RegisterVmEngine => RegisterEventScriptCompiler.Compile(
-                linked,
-                new RegisterEventScriptCompilationOptions
-                {
-                    EnableDiagnostics = diagnosticsEnabled
-                }),
-            _ => throw new InvalidOperationException($"Unsupported conformance engine '{engine}'.")
-        };
+        return RegisterEventScriptCompiler.Compile(
+            linked,
+            new RegisterEventScriptCompilationOptions
+            {
+                EnableDiagnostics = diagnosticsEnabled
+            });
     }
 
     private static IEnumerable<EventScriptConformanceCase> EnumerateConformanceCases(string specDirectory)
@@ -138,10 +127,7 @@ internal static class EventScriptConformanceRunner
         {
             ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
-            foreach (var engine in GetEngines(test))
-            {
-                yield return new EventScriptConformanceCase(file, suite.Name!, test, engine);
-            }
+            yield return new EventScriptConformanceCase(file, suite.Name!, test, UsesRuntimeEngine(test.Kind) ? RegisterVmEngine : null);
         }
     }
 
@@ -158,16 +144,10 @@ internal static class EventScriptConformanceRunner
         }
     }
 
-    private static IReadOnlyList<string?> GetEngines(EventScriptConformanceTest test)
-        => UsesRuntimeEngine(test.Kind) ? RuntimeEngines : new string?[] { null };
-
     private static bool UsesRuntimeEngine(string? kind)
         => string.Equals(kind, "scriptApi", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(kind, "compileError", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(kind, "compileMetadata", StringComparison.OrdinalIgnoreCase);
-
-    private static string RequireEngine(EventScriptConformanceCase testCase)
-        => testCase.Engine ?? throw new InvalidOperationException($"{testCase}: test kind requires a conformance engine.");
 
     private static void RunCompileErrorTest(EventScriptConformanceCase testCase)
     {
@@ -179,7 +159,7 @@ internal static class EventScriptConformanceRunner
 
         try
         {
-            CompileScripts(testCase.Test, RequireEngine(testCase));
+            CompileScripts(testCase.Test);
         }
         catch (EventScriptSyntaxException exception)
         {
@@ -232,7 +212,7 @@ internal static class EventScriptConformanceRunner
             Assert.Fail($"{testCase}: compileMetadata tests require expectedMessageDefinitions.");
         }
 
-        var compiled = CompileScripts(testCase.Test, RequireEngine(testCase));
+        var compiled = CompileScripts(testCase.Test);
         var messageDefinitions = GetMessageDefinitions(compiled);
         foreach (var expected in expectedDefinitions)
         {

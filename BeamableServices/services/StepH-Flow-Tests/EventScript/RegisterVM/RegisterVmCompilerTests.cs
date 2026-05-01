@@ -24,8 +24,8 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var first = RegisterBytecodeDumper.ToDebugText(EventScriptManager.CompileRegisterVM(script));
-        var second = RegisterBytecodeDumper.ToDebugText(EventScriptManager.CompileRegisterVM(script));
+        var first = RegisterBytecodeDumper.ToDebugText(EventScriptManager.Compile(script));
+        var second = RegisterBytecodeDumper.ToDebugText(EventScriptManager.Compile(script));
 
         Assert.AreEqual(first, second);
         StringAssert.Contains(first, "registervm bytecode v1");
@@ -50,7 +50,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start"));
 
@@ -76,7 +76,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start"));
 
@@ -110,7 +110,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start", ("first", EventScriptValueFactory.Boolean(true)), ("second", EventScriptValueFactory.Boolean(false))));
         host.Publish(Message("Start", ("first", EventScriptValueFactory.Boolean(false)), ("second", EventScriptValueFactory.Boolean(true))));
@@ -142,7 +142,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start", ("flag", EventScriptValueFactory.Boolean(true))));
 
@@ -170,7 +170,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message(
             "Start",
@@ -206,7 +206,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message(
             "Start",
@@ -245,7 +245,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start"));
 
@@ -293,7 +293,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message(
             "Start",
@@ -357,7 +357,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start", ("seed", EventScriptValueFactory.Integer(7))));
 
@@ -431,7 +431,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message(
             "Start",
@@ -488,7 +488,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start", ("value", EventScriptValueFactory.Integer(21))));
 
@@ -530,7 +530,7 @@ public sealed class RegisterVmCompilerTests
         var host = EventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start", ("success", EventScriptValueFactory.Boolean(true))));
 
@@ -570,7 +570,7 @@ public sealed class RegisterVmCompilerTests
             .WithDiagnosticCollector(collector)
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(
+            .Load(EventScriptManager.Compile(
                 script,
                 new RegisterEventScriptCompilationOptions { EnableDiagnostics = true }));
 
@@ -600,7 +600,7 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var compiled = EventScriptManager.Compile(script);
         var dump = RegisterBytecodeDumper.ToDebugText(compiled);
 
         StringAssert.Contains(dump, "externalReferences[0]");
@@ -636,7 +636,7 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var compiled = EventScriptManager.Compile(script);
         var dump = RegisterBytecodeDumper.ToDebugText(compiled);
 
         StringAssert.Contains(dump, "externalReferences[1]");
@@ -678,7 +678,7 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var compiled = EventScriptManager.Compile(script);
         var exception = Assert.ThrowsExactly<EventScriptDynamicLinkException>(() =>
             EventScriptHost.CreateBuilder()
                 .WithRegistry(TestExtensionRegistry.Instance)
@@ -702,7 +702,7 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var compiled = EventScriptManager.Compile(script);
         var dump = RegisterBytecodeDumper.ToDebugText(compiled);
 
         StringAssert.Contains(dump, "nav.shortestTurn(to,from)");
@@ -731,7 +731,7 @@ public sealed class RegisterVmCompilerTests
             .WithRegistry(StandardOverrideRegistry.Instance)
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(EventScriptManager.CompileRegisterVM(script));
+            .Load(EventScriptManager.Compile(script));
 
         host.Publish(Message("Start", ("value", EventScriptValueFactory.Decimal(10.9m))));
 

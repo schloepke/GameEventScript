@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using StepH.Flow.EventScript;
-using StepH.Flow.EventScript.Interpreter;
 using StepH.Flow.EventScript.Linker;
 using StepH.Flow.EventScript.RegisterVM;
 using StepH.Flow.EventScript.Runtime;
@@ -10,7 +9,7 @@ using static StepH.Flow.EventScript.EventScriptMessage;
 namespace StepH_Flow_Tests.EventScript.RegisterVM;
 
 [TestClass]
-public sealed class EventScriptEnginePerformanceComparisonTests
+public sealed class RegisterVmPerformanceReportTests
 {
     private const int WarmupRuns = 25;
     private const int MeasuredRuns = 1_000;
@@ -46,7 +45,7 @@ public sealed class EventScriptEnginePerformanceComparisonTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void EventScriptEnginesCanBeComparedForRuntimeCost()
+    public void RegisterVmRuntimeCostCanBeReported()
     {
         var input = Message("Start", ("values", EventScriptValueFactory.List(
             Enumerable.Range(1, 50).Select(value => EventScriptValueFactory.Integer(value)))));
@@ -54,36 +53,29 @@ public sealed class EventScriptEnginePerformanceComparisonTests
         WarmUp(input);
 
         var linked = LinkPerformanceScript();
-        var interpreterCompile = Measure<IEventScriptMessageHandlerCollection>("interpreter compile", () => new CompiledEventScript(linked));
-        var registerVmCompile = Measure<IEventScriptMessageHandlerCollection>("registervm compile", () => CompileRegisterVm(linked));
+        var registerVmCompile = Measure<IEventScriptMessageHandlerCollection>("registervm compile", () => CompileScript(linked));
 
-        var interpreterRun = MeasureRun(interpreterCompile.Value, input, MeasuredRuns);
         var registerVmRun = MeasureRun(registerVmCompile.Value, input, MeasuredRuns);
 
-        AssertEquivalentOutput(interpreterRun.LastMessage, registerVmRun.LastMessage);
-        Assert.AreEqual(MeasuredRuns, interpreterRun.PublishedMessages);
         Assert.AreEqual(MeasuredRuns, registerVmRun.PublishedMessages);
+        Assert.AreEqual("Done", registerVmRun.LastMessage.Name);
 
-        WriteReport("interpreter", interpreterCompile, interpreterRun);
         WriteReport("registervm", registerVmCompile, registerVmRun);
-        TestContext.WriteLine("registervm/interpreter runtime ratio: {0:0.00}x", registerVmRun.Elapsed.TotalMilliseconds / Math.Max(0.001d, interpreterRun.Elapsed.TotalMilliseconds));
-        TestContext.WriteLine("registervm/interpreter runtime allocation ratio: {0:0.00}x", (double)registerVmRun.AllocatedBytes / Math.Max(1L, interpreterRun.AllocatedBytes));
         TestContext.WriteLine("allocation values are cumulative thread allocations, not peak live memory.");
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(CompileRegisterVm(linked)));
+        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(CompileScript(linked)));
     }
 
     private static void WarmUp(EventScriptMessage input)
     {
         var linked = LinkPerformanceScript();
-        MeasureRun(new CompiledEventScript(linked), input, WarmupRuns);
-        MeasureRun(CompileRegisterVm(linked), input, WarmupRuns);
+        MeasureRun(CompileScript(linked), input, WarmupRuns);
     }
 
     private static LinkedEventScriptModule LinkPerformanceScript()
         => EventScriptManager.LinkModules(EventScriptManager.ParseModule(PerformanceScript, "engine-performance.es"));
 
-    private static RegisterCompiledEventScript CompileRegisterVm(LinkedEventScriptModule linked)
+    private static RegisterCompiledEventScript CompileScript(LinkedEventScriptModule linked)
         => RegisterEventScriptCompiler.Compile(linked);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
@@ -120,16 +112,6 @@ public sealed class EventScriptEnginePerformanceComparisonTests
 
         stopwatch.Stop();
         return new EngineRunMetrics(stopwatch.Elapsed, GC.GetAllocatedBytesForCurrentThread() - beforeAllocated, publishedCount, lastMessage);
-    }
-
-    private static void AssertEquivalentOutput(EventScriptMessage expected, EventScriptMessage actual)
-    {
-        Assert.AreEqual(expected.Name, actual.Name);
-        CollectionAssert.AreEqual(expected.Arguments.Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray(), actual.Arguments.Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray());
-        foreach (var key in expected.Arguments.Keys)
-        {
-            Assert.AreEqual(expected.Arguments[key], actual.Arguments[key], $"Argument '{key}' differs.");
-        }
     }
 
     private void WriteReport<T>(string engine, Measured<T> compile, EngineRunMetrics run)

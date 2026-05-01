@@ -192,9 +192,8 @@ host.Publish(EventScriptMessage.Message("Start", ("value", EventScriptValue.Inte
 
 Compilation paths:
 
-- The classic runtime is an optimized AST runtime.
-- The RegisterVM runtime compiles scripts to register bytecode and uses the classic runtime as reference behavior.
-- Both expose the same `IEventScriptMessageHandlerCollection` host contract.
+- `EventScriptManager.Compile(...)` compiles scripts to RegisterVM bytecode.
+- The compiled script exposes the `IEventScriptMessageHandlerCollection` host contract.
 
 ## Comments
 

@@ -284,6 +284,12 @@ internal static class EventScriptLinkOptimizer
             return constructed with { SourceRange = optimized.SourceRange };
         }
 
+        if (optimized is ExtensionCallExpressionNode extensionCallExpression &&
+            TryFoldConstantStandardExtension(extensionCallExpression, out var extensionFolded))
+        {
+            return extensionFolded with { SourceRange = optimized.SourceRange };
+        }
+
         return optimized;
     }
 
@@ -419,6 +425,33 @@ internal static class EventScriptLinkOptimizer
         }
 
         return TryConvertValueToLiteral(value, out folded);
+    }
+
+    private static bool TryFoldConstantStandardExtension(ExtensionCallExpressionNode extensionCall, out ExpressionNode folded)
+    {
+        folded = extensionCall;
+        var reference = new EventScriptExtensionReference(
+            extensionCall.ExtensionName,
+            extensionCall.FunctionName,
+            extensionCall.Arguments.Select(argument => argument.Name).ToArray());
+        if (!EventScriptStandardExtensions.IsStandardReference(reference))
+        {
+            return false;
+        }
+
+        var arguments = new EventScriptFastValue[extensionCall.Arguments.Count];
+        for (var index = 0; index < extensionCall.Arguments.Count; index++)
+        {
+            if (!TryEvaluateConstant(extensionCall.Arguments[index].Expression, out var argument))
+            {
+                return false;
+            }
+
+            arguments[index] = EventScriptFastValue.FromEventScriptValue(argument);
+        }
+
+        return EventScriptStandardExtensions.TryInvoke(reference, arguments, out var value) &&
+               TryConvertValueToLiteral(value.ToEventScriptValue(), out folded);
     }
 
     private static bool TryEvaluateConstant(ExpressionNode expression, out EventScriptValue value)
@@ -674,9 +707,6 @@ internal static class EventScriptLinkOptimizer
                 return true;
             case "empty":
                 value = EventScriptValueFactory.Boolean(operand.IsSemanticallyEmpty());
-                return true;
-            case "wrapDegree":
-                value = EventScriptValueAlu.EvaluateWrapDegree(operand);
                 return true;
             case "abs":
                 if (EventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out value))

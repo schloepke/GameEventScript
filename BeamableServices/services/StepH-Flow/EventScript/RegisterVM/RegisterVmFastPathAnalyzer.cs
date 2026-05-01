@@ -677,8 +677,7 @@ internal static class RegisterVmFastPathAnalyzer
     private static bool SupportsUnaryOperator(string operation)
         => operation is "-" or "!" or "has value" or "empty" or
             "len" or "chance" or "keys" or "values" or "entries" or
-            "abs" or "floor" or "ceil" or "round" or "rounddown" or
-            "roundup" or "roundeven" or "wrapDegree";
+            "abs";
 
     private static bool SupportsVariadicTaggedOperator(string operation)
         => operation is "min" or "max";

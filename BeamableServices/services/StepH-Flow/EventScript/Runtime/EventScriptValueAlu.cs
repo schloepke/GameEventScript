@@ -707,27 +707,6 @@ internal static class EventScriptValueAlu
         }
     }
 
-    public static bool TryEvaluateUnitRounding(EventScriptValue operand, string operation, out EventScriptValue value)
-    {
-        if (!EventScriptValue.TryGetDecimalUnit(operand, out var unit))
-        {
-            value = EventScriptValue.Nothing;
-            return false;
-        }
-
-        var degrees = operand.AsNumber();
-        var rounded = operation switch
-        {
-            "floor" or "rounddown" => Math.Floor(degrees),
-            "ceil" or "roundup" => Math.Ceiling(degrees),
-            "round" or "roundeven" => Math.Round(degrees, 0, MidpointRounding.ToEven),
-            _ => degrees
-        };
-
-        value = EventScriptValueFactory.Decimal(rounded, unit);
-        return true;
-    }
-
     public static EventScriptValue EvaluateWrapDegree(EventScriptValue operand)
     {
         if (operand.IsNothing())

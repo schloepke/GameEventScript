@@ -86,6 +86,24 @@
     },
     {
       "kind": "compileError",
+      "name": "legacy floor prefix builtin is rejected",
+      "script": "on Start {\n  let value be :floor 10.4\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Parser"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy wrapDegree prefix builtin is rejected",
+      "script": "on Start {\n  let value be :wrapDegree 370°\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Parser"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "direct range is rejected after in for loops",
       "script": "on Start {\n  for item in from 1 to 10 publish Seen(value: item)\n}",
       "expectedError": {

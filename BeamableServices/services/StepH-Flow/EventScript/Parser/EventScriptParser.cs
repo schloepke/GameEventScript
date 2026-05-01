@@ -1146,13 +1146,6 @@ public sealed class EventScriptParser
             ":values" => "values",
             ":entries" => "entries",
             ":abs" => "abs",
-            ":floor" => "floor",
-            ":ceil" => "ceil",
-            ":round" => "round",
-            ":rounddown" => "rounddown",
-            ":roundup" => "roundup",
-            ":roundeven" => "roundeven",
-            ":wrapDegree" => "wrapDegree",
             _ => string.Empty
         };
 

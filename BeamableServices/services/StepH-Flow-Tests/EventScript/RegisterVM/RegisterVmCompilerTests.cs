@@ -589,6 +589,41 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
+    public void RegisterVmStandardExtensionsAreIntrinsicAndDoNotRequireDynamicLinking()
+    {
+        const string script =
+            """
+            module StandardExtensions
+
+            on Start(value, heading) {
+              publish Done(floor: :integer.floor value, wrapped: :degree.wrap heading)
+            }
+            """;
+
+        var compiled = EventScriptManager.CompileRegisterVM(script);
+        var dump = RegisterBytecodeDumper.ToDebugText(compiled);
+
+        StringAssert.Contains(dump, "externalReferences[0]");
+        Assert.IsFalse(dump.Contains("integer.floor(_)", StringComparison.Ordinal));
+        Assert.IsFalse(dump.Contains("degree.wrap(_)", StringComparison.Ordinal));
+
+        var published = new List<EventScriptMessage>();
+        var host = EventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(compiled);
+
+        host.Publish(Message(
+            "Start",
+            ("value", EventScriptValueFactory.Decimal(10.4m)),
+            ("heading", EventScriptValueFactory.Degree(-10))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(EventScriptValueFactory.Integer(10), published[0].Arguments["floor"]);
+        Assert.AreEqual(EventScriptValueFactory.Degree(350), published[0].Arguments["wrapped"]);
+    }
+
+    [TestMethod]
     public void RegisterVmDynamicLinkBindsExtensionReferencesOnHostLoad()
     {
         const string script =

@@ -281,6 +281,11 @@ public static class RegisterEventScriptCompiler
 
         private int AddExternalReference(EventScriptExtensionReference reference)
         {
+            if (EventScriptStandardExtensions.IsStandardReference(reference))
+            {
+                return -1;
+            }
+
             if (_externalReferenceIndex.TryGetValue(reference.SignatureId, out var existing))
             {
                 return _externalReferences.IndexOf(existing);

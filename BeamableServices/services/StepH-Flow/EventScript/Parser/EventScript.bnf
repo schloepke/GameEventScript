@@ -103,13 +103,6 @@ UnaryTag ::= ":len"
            | ":values"
            | ":entries"
            | ":abs"
-           | ":floor"
-           | ":ceil"
-           | ":round"
-           | ":rounddown"
-           | ":roundup"
-           | ":roundeven"
-           | ":wrapDegree"
 VariadicTaggedExpression ::= ( ":min" | ":max" ) "of" Expression { "and" Expression }
 ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expression
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }

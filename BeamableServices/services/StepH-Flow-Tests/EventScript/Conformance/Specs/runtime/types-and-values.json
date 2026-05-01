@@ -313,7 +313,7 @@
     {
       "kind": "scriptApi",
       "name": "degree literals preserve raw angles and wrap explicitly",
-      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :wrapDegree -10°\n  let wrapOver be :wrapDegree 370°\n  let wrapLarge be :wrapDegree 1000°\n  let wrapCast be :wrapDegree castOpen\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  publish Done(fromLiteral: fromLiteral, overLiteral: overLiteral, decimalLiteral: decimalLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  publish Done(fromLiteral: fromLiteral, overLiteral: overLiteral, decimalLiteral: decimalLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -345,7 +345,7 @@
     {
       "kind": "scriptApi",
       "name": "degree arithmetic percentages helpers and comparisons",
-      "script": "on Start {\n  publish Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyDecimal: 30° * 0.2, divideDecimal: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :wrapDegree (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: :floor 43.9°, ceilDegree: :ceil 43.1°, roundEvenDegree: :roundeven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
+      "script": "on Start {\n  publish Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyDecimal: 30° * 0.2, divideDecimal: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :degree.wrap (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: :integer.floor 43.9°, ceilDegree: :integer.ceil 43.1°, roundEvenDegree: :integer.halfEven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -371,9 +371,9 @@
                 "reverseSubtract": { "type": ":decimal", "value": "NaN" },
                 "reverseDivide": { "type": ":decimal", "value": "NaN" },
                 "reverseModulo": { "type": ":decimal", "value": "NaN" },
-                "floorDegree": { "type": ":decimal", "value": "43", "unit": ":degree" },
-                "ceilDegree": { "type": ":decimal", "value": "44", "unit": ":degree" },
-                "roundEvenDegree": { "type": ":decimal", "value": "42", "unit": ":degree" },
+                "floorDegree": { "type": ":integer", "value": "43" },
+                "ceilDegree": { "type": ":integer", "value": "44" },
+                "roundEvenDegree": { "type": ":integer", "value": "42" },
                 "minDegree": { "type": ":decimal", "value": "10", "unit": ":degree" },
                 "maxDegree": { "type": ":decimal", "value": "350", "unit": ":degree" },
                 "greaterDegree": { "type": ":boolean", "value": true },
@@ -388,7 +388,7 @@
     {
       "kind": "scriptApi",
       "name": "decimal unit literals casts and strict arithmetic",
-      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :decimal be castMeter\n  publish Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isDecimal: castMeter is :decimal, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :wrapDegree 10m)\n}",
+      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :decimal be castMeter\n  publish Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isDecimal: castMeter is :decimal, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -413,6 +413,47 @@
                 "unitModulo": { "type": ":decimal", "value": "10", "unit": ":meter" },
                 "unitModuloScalar": { "type": ":decimal", "value": "NaN" },
                 "wrapMeter": { "type": ":decimal", "value": "NaN" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "required standard integer and degree extensions are intrinsic",
+      "script": "on Start(value, heading, unitlessHeading, meterValue) {\n  let pi be :degree.toRadians 180°\n  publish Done(floorBare: :integer.floor value, floorCall: :integer.floor(value), floorNegative: :integer.floor -10.4, ceilNegative: :integer.ceil -10.4, truncateNegative: :integer.truncate -10.4, halfEven12: :integer.halfEven 12.5, halfEven13: :integer.halfEven 13.5, halfUpNegative: :integer.halfUp -12.5, halfDownNegative: :integer.halfDown -12.5, wrapNegative: :degree.wrap heading, wrapUnitless: :degree.wrap unitlessHeading, radians: pi, degrees: :degree.fromRadians pi, wrapWrongUnit: :degree.wrap meterValue, radiansWrongUnit: :degree.toRadians meterValue, fromRadiansWrongUnit: :degree.fromRadians meterValue)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "10.4" },
+              "heading": { "type": ":decimal", "value": "-10", "unit": ":degree" },
+              "unitlessHeading": { "type": ":decimal", "value": "370" },
+              "meterValue": { "type": ":decimal", "value": "10", "unit": ":meter" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "floorBare": { "type": ":integer", "value": "10" },
+                "floorCall": { "type": ":integer", "value": "10" },
+                "floorNegative": { "type": ":integer", "value": "-11" },
+                "ceilNegative": { "type": ":integer", "value": "-10" },
+                "truncateNegative": { "type": ":integer", "value": "-10" },
+                "halfEven12": { "type": ":integer", "value": "12" },
+                "halfEven13": { "type": ":integer", "value": "14" },
+                "halfUpNegative": { "type": ":integer", "value": "-13" },
+                "halfDownNegative": { "type": ":integer", "value": "-12" },
+                "wrapNegative": { "type": ":decimal", "value": "350", "unit": ":degree" },
+                "wrapUnitless": { "type": ":decimal", "value": "10", "unit": ":degree" },
+                "radians": { "type": ":decimal", "value": "3.1415926535897932384626433833" },
+                "degrees": { "type": ":decimal", "value": "180", "unit": ":degree" },
+                "wrapWrongUnit": { "type": ":decimal", "value": "NaN" },
+                "radiansWrongUnit": { "type": ":decimal", "value": "NaN" },
+                "fromRadiansWrongUnit": { "type": ":decimal", "value": "NaN" }
               }
             }
           ]
@@ -842,8 +883,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "unary domain conditional and rounding forms",
-      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negDecimal be -12.34\n  let negPercent be -25%\n  let restored be -negDecimal\n  let score as :decimal be 12 when age is :boolean, or 15 when age is :decimal, otherwise 5\n  publish Done(negInt: negInt, negDecimal: negDecimal, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :floor 12.7, ceil: :ceil 12.1, roundEven12: :roundeven 12.5, roundEven13: :roundeven 13.5, roundDown: :rounddown 12.1, roundUp: :roundup 12.1, round: :round 12.5)\n}",
+      "name": "unary domain conditional and standard integer rounding forms",
+      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negDecimal be -12.34\n  let negPercent be -25%\n  let restored be -negDecimal\n  let score as :decimal be 12 when age is :boolean, or 15 when age is :decimal, otherwise 5\n  publish Done(negInt: negInt, negDecimal: negDecimal, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven12: :integer.halfEven 12.5, roundEven13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
       "steps": [
         {
           "input": {
@@ -878,9 +919,9 @@
                 "ceil": { "type": ":integer", "value": "13" },
                 "roundEven12": { "type": ":integer", "value": "12" },
                 "roundEven13": { "type": ":integer", "value": "14" },
-                "roundDown": { "type": ":integer", "value": "12" },
-                "roundUp": { "type": ":integer", "value": "13" },
-                "round": { "type": ":integer", "value": "12" }
+                "truncate": { "type": ":integer", "value": "-12" },
+                "halfUp": { "type": ":integer", "value": "-13" },
+                "halfDown": { "type": ":integer", "value": "-12" }
               }
             }
           ]
@@ -918,9 +959,9 @@
                 "ceil": { "type": ":integer", "value": "13" },
                 "roundEven12": { "type": ":integer", "value": "12" },
                 "roundEven13": { "type": ":integer", "value": "14" },
-                "roundDown": { "type": ":integer", "value": "12" },
-                "roundUp": { "type": ":integer", "value": "13" },
-                "round": { "type": ":integer", "value": "12" }
+                "truncate": { "type": ":integer", "value": "-12" },
+                "halfUp": { "type": ":integer", "value": "-13" },
+                "halfDown": { "type": ":integer", "value": "-12" }
               }
             }
           ]

@@ -564,6 +564,11 @@ internal static class EventScriptInvocationEngine
                 extensionCall.ExtensionName,
                 extensionCall.FunctionName,
                 extensionCall.Arguments.Select(argument => argument.Name).ToArray());
+            if (EventScriptStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
+            {
+                return standardValue.ToEventScriptValue();
+            }
+
             return _context.ExtensionRegistry.TryResolve(reference, out var function)
                 ? function.Invoke(new EventScriptExtensionContext(_context), arguments).ToEventScriptValue()
                 : EventScriptValue.Nothing;
@@ -575,12 +580,17 @@ internal static class EventScriptInvocationEngine
                 extensionPredicate.ExtensionName,
                 extensionPredicate.FunctionName,
                 [EventScriptMessageSignature.UnlabeledParameterName]);
+            var input = EventScriptFastValue.FromEventScriptValue(EvaluateExpression(context, extensionPredicate.Value));
+            if (EventScriptStandardExtensions.TryInvoke(reference, [input], out var standardValue))
+            {
+                return EventScriptValueFactory.Boolean(standardValue.ToEventScriptValue().AsBoolean());
+            }
+
             if (!_context.ExtensionRegistry.TryResolve(reference, out var function))
             {
                 return EventScriptValue.Nothing;
             }
 
-            var input = EventScriptFastValue.FromEventScriptValue(EvaluateExpression(context, extensionPredicate.Value));
             return EventScriptValueFactory.Boolean(function.Invoke(new EventScriptExtensionContext(_context), [input]).ToEventScriptValue().AsBoolean());
         }
 
@@ -773,13 +783,6 @@ internal static class EventScriptInvocationEngine
                 "values" => EventScriptValueFactory.Values(operand),
                 "entries" => EventScriptValueFactory.Entries(operand),
                 "abs" => EvaluateAbsUnary(operand),
-                "floor" => EvaluateRoundingUnary(operand, "floor"),
-                "ceil" => EvaluateRoundingUnary(operand, "ceil"),
-                "round" => EvaluateRoundingUnary(operand, "round"),
-                "rounddown" => EvaluateRoundingUnary(operand, "rounddown"),
-                "roundup" => EvaluateRoundingUnary(operand, "roundup"),
-                "roundeven" => EvaluateRoundingUnary(operand, "roundeven"),
-                "wrapDegree" => EventScriptValueAlu.EvaluateWrapDegree(operand),
                 _ => EventScriptValue.Nothing
             };
         }
@@ -959,47 +962,6 @@ internal static class EventScriptInvocationEngine
             return TryNextInclusiveDecimal(0m, 1m, out var randomValue)
                 ? EventScriptValueFactory.Boolean(randomValue < ratio)
                 : EventScriptValueFactory.Boolean(false);
-        }
-
-        private static EventScriptValue EvaluateRoundingUnary(EventScriptValue operand, string operation)
-        {
-            if (operand.IsNothing())
-            {
-                return EventScriptValue.Nothing;
-            }
-
-            if (EventScriptValueAlu.TryEvaluateUnitRounding(operand, operation, out var degree))
-            {
-                return degree;
-            }
-
-            if (!TryCoerceNumericForOperation(operand, out var number))
-            {
-                return EventScriptValue.Nothing;
-            }
-
-            if (number.IsNaN)
-            {
-                return EventScriptValue.Nothing;
-            }
-
-            if (number.IsPositiveInfinity)
-            {
-                return EventScriptValueFactory.Integer(long.MaxValue);
-            }
-
-            if (number.IsNegativeInfinity)
-            {
-                return EventScriptValueFactory.Integer(long.MinValue);
-            }
-
-            return operation switch
-            {
-                "floor" or "rounddown" => EventScriptValueFactory.Integer(ToIntegerSaturated(Math.Floor(number.Value))),
-                "ceil" or "roundup" => EventScriptValueFactory.Integer(ToIntegerSaturated(Math.Ceiling(number.Value))),
-                "round" or "roundeven" => EventScriptValueFactory.Integer(ToIntegerSaturated(Math.Round(number.Value, 0, MidpointRounding.ToEven))),
-                _ => EventScriptValue.Nothing
-            };
         }
 
         private static EventScriptValue EvaluateAbsUnary(EventScriptValue operand)

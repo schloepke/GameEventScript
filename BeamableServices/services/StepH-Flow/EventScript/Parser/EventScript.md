@@ -302,7 +302,10 @@ Percentage arithmetic keeps percentages when the percentage is the subject:
 15s
 ```
 
-Decimal unit literals are regular `:decimal` values with an attached unit. Built-in units are `:degree`, `:meter`, and `:second`. Unit values preserve their unit in text output. `as :decimal` erases the unit. Unit casts such as `as :meter` or `:meter(value)` apply the unit to unitless numeric values, keep matching units, and return `NaN` for mismatched units. Use `:wrapDegree` to wrap a unitless decimal or degree value into the canonical `0°` up to, but not including, `360°` range.
+Decimal unit literals are regular `:decimal` values with an attached unit. Built-in units are `:degree`, `:meter`, and `:second`. Unit
+values preserve their unit in text output. `as :decimal` erases the unit. Unit casts such as `as :meter` or `:meter(value)` apply the
+unit to unitless numeric values, keep matching units, and return `NaN` for mismatched units. Use `:degree.wrap` to wrap a unitless
+decimal or degree value into the canonical `0°` up to, but not including, `360°` range.
 
 ### Text
 
@@ -554,7 +557,8 @@ a mod b
 a rem b
 ```
 
-`/` is numeric division. `div` is floor division. `mod` is mathematical modulo, and `rem` is the truncating remainder. Percentage values are written as literals such as `10%`.
+`/` is numeric division. `div` is floor division. `mod` is mathematical modulo, and `rem` is the truncating remainder.
+Percentage values are written as literals such as `10%`.
 
 Vectors support basic vector arithmetic:
 
@@ -1154,13 +1158,6 @@ Current prefix tag operators:
 - `:values`
 - `:entries`
 - `:abs`
-- `:floor`
-- `:ceil`
-- `:round`
-- `:rounddown`
-- `:roundup`
-- `:roundeven`
-- `:wrapDegree`
 
 Examples:
 
@@ -1173,11 +1170,33 @@ let entries be :entries entry
 let penalty be -12
 let debt be -12.5
 let distance be :abs -5
-let roundedDown be :floor 12.9
-let heading be :wrapDegree -10°
 ```
 
 Negative values can be written directly with unary minus, such as `-12` or `-12.34`.
+
+## Required Standard Extensions
+
+The standard extension namespace is parsed like any other extension call, but these functions are intrinsic and do not require a host registry:
+
+- `:integer.floor value`
+- `:integer.ceil value`
+- `:integer.truncate value`
+- `:integer.halfEven value`
+- `:integer.halfUp value`
+- `:integer.halfDown value`
+- `:degree.wrap value`
+- `:degree.toRadians value`
+- `:degree.fromRadians value`
+
+Examples:
+
+```eventscript
+let roundedDown be :integer.floor 12.9
+let roundedUp be :integer.ceil(12.1)
+let heading be :degree.wrap -10°
+let radians be :degree.toRadians 180°
+let degrees be :degree.fromRadians 3.1415926535897932384626433833
+```
 
 ## Keys, Values, and Entries
 

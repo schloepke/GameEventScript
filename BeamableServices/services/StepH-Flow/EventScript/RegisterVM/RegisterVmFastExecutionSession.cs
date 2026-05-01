@@ -1106,6 +1106,22 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
+        var argumentLabels = labels is { Length: var labelCount } && labelCount == count
+            ? labels
+            : Enumerable.Repeat(EventScriptMessageSignature.UnlabeledParameterName, count).ToArray();
+        var reference = new EventScriptExtensionReference(extensionName, functionName, argumentLabels);
+        var arguments = new EventScriptFastValue[count];
+        for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+        {
+            arguments[argumentIndex] = EventScriptFastValue.FromEventScriptValue(stack[start + argumentIndex].ToEventScriptValue());
+        }
+
+        if (EventScriptStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
+        {
+            value = RegisterFastValue.FromEventScriptValue(standardValue.ToEventScriptValue());
+            return true;
+        }
+
         IEventScriptExtensionFunction function;
         if (referenceIndex >= 0)
         {
@@ -1116,20 +1132,10 @@ internal sealed class RegisterVmFastExecutionSession
         }
         else
         {
-            var argumentLabels = labels is { Length: var labelCount } && labelCount == count
-                ? labels
-                : Enumerable.Repeat(EventScriptMessageSignature.UnlabeledParameterName, count).ToArray();
-            var reference = new EventScriptExtensionReference(extensionName, functionName, argumentLabels);
             if (!_compiledScript.TryGetBoundExtension(reference, out function))
             {
                 throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' was not dynamically bound.");
             }
-        }
-
-        var arguments = new EventScriptFastValue[count];
-        for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
-        {
-            arguments[argumentIndex] = EventScriptFastValue.FromEventScriptValue(stack[start + argumentIndex].ToEventScriptValue());
         }
 
         value = RegisterFastValue.FromEventScriptValue(function.Invoke(new EventScriptExtensionContext(_context), arguments).ToEventScriptValue());
@@ -1652,8 +1658,6 @@ internal sealed class RegisterVmFastExecutionSession
             "values" => RegisterFastValue.Reference(Values(boxed)),
             "entries" => RegisterFastValue.Reference(Entries(boxed)),
             "abs" => RegisterFastValue.FromEventScriptValue(EvaluateAbsUnary(boxed)),
-            "floor" or "ceil" or "round" or "rounddown" or "roundup" or "roundeven" => RegisterFastValue.FromEventScriptValue(EvaluateRoundingUnary(boxed, operation!)),
-            "wrapDegree" => RegisterFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateWrapDegree(boxed)),
             _ => RegisterFastValue.Unsupported()
         };
 
@@ -1980,42 +1984,6 @@ internal sealed class RegisterVmFastExecutionSession
         return TryNextInclusiveDecimal(0m, 1m, out var randomValue)
             ? Boolean(randomValue < ratio)
             : Boolean(false);
-    }
-
-    private static EventScriptValue EvaluateRoundingUnary(EventScriptValue operand, string operation)
-    {
-        if (operand.IsNothing())
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        if (EventScriptValueAlu.TryEvaluateUnitRounding(operand, operation, out var unitRounded))
-        {
-            return unitRounded;
-        }
-
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) || number.IsNaN)
-        {
-            return EventScriptValue.Nothing;
-        }
-
-        if (number.IsPositiveInfinity)
-        {
-            return Integer(long.MaxValue);
-        }
-
-        if (number.IsNegativeInfinity)
-        {
-            return Integer(long.MinValue);
-        }
-
-        return operation switch
-        {
-            "floor" or "rounddown" => Integer(EventScriptValueAlu.ToIntegerSaturated(Math.Floor(number.Value))),
-            "ceil" or "roundup" => Integer(EventScriptValueAlu.ToIntegerSaturated(Math.Ceiling(number.Value))),
-            "round" or "roundeven" => Integer(EventScriptValueAlu.ToIntegerSaturated(Math.Round(number.Value, 0, MidpointRounding.ToEven))),
-            _ => EventScriptValue.Nothing
-        };
     }
 
     private static EventScriptValue EvaluateAbsUnary(EventScriptValue operand)

@@ -1798,6 +1798,11 @@ internal sealed class RegisterVmFastExecutionSession
 
     private static EventScriptValue EvaluateAddBinary(EventScriptValue left, EventScriptValue right)
     {
+        if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "+", right, out var vector))
+        {
+            return vector;
+        }
+
         if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
         {
             return percentage;
@@ -1826,6 +1831,11 @@ internal sealed class RegisterVmFastExecutionSession
 
     private static EventScriptValue EvaluateNumericBinary(EventScriptValue left, string operation, EventScriptValue right)
     {
+        if (EventScriptValueAlu.TryEvaluateVectorBinary(left, operation, right, out var vector))
+        {
+            return vector;
+        }
+
         if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
         {
             return percentage;
@@ -1870,6 +1880,11 @@ internal sealed class RegisterVmFastExecutionSession
         if (unwrapped.IsPercentage())
         {
             return Percentage(-unwrapped.AsNumber());
+        }
+
+        if (EventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
+        {
+            return vectorNegation;
         }
 
         if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
@@ -2010,6 +2025,11 @@ internal sealed class RegisterVmFastExecutionSession
             return EventScriptValue.Nothing;
         }
 
+        if (EventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out var vectorLength))
+        {
+            return vectorLength;
+        }
+
         return EventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
             ? Decimal(Math.Abs(number.Value))
             : EventScriptValue.Nothing;
@@ -2115,8 +2135,8 @@ internal sealed class RegisterVmFastExecutionSession
             EventScriptValueKind.Tag => $"tag:{value.AsText()}",
             EventScriptValueKind.Text => $"text:{value.AsText()}",
             EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-            EventScriptValueKind.Vector2 => $"vector2:{((EventScriptVector2Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector2Value)value).Y.ToString(CultureInfo.InvariantCulture)}",
-            EventScriptValueKind.Vector3 => $"vector3:{((EventScriptVector3Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Y.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Z.ToString(CultureInfo.InvariantCulture)}",
+            EventScriptValueKind.Vector2 => BuildVector2StableSeedText((EventScriptVector2Value)value),
+            EventScriptValueKind.Vector3 => BuildVector3StableSeedText((EventScriptVector3Value)value),
             EventScriptValueKind.Decimal => value.IsNaN()
                 ? "decimal:nan"
                 : value.IsNegativeInfinity()
@@ -2143,6 +2163,16 @@ internal sealed class RegisterVmFastExecutionSession
             EventScriptValueKind.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
             _ => value.ToString()
         };
+
+    private static string BuildVector2StableSeedText(EventScriptVector2Value value)
+        => value.Unit.HasValue
+            ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+            : $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}";
+
+    private static string BuildVector3StableSeedText(EventScriptVector3Value value)
+        => value.Unit.HasValue
+            ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+            : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
     private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterFastValue value)
     {
@@ -2502,18 +2532,20 @@ internal sealed class RegisterVmFastExecutionSession
             return RegisterFastValue.Nothing;
         }
 
-        var components = new decimal[expectedCount];
-        for (var index = 0; index < expectedCount; index++)
-        {
-            if (!TryReadVectorComponent(stack[start + index].ToEventScriptValue(), out components[index]))
-            {
-                return RegisterFastValue.Nothing;
-            }
-        }
-
-        return RegisterFastValue.Reference(expectedCount == 2
-            ? Vector2(components[0], components[1])
-            : Vector3(components[0], components[1], components[2]));
+        return expectedCount == 2
+            ? EventScriptValueAlu.TryCreateVector2(
+                stack[start].ToEventScriptValue(),
+                stack[start + 1].ToEventScriptValue(),
+                out var vector2)
+                ? RegisterFastValue.FromEventScriptValue(vector2)
+                : RegisterFastValue.Nothing
+            : EventScriptValueAlu.TryCreateVector3(
+                stack[start].ToEventScriptValue(),
+                stack[start + 1].ToEventScriptValue(),
+                stack[start + 2].ToEventScriptValue(),
+                out var vector3)
+                ? RegisterFastValue.FromEventScriptValue(vector3)
+                : RegisterFastValue.Nothing;
     }
 
     private bool TryConvertDeclaredType(string declaredType, RegisterFastValue input, out RegisterFastValue value)
@@ -2659,21 +2691,21 @@ internal sealed class RegisterVmFastExecutionSession
 
         if (unwrapped is EventScriptVector3Value vector3)
         {
-            return Vector2(vector3.X, vector3.Y);
+            return Vector2(vector3.X, vector3.Y, vector3.Unit);
         }
 
-        if (TryReadVectorComponent(unwrapped, "x", out var x) &&
-            TryReadVectorComponent(unwrapped, "y", out var y))
+        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+            unwrapped.TryGetDictionaryMember("y", out var y) &&
+            EventScriptValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
         {
-            return Vector2(x, y);
+            return vectorFromMembers;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 2 &&
-            TryReadVectorComponent(items[0], out x) &&
-            TryReadVectorComponent(items[1], out y))
+            EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
         {
-            return Vector2(x, y);
+            return vectorFromItems;
         }
 
         return EventScriptValue.Nothing;
@@ -2693,23 +2725,36 @@ internal sealed class RegisterVmFastExecutionSession
 
         if (unwrapped is EventScriptVector2Value vector2)
         {
-            return Vector3(vector2.X, vector2.Y, 0m);
+            return Vector3(vector2.X, vector2.Y, 0m, vector2.Unit);
         }
 
-        if (TryReadVectorComponent(unwrapped, "x", out var x) &&
-            TryReadVectorComponent(unwrapped, "y", out var y))
+        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+            unwrapped.TryGetDictionaryMember("y", out var y))
         {
-            var z = TryReadVectorComponent(unwrapped, "z", out var zValue) ? zValue : 0m;
-            return Vector3(x, y, z);
+            if (unwrapped.TryGetDictionaryMember("z", out var z))
+            {
+                return EventScriptValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
+                    ? vectorFromMembers
+                    : EventScriptValue.Nothing;
+            }
+
+            return EventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is EventScriptVector2Value xy
+                ? Vector3(xy.X, xy.Y, 0m, xy.Unit)
+                : xyVector;
         }
 
         var items = unwrapped.AsList();
-        if (items.Count >= 2 &&
-            TryReadVectorComponent(items[0], out x) &&
-            TryReadVectorComponent(items[1], out y))
+        if (items.Count >= 3 &&
+            EventScriptValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
         {
-            var z = items.Count >= 3 && TryReadVectorComponent(items[2], out var zValue) ? zValue : 0m;
-            return Vector3(x, y, z);
+            return vectorFromItems;
+        }
+
+        if (items.Count >= 2 &&
+            EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
+            xyVectorFromItems is EventScriptVector2Value xyFromItems)
+        {
+            return Vector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
         return EventScriptValue.Nothing;
@@ -2828,32 +2873,6 @@ internal sealed class RegisterVmFastExecutionSession
         {
             ExitScope();
         }
-    }
-
-    private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
-    {
-        if (source.TryGetDictionaryMember(key, out var component) &&
-            TryReadVectorComponent(component, out value))
-        {
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    private static bool TryReadVectorComponent(EventScriptValue component, out decimal value)
-    {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(component, out var unwrapped) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) ||
-            !number.IsFinite)
-        {
-            value = default;
-            return false;
-        }
-
-        value = number.Value;
-        return true;
     }
 
     private bool TryExecutePipelineProgram(RegisterFastPipelineProgram pipeline, out RegisterFastValue value)
@@ -5068,6 +5087,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue Add(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "+", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return AddPercentage(left, right);
@@ -5115,6 +5139,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue Subtract(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "-", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return SubtractPercentage(left, right);
@@ -5154,6 +5183,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue Multiply(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "*", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return MultiplyPercentage(left, right);
@@ -5192,6 +5226,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue Divide(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "/", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return DividePercentage(left, right);
@@ -5230,6 +5269,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue IntegerDivide(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "div", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
         {
@@ -5266,6 +5310,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue Modulo(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "mod", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
         {
@@ -5301,6 +5350,11 @@ internal readonly record struct RegisterFastValue(
 
     public static RegisterFastValue Remainder(RegisterFastValue left, RegisterFastValue right)
     {
+        if (TryEvaluateVectorBinary(left, "rem", right, out var vectorResult))
+        {
+            return vectorResult;
+        }
+
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
         {
@@ -5520,6 +5574,27 @@ internal readonly record struct RegisterFastValue(
     private bool IsPercentageLike()
         => Kind == RegisterFastValueKind.Percentage ||
            ReferenceValue is { } reference && reference.IsPercentage();
+
+    private bool IsVectorLike()
+        => ReferenceValue is EventScriptVector2Value or EventScriptVector3Value;
+
+    private static bool TryEvaluateVectorBinary(RegisterFastValue left, string operation, RegisterFastValue right, out RegisterFastValue value)
+    {
+        if (!left.IsVectorLike() && !right.IsVectorLike())
+        {
+            value = default;
+            return false;
+        }
+
+        if (EventScriptValueAlu.TryEvaluateVectorBinary(left.ToEventScriptValue(), operation, right.ToEventScriptValue(), out var vectorValue))
+        {
+            value = FromEventScriptValue(vectorValue);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
 
     public bool IsNothingLike()
         => Kind == RegisterFastValueKind.Nothing ||

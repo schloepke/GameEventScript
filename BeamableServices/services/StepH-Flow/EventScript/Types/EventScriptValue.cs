@@ -252,10 +252,12 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             EventScriptValueKind.Text => AsText() == other.AsText(),
             EventScriptValueKind.Percentage => ((EventScriptPercentageValue)this).Ratio == ((EventScriptPercentageValue)other).Ratio,
             EventScriptValueKind.Vector2 => ((EventScriptVector2Value)this).X == ((EventScriptVector2Value)other).X &&
-                                            ((EventScriptVector2Value)this).Y == ((EventScriptVector2Value)other).Y,
+                                            ((EventScriptVector2Value)this).Y == ((EventScriptVector2Value)other).Y &&
+                                            ((EventScriptVector2Value)this).Unit == ((EventScriptVector2Value)other).Unit,
             EventScriptValueKind.Vector3 => ((EventScriptVector3Value)this).X == ((EventScriptVector3Value)other).X &&
                                             ((EventScriptVector3Value)this).Y == ((EventScriptVector3Value)other).Y &&
-                                            ((EventScriptVector3Value)this).Z == ((EventScriptVector3Value)other).Z,
+                                            ((EventScriptVector3Value)this).Z == ((EventScriptVector3Value)other).Z &&
+                                            ((EventScriptVector3Value)this).Unit == ((EventScriptVector3Value)other).Unit,
             EventScriptValueKind.Decimal => AsNumber() == other.AsNumber(),
             EventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
             EventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
@@ -315,11 +317,13 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             case EventScriptValueKind.Vector2:
                 hash.Add(((EventScriptVector2Value)this).X);
                 hash.Add(((EventScriptVector2Value)this).Y);
+                hash.Add(((EventScriptVector2Value)this).Unit);
                 break;
             case EventScriptValueKind.Vector3:
                 hash.Add(((EventScriptVector3Value)this).X);
                 hash.Add(((EventScriptVector3Value)this).Y);
                 hash.Add(((EventScriptVector3Value)this).Z);
+                hash.Add(((EventScriptVector3Value)this).Unit);
                 break;
             case EventScriptValueKind.Optional:
             {
@@ -841,13 +845,16 @@ public abstract class EventScriptValue : IComparable<EventScriptValue>, IEquatab
             });
 
     internal static string FormatVector2(EventScriptVector2Value value)
-        => $"vector2[x: {FormatDecimalComponent(value.X)}, y: {FormatDecimalComponent(value.Y)}]";
+        => $"vector2[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}]";
 
     internal static string FormatVector3(EventScriptVector3Value value)
-        => $"vector3[x: {FormatDecimalComponent(value.X)}, y: {FormatDecimalComponent(value.Y)}, z: {FormatDecimalComponent(value.Z)}]";
+        => $"vector3[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
 
-    internal static string FormatDecimalComponent(decimal value)
-        => value.ToString("0.############################", CultureInfo.InvariantCulture);
+    internal static string FormatDecimalComponent(decimal value, EventScriptDecimalUnit? unit = null)
+    {
+        var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
+        return unit.HasValue ? $"{formatted}{EventScriptDecimalUnits.ToSuffix(unit.Value)}" : formatted;
+    }
 
     internal static long ToIntegerPercentage(decimal ratio)
     {

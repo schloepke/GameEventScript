@@ -801,6 +801,11 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValueFactory.Percentage(-unwrapped.AsNumber());
             }
 
+            if (EventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
+            {
+                return vectorNegation;
+            }
+
             if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
             {
                 return EventScriptValueFactory.Decimal(-unwrapped.AsNumber(), unit);
@@ -1004,6 +1009,11 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValue.Nothing;
             }
 
+            if (EventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out var vectorLength))
+            {
+                return vectorLength;
+            }
+
             if (!TryCoerceNumericForOperation(operand, out var number) || !number.IsFinite)
             {
                 return EventScriptValue.Nothing;
@@ -1172,6 +1182,11 @@ internal static class EventScriptInvocationEngine
                     return EventScriptValueFactory.Boolean(greaterOrEqualComparison >= 0);
                 case "+":
                 {
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "+", right, out var vectorSum))
+                    {
+                        return vectorSum;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
                     {
                         return percentage;
@@ -1211,6 +1226,11 @@ internal static class EventScriptInvocationEngine
                 case "zip":
                     return EvaluateCollectionZip(left, right);
                 case "-":
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "-", right, out var vectorDifference))
+                    {
+                        return vectorDifference;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "-", right, out var percentageDifference))
                     {
                         return percentageDifference;
@@ -1229,6 +1249,11 @@ internal static class EventScriptInvocationEngine
 
                     return EventScriptValueAlu.ToEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 case "*":
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "*", right, out var vectorProduct))
+                    {
+                        return vectorProduct;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out var percentageProduct))
                     {
                         return percentageProduct;
@@ -1247,6 +1272,11 @@ internal static class EventScriptInvocationEngine
 
                     return EventScriptValueAlu.ToEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 case "/":
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "/", right, out var vectorQuotient))
+                    {
+                        return vectorQuotient;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out var percentageQuotient))
                     {
                         return percentageQuotient;
@@ -1265,6 +1295,11 @@ internal static class EventScriptInvocationEngine
 
                     return ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 case "mod":
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "mod", right, out var vectorModulo))
+                    {
+                        return vectorModulo;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "mod", right, out var degreeModulo))
                     {
                         return degreeModulo;
@@ -1278,6 +1313,11 @@ internal static class EventScriptInvocationEngine
 
                     return EventScriptValueAlu.ToEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
                 case "div":
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "div", right, out var vectorIntegerDivide))
+                    {
+                        return vectorIntegerDivide;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "div", right, out var unitIntegerDivide))
                     {
                         return unitIntegerDivide;
@@ -1291,6 +1331,11 @@ internal static class EventScriptInvocationEngine
 
                     return EventScriptValueAlu.ToEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
                 case "rem":
+                    if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "rem", right, out var vectorRemainder))
+                    {
+                        return vectorRemainder;
+                    }
+
                     if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "rem", right, out var unitRemainder))
                     {
                         return unitRemainder;
@@ -2531,19 +2576,13 @@ internal static class EventScriptInvocationEngine
                 return EventScriptValue.Nothing;
             }
 
-            var components = new decimal[expectedCount];
-            for (var index = 0; index < expectedCount; index++)
-            {
-                var component = EvaluateExpression(context, constructor.Arguments[index].Expression);
-                if (!TryReadVectorComponent(component, out components[index]))
-                {
-                    return EventScriptValue.Nothing;
-                }
-            }
+            var components = constructor.Arguments
+                .Select(argument => EvaluateExpression(context, argument.Expression))
+                .ToArray();
 
             return expectedCount == 2
-                ? EventScriptValueFactory.Vector2(components[0], components[1])
-                : EventScriptValueFactory.Vector3(components[0], components[1], components[2]);
+                ? EventScriptValueAlu.TryCreateVector2(components[0], components[1], out var vector2) ? vector2 : EventScriptValue.Nothing
+                : EventScriptValueAlu.TryCreateVector3(components[0], components[1], components[2], out var vector3) ? vector3 : EventScriptValue.Nothing;
         }
 
         private EventScriptValue ConvertToPercentage(EventScriptValue value)
@@ -2612,21 +2651,21 @@ internal static class EventScriptInvocationEngine
 
             if (unwrapped is EventScriptVector3Value vector3)
             {
-                return EventScriptValueFactory.Vector2(vector3.X, vector3.Y);
+                return EventScriptValueFactory.Vector2(vector3.X, vector3.Y, vector3.Unit);
             }
 
-            if (TryReadVectorComponent(unwrapped, "x", out var x) &&
-                TryReadVectorComponent(unwrapped, "y", out var y))
+            if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+                unwrapped.TryGetDictionaryMember("y", out var y) &&
+                EventScriptValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
             {
-                return EventScriptValueFactory.Vector2(x, y);
+                return vectorFromMembers;
             }
 
             var items = unwrapped.AsList();
             if (items.Count >= 2 &&
-                TryReadVectorComponent(items[0], out x) &&
-                TryReadVectorComponent(items[1], out y))
+                EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
             {
-                return EventScriptValueFactory.Vector2(x, y);
+                return vectorFromItems;
             }
 
             return EventScriptValue.Nothing;
@@ -2646,52 +2685,39 @@ internal static class EventScriptInvocationEngine
 
             if (unwrapped is EventScriptVector2Value vector2)
             {
-                return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m);
+                return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m, vector2.Unit);
             }
 
-            if (TryReadVectorComponent(unwrapped, "x", out var x) &&
-                TryReadVectorComponent(unwrapped, "y", out var y))
+            if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+                unwrapped.TryGetDictionaryMember("y", out var y))
             {
-                var z = TryReadVectorComponent(unwrapped, "z", out var zValue) ? zValue : 0m;
-                return EventScriptValueFactory.Vector3(x, y, z);
+                if (unwrapped.TryGetDictionaryMember("z", out var z))
+                {
+                    return EventScriptValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
+                        ? vectorFromMembers
+                        : EventScriptValue.Nothing;
+                }
+
+                return EventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is EventScriptVector2Value xy
+                    ? EventScriptValueFactory.Vector3(xy.X, xy.Y, 0m, xy.Unit)
+                    : xyVector;
             }
 
             var items = unwrapped.AsList();
-            if (items.Count >= 2 &&
-                TryReadVectorComponent(items[0], out x) &&
-                TryReadVectorComponent(items[1], out y))
+            if (items.Count >= 3 &&
+                EventScriptValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
             {
-                var z = items.Count >= 3 && TryReadVectorComponent(items[2], out var zValue) ? zValue : 0m;
-                return EventScriptValueFactory.Vector3(x, y, z);
+                return vectorFromItems;
+            }
+
+            if (items.Count >= 2 &&
+                EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
+                xyVectorFromItems is EventScriptVector2Value xyFromItems)
+            {
+                return EventScriptValueFactory.Vector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
             }
 
             return EventScriptValue.Nothing;
-        }
-
-        private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
-        {
-            if (source.TryGetDictionaryMember(key, out var component) &&
-                TryReadVectorComponent(component, out value))
-            {
-                return true;
-            }
-
-            value = default;
-            return false;
-        }
-
-        private static bool TryReadVectorComponent(EventScriptValue component, out decimal value)
-        {
-            if (!TryUnwrapOptionalForOperation(component, out var unwrapped) ||
-                !TryCoerceNumericForOperation(unwrapped, out var number) ||
-                !number.IsFinite)
-            {
-                value = default;
-                return false;
-            }
-
-            value = number.Value;
-            return true;
         }
 
         private EventScriptValue ConvertToCustomType(ExecutionContext context, EventScriptValue value, CompiledTypeDefinition typeDefinition)
@@ -2885,8 +2911,8 @@ internal static class EventScriptInvocationEngine
                 EventScriptValueKind.Tag => $"tag:{value.AsText()}",
                 EventScriptValueKind.Text => $"text:{value.AsText()}",
                 EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-                EventScriptValueKind.Vector2 => $"vector2:{((EventScriptVector2Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector2Value)value).Y.ToString(CultureInfo.InvariantCulture)}",
-                EventScriptValueKind.Vector3 => $"vector3:{((EventScriptVector3Value)value).X.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Y.ToString(CultureInfo.InvariantCulture)}:{((EventScriptVector3Value)value).Z.ToString(CultureInfo.InvariantCulture)}",
+                EventScriptValueKind.Vector2 => BuildVector2StableSeedText((EventScriptVector2Value)value),
+                EventScriptValueKind.Vector3 => BuildVector3StableSeedText((EventScriptVector3Value)value),
                 EventScriptValueKind.Decimal => value.IsNaN()
                     ? "decimal:nan"
                     : value.IsNegativeInfinity()
@@ -2914,6 +2940,16 @@ internal static class EventScriptInvocationEngine
                 _ => value.ToString()
             };
         }
+
+        private static string BuildVector2StableSeedText(EventScriptVector2Value value)
+            => value.Unit.HasValue
+                ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+                : $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}";
+
+        private static string BuildVector3StableSeedText(EventScriptVector3Value value)
+            => value.Unit.HasValue
+                ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+                : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
         private sealed class ExecutionContext
         {

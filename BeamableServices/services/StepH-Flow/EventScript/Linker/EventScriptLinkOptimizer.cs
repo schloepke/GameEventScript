@@ -558,20 +558,18 @@ internal static class EventScriptLinkOptimizer
             return false;
         }
 
-        var components = new decimal[expectedCount];
+        var components = new EventScriptValue[expectedCount];
         for (var index = 0; index < expectedCount; index++)
         {
-            if (!TryEvaluateConstant(constructor.Arguments[index].Expression, out var component) ||
-                !TryReadVectorComponent(component, out components[index]))
+            if (!TryEvaluateConstant(constructor.Arguments[index].Expression, out components[index]))
             {
                 return false;
             }
         }
 
-        value = expectedCount == 2
-            ? EventScriptValueFactory.Vector2(components[0], components[1])
-            : EventScriptValueFactory.Vector3(components[0], components[1], components[2]);
-        return true;
+        return expectedCount == 2
+            ? EventScriptValueAlu.TryCreateVector2(components[0], components[1], out value)
+            : EventScriptValueAlu.TryCreateVector3(components[0], components[1], components[2], out value);
     }
 
     private static bool TryEvaluateConstantUnary(UnaryExpressionNode unary, out EventScriptValue value)
@@ -600,6 +598,11 @@ internal static class EventScriptLinkOptimizer
                 if (unwrapped.IsPercentage())
                 {
                     value = EventScriptValueFactory.Percentage(-unwrapped.AsNumber());
+                    return true;
+                }
+
+                if (EventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out value))
+                {
                     return true;
                 }
 
@@ -641,6 +644,14 @@ internal static class EventScriptLinkOptimizer
             case "wrapDegree":
                 value = EventScriptValueAlu.EvaluateWrapDegree(operand);
                 return true;
+            case "abs":
+                if (EventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out value))
+                {
+                    return true;
+                }
+
+                value = EventScriptValue.Nothing;
+                return false;
             default:
                 value = EventScriptValue.Nothing;
                 return false;
@@ -716,6 +727,11 @@ internal static class EventScriptLinkOptimizer
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
             case "+":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "+", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out value))
                 {
                     return true;
@@ -736,6 +752,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptNumericResult(left, "+", right, AddNumeric(leftNumeric, rightNumeric));
                 return true;
             case "-":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "-", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "-", right, out value))
                 {
                     return true;
@@ -756,6 +777,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "*", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out value))
                 {
                     return true;
@@ -776,6 +802,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "/", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out value))
                 {
                     return true;
@@ -796,6 +827,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case "mod":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "mod", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "mod", right, out value))
                 {
                     return true;
@@ -811,6 +847,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
                 return true;
             case "div":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "div", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "div", right, out value))
                 {
                     return true;
@@ -826,6 +867,11 @@ internal static class EventScriptLinkOptimizer
                 value = ToEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
                 return true;
             case "rem":
+                if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "rem", right, out value))
+                {
+                    return true;
+                }
+
                 if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "rem", right, out value))
                 {
                     return true;
@@ -1022,21 +1068,21 @@ internal static class EventScriptLinkOptimizer
 
         if (unwrapped is EventScriptVector3Value vector3)
         {
-            return EventScriptValueFactory.Vector2(vector3.X, vector3.Y);
+            return EventScriptValueFactory.Vector2(vector3.X, vector3.Y, vector3.Unit);
         }
 
-        if (TryReadVectorComponent(unwrapped, "x", out var x) &&
-            TryReadVectorComponent(unwrapped, "y", out var y))
+        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+            unwrapped.TryGetDictionaryMember("y", out var y) &&
+            EventScriptValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
         {
-            return EventScriptValueFactory.Vector2(x, y);
+            return vectorFromMembers;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 2 &&
-            TryReadVectorComponent(items[0], out x) &&
-            TryReadVectorComponent(items[1], out y))
+            EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
         {
-            return EventScriptValueFactory.Vector2(x, y);
+            return vectorFromItems;
         }
 
         return EventScriptValue.Nothing;
@@ -1056,52 +1102,39 @@ internal static class EventScriptLinkOptimizer
 
         if (unwrapped is EventScriptVector2Value vector2)
         {
-            return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m);
+            return EventScriptValueFactory.Vector3(vector2.X, vector2.Y, 0m, vector2.Unit);
         }
 
-        if (TryReadVectorComponent(unwrapped, "x", out var x) &&
-            TryReadVectorComponent(unwrapped, "y", out var y))
+        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+            unwrapped.TryGetDictionaryMember("y", out var y))
         {
-            var z = TryReadVectorComponent(unwrapped, "z", out var zValue) ? zValue : 0m;
-            return EventScriptValueFactory.Vector3(x, y, z);
+            if (unwrapped.TryGetDictionaryMember("z", out var z))
+            {
+                return EventScriptValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
+                    ? vectorFromMembers
+                    : EventScriptValue.Nothing;
+            }
+
+            return EventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is EventScriptVector2Value xy
+                ? EventScriptValueFactory.Vector3(xy.X, xy.Y, 0m, xy.Unit)
+                : xyVector;
         }
 
         var items = unwrapped.AsList();
-        if (items.Count >= 2 &&
-            TryReadVectorComponent(items[0], out x) &&
-            TryReadVectorComponent(items[1], out y))
+        if (items.Count >= 3 &&
+            EventScriptValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
         {
-            var z = items.Count >= 3 && TryReadVectorComponent(items[2], out var zValue) ? zValue : 0m;
-            return EventScriptValueFactory.Vector3(x, y, z);
+            return vectorFromItems;
+        }
+
+        if (items.Count >= 2 &&
+            EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
+            xyVectorFromItems is EventScriptVector2Value xyFromItems)
+        {
+            return EventScriptValueFactory.Vector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
         return EventScriptValue.Nothing;
-    }
-
-    private static bool TryReadVectorComponent(EventScriptValue source, string key, out decimal value)
-    {
-        if (source.TryGetDictionaryMember(key, out var component) &&
-            TryReadVectorComponent(component, out value))
-        {
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    private static bool TryReadVectorComponent(EventScriptValue component, out decimal value)
-    {
-        if (!TryUnwrapOptional(component, out var unwrapped) ||
-            !TryCoerceNumeric(unwrapped, out var number, out var isFinite) ||
-            !isFinite)
-        {
-            value = default;
-            return false;
-        }
-
-        value = number;
-        return true;
     }
 
     private static bool TryUnwrapOptional(EventScriptValue value, out EventScriptValue unwrapped)
@@ -1606,8 +1639,8 @@ internal static class EventScriptLinkOptimizer
                 expression = new TypeConstructorExpressionNode(
                     "vector2",
                     new ArgumentListNode([
-                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.X)),
-                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.Y))
+                        new ArgumentNode(null, CreateDecimalLiteral(vector.X, vector.Unit)),
+                        new ArgumentNode(null, CreateDecimalLiteral(vector.Y, vector.Unit))
                     ]));
                 return true;
             }
@@ -1617,9 +1650,9 @@ internal static class EventScriptLinkOptimizer
                 expression = new TypeConstructorExpressionNode(
                     "vector3",
                     new ArgumentListNode([
-                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.X)),
-                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.Y)),
-                        new ArgumentNode(null, new DecimalLiteralExpressionNode(vector.Z))
+                        new ArgumentNode(null, CreateDecimalLiteral(vector.X, vector.Unit)),
+                        new ArgumentNode(null, CreateDecimalLiteral(vector.Y, vector.Unit)),
+                        new ArgumentNode(null, CreateDecimalLiteral(vector.Z, vector.Unit))
                     ]));
                 return true;
             }
@@ -1676,9 +1709,14 @@ internal static class EventScriptLinkOptimizer
             }
             default:
                 expression = default!;
-            return false;
+                return false;
         }
     }
+
+    private static ExpressionNode CreateDecimalLiteral(decimal value, EventScriptDecimalUnit? unit)
+        => unit.HasValue
+            ? new UnitDecimalLiteralExpressionNode(value, EventScriptDecimalUnits.ToTypeName(unit.Value))
+            : new DecimalLiteralExpressionNode(value);
 
     private static bool TryRemainderFinite(decimal left, decimal right, out decimal value)
     {

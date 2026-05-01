@@ -498,6 +498,106 @@ internal static class EventScriptValueAlu
         return true;
     }
 
+    public static bool TryEvaluateVectorBinary(EventScriptValue left, string operation, EventScriptValue right, out EventScriptValue value)
+    {
+        var leftIsVector = TryReadVector(left, out var leftVector);
+        var rightIsVector = TryReadVector(right, out var rightVector);
+        if (operation is not ("+" or "-" or "*" or "/" or "div" or "mod" or "rem") || (!leftIsVector && !rightIsVector))
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        if (operation is "div" or "mod" or "rem")
+        {
+            value = EventScriptValueFactory.DecimalNaN();
+            return true;
+        }
+
+        if (operation is "+" or "-")
+        {
+            if (!leftIsVector || !rightIsVector)
+            {
+                value = operation == "+"
+                    ? EventScriptValue.Nothing
+                    : EventScriptValueFactory.DecimalNaN();
+                return operation != "+";
+            }
+
+            if (
+                leftVector.Dimension != rightVector.Dimension ||
+                leftVector.Unit != rightVector.Unit)
+            {
+                value = EventScriptValueFactory.DecimalNaN();
+                return true;
+            }
+
+            value = CreateVector(
+                leftVector.Dimension,
+                operation == "+"
+                    ? AddNumeric(NumericValue.Finite(leftVector.X), NumericValue.Finite(rightVector.X))
+                    : SubtractNumeric(NumericValue.Finite(leftVector.X), NumericValue.Finite(rightVector.X)),
+                operation == "+"
+                    ? AddNumeric(NumericValue.Finite(leftVector.Y), NumericValue.Finite(rightVector.Y))
+                    : SubtractNumeric(NumericValue.Finite(leftVector.Y), NumericValue.Finite(rightVector.Y)),
+                operation == "+"
+                    ? AddNumeric(NumericValue.Finite(leftVector.Z), NumericValue.Finite(rightVector.Z))
+                    : SubtractNumeric(NumericValue.Finite(leftVector.Z), NumericValue.Finite(rightVector.Z)),
+                leftVector.Unit);
+            return true;
+        }
+
+        if (operation == "*")
+        {
+            if (leftIsVector && rightIsVector)
+            {
+                value = EventScriptValueFactory.DecimalNaN();
+                return true;
+            }
+
+            value = leftIsVector
+                ? ScaleVector(leftVector, right, operation)
+                : ScaleVector(rightVector, left, operation);
+            return true;
+        }
+
+        if (operation == "/")
+        {
+            value = leftIsVector && !rightIsVector
+                ? ScaleVector(leftVector, right, operation)
+                : EventScriptValueFactory.DecimalNaN();
+            return true;
+        }
+
+        value = EventScriptValue.Nothing;
+        return false;
+    }
+
+    public static bool TryEvaluateVectorUnary(EventScriptValue operand, string operation, out EventScriptValue value)
+    {
+        if (!TryReadVector(operand, out var vector) || operation is not ("-" or "abs"))
+        {
+            value = EventScriptValue.Nothing;
+            return false;
+        }
+
+        value = operation == "-"
+            ? CreateVector(
+                vector.Dimension,
+                NegateNumeric(NumericValue.Finite(vector.X)),
+                NegateNumeric(NumericValue.Finite(vector.Y)),
+                NegateNumeric(NumericValue.Finite(vector.Z)),
+                vector.Unit)
+            : EvaluateVectorLength(vector);
+        return true;
+    }
+
+    public static bool TryCreateVector2(EventScriptValue x, EventScriptValue y, out EventScriptValue value)
+        => TryCreateVectorFromComponents([x, y], 2, out value);
+
+    public static bool TryCreateVector3(EventScriptValue x, EventScriptValue y, EventScriptValue z, out EventScriptValue value)
+        => TryCreateVectorFromComponents([x, y, z], 3, out value);
+
     public static bool TryEvaluateUnitRounding(EventScriptValue operand, string operation, out EventScriptValue value)
     {
         if (!EventScriptValue.TryGetDecimalUnit(operand, out var unit))
@@ -598,6 +698,192 @@ internal static class EventScriptValueAlu
     {
         unit = value;
         return true;
+    }
+
+    private readonly record struct VectorComponents(int Dimension, decimal X, decimal Y, decimal Z, EventScriptDecimalUnit? Unit);
+
+    private static bool TryReadVector(EventScriptValue value, out VectorComponents vector)
+    {
+        switch (value)
+        {
+            case EventScriptVector2Value vector2:
+                vector = new VectorComponents(2, vector2.X, vector2.Y, 0m, vector2.Unit);
+                return true;
+            case EventScriptVector3Value vector3:
+                vector = new VectorComponents(3, vector3.X, vector3.Y, vector3.Z, vector3.Unit);
+                return true;
+            default:
+                vector = default;
+                return false;
+        }
+    }
+
+    private static bool TryCreateVectorFromComponents(IReadOnlyList<EventScriptValue> components, int dimension, out EventScriptValue value)
+    {
+        var values = new decimal[dimension];
+        var unit = default(EventScriptDecimalUnit?);
+        var initialized = false;
+
+        for (var index = 0; index < dimension; index++)
+        {
+            if (!TryReadVectorComponent(components[index], out values[index], out var componentUnit, out var invalid))
+            {
+                value = invalid ? EventScriptValueFactory.DecimalNaN() : EventScriptValue.Nothing;
+                return invalid;
+            }
+
+            if (!initialized)
+            {
+                unit = componentUnit;
+                initialized = true;
+                continue;
+            }
+
+            if (unit != componentUnit)
+            {
+                value = EventScriptValueFactory.DecimalNaN();
+                return true;
+            }
+        }
+
+        value = dimension == 2
+            ? EventScriptValueFactory.Vector2(values[0], values[1], unit)
+            : EventScriptValueFactory.Vector3(values[0], values[1], values[2], unit);
+        return true;
+    }
+
+    private static bool TryReadVectorComponent(
+        EventScriptValue component,
+        out decimal value,
+        out EventScriptDecimalUnit? unit,
+        out bool invalid)
+    {
+        value = default;
+        unit = null;
+        invalid = false;
+
+        if (!TryUnwrapOptionalForOperation(component, out var unwrapped) ||
+            !TryCoerceNumericForOperation(unwrapped, out var number))
+        {
+            return false;
+        }
+
+        if (!number.IsFinite)
+        {
+            invalid = true;
+            return false;
+        }
+
+        value = number.Value;
+        unit = EventScriptValue.TryGetDecimalUnit(unwrapped, out var decimalUnit) ? decimalUnit : null;
+        return true;
+    }
+
+    private static EventScriptValue ScaleVector(VectorComponents vector, EventScriptValue scalar, string operation)
+    {
+        if (!TryCoerceNumericForOperation(scalar, out var scalarNumber) || !scalarNumber.IsFinite)
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        var scalarHasUnit = EventScriptValue.TryGetDecimalUnit(scalar, out var scalarUnit);
+        if (!TryGetVectorScalarResultUnit(vector.Unit, scalarHasUnit ? scalarUnit : null, operation, out var resultUnit))
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        if (operation == "/" && scalarNumber.Value == 0m)
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        var x = operation == "*"
+            ? MultiplyNumeric(NumericValue.Finite(vector.X), scalarNumber)
+            : DivideNumeric(NumericValue.Finite(vector.X), scalarNumber);
+        var y = operation == "*"
+            ? MultiplyNumeric(NumericValue.Finite(vector.Y), scalarNumber)
+            : DivideNumeric(NumericValue.Finite(vector.Y), scalarNumber);
+        var z = operation == "*"
+            ? MultiplyNumeric(NumericValue.Finite(vector.Z), scalarNumber)
+            : DivideNumeric(NumericValue.Finite(vector.Z), scalarNumber);
+
+        return CreateVector(vector.Dimension, x, y, z, resultUnit);
+    }
+
+    private static bool TryGetVectorScalarResultUnit(
+        EventScriptDecimalUnit? vectorUnit,
+        EventScriptDecimalUnit? scalarUnit,
+        string operation,
+        out EventScriptDecimalUnit? resultUnit)
+    {
+        resultUnit = null;
+        if (operation == "*")
+        {
+            if (vectorUnit.HasValue && scalarUnit.HasValue)
+            {
+                return false;
+            }
+
+            resultUnit = vectorUnit ?? scalarUnit;
+            return true;
+        }
+
+        if (operation == "/")
+        {
+            if (!vectorUnit.HasValue && !scalarUnit.HasValue)
+            {
+                return true;
+            }
+
+            if (vectorUnit.HasValue && !scalarUnit.HasValue)
+            {
+                resultUnit = vectorUnit;
+                return true;
+            }
+
+            if (vectorUnit.HasValue && scalarUnit.HasValue && vectorUnit == scalarUnit)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static EventScriptValue CreateVector(
+        int dimension,
+        NumericValue x,
+        NumericValue y,
+        NumericValue z,
+        EventScriptDecimalUnit? unit)
+    {
+        if (!x.IsFinite || !y.IsFinite || !z.IsFinite)
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
+
+        return dimension == 2
+            ? EventScriptValueFactory.Vector2(x.Value, y.Value, unit)
+            : EventScriptValueFactory.Vector3(x.Value, y.Value, z.Value, unit);
+    }
+
+    private static EventScriptValue EvaluateVectorLength(VectorComponents vector)
+    {
+        try
+        {
+            var squared = (double)(vector.X * vector.X + vector.Y * vector.Y + (vector.Dimension == 3 ? vector.Z * vector.Z : 0m));
+            var length = Math.Sqrt(squared);
+            if (double.IsNaN(length) || double.IsInfinity(length))
+            {
+                return EventScriptValueFactory.DecimalNaN();
+            }
+
+            return EventScriptValueFactory.Decimal((decimal)length, vector.Unit);
+        }
+        catch (OverflowException)
+        {
+            return EventScriptValueFactory.DecimalNaN();
+        }
     }
 
     private static EventScriptValue ToEventScriptPercentage(NumericValue number)

@@ -74,12 +74,14 @@ internal static class EventScriptConformanceValueCodec
             case ":vector2":
                 return EventScriptValueFactory.Vector2(
                     RequireDecimal(element, "x", "vector2 x component"),
-                    RequireDecimal(element, "y", "vector2 y component"));
+                    RequireDecimal(element, "y", "vector2 y component"),
+                    DecodeOptionalDecimalUnit(element));
             case ":vector3":
                 return EventScriptValueFactory.Vector3(
                     RequireDecimal(element, "x", "vector3 x component"),
                     RequireDecimal(element, "y", "vector3 y component"),
-                    RequireDecimal(element, "z", "vector3 z component"));
+                    RequireDecimal(element, "z", "vector3 z component"),
+                    DecodeOptionalDecimalUnit(element));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
@@ -175,7 +177,19 @@ internal static class EventScriptConformanceValueCodec
     private static EventScriptValue DecodeDecimalValue(JsonElement element)
     {
         var value = RequireString(element, "value", "decimal value");
-        var unit = default(EventScriptDecimalUnit?);
+        var unit = DecodeOptionalDecimalUnit(element);
+
+        return value switch
+        {
+            "NaN" => EventScriptValueFactory.DecimalNaN(),
+            "Infinity" => EventScriptValueFactory.DecimalInfinity(),
+            "-Infinity" => EventScriptValueFactory.DecimalNegativeInfinity(),
+            _ => EventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
+        };
+    }
+
+    private static EventScriptDecimalUnit? DecodeOptionalDecimalUnit(JsonElement element)
+    {
         if (TryGetProperty(element, "unit", out var unitElement))
         {
             if (unitElement.ValueKind != JsonValueKind.String)
@@ -194,16 +208,10 @@ internal static class EventScriptConformanceValueCodec
                 throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
             }
 
-            unit = parsedUnit;
+            return parsedUnit;
         }
 
-        return value switch
-        {
-            "NaN" => EventScriptValueFactory.DecimalNaN(),
-            "Infinity" => EventScriptValueFactory.DecimalInfinity(),
-            "-Infinity" => EventScriptValueFactory.DecimalNegativeInfinity(),
-            _ => EventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
-        };
+        return null;
     }
 
     private static EventScriptValue DecodeOptionalValue(JsonElement element)
@@ -316,21 +324,39 @@ internal static class EventScriptConformanceValueCodec
     }
 
     private static JsonObject ToVector2Json(EventScriptVector2Value value)
-        => new()
+    {
+        var node = new JsonObject
         {
             ["type"] = ":vector2",
             ["x"] = FormatDecimal(value.X),
             ["y"] = FormatDecimal(value.Y)
         };
 
+        if (value.Unit.HasValue)
+        {
+            node["unit"] = ToCanonicalTypeName(EventScriptDecimalUnits.ToTypeName(value.Unit.Value));
+        }
+
+        return node;
+    }
+
     private static JsonObject ToVector3Json(EventScriptVector3Value value)
-        => new()
+    {
+        var node = new JsonObject
         {
             ["type"] = ":vector3",
             ["x"] = FormatDecimal(value.X),
             ["y"] = FormatDecimal(value.Y),
             ["z"] = FormatDecimal(value.Z)
         };
+
+        if (value.Unit.HasValue)
+        {
+            node["unit"] = ToCanonicalTypeName(EventScriptDecimalUnits.ToTypeName(value.Unit.Value));
+        }
+
+        return node;
+    }
 
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;

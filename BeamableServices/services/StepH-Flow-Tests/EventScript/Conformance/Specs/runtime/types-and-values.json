@@ -442,6 +442,83 @@
     },
     {
       "kind": "scriptApi",
+      "name": "vector units are preserved in components and conversions",
+      "script": "on Start {\n  let position be :vector2(3m, 4m)\n  let lifted as :vector3 be position\n  let flattened as :vector2 be :vector3(1m, 2m, 3m)\n  let vectorList as :list be position\n  let vectorDictionary as :dictionary be position\n  publish Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, lifted: lifted, flattened: flattened)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "position": { "type": ":vector2", "x": "3", "y": "4", "unit": ":meter" },
+                "x": { "type": ":decimal", "value": "3", "unit": ":meter" },
+                "y": { "type": ":decimal", "value": "4", "unit": ":meter" },
+                "listY": { "type": ":decimal", "value": "4", "unit": ":meter" },
+                "dictX": { "type": ":decimal", "value": "3", "unit": ":meter" },
+                "lifted": { "type": ":vector3", "x": "3", "y": "4", "z": "0", "unit": ":meter" },
+                "flattened": { "type": ":vector2", "x": "1", "y": "2", "unit": ":meter" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "vector arithmetic supports addition scaling division and length",
+      "script": "on Start {\n  let a be :vector2(1m, 2m)\n  let b be :vector2(3m, 4m)\n  let c be :vector3(1, 2, 2)\n  publish Done(sum: a + b, difference: a - b, negated: -a, scaleRight: a * 2, scaleLeft: 2 * a, percentScale: a * 50%, divided: b / 2, unitlessScaled: :vector2(1, 2) * 5m, unitDivided: a / 1m, length2: :abs :vector2(3m, 4m), length3: :abs c)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "sum": { "type": ":vector2", "x": "4", "y": "6", "unit": ":meter" },
+                "difference": { "type": ":vector2", "x": "-2", "y": "-2", "unit": ":meter" },
+                "negated": { "type": ":vector2", "x": "-1", "y": "-2", "unit": ":meter" },
+                "scaleRight": { "type": ":vector2", "x": "2", "y": "4", "unit": ":meter" },
+                "scaleLeft": { "type": ":vector2", "x": "2", "y": "4", "unit": ":meter" },
+                "percentScale": { "type": ":vector2", "x": "0.5", "y": "1", "unit": ":meter" },
+                "divided": { "type": ":vector2", "x": "1.5", "y": "2", "unit": ":meter" },
+                "unitlessScaled": { "type": ":vector2", "x": "5", "y": "10", "unit": ":meter" },
+                "unitDivided": { "type": ":vector2", "x": "1", "y": "2" },
+                "length2": { "type": ":decimal", "value": "5", "unit": ":meter" },
+                "length3": { "type": ":decimal", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "invalid vector arithmetic returns nan",
+      "script": "on Start {\n  publish Done(mixedUnits: :vector2(10m, 20s), mixedUnitless: :vector2(10, 20m), vectorProduct: :vector2(1, 2) * :vector2(3, 4), scalarDivide: 10 / :vector2(1, 2), dimensionAdd: :vector2(1, 2) + :vector3(1, 2, 3), incompatibleScalar: :vector2(1m, 2m) * 5s, divideZero: :vector2(1, 2) / 0, vectorModulo: :vector2(1, 2) mod 2)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "mixedUnits": { "type": ":decimal", "value": "NaN" },
+                "mixedUnitless": { "type": ":decimal", "value": "NaN" },
+                "vectorProduct": { "type": ":decimal", "value": "NaN" },
+                "scalarDivide": { "type": ":decimal", "value": "NaN" },
+                "dimensionAdd": { "type": ":decimal", "value": "NaN" },
+                "incompatibleScalar": { "type": ":decimal", "value": "NaN" },
+                "divideZero": { "type": ":decimal", "value": "NaN" },
+                "vectorModulo": { "type": ":decimal", "value": "NaN" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "inline literals escaped quotes and numeric helpers",
       "script": "on Start(opt, missingValue) {\n  let text be 'Hello ''World'', I''m here'\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  publish Done(text: text, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, boundedHigh: boundedHigh, boundedLow: boundedLow, highest: highest, lowest: lowest, optionalFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
       "steps": [

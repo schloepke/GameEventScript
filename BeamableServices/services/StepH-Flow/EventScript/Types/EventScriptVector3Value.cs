@@ -10,29 +10,31 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptVector3Value : EventScriptValue
 {
-    public static readonly EventScriptVector3Value Zero = new(0m, 0m, 0m);
+    public static readonly EventScriptVector3Value Zero = new(0m, 0m, 0m, null);
 
-    public static EventScriptVector3Value EventScriptVector3(decimal x, decimal y, decimal z)
-        => x == 0m && y == 0m && z == 0m ? Zero : new EventScriptVector3Value(x, y, z);
+    public static EventScriptVector3Value EventScriptVector3(decimal x, decimal y, decimal z, EventScriptDecimalUnit? unit = null)
+        => x == 0m && y == 0m && z == 0m && unit is null ? Zero : new EventScriptVector3Value(x, y, z, unit);
 
-    private EventScriptVector3Value(decimal x, decimal y, decimal z)
+    private EventScriptVector3Value(decimal x, decimal y, decimal z, EventScriptDecimalUnit? unit)
     {
         X = x;
         Y = y;
         Z = z;
-        Components = CreateReadOnlyList(new[] { Decimal(x), Decimal(y), Decimal(z) });
+        Unit = unit;
+        Components = CreateReadOnlyList(new[] { Decimal(x, unit), Decimal(y, unit), Decimal(z, unit) });
         Members = new ReadOnlyDictionary<string, EventScriptValue>(
             new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
             {
-                ["x"] = Decimal(x),
-                ["y"] = Decimal(y),
-                ["z"] = Decimal(z)
+                ["x"] = Decimal(x, unit),
+                ["y"] = Decimal(y, unit),
+                ["z"] = Decimal(z, unit)
             });
     }
 
     public decimal X { get; }
     public decimal Y { get; }
     public decimal Z { get; }
+    public EventScriptDecimalUnit? Unit { get; }
     public override EventScriptValueKind Kind => EventScriptValueKind.Vector3;
 
     private IReadOnlyList<EventScriptValue> Components { get; }

@@ -20,9 +20,9 @@ public static class EventScriptValueFactory
 
     public static EventScriptValue Seconds(decimal seconds) => EventScriptDecimalValue.EventScriptDecimal(seconds, EventScriptDecimalUnit.Second);
 
-    public static EventScriptValue Vector2(decimal x, decimal y) => EventScriptVector2Value.EventScriptVector2(x, y);
+    public static EventScriptValue Vector2(decimal x, decimal y, EventScriptDecimalUnit? unit = null) => EventScriptVector2Value.EventScriptVector2(x, y, unit);
 
-    public static EventScriptValue Vector3(decimal x, decimal y, decimal z) => EventScriptVector3Value.EventScriptVector3(x, y, z);
+    public static EventScriptValue Vector3(decimal x, decimal y, decimal z, EventScriptDecimalUnit? unit = null) => EventScriptVector3Value.EventScriptVector3(x, y, z, unit);
 
     public static EventScriptValue DecimalNaN() => EventScriptDecimalValue.NaN;
 

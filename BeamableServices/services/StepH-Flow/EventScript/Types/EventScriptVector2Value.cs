@@ -10,26 +10,28 @@ namespace StepH.Flow.EventScript.Types;
 
 public sealed class EventScriptVector2Value : EventScriptValue
 {
-    public static readonly EventScriptVector2Value Zero = new(0m, 0m);
+    public static readonly EventScriptVector2Value Zero = new(0m, 0m, null);
 
-    public static EventScriptVector2Value EventScriptVector2(decimal x, decimal y)
-        => x == 0m && y == 0m ? Zero : new EventScriptVector2Value(x, y);
+    public static EventScriptVector2Value EventScriptVector2(decimal x, decimal y, EventScriptDecimalUnit? unit = null)
+        => x == 0m && y == 0m && unit is null ? Zero : new EventScriptVector2Value(x, y, unit);
 
-    private EventScriptVector2Value(decimal x, decimal y)
+    private EventScriptVector2Value(decimal x, decimal y, EventScriptDecimalUnit? unit)
     {
         X = x;
         Y = y;
-        Components = CreateReadOnlyList(new[] { Decimal(x), Decimal(y) });
+        Unit = unit;
+        Components = CreateReadOnlyList(new[] { Decimal(x, unit), Decimal(y, unit) });
         Members = new ReadOnlyDictionary<string, EventScriptValue>(
             new Dictionary<string, EventScriptValue>(StringComparer.Ordinal)
             {
-                ["x"] = Decimal(x),
-                ["y"] = Decimal(y)
+                ["x"] = Decimal(x, unit),
+                ["y"] = Decimal(y, unit)
             });
     }
 
     public decimal X { get; }
     public decimal Y { get; }
+    public EventScriptDecimalUnit? Unit { get; }
     public override EventScriptValueKind Kind => EventScriptValueKind.Vector2;
 
     private IReadOnlyList<EventScriptValue> Components { get; }

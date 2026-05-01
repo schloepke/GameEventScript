@@ -437,10 +437,21 @@ let position be :vector2(10, 20)
 let labeledPosition be :vector2(x: 10, y: 20)
 let point be :vector3(10, 20, 5)
 let labeledPoint be :vector3(x: 10, y: 20, z: 5)
+let offset be :vector2(3m, 4m)
 ```
 
 Labels are positional and must match the component names exactly. `:vector2(y: 20, x: 10)`
 is invalid.
+
+Vectors may have one shared decimal unit. Component access, `as :list`, and `as :dictionary`
+preserve that unit:
+
+```eventscript
+let offset be :vector2(3m, 4m)
+offset.x // 3m
+```
+
+Mixed component units such as `:vector2(3m, 4s)` or `:vector2(3, 4m)` evaluate to `NaN`.
 
 Custom record constructors are labeled-only:
 
@@ -530,6 +541,23 @@ a rem b
 ```
 
 `/` is numeric division. `div` is floor division. `mod` is mathematical modulo, and `rem` is the truncating remainder. Percentage values are written as literals such as `10%`.
+
+Vectors support basic vector arithmetic:
+
+```eventscript
+:vector2(1m, 2m) + :vector2(3m, 4m) // vector2[x: 4m, y: 6m]
+:vector2(1m, 2m) - :vector2(3m, 4m) // vector2[x: -2m, y: -2m]
+-:vector2(1m, 2m)                   // vector2[x: -1m, y: -2m]
+:vector2(1m, 2m) * 2                // vector2[x: 2m, y: 4m]
+2 * :vector2(1m, 2m)                // vector2[x: 2m, y: 4m]
+:vector2(3m, 4m) / 2                // vector2[x: 1.5m, y: 2m]
+:abs :vector2(3m, 4m)               // 5m
+```
+
+Vector addition and subtraction require the same dimension and the same shared unit.
+`vector * vector`, `scalar / vector`, vector `div`/`mod`/`rem`, mixed dimensions, and
+incompatible scalar units evaluate to `NaN`. Dot/cross/normalize are intentionally left
+for explicit helpers or extensions.
 
 ### Collection combination
 

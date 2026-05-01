@@ -146,6 +146,17 @@ public class EventScriptValueScenarios
         Assert.AreSame(EventScriptVector2Value.Zero, Vector2(0m, 0m));
         Assert.AreSame(EventScriptVector3Value.Zero, Vector3(0m, 0m, 0m));
         Assert.AreEqual("vector2[x: 10.5, y: -2]", vector2.ToString());
+
+        var unitVector = Vector2(0m, 0m, EventScriptDecimalUnit.Meter);
+        var sameComponentsDifferentUnit = Vector2(0m, 0m, EventScriptDecimalUnit.Second);
+        Assert.AreNotSame(EventScriptVector2Value.Zero, unitVector);
+        Assert.AreNotEqual(Vector2(0m, 0m), unitVector);
+        Assert.AreNotEqual(unitVector, sameComponentsDifferentUnit);
+        Assert.AreNotEqual(unitVector.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
+        Assert.AreEqual(EventScriptDecimalUnit.Meter, ((EventScriptVector2Value)unitVector).Unit);
+        Assert.AreEqual(EventScriptDecimalUnit.Meter, ((EventScriptDecimalValue)unitVector.AsDictionary()["x"]).Unit);
+        Assert.AreEqual(EventScriptDecimalUnit.Meter, ((EventScriptDecimalValue)unitVector.AsList()[1]).Unit);
+        Assert.AreEqual("vector2[x: 0m, y: 0m]", unitVector.ToString());
     }
 
     [TestMethod]

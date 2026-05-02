@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.RegisterVM;
 
 public static class RegisterBytecodeDumper
 {
-    public static string ToDebugText(RegisterCompiledEventScript compiledScript)
+    public static string ToDebugText(RegisterCompiledGse compiledScript)
         => ToDebugText(compiledScript.BytecodeModule);
 
     internal static string ToDebugText(RegisterBytecodeModule module)

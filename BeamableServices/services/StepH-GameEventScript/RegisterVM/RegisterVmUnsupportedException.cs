@@ -4,7 +4,7 @@ using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.RegisterVM;
 
-public sealed class RegisterVmUnsupportedException : EventScriptFatalRuntimeException
+public sealed class RegisterVmUnsupportedException : GseFatalRuntimeException
 {
     internal RegisterVmUnsupportedException(
         string messageName,

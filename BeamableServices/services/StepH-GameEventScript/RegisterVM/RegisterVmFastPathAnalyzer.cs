@@ -17,7 +17,7 @@ internal static class RegisterVmFastPathAnalyzer
         IReadOnlyList<StatementNode> statements,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
-        Func<EventScriptExtensionReference, int>? externalReferenceResolver = null)
+        Func<GseExtensionReference, int>? externalReferenceResolver = null)
     {
         if (!SupportsHandler(statements, callables, out var unsupportedReason))
         {
@@ -1534,10 +1534,10 @@ internal static class RegisterVmFastPathAnalyzer
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        Func<EventScriptExtensionReference, int>? externalReferenceResolver)
+        Func<GseExtensionReference, int>? externalReferenceResolver)
     {
         private readonly IReadOnlyDictionary<string, LinkedCallableDefinition> _callables = callables;
-        private readonly Func<EventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
+        private readonly Func<GseExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
         private readonly Dictionary<ExpressionNode, RegisterFastExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
         private readonly Dictionary<PublishStatementNode, RegisterFastPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
 
@@ -1658,8 +1658,8 @@ internal static class RegisterVmFastPathAnalyzer
             }
 
             layout = new RegisterFastPublishLayout(
-                EventScriptMessageSignature.NormalizeMessageName(message.Message),
-                EventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
+                GseMessageSignature.NormalizeMessageName(message.Message),
+                GseMessageSignature.CreateSignatureId(message.Message, argumentNames),
                 argumentNames,
                 argumentPrograms);
             _publishLayouts[publish] = layout;
@@ -1715,24 +1715,24 @@ internal static class RegisterVmFastPathAnalyzer
                         return;
 
                     case UnitDecimalLiteralExpressionNode unitDecimal:
-                        EmitLoadConstant(EventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
+                        EmitLoadConstant(GseDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
                             ? RegisterFastValue.Decimal(unitDecimal.Value, unit)
                             : RegisterFastValue.NaN());
                         return;
 
                     case TextLiteralExpressionNode text:
-                        EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Text(text.Value)));
+                        EmitLoadConstant(RegisterFastValue.Reference(GseValueFactory.Text(text.Value)));
                         return;
 
                     case TagLiteralExpressionNode tag:
-                        EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Tag(tag.Name)));
+                        EmitLoadConstant(RegisterFastValue.Reference(GseValueFactory.Tag(tag.Name)));
                         return;
 
                     case HandlerLiteralExpressionNode handler:
                     {
                         var parameterNames = handler.SignatureLabels.ToArray();
-                        EmitLoadConstant(RegisterFastValue.Reference(EventScriptValueFactory.Handler(
-                            new EventScriptMessageSignature(handler.Message, parameterNames))));
+                        EmitLoadConstant(RegisterFastValue.Reference(GseValueFactory.Handler(
+                            new GseMessageSignature(handler.Message, parameterNames))));
                         return;
                     }
 
@@ -1748,8 +1748,8 @@ internal static class RegisterVmFastPathAnalyzer
                         instructions.Add(new RegisterFastInstruction(
                             RegisterFastOpCode.BuildMessage,
                             A: message.Arguments.Count,
-                            DiagnosticName: EventScriptMessageSignature.NormalizeMessageName(message.Message),
-                            DiagnosticArgumentName: EventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
+                            DiagnosticName: GseMessageSignature.NormalizeMessageName(message.Message),
+                            DiagnosticArgumentName: GseMessageSignature.CreateSignatureId(message.Message, argumentNames),
                             Names: argumentNames));
                         CollapseValuesToSingle(message.Arguments.Count);
                         return;
@@ -1965,14 +1965,14 @@ internal static class RegisterVmFastPathAnalyzer
                         var predicateExtensionReferenceIndex = ResolveExternalReference(
                             extensionPredicate.ExtensionName,
                             extensionPredicate.FunctionName,
-                            [EventScriptMessageSignature.UnlabeledParameterName]);
+                            [GseMessageSignature.UnlabeledParameterName]);
                         instructions.Add(new RegisterFastInstruction(
                             RegisterFastOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
                             DiagnosticName: extensionPredicate.ExtensionName,
                             DiagnosticArgumentName: extensionPredicate.FunctionName,
-                            Names: [EventScriptMessageSignature.UnlabeledParameterName]));
+                            Names: [GseMessageSignature.UnlabeledParameterName]));
                         return;
 
                     case CallExpressionNode call:
@@ -2361,7 +2361,7 @@ internal static class RegisterVmFastPathAnalyzer
             }
 
             private int ResolveExternalReference(string extensionName, string functionName, IReadOnlyList<string> argumentLabels)
-                => compiler._externalReferenceResolver?.Invoke(new EventScriptExtensionReference(extensionName, functionName, argumentLabels)) ?? -1;
+                => compiler._externalReferenceResolver?.Invoke(new GseExtensionReference(extensionName, functionName, argumentLabels)) ?? -1;
 
             private void CollapseValuesToSingle(int valueCount)
             {

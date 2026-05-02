@@ -8,7 +8,7 @@ using StepH.GameEventScript.Linker;
 using StepH.GameEventScript.Parser;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Types.EventScriptValueFactory;
+using static StepH.GameEventScript.Types.GseValueFactory;
 
 namespace StepH.GameEventScript.RegisterVM;
 
@@ -16,8 +16,8 @@ internal sealed class RegisterVmFastExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
-    private readonly RegisterCompiledEventScript _compiledScript;
-    private readonly EventScriptContext _context;
+    private readonly RegisterCompiledGse _compiledScript;
+    private readonly GseContext _context;
     private readonly RegisterVmFastPathPlan _plan;
     private readonly RegisterFastValue[] _locals;
     private readonly bool[] _assignedSlots;
@@ -25,12 +25,12 @@ internal sealed class RegisterVmFastExecutionSession
     private readonly bool _diagnosticsEnabled;
     private readonly List<LocalChange> _changes = [];
     private readonly List<int> _scopeMarks = [];
-    private readonly Stack<EventScriptRandomGenerator> _randomScopes = new();
+    private readonly Stack<GseRandomGenerator> _randomScopes = new();
     private bool _halted;
 
     private RegisterVmFastExecutionSession(
-        RegisterCompiledEventScript compiledScript,
-        EventScriptContext context,
+        RegisterCompiledGse compiledScript,
+        GseContext context,
         RegisterVmFastPathPlan plan,
         bool diagnosticsEnabled)
     {
@@ -45,10 +45,10 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     public static bool TryInvokeHandler(
-        RegisterCompiledEventScript compiledScript,
-        EventScriptContext context,
-        RegisterCompiledEventScriptHandler handler,
-        IReadOnlyDictionary<string, EventScriptValue> args)
+        RegisterCompiledGse compiledScript,
+        GseContext context,
+        RegisterCompiledGseHandler handler,
+        IReadOnlyDictionary<string, GseValue> args)
     {
         if (!handler.FastPathPlan.IsSupported)
         {
@@ -59,7 +59,7 @@ internal sealed class RegisterVmFastExecutionSession
         return session.TryInvoke(handler, args);
     }
 
-    private bool TryInvoke(RegisterCompiledEventScriptHandler handler, IReadOnlyDictionary<string, EventScriptValue> args)
+    private bool TryInvoke(RegisterCompiledGseHandler handler, IReadOnlyDictionary<string, GseValue> args)
     {
         EnterScope();
         try
@@ -75,7 +75,7 @@ internal sealed class RegisterVmFastExecutionSession
 
                 RecordParameterBound(parameter, value);
 
-                if (!Define(parameter, RegisterFastValue.FromEventScriptValue(value)))
+                if (!Define(parameter, RegisterFastValue.FromGseValue(value)))
                 {
                     return false;
                 }
@@ -91,9 +91,9 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private static bool TryGetArgumentValue(IReadOnlyDictionary<string, EventScriptValue> args, string parameter, int parameterIndex, out EventScriptValue value)
+    private static bool TryGetArgumentValue(IReadOnlyDictionary<string, GseValue> args, string parameter, int parameterIndex, out GseValue value)
     {
-        if (args is EventScriptNamedArguments namedArguments && parameterIndex >= 0 && parameterIndex < namedArguments.Count)
+        if (args is GseNamedArguments namedArguments && parameterIndex >= 0 && parameterIndex < namedArguments.Count)
         {
             value = namedArguments[parameterIndex];
             return true;
@@ -185,7 +185,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        PushSeededRandomScope(seed.ToEventScriptValue());
+        PushSeededRandomScope(seed.ToGseValue());
         try
         {
             return TryExecuteStatementBody(seededRandom.Body);
@@ -255,7 +255,7 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
-        var length = EventScriptRuntimeLimitUtilities.GetRangeLength(from, to, step);
+        var length = GseRuntimeLimitUtilities.GetRangeLength(from, to, step);
         if (!_context.RuntimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
         {
             return true;
@@ -312,8 +312,8 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var sourceValue = sourceFastValue.ToEventScriptValue();
-        if (EventScriptRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
+        var sourceValue = sourceFastValue.ToGseValue();
+        if (GseRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
             !_context.RuntimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
         {
             return true;
@@ -321,7 +321,7 @@ internal sealed class RegisterVmFastExecutionSession
 
         foreach (var item in sourceValue.AsEnumerable())
         {
-            if (!TryExecuteLoopIteration(forStatement, RegisterFastValue.FromEventScriptValue(item)))
+            if (!TryExecuteLoopIteration(forStatement, RegisterFastValue.FromGseValue(item)))
             {
                 return false;
             }
@@ -358,28 +358,28 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private bool TryEvaluateMessageArguments(MessageLiteralExpressionNode message, out IReadOnlyDictionary<string, EventScriptValue> arguments)
+    private bool TryEvaluateMessageArguments(MessageLiteralExpressionNode message, out IReadOnlyDictionary<string, GseValue> arguments)
     {
         if (message.Arguments.Count == 0)
         {
-            arguments = EventScriptNamedArguments.Empty;
+            arguments = GseNamedArguments.Empty;
             return true;
         }
 
-        var pairs = new KeyValuePair<string, EventScriptValue>[message.Arguments.Count];
+        var pairs = new KeyValuePair<string, GseValue>[message.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
         {
             var argument = message.Arguments[argumentIndex];
             if (!TryEvaluate(argument.Expression, out var value))
             {
-                arguments = EventScriptNamedArguments.Empty;
+                arguments = GseNamedArguments.Empty;
                 return false;
             }
 
-            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(argument.Name, value.ToEventScriptValue());
+            pairs[argumentIndex] = new KeyValuePair<string, GseValue>(argument.Name, value.ToGseValue());
         }
 
-        arguments = EventScriptNamedArguments.CreateOrdered(pairs);
+        arguments = GseNamedArguments.CreateOrdered(pairs);
         return true;
     }
 
@@ -389,14 +389,14 @@ internal sealed class RegisterVmFastExecutionSession
         var argumentPrograms = layout.ArgumentPrograms;
         if (argumentNames.Length == 0)
         {
-            _context.Publish(EventScriptMessage.CreatePrecomputed(
+            _context.Publish(GseMessage.CreatePrecomputed(
                 layout.MessageName,
-                EventScriptNamedArguments.Empty,
+                GseNamedArguments.Empty,
                 layout.SignatureId));
             return true;
         }
 
-        var pairs = new KeyValuePair<string, EventScriptValue>[argumentNames.Length];
+        var pairs = new KeyValuePair<string, GseValue>[argumentNames.Length];
         for (var argumentIndex = 0; argumentIndex < argumentNames.Length; argumentIndex++)
         {
             if (!TryExecuteExpressionProgram(argumentPrograms[argumentIndex], 0, out var value))
@@ -406,14 +406,14 @@ internal sealed class RegisterVmFastExecutionSession
 
             RecordPublishArgumentEvaluatedToNothing(argumentNames[argumentIndex], value);
 
-            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+            pairs[argumentIndex] = new KeyValuePair<string, GseValue>(
                 argumentNames[argumentIndex],
-                value.ToEventScriptValue());
+                value.ToGseValue());
         }
 
-        _context.Publish(EventScriptMessage.CreatePrecomputed(
+        _context.Publish(GseMessage.CreatePrecomputed(
             layout.MessageName,
-            EventScriptNamedArguments.CreateOrdered(pairs),
+            GseNamedArguments.CreateOrdered(pairs),
             layout.SignatureId));
         return true;
     }
@@ -425,8 +425,8 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var boxed = publishValue.ToEventScriptValue();
-        if (EventScriptMessageValueCodec.TryReadMessageValue(boxed, out var message))
+        var boxed = publishValue.ToGseValue();
+        if (GseMessageValueCodec.TryReadMessageValue(boxed, out var message))
         {
             _context.Publish(message);
         }
@@ -462,7 +462,7 @@ internal sealed class RegisterVmFastExecutionSession
                 value = RegisterFastValue.Percentage(percentage.PercentValue / 100m);
                 return true;
             case UnitDecimalLiteralExpressionNode unitDecimal:
-                value = EventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
+                value = GseDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
                     ? RegisterFastValue.Decimal(unitDecimal.Value, unit)
                     : RegisterFastValue.NaN();
                 return true;
@@ -473,8 +473,8 @@ internal sealed class RegisterVmFastExecutionSession
                 value = RegisterFastValue.Reference(Tag(tag.Name));
                 return true;
             case HandlerLiteralExpressionNode handler:
-                value = RegisterFastValue.Reference(EventScriptValueFactory.Handler(
-                    new EventScriptMessageSignature(handler.Message, handler.SignatureLabels)));
+                value = RegisterFastValue.Reference(GseValueFactory.Handler(
+                    new GseMessageSignature(handler.Message, handler.SignatureLabels)));
                 return true;
             case HandlerBindExpressionNode handlerBind:
                 return TryEvaluateHandlerBind(handlerBind, out value);
@@ -535,7 +535,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                value = RegisterFastValue.Reference(Message(new EventScriptMessage(message.Message, arguments)));
+                value = RegisterFastValue.Reference(Message(new GseMessage(message.Message, arguments)));
                 return true;
             default:
                 value = RegisterFastValue.Nothing;
@@ -833,7 +833,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var arguments = new Dictionary<string, EventScriptValue>(handlerBind.Arguments.Count, StringComparer.Ordinal);
+        var arguments = new Dictionary<string, GseValue>(handlerBind.Arguments.Count, StringComparer.Ordinal);
         foreach (var argument in handlerBind.Arguments)
         {
             if (!TryEvaluate(argument.Expression, out var argumentValue))
@@ -842,11 +842,11 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            arguments[argument.Name] = argumentValue.ToEventScriptValue();
+            arguments[argument.Name] = argumentValue.ToGseValue();
         }
 
-        value = EventScriptMessageValueCodec.TryBindHandlerValue(callee.ToEventScriptValue(), arguments, out var message)
-            ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+        value = GseMessageValueCodec.TryBindHandlerValue(callee.ToGseValue(), arguments, out var message)
+            ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
             : RegisterFastValue.Nothing;
         return true;
     }
@@ -865,7 +865,7 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out RegisterFastValue value)
     {
-        var items = new EventScriptValue[list.Items.Count];
+        var items = new GseValue[list.Items.Count];
         for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(list.Items[itemIndex], out var item))
@@ -874,16 +874,16 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            items[itemIndex] = item.ToEventScriptValue();
+            items[itemIndex] = item.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.List(items));
+        value = RegisterFastValue.Reference(GseValueFactory.List(items));
         return true;
     }
 
     private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out RegisterFastValue value)
     {
-        var items = new EventScriptValue[sequence.Items.Count];
+        var items = new GseValue[sequence.Items.Count];
         for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(sequence.Items[itemIndex], out var item))
@@ -892,16 +892,16 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            items[itemIndex] = item.ToEventScriptValue();
+            items[itemIndex] = item.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.Sequence(items));
+        value = RegisterFastValue.Reference(GseValueFactory.Sequence(items));
         return true;
     }
 
     private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out RegisterFastValue value)
     {
-        var items = new EventScriptValue[set.Items.Count];
+        var items = new GseValue[set.Items.Count];
         for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(set.Items[itemIndex], out var item))
@@ -910,16 +910,16 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            items[itemIndex] = item.ToEventScriptValue();
+            items[itemIndex] = item.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.Set(items));
+        value = RegisterFastValue.Reference(GseValueFactory.Set(items));
         return true;
     }
 
     private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out RegisterFastValue value)
     {
-        var map = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GseValue>(StringComparer.Ordinal);
         foreach (var entry in dictionary.Entries)
         {
             if (!TryEvaluate(entry.Value, out var entryValue))
@@ -928,10 +928,10 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            map[entry.Key] = entryValue.ToEventScriptValue();
+            map[entry.Key] = entryValue.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(map));
+        value = RegisterFastValue.Reference(GseValueFactory.Dictionary(map));
         return true;
     }
 
@@ -954,59 +954,59 @@ internal sealed class RegisterVmFastExecutionSession
             return RegisterFastValue.Nothing;
         }
 
-        var targetValue = target.ToEventScriptValue();
+        var targetValue = target.ToGseValue();
         if (targetValue.IsNothing())
         {
             return RegisterFastValue.Nothing;
         }
 
         return targetValue.TryGetDictionaryMember(member, out var value)
-            ? RegisterFastValue.FromEventScriptValue(value)
+            ? RegisterFastValue.FromGseValue(value)
             : RegisterFastValue.Nothing;
     }
 
     private static RegisterFastValue EvaluateIndexedAccess(RegisterFastValue target, RegisterFastValue selector)
     {
-        var selectorValue = selector.ToEventScriptValue();
+        var selectorValue = selector.ToGseValue();
         if (selectorValue.IsNothing())
         {
             return RegisterFastValue.Nothing;
         }
 
-        return RegisterFastValue.FromEventScriptValue(target.ToEventScriptValue().Lookup(selectorValue));
+        return RegisterFastValue.FromGseValue(target.ToGseValue().Lookup(selectorValue));
     }
 
     private static RegisterFastValue BuildListValue(RegisterFastValue[] stack, int start, int count)
     {
-        var items = new EventScriptValue[count];
+        var items = new GseValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
         {
-            items[itemIndex] = stack[start + itemIndex].ToEventScriptValue();
+            items[itemIndex] = stack[start + itemIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(EventScriptValueFactory.List(items));
+        return RegisterFastValue.Reference(GseValueFactory.List(items));
     }
 
     private static RegisterFastValue BuildSequenceValue(RegisterFastValue[] stack, int start, int count)
     {
-        var items = new EventScriptValue[count];
+        var items = new GseValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
         {
-            items[itemIndex] = stack[start + itemIndex].ToEventScriptValue();
+            items[itemIndex] = stack[start + itemIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(EventScriptValueFactory.Sequence(items));
+        return RegisterFastValue.Reference(GseValueFactory.Sequence(items));
     }
 
     private static RegisterFastValue BuildSetValue(RegisterFastValue[] stack, int start, int count)
     {
-        var items = new EventScriptValue[count];
+        var items = new GseValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
         {
-            items[itemIndex] = stack[start + itemIndex].ToEventScriptValue();
+            items[itemIndex] = stack[start + itemIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(EventScriptValueFactory.Set(items));
+        return RegisterFastValue.Reference(GseValueFactory.Set(items));
     }
 
     private static RegisterFastValue BuildDictionaryValue(RegisterFastValue[] stack, int start, int count, string[]? names)
@@ -1016,13 +1016,13 @@ internal sealed class RegisterVmFastExecutionSession
             return RegisterFastValue.Nothing;
         }
 
-        var map = new Dictionary<string, EventScriptValue>(count, StringComparer.Ordinal);
+        var map = new Dictionary<string, GseValue>(count, StringComparer.Ordinal);
         for (var entryIndex = 0; entryIndex < count; entryIndex++)
         {
-            map[names[entryIndex]] = stack[start + entryIndex].ToEventScriptValue();
+            map[names[entryIndex]] = stack[start + entryIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(map));
+        return RegisterFastValue.Reference(GseValueFactory.Dictionary(map));
     }
 
     private static RegisterFastValue BuildMessageValue(
@@ -1043,23 +1043,23 @@ internal sealed class RegisterVmFastExecutionSession
 
         if (count == 0)
         {
-            return RegisterFastValue.Reference(Message(EventScriptMessage.CreatePrecomputed(
+            return RegisterFastValue.Reference(Message(GseMessage.CreatePrecomputed(
                 messageName,
-                EventScriptNamedArguments.Empty,
+                GseNamedArguments.Empty,
                 signatureId)));
         }
 
-        var pairs = new KeyValuePair<string, EventScriptValue>[count];
+        var pairs = new KeyValuePair<string, GseValue>[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+            pairs[argumentIndex] = new KeyValuePair<string, GseValue>(
                 names[argumentIndex],
-                stack[start + argumentIndex].ToEventScriptValue());
+                stack[start + argumentIndex].ToGseValue());
         }
 
-        return RegisterFastValue.Reference(Message(EventScriptMessage.CreatePrecomputed(
+        return RegisterFastValue.Reference(Message(GseMessage.CreatePrecomputed(
             messageName,
-            EventScriptNamedArguments.CreateOrdered(pairs),
+            GseNamedArguments.CreateOrdered(pairs),
             signatureId)));
     }
 
@@ -1075,17 +1075,17 @@ internal sealed class RegisterVmFastExecutionSession
             return RegisterFastValue.Nothing;
         }
 
-        var pairs = new KeyValuePair<string, EventScriptValue>[count];
+        var pairs = new KeyValuePair<string, GseValue>[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+            pairs[argumentIndex] = new KeyValuePair<string, GseValue>(
                 names[argumentIndex],
-                stack[start + argumentIndex].ToEventScriptValue());
+                stack[start + argumentIndex].ToGseValue());
         }
 
-        var arguments = EventScriptNamedArguments.CreateOrdered(pairs, names);
-        return EventScriptMessageValueCodec.TryBindHandlerValue(callee.ToEventScriptValue(), arguments, out var message)
-            ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+        var arguments = GseNamedArguments.CreateOrdered(pairs, names);
+        return GseMessageValueCodec.TryBindHandlerValue(callee.ToGseValue(), arguments, out var message)
+            ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
             : RegisterFastValue.Nothing;
     }
 
@@ -1108,50 +1108,50 @@ internal sealed class RegisterVmFastExecutionSession
 
         var argumentLabels = labels is { Length: var labelCount } && labelCount == count
             ? labels
-            : Enumerable.Repeat(EventScriptMessageSignature.UnlabeledParameterName, count).ToArray();
-        var reference = new EventScriptExtensionReference(extensionName, functionName, argumentLabels);
-        var arguments = new EventScriptFastValue[count];
+            : Enumerable.Repeat(GseMessageSignature.UnlabeledParameterName, count).ToArray();
+        var reference = new GseExtensionReference(extensionName, functionName, argumentLabels);
+        var arguments = new GseFastValue[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            arguments[argumentIndex] = ToEventScriptFastValue(stack[start + argumentIndex]);
+            arguments[argumentIndex] = ToGseFastValue(stack[start + argumentIndex]);
         }
 
-        if (EventScriptStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
+        if (GseStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
         {
-            value = RegisterFastValue.FromEventScriptFastValue(standardValue);
+            value = RegisterFastValue.FromGseFastValue(standardValue);
             return true;
         }
 
-        IEventScriptExtensionFunction function;
+        IGseExtensionFunction function;
         if (referenceIndex >= 0)
         {
             if (!_compiledScript.TryGetBoundExtension(referenceIndex, out function))
             {
-                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' was not dynamically bound to reference slot '{referenceIndex}'.");
+                throw new GseDynamicLinkException($"Gse extension '{reference.SignatureId}' was not dynamically bound to reference slot '{referenceIndex}'.");
             }
         }
         else
         {
             if (!_compiledScript.TryGetBoundExtension(reference, out function))
             {
-                throw new EventScriptDynamicLinkException($"EventScript extension '{reference.SignatureId}' was not dynamically bound.");
+                throw new GseDynamicLinkException($"Gse extension '{reference.SignatureId}' was not dynamically bound.");
             }
         }
 
-        value = RegisterFastValue.FromEventScriptFastValue(function.Invoke(new EventScriptExtensionContext(_context), arguments));
+        value = RegisterFastValue.FromGseFastValue(function.Invoke(new GseExtensionContext(_context), arguments));
         return true;
     }
 
-    private static EventScriptFastValue ToEventScriptFastValue(RegisterFastValue value)
+    private static GseFastValue ToGseFastValue(RegisterFastValue value)
         => value.Kind switch
         {
-            RegisterFastValueKind.Nothing => EventScriptFastValue.Nothing,
-            RegisterFastValueKind.Boolean => EventScriptFastValue.FromBoolean(value.BooleanValue),
-            RegisterFastValueKind.Integer => EventScriptFastValue.FromInteger(value.IntegerValue),
-            RegisterFastValueKind.Decimal => EventScriptFastValue.FromDecimal(value.Number, value.Unit),
-            RegisterFastValueKind.Percentage => EventScriptFastValue.FromPercentage(value.Number),
-            RegisterFastValueKind.Reference => EventScriptFastValue.FromEventScriptValue(value.ReferenceValue ?? EventScriptValue.Nothing),
-            _ => EventScriptFastValue.Nothing
+            RegisterFastValueKind.Nothing => GseFastValue.Nothing,
+            RegisterFastValueKind.Boolean => GseFastValue.FromBoolean(value.BooleanValue),
+            RegisterFastValueKind.Integer => GseFastValue.FromInteger(value.IntegerValue),
+            RegisterFastValueKind.Decimal => GseFastValue.FromDecimal(value.Number, value.Unit),
+            RegisterFastValueKind.Percentage => GseFastValue.FromPercentage(value.Number),
+            RegisterFastValueKind.Reference => GseFastValue.FromGseValue(value.ReferenceValue ?? GseValue.Nothing),
+            _ => GseFastValue.Nothing
         };
 
     private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)
@@ -1221,26 +1221,26 @@ internal sealed class RegisterVmFastExecutionSession
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
             "percentage" => value.Kind == RegisterFastValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
-            "degree" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == EventScriptDecimalUnit.Degree ||
-                        (value.ReferenceValue?.IsDecimalUnit(EventScriptDecimalUnit.Degree) ?? false),
-            "meter" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == EventScriptDecimalUnit.Meter ||
-                       (value.ReferenceValue?.IsDecimalUnit(EventScriptDecimalUnit.Meter) ?? false),
-            "second" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == EventScriptDecimalUnit.Second ||
-                        (value.ReferenceValue?.IsDecimalUnit(EventScriptDecimalUnit.Second) ?? false),
+            "degree" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == GseDecimalUnit.Degree ||
+                        (value.ReferenceValue?.IsDecimalUnit(GseDecimalUnit.Degree) ?? false),
+            "meter" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == GseDecimalUnit.Meter ||
+                       (value.ReferenceValue?.IsDecimalUnit(GseDecimalUnit.Meter) ?? false),
+            "second" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == GseDecimalUnit.Second ||
+                        (value.ReferenceValue?.IsDecimalUnit(GseDecimalUnit.Second) ?? false),
             "vector2" => value.ReferenceValue?.IsVector2() ?? false,
             "vector3" => value.ReferenceValue?.IsVector3() ?? false,
             "decimal" => value.Kind is RegisterFastValueKind.Integer or RegisterFastValueKind.Decimal or RegisterFastValueKind.Percentage ||
                          (value.ReferenceValue?.IsNumber() ?? false),
             "integer" => value.Kind == RegisterFastValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
-            "boolean" => value.Kind == RegisterFastValueKind.Boolean || value.ReferenceValue?.Kind == EventScriptValueKind.Boolean,
+            "boolean" => value.Kind == RegisterFastValueKind.Boolean || value.ReferenceValue?.Kind == GseValueKind.Boolean,
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "sequence" => value.ReferenceValue?.IsSequence() ?? false,
             "list" => value.ReferenceValue?.IsList() ?? false,
             "range" => value.ReferenceValue?.IsRange() ?? false,
             "message" => value.ReferenceValue is { } messageValue &&
-                         (messageValue.Kind == EventScriptValueKind.Message || EventScriptMessageValueCodec.TryReadMessageValue(messageValue, out _)),
+                         (messageValue.Kind == GseValueKind.Message || GseMessageValueCodec.TryReadMessageValue(messageValue, out _)),
             "handler" => value.ReferenceValue is { } handlerValue &&
-                         (handlerValue.Kind == EventScriptValueKind.Handler || EventScriptMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
+                         (handlerValue.Kind == GseValueKind.Handler || GseMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
             "dictionary" => value.ReferenceValue?.IsDictionary() ?? false,
             "set" => value.ReferenceValue?.IsSet() ?? false,
             "dice" => value.ReferenceValue?.IsDice() ?? false,
@@ -1358,7 +1358,7 @@ internal sealed class RegisterVmFastExecutionSession
         int stackBase,
         out RegisterFastValue value)
     {
-        PushSeededRandomScope(seed.ToEventScriptValue());
+        PushSeededRandomScope(seed.ToGseValue());
         try
         {
             return TryExecuteExpressionProgram(bodyProgram, stackBase, out value);
@@ -1385,7 +1385,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var values = new List<EventScriptValue>();
+        var values = new List<GseValue>();
         foreach (var item in sourceItems)
         {
             if (!_context.RuntimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
@@ -1393,7 +1393,7 @@ internal sealed class RegisterVmFastExecutionSession
                 break;
             }
 
-            var fastItem = RegisterFastValue.FromEventScriptValue(item);
+            var fastItem = RegisterFastValue.FromGseValue(item);
             if (generatedCollection.Predicate is not null)
             {
                 if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Predicate, out var predicate))
@@ -1419,12 +1419,12 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            values.Add(projected.ToEventScriptValue());
+            values.Add(projected.ToGseValue());
         }
 
         value = RegisterFastValue.Reference(generatedCollection.CollectionType == "set"
-            ? EventScriptValueFactory.Set(values)
-            : EventScriptValueFactory.List(values));
+            ? GseValueFactory.Set(values)
+            : GseValueFactory.List(values));
         return true;
     }
 
@@ -1436,7 +1436,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var values = new List<EventScriptValue>();
+        var values = new List<GseValue>();
         foreach (var item in sourceItems)
         {
             if (!_context.RuntimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
@@ -1444,7 +1444,7 @@ internal sealed class RegisterVmFastExecutionSession
                 break;
             }
 
-            var fastItem = RegisterFastValue.FromEventScriptValue(item);
+            var fastItem = RegisterFastValue.FromGseValue(item);
             if (program.PredicateProgram is not null)
             {
                 if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.PredicateProgram, 0, out var predicate))
@@ -1470,16 +1470,16 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            values.Add(projected.ToEventScriptValue());
+            values.Add(projected.ToGseValue());
         }
 
         value = RegisterFastValue.Reference(program.CollectionType == "set"
-            ? EventScriptValueFactory.Set(values)
-            : EventScriptValueFactory.List(values));
+            ? GseValueFactory.Set(values)
+            : GseValueFactory.List(values));
         return true;
     }
 
-    private bool TryMaterializeIterationSource(IterationSourceNode source, out EventScriptValue[] items)
+    private bool TryMaterializeIterationSource(IterationSourceNode source, out GseValue[] items)
     {
         switch (source)
         {
@@ -1490,7 +1490,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                var boxedCollection = collectionValue.ToEventScriptValue();
+                var boxedCollection = collectionValue.ToGseValue();
                 if (!TryCheckMaterializedValue(boxedCollection, "Iteration source would enumerate more range items than allowed."))
                 {
                     items = [];
@@ -1507,7 +1507,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                var boxedRange = rangeValue.ToEventScriptValue();
+                var boxedRange = rangeValue.ToGseValue();
                 if (!TryCheckMaterializedValue(boxedRange, "Range item count exceeds the configured limit."))
                 {
                     items = [];
@@ -1571,13 +1571,13 @@ internal sealed class RegisterVmFastExecutionSession
 
     private RegisterFastValue EvaluateRandomExpression(RegisterFastValue fromValue, RegisterFastValue toValue)
     {
-        var fromRaw = fromValue.ToEventScriptValue();
-        var toRaw = toValue.ToEventScriptValue();
+        var fromRaw = fromValue.ToGseValue();
+        var toRaw = toValue.ToGseValue();
 
-        if (EventScriptValueAlu.TryUnwrapOptionalForOperation(fromRaw, out var unwrappedFrom) &&
-            EventScriptValueAlu.TryUnwrapOptionalForOperation(toRaw, out var unwrappedTo) &&
-            unwrappedFrom.Kind == EventScriptValueKind.Integer &&
-            unwrappedTo.Kind == EventScriptValueKind.Integer)
+        if (GseValueAlu.TryUnwrapOptionalForOperation(fromRaw, out var unwrappedFrom) &&
+            GseValueAlu.TryUnwrapOptionalForOperation(toRaw, out var unwrappedTo) &&
+            unwrappedFrom.Kind == GseValueKind.Integer &&
+            unwrappedTo.Kind == GseValueKind.Integer)
         {
             var from = ToIntSaturated(unwrappedFrom.AsInteger());
             var to = ToIntSaturated(unwrappedTo.AsInteger());
@@ -1591,8 +1591,8 @@ internal sealed class RegisterVmFastExecutionSession
                 : RegisterFastValue.Nothing;
         }
 
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(toRaw, out var toNumber) ||
+        if (!GseValueAlu.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(toRaw, out var toNumber) ||
             !fromNumber.IsFinite ||
             !toNumber.IsFinite)
         {
@@ -1613,9 +1613,9 @@ internal sealed class RegisterVmFastExecutionSession
 
     private static RegisterFastValue EvaluateRangeExpression(RegisterFastValue fromValue, RegisterFastValue toValue, RegisterFastValue stepValue)
     {
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(fromValue.ToEventScriptValue(), out var fromNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(toValue.ToEventScriptValue(), out var toNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(stepValue.ToEventScriptValue(), out var stepNumber) ||
+        if (!GseValueAlu.TryCoerceNumericForOperation(fromValue.ToGseValue(), out var fromNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(toValue.ToGseValue(), out var toNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(stepValue.ToGseValue(), out var stepNumber) ||
             !fromNumber.IsFinite ||
             !toNumber.IsFinite ||
             !stepNumber.IsFinite)
@@ -1624,21 +1624,21 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         return RegisterFastValue.Reference(Range(
-            EventScriptValueAlu.ToIntegerSaturated(fromNumber.Value),
-            EventScriptValueAlu.ToIntegerSaturated(toNumber.Value),
-            EventScriptValueAlu.ToIntegerSaturated(stepNumber.Value)));
+            GseValueAlu.ToIntegerSaturated(fromNumber.Value),
+            GseValueAlu.ToIntegerSaturated(toNumber.Value),
+            GseValueAlu.ToIntegerSaturated(stepNumber.Value)));
     }
 
     private RegisterFastValue EvaluateDiceExpression(int diceCount, int sideCount)
     {
         if (diceCount <= 0 || sideCount <= 0)
         {
-            return RegisterFastValue.Reference(Dice(EventScriptDiceValue.Empty));
+            return RegisterFastValue.Reference(Dice(GseDiceValue.Empty));
         }
 
         if (!_context.RuntimeBudget.TryCheckDice(new DiceExpressionNode(diceCount, sideCount)))
         {
-            return RegisterFastValue.Reference(Dice(EventScriptDiceValue.Empty));
+            return RegisterFastValue.Reference(Dice(GseDiceValue.Empty));
         }
 
         var rolls = new int[diceCount];
@@ -1646,30 +1646,30 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryNextInclusiveInt(1, sideCount, out var roll))
             {
-                return RegisterFastValue.Reference(Dice(EventScriptDiceValue.Empty));
+                return RegisterFastValue.Reference(Dice(GseDiceValue.Empty));
             }
 
             rolls[i] = roll;
         }
 
-        return RegisterFastValue.Reference(Dice(EventScriptDiceValue.EventScriptDice(rolls)));
+        return RegisterFastValue.Reference(Dice(GseDiceValue.GseDice(rolls)));
     }
 
     private bool TryEvaluateUnaryOperation(string? operation, RegisterFastValue operand, out RegisterFastValue value)
     {
-        var boxed = operand.ToEventScriptValue();
+        var boxed = operand.ToGseValue();
         value = operation switch
         {
-            "-" => RegisterFastValue.FromEventScriptValue(EvaluateNegateUnary(boxed)),
-            "!" => RegisterFastValue.FromEventScriptValue(EvaluateNotUnary(boxed)),
+            "-" => RegisterFastValue.FromGseValue(EvaluateNegateUnary(boxed)),
+            "!" => RegisterFastValue.FromGseValue(EvaluateNotUnary(boxed)),
             "has value" => RegisterFastValue.Boolean(boxed.HasSemanticValue()),
             "empty" => RegisterFastValue.Boolean(boxed.IsSemanticallyEmpty()),
-            "len" => RegisterFastValue.FromEventScriptValue(EvaluateLenUnary(boxed)),
-            "chance" => RegisterFastValue.FromEventScriptValue(EvaluateChanceUnary(boxed)),
+            "len" => RegisterFastValue.FromGseValue(EvaluateLenUnary(boxed)),
+            "chance" => RegisterFastValue.FromGseValue(EvaluateChanceUnary(boxed)),
             "keys" => RegisterFastValue.Reference(Keys(boxed)),
             "values" => RegisterFastValue.Reference(Values(boxed)),
             "entries" => RegisterFastValue.Reference(Entries(boxed)),
-            "abs" => RegisterFastValue.FromEventScriptValue(EvaluateAbsUnary(boxed)),
+            "abs" => RegisterFastValue.FromGseValue(EvaluateAbsUnary(boxed)),
             _ => RegisterFastValue.Unsupported()
         };
 
@@ -1689,16 +1689,16 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
-        var boxedValues = new EventScriptValue[count];
+        var boxedValues = new GseValue[count];
         for (var i = 0; i < count; i++)
         {
-            boxedValues[i] = stack[start + i].ToEventScriptValue();
+            boxedValues[i] = stack[start + i].ToGseValue();
         }
 
         value = operation switch
         {
-            "min" => RegisterFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
-            "max" => RegisterFastValue.FromEventScriptValue(EventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
+            "min" => RegisterFastValue.FromGseValue(GseValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
+            "max" => RegisterFastValue.FromGseValue(GseValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
             _ => RegisterFastValue.Unsupported()
         };
 
@@ -1707,12 +1707,12 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateBinaryOperation(string operation, RegisterFastValue leftRawFast, RegisterFastValue rightRawFast, out RegisterFastValue value)
     {
-        var leftRaw = leftRawFast.ToEventScriptValue();
-        var rightRaw = rightRawFast.ToEventScriptValue();
+        var leftRaw = leftRawFast.ToGseValue();
+        var rightRaw = rightRawFast.ToGseValue();
 
         if (operation == "default")
         {
-            value = RegisterFastValue.FromEventScriptValue(EvaluateDefaultBinary(leftRaw, rightRaw));
+            value = RegisterFastValue.FromGseValue(EvaluateDefaultBinary(leftRaw, rightRaw));
             return true;
         }
 
@@ -1722,8 +1722,8 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
-            !EventScriptValueAlu.TryUnwrapOptionalForOperation(rightRaw, out var right))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
+            !GseValueAlu.TryUnwrapOptionalForOperation(rightRaw, out var right))
         {
             value = RegisterFastValue.Reference(OptionalNone());
             return true;
@@ -1734,8 +1734,8 @@ internal sealed class RegisterVmFastExecutionSession
             "|" => RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean()),
             "^" => RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
             "&" => RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean()),
-            "=" or "==" => RegisterFastValue.Boolean(EventScriptValueAlu.AreEqual(left, right)),
-            "<>" => RegisterFastValue.Boolean(!EventScriptValueAlu.AreEqual(left, right)),
+            "=" or "==" => RegisterFastValue.Boolean(GseValueAlu.AreEqual(left, right)),
+            "<>" => RegisterFastValue.Boolean(!GseValueAlu.AreEqual(left, right)),
             "in" => RegisterFastValue.Boolean(right.Contains(left)),
             "value in" => RegisterFastValue.Boolean(right.ContainsValue(left)),
             "starts with" => RegisterFastValue.Boolean(left.StartsWith(right)),
@@ -1744,17 +1744,17 @@ internal sealed class RegisterVmFastExecutionSession
             ">" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison > 0)),
             "<=" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison <= 0)),
             ">=" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison >= 0)),
-            "+" => RegisterFastValue.FromEventScriptValue(EvaluateAddBinary(left, right)),
-            "-" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "-", right)),
-            "*" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "*", right)),
-            "/" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "/", right)),
-            "div" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "div", right)),
-            "mod" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
-            "rem" => RegisterFastValue.FromEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
-            "intersect" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionIntersect(left, right)),
-            "combine" or "merge" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionCombine(left, right)),
-            "except" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionExcept(left, right)),
-            "zip" => RegisterFastValue.Reference(EventScriptValueAlu.EvaluateCollectionZip(left, right)),
+            "+" => RegisterFastValue.FromGseValue(EvaluateAddBinary(left, right)),
+            "-" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "-", right)),
+            "*" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "*", right)),
+            "/" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "/", right)),
+            "div" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "div", right)),
+            "mod" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "mod", right)),
+            "rem" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "rem", right)),
+            "intersect" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionIntersect(left, right)),
+            "combine" or "merge" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionCombine(left, right)),
+            "except" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionExcept(left, right)),
+            "zip" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionZip(left, right)),
             _ => RegisterFastValue.Unsupported()
         };
 
@@ -1792,7 +1792,7 @@ internal sealed class RegisterVmFastExecutionSession
             _ => string.Empty
         };
 
-    private static EventScriptValue EvaluateDefaultBinary(EventScriptValue leftRaw, EventScriptValue rightRaw)
+    private static GseValue EvaluateDefaultBinary(GseValue leftRaw, GseValue rightRaw)
     {
         if (!leftRaw.HasSemanticValue())
         {
@@ -1808,87 +1808,87 @@ internal sealed class RegisterVmFastExecutionSession
         return leftRaw;
     }
 
-    private static bool TryCompare(EventScriptValue left, EventScriptValue right, Func<int, bool> predicate)
-        => EventScriptValueAlu.TryCompareNumericValues(left, right, out var comparison) &&
+    private static bool TryCompare(GseValue left, GseValue right, Func<int, bool> predicate)
+        => GseValueAlu.TryCompareNumericValues(left, right, out var comparison) &&
            predicate(comparison);
 
-    private static EventScriptValue EvaluateAddBinary(EventScriptValue left, EventScriptValue right)
+    private static GseValue EvaluateAddBinary(GseValue left, GseValue right)
     {
-        if (EventScriptValueAlu.TryEvaluateVectorBinary(left, "+", right, out var vector))
+        if (GseValueAlu.TryEvaluateVectorBinary(left, "+", right, out var vector))
         {
             return vector;
         }
 
-        if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
+        if (GseValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
         {
             return percentage;
         }
 
-        if (EventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out var unit))
+        if (GseValueAlu.TryEvaluateUnitBinary(left, "+", right, out var unit))
         {
             return unit;
         }
 
-        if (EventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) &&
-            EventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
+        if (GseValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) &&
+            GseValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
-            return EventScriptValueAlu.ToEventScriptNumericResult(left, "+", right, EventScriptValueAlu.AddNumeric(leftNumeric, rightNumeric));
+            return GseValueAlu.ToGseNumericResult(left, "+", right, GseValueAlu.AddNumeric(leftNumeric, rightNumeric));
         }
 
-        if (EventScriptValueAlu.TryCombineWithPlus(left, right, out var combined))
+        if (GseValueAlu.TryCombineWithPlus(left, right, out var combined))
         {
             return combined;
         }
 
         return left.IsText() || right.IsText()
-            ? Text($"{EventScriptValueAlu.ToText(left)}{EventScriptValueAlu.ToText(right)}")
+            ? Text($"{GseValueAlu.ToText(left)}{GseValueAlu.ToText(right)}")
             : DecimalNaN();
     }
 
-    private static EventScriptValue EvaluateNumericBinary(EventScriptValue left, string operation, EventScriptValue right)
+    private static GseValue EvaluateNumericBinary(GseValue left, string operation, GseValue right)
     {
-        if (EventScriptValueAlu.TryEvaluateVectorBinary(left, operation, right, out var vector))
+        if (GseValueAlu.TryEvaluateVectorBinary(left, operation, right, out var vector))
         {
             return vector;
         }
 
-        if (EventScriptValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
+        if (GseValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
         {
             return percentage;
         }
 
-        if (EventScriptValueAlu.TryEvaluateUnitBinary(left, operation, right, out var unit))
+        if (GseValueAlu.TryEvaluateUnitBinary(left, operation, right, out var unit))
         {
             return unit;
         }
 
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
+        if (!GseValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) ||
+            !GseValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
             return DecimalNaN();
         }
 
         var result = operation switch
         {
-            "-" => EventScriptValueAlu.SubtractNumeric(leftNumeric, rightNumeric),
-            "*" => EventScriptValueAlu.MultiplyNumeric(leftNumeric, rightNumeric),
-            "/" => EventScriptValueAlu.DivideNumeric(leftNumeric, rightNumeric),
-            "div" => EventScriptValueAlu.IntegerDivideNumeric(leftNumeric, rightNumeric),
-            "mod" => EventScriptValueAlu.ModuloNumeric(leftNumeric, rightNumeric),
-            "rem" => EventScriptValueAlu.RemainderNumeric(leftNumeric, rightNumeric),
-            _ => EventScriptValueAlu.NumericValue.NaN()
+            "-" => GseValueAlu.SubtractNumeric(leftNumeric, rightNumeric),
+            "*" => GseValueAlu.MultiplyNumeric(leftNumeric, rightNumeric),
+            "/" => GseValueAlu.DivideNumeric(leftNumeric, rightNumeric),
+            "div" => GseValueAlu.IntegerDivideNumeric(leftNumeric, rightNumeric),
+            "mod" => GseValueAlu.ModuloNumeric(leftNumeric, rightNumeric),
+            "rem" => GseValueAlu.RemainderNumeric(leftNumeric, rightNumeric),
+            _ => GseValueAlu.NumericValue.NaN()
         };
-        return EventScriptValueAlu.ToEventScriptNumericResult(left, operation, right, result);
+        return GseValueAlu.ToGseNumericResult(left, operation, right, result);
     }
 
-    private static EventScriptValue EvaluateNegateUnary(EventScriptValue operand)
+    private static GseValue EvaluateNegateUnary(GseValue operand)
     {
         if (operand.IsNothing())
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped))
         {
             return OptionalNone();
         }
@@ -1898,34 +1898,34 @@ internal sealed class RegisterVmFastExecutionSession
             return Percentage(-unwrapped.AsNumber());
         }
 
-        if (EventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
+        if (GseValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
         {
             return vectorNegation;
         }
 
-        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
+        if (GseValue.TryGetDecimalUnit(unwrapped, out var unit))
         {
             return Decimal(-unwrapped.AsNumber(), unit);
         }
 
-        return EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number)
-            ? EventScriptValueAlu.ToEventScriptDecimal(EventScriptValueAlu.NegateNumeric(number))
-            : EventScriptValue.Nothing;
+        return GseValueAlu.TryCoerceNumericForOperation(unwrapped, out var number)
+            ? GseValueAlu.ToGseDecimal(GseValueAlu.NegateNumeric(number))
+            : GseValue.Nothing;
     }
 
-    private static EventScriptValue EvaluateNotUnary(EventScriptValue operand)
+    private static GseValue EvaluateNotUnary(GseValue operand)
     {
         if (operand.IsNothing())
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
-        return EventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped)
+        return GseValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped)
             ? Boolean(!unwrapped.AsBoolean())
             : OptionalNone();
     }
 
-    private EventScriptValue EvaluateLenUnary(EventScriptValue operand)
+    private GseValue EvaluateLenUnary(GseValue operand)
     {
         if (operand.IsNothing())
         {
@@ -1934,38 +1934,38 @@ internal sealed class RegisterVmFastExecutionSession
 
         return operand.Kind switch
         {
-            EventScriptValueKind.Text => Integer(operand.AsText().Length),
-            EventScriptValueKind.Sequence => CountEnumerableWithBudget(operand.AsEnumerable(), "Sequence length evaluation budget exhausted."),
-            EventScriptValueKind.Range => EvaluateRangeLength(operand),
-            EventScriptValueKind.List => Integer(operand.AsList().Count),
-            EventScriptValueKind.Dictionary => Integer(operand.AsDictionary().Count),
-            EventScriptValueKind.Set => Integer(operand.AsSet().Count),
-            EventScriptValueKind.Dice => Integer(operand.AsDice().Rolls.Count),
-            EventScriptValueKind.Optional => Integer(operand.AsOptional().HasValue ? 1 : 0),
-            _ => EventScriptValue.Nothing
+            GseValueKind.Text => Integer(operand.AsText().Length),
+            GseValueKind.Sequence => CountEnumerableWithBudget(operand.AsEnumerable(), "Sequence length evaluation budget exhausted."),
+            GseValueKind.Range => EvaluateRangeLength(operand),
+            GseValueKind.List => Integer(operand.AsList().Count),
+            GseValueKind.Dictionary => Integer(operand.AsDictionary().Count),
+            GseValueKind.Set => Integer(operand.AsSet().Count),
+            GseValueKind.Dice => Integer(operand.AsDice().Rolls.Count),
+            GseValueKind.Optional => Integer(operand.AsOptional().HasValue ? 1 : 0),
+            _ => GseValue.Nothing
         };
     }
 
-    private EventScriptValue EvaluateRangeLength(EventScriptValue operand)
+    private GseValue EvaluateRangeLength(GseValue operand)
     {
-        if (!EventScriptRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
+        if (!GseRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
         return _context.RuntimeBudget.TryCheckRangeLength(length, "Range length exceeds the configured limit.")
             ? Integer(length)
-            : EventScriptValue.Nothing;
+            : GseValue.Nothing;
     }
 
-    private EventScriptValue CountEnumerableWithBudget(IEnumerable<EventScriptValue> values, string detail)
+    private GseValue CountEnumerableWithBudget(IEnumerable<GseValue> values, string detail)
     {
         long count = 0;
         foreach (var _ in values)
         {
             if (!_context.RuntimeBudget.TryConsumeLoopIteration(detail))
             {
-                return EventScriptValue.Nothing;
+                return GseValue.Nothing;
             }
 
             count++;
@@ -1974,7 +1974,7 @@ internal sealed class RegisterVmFastExecutionSession
         return Integer(count);
     }
 
-    private EventScriptValue EvaluateChanceUnary(EventScriptValue operand)
+    private GseValue EvaluateChanceUnary(GseValue operand)
     {
         var percentage = ConvertToPercentage(operand);
         if (!percentage.IsPercentage())
@@ -1998,39 +1998,39 @@ internal sealed class RegisterVmFastExecutionSession
             : Boolean(false);
     }
 
-    private static EventScriptValue EvaluateAbsUnary(EventScriptValue operand)
+    private static GseValue EvaluateAbsUnary(GseValue operand)
     {
         if (operand.IsNothing())
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
-        if (EventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out var vectorLength))
+        if (GseValueAlu.TryEvaluateVectorUnary(operand, "abs", out var vectorLength))
         {
             return vectorLength;
         }
 
-        return EventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
+        return GseValueAlu.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
             ? Decimal(Math.Abs(number.Value))
-            : EventScriptValue.Nothing;
+            : GseValue.Nothing;
     }
 
     private static RegisterFastValue EvaluateClamp(RegisterFastValue rawValue, RegisterFastValue minimumValue, RegisterFastValue maximumValue)
     {
-        var raw = rawValue.ToEventScriptValue();
-        var minimum = minimumValue.ToEventScriptValue();
-        var maximum = maximumValue.ToEventScriptValue();
+        var raw = rawValue.ToGseValue();
+        var minimum = minimumValue.ToGseValue();
+        var maximum = maximumValue.ToGseValue();
 
-        if (!EventScriptValueAlu.HaveCompatibleNumericUnits(raw, minimum) ||
-            !EventScriptValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
-            !EventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+        if (!GseValueAlu.HaveCompatibleNumericUnits(raw, minimum) ||
+            !GseValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
+            !GseValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
         {
             return RegisterFastValue.NaN();
         }
 
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(raw, out var rawNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber) ||
+        if (!GseValueAlu.TryCoerceNumericForOperation(raw, out var rawNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber) ||
             !rawNumber.IsFinite ||
             !minimumNumber.IsFinite ||
             !maximumNumber.IsFinite)
@@ -2040,8 +2040,8 @@ internal sealed class RegisterVmFastExecutionSession
 
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-        EventScriptValue.TryGetDecimalUnit(raw, out var unit);
-        return RegisterFastValue.FromEventScriptValue(Decimal(
+        GseValue.TryGetDecimalUnit(raw, out var unit);
+        return RegisterFastValue.FromGseValue(Decimal(
             Math.Min(Math.Max(rawNumber.Value, lower), upper),
             raw.HasDecimalUnit() ? unit : null));
     }
@@ -2074,8 +2074,8 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private void PushSeededRandomScope(EventScriptValue seedValue)
-        => _randomScopes.Push(EventScriptRandomGenerator.FromSeed(DeriveStableSeed(seedValue)));
+    private void PushSeededRandomScope(GseValue seedValue)
+        => _randomScopes.Push(GseRandomGenerator.FromSeed(DeriveStableSeed(seedValue)));
 
     private void PopSeededRandomScope()
     {
@@ -2092,7 +2092,7 @@ internal sealed class RegisterVmFastExecutionSession
         return (int)value;
     }
 
-    private static int DeriveStableSeed(EventScriptValue value)
+    private static int DeriveStableSeed(GseValue value)
     {
         var canonical = BuildStableSeedText(value);
         unchecked
@@ -2108,50 +2108,50 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private static string BuildStableSeedText(EventScriptValue value)
+    private static string BuildStableSeedText(GseValue value)
         => value.Kind switch
         {
-            EventScriptValueKind.Nothing => "nothing",
-            EventScriptValueKind.Tag => $"tag:{value.AsText()}",
-            EventScriptValueKind.Text => $"text:{value.AsText()}",
-            EventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-            EventScriptValueKind.Vector2 => BuildVector2StableSeedText((EventScriptVector2Value)value),
-            EventScriptValueKind.Vector3 => BuildVector3StableSeedText((EventScriptVector3Value)value),
-            EventScriptValueKind.Decimal => value.IsNaN()
+            GseValueKind.Nothing => "nothing",
+            GseValueKind.Tag => $"tag:{value.AsText()}",
+            GseValueKind.Text => $"text:{value.AsText()}",
+            GseValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
+            GseValueKind.Vector2 => BuildVector2StableSeedText((GseVector2Value)value),
+            GseValueKind.Vector3 => BuildVector3StableSeedText((GseVector3Value)value),
+            GseValueKind.Decimal => value.IsNaN()
                 ? "decimal:nan"
                 : value.IsNegativeInfinity()
                     ? "decimal:-infinity"
                     : value.IsInfinity()
                         ? "decimal:infinity"
-                        : value is EventScriptDecimalValue { Unit: { } unit }
-                            ? $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(unit)}"
+                        : value is GseDecimalValue { Unit: { } unit }
+                            ? $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}:{GseDecimalUnits.ToTypeName(unit)}"
                             : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-            EventScriptValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
-            EventScriptValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
-            EventScriptValueKind.Optional => value.AsOptional().HasValue
+            GseValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
+            GseValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
+            GseValueKind.Optional => value.AsOptional().HasValue
                 ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                 : "optional:none",
-            EventScriptValueKind.Sequence => $"sequence:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
-            EventScriptValueKind.Range => $"range:{((EventScriptRangeValue)value).From}:{((EventScriptRangeValue)value).To}:{((EventScriptRangeValue)value).Step}",
-            EventScriptValueKind.Message =>
-                $"message:{((EventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((EventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
-            EventScriptValueKind.Handler => $"handler:{((EventScriptHandlerValue)value).Signature.SignatureId}",
-            EventScriptValueKind.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
-            EventScriptValueKind.Dictionary =>
+            GseValueKind.Sequence => $"sequence:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+            GseValueKind.Range => $"range:{((GseRangeValue)value).From}:{((GseRangeValue)value).To}:{((GseRangeValue)value).Step}",
+            GseValueKind.Message =>
+                $"message:{((GseMessageValue)value).Value.SignatureId}:[{string.Join("|", ((GseMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
+            GseValueKind.Handler => $"handler:{((GseHandlerValue)value).Signature.SignatureId}",
+            GseValueKind.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
+            GseValueKind.Dictionary =>
                 $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
-            EventScriptValueKind.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, EventScriptValue.StableComparer).Select(BuildStableSeedText))}]",
-            EventScriptValueKind.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
+            GseValueKind.Set => $"set:[{string.Join("|", value.AsSet().OrderBy(item => item, GseValue.StableComparer).Select(BuildStableSeedText))}]",
+            GseValueKind.Dice => $"dice:[{string.Join("|", value.AsDice().Rolls)}]",
             _ => value.ToString()
         };
 
-    private static string BuildVector2StableSeedText(EventScriptVector2Value value)
+    private static string BuildVector2StableSeedText(GseVector2Value value)
         => value.Unit.HasValue
-            ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+            ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{GseDecimalUnits.ToTypeName(value.Unit.Value)}"
             : $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}";
 
-    private static string BuildVector3StableSeedText(EventScriptVector3Value value)
+    private static string BuildVector3StableSeedText(GseVector3Value value)
         => value.Unit.HasValue
-            ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{EventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+            ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{GseDecimalUnits.ToTypeName(value.Unit.Value)}"
             : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
     private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterFastValue value)
@@ -2193,7 +2193,7 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            var dynamicPairs = new KeyValuePair<string, EventScriptValue>[call.ArgumentList.Count];
+            var dynamicPairs = new KeyValuePair<string, GseValue>[call.ArgumentList.Count];
             var dynamicLabels = new string[call.ArgumentList.Count];
             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
             {
@@ -2205,12 +2205,12 @@ internal sealed class RegisterVmFastExecutionSession
                 }
 
                 dynamicLabels[argumentIndex] = argument.Name;
-                dynamicPairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(argument.Name, argumentValue.ToEventScriptValue());
+                dynamicPairs[argumentIndex] = new KeyValuePair<string, GseValue>(argument.Name, argumentValue.ToGseValue());
             }
 
-            var dynamicArguments = EventScriptNamedArguments.CreateOrdered(dynamicPairs, dynamicLabels);
-            value = EventScriptMessageValueCodec.TryBindHandlerValue(handlerValue.ToEventScriptValue(), dynamicArguments, out var message)
-                ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+            var dynamicArguments = GseNamedArguments.CreateOrdered(dynamicPairs, dynamicLabels);
+            value = GseMessageValueCodec.TryBindHandlerValue(handlerValue.ToGseValue(), dynamicArguments, out var message)
+                ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
                 : RegisterFastValue.Nothing;
             return true;
         }
@@ -2295,7 +2295,7 @@ internal sealed class RegisterVmFastExecutionSession
         return TryCallExtension(
             extensionPredicate.ExtensionName,
             extensionPredicate.FunctionName,
-            [EventScriptMessageSignature.UnlabeledParameterName],
+            [GseMessageSignature.UnlabeledParameterName],
             -1,
             arguments,
             0,
@@ -2472,24 +2472,24 @@ internal sealed class RegisterVmFastExecutionSession
 
         if (_compiledScript.TypeDefinitions.TryGetValue(typeName, out var typeDefinition))
         {
-            var values = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+            var values = new Dictionary<string, GseValue>(StringComparer.Ordinal);
             for (var index = 0; index < count; index++)
             {
                 var label = labels is { Length: var labelCount } && index < labelCount
                     ? labels[index]
-                    : EventScriptMessageSignature.UnlabeledParameterName;
-                if (string.Equals(label, EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+                    : GseMessageSignature.UnlabeledParameterName;
+                if (string.Equals(label, GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
                 {
                     return RegisterFastValue.Nothing;
                 }
 
-                values[label] = stack[start + index].ToEventScriptValue();
+                values[label] = stack[start + index].ToGseValue();
             }
 
-            return RegisterFastValue.FromEventScriptValue(ConvertToCustomType(Dictionary(values), typeDefinition));
+            return RegisterFastValue.FromGseValue(ConvertToCustomType(Dictionary(values), typeDefinition));
         }
 
-        if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
             return RegisterFastValue.Nothing;
         }
@@ -2508,7 +2508,7 @@ internal sealed class RegisterVmFastExecutionSession
     {
         if (count == 1 &&
             labels is { Length: > 0 } &&
-            string.Equals(labels[0], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            string.Equals(labels[0], GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
             return TryConvertDeclaredType(typeName, stack[start], out var converted)
                 ? converted
@@ -2518,29 +2518,29 @@ internal sealed class RegisterVmFastExecutionSession
         if (typeName == "vector3" &&
             count == 2 &&
             labels is { Length: >= 2 } &&
-            string.Equals(labels[0], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
-            string.Equals(labels[1], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            string.Equals(labels[0], GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
+            string.Equals(labels[1], GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
-            return EventScriptValueAlu.TryCreateVector3(
-                stack[start].ToEventScriptValue(),
-                stack[start + 1].ToEventScriptValue(),
+            return GseValueAlu.TryCreateVector3(
+                stack[start].ToGseValue(),
+                stack[start + 1].ToGseValue(),
                 out var lifted)
-                ? RegisterFastValue.FromEventScriptValue(lifted)
+                ? RegisterFastValue.FromGseValue(lifted)
                 : RegisterFastValue.Nothing;
         }
 
         if (count == 0 || labels is { Length: var labelCount } &&
             labelCount >= count &&
-            Enumerable.Range(0, count).All(index => !string.Equals(labels[index], EventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)))
+            Enumerable.Range(0, count).All(index => !string.Equals(labels[index], GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)))
         {
-            var labeledComponents = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+            var labeledComponents = new Dictionary<string, GseValue>(StringComparer.Ordinal);
             for (var index = 0; index < count; index++)
             {
-                labeledComponents[labels![index]] = stack[start + index].ToEventScriptValue();
+                labeledComponents[labels![index]] = stack[start + index].ToGseValue();
             }
 
-            return EventScriptValueAlu.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
-                ? RegisterFastValue.FromEventScriptValue(vector)
+            return GseValueAlu.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
+                ? RegisterFastValue.FromGseValue(vector)
                 : RegisterFastValue.Nothing;
         }
 
@@ -2551,52 +2551,52 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         return expectedCount == 2
-            ? EventScriptValueAlu.TryCreateVector2(
-                stack[start].ToEventScriptValue(),
-                stack[start + 1].ToEventScriptValue(),
+            ? GseValueAlu.TryCreateVector2(
+                stack[start].ToGseValue(),
+                stack[start + 1].ToGseValue(),
                 out var vector2)
-                ? RegisterFastValue.FromEventScriptValue(vector2)
+                ? RegisterFastValue.FromGseValue(vector2)
                 : RegisterFastValue.Nothing
-            : EventScriptValueAlu.TryCreateVector3(
-                stack[start].ToEventScriptValue(),
-                stack[start + 1].ToEventScriptValue(),
-                stack[start + 2].ToEventScriptValue(),
+            : GseValueAlu.TryCreateVector3(
+                stack[start].ToGseValue(),
+                stack[start + 1].ToGseValue(),
+                stack[start + 2].ToGseValue(),
                 out var vector3)
-                ? RegisterFastValue.FromEventScriptValue(vector3)
+                ? RegisterFastValue.FromGseValue(vector3)
                 : RegisterFastValue.Nothing;
     }
 
     private bool TryConvertDeclaredType(string declaredType, RegisterFastValue input, out RegisterFastValue value)
     {
-        var boxed = input.ToEventScriptValue();
+        var boxed = input.ToGseValue();
         value = declaredType switch
         {
             "nothing" => RegisterFastValue.Nothing,
             "tag" => RegisterFastValue.Reference(Tag(boxed.AsText())),
-            "text" => RegisterFastValue.Reference(Text(EventScriptValueAlu.ToText(boxed))),
-            "percentage" => RegisterFastValue.FromEventScriptValue(ConvertToPercentage(boxed)),
-            "degree" => RegisterFastValue.FromEventScriptValue(ConvertToDecimalUnit(boxed, EventScriptDecimalUnit.Degree)),
-            "meter" => RegisterFastValue.FromEventScriptValue(ConvertToDecimalUnit(boxed, EventScriptDecimalUnit.Meter)),
-            "second" => RegisterFastValue.FromEventScriptValue(ConvertToDecimalUnit(boxed, EventScriptDecimalUnit.Second)),
+            "text" => RegisterFastValue.Reference(Text(GseValueAlu.ToText(boxed))),
+            "percentage" => RegisterFastValue.FromGseValue(ConvertToPercentage(boxed)),
+            "degree" => RegisterFastValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Degree)),
+            "meter" => RegisterFastValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Meter)),
+            "second" => RegisterFastValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Second)),
             "vector2" => RegisterFastValue.Reference(ConvertToVector2(boxed)),
             "vector3" => RegisterFastValue.Reference(ConvertToVector3(boxed)),
             "boolean" => RegisterFastValue.Boolean(boxed.AsBoolean()),
             "integer" => RegisterFastValue.Integer(boxed.AsInteger()),
-            "decimal" or "number" => RegisterFastValue.FromEventScriptValue(ConvertToDecimal(boxed)),
-            "sequence" => RegisterFastValue.Reference(boxed.IsSequence() ? boxed : EventScriptValueFactory.Sequence(boxed.AsEnumerable())),
+            "decimal" or "number" => RegisterFastValue.FromGseValue(ConvertToDecimal(boxed)),
+            "sequence" => RegisterFastValue.Reference(boxed.IsSequence() ? boxed : GseValueFactory.Sequence(boxed.AsEnumerable())),
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
                 ? RegisterFastValue.Reference(List(boxed.AsList()))
                 : RegisterFastValue.Nothing,
-            "range" => RegisterFastValue.Reference(boxed.IsRange() ? boxed : EventScriptValue.Nothing),
-            "message" => boxed.Kind == EventScriptValueKind.Message
+            "range" => RegisterFastValue.Reference(boxed.IsRange() ? boxed : GseValue.Nothing),
+            "message" => boxed.Kind == GseValueKind.Message
                 ? input
-                : EventScriptMessageValueCodec.TryReadMessageValue(boxed, out var message)
-                    ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateMessageValue(message))
+                : GseMessageValueCodec.TryReadMessageValue(boxed, out var message)
+                    ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
                     : RegisterFastValue.Nothing,
-            "handler" => boxed.Kind == EventScriptValueKind.Handler
+            "handler" => boxed.Kind == GseValueKind.Handler
                 ? input
-                : EventScriptMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
-                    ? RegisterFastValue.Reference(EventScriptMessageValueCodec.CreateHandlerValue(handler))
+                : GseMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
+                    ? RegisterFastValue.Reference(GseMessageValueCodec.CreateHandlerValue(handler))
                     : RegisterFastValue.Nothing,
             "dictionary" => RegisterFastValue.Reference(Dictionary(boxed.AsDictionary())),
             "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
@@ -2609,15 +2609,15 @@ internal sealed class RegisterVmFastExecutionSession
                     ? RegisterFastValue.Reference(OptionalNone())
                     : RegisterFastValue.Reference(OptionalSome(boxed)),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
-                ? RegisterFastValue.FromEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
+                ? RegisterFastValue.FromGseValue(ConvertToCustomType(boxed, typeDefinition))
                 : input
         };
 
         return value.Kind != RegisterFastValueKind.Unsupported;
     }
 
-    private bool TryCheckMaterializedValue(EventScriptValue value, string detail)
-        => !EventScriptRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
+    private bool TryCheckMaterializedValue(GseValue value, string detail)
+        => !GseRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
            _context.RuntimeBudget.TryCheckRangeLength(length, detail);
 
     private static string GetCastTypeName(RegisterFastCastKind castKind)
@@ -2635,26 +2635,26 @@ internal sealed class RegisterVmFastExecutionSession
             _ => string.Empty
         };
 
-    private static EventScriptValue ConvertToDecimal(EventScriptValue value)
+    private static GseValue ConvertToDecimal(GseValue value)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
         {
             return DecimalNaN();
         }
 
-        if (EventScriptValueAlu.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
+        if (GseValueAlu.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
         {
             return vectorWithoutUnit;
         }
 
-        return EventScriptValueAlu.TryCoerceNumericForOperation(unwrappedNumber, out var number)
-            ? EventScriptValueAlu.ToEventScriptDecimal(number)
+        return GseValueAlu.TryCoerceNumericForOperation(unwrappedNumber, out var number)
+            ? GseValueAlu.ToGseDecimal(number)
             : DecimalNaN();
     }
 
-    private static EventScriptValue ConvertToPercentage(EventScriptValue value)
+    private static GseValue ConvertToPercentage(GseValue value)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
             return DecimalNaN();
         }
@@ -2669,13 +2669,13 @@ internal sealed class RegisterVmFastExecutionSession
             return DecimalNaN();
         }
 
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) ||
+        if (!GseValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) ||
             !number.IsFinite)
         {
             return DecimalNaN();
         }
 
-        var ratio = unwrapped.Kind == EventScriptValueKind.Integer
+        var ratio = unwrapped.Kind == GseValueKind.Integer
             ? number.Value / 100m
             : number.Value > 1m || number.Value < -1m
                 ? number.Value / 100m
@@ -2683,25 +2683,25 @@ internal sealed class RegisterVmFastExecutionSession
         return Percentage(ratio);
     }
 
-    private static EventScriptValue ConvertToDecimalUnit(EventScriptValue value, EventScriptDecimalUnit unit)
+    private static GseValue ConvertToDecimalUnit(GseValue value, GseDecimalUnit unit)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
             return DecimalNaN();
         }
 
-        if (EventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+        if (GseValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
         {
             return vectorWithUnit;
         }
 
-        if (EventScriptValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
+        if (GseValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
         {
             return DecimalNaN();
         }
 
-        if (unwrapped.Kind is EventScriptValueKind.Decimal or EventScriptValueKind.Integer &&
-            EventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) &&
+        if (unwrapped.Kind is GseValueKind.Decimal or GseValueKind.Integer &&
+            GseValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) &&
             number.IsFinite)
         {
             return Decimal(number.Value, unit);
@@ -2710,53 +2710,53 @@ internal sealed class RegisterVmFastExecutionSession
         return DecimalNaN();
     }
 
-    private static EventScriptValue ConvertToVector2(EventScriptValue value)
+    private static GseValue ConvertToVector2(GseValue value)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
-        if (unwrapped is EventScriptVector2Value vector2)
+        if (unwrapped is GseVector2Value vector2)
         {
             return vector2;
         }
 
-        if (unwrapped is EventScriptVector3Value vector3)
+        if (unwrapped is GseVector3Value vector3)
         {
             return Vector2(vector3.X, vector3.Y, vector3.Unit);
         }
 
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
             unwrapped.TryGetDictionaryMember("y", out var y) &&
-            EventScriptValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
+            GseValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
         {
             return vectorFromMembers;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 2 &&
-            EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
+            GseValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
-        return EventScriptValue.Nothing;
+        return GseValue.Nothing;
     }
 
-    private static EventScriptValue ConvertToVector3(EventScriptValue value)
+    private static GseValue ConvertToVector3(GseValue value)
     {
-        if (!EventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GseValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
-        if (unwrapped is EventScriptVector3Value vector3)
+        if (unwrapped is GseVector3Value vector3)
         {
             return vector3;
         }
 
-        if (unwrapped is EventScriptVector2Value vector2)
+        if (unwrapped is GseVector2Value vector2)
         {
             return Vector3(vector2.X, vector2.Y, 0m, vector2.Unit);
         }
@@ -2766,34 +2766,34 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (unwrapped.TryGetDictionaryMember("z", out var z))
             {
-                return EventScriptValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
+                return GseValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
                     ? vectorFromMembers
-                    : EventScriptValue.Nothing;
+                    : GseValue.Nothing;
             }
 
-            return EventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is EventScriptVector2Value xy
+            return GseValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is GseVector2Value xy
                 ? Vector3(xy.X, xy.Y, 0m, xy.Unit)
                 : xyVector;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 3 &&
-            EventScriptValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
+            GseValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
         if (items.Count >= 2 &&
-            EventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
-            xyVectorFromItems is EventScriptVector2Value xyFromItems)
+            GseValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
+            xyVectorFromItems is GseVector2Value xyFromItems)
         {
             return Vector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
-        return EventScriptValue.Nothing;
+        return GseValue.Nothing;
     }
 
-    private EventScriptValue ConvertToCustomType(EventScriptValue value, RegisterVmTypeDefinition typeDefinition)
+    private GseValue ConvertToCustomType(GseValue value, RegisterVmTypeDefinition typeDefinition)
     {
         if (value.TryGetCustomTypeName(out var existingTypeName) &&
             string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
@@ -2802,12 +2802,12 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         var sourceValues = value.AsDictionary().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        var materializedValues = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        var materializedValues = new Dictionary<string, GseValue>(StringComparer.Ordinal);
 
         foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is null))
         {
             sourceValues.TryGetValue(field.Name, out var rawValue);
-            rawValue ??= EventScriptValue.Nothing;
+            rawValue ??= GseValue.Nothing;
 
             var fieldValue = ConvertValueToDeclaredType(rawValue, field.TypeName);
             fieldValue = ApplyFieldClamp(typeDefinition, field, fieldValue, sourceValues, materializedValues);
@@ -2821,20 +2821,20 @@ internal sealed class RegisterVmFastExecutionSession
             materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
         }
 
-        return EventScriptValueFactory.CustomType(typeDefinition.Name, materializedValues);
+        return GseValueFactory.CustomType(typeDefinition.Name, materializedValues);
     }
 
-    private EventScriptValue ConvertValueToDeclaredType(EventScriptValue value, string declaredType)
-        => TryConvertDeclaredType(declaredType, RegisterFastValue.FromEventScriptValue(value), out var converted)
-            ? converted.ToEventScriptValue()
-            : EventScriptValue.Nothing;
+    private GseValue ConvertValueToDeclaredType(GseValue value, string declaredType)
+        => TryConvertDeclaredType(declaredType, RegisterFastValue.FromGseValue(value), out var converted)
+            ? converted.ToGseValue()
+            : GseValue.Nothing;
 
-    private EventScriptValue ApplyFieldClamp(
+    private GseValue ApplyFieldClamp(
         RegisterVmTypeDefinition typeDefinition,
         RegisterVmTypeFieldDefinition field,
-        EventScriptValue fieldValue,
-        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
-        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+        GseValue fieldValue,
+        IReadOnlyDictionary<string, GseValue> sourceValues,
+        IReadOnlyDictionary<string, GseValue> materializedValues)
     {
         _ = typeDefinition;
         if (field.MinimumExpression is null || field.MaximumExpression is null)
@@ -2844,16 +2844,16 @@ internal sealed class RegisterVmFastExecutionSession
 
         var minimum = EvaluateCustomTypeExpression(field.MinimumExpression, sourceValues, materializedValues);
         var maximum = EvaluateCustomTypeExpression(field.MaximumExpression, sourceValues, materializedValues);
-        if (!EventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, minimum) ||
-            !EventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
-            !EventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+        if (!GseValueAlu.HaveCompatibleNumericUnits(fieldValue, minimum) ||
+            !GseValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
+            !GseValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
         {
-            return EventScriptValueFactory.DecimalNaN();
+            return GseValueFactory.DecimalNaN();
         }
 
-        if (!EventScriptValueAlu.TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
-            !EventScriptValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber))
+        if (!GseValueAlu.TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !GseValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber))
         {
             return fieldValue;
         }
@@ -2862,7 +2862,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (maximumNumber.IsPositiveInfinity && minimumNumber.IsFinite && valueNumber.IsFinite)
             {
-                return EventScriptValueFactory.Decimal(Math.Max(valueNumber.Value, minimumNumber.Value));
+                return GseValueFactory.Decimal(Math.Max(valueNumber.Value, minimumNumber.Value));
             }
 
             return fieldValue;
@@ -2870,37 +2870,37 @@ internal sealed class RegisterVmFastExecutionSession
 
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-        EventScriptValue.TryGetDecimalUnit(fieldValue, out var unit);
-        return EventScriptValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasDecimalUnit() ? unit : null);
+        GseValue.TryGetDecimalUnit(fieldValue, out var unit);
+        return GseValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasDecimalUnit() ? unit : null);
     }
 
-    private EventScriptValue EvaluateCustomTypeExpression(
+    private GseValue EvaluateCustomTypeExpression(
         ExpressionNode expression,
-        IReadOnlyDictionary<string, EventScriptValue> sourceValues,
-        IReadOnlyDictionary<string, EventScriptValue> materializedValues)
+        IReadOnlyDictionary<string, GseValue> sourceValues,
+        IReadOnlyDictionary<string, GseValue> materializedValues)
     {
         EnterScope();
         try
         {
             foreach (var pair in sourceValues)
             {
-                if (!Define(pair.Key, RegisterFastValue.FromEventScriptValue(pair.Value)))
+                if (!Define(pair.Key, RegisterFastValue.FromGseValue(pair.Value)))
                 {
-                    return EventScriptValue.Nothing;
+                    return GseValue.Nothing;
                 }
             }
 
             foreach (var pair in materializedValues)
             {
-                if (!Define(pair.Key, RegisterFastValue.FromEventScriptValue(pair.Value)))
+                if (!Define(pair.Key, RegisterFastValue.FromGseValue(pair.Value)))
                 {
-                    return EventScriptValue.Nothing;
+                    return GseValue.Nothing;
                 }
             }
 
             return TryEvaluate(expression, out var value)
-                ? value.ToEventScriptValue()
-                : EventScriptValue.Nothing;
+                ? value.ToGseValue()
+                : GseValue.Nothing;
         }
         finally
         {
@@ -2916,7 +2916,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var sourceTarget = sourceValue.ToEventScriptValue();
+        var sourceTarget = sourceValue.ToGseValue();
         if (!TryCheckMaterializedValue(sourceTarget, "Collection access would enumerate more range items than allowed."))
         {
             value = RegisterFastValue.Nothing;
@@ -2926,7 +2926,7 @@ internal sealed class RegisterVmFastExecutionSession
         var sourceItems = MaterializeListLikeValue(sourceTarget);
         var terminalTarget = pipeline.PrefixSelectors.Length == 0
             ? sourceTarget
-            : EventScriptListValue.Empty;
+            : GseListValue.Empty;
         return pipeline.TerminalSelector.Kind switch
         {
             RegisterFastSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
@@ -2953,29 +2953,29 @@ internal sealed class RegisterVmFastExecutionSession
                 ? TryExecuteProgramChoose(chooseItems, pipeline.TerminalSelector, out value)
                 : false,
             RegisterFastSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
-                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
+                ? SetValue(RegisterFastValue.FromGseValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
                 : false,
             RegisterFastSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
-                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
+                ? SetValue(RegisterFastValue.FromGseValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
                 : false,
             RegisterFastSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
-                ? SetValue(RegisterFastValue.FromEventScriptValue(EventScriptCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
+                ? SetValue(RegisterFastValue.FromGseValue(GseCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
                 : false,
             RegisterFastSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
             RegisterFastSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
             RegisterFastSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
             RegisterFastSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
-                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
+                ? SetValue(RegisterFastValue.FromGseValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
                 : false,
             RegisterFastSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
-                ? SetValue(RegisterFastValue.FromEventScriptValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
+                ? SetValue(RegisterFastValue.FromGseValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
                 : false,
             _ => Fail(out value)
         };
     }
 
     private bool TryExecuteProgramFilter(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -2986,7 +2986,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var result = new List<EventScriptValue>();
+        var result = new List<GseValue>();
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
                 if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate))
@@ -2996,7 +2996,7 @@ internal sealed class RegisterVmFastExecutionSession
 
                 if (predicate.AsBoolean())
                 {
-                    result.Add(item.ToEventScriptValue());
+                    result.Add(item.ToGseValue());
                 }
 
                 return true;
@@ -3006,12 +3006,12 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.List(result));
+        value = RegisterFastValue.Reference(GseValueFactory.List(result));
         return true;
     }
 
     private bool TryExecuteProgramSelect(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3022,7 +3022,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var result = new List<EventScriptValue>();
+        var result = new List<GseValue>();
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
                 if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var selected))
@@ -3030,7 +3030,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                result.Add(selected.ToEventScriptValue());
+                result.Add(selected.ToGseValue());
                 return true;
             }))
         {
@@ -3038,12 +3038,12 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.List(result));
+        value = RegisterFastValue.Reference(GseValueFactory.List(result));
         return true;
     }
 
     private bool TryExecuteProgramPredicate(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3093,7 +3093,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramSum(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3110,7 +3110,7 @@ internal sealed class RegisterVmFastExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromEventScriptValue(sourceItems[itemIndex]),
+                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3139,7 +3139,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramAverage(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3156,7 +3156,7 @@ internal sealed class RegisterVmFastExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromEventScriptValue(sourceItems[itemIndex]),
+                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3187,7 +3187,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramCount(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3203,7 +3203,7 @@ internal sealed class RegisterVmFastExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromEventScriptValue(sourceItems[itemIndex]),
+                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3234,7 +3234,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramEdge(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3246,7 +3246,7 @@ internal sealed class RegisterVmFastExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromEventScriptValue(sourceItems[itemIndex]),
+                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3282,7 +3282,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramExtrema(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         bool isMax,
         out RegisterFastValue value)
@@ -3295,7 +3295,7 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         RegisterFastValue bestItem = RegisterFastValue.Nothing;
-        EventScriptValue? bestProjection = null;
+        GseValue? bestProjection = null;
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
                 if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projection))
@@ -3303,7 +3303,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                var candidateProjection = projection.ToEventScriptValue();
+                var candidateProjection = projection.ToGseValue();
                 if (bestProjection is null)
                 {
                     bestProjection = candidateProjection;
@@ -3312,17 +3312,17 @@ internal sealed class RegisterVmFastExecutionSession
                 }
 
                 int comparison;
-                if (EventScriptValueAlu.TryCoerceNumericForOperation(candidateProjection, out _) &&
-                    EventScriptValueAlu.TryCoerceNumericForOperation(bestProjection, out _))
+                if (GseValueAlu.TryCoerceNumericForOperation(candidateProjection, out _) &&
+                    GseValueAlu.TryCoerceNumericForOperation(bestProjection, out _))
                 {
-                    if (!EventScriptValueAlu.TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
+                    if (!GseValueAlu.TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
                     {
                         return false;
                     }
                 }
                 else
                 {
-                    comparison = EventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+                    comparison = GseValue.StableComparer.Compare(candidateProjection, bestProjection);
                 }
 
                 if ((isMax && comparison > 0) || (!isMax && comparison < 0))
@@ -3343,7 +3343,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramDictionary(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3354,7 +3354,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var result = new Dictionary<string, EventScriptValue>(StringComparer.Ordinal);
+        var result = new Dictionary<string, GseValue>(StringComparer.Ordinal);
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
                 if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var keyValue))
@@ -3362,7 +3362,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                var key = keyValue.ToEventScriptValue().AsText();
+                var key = keyValue.ToGseValue().AsText();
                 if (string.IsNullOrEmpty(key))
                 {
                     return true;
@@ -3370,7 +3370,7 @@ internal sealed class RegisterVmFastExecutionSession
 
                 if (terminal.SecondaryExpressionProgram is null)
                 {
-                    result[key] = item.ToEventScriptValue();
+                    result[key] = item.ToGseValue();
                     return true;
                 }
 
@@ -3379,7 +3379,7 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                result[key] = projectedValue.ToEventScriptValue();
+                result[key] = projectedValue.ToGseValue();
                 return true;
             }))
         {
@@ -3387,13 +3387,13 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(result));
+        value = RegisterFastValue.Reference(GseValueFactory.Dictionary(result));
         return true;
     }
 
     private bool TryExecuteProgramContains(
-        IReadOnlyList<EventScriptValue> sourceItems,
-        EventScriptValue terminalTarget,
+        IReadOnlyList<GseValue> sourceItems,
+        GseValue terminalTarget,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3405,7 +3405,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        EventScriptValue target;
+        GseValue target;
         if (pipeline.PrefixSelectors.Length == 0)
         {
             target = terminalTarget;
@@ -3417,10 +3417,10 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            target = EventScriptValueFactory.List(targetItems);
+            target = GseValueFactory.List(targetItems);
         }
 
-        var boxedNeedle = needle.ToEventScriptValue();
+        var boxedNeedle = needle.ToGseValue();
         value = terminal.EdgeMode switch
         {
             "single" => RegisterFastValue.Boolean(target.Contains(boxedNeedle)),
@@ -3432,8 +3432,8 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramDistinct(
-        IReadOnlyList<EventScriptValue> sourceItems,
-        EventScriptValue terminalTarget,
+        IReadOnlyList<GseValue> sourceItems,
+        GseValue terminalTarget,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3443,35 +3443,35 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : EventScriptListValue.Empty;
+        var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GseListValue.Empty;
         if (terminal.ExpressionProgram is null || terminal.IdentifierSlot < 0)
         {
-            value = RegisterFastValue.FromEventScriptValue(EventScriptCollectionOperators.Distinct(target, items));
+            value = RegisterFastValue.FromGseValue(GseCollectionOperators.Distinct(target, items));
             return true;
         }
 
-        var distinctItems = new List<EventScriptValue>();
-        var seenKeys = new HashSet<EventScriptValue>();
+        var distinctItems = new List<GseValue>();
+        var seenKeys = new HashSet<GseValue>();
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromEventScriptValue(item), out var key))
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromGseValue(item), out var key))
             {
                 value = RegisterFastValue.Nothing;
                 return false;
             }
 
-            if (seenKeys.Add(key.ToEventScriptValue()))
+            if (seenKeys.Add(key.ToGseValue()))
             {
                 distinctItems.Add(item);
             }
         }
 
-        value = RegisterFastValue.FromEventScriptValue(MaterializeDistinctItems(target, distinctItems));
+        value = RegisterFastValue.FromGseValue(MaterializeDistinctItems(target, distinctItems));
         return true;
     }
 
     private bool TryExecuteProgramGroupBy(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3482,7 +3482,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var groups = new Dictionary<string, List<EventScriptValue>>(StringComparer.Ordinal);
+        var groups = new Dictionary<string, List<GseValue>>(StringComparer.Ordinal);
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
                 if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var keyValue))
@@ -3490,14 +3490,14 @@ internal sealed class RegisterVmFastExecutionSession
                     return false;
                 }
 
-                var key = keyValue.ToEventScriptValue().AsText();
+                var key = keyValue.ToGseValue().AsText();
                 if (!groups.TryGetValue(key, out var bucket))
                 {
                     bucket = [];
                     groups[key] = bucket;
                 }
 
-                bucket.Add(item.ToEventScriptValue());
+                bucket.Add(item.ToGseValue());
                 return true;
             }))
         {
@@ -3505,16 +3505,16 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.Dictionary(groups.ToDictionary(
+        value = RegisterFastValue.Reference(GseValueFactory.Dictionary(groups.ToDictionary(
             pair => pair.Key,
-            pair => EventScriptValueFactory.List(pair.Value),
+            pair => GseValueFactory.List(pair.Value),
             StringComparer.Ordinal)));
         return true;
     }
 
     private bool TryExecuteProgramOrderBy(
-        IReadOnlyList<EventScriptValue> sourceItems,
-        EventScriptValue terminalTarget,
+        IReadOnlyList<GseValue> sourceItems,
+        GseValue terminalTarget,
         RegisterFastPipelineProgram pipeline,
         out RegisterFastValue value)
     {
@@ -3526,34 +3526,34 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var pairs = new List<(EventScriptValue Item, EventScriptValue Key)>(items.Length);
+        var pairs = new List<(GseValue Item, GseValue Key)>(items.Length);
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromEventScriptValue(item), out var key))
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromGseValue(item), out var key))
             {
                 value = RegisterFastValue.Nothing;
                 return false;
             }
 
-            pairs.Add((Item: item, Key: key.ToEventScriptValue()));
+            pairs.Add((Item: item, Key: key.ToGseValue()));
         }
 
         var comparer = string.Equals(terminal.EdgeMode, "descending", StringComparison.Ordinal)
-            ? Comparer<EventScriptValue>.Create((left, right) => EventScriptValue.StableComparer.Compare(right, left))
-            : EventScriptValue.StableComparer;
+            ? Comparer<GseValue>.Create((left, right) => GseValue.StableComparer.Compare(right, left))
+            : GseValue.StableComparer;
         var ordered = pairs.OrderBy(pair => pair.Key, comparer).Select(pair => pair.Item).ToArray();
-        var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : EventScriptListValue.Empty;
-        value = RegisterFastValue.FromEventScriptValue(target.Kind switch
+        var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GseListValue.Empty;
+        value = RegisterFastValue.FromGseValue(target.Kind switch
         {
-            EventScriptValueKind.Dice or EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Range => EventScriptValueFactory.List(ordered),
-            _ => EventScriptValue.Nothing
+            GseValueKind.Dice or GseValueKind.List or GseValueKind.Set or GseValueKind.Range => GseValueFactory.List(ordered),
+            _ => GseValue.Nothing
         });
         return true;
     }
 
     private bool TryExecuteProgramPattern(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         RegisterFastSelectorProgram selector,
         out RegisterFastValue value)
     {
@@ -3574,8 +3574,8 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramObjectMatch(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         RegisterFastSelectorProgram selector,
         out RegisterFastValue value)
     {
@@ -3596,8 +3596,8 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteProgramTakePattern(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         RegisterFastSelectorProgram selector,
         out RegisterFastValue value)
     {
@@ -3613,12 +3613,12 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        value = RegisterFastValue.FromEventScriptValue(result);
+        value = RegisterFastValue.FromGseValue(result);
         return true;
     }
 
     private bool TryExecuteProgramChoose(
-        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyList<GseValue> items,
         RegisterFastSelectorProgram selector,
         out RegisterFastValue value)
     {
@@ -3628,7 +3628,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        IReadOnlyList<EventScriptValue> chosen;
+        IReadOnlyList<GseValue> chosen;
         if (selector.SecondaryExpressionProgram is not null && selector.SecondaryIdentifierSlot >= 0)
         {
             if (!TryChooseWeightedItems(candidates, selector.Count, selector.SecondaryIdentifierSlot, selector.SecondaryExpressionProgram, out chosen))
@@ -3650,18 +3650,18 @@ internal sealed class RegisterVmFastExecutionSession
         {
             value = chosen.Count == 0
                 ? RegisterFastValue.Nothing
-                : RegisterFastValue.FromEventScriptValue(chosen[0]);
+                : RegisterFastValue.FromGseValue(chosen[0]);
             return true;
         }
 
-        value = RegisterFastValue.Reference(EventScriptValueFactory.List(chosen));
+        value = RegisterFastValue.Reference(GseValueFactory.List(chosen));
         return true;
     }
 
     private bool TryFilterChooseCandidates(
-        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyList<GseValue> items,
         RegisterFastSelectorProgram selector,
-        out IReadOnlyList<EventScriptValue> candidates)
+        out IReadOnlyList<GseValue> candidates)
     {
         if (selector.ExpressionProgram is null || selector.IdentifierSlot < 0)
         {
@@ -3669,10 +3669,10 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
-        var filtered = new List<EventScriptValue>();
+        var filtered = new List<GseValue>();
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, RegisterFastValue.FromEventScriptValue(item), out var predicate))
+            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, RegisterFastValue.FromGseValue(item), out var predicate))
             {
                 candidates = [];
                 return false;
@@ -3689,29 +3689,29 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryChooseWeightedItems(
-        IReadOnlyList<EventScriptValue> candidates,
+        IReadOnlyList<GseValue> candidates,
         int count,
         int identifierSlot,
         RegisterFastExpressionProgram weightProgram,
-        out IReadOnlyList<EventScriptValue> chosen)
+        out IReadOnlyList<GseValue> chosen)
     {
         var remaining = candidates.ToList();
-        var result = new List<EventScriptValue>();
+        var result = new List<GseValue>();
 
         while (result.Count < count && remaining.Count > 0)
         {
-            var weightedItems = new List<(EventScriptValue Item, decimal Weight)>();
+            var weightedItems = new List<(GseValue Item, decimal Weight)>();
             decimal totalWeight = 0m;
 
             foreach (var candidate in remaining)
             {
-                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, RegisterFastValue.FromEventScriptValue(candidate), out var weightValue))
+                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, RegisterFastValue.FromGseValue(candidate), out var weightValue))
                 {
                     chosen = [];
                     return false;
                 }
 
-                var weight = EvaluatePositiveWeight(weightValue.ToEventScriptValue());
+                var weight = EvaluatePositiveWeight(weightValue.ToGseValue());
                 if (weight <= 0m)
                 {
                     continue;
@@ -3751,15 +3751,15 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static decimal EvaluatePositiveWeight(EventScriptValue value)
-        => EventScriptValueAlu.TryCoerceNumericForOperation(value, out var number) && number.IsFinite
+    private static decimal EvaluatePositiveWeight(GseValue value)
+        => GseValueAlu.TryCoerceNumericForOperation(value, out var number) && number.IsFinite
             ? Math.Max(0m, number.Value)
             : 0m;
 
-    private IReadOnlyList<EventScriptValue> ChooseRandomItems(IReadOnlyList<EventScriptValue> items, int count)
+    private IReadOnlyList<GseValue> ChooseRandomItems(IReadOnlyList<GseValue> items, int count)
     {
         var pool = items.ToList();
-        var result = new List<EventScriptValue>(Math.Min(count, pool.Count));
+        var result = new List<GseValue>(Math.Min(count, pool.Count));
         for (var i = 0; i < count && pool.Count > 0; i++)
         {
             if (!TryNextInclusiveInt(0, pool.Count - 1, out var index))
@@ -3775,7 +3775,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryForEachIncludedPipelineItem(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastSelectorProgram[] prefixSelectors,
         Func<RegisterFastValue, bool> action,
         Func<bool>? stopWhen = null)
@@ -3783,7 +3783,7 @@ internal sealed class RegisterVmFastExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromEventScriptValue(sourceItems[itemIndex]),
+                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3811,22 +3811,22 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryMaterializePipelineItems(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastPipelineProgram pipeline,
-        out EventScriptValue[] items,
+        out GseValue[] items,
         out RegisterFastValue value)
         => TryMaterializePipelineItems(sourceItems, pipeline.PrefixSelectors, out items, out value);
 
     private bool TryMaterializePipelineItems(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         RegisterFastSelectorProgram[] prefixSelectors,
-        out EventScriptValue[] items,
+        out GseValue[] items,
         out RegisterFastValue value)
     {
-        var result = new List<EventScriptValue>(sourceItems.Count);
+        var result = new List<GseValue>(sourceItems.Count);
         if (!TryForEachIncludedPipelineItem(sourceItems, prefixSelectors, item =>
             {
-                result.Add(item.ToEventScriptValue());
+                result.Add(item.ToGseValue());
                 return true;
             }))
         {
@@ -3840,32 +3840,32 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static IEnumerable<EventScriptValue> EnumerateListLikeValue(EventScriptValue value)
+    private static IEnumerable<GseValue> EnumerateListLikeValue(GseValue value)
     {
-        if (value.Kind == EventScriptValueKind.Optional)
+        if (value.Kind == GseValueKind.Optional)
         {
             var optional = value.AsOptional();
             return optional.HasValue
                 ? EnumerateListLikeValue(optional.Value)
-                : Array.Empty<EventScriptValue>();
+                : Array.Empty<GseValue>();
         }
 
-        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Sequence
+        return value.Kind is GseValueKind.Range or GseValueKind.Sequence
             ? value.AsEnumerable()
             : value.AsList();
     }
 
-    private static IReadOnlyList<EventScriptValue> MaterializeListLikeValue(EventScriptValue value)
+    private static IReadOnlyList<GseValue> MaterializeListLikeValue(GseValue value)
     {
-        if (value.Kind == EventScriptValueKind.Optional)
+        if (value.Kind == GseValueKind.Optional)
         {
             var optional = value.AsOptional();
             return optional.HasValue
                 ? MaterializeListLikeValue(optional.Value)
-                : Array.Empty<EventScriptValue>();
+                : Array.Empty<GseValue>();
         }
 
-        return value.Kind is EventScriptValueKind.Range or EventScriptValueKind.Sequence
+        return value.Kind is GseValueKind.Range or GseValueKind.Sequence
             ? value.AsEnumerable().ToArray()
             : value.AsList();
     }
@@ -3876,39 +3876,39 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static EventScriptValue EvaluateReverseSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    private static GseValue EvaluateReverseSelector(GseValue target, IReadOnlyList<GseValue> items)
     {
-        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        if (target.Kind is not (GseValueKind.List or GseValueKind.Dice))
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
-        return EventScriptValueFactory.List(items.Reverse().ToArray());
+        return GseValueFactory.List(items.Reverse().ToArray());
     }
 
-    private static EventScriptValue EvaluateDrawSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items, int count)
+    private static GseValue EvaluateDrawSelector(GseValue target, IReadOnlyList<GseValue> items, int count)
     {
-        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        if (target.Kind is not (GseValueKind.List or GseValueKind.Dice))
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
         var drawn = items.Take(count).ToArray();
         if (count == 1)
         {
-            return drawn.Length == 0 ? EventScriptValue.Nothing : drawn[0];
+            return drawn.Length == 0 ? GseValue.Nothing : drawn[0];
         }
 
-        return target.Kind == EventScriptValueKind.Dice
-            ? EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(drawn.Select(item => (int)item.AsInteger())))
-            : EventScriptValueFactory.List(drawn);
+        return target.Kind == GseValueKind.Dice
+            ? GseValueFactory.Dice(GseDiceValue.GseDice(drawn.Select(item => (int)item.AsInteger())))
+            : GseValueFactory.List(drawn);
     }
 
-    private EventScriptValue EvaluateShuffleSelector(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    private GseValue EvaluateShuffleSelector(GseValue target, IReadOnlyList<GseValue> items)
     {
-        if (target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Dice))
+        if (target.Kind is not (GseValueKind.List or GseValueKind.Dice))
         {
-            return EventScriptValue.Nothing;
+            return GseValue.Nothing;
         }
 
         var shuffled = items.ToArray();
@@ -3916,42 +3916,42 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryNextInclusiveInt(0, i, out var swapIndex))
             {
-                return EventScriptValueFactory.List(shuffled);
+                return GseValueFactory.List(shuffled);
             }
 
             (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
         }
 
-        return EventScriptValueFactory.List(shuffled);
+        return GseValueFactory.List(shuffled);
     }
 
     private bool TryEvaluateTakePattern(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         DicePatternNode pattern,
-        out EventScriptValue value)
+        out GseValue value)
     {
         if (!IsPatternSequence(target))
         {
-            value = EventScriptValue.Nothing;
+            value = GseValue.Nothing;
             return true;
         }
 
         if (!TryTakeSequencePattern(items, pattern, out var takenItems))
         {
-            value = EventScriptValue.Nothing;
+            value = GseValue.Nothing;
             return true;
         }
 
-        value = target.Kind == EventScriptValueKind.Dice
-            ? EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(takenItems.Select(item => (int)item.AsInteger())))
-            : EventScriptValueFactory.List(takenItems);
+        value = target.Kind == GseValueKind.Dice
+            ? GseValueFactory.Dice(GseDiceValue.GseDice(takenItems.Select(item => (int)item.AsInteger())))
+            : GseValueFactory.List(takenItems);
         return true;
     }
 
     private bool TryEvaluateSequencePattern(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         DicePatternNode? pattern,
         out bool matches)
     {
@@ -3985,7 +3985,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryMatchDiceCountPattern(
-        IReadOnlyDictionary<EventScriptValue, int> counts,
+        IReadOnlyDictionary<GseValue, int> counts,
         DiceCountPatternNode pattern,
         out bool matches)
     {
@@ -3997,7 +3997,7 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            matches = counts.TryGetValue(face.ToEventScriptValue(), out var count) && count >= pattern.Count;
+            matches = counts.TryGetValue(face.ToGseValue(), out var count) && count >= pattern.Count;
             return true;
         }
 
@@ -4005,7 +4005,7 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static bool MatchStraight(IReadOnlyList<EventScriptValue> items)
+    private static bool MatchStraight(IReadOnlyList<GseValue> items)
     {
         var unique = items
             .Select(item => item.AsInteger())
@@ -4028,13 +4028,13 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static bool IsPatternSequence(EventScriptValue value)
-        => value.Kind is EventScriptValueKind.List or EventScriptValueKind.Dice;
+    private static bool IsPatternSequence(GseValue value)
+        => value.Kind is GseValueKind.List or GseValueKind.Dice;
 
     private bool TryTakeSequencePattern(
-        IReadOnlyList<EventScriptValue> items,
+        IReadOnlyList<GseValue> items,
         DicePatternNode pattern,
-        out IReadOnlyList<EventScriptValue> takenItems)
+        out IReadOnlyList<GseValue> takenItems)
     {
         var counts = items
             .GroupBy(item => item)
@@ -4052,33 +4052,33 @@ internal sealed class RegisterVmFastExecutionSession
                 return TryTakeStraight(items, out takenItems);
 
             default:
-                takenItems = Array.Empty<EventScriptValue>();
+                takenItems = Array.Empty<GseValue>();
                 return false;
         }
     }
 
     private bool TryTakeCountPattern(
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyDictionary<EventScriptValue, int> counts,
+        IReadOnlyList<GseValue> items,
+        IReadOnlyDictionary<GseValue, int> counts,
         DiceCountPatternNode pattern,
-        out IReadOnlyList<EventScriptValue> takenItems)
+        out IReadOnlyList<GseValue> takenItems)
     {
         if (pattern.Face is not null)
         {
             if (!TryEvaluate(pattern.Face, out var face))
             {
-                takenItems = Array.Empty<EventScriptValue>();
+                takenItems = Array.Empty<GseValue>();
                 return false;
             }
 
-            var boxedFace = face.ToEventScriptValue();
+            var boxedFace = face.ToGseValue();
             if (counts.TryGetValue(boxedFace, out var faceCount) && faceCount >= pattern.Count)
             {
-                takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int> { [boxedFace] = pattern.Count });
+                takenItems = TakeItemsByCounts(items, new Dictionary<GseValue, int> { [boxedFace] = pattern.Count });
                 return true;
             }
 
-            takenItems = Array.Empty<EventScriptValue>();
+            takenItems = Array.Empty<GseValue>();
             return false;
         }
 
@@ -4086,19 +4086,19 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (counts.TryGetValue(candidate, out var candidateCount) && candidateCount >= pattern.Count)
             {
-                takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int> { [candidate] = pattern.Count });
+                takenItems = TakeItemsByCounts(items, new Dictionary<GseValue, int> { [candidate] = pattern.Count });
                 return true;
             }
         }
 
-        takenItems = Array.Empty<EventScriptValue>();
+        takenItems = Array.Empty<GseValue>();
         return false;
     }
 
     private static bool TryTakeFullHouse(
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyDictionary<EventScriptValue, int> counts,
-        out IReadOnlyList<EventScriptValue> takenItems)
+        IReadOnlyList<GseValue> items,
+        IReadOnlyDictionary<GseValue, int> counts,
+        out IReadOnlyList<GseValue> takenItems)
     {
         foreach (var tripleCandidate in EnumerateDistinctInSourceOrder(items))
         {
@@ -4109,14 +4109,14 @@ internal sealed class RegisterVmFastExecutionSession
 
             foreach (var pairCandidate in EnumerateDistinctInSourceOrder(items))
             {
-                if (EventScriptValueAlu.AreEqual(pairCandidate, tripleCandidate))
+                if (GseValueAlu.AreEqual(pairCandidate, tripleCandidate))
                 {
                     continue;
                 }
 
                 if (counts.TryGetValue(pairCandidate, out var pairCount) && pairCount >= 2)
                 {
-                    takenItems = TakeItemsByCounts(items, new Dictionary<EventScriptValue, int>
+                    takenItems = TakeItemsByCounts(items, new Dictionary<GseValue, int>
                     {
                         [tripleCandidate] = 3,
                         [pairCandidate] = 2
@@ -4126,13 +4126,13 @@ internal sealed class RegisterVmFastExecutionSession
             }
         }
 
-        takenItems = Array.Empty<EventScriptValue>();
+        takenItems = Array.Empty<GseValue>();
         return false;
     }
 
-    private static bool TryTakeStraight(IReadOnlyList<EventScriptValue> items, out IReadOnlyList<EventScriptValue> takenItems)
+    private static bool TryTakeStraight(IReadOnlyList<GseValue> items, out IReadOnlyList<GseValue> takenItems)
     {
-        var distinctValues = new List<EventScriptValue>();
+        var distinctValues = new List<GseValue>();
         var seenIntegers = new HashSet<long>();
         foreach (var item in items)
         {
@@ -4149,7 +4149,7 @@ internal sealed class RegisterVmFastExecutionSession
             .ToArray();
         if (uniqueIntegers.Length < 2)
         {
-            takenItems = Array.Empty<EventScriptValue>();
+            takenItems = Array.Empty<GseValue>();
             return false;
         }
 
@@ -4157,7 +4157,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (uniqueIntegers[i] - 1 != uniqueIntegers[i + 1])
             {
-                takenItems = Array.Empty<EventScriptValue>();
+                takenItems = Array.Empty<GseValue>();
                 return false;
             }
         }
@@ -4166,12 +4166,12 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static IReadOnlyList<EventScriptValue> TakeItemsByCounts(
-        IReadOnlyList<EventScriptValue> items,
-        IReadOnlyDictionary<EventScriptValue, int> requiredCounts)
+    private static IReadOnlyList<GseValue> TakeItemsByCounts(
+        IReadOnlyList<GseValue> items,
+        IReadOnlyDictionary<GseValue, int> requiredCounts)
     {
         var remaining = requiredCounts.ToDictionary(pair => pair.Key, pair => pair.Value);
-        var takenItems = new List<EventScriptValue>();
+        var takenItems = new List<GseValue>();
 
         foreach (var item in items)
         {
@@ -4187,9 +4187,9 @@ internal sealed class RegisterVmFastExecutionSession
         return takenItems;
     }
 
-    private static IEnumerable<EventScriptValue> EnumerateDistinctInSourceOrder(IReadOnlyList<EventScriptValue> items)
+    private static IEnumerable<GseValue> EnumerateDistinctInSourceOrder(IReadOnlyList<GseValue> items)
     {
-        var seen = new HashSet<EventScriptValue>();
+        var seen = new HashSet<GseValue>();
         foreach (var item in items)
         {
             if (seen.Add(item))
@@ -4200,12 +4200,12 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateObjectMatchSelector(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         ObjectMatchPatternNode? pattern,
         out bool matches)
     {
-        if (pattern is null || target.Kind is not (EventScriptValueKind.List or EventScriptValueKind.Set or EventScriptValueKind.Dice))
+        if (pattern is null || target.Kind is not (GseValueKind.List or GseValueKind.Set or GseValueKind.Dice))
         {
             matches = false;
             return true;
@@ -4230,9 +4230,9 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private bool TryMatchesObjectPattern(EventScriptValue value, ObjectMatchPatternNode pattern, out bool matches)
+    private bool TryMatchesObjectPattern(GseValue value, ObjectMatchPatternNode pattern, out bool matches)
     {
-        if (value.Kind != EventScriptValueKind.Dictionary)
+        if (value.Kind != GseValueKind.Dictionary)
         {
             matches = false;
             return true;
@@ -4256,7 +4256,7 @@ internal sealed class RegisterVmFastExecutionSession
                         return false;
                     }
 
-                    if (!EventScriptValueAlu.AreEqual(actual, expected.ToEventScriptValue()))
+                    if (!GseValueAlu.AreEqual(actual, expected.ToGseValue()))
                     {
                         matches = false;
                         return true;
@@ -4285,16 +4285,16 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static EventScriptValue EvaluateSequenceSliceSelector(
-        EventScriptValue target,
-        IReadOnlyList<EventScriptValue> items,
+    private static GseValue EvaluateSequenceSliceSelector(
+        GseValue target,
+        IReadOnlyList<GseValue> items,
         RegisterFastSelectorProgram selector)
     {
         if (selector.Count <= 0)
         {
-            return target.Kind == EventScriptValueKind.Dice
-                ? EventScriptValueFactory.Dice(EventScriptDiceValue.Empty)
-                : EventScriptValueFactory.List(Array.Empty<EventScriptValue>());
+            return target.Kind == GseValueKind.Dice
+                ? GseValueFactory.Dice(GseDiceValue.Empty)
+                : GseValueFactory.List(Array.Empty<GseValue>());
         }
 
         var selectedItems = selector.SecondaryMode switch
@@ -4303,7 +4303,7 @@ internal sealed class RegisterVmFastExecutionSession
             "last" => TakeLast(items, selector.Count),
             "highest" => TakeHighest(items, selector.Count),
             "lowest" => TakeLowest(items, selector.Count),
-            _ => Array.Empty<EventScriptValue>()
+            _ => Array.Empty<GseValue>()
         };
 
         if (string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal))
@@ -4313,44 +4313,44 @@ internal sealed class RegisterVmFastExecutionSession
 
         return target.Kind switch
         {
-            EventScriptValueKind.Dice => EventScriptValueFactory.Dice(EventScriptDiceValue.EventScriptDice(selectedItems.Select(item => (int)item.AsInteger()))),
-            EventScriptValueKind.List => EventScriptValueFactory.List(selectedItems),
-            EventScriptValueKind.Set => EventScriptValueFactory.List(selectedItems),
-            _ => EventScriptValue.Nothing
+            GseValueKind.Dice => GseValueFactory.Dice(GseDiceValue.GseDice(selectedItems.Select(item => (int)item.AsInteger()))),
+            GseValueKind.List => GseValueFactory.List(selectedItems),
+            GseValueKind.Set => GseValueFactory.List(selectedItems),
+            _ => GseValue.Nothing
         };
     }
 
-    private static EventScriptValue MaterializeDistinctItems(EventScriptValue target, IReadOnlyList<EventScriptValue> items)
+    private static GseValue MaterializeDistinctItems(GseValue target, IReadOnlyList<GseValue> items)
     {
         return target.Kind switch
         {
-            EventScriptValueKind.Set => EventScriptValueFactory.Set(items),
-            EventScriptValueKind.List => EventScriptValueFactory.List(items),
-            EventScriptValueKind.Dice => EventScriptValueFactory.List(items),
-            EventScriptValueKind.Range => EventScriptValueFactory.List(items),
-            _ => EventScriptValue.Nothing
+            GseValueKind.Set => GseValueFactory.Set(items),
+            GseValueKind.List => GseValueFactory.List(items),
+            GseValueKind.Dice => GseValueFactory.List(items),
+            GseValueKind.Range => GseValueFactory.List(items),
+            _ => GseValue.Nothing
         };
     }
 
-    private static EventScriptValue[] TakeFirst(IReadOnlyList<EventScriptValue> items, int count)
+    private static GseValue[] TakeFirst(IReadOnlyList<GseValue> items, int count)
         => items.Take(count).ToArray();
 
-    private static EventScriptValue[] TakeLast(IReadOnlyList<EventScriptValue> items, int count)
+    private static GseValue[] TakeLast(IReadOnlyList<GseValue> items, int count)
         => items.Skip(Math.Max(0, items.Count - count)).ToArray();
 
-    private static EventScriptValue[] TakeHighest(IReadOnlyList<EventScriptValue> items, int count)
+    private static GseValue[] TakeHighest(IReadOnlyList<GseValue> items, int count)
         => items
-            .OrderByDescending(item => item, EventScriptValue.StableComparer)
+            .OrderByDescending(item => item, GseValue.StableComparer)
             .Take(count)
             .ToArray();
 
-    private static EventScriptValue[] TakeLowest(IReadOnlyList<EventScriptValue> items, int count)
+    private static GseValue[] TakeLowest(IReadOnlyList<GseValue> items, int count)
         => items
-            .OrderBy(item => item, EventScriptValue.StableComparer)
+            .OrderBy(item => item, GseValue.StableComparer)
             .Take(count)
             .ToArray();
 
-    private static EventScriptValue[] DropSelection(IReadOnlyList<EventScriptValue> items, IReadOnlyList<EventScriptValue> selection)
+    private static GseValue[] DropSelection(IReadOnlyList<GseValue> items, IReadOnlyList<GseValue> selection)
     {
         if (selection.Count == 0)
         {
@@ -4360,7 +4360,7 @@ internal sealed class RegisterVmFastExecutionSession
         var remainingSelections = selection
             .GroupBy(item => item)
             .ToDictionary(group => group.Key, group => group.Count());
-        var result = new List<EventScriptValue>(items.Count);
+        var result = new List<GseValue>(items.Count);
 
         foreach (var item in items)
         {
@@ -4489,7 +4489,7 @@ internal sealed class RegisterVmFastExecutionSession
             return false;
         }
 
-        var sourceItems = sourceValue.ToEventScriptValue().AsList();
+        var sourceItems = sourceValue.ToGseValue().AsList();
         var prefixCount = Math.Max(0, selectors.Count - 1);
         var terminal = selectors[^1];
         return terminal switch
@@ -4503,7 +4503,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateSum(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         SumSelectorNode selector,
@@ -4528,7 +4528,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateAverage(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         AverageSelectorNode selector,
@@ -4555,7 +4555,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateCount(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         CountSelectorNode selector,
@@ -4582,7 +4582,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateEdge(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         EdgeSelectorNode selector,
@@ -4617,14 +4617,14 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryForEachPipelineItem(
-        IReadOnlyList<EventScriptValue> sourceItems,
+        IReadOnlyList<GseValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         Func<RegisterFastValue, bool> action)
     {
         for (var index = 0; index < sourceItems.Count; index++)
         {
-            if (!TryApplyPipelinePrefix(RegisterFastValue.FromEventScriptValue(sourceItems[index]), selectors, 0, prefixCount, action))
+            if (!TryApplyPipelinePrefix(RegisterFastValue.FromGseValue(sourceItems[index]), selectors, 0, prefixCount, action))
             {
                 return false;
             }
@@ -4816,7 +4816,7 @@ internal sealed class RegisterVmFastExecutionSession
         return false;
     }
 
-    private void RecordParameterBound(string parameter, EventScriptValue value)
+    private void RecordParameterBound(string parameter, GseValue value)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4824,7 +4824,7 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.ParameterBound,
+            GseDiagnosticEventKind.ParameterBound,
             parameter,
             CreateSingleArgument(parameter, value),
             $"Bound '{parameter}'");
@@ -4838,13 +4838,13 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.LetEvaluated,
+            GseDiagnosticEventKind.LetEvaluated,
             identifier,
-            CreateSingleArgument(identifier, value.ToEventScriptValue()),
+            CreateSingleArgument(identifier, value.ToGseValue()),
             $"Let '{identifier}' evaluated");
     }
 
-    private void RecordHandlerInvoked(string message, IReadOnlyDictionary<string, EventScriptValue> args)
+    private void RecordHandlerInvoked(string message, IReadOnlyDictionary<string, GseValue> args)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4852,7 +4852,7 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.HandlerInvoked,
+            GseDiagnosticEventKind.HandlerInvoked,
             message,
             args,
             $"Handler '{message}' invoked");
@@ -4868,9 +4868,9 @@ internal sealed class RegisterVmFastExecutionSession
         var ruleName = instruction.DiagnosticName ?? string.Empty;
         var argumentName = instruction.DiagnosticArgumentName ?? "value";
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.RuleCalled,
+            GseDiagnosticEventKind.RuleCalled,
             ruleName,
-            CreateSingleArgument(argumentName, input.ToEventScriptValue()),
+            CreateSingleArgument(argumentName, input.ToGseValue()),
             $"rule '{ruleName}' called");
     }
 
@@ -4883,22 +4883,22 @@ internal sealed class RegisterVmFastExecutionSession
 
         var callableName = instruction.DiagnosticName ?? string.Empty;
         var parameters = instruction.Names ?? [];
-        var pairs = new KeyValuePair<string, EventScriptValue>[Math.Min(parameters.Length, count)];
+        var pairs = new KeyValuePair<string, GseValue>[Math.Min(parameters.Length, count)];
         for (var argumentIndex = 0; argumentIndex < pairs.Length; argumentIndex++)
         {
-            pairs[argumentIndex] = new KeyValuePair<string, EventScriptValue>(
+            pairs[argumentIndex] = new KeyValuePair<string, GseValue>(
                 parameters[argumentIndex],
-                stack[start + argumentIndex].ToEventScriptValue());
+                stack[start + argumentIndex].ToGseValue());
         }
 
         var kind = instruction.CallableKind == RegisterFastCallableKind.Rule
-            ? EventScriptDiagnosticEventKind.RuleCalled
-            : EventScriptDiagnosticEventKind.SelectCalled;
+            ? GseDiagnosticEventKind.RuleCalled
+            : GseDiagnosticEventKind.SelectCalled;
         var kindText = instruction.CallableKind == RegisterFastCallableKind.Rule ? "rule" : "select";
         RecordDiagnostic(
             kind,
             callableName,
-            EventScriptNamedArguments.CreateOrdered(pairs),
+            GseNamedArguments.CreateOrdered(pairs),
             $"{kindText} '{callableName}' called");
     }
 
@@ -4910,9 +4910,9 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
+            GseDiagnosticEventKind.ExpressionEvaluatedToNothing,
             identifier,
-            CreateSingleArgument(identifier, EventScriptValue.Nothing),
+            CreateSingleArgument(identifier, GseValue.Nothing),
             $"Let '{identifier}' expression evaluated to Nothing.");
     }
 
@@ -4924,9 +4924,9 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
+            GseDiagnosticEventKind.ExpressionEvaluatedToNothing,
             argumentName,
-            CreateSingleArgument(argumentName, EventScriptValue.Nothing),
+            CreateSingleArgument(argumentName, GseValue.Nothing),
             $"Publish argument '{argumentName}' evaluated to Nothing.");
     }
 
@@ -4939,23 +4939,23 @@ internal sealed class RegisterVmFastExecutionSession
 
         var name = expression.GetType().Name;
         RecordDiagnostic(
-            EventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
+            GseDiagnosticEventKind.ExpressionEvaluatedToNothing,
             name,
-            CreateSingleArgument(name, EventScriptValue.Nothing),
+            CreateSingleArgument(name, GseValue.Nothing),
             "Expression statement evaluated to Nothing.");
     }
 
     private void RecordDiagnostic(
-        EventScriptDiagnosticEventKind kind,
+        GseDiagnosticEventKind kind,
         string name,
-        IReadOnlyDictionary<string, EventScriptValue> arguments,
+        IReadOnlyDictionary<string, GseValue> arguments,
         string? detail = null)
-        => EventScriptInvocationKernel.RecordDiagnostic(_context, _diagnosticsEnabled, kind, name, arguments, detail);
+        => GseInvocationKernel.RecordDiagnostic(_context, _diagnosticsEnabled, kind, name, arguments, detail);
 
-    private static EventScriptNamedArguments CreateSingleArgument(string name, EventScriptValue value)
-        => EventScriptNamedArguments.CreateOrdered(
+    private static GseNamedArguments CreateSingleArgument(string name, GseValue value)
+        => GseNamedArguments.CreateOrdered(
         [
-            new KeyValuePair<string, EventScriptValue>(name, value)
+            new KeyValuePair<string, GseValue>(name, value)
         ]);
 
     private static bool Fail(out RegisterFastValue value)
@@ -4990,8 +4990,8 @@ internal readonly record struct RegisterFastValue(
     decimal Number,
     long IntegerValue,
     bool BooleanValue,
-    EventScriptDecimalUnit? Unit,
-    EventScriptValue? ReferenceValue)
+    GseDecimalUnit? Unit,
+    GseValue? ReferenceValue)
 {
     public static RegisterFastValue Nothing { get; } = new(RegisterFastValueKind.Nothing, 0m, 0, false, null, null);
 
@@ -5001,13 +5001,13 @@ internal readonly record struct RegisterFastValue(
     public static RegisterFastValue Integer(long value)
         => new(RegisterFastValueKind.Integer, value, value, value != 0, null, null);
 
-    public static RegisterFastValue Decimal(decimal value, EventScriptDecimalUnit? unit = null)
+    public static RegisterFastValue Decimal(decimal value, GseDecimalUnit? unit = null)
         => new(RegisterFastValueKind.Decimal, value, ToLongSaturated(value), value != 0m, unit, null);
 
     public static RegisterFastValue Percentage(decimal ratio)
         => new(RegisterFastValueKind.Percentage, ratio, ToLongSaturated(ratio * 100m), ratio != 0m, null, null);
 
-    public static RegisterFastValue Reference(EventScriptValue value)
+    public static RegisterFastValue Reference(GseValue value)
         => new(RegisterFastValueKind.Reference, 0m, 0, value.AsBoolean(), null, value);
 
     public static RegisterFastValue Unsupported()
@@ -5016,25 +5016,25 @@ internal readonly record struct RegisterFastValue(
     public static RegisterFastValue NaN()
         => Reference(DecimalNaN());
 
-    public static RegisterFastValue FromEventScriptValue(EventScriptValue value)
+    public static RegisterFastValue FromGseValue(GseValue value)
         => value switch
         {
-            EventScriptBooleanValue boolean => Boolean(boolean.Value),
-            EventScriptIntegerValue integer => Integer(integer.Value),
-            EventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => Decimal(decimalValue.Value, decimalValue.Unit),
-            EventScriptPercentageValue percentage => Percentage(percentage.Ratio),
+            GseBooleanValue boolean => Boolean(boolean.Value),
+            GseIntegerValue integer => Integer(integer.Value),
+            GseDecimalValue decimalValue when decimalValue.HasSemanticValue() => Decimal(decimalValue.Value, decimalValue.Unit),
+            GsePercentageValue percentage => Percentage(percentage.Ratio),
             _ => Reference(value)
         };
 
-    public static RegisterFastValue FromEventScriptFastValue(EventScriptFastValue value)
+    public static RegisterFastValue FromGseFastValue(GseFastValue value)
         => value.Kind switch
         {
-            EventScriptValueKind.Nothing => Nothing,
-            EventScriptValueKind.Boolean => Boolean(value.Boolean),
-            EventScriptValueKind.Integer => Integer(value.Integer),
-            EventScriptValueKind.Decimal when !value.IsReferenceBacked => Decimal(value.Number, value.Unit),
-            EventScriptValueKind.Percentage when !value.IsReferenceBacked => Percentage(value.Number),
-            _ => FromEventScriptValue(value.ToEventScriptValue())
+            GseValueKind.Nothing => Nothing,
+            GseValueKind.Boolean => Boolean(value.Boolean),
+            GseValueKind.Integer => Integer(value.Integer),
+            GseValueKind.Decimal when !value.IsReferenceBacked => Decimal(value.Number, value.Unit),
+            GseValueKind.Percentage when !value.IsReferenceBacked => Percentage(value.Number),
+            _ => FromGseValue(value.ToGseValue())
         };
 
     public bool AsBoolean()
@@ -5060,16 +5060,16 @@ internal readonly record struct RegisterFastValue(
         return false;
     }
 
-    public EventScriptValue ToEventScriptValue()
+    public GseValue ToGseValue()
         => Kind switch
         {
-            RegisterFastValueKind.Nothing => EventScriptValue.Nothing,
-            RegisterFastValueKind.Boolean => EventScriptValueFactory.Boolean(BooleanValue),
-            RegisterFastValueKind.Integer => EventScriptValueFactory.Integer(IntegerValue),
-            RegisterFastValueKind.Decimal => EventScriptValueFactory.Decimal(Number, Unit),
-            RegisterFastValueKind.Percentage => EventScriptValueFactory.Percentage(Number),
-            RegisterFastValueKind.Reference => ReferenceValue ?? EventScriptValue.Nothing,
-            _ => EventScriptValue.Nothing
+            RegisterFastValueKind.Nothing => GseValue.Nothing,
+            RegisterFastValueKind.Boolean => GseValueFactory.Boolean(BooleanValue),
+            RegisterFastValueKind.Integer => GseValueFactory.Integer(IntegerValue),
+            RegisterFastValueKind.Decimal => GseValueFactory.Decimal(Number, Unit),
+            RegisterFastValueKind.Percentage => GseValueFactory.Percentage(Number),
+            RegisterFastValueKind.Reference => ReferenceValue ?? GseValue.Nothing,
+            _ => GseValue.Nothing
         };
 
     public static bool AreEqual(RegisterFastValue left, RegisterFastValue right)
@@ -5095,7 +5095,7 @@ internal readonly record struct RegisterFastValue(
             return leftNumber.Value == rightNumber.Value;
         }
 
-        return left.ToEventScriptValue().Equals(right.ToEventScriptValue());
+        return left.ToGseValue().Equals(right.ToGseValue());
     }
 
     public static int CompareNumeric(RegisterFastValue left, RegisterFastValue right)
@@ -5126,7 +5126,7 @@ internal readonly record struct RegisterFastValue(
             return false;
         }
 
-        return EventScriptValueAlu.TryCompareNumeric(leftNumber, rightNumber, out comparison);
+        return GseValueAlu.TryCompareNumeric(leftNumber, rightNumber, out comparison);
     }
 
     public static RegisterFastValue Add(RegisterFastValue left, RegisterFastValue right)
@@ -5149,27 +5149,27 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return EventScriptValueAlu.TryAddFinite(leftPrimitive, rightPrimitive, out var sum)
+            return GseValueAlu.TryAddFinite(leftPrimitive, rightPrimitive, out var sum)
                 ? FromFinitePrimitiveNumericResult(left, "+", right, sum, left.Unit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.AddNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.AddNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
-            var leftValue = left.ToEventScriptValue();
-            var rightValue = right.ToEventScriptValue();
-            if (EventScriptValueAlu.TryCombineWithPlus(leftValue, rightValue, out var combined))
+            var leftValue = left.ToGseValue();
+            var rightValue = right.ToGseValue();
+            if (GseValueAlu.TryCombineWithPlus(leftValue, rightValue, out var combined))
             {
-                return FromEventScriptValue(combined);
+                return FromGseValue(combined);
             }
 
             return leftValue.IsText() || rightValue.IsText()
-                ? Reference(Text($"{EventScriptValueAlu.ToText(leftValue)}{EventScriptValueAlu.ToText(rightValue)}"))
+                ? Reference(Text($"{GseValueAlu.ToText(leftValue)}{GseValueAlu.ToText(rightValue)}"))
                 : NaN();
         }
 
@@ -5178,7 +5178,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(EventScriptValueAlu.AddNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GseValueAlu.AddNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static RegisterFastValue Subtract(RegisterFastValue left, RegisterFastValue right)
@@ -5201,13 +5201,13 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return EventScriptValueAlu.TryNegateFinite(rightPrimitive, out var negatedRight) &&
-                   EventScriptValueAlu.TryAddFinite(leftPrimitive, negatedRight, out var difference)
+            return GseValueAlu.TryNegateFinite(rightPrimitive, out var negatedRight) &&
+                   GseValueAlu.TryAddFinite(leftPrimitive, negatedRight, out var difference)
                 ? FromFinitePrimitiveNumericResult(left, "-", right, difference, left.Unit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.SubtractNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.SubtractNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -5222,7 +5222,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(EventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GseValueAlu.SubtractNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static RegisterFastValue Multiply(RegisterFastValue left, RegisterFastValue right)
@@ -5245,12 +5245,12 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return EventScriptValueAlu.TryMultiplyFinite(leftPrimitive, rightPrimitive, out var product)
+            return GseValueAlu.TryMultiplyFinite(leftPrimitive, rightPrimitive, out var product)
                 ? FromFinitePrimitiveNumericResult(left, "*", right, product, left.Unit ?? right.Unit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.MultiplyNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.MultiplyNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     left.Unit ?? right.Unit);
         }
 
@@ -5265,7 +5265,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
+        return FromDecimalNumeric(GseValueAlu.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
     }
 
     public static RegisterFastValue Divide(RegisterFastValue left, RegisterFastValue right)
@@ -5288,12 +5288,12 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && EventScriptValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
+            return rightPrimitive != 0m && GseValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
                 ? Decimal(quotient, primitiveResultUnit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.DivideNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.DivideNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     primitiveResultUnit);
         }
 
@@ -5308,7 +5308,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(EventScriptValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
+        return FromDecimalNumeric(GseValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
     public static RegisterFastValue IntegerDivide(RegisterFastValue left, RegisterFastValue right)
@@ -5326,12 +5326,12 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && EventScriptValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
+            return rightPrimitive != 0m && GseValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
                 ? FromFinitePrimitiveNumericResult(left, "div", right, Math.Floor(quotient), primitiveResultUnit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.IntegerDivideNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.IntegerDivideNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     primitiveResultUnit);
         }
 
@@ -5346,7 +5346,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        var result = EventScriptValueAlu.IntegerDivideNumeric(leftNumber, rightNumber);
+        var result = GseValueAlu.IntegerDivideNumeric(leftNumber, rightNumber);
         return resultUnit is null && result.IsFinite && TryToInteger(result.Value, out var integer)
             ? Integer(integer)
             : FromDecimalNumeric(result, resultUnit);
@@ -5368,12 +5368,12 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && EventScriptValueAlu.TryModuloFinite(leftPrimitive, rightPrimitive, out var modulo)
+            return rightPrimitive != 0m && GseValueAlu.TryModuloFinite(leftPrimitive, rightPrimitive, out var modulo)
                 ? FromFinitePrimitiveNumericResult(left, "mod", right, modulo, left.Unit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.ModuloNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.ModuloNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -5389,7 +5389,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(EventScriptValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GseValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static RegisterFastValue Remainder(RegisterFastValue left, RegisterFastValue right)
@@ -5408,12 +5408,12 @@ internal readonly record struct RegisterFastValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && EventScriptValueAlu.TryRemainderFinite(leftPrimitive, rightPrimitive, out var remainder)
+            return rightPrimitive != 0m && GseValueAlu.TryRemainderFinite(leftPrimitive, rightPrimitive, out var remainder)
                 ? FromFinitePrimitiveNumericResult(left, "rem", right, remainder, left.Unit)
                 : FromDecimalNumeric(
-                    EventScriptValueAlu.RemainderNumeric(
-                        EventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        EventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GseValueAlu.RemainderNumeric(
+                        GseValueAlu.NumericValue.Finite(leftPrimitive),
+                        GseValueAlu.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -5429,13 +5429,13 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(EventScriptValueAlu.RemainderNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GseValueAlu.RemainderNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     private static bool TryGetDivideResultUnit(
-        EventScriptDecimalUnit? leftUnit,
-        EventScriptDecimalUnit? rightUnit,
-        out EventScriptDecimalUnit? resultUnit)
+        GseDecimalUnit? leftUnit,
+        GseDecimalUnit? rightUnit,
+        out GseDecimalUnit? resultUnit)
     {
         if (!leftUnit.HasValue && !rightUnit.HasValue)
         {
@@ -5469,7 +5469,7 @@ internal readonly record struct RegisterFastValue(
 
         if (leftIsPercentage && rightIsPercentage)
         {
-            return FromPercentageNumeric(EventScriptValueAlu.AddNumeric(leftNumber, rightNumber));
+            return FromPercentageNumeric(GseValueAlu.AddNumeric(leftNumber, rightNumber));
         }
 
         if (leftIsPercentage)
@@ -5477,8 +5477,8 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        var delta = EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
-        return FromDecimalNumeric(EventScriptValueAlu.AddNumeric(leftNumber, delta), leftUnit);
+        var delta = GseValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        return FromDecimalNumeric(GseValueAlu.AddNumeric(leftNumber, delta), leftUnit);
     }
 
     private static RegisterFastValue SubtractPercentage(RegisterFastValue left, RegisterFastValue right)
@@ -5491,7 +5491,7 @@ internal readonly record struct RegisterFastValue(
 
         if (leftIsPercentage && rightIsPercentage)
         {
-            return FromPercentageNumeric(EventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber));
+            return FromPercentageNumeric(GseValueAlu.SubtractNumeric(leftNumber, rightNumber));
         }
 
         if (leftIsPercentage)
@@ -5499,8 +5499,8 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        var delta = EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
-        return FromDecimalNumeric(EventScriptValueAlu.SubtractNumeric(leftNumber, delta), leftUnit);
+        var delta = GseValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        return FromDecimalNumeric(GseValueAlu.SubtractNumeric(leftNumber, delta), leftUnit);
     }
 
     private static RegisterFastValue MultiplyPercentage(RegisterFastValue left, RegisterFastValue right)
@@ -5511,7 +5511,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        var result = EventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        var result = GseValueAlu.MultiplyNumeric(leftNumber, rightNumber);
         if (leftIsPercentage && rightIsPercentage)
         {
             return FromPercentageNumeric(result);
@@ -5540,7 +5540,7 @@ internal readonly record struct RegisterFastValue(
             return NaN();
         }
 
-        var result = EventScriptValueAlu.DivideNumeric(leftNumber, rightNumber);
+        var result = GseValueAlu.DivideNumeric(leftNumber, rightNumber);
         if (leftIsPercentage && rightIsPercentage)
         {
             return FromDecimalNumeric(result);
@@ -5555,36 +5555,36 @@ internal readonly record struct RegisterFastValue(
     }
 
     private bool TryGetNumeric(
-        out EventScriptValueAlu.NumericValue number,
-        out EventScriptDecimalUnit? unit,
+        out GseValueAlu.NumericValue number,
+        out GseDecimalUnit? unit,
         out bool isPercentage)
     {
         switch (Kind)
         {
             case RegisterFastValueKind.Boolean:
-                number = EventScriptValueAlu.NumericValue.Finite(BooleanValue ? 1m : 0m);
+                number = GseValueAlu.NumericValue.Finite(BooleanValue ? 1m : 0m);
                 unit = null;
                 isPercentage = false;
                 return true;
             case RegisterFastValueKind.Integer:
-                number = EventScriptValueAlu.NumericValue.Finite(IntegerValue);
+                number = GseValueAlu.NumericValue.Finite(IntegerValue);
                 unit = null;
                 isPercentage = false;
                 return true;
             case RegisterFastValueKind.Decimal:
-                number = EventScriptValueAlu.NumericValue.Finite(Number);
+                number = GseValueAlu.NumericValue.Finite(Number);
                 unit = Unit;
                 isPercentage = false;
                 return true;
             case RegisterFastValueKind.Percentage:
-                number = EventScriptValueAlu.NumericValue.Finite(Number);
+                number = GseValueAlu.NumericValue.Finite(Number);
                 unit = null;
                 isPercentage = true;
                 return true;
             case RegisterFastValueKind.Reference when ReferenceValue is { } reference &&
-                                                       EventScriptValueAlu.TryCoerceNumericForOperation(reference, out var referenceNumber):
+                                                       GseValueAlu.TryCoerceNumericForOperation(reference, out var referenceNumber):
                 number = referenceNumber;
-                unit = EventScriptValue.TryGetDecimalUnit(reference, out var referenceUnit) ? referenceUnit : null;
+                unit = GseValue.TryGetDecimalUnit(reference, out var referenceUnit) ? referenceUnit : null;
                 isPercentage = reference.IsPercentage();
                 return true;
             default:
@@ -5620,7 +5620,7 @@ internal readonly record struct RegisterFastValue(
            ReferenceValue is { } reference && reference.IsPercentage();
 
     private bool IsVectorLike()
-        => ReferenceValue is EventScriptVector2Value or EventScriptVector3Value;
+        => ReferenceValue is GseVector2Value or GseVector3Value;
 
     private static bool TryEvaluateVectorBinary(RegisterFastValue left, string operation, RegisterFastValue right, out RegisterFastValue value)
     {
@@ -5630,9 +5630,9 @@ internal readonly record struct RegisterFastValue(
             return false;
         }
 
-        if (EventScriptValueAlu.TryEvaluateVectorBinary(left.ToEventScriptValue(), operation, right.ToEventScriptValue(), out var vectorValue))
+        if (GseValueAlu.TryEvaluateVectorBinary(left.ToGseValue(), operation, right.ToGseValue(), out var vectorValue))
         {
-            value = FromEventScriptValue(vectorValue);
+            value = FromGseValue(vectorValue);
             return true;
         }
 
@@ -5644,17 +5644,17 @@ internal readonly record struct RegisterFastValue(
         => Kind == RegisterFastValueKind.Nothing ||
            ReferenceValue is { } reference && reference.IsNothing();
 
-    private static RegisterFastValue FromDecimalNumeric(EventScriptValueAlu.NumericValue number, EventScriptDecimalUnit? unit = null)
+    private static RegisterFastValue FromDecimalNumeric(GseValueAlu.NumericValue number, GseDecimalUnit? unit = null)
         => number.IsFinite
             ? Decimal(number.Value, unit)
-            : Reference(EventScriptValueAlu.ToEventScriptDecimal(number));
+            : Reference(GseValueAlu.ToGseDecimal(number));
 
     private static RegisterFastValue FromFinitePrimitiveNumericResult(
         RegisterFastValue left,
         string operation,
         RegisterFastValue right,
         decimal value,
-        EventScriptDecimalUnit? unit = null)
+        GseDecimalUnit? unit = null)
         => unit is null &&
            operation == "div" &&
            TryToInteger(value, out var quotient)
@@ -5667,7 +5667,7 @@ internal readonly record struct RegisterFastValue(
             ? Integer(integer)
             : Decimal(value, unit);
 
-    private static RegisterFastValue FromPercentageNumeric(EventScriptValueAlu.NumericValue number)
+    private static RegisterFastValue FromPercentageNumeric(GseValueAlu.NumericValue number)
         => number.IsFinite
             ? Percentage(number.Value)
             : FromDecimalNumeric(number);

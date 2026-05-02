@@ -2,7 +2,7 @@
 
 using System;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Types.EventScriptValueFactory;
+using static StepH.GameEventScript.Types.GseValueFactory;
 
 namespace StepH.GameEventScript.RegisterVM;
 
@@ -18,15 +18,15 @@ internal enum RegisterVmValueKind
 
 internal readonly struct RegisterVmValue
 {
-    private readonly EventScriptValue? _reference;
+    private readonly GseValue? _reference;
 
     private RegisterVmValue(
         RegisterVmValueKind kind,
         long integer,
         decimal number,
         bool boolean,
-        EventScriptDecimalUnit? unit,
-        EventScriptValue? reference)
+        GseDecimalUnit? unit,
+        GseValue? reference)
     {
         Kind = kind;
         Integer = integer;
@@ -46,7 +46,7 @@ internal readonly struct RegisterVmValue
 
     public bool Boolean { get; }
 
-    public EventScriptDecimalUnit? Unit { get; }
+    public GseDecimalUnit? Unit { get; }
 
     public static RegisterVmValue FromBoolean(bool value)
         => new(RegisterVmValueKind.Boolean, 0, 0m, value, null, null);
@@ -54,32 +54,32 @@ internal readonly struct RegisterVmValue
     public static RegisterVmValue FromInteger(long value)
         => new(RegisterVmValueKind.Integer, value, value, value != 0, null, null);
 
-    public static RegisterVmValue FromDecimal(decimal value, EventScriptDecimalUnit? unit = null)
+    public static RegisterVmValue FromDecimal(decimal value, GseDecimalUnit? unit = null)
         => new(RegisterVmValueKind.Decimal, 0, value, value != 0m, unit, null);
 
     public static RegisterVmValue FromPercentage(decimal ratio)
         => new(RegisterVmValueKind.Percentage, 0, ratio, ratio != 0m, null, null);
 
-    public static RegisterVmValue FromReference(EventScriptValue value)
+    public static RegisterVmValue FromReference(GseValue value)
         => value switch
         {
             null => Nothing,
-            EventScriptBooleanValue boolean => FromBoolean(boolean.Value),
-            EventScriptIntegerValue integer => FromInteger(integer.Value),
-            EventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => FromDecimal(decimalValue.Value, decimalValue.Unit),
-            EventScriptPercentageValue percentage => FromPercentage(percentage.Ratio),
+            GseBooleanValue boolean => FromBoolean(boolean.Value),
+            GseIntegerValue integer => FromInteger(integer.Value),
+            GseDecimalValue decimalValue when decimalValue.HasSemanticValue() => FromDecimal(decimalValue.Value, decimalValue.Unit),
+            GsePercentageValue percentage => FromPercentage(percentage.Ratio),
             _ => new RegisterVmValue(RegisterVmValueKind.Reference, 0, 0m, false, null, value)
         };
 
-    public EventScriptValue ToEventScriptValue()
+    public GseValue ToGseValue()
         => Kind switch
         {
-            RegisterVmValueKind.Nothing => EventScriptValue.Nothing,
-            RegisterVmValueKind.Boolean => EventScriptValueFactory.Boolean(Boolean),
-            RegisterVmValueKind.Integer => EventScriptValueFactory.Integer(Integer),
+            RegisterVmValueKind.Nothing => GseValue.Nothing,
+            RegisterVmValueKind.Boolean => GseValueFactory.Boolean(Boolean),
+            RegisterVmValueKind.Integer => GseValueFactory.Integer(Integer),
             RegisterVmValueKind.Decimal => Decimal(Number, Unit),
             RegisterVmValueKind.Percentage => Percentage(Number),
-            RegisterVmValueKind.Reference => _reference ?? EventScriptValue.Nothing,
+            RegisterVmValueKind.Reference => _reference ?? GseValue.Nothing,
             _ => throw new InvalidOperationException($"Unsupported RegisterVM value kind '{Kind}'.")
         };
 }

@@ -1,0 +1,253 @@
+GameEventScript ::= { TriviaOrSeparator } [ ModuleDeclaration { StatementSeparator } ] [ TopLevel { EventSeparator TopLevel } ] { TriviaOrSeparator }
+
+TriviaOrSeparator ::= Trivia | StatementSeparator
+Trivia ::= WhiteSpace | LineComment
+WhiteSpace ::= " " | "\t"
+LineComment ::= "//" { AnyCharExceptLineBreak }
+
+ModuleDeclaration ::= "module" ModuleName
+TopLevel ::= TypeDefinition | RuleDefinition | SelectDefinition | EventEndpoint
+EventEndpoint ::= EventHandler
+TypeDefinition ::= "record" TypeTag "as" "{" { StatementSeparator } [ TypeFieldDefinition { TypeFieldSeparator TypeFieldDefinition } ] { StatementSeparator } "}"
+RuleDefinition ::= "rule" Identifier "(" [ ParamList ] ")" "means" Expression
+SelectDefinition ::= "select" Identifier "(" [ ParamList ] ")" "means" Expression
+TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
+TypeFieldSeparator ::= "," | StatementSeparator
+EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
+EventSeparator ::= StatementSeparator
+StatementSeparator ::= [ Trivia ] ( ";" [ Trivia ] | NewLine { TriviaOrNewLine } )
+TriviaOrNewLine ::= Trivia | NewLine
+NewLine ::= "\n" | "\r\n"
+
+ParamList ::= Parameter { "," Parameter }
+Parameter ::= Identifier
+            | "_" Identifier
+
+Statement ::= PublishStatement
+             | LetStatement
+             | IfStatement
+             | ForStatement
+             | SeededRandomStatement
+             | ExpressionStatement
+
+PublishStatement ::= "publish" PublishMessageExpression
+PublishMessageExpression ::= Message [ ParenthesizedArgumentList ]
+                         | Expression
+LetStatement ::= "let" Identifier [ "as" TypeTag ] LetAssignmentOperator LetValue
+LetAssignmentOperator ::= "be"
+LetValue ::= Expression
+           | GuardedLetValue
+GuardedLetValue ::= Expression "when" Expression { "," [ "or" ] Expression "when" Expression } "otherwise" Expression
+IfStatement ::= "if" Expression StatementOrBlock [ "else" StatementOrBlock ]
+ForStatement ::= "for" Identifier ( "in" CollectionIterationExpression | RangeIterationSource ) StatementOrBlock
+SeededRandomStatement ::= ":random" "with" Expression StatementOrBlock
+StatementOrBlock ::= Statement | StatementBlock
+StatementBlock ::= "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
+ExpressionStatement ::= Expression
+
+ExpressionList ::= Expression { "," Expression }
+ParenthesizedArgumentList ::= "(" [ ArgumentList ] ")"
+ArgumentList ::= Argument { "," Argument | LabeledArgument }
+Argument ::= LabeledArgument | Expression
+LabeledArgument ::= ArgumentLabel ":" Expression
+UngroupedLabeledArgumentList ::= LabeledArgument { LabeledArgument }
+OfArgumentList ::= "of" Expression { "and" Expression }
+ArgumentLabel ::= Identifier | "to"
+
+Expression ::= GuardedChoiceExpression
+GuardedChoiceExpression ::= DefaultExpression [ "when" Expression { "," [ "or" ] Expression "when" Expression } "otherwise" Expression ]
+DefaultExpression ::= CollectionCombineExpression { ":default" CollectionCombineExpression }
+CollectionCombineExpression ::= OrExpression { CollectionCombineOperator OrExpression }
+CollectionCombineOperator ::= ":intersect"
+                            | ":combine"
+                            | ":merge"
+                            | ":except"
+                            | ":zip"
+
+OrExpression ::= XorExpression { ( "|" | "or" ) XorExpression }
+XorExpression ::= AndExpression { ( "^" | "xor" ) AndExpression }
+AndExpression ::= EqualityExpression { ( "&" | "and" ) EqualityExpression }
+EqualityExpression ::= MembershipExpression { ( "=" | "<>" ) MembershipExpression }
+MembershipExpression ::= TypeCheckExpression { MembershipOperator TypeCheckExpression }
+MembershipOperator ::= "in"
+                     | "has" "value"
+                     | "value" "in"
+                     | "starts" "with"
+                     | "ends" "with"
+TypeCheckExpression ::= RelationalExpression { IsOperation | AsOperation }
+IsOperation ::= "is" TypeTag
+              | "is" "empty"
+              | "is" "at" "least" AdditiveExpression
+              | "is" "at" "most" AdditiveExpression
+              | "is" AdditiveExpression "or" "less"
+              | "is" AdditiveExpression "or" "more"
+              | "is" AdditiveExpression "or" "greater"
+              | "is" ExtensionReference
+              | "is" Identifier
+              | "is" AdditiveExpression
+AsOperation ::= "as" TypeTag
+RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
+AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" ) MultiplicativeExpression }
+MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "div" | "mod" | "rem" ) UnaryExpression }
+UnaryExpression ::= "-" UnaryExpression
+                  | "!" UnaryExpression
+                  | "~" UnaryExpression
+                  | "not" UnaryExpression
+                  | "has" "value" UnaryExpression
+                  | "empty" UnaryExpression
+                  | UnaryTag UnaryExpression
+                  | PostfixExpression
+UnaryTag ::= ":len"
+           | ":chance"
+           | ":keys"
+           | ":values"
+           | ":entries"
+           | ":abs"
+VariadicTaggedExpression ::= ( ":min" | ":max" ) "of" Expression { "and" Expression }
+ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expression
+PostfixExpression ::= PrimaryExpression { PostfixSuffix }
+PostfixSuffix ::= "." Identifier
+                | "[" CollectionSelector "]"
+PrimaryExpression ::= Literal | CallExpression | ExtensionCallExpression | TypeConstructorExpression | Identifier | TagLiteral | VariadicTaggedExpression | ClampExpression | SequenceLiteral | "(" Expression ")"
+                    | BracketLiteral
+                    | SetLiteral
+                    | GeneratedListExpression
+                    | GeneratedSetExpression
+                    | RangeExpression
+                    | RandomExpression
+                    | SeededRandomExpression
+                    | DiceExpression
+                    | MessageInvocationExpression
+CallExpression ::= Identifier ParenthesizedArgumentList
+MessageInvocationExpression ::= Message [ ParenthesizedArgumentList ]
+ExtensionCallExpression ::= ExtensionReference [ ParenthesizedArgumentList | OfArgumentList | UngroupedLabeledArgumentList | UnaryExpression ]
+ExtensionReference ::= ":" Identifier "." Identifier
+TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
+SequenceLiteral ::= OfArgumentList
+
+Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
+TagLiteral ::= ":" Identifier
+
+Message ::= UpperLetter { LowerLetter | UpperLetter | Digit }
+ModuleName ::= Identifier | Message
+
+Identifier ::= LowerLetter { LowerLetter | UpperLetter | Digit }
+Number ::= Digit { Digit } [ "." Digit { Digit } ]
+Percentage ::= Number "%"
+UnitDecimal ::= Number ( "°" | "m" | "s" )
+TextLiteral ::= "'" { TextChar } "'"
+TextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
+EscapedSingleQuote ::= "''"
+AnyCharExceptLineBreak ::= "[^\r\n]"
+
+LowerLetter ::= "[a-z]"
+UpperLetter ::= "[A-Z]"
+
+Digit ::= "[0-9]"
+
+AnyCharButSingleQuote ::= "[^']"
+
+TypeTag ::= ":text"
+          | ":tag"
+          | ":percentage"
+          | ":degree"
+          | ":meter"
+          | ":second"
+          | ":vector2"
+          | ":vector3"
+          | ":decimal"
+          | ":integer"
+          | ":boolean"
+          | ":optional"
+          | ":range"
+          | ":message"
+          | ":handler"
+          | ":sequence"
+          | ":list"
+          | ":dictionary"
+          | ":set"
+          | ":dice"
+          | ":nothing"
+          | ":" Identifier
+
+CollectionSelector ::= LookupSelector
+                     | StructuredCollectionSelector
+LookupSelector ::= Expression
+StructuredCollectionSelector ::= QuantifiedCollectionSelector
+                               | PatternCollectionSelector
+                               | DropCollectionSelector
+                               | CountCollectionSelector
+                               | ChooseCollectionSelector
+                               | DrawCollectionSelector
+                               | ShuffleCollectionSelector
+                               | ReverseCollectionSelector
+                               | EdgeCollectionSelector
+                               | FilterCollectionSelector
+                               | SumCollectionSelector
+                               | AverageCollectionSelector
+                               | ExtremaCollectionSelector
+                               | DistinctCollectionSelector
+                               | GroupByCollectionSelector
+                               | ContainsCollectionSelector
+                               | SelectCollectionSelector
+                               | DictionaryCollectionSelector
+                               | SortCollectionSelector
+                               | OrderByCollectionSelector
+QuantifiedCollectionSelector ::= QuantifiedCollectionSelectorKeyword Identifier "where" Expression
+QuantifiedCollectionSelectorKeyword ::= ":any" | ":all"
+PatternCollectionSelector ::= PatternCollectionSelectorKeyword CollectionPattern
+                            | ":has" ObjectMatchPattern
+                            | ":take" SliceSelector
+PatternCollectionSelectorKeyword ::= ":has"
+DropCollectionSelector ::= ":drop" SliceSelector
+CountCollectionSelector ::= ":count" Identifier "where" Expression
+ChooseCollectionSelector ::= ":choose" Number [ "at" "random" ] [ Identifier "where" Expression ] [ "weighted" "by" Identifier "->" Expression ]
+DrawCollectionSelector ::= ":draw" Number
+ShuffleCollectionSelector ::= ":shuffle"
+ReverseCollectionSelector ::= ":reverse"
+EdgeCollectionSelector ::= EdgeCollectionSelectorKeyword [ Identifier "where" Expression ]
+EdgeCollectionSelectorKeyword ::= ":first" | ":last" | ":single"
+FilterCollectionSelector ::= ":filter" Identifier "where" Expression
+SumCollectionSelector ::= ":sum" Identifier "->" Expression
+AverageCollectionSelector ::= ":average" Identifier "->" Expression
+ExtremaCollectionSelector ::= ( ":min" | ":max" | ":highest" | ":lowest" ) Identifier "->" Expression
+DistinctCollectionSelector ::= ":distinct" [ "by" Identifier "->" Expression ]
+GroupByCollectionSelector ::= ":group" "by" Identifier "->" Expression
+ContainsCollectionSelector ::= ":contains" Expression
+                             | ":contains" "all" Expression
+                             | ":contains" "any" Expression
+SelectCollectionSelector ::= ":select" Identifier "->" Expression
+DictionaryCollectionSelector ::= ":dictionary" Identifier "by" Expression [ "->" Expression ]
+SortCollectionSelector ::= ":sort" SortDirection
+OrderByCollectionSelector ::= ":order" "by" Identifier "->" Expression SortDirection
+GeneratedListExpression ::= ":list" "[" GeneratedCollectionSelector "]"
+GeneratedSetExpression ::= ":set" "[" GeneratedCollectionSelector "]"
+GeneratedCollectionSelector ::= ":select" Identifier ( RangeIterationSource | "in" CollectionIterationExpression ) [ "where" Expression ] "->" Expression
+SortDirection ::= "ascending" | "descending"
+SliceSelector ::= SliceScope Number
+SliceScope ::= "first" | "last" | "highest" | "lowest"
+CollectionPattern ::= "pair" [ "of" UnaryExpression ]
+                    | "three" "of" ( "a" "kind" | UnaryExpression )
+                    | "four" "of" ( "a" "kind" | UnaryExpression )
+                    | "five" "of" ( "a" "kind" | UnaryExpression )
+                    | "six" "of" ( "a" "kind" | UnaryExpression )
+                    | "seven" "of" ( "a" "kind" | UnaryExpression )
+                    | "full" "house"
+                    | "straight"
+ObjectMatchPattern ::= "[" [ ObjectMatchEntry { "," ObjectMatchEntry } ] "]"
+ObjectMatchEntry ::= Identifier ":" ( Expression | ObjectMatchPattern )
+
+RandomExpression ::= ":random" [ "from" ] AdditiveExpression "to" AdditiveExpression
+SeededRandomExpression ::= ":random" "with" Expression Expression
+RangeExpression ::= RangeIterationSource
+RangeIterationSource ::= "from" Expression "to" Expression [ "step" Expression ]
+CollectionIterationExpression ::= Expression
+
+DiceExpression ::= ":dice" Number "d" Number
+
+BracketLiteral ::= ListLiteral | DictionaryLiteral
+ListLiteral ::= "[" [ ExpressionList ] "]"
+SetLiteral ::= ":set" "[" [ ExpressionList ] "]"
+DictionaryLiteral ::= "[" ":" "]"
+                    | "[" DictionaryEntry { "," DictionaryEntry } "]"
+DictionaryEntry ::= Identifier ":" Expression

@@ -5,9 +5,9 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.BytecodeVM;
 
-internal sealed class BytecodeVmCompiledHandler
+internal sealed class GesBytecodeVmCompiledHandler
 {
-    internal BytecodeVmCompiledHandler(string message, IReadOnlyList<string> parameters, IReadOnlyList<string> signatureLabels, string signatureId, int declarationOrder, int programIndex,
+    internal GesBytecodeVmCompiledHandler(string message, IReadOnlyList<string> parameters, IReadOnlyList<string> signatureLabels, string signatureId, int declarationOrder, int programIndex,
         bool diagnosticsEnabled, BytecodeVmExecutionPlan executionPlan)
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));

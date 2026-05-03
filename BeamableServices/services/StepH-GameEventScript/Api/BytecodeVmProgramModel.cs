@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.BytecodeVM;
 
 namespace StepH.GameEventScript.Api;
 

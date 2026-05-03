@@ -107,7 +107,7 @@ internal static class GameEventScriptConformanceRunner
 
     internal static IGameEventScriptMessageHandlerCollection CompileScripts(GameEventScriptConformanceTest test)
     {
-        return BytecodeVmExecutableBuilder.Build(CompileBytecode(test));
+        return GesBytecodeVmExecutableBuilder.Build(CompileBytecode(test));
     }
 
     private static IEnumerable<GameEventScriptConformanceCase> EnumerateConformanceCases(string specDirectory)

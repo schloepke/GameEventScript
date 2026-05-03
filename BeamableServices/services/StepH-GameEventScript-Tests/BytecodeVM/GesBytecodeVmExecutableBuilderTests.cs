@@ -10,7 +10,7 @@ using static StepH.GameEventScript.Api.GameEventScriptMessage;
 namespace StepH_GameEventScript_Tests.BytecodeVM;
 
 [TestClass]
-public sealed class BytecodeVmExecutableBuilderTests
+public sealed class GesBytecodeVmExecutableBuilderTests
 {
     [TestMethod]
     public void DebugDumpIsDeterministic()

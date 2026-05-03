@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 
-namespace StepH.GameEventScript.Types;
+namespace StepH.GameEventScript.Runtime;
 
 internal static class GesValueOperations
 {

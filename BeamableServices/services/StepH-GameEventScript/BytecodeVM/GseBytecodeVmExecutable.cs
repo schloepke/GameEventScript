@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +9,7 @@ namespace StepH.GameEventScript.BytecodeVM;
 internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCollection
 {
     private readonly IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptContext> Handler)> _messageHandlers;
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> _dispatchIndex;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _dispatchIndex;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _boundExtensions = new Dictionary<string, IGameEventScriptExtensionFunction>(StringComparer.Ordinal);
     private IGameEventScriptExtensionFunction[] _boundExtensionSlots = [];
@@ -19,7 +17,7 @@ internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     internal GseBytecodeVmExecutable(
         GameEventScriptCompileOptions options,
         GameEventScriptCompiled bytecodeModule,
-        IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> handlers,
+        IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers,
         IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -38,13 +36,13 @@ internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
 
     public bool DiagnosticsEnabled => Options.EnableDiagnostics;
 
-    internal IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> Handlers { get; }
+    internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> Handlers { get; }
 
     internal GameEventScriptCompiled BytecodeModule { get; }
 
     internal IReadOnlyDictionary<string, BytecodeVmTypeDefinition> TypeDefinitions { get; }
 
-    internal IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> DispatchIndex => _dispatchIndex;
+    internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> DispatchIndex => _dispatchIndex;
 
     internal IGameEventScriptExtensionRegistry ExtensionRegistry => _extensionRegistry;
 
@@ -52,10 +50,10 @@ internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         => _messageHandlers;
 
     public void Invoke(GameEventScriptMessage message, GameEventScriptContext context)
-        => BytecodeVmInvocationEngine.InvokeMessage(this, context, message);
+        => GesBytecodeVmInvocationEngine.InvokeMessage(this, context, message);
 
-    internal void InvokeHandler(BytecodeVmCompiledHandler handler, GameEventScriptMessage message, GameEventScriptContext context)
-        => BytecodeVmInvocationEngine.InvokeHandler(this, context, handler, message);
+    internal void InvokeHandler(GesBytecodeVmCompiledHandler handler, GameEventScriptMessage message, GameEventScriptContext context)
+        => GesBytecodeVmInvocationEngine.InvokeHandler(this, context, handler, message);
 
     internal void BindExtensions(IGameEventScriptExtensionRegistry registry)
     {

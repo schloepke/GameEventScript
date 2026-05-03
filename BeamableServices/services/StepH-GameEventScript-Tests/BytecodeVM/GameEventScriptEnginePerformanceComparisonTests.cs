@@ -80,7 +80,7 @@ public sealed class BytecodeVmPerformanceReportTests
             .Compile();
 
     private static GseBytecodeVmExecutable BuildExecutable(GameEventScriptCompiled bytecode)
-        => BytecodeVmExecutableBuilder.Build(bytecode);
+        => GesBytecodeVmExecutableBuilder.Build(bytecode);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {

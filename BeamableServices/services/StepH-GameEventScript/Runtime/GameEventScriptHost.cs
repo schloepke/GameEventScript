@@ -38,7 +38,7 @@ public sealed class GameEventScriptHost
     public GameEventScriptHost Load(GameEventScriptCompiled bytecode, int priority = NormalPriority)
     {
         _ = bytecode ?? throw new ArgumentNullException(nameof(bytecode));
-        return Load(BytecodeVmExecutableBuilder.Build(bytecode), priority);
+        return Load(GesBytecodeVmExecutableBuilder.Build(bytecode), priority);
     }
 
     public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
@@ -46,7 +46,7 @@ public sealed class GameEventScriptHost
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
         if (handlers is GseBytecodeVmExecutable registerCompiled)
         {
-            GameEventScriptDynamicLinker.Bind(registerCompiled, _extensionRegistry);
+            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry);
         }
 
         foreach (var handler in handlers.Handlers)
@@ -138,11 +138,7 @@ public sealed class GameEventScriptHost
 
         foreach (var subscription in subscriptions)
         {
-            state.RecordDiagnostic(
-                GameEventScriptDiagnosticEventKind.SubscriberMatched,
-                queuedEvent.Name,
-                queuedEvent.Arguments,
-                $"Subscriber matched: {subscription.Definition.SignatureId}");
+            state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberMatched, queuedEvent.Name, queuedEvent.Arguments, $"Subscriber matched: {subscription.Definition.SignatureId}");
 
             try
             {

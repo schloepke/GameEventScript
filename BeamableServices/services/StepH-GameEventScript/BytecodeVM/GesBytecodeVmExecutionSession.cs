@@ -1,18 +1,15 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
-namespace StepH.GameEventScript.Api;
+namespace StepH.GameEventScript.BytecodeVM;
 
-internal sealed class BytecodeVmExecutionSession
+internal sealed class GesBytecodeVmExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
@@ -28,7 +25,7 @@ internal sealed class BytecodeVmExecutionSession
     private readonly Stack<GameEventScriptRandomGenerator> _randomScopes = new();
     private bool _halted;
 
-    private BytecodeVmExecutionSession(
+    private GesBytecodeVmExecutionSession(
         GseBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
         BytecodeVmExecutionPlan plan,
@@ -47,10 +44,10 @@ internal sealed class BytecodeVmExecutionSession
     public static void InvokeHandler(
         GseBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
-        BytecodeVmCompiledHandler handler,
+        GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
-        var session = new BytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
+        var session = new GesBytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
         if (!session.TryInvoke(handler, args))
         {
             throw new InvalidOperationException(
@@ -58,7 +55,7 @@ internal sealed class BytecodeVmExecutionSession
         }
     }
 
-    private bool TryInvoke(BytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
+    private bool TryInvoke(GesBytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
         EnterScope();
         try

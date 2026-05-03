@@ -19,7 +19,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
         IReadOnlyList<string> typeMetadata,
         IReadOnlyList<GameEventScriptBytecodeProgram> programs,
-        IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> handlers,
+        IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers,
         IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions,
         int maxStackDepth)
     {
@@ -52,7 +52,7 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<GameEventScriptBytecodeProgram> Programs { get; }
 
-    internal IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> Handlers { get; }
+    internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> Handlers { get; }
 
     internal IReadOnlyDictionary<string, BytecodeVmTypeDefinition> TypeDefinitions { get; }
 

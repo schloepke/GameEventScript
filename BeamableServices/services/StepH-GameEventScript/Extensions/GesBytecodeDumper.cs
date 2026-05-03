@@ -9,7 +9,7 @@ namespace StepH.GameEventScript.Extensions;
 /// within a <see cref="GameEventScriptCompiled"/> instance. This utility is useful for debugging
 /// and analyzing the structure, references, and instructions of compiled game event scripts.
 /// </summary>
-public static class GameEventScriptBytecodeDumper
+public static class GesBytecodeDumper
 {
     /// <summary>
     /// Dumps the bytecode of the specified <see cref="GameEventScriptCompiled"/> instance

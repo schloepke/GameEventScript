@@ -62,12 +62,12 @@ internal static class GesBytecodeCompiler
                 maxStackDepth);
         }
 
-        private IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> BuildHandlers()
+        private IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> BuildHandlers()
         {
             return module.Handlers.ToDictionary(
                 pair => pair.Key,
-                pair => (IReadOnlyList<BytecodeVmCompiledHandler>)pair.Value
-                    .Select((handler, index) => new BytecodeVmCompiledHandler(
+                pair => (IReadOnlyList<GesBytecodeVmCompiledHandler>)pair.Value
+                    .Select((handler, index) => new GesBytecodeVmCompiledHandler(
                         pair.Key,
                         handler.Parameters,
                         handler.SignatureLabels,
@@ -118,7 +118,7 @@ internal static class GesBytecodeCompiler
             throw new InvalidOperationException($"BytecodeVM invariant failed: external reference '{reference.SignatureId}' was not emitted into bytecode.");
         }
 
-        private static int GetMaxStackDepth(IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> handlers)
+        private static int GetMaxStackDepth(IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers)
             => handlers.Count == 0
                 ? 1
                 : handlers.Values.SelectMany(group => group).Select(handler => handler.ExecutionPlan.MaxStackDepth).DefaultIfEmpty(1).Max();

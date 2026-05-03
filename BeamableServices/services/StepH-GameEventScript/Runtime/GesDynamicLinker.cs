@@ -1,12 +1,11 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
-using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeVM;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal static class GameEventScriptDynamicLinker
+internal static class GesDynamicLinker
 {
     public static void Bind(GseBytecodeVmExecutable compiledScript, IGameEventScriptExtensionRegistry registry)
     {

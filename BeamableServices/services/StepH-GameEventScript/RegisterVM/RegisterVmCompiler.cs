@@ -6,34 +6,34 @@ using System.Linq;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Types.GseValueFactory;
+using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.RegisterVM;
 
-public static class RegisterVmCompiler
+internal static class RegisterVmCompiler
 {
-    public static RegisterCompiledGse Compile(
-        GseModule module,
-        RegisterVmCompilationOptions? options = null)
+    public static CompiledGameEventScript Compile(
+        GameEventScriptModule module,
+        GameEventScriptCompilationOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
-        var compileOptions = options ?? new RegisterVmCompilationOptions();
+        var compileOptions = options ?? new GameEventScriptCompilationOptions();
         var builder = new CompilerBuilder(module, compileOptions);
         return builder.Build();
     }
 
     private sealed class CompilerBuilder(
-        GseModule module,
-        RegisterVmCompilationOptions options)
+        GameEventScriptModule module,
+        GameEventScriptCompilationOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
-        private readonly Dictionary<GseValue, int> _constantIndex = new();
-        private readonly List<GseValue> _constantPool = [];
+        private readonly Dictionary<GameEventScriptValue, int> _constantIndex = new();
+        private readonly List<GameEventScriptValue> _constantPool = [];
         private readonly Dictionary<string, int> _signatureIndex = new(StringComparer.Ordinal);
         private readonly List<string> _signatures = [];
-        private readonly Dictionary<string, GseExtensionReference> _externalReferenceIndex = new(StringComparer.Ordinal);
-        private readonly List<GseExtensionReference> _externalReferences = [];
+        private readonly Dictionary<string, GameEventScriptExtensionReference> _externalReferenceIndex = new(StringComparer.Ordinal);
+        private readonly List<GameEventScriptExtensionReference> _externalReferences = [];
         private readonly Dictionary<string, int> _namedArgumentLayoutIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
@@ -41,7 +41,7 @@ public static class RegisterVmCompiler
         private readonly List<RegisterProgram> _programs = [];
         private readonly Dictionary<(string Message, int DeclarationOrder), int> _handlerProgramIndices = new();
 
-        public RegisterCompiledGse Build()
+        public CompiledGameEventScript Build()
         {
             CompileMetadata();
             CompileGlobalDefinitions();
@@ -59,7 +59,7 @@ public static class RegisterVmCompiler
                 _typeMetadata.ToArray(),
                 _programs.ToArray());
 
-            return new RegisterCompiledGse(options, bytecode, handlers, module.Callables, typeDefinitions);
+            return new CompiledGameEventScript(options, bytecode, handlers, module.Callables, typeDefinitions);
         }
 
         private void CompileMetadata()
@@ -72,7 +72,7 @@ public static class RegisterVmCompiler
             foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
             {
                 AddString(callable.Name);
-                AddSignature(GseMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
+                AddSignature(GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
             }
 
             foreach (var type in module.TypeDefinitions.Values)
@@ -94,7 +94,7 @@ public static class RegisterVmCompiler
             }
         }
 
-        private void CompileCallable(GseCallableDefinition callable)
+        private void CompileCallable(GameEventScriptCallableDefinition callable)
         {
             var instructions = new List<RegisterInstruction>
             {
@@ -120,7 +120,7 @@ public static class RegisterVmCompiler
                         handler.Statements,
                         createsScope: false);
                     _handlerProgramIndices[(pair.Key, declarationOrder)] = programIndex;
-                    AddSignature(GseMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
+                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
                 }
             }
         }
@@ -210,16 +210,16 @@ public static class RegisterVmCompiler
             }
         }
 
-        private IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledGseHandler>> BuildHandlers()
+        private IReadOnlyDictionary<string, IReadOnlyList<CompiledGameEventScriptHandler>> BuildHandlers()
         {
             return module.Handlers.ToDictionary(
                 pair => pair.Key,
-                pair => (IReadOnlyList<RegisterCompiledGseHandler>)pair.Value
-                    .Select((handler, index) => new RegisterCompiledGseHandler(
+                pair => (IReadOnlyList<CompiledGameEventScriptHandler>)pair.Value
+                    .Select((handler, index) => new CompiledGameEventScriptHandler(
                         pair.Key,
                         handler.Parameters,
                         handler.SignatureLabels,
-                        GseMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels),
+                        GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels),
                         index,
                         _handlerProgramIndices.TryGetValue((pair.Key, index), out var programIndex) ? programIndex : -1,
                         options.EnableDiagnostics,
@@ -252,7 +252,7 @@ public static class RegisterVmCompiler
             return index;
         }
 
-        private int AddConstant(GseValue value)
+        private int AddConstant(GameEventScriptValue value)
         {
             if (_constantIndex.TryGetValue(value, out var index))
             {
@@ -278,9 +278,9 @@ public static class RegisterVmCompiler
             return index;
         }
 
-        private int AddExternalReference(GseExtensionReference reference)
+        private int AddExternalReference(GameEventScriptExtensionReference reference)
         {
-            if (GseStandardExtensions.IsStandardReference(reference))
+            if (GameEventScriptStandardExtensions.IsStandardReference(reference))
             {
                 return -1;
             }
@@ -348,7 +348,7 @@ public static class RegisterVmCompiler
             switch (expression)
             {
                 case BooleanLiteralExpressionNode boolean:
-                    AddConstant(GseValueFactory.Boolean(boolean.Value));
+                    AddConstant(GameEventScriptValueFactory.Boolean(boolean.Value));
                     return "literal:boolean";
                 case IntegerLiteralExpressionNode integer:
                     AddConstant(Integer(integer.Value));
@@ -362,7 +362,7 @@ public static class RegisterVmCompiler
                 case UnitDecimalLiteralExpressionNode unitDecimal:
                     AddConstant(Decimal(
                         unitDecimal.Value,
-                        GseDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit) ? unit : null));
+                        GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit) ? unit : null));
                     return "literal:unitDecimal";
                 case TextLiteralExpressionNode text:
                     AddConstant(Text(text.Value));
@@ -485,7 +485,7 @@ public static class RegisterVmCompiler
             switch (expression)
             {
                 case ExtensionCallExpressionNode extensionCall:
-                    AddExternalReference(new GseExtensionReference(
+                    AddExternalReference(new GameEventScriptExtensionReference(
                         extensionCall.ExtensionName,
                         extensionCall.FunctionName,
                         extensionCall.Arguments.Select(argument => argument.Name).ToArray()));
@@ -496,10 +496,10 @@ public static class RegisterVmCompiler
 
                     return;
                 case ExtensionPredicateExpressionNode extensionPredicate:
-                    AddExternalReference(new GseExtensionReference(
+                    AddExternalReference(new GameEventScriptExtensionReference(
                         extensionPredicate.ExtensionName,
                         extensionPredicate.FunctionName,
-                        [GseMessageSignature.UnlabeledParameterName]));
+                        [GameEventScriptMessageSignature.UnlabeledParameterName]));
                     CollectExternalReferences(extensionPredicate.Value);
                     return;
                 case UnaryExpressionNode unary:

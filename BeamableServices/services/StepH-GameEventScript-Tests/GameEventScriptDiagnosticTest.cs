@@ -3,7 +3,7 @@ using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.GseMessage;
+using static StepH.GameEventScript.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests;
 
@@ -45,15 +45,15 @@ public class GameEventScriptDiagnosticTest
     [TestMethod]
     public void DisplayingDiagnosticsTest()
     {
-        var module = GseModuleBuilder.Create()
+        var module = GameEventScriptModuleBuilder.Create()
             .AddScript(script)
             .Build();
-        var compiledModule = RegisterVmCompiler.Compile(module, new RegisterVmCompilationOptions { EnableDiagnostics = true });
+        var compiledModule = RegisterVmCompiler.Compile(module, new GameEventScriptCompilationOptions { EnableDiagnostics = true });
         
-        var input = Message("Start", ("startPosition", GseValueFactory.Vector2(20, 15)));
+        var input = Message("Start", ("startPosition", GameEventScriptValueFactory.Vector2(20, 15)));
         
-        var collector = new GseDiagnosticTraceCollector();
-        var host = GseHost.CreateBuilder()
+        var collector = new GameEventScriptDiagnosticTraceCollector();
+        var host = GameEventScriptHost.CreateBuilder()
             .WithMaxProcessedEventsPerRun(128)
             .WithDiagnosticCollector(collector)
             .Build()

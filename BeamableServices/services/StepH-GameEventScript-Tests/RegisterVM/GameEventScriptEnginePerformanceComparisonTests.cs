@@ -4,7 +4,7 @@ using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.GseMessage;
+using static StepH.GameEventScript.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests.RegisterVM;
 
@@ -47,13 +47,13 @@ public sealed class RegisterVmPerformanceReportTests
     [TestMethod]
     public void RegisterVmRuntimeCostCanBeReported()
     {
-        var input = Message("Start", ("values", GseValueFactory.List(
-            Enumerable.Range(1, 50).Select(value => GseValueFactory.Integer(value)))));
+        var input = Message("Start", ("values", GameEventScriptValueFactory.List(
+            Enumerable.Range(1, 50).Select(value => GameEventScriptValueFactory.Integer(value)))));
 
         WarmUp(input);
 
         var module = BuildPerformanceModule();
-        var registerVmCompile = Measure<IGseMessageHandlerCollection>("registervm compile", () => CompileScript(module));
+        var registerVmCompile = Measure<IGameEventScriptMessageHandlerCollection>("registervm compile", () => CompileScript(module));
 
         var registerVmRun = MeasureRun(registerVmCompile.Value, input, MeasuredRuns);
 
@@ -63,21 +63,21 @@ public sealed class RegisterVmPerformanceReportTests
         WriteReport("registervm", registerVmCompile, registerVmRun);
         TestContext.WriteLine("allocation values are cumulative thread allocations, not peak live memory.");
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(CompileScript(module)));
+        TestContext.WriteLine("RegisterVM Dump:\n" + GameEventScriptBytecodeDumper.ToDebugText(CompileScript(module)));
     }
 
-    private static void WarmUp(GseMessage input)
+    private static void WarmUp(GameEventScriptMessage input)
     {
         var module = BuildPerformanceModule();
         MeasureRun(CompileScript(module), input, WarmupRuns);
     }
 
-    private static GseModule BuildPerformanceModule()
-        => GseModuleBuilder.Create()
+    private static GameEventScriptModule BuildPerformanceModule()
+        => GameEventScriptModuleBuilder.Create()
             .AddScript(PerformanceScript, "engine-performance.es")
             .Build();
 
-    private static RegisterCompiledGse CompileScript(GseModule module)
+    private static CompiledGameEventScript CompileScript(GameEventScriptModule module)
         => RegisterVmCompiler.Compile(module);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
@@ -90,11 +90,11 @@ public sealed class RegisterVmPerformanceReportTests
         return new Measured<T>(name, value, stopwatch.Elapsed, GC.GetAllocatedBytesForCurrentThread() - beforeAllocated);
     }
 
-    private static EngineRunMetrics MeasureRun(IGseMessageHandlerCollection compiled, GseMessage input, int iterations)
+    private static EngineRunMetrics MeasureRun(IGameEventScriptMessageHandlerCollection compiled, GameEventScriptMessage input, int iterations)
     {
         var publishedCount = 0;
-        var lastMessage = GseMessage.EmptyMessage;
-        var host = GseHost.CreateBuilder()
+        var lastMessage = GameEventScriptMessage.EmptyMessage;
+        var host = GameEventScriptHost.CreateBuilder()
             .WithMaxProcessedEventsPerRun(128)
             .WithPublishedMessageObserver(message =>
             {
@@ -154,5 +154,5 @@ public sealed class RegisterVmPerformanceReportTests
 
     private sealed record Measured<T>(string Name, T Value, TimeSpan Elapsed, long AllocatedBytes);
 
-    private sealed record EngineRunMetrics(TimeSpan Elapsed, long AllocatedBytes, int PublishedMessages, GseMessage LastMessage);
+    private sealed record EngineRunMetrics(TimeSpan Elapsed, long AllocatedBytes, int PublishedMessages, GameEventScriptMessage LastMessage);
 }

@@ -22,24 +22,24 @@ internal static class GameEventScriptConformanceValueCodec
         WriteIndented = true
     };
 
-    public static GseMessage DecodeMessage(JsonElement element)
+    public static GameEventScriptMessage DecodeMessage(JsonElement element)
     {
         RequireObject(element, "message");
         var name = RequireString(element, "name", "message name");
-        var args = new Dictionary<string, GseValue>(StringComparer.Ordinal);
+        var args = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
 
         if (TryGetProperty(element, "args", out var argsElement))
         {
             args = DecodeArguments(argsElement);
         }
 
-        return GseMessage.Message(name, args);
+        return GameEventScriptMessage.Message(name, args);
     }
 
-    public static Dictionary<string, GseValue> DecodeArguments(JsonElement element)
+    public static Dictionary<string, GameEventScriptValue> DecodeArguments(JsonElement element)
     {
         RequireObject(element, "message args");
-        var args = new Dictionary<string, GseValue>(StringComparer.Ordinal);
+        var args = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
         foreach (var property in element.EnumerateObject())
         {
             args[property.Name] = DecodeValue(property.Value);
@@ -48,33 +48,33 @@ internal static class GameEventScriptConformanceValueCodec
         return args;
     }
 
-    public static GseValue DecodeValue(JsonElement element)
+    public static GameEventScriptValue DecodeValue(JsonElement element)
     {
         RequireObject(element, "value");
         var type = RequireCanonicalTypeName(element, "type", "value type");
         switch (type)
         {
             case ":nothing":
-                return GseValue.Nothing;
+                return GameEventScriptValue.Nothing;
             case ":text":
-                return GseValueFactory.Text(RequireString(element, "value", "text value"));
+                return GameEventScriptValueFactory.Text(RequireString(element, "value", "text value"));
             case ":tag":
-                return GseValueFactory.Tag(RequireString(element, "value", "tag value"));
+                return GameEventScriptValueFactory.Tag(RequireString(element, "value", "tag value"));
             case ":boolean":
-                return GseValueFactory.Boolean(RequireBoolean(element, "value", "boolean value"));
+                return GameEventScriptValueFactory.Boolean(RequireBoolean(element, "value", "boolean value"));
             case ":integer":
-                return GseValueFactory.Integer(RequireInt64(element, "value", "integer value"));
+                return GameEventScriptValueFactory.Integer(RequireInt64(element, "value", "integer value"));
             case ":decimal":
                 return DecodeDecimalValue(element);
             case ":percentage":
-                return GseValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
+                return GameEventScriptValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
             case ":vector2":
-                return GseValueFactory.Vector2(
+                return GameEventScriptValueFactory.Vector2(
                     RequireDecimal(element, "x", "vector2 x component"),
                     RequireDecimal(element, "y", "vector2 y component"),
                     DecodeOptionalDecimalUnit(element));
             case ":vector3":
-                return GseValueFactory.Vector3(
+                return GameEventScriptValueFactory.Vector3(
                     RequireDecimal(element, "x", "vector3 x component"),
                     RequireDecimal(element, "y", "vector3 y component"),
                     RequireDecimal(element, "z", "vector3 z component"),
@@ -82,44 +82,44 @@ internal static class GameEventScriptConformanceValueCodec
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
-                return GseValueFactory.List(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
+                return GameEventScriptValueFactory.List(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
             case ":dictionary":
-                return GseValueFactory.Dictionary(DecodeEntries(element));
+                return GameEventScriptValueFactory.Dictionary(DecodeEntries(element));
             case ":set":
-                return GseValueFactory.Set(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
+                return GameEventScriptValueFactory.Set(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
             case ":dice":
-                return GseValueFactory.Dice(GseDiceValue.GseDice(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
+                return GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.GameEventScriptDice(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
             case ":range":
-                return GseValueFactory.Range(
+                return GameEventScriptValueFactory.Range(
                     RequireInt64(element, "from", "range start"),
                     RequireInt64(element, "to", "range end"),
                     TryGetProperty(element, "step", out var stepElement) ? ReadInt64(stepElement, "range step") : 1L);
             case ":message":
-                return GseValueFactory.Message(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
+                return GameEventScriptValueFactory.Message(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
             default:
-                return GseValueFactory.CustomType(type[1..], DecodeEntries(element));
+                return GameEventScriptValueFactory.CustomType(type[1..], DecodeEntries(element));
         }
     }
 
-    public static string ToCanonicalJson(GseMessage message)
+    public static string ToCanonicalJson(GameEventScriptMessage message)
         => ToMessageJson(message).ToJsonString(CompactJsonOptions);
 
-    public static string ToPrettyJson(GseMessage message)
+    public static string ToPrettyJson(GameEventScriptMessage message)
         => ToMessageJson(message).ToJsonString(PrettyJsonOptions);
 
-    public static string ToCanonicalJson(IEnumerable<GseMessage> messages)
+    public static string ToCanonicalJson(IEnumerable<GameEventScriptMessage> messages)
         => ToMessageArrayJson(messages).ToJsonString(CompactJsonOptions);
 
-    public static string ToPrettyJson(IEnumerable<GseMessage> messages)
+    public static string ToPrettyJson(IEnumerable<GameEventScriptMessage> messages)
         => ToMessageArrayJson(messages).ToJsonString(PrettyJsonOptions);
 
-    public static string ToCanonicalJson(GseValue value)
+    public static string ToCanonicalJson(GameEventScriptValue value)
         => ToValueJson(value).ToJsonString(CompactJsonOptions);
 
-    public static string ToPrettyJson(GseValue value)
+    public static string ToPrettyJson(GameEventScriptValue value)
         => ToValueJson(value).ToJsonString(PrettyJsonOptions);
 
-    public static JsonObject ToMessageJson(GseMessage message)
+    public static JsonObject ToMessageJson(GameEventScriptMessage message)
     {
         var node = new JsonObject
         {
@@ -136,7 +136,7 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
-    public static JsonObject ToValueJson(GseValue value)
+    public static JsonObject ToValueJson(GameEventScriptValue value)
     {
         if (value.TryGetCustomTypeName(out var customTypeName))
         {
@@ -149,43 +149,43 @@ internal static class GameEventScriptConformanceValueCodec
 
         return value.Kind switch
         {
-            GseValueKind.Nothing => new JsonObject { ["type"] = ":nothing" },
-            GseValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
-            GseValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
-            GseValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
-            GseValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
-            GseValueKind.Decimal => ToDecimalJson((GseDecimalValue)value),
-            GseValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
-            GseValueKind.Vector2 => ToVector2Json((GseVector2Value)value),
-            GseValueKind.Vector3 => ToVector3Json((GseVector3Value)value),
-            GseValueKind.Optional => ToOptionalJson(value),
-            GseValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
-            GseValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
-            GseValueKind.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, GseValue.StableComparer)) },
-            GseValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
-            GseValueKind.Range => ToRangeJson(value),
-            GseValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GseMessage>(value, "Value")) },
-            GseValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
-            GseValueKind.Sequence => throw new NotSupportedException("Sequence values are not part of the conformance JSON value wire format."),
-            _ => throw new NotSupportedException($"Unsupported Gse value type '{value.Kind}'.")
+            GameEventScriptValueKind.Nothing => new JsonObject { ["type"] = ":nothing" },
+            GameEventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
+            GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
+            GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
+            GameEventScriptValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
+            GameEventScriptValueKind.Decimal => ToDecimalJson((GameEventScriptDecimalValue)value),
+            GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
+            GameEventScriptValueKind.Vector2 => ToVector2Json((GameEventScriptVector2Value)value),
+            GameEventScriptValueKind.Vector3 => ToVector3Json((GameEventScriptVector3Value)value),
+            GameEventScriptValueKind.Optional => ToOptionalJson(value),
+            GameEventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
+            GameEventScriptValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
+            GameEventScriptValueKind.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, GameEventScriptValue.StableComparer)) },
+            GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
+            GameEventScriptValueKind.Range => ToRangeJson(value),
+            GameEventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GameEventScriptMessage>(value, "Value")) },
+            GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
+            GameEventScriptValueKind.Sequence => throw new NotSupportedException("Sequence values are not part of the conformance JSON value wire format."),
+            _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
         };
     }
 
-    private static GseValue DecodeDecimalValue(JsonElement element)
+    private static GameEventScriptValue DecodeDecimalValue(JsonElement element)
     {
         var value = RequireString(element, "value", "decimal value");
         var unit = DecodeOptionalDecimalUnit(element);
 
         return value switch
         {
-            "NaN" => GseValueFactory.DecimalNaN(),
-            "Infinity" => GseValueFactory.DecimalInfinity(),
-            "-Infinity" => GseValueFactory.DecimalNegativeInfinity(),
-            _ => GseValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
+            "NaN" => GameEventScriptValueFactory.DecimalNaN(),
+            "Infinity" => GameEventScriptValueFactory.DecimalInfinity(),
+            "-Infinity" => GameEventScriptValueFactory.DecimalNegativeInfinity(),
+            _ => GameEventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
         };
     }
 
-    private static GseDecimalUnit? DecodeOptionalDecimalUnit(JsonElement element)
+    private static GameEventScriptDecimalUnit? DecodeOptionalDecimalUnit(JsonElement element)
     {
         if (TryGetProperty(element, "unit", out var unitElement))
         {
@@ -200,7 +200,7 @@ internal static class GameEventScriptConformanceValueCodec
                 throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
             }
 
-            if (!GseDecimalUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
+            if (!GameEventScriptDecimalUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
             {
                 throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
             }
@@ -211,21 +211,21 @@ internal static class GameEventScriptConformanceValueCodec
         return null;
     }
 
-    private static GseValue DecodeOptionalValue(JsonElement element)
+    private static GameEventScriptValue DecodeOptionalValue(JsonElement element)
     {
         var hasValue = RequireBoolean(element, "hasValue", "optional hasValue");
         if (!hasValue)
         {
-            return GseValueFactory.OptionalNone();
+            return GameEventScriptValueFactory.OptionalNone();
         }
 
-        return GseValueFactory.OptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
+        return GameEventScriptValueFactory.OptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
     }
 
-    private static IReadOnlyDictionary<string, GseValue> DecodeEntries(JsonElement element)
+    private static IReadOnlyDictionary<string, GameEventScriptValue> DecodeEntries(JsonElement element)
     {
         var entriesElement = RequireObjectProperty(element, "entries", "dictionary entries");
-        var entries = new Dictionary<string, GseValue>(StringComparer.Ordinal);
+        var entries = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
         foreach (var property in entriesElement.EnumerateObject())
         {
             entries[property.Name] = DecodeValue(property.Value);
@@ -234,7 +234,7 @@ internal static class GameEventScriptConformanceValueCodec
         return entries;
     }
 
-    private static JsonArray ToMessageArrayJson(IEnumerable<GseMessage> messages)
+    private static JsonArray ToMessageArrayJson(IEnumerable<GameEventScriptMessage> messages)
     {
         var array = new JsonArray();
         foreach (var message in messages)
@@ -245,7 +245,7 @@ internal static class GameEventScriptConformanceValueCodec
         return array;
     }
 
-    private static JsonArray ToValueArrayJson(IEnumerable<GseValue> values)
+    private static JsonArray ToValueArrayJson(IEnumerable<GameEventScriptValue> values)
     {
         var array = new JsonArray();
         foreach (var value in values)
@@ -267,7 +267,7 @@ internal static class GameEventScriptConformanceValueCodec
         return array;
     }
 
-    private static JsonObject ToEntriesJson(IReadOnlyDictionary<string, GseValue> entries)
+    private static JsonObject ToEntriesJson(IReadOnlyDictionary<string, GameEventScriptValue> entries)
     {
         var node = new JsonObject();
         foreach (var pair in entries.OrderBy(pair => pair.Key, StringComparer.Ordinal))
@@ -278,7 +278,7 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
-    private static JsonObject ToOptionalJson(GseValue value)
+    private static JsonObject ToOptionalJson(GameEventScriptValue value)
     {
         var optional = value.AsOptional();
         var node = new JsonObject
@@ -295,7 +295,7 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
-    private static JsonObject ToRangeJson(GseValue value)
+    private static JsonObject ToRangeJson(GameEventScriptValue value)
         => new()
         {
             ["type"] = ":range",
@@ -304,7 +304,7 @@ internal static class GameEventScriptConformanceValueCodec
             ["step"] = GetInternalProperty<long>(value, "Step").ToString(CultureInfo.InvariantCulture)
         };
 
-    private static JsonObject ToDecimalJson(GseDecimalValue value)
+    private static JsonObject ToDecimalJson(GameEventScriptDecimalValue value)
     {
         var node = new JsonObject
         {
@@ -314,13 +314,13 @@ internal static class GameEventScriptConformanceValueCodec
 
         if (value.Unit.HasValue)
         {
-            node["unit"] = ToCanonicalTypeName(GseDecimalUnits.ToTypeName(value.Unit.Value));
+            node["unit"] = ToCanonicalTypeName(GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value));
         }
 
         return node;
     }
 
-    private static JsonObject ToVector2Json(GseVector2Value value)
+    private static JsonObject ToVector2Json(GameEventScriptVector2Value value)
     {
         var node = new JsonObject
         {
@@ -331,13 +331,13 @@ internal static class GameEventScriptConformanceValueCodec
 
         if (value.Unit.HasValue)
         {
-            node["unit"] = ToCanonicalTypeName(GseDecimalUnits.ToTypeName(value.Unit.Value));
+            node["unit"] = ToCanonicalTypeName(GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value));
         }
 
         return node;
     }
 
-    private static JsonObject ToVector3Json(GseVector3Value value)
+    private static JsonObject ToVector3Json(GameEventScriptVector3Value value)
     {
         var node = new JsonObject
         {
@@ -349,7 +349,7 @@ internal static class GameEventScriptConformanceValueCodec
 
         if (value.Unit.HasValue)
         {
-            node["unit"] = ToCanonicalTypeName(GseDecimalUnits.ToTypeName(value.Unit.Value));
+            node["unit"] = ToCanonicalTypeName(GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value));
         }
 
         return node;
@@ -358,7 +358,7 @@ internal static class GameEventScriptConformanceValueCodec
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;
 
-    private static string FormatDecimal(GseValue value)
+    private static string FormatDecimal(GameEventScriptValue value)
     {
         if (value.IsNaN())
         {
@@ -376,7 +376,7 @@ internal static class GameEventScriptConformanceValueCodec
     private static string FormatDecimal(decimal value)
         => value.ToString("0.############################", CultureInfo.InvariantCulture);
 
-    private static T GetInternalProperty<T>(GseValue value, string propertyName)
+    private static T GetInternalProperty<T>(GameEventScriptValue value, string propertyName)
     {
         var property = value.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         if (property?.GetValue(value) is T typed)
@@ -423,7 +423,7 @@ internal static class GameEventScriptConformanceValueCodec
         var typeName = RequireString(element, propertyName, description);
         if (!typeName.StartsWith(":", StringComparison.Ordinal) || typeName.Length == 1)
         {
-            throw new InvalidOperationException($"Invalid {description}; expected canonical Gse type name like ':integer'.");
+            throw new InvalidOperationException($"Invalid {description}; expected canonical GameEventScript type name like ':integer'.");
         }
 
         return typeName;

@@ -8,24 +8,24 @@ using StepH.GameEventScript.Types;
 namespace StepH.GameEventScript.RegisterVM;
 
 internal sealed class RegisterBytecodeModule(
-    RegisterVmCompilationOptions options,
+    GameEventScriptCompilationOptions options,
     IReadOnlyList<string> stringPool,
-    IReadOnlyList<GseValue> constantPool,
+    IReadOnlyList<GameEventScriptValue> constantPool,
     IReadOnlyList<string> signatures,
-    IReadOnlyList<GseExtensionReference> externalReferences,
+    IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
     IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
     IReadOnlyList<string> typeMetadata,
     IReadOnlyList<RegisterProgram> programs)
 {
-    public RegisterVmCompilationOptions Options { get; } = options ?? throw new ArgumentNullException(nameof(options));
+    public GameEventScriptCompilationOptions Options { get; } = options ?? throw new ArgumentNullException(nameof(options));
 
     public IReadOnlyList<string> StringPool { get; } = stringPool ?? throw new ArgumentNullException(nameof(stringPool));
 
-    public IReadOnlyList<GseValue> ConstantPool { get; } = constantPool ?? throw new ArgumentNullException(nameof(constantPool));
+    public IReadOnlyList<GameEventScriptValue> ConstantPool { get; } = constantPool ?? throw new ArgumentNullException(nameof(constantPool));
 
     public IReadOnlyList<string> Signatures { get; } = signatures ?? throw new ArgumentNullException(nameof(signatures));
 
-    public IReadOnlyList<GseExtensionReference> ExternalReferences { get; } = externalReferences ?? throw new ArgumentNullException(nameof(externalReferences));
+    public IReadOnlyList<GameEventScriptExtensionReference> ExternalReferences { get; } = externalReferences ?? throw new ArgumentNullException(nameof(externalReferences));
 
     public IReadOnlyList<IReadOnlyList<string>> NamedArgumentLayouts { get; } = namedArgumentLayouts ?? throw new ArgumentNullException(nameof(namedArgumentLayouts));
 

@@ -10,9 +10,9 @@ namespace StepH.GameEventScript;
 
 public static class GameEventScriptManager
 {
-    public static GseModuleBuilder CreateModuleBuilder() => GseModuleBuilder.Create();
+    public static GameEventScriptModuleBuilder CreateModuleBuilder() => GameEventScriptModuleBuilder.Create();
 
-    public static RegisterCompiledGse Compile(string input, RegisterVmCompilationOptions? options = null) => CreateModuleBuilder().AddScript(input).Compile(options);
+    public static CompiledGameEventScript Compile(string input, GameEventScriptCompilationOptions? options = null) => CreateModuleBuilder().AddScript(input).Compile(options);
 
 }
 

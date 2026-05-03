@@ -1622,7 +1622,7 @@ external references.
 ### Host-provided extensions
 
 Host extensions are dynamically bound when a compiled script is loaded into an
-`GseHost`.
+`GameEventScriptHost`.
 
 The runtime records each external reference as:
 
@@ -1647,26 +1647,26 @@ If the compiled script contains external references, the host must provide a
 registry. Missing registries or missing functions are dynamic-link errors during
 host load, not late runtime lookups.
 
-The extension API uses `GseFastValue` to avoid boxing primitive values at
+The extension API uses `GameEventScriptFastValue` to avoid boxing primitive values at
 the runtime boundary.
 
 ```csharp
-public interface IGseExtensionFunction
+public interface IGameEventScriptExtensionFunction
 {
-    GseFastValue Invoke(
-        GseExtensionContext context,
-        ReadOnlySpan<GseFastValue> arguments);
+    GameEventScriptFastValue Invoke(
+        GameEventScriptExtensionContext context,
+        ReadOnlySpan<GameEventScriptFastValue> arguments);
 }
 
-public interface IGseExtensionRegistry
+public interface IGameEventScriptExtensionRegistry
 {
     bool TryResolve(
-        GseExtensionReference reference,
-        out IGseExtensionFunction function);
+        GameEventScriptExtensionReference reference,
+        out IGameEventScriptExtensionFunction function);
 }
 ```
 
-`GseFastValue` exposes unboxed primitives for common values:
+`GameEventScriptFastValue` exposes unboxed primitives for common values:
 
 - `Kind`
 - `Integer`
@@ -1676,28 +1676,28 @@ public interface IGseExtensionRegistry
 - `Unit`
 - `X`, `Y`, `Z`
 - `IsReferenceBacked`
-- `ToGseValue()`
+- `ToGameEventScriptValue()`
 
 Host functions should use the fast properties when possible and only call
-`ToGseValue()` for complex values or when full boxed semantics are
+`ToGameEventScriptValue()` for complex values or when full boxed semantics are
 needed.
 
 Minimal registry example:
 
 ```csharp
-public sealed class MathFloorFunction : IGseExtensionFunction
+public sealed class MathFloorFunction : IGameEventScriptExtensionFunction
 {
-    public GseFastValue Invoke(
-        GseExtensionContext context,
-        ReadOnlySpan<GseFastValue> arguments)
-        => GseFastValue.FromDecimal(Math.Floor(arguments[0].Number));
+    public GameEventScriptFastValue Invoke(
+        GameEventScriptExtensionContext context,
+        ReadOnlySpan<GameEventScriptFastValue> arguments)
+        => GameEventScriptFastValue.FromDecimal(Math.Floor(arguments[0].Number));
 }
 
-public sealed class GameExtensionRegistry : IGseExtensionRegistry
+public sealed class GameExtensionRegistry : IGameEventScriptExtensionRegistry
 {
     public bool TryResolve(
-        GseExtensionReference reference,
-        out IGseExtensionFunction function)
+        GameEventScriptExtensionReference reference,
+        out IGameEventScriptExtensionFunction function)
     {
         if (reference.SignatureId == "math.floor(_)")
         {
@@ -1716,7 +1716,7 @@ Load with a registry:
 ```csharp
 var compiled = GameEventScriptManager.Compile(script);
 
-var host = GseHost.CreateBuilder()
+var host = GameEventScriptHost.CreateBuilder()
     .WithRegistry(new GameExtensionRegistry())
     .Build()
     .Load(compiled);
@@ -1730,52 +1730,52 @@ Compile with `GameEventScriptManager.Compile(...)`.
 var compiled = GameEventScriptManager.Compile(script);
 ```
 
-Compile options use RegisterVM options:
+Compile options use the public GameEventScript options type:
 
 ```csharp
 var compiled = GameEventScriptManager.Compile(
     script,
-    new RegisterVmCompilationOptions
+    new GameEventScriptCompilationOptions
     {
         EnableDiagnostics = true
     });
 ```
 
-The compiled script implements `IGseMessageHandlerCollection`, so it can
+The compiled script implements `IGameEventScriptMessageHandlerCollection`, so it can
 be loaded into a host.
 
 ```csharp
-var published = new List<GseMessage>();
+var published = new List<GameEventScriptMessage>();
 
-var host = GseHost.CreateBuilder()
+var host = GameEventScriptHost.CreateBuilder()
     .WithPublishedMessageObserver(message => published.Add(message))
     .Build()
     .Load(compiled);
 
-host.Publish(GseMessage.Message(
+host.Publish(GameEventScriptMessage.Message(
     "Start",
-    ("value", GseValueFactory.Integer(3))));
+    ("value", GameEventScriptValueFactory.Integer(3))));
 ```
 
-You can also invoke a compiled script directly with a `GseContext`.
+You can also invoke a compiled script directly with a `GameEventScriptContext`.
 Host orchestration is preferred for normal runtime behavior because it handles
 queueing, dynamic extension binding, subscribers, priorities, diagnostics, and
 runtime limits.
 
 ```csharp
-var emitted = new List<GseMessage>();
-var context = new GseContext(
-    GseRandomGenerator.Create(),
+var emitted = new List<GameEventScriptMessage>();
+var context = new GameEventScriptContext(
+    GameEventScriptRandomGenerator.Create(),
     message => emitted.Add(message));
 
 compiled.Invoke(
-    GseMessage.Message("Start"),
+    GameEventScriptMessage.Message("Start"),
     context);
 ```
 
 ### Host builder options
 
-`GseHostBuilder` supports:
+`GameEventScriptHostBuilder` supports:
 
 - `WithRandom(...)`
 - `WithRegistry(...)`
@@ -1790,7 +1790,7 @@ External subscribers can be registered with `Subscribe`.
 
 ```csharp
 host.Subscribe(
-    GseMessageSignature.MessageSignature("Done", ["value"]),
+    GameEventScriptMessageSignature.MessageSignature("Done", ["value"]),
     (message, context) =>
     {
         // host callback
@@ -1802,16 +1802,16 @@ callbacks remain lenient like script handlers.
 
 ### Diagnostics
 
-Diagnostics are collected through `IGseDiagnosticCollector`.
+Diagnostics are collected through `IGameEventScriptDiagnosticCollector`.
 
 ```csharp
-var diagnostics = new GseDiagnosticTraceCollector();
+var diagnostics = new GameEventScriptDiagnosticTraceCollector();
 
 var compiled = GameEventScriptManager.Compile(
     script,
-    new RegisterVmCompilationOptions { EnableDiagnostics = true });
+    new GameEventScriptCompilationOptions { EnableDiagnostics = true });
 
-var host = GseHost.CreateBuilder()
+var host = GameEventScriptHost.CreateBuilder()
     .WithDiagnosticCollector(diagnostics)
     .Build()
     .Load(compiled);
@@ -1862,7 +1862,7 @@ be bound by the configured registry.
 Runtime limits prevent runaway scripts.
 
 ```csharp
-var limits = new GseRuntimeLimits
+var limits = new GameEventScriptRuntimeLimits
 {
     MaxExecutionSteps = 100_000,
     MaxLoopIterations = 100_000,

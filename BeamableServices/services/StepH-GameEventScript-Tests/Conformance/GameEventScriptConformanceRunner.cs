@@ -71,13 +71,13 @@ internal static class GameEventScriptConformanceRunner
 
     internal static void RunScriptApiTest(
         GameEventScriptConformanceCase testCase,
-        Func<GameEventScriptConformanceTest, IGseMessageHandlerCollection>? compileScripts = null)
+        Func<GameEventScriptConformanceTest, IGameEventScriptMessageHandlerCollection>? compileScripts = null)
     {
         var test = testCase.Test;
         var compiled = (compileScripts ?? CompileScripts)(test);
-        var collector = new GseDiagnosticTraceCollector();
-        var published = new List<GseMessage>();
-        var builder = GseHost.CreateBuilder()
+        var collector = new GameEventScriptDiagnosticTraceCollector();
+        var published = new List<GameEventScriptMessage>();
+        var builder = GameEventScriptHost.CreateBuilder()
             .WithRandom(CreateRandom(test.RandomSequence))
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
             .WithRuntimeLimits(CreateRuntimeLimits(test.RuntimeLimits))
@@ -109,13 +109,13 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    internal static IGseMessageHandlerCollection CompileScripts(GameEventScriptConformanceTest test)
+    internal static IGameEventScriptMessageHandlerCollection CompileScripts(GameEventScriptConformanceTest test)
     {
         var module = BuildModule(test);
         var diagnosticsEnabled = test.CompileOptions?.EnableDiagnostics ?? false;
         return RegisterVmCompiler.Compile(
             module,
-            new RegisterVmCompilationOptions
+            new GameEventScriptCompilationOptions
             {
                 EnableDiagnostics = diagnosticsEnabled
             });
@@ -186,7 +186,7 @@ internal static class GameEventScriptConformanceRunner
                             ?? throw new InvalidOperationException($"{testCase}: messageApi tests require signature.");
 
         ValidateRequired(signatureSpec.Name, "messageApi signature name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-        var signature = new GseMessageSignature(signatureSpec.Name!, signatureSpec.Parameters ?? []);
+        var signature = new GameEventScriptMessageSignature(signatureSpec.Name!, signatureSpec.Parameters ?? []);
         var message = GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(testCase.Test.Message, "messageApi message", testCase));
 
         AssertOptionalEquals(testCase, "signature id", testCase.Test.ExpectedSignatureId, signature.SignatureId);
@@ -237,7 +237,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static void RegisterExternalSubscribers(GameEventScriptConformanceCase testCase, GseHost host)
+    private static void RegisterExternalSubscribers(GameEventScriptConformanceCase testCase, GameEventScriptHost host)
     {
         if (testCase.Test.ExternalSubscribers is null)
         {
@@ -263,10 +263,10 @@ internal static class GameEventScriptConformanceRunner
                         var args = publish.ForwardArguments
                             ? message.Arguments.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
                             : publish.Args.ValueKind == JsonValueKind.Undefined
-                                ? new Dictionary<string, GseValue>(StringComparer.Ordinal)
+                                ? new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
                                 : GameEventScriptConformanceValueCodec.DecodeArguments(publish.Args);
 
-                        context.Publish(GseMessage.Message(publish.Name!, args));
+                        context.Publish(GameEventScriptMessage.Message(publish.Name!, args));
                     }
                 },
                 subscriber.Priority);
@@ -277,7 +277,7 @@ internal static class GameEventScriptConformanceRunner
         GameEventScriptConformanceCase testCase,
         int stepIndex,
         IReadOnlyList<JsonElement>? expectedPublished,
-        IReadOnlyList<GseMessage> actual)
+        IReadOnlyList<GameEventScriptMessage> actual)
     {
         var expected = (expectedPublished ?? []).Select(GameEventScriptConformanceValueCodec.DecodeMessage).ToArray();
         var expectedJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(expected);
@@ -297,7 +297,7 @@ internal static class GameEventScriptConformanceRunner
         GameEventScriptConformanceCase testCase,
         int stepIndex,
         GameEventScriptApiStepSpec step,
-        IReadOnlyList<GseDiagnosticEvent> actual)
+        IReadOnlyList<GameEventScriptDiagnosticEvent> actual)
     {
         var expectedDiagnostics = step.ExpectedDiagnostics;
         if (expectedDiagnostics is null || expectedDiagnostics.Count == 0)
@@ -343,7 +343,7 @@ internal static class GameEventScriptConformanceRunner
         GameEventScriptConformanceCase testCase,
         int stepIndex,
         IReadOnlyList<GameEventScriptDiagnosticExpectationSpec> expectedDiagnostics,
-        IReadOnlyList<GseDiagnosticEvent> actual)
+        IReadOnlyList<GameEventScriptDiagnosticEvent> actual)
     {
         if (expectedDiagnostics.Count != actual.Count)
         {
@@ -367,7 +367,7 @@ internal static class GameEventScriptConformanceRunner
         GameEventScriptConformanceCase testCase,
         int stepIndex,
         IReadOnlyList<GameEventScriptDiagnosticExpectationSpec>? unexpectedDiagnostics,
-        IReadOnlyList<GseDiagnosticEvent> actual)
+        IReadOnlyList<GameEventScriptDiagnosticEvent> actual)
     {
         if (unexpectedDiagnostics is null || unexpectedDiagnostics.Count == 0)
         {
@@ -386,7 +386,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static bool DiagnosticMatches(GameEventScriptDiagnosticExpectationSpec expected, GseDiagnosticEvent actual)
+    private static bool DiagnosticMatches(GameEventScriptDiagnosticExpectationSpec expected, GameEventScriptDiagnosticEvent actual)
     {
         if (!string.IsNullOrWhiteSpace(expected.Kind) &&
             !string.Equals(expected.Kind, actual.Kind.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -459,9 +459,9 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static GseModule BuildModule(GameEventScriptConformanceTest test)
+    private static GameEventScriptModule BuildModule(GameEventScriptConformanceTest test)
     {
-        var builder = GseModuleBuilder.Create();
+        var builder = GameEventScriptModuleBuilder.Create();
         foreach (var source in GetSources(test))
         {
             builder.AddScript(source.Text!, source.SourceName);
@@ -470,14 +470,14 @@ internal static class GameEventScriptConformanceRunner
         return builder.Build();
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<GseMessageSignature>> GetMessageDefinitions(
-        IGseMessageHandlerCollection compiled)
+    private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(
+        IGameEventScriptMessageHandlerCollection compiled)
     {
         return compiled.Handlers
             .GroupBy(handler => handler.Signature.Name, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<GseMessageSignature>)group.Select(handler => handler.Signature).ToArray(),
+                group => (IReadOnlyList<GameEventScriptMessageSignature>)group.Select(handler => handler.Signature).ToArray(),
                 StringComparer.Ordinal);
     }
 
@@ -515,25 +515,25 @@ internal static class GameEventScriptConformanceRunner
         throw new InvalidOperationException($"Test '{test.Name}' requires script or scripts.");
     }
 
-    private static GseRandomGenerator CreateRandom(IReadOnlyList<string>? randomSequence)
+    private static GameEventScriptRandomGenerator CreateRandom(IReadOnlyList<string>? randomSequence)
     {
         if (randomSequence is null || randomSequence.Count == 0)
         {
-            return GseRandomGenerator.Create();
+            return GameEventScriptRandomGenerator.Create();
         }
 
-        return GseRandomGenerator.FromSequence(randomSequence.Select(value => decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture)).ToArray());
+        return GameEventScriptRandomGenerator.FromSequence(randomSequence.Select(value => decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture)).ToArray());
     }
 
-    private static GseRuntimeLimits CreateRuntimeLimits(GameEventScriptRuntimeLimitsSpec? spec)
+    private static GameEventScriptRuntimeLimits CreateRuntimeLimits(GameEventScriptRuntimeLimitsSpec? spec)
     {
-        var defaults = GseRuntimeLimits.Default;
+        var defaults = GameEventScriptRuntimeLimits.Default;
         if (spec is null)
         {
             return defaults;
         }
 
-        return new GseRuntimeLimits
+        return new GameEventScriptRuntimeLimits
         {
             MaxExecutionSteps = spec.MaxExecutionSteps ?? defaults.MaxExecutionSteps,
             MaxLoopIterations = spec.MaxLoopIterations ?? defaults.MaxLoopIterations,
@@ -599,7 +599,7 @@ internal static class GameEventScriptConformanceRunner
     private static string DescribeDiagnosticExpectation(GameEventScriptDiagnosticExpectationSpec expected)
         => $"kind={expected.Kind ?? "*"}, name={expected.Name ?? "*"}, detailContains={expected.DetailContains ?? expected.MessageContains ?? "*"}";
 
-    private static string DescribeDiagnostics(IEnumerable<GseDiagnosticEvent> diagnostics)
+    private static string DescribeDiagnostics(IEnumerable<GameEventScriptDiagnosticEvent> diagnostics)
         => string.Join(Environment.NewLine, diagnostics.Select(diagnostic => $"{diagnostic.Kind} {diagnostic.Name}: {diagnostic.Detail}"));
 
     private static void ValidateRequired(string? value, string description, string file, string? suite, string? test)
@@ -614,20 +614,20 @@ internal static class GameEventScriptConformanceRunner
     }
 }
 
-internal sealed class GameEventScriptConformanceExtensionRegistry : IGseExtensionRegistry
+internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventScriptExtensionRegistry
 {
     public static readonly GameEventScriptConformanceExtensionRegistry Instance = new();
 
-    private static readonly IGseExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
+    private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
         args.Length == 1
-            ? GseFastValue.FromDecimal(Math.Floor(args[0].Number), args[0].Unit)
-            : GseFastValue.Nothing);
+            ? GameEventScriptFastValue.FromDecimal(Math.Floor(args[0].Number), args[0].Unit)
+            : GameEventScriptFastValue.Nothing);
 
-    private static readonly IGseExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
+    private static readonly IGameEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length == 0)
         {
-            return GseFastValue.Nothing;
+            return GameEventScriptFastValue.Nothing;
         }
 
         var max = args[0].Number;
@@ -636,46 +636,46 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGseExtensio
             max = Math.Max(max, args[index].Number);
         }
 
-        return GseFastValue.FromDecimal(max);
+        return GameEventScriptFastValue.FromDecimal(max);
     });
 
-    private static readonly IGseExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
+    private static readonly IGameEventScriptExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 2)
         {
-            return GseFastValue.Nothing;
+            return GameEventScriptFastValue.Nothing;
         }
 
         var from = args[0].Number;
         var to = args[1].Number;
         var delta = (to - from + 540m) % 360m - 180m;
-        return GseFastValue.FromDecimal(delta, GseDecimalUnit.Degree);
+        return GameEventScriptFastValue.FromDecimal(delta, GameEventScriptDecimalUnit.Degree);
     });
 
-    private static readonly IGseExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
+    private static readonly IGameEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 1)
         {
-            return GseFastValue.FromBoolean(false);
+            return GameEventScriptFastValue.FromBoolean(false);
         }
 
         var value = args[0].Number;
         var wrapped = ((value % 360m) + 360m) % 360m;
-        return GseFastValue.FromBoolean(wrapped is <= 45m or >= 315m);
+        return GameEventScriptFastValue.FromBoolean(wrapped is <= 45m or >= 315m);
     });
 
-    private static readonly IGseExtensionFunction TestVectorSum = new DelegateExtensionFunction((_, args) =>
+    private static readonly IGameEventScriptExtensionFunction TestVectorSum = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 1)
         {
-            return GseFastValue.Nothing;
+            return GameEventScriptFastValue.Nothing;
         }
 
         return args[0].Kind switch
         {
-            GseValueKind.Vector2 => GseFastValue.FromDecimal(args[0].X + args[0].Y, args[0].Unit),
-            GseValueKind.Vector3 => GseFastValue.FromDecimal(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
-            _ => GseFastValue.Nothing
+            GameEventScriptValueKind.Vector2 => GameEventScriptFastValue.FromDecimal(args[0].X + args[0].Y, args[0].Unit),
+            GameEventScriptValueKind.Vector3 => GameEventScriptFastValue.FromDecimal(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
+            _ => GameEventScriptFastValue.Nothing
         };
     });
 
@@ -683,7 +683,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGseExtensio
     {
     }
 
-    public bool TryResolve(GseExtensionReference reference, out IGseExtensionFunction function)
+    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
     {
         if (string.Equals(reference.ExtensionName, "math", StringComparison.Ordinal) &&
             string.Equals(reference.FunctionName, "floor", StringComparison.Ordinal) &&
@@ -733,13 +733,13 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGseExtensio
     }
 
     private static bool IsUnlabeled(string label)
-        => string.Equals(label, GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
+        => string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
 
-    private delegate GseFastValue ExtensionInvoke(GseExtensionContext context, ReadOnlySpan<GseFastValue> arguments);
+    private delegate GameEventScriptFastValue ExtensionInvoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments);
 
-    private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IGseExtensionFunction
+    private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IGameEventScriptExtensionFunction
     {
-        public GseFastValue Invoke(GseExtensionContext context, ReadOnlySpan<GseFastValue> arguments)
+        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
             => invoke(context, arguments);
     }
 }

@@ -16,9 +16,9 @@ internal static class RegisterVmProgramCompiler
         int declarationOrder,
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
-        Func<GseExtensionReference, int>? externalReferenceResolver = null)
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
     {
         if (!TryValidateStatements(statements, callables, out var failureReason))
         {
@@ -54,7 +54,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateStatements(
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
@@ -72,7 +72,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateStatement(
         StatementNode statement,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         switch (statement)
@@ -199,7 +199,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateRange(
         RangeExpressionNode range,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         if (!TryValidateExpression(range.FromExpression, callables, out failureReason))
@@ -227,7 +227,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateExpression(
         ExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         switch (expression)
@@ -540,7 +540,7 @@ internal static class RegisterVmProgramCompiler
                     return false;
                 }
 
-                if (callable.Kind != GseCallableKind.Rule)
+                if (callable.Kind != GameEventScriptCallableKind.Rule)
                 {
                     failureReason = $"Callable '{rulePredicate.RuleName}' is a {callable.Kind}, not a rule.";
                     return false;
@@ -692,7 +692,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateIterationSource(
         IterationSourceNode source,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         switch (source)
@@ -718,7 +718,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidatePipelinedCollection(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         var selectors = new List<CollectionSelectorNode>();
@@ -758,7 +758,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateIndexedCollectionAccess(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         if (expression.Selector is not ExpressionSelectorNode selector)
@@ -786,7 +786,7 @@ internal static class RegisterVmProgramCompiler
     private static bool TryValidateSelector(
         CollectionSelectorNode selector,
         bool isTerminal,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         switch (selector)
@@ -1004,7 +1004,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateDicePattern(
         DicePatternNode pattern,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         if (pattern is DiceCountPatternNode { Face: { } face } &&
@@ -1020,7 +1020,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateObjectMatchPattern(
         ObjectMatchPatternNode pattern,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         out string failureReason)
     {
         foreach (var entry in pattern.Entries)
@@ -1052,7 +1052,7 @@ internal static class RegisterVmProgramCompiler
     }
 
     private sealed class SlotCollector(
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
         private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
@@ -1530,11 +1530,11 @@ internal static class RegisterVmProgramCompiler
 
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
-        Func<GseExtensionReference, int>? externalReferenceResolver)
+        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver)
     {
-        private readonly IReadOnlyDictionary<string, GseCallableDefinition> _callables = callables;
-        private readonly Func<GseExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
+        private readonly IReadOnlyDictionary<string, GameEventScriptCallableDefinition> _callables = callables;
+        private readonly Func<GameEventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
         private readonly Dictionary<ExpressionNode, RegisterVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
         private readonly Dictionary<PublishStatementNode, RegisterVmPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
 
@@ -1655,8 +1655,8 @@ internal static class RegisterVmProgramCompiler
             }
 
             layout = new RegisterVmPublishLayout(
-                GseMessageSignature.NormalizeMessageName(message.Message),
-                GseMessageSignature.CreateSignatureId(message.Message, argumentNames),
+                GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
+                GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
                 argumentNames,
                 argumentPrograms);
             _publishLayouts[publish] = layout;
@@ -1712,24 +1712,24 @@ internal static class RegisterVmProgramCompiler
                         return;
 
                     case UnitDecimalLiteralExpressionNode unitDecimal:
-                        EmitLoadConstant(GseDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
+                        EmitLoadConstant(GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
                             ? RegisterVmValue.Decimal(unitDecimal.Value, unit)
                             : RegisterVmValue.NaN());
                         return;
 
                     case TextLiteralExpressionNode text:
-                        EmitLoadConstant(RegisterVmValue.Reference(GseValueFactory.Text(text.Value)));
+                        EmitLoadConstant(RegisterVmValue.Reference(GameEventScriptValueFactory.Text(text.Value)));
                         return;
 
                     case TagLiteralExpressionNode tag:
-                        EmitLoadConstant(RegisterVmValue.Reference(GseValueFactory.Tag(tag.Name)));
+                        EmitLoadConstant(RegisterVmValue.Reference(GameEventScriptValueFactory.Tag(tag.Name)));
                         return;
 
                     case HandlerLiteralExpressionNode handler:
                     {
                         var parameterNames = handler.SignatureLabels.ToArray();
-                        EmitLoadConstant(RegisterVmValue.Reference(GseValueFactory.Handler(
-                            new GseMessageSignature(handler.Message, parameterNames))));
+                        EmitLoadConstant(RegisterVmValue.Reference(GameEventScriptValueFactory.Handler(
+                            new GameEventScriptMessageSignature(handler.Message, parameterNames))));
                         return;
                     }
 
@@ -1745,8 +1745,8 @@ internal static class RegisterVmProgramCompiler
                         instructions.Add(new RegisterVmProgramInstruction(
                             RegisterVmProgramOpCode.BuildMessage,
                             A: message.Arguments.Count,
-                            DiagnosticName: GseMessageSignature.NormalizeMessageName(message.Message),
-                            DiagnosticArgumentName: GseMessageSignature.CreateSignatureId(message.Message, argumentNames),
+                            DiagnosticName: GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
+                            DiagnosticArgumentName: GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
                             Names: argumentNames));
                         CollapseValuesToSingle(message.Arguments.Count);
                         return;
@@ -1962,14 +1962,14 @@ internal static class RegisterVmProgramCompiler
                         var predicateExtensionReferenceIndex = ResolveExternalReference(
                             extensionPredicate.ExtensionName,
                             extensionPredicate.FunctionName,
-                            [GseMessageSignature.UnlabeledParameterName]);
+                            [GameEventScriptMessageSignature.UnlabeledParameterName]);
                         instructions.Add(new RegisterVmProgramInstruction(
                             RegisterVmProgramOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
                             DiagnosticName: extensionPredicate.ExtensionName,
                             DiagnosticArgumentName: extensionPredicate.FunctionName,
-                            Names: [GseMessageSignature.UnlabeledParameterName]));
+                            Names: [GameEventScriptMessageSignature.UnlabeledParameterName]));
                         return;
 
                     case CallExpressionNode call:
@@ -2017,7 +2017,7 @@ internal static class RegisterVmProgramCompiler
                         instructions.Add(new RegisterVmProgramInstruction(
                             RegisterVmProgramOpCode.Call,
                             A: call.Arguments.Count,
-                            CallableKind: called.Kind == GseCallableKind.Rule
+                            CallableKind: called.Kind == GameEventScriptCallableKind.Rule
                                 ? RegisterVmCallableKind.Rule
                                 : RegisterVmCallableKind.Select,
                             ExpressionProgram: callableProgram,
@@ -2358,7 +2358,7 @@ internal static class RegisterVmProgramCompiler
             }
 
             private int ResolveExternalReference(string extensionName, string functionName, IReadOnlyList<string> argumentLabels)
-                => compiler._externalReferenceResolver?.Invoke(new GseExtensionReference(extensionName, functionName, argumentLabels)) ?? -1;
+                => compiler._externalReferenceResolver?.Invoke(new GameEventScriptExtensionReference(extensionName, functionName, argumentLabels)) ?? -1;
 
             private void CollapseValuesToSingle(int valueCount)
             {

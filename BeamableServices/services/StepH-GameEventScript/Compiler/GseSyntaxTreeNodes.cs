@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
-namespace StepH.GameEventScript.Parser;
+namespace StepH.GameEventScript.Compiler;
 
 // Abstract nodes for the syntax tree
 
@@ -104,7 +104,7 @@ public abstract record GseNode
 
 // Root node of the syntax tree
 
-public sealed record GseModule(string ModuleName, string SourceName, IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<RuleDefinitionNode> RuleDefinitions, IReadOnlyList<SelectDefinitionNode> SelectDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : GseNode;
+public sealed record GseParsedModule(string ModuleName, string SourceName, IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<RuleDefinitionNode> RuleDefinitions, IReadOnlyList<SelectDefinitionNode> SelectDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : GseNode;
 
 // Type/Rule/Select/Handler nodes
 

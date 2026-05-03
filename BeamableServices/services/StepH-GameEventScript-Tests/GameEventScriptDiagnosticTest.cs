@@ -1,4 +1,5 @@
 using StepH.GameEventScript;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -44,8 +45,10 @@ public class GameEventScriptDiagnosticTest
     [TestMethod]
     public void DisplayingDiagnosticsTest()
     {
-        var linkedModule = GameEventScriptManager.LinkScripts(script);
-        var compiledModule = RegisterGseCompiler.Compile(linkedModule, new RegisterGseCompilationOptions { EnableDiagnostics = true });
+        var module = GseModuleBuilder.Create()
+            .AddScript(script)
+            .Build();
+        var compiledModule = RegisterVmCompiler.Compile(module, new RegisterVmCompilationOptions { EnableDiagnostics = true });
         
         var input = Message("Start", ("startPosition", GseValueFactory.Vector2(20, 15)));
         

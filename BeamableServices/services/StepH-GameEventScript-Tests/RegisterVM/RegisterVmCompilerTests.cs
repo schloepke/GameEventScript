@@ -1,6 +1,5 @@
 using StepH.GameEventScript;
-using StepH.GameEventScript.Linker;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -64,9 +63,9 @@ public sealed class RegisterVmCompilerTests
     [TestMethod]
     public void RegisterVmRejectsUnknownStatementNodesAtCompileTime()
     {
-        var module = new LinkedGseModule(
+        var module = new GseModule(
             new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
-            new Dictionary<string, LinkedCallableDefinition>(StringComparer.Ordinal),
+            new Dictionary<string, GseCallableDefinition>(StringComparer.Ordinal),
             new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
             {
                 ["Start"] =
@@ -79,7 +78,7 @@ public sealed class RegisterVmCompilerTests
             },
             sourceCount: 1);
 
-        var exception = Assert.ThrowsExactly<GseCompilationException>(() => RegisterGseCompiler.Compile(module));
+        var exception = Assert.ThrowsExactly<GameEventScriptCompilationException>(() => RegisterVmCompiler.Compile(module));
         StringAssert.Contains(exception.Message, "RegisterVM compiler does not support handler 'Start' #0");
         StringAssert.Contains(exception.Message, nameof(UnknownStatementNode));
     }
@@ -597,7 +596,7 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(
                 script,
-                new RegisterGseCompilationOptions { EnableDiagnostics = true }));
+                new RegisterVmCompilationOptions { EnableDiagnostics = true }));
 
         host.Publish(Message("Start", ("value", GseValueFactory.Integer(5))));
 

@@ -4,9 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using static StepH.GameEventScript.Parser.GseTokenKind;
+using static StepH.GameEventScript.Compiler.GseTokenKind;
 
-namespace StepH.GameEventScript.Parser;
+namespace StepH.GameEventScript.Compiler;
 
 
 /// <summary>
@@ -17,12 +17,12 @@ namespace StepH.GameEventScript.Parser;
 public sealed class GseParser
 {
     /// <summary>
-    /// Parses the provided GameEventScript string into an GseModule, which represents the root node of the syntax tree.
+    /// Parses the provided GameEventScript string into an GseParsedModule, which represents the root node of the syntax tree.
     /// </summary>
     /// <param name="script">The GameEventScript source code to be parsed.</param>
     /// <param name="sourceName">An optional source name used for diagnostics.</param>
-    /// <returns>An <see cref="GseModule"/> representing the parsed syntax tree structure.</returns>
-    public static GseModule Parse(string script, string? sourceName = null)
+    /// <returns>An <see cref="GseParsedModule"/> representing the parsed syntax tree structure.</returns>
+    public static GseParsedModule Parse(string script, string? sourceName = null)
     {
         _ = script ?? throw new ArgumentNullException(nameof(script));
 
@@ -40,7 +40,6 @@ public sealed class GseParser
                 initialErrors.Add(new GseSyntaxError(
                     $"Illegal token '{token.Text}'",
                     moduleName,
-                    GseSyntaxErrorKind.Syntax,
                     new GseSourceLocation(resolvedSourceName, token.Line, token.Column, token.EndLine, token.EndColumn, moduleName)));
                 continue;
             }
@@ -126,7 +125,7 @@ public sealed class GseParser
     private T WithRange<T>(T node, GseNode? first, GseNode? last = null) where T : GseNode
         => node with { SourceRange = MergeRanges(first, last) };
 
-    private GseModule ParseGse()
+    private GseParsedModule ParseGse()
     {
         var typeDefinitions = new List<TypeDefinitionNode>();
         var ruleDefinitions = new List<RuleDefinitionNode>();
@@ -168,10 +167,10 @@ public sealed class GseParser
 
         if (_errors.Count > 0)
         {
-            throw new GseSyntaxException(_errors);
+            throw new GameEventScriptSyntaxException(_errors);
         }
 
-        var module = new GseModule(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
+        var module = new GseParsedModule(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
         var firstToken = _tokens.FirstOrDefault();
         if (firstToken.Kind == EndOfFile)
         {
@@ -2531,7 +2530,6 @@ public sealed class GseParser
         _errors.Add(new GseSyntaxError(
             exception.Message,
             _moduleName,
-            GseSyntaxErrorKind.Syntax,
             new GseSourceLocation(_sourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, _moduleName)));
     }
 

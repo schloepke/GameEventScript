@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace StepH.GameEventScript.Parser;
+namespace StepH.GameEventScript.Compiler;
 
 public enum GseTokenKind
 {

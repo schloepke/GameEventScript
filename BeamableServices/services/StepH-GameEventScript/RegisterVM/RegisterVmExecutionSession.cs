@@ -4,8 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using StepH.GameEventScript.Linker;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Types.GseValueFactory;
@@ -2156,7 +2155,7 @@ internal sealed class RegisterVmExecutionSession
     private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterVmValue value)
     {
         if (!_compiledScript.Callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
-            callable.Kind != LinkedCallableKind.Rule ||
+            callable.Kind != GseCallableKind.Rule ||
             callable.Parameters.Count != 1 ||
             !TryEvaluate(rulePredicate.Value, out var input))
         {
@@ -2243,7 +2242,7 @@ internal sealed class RegisterVmExecutionSession
         var instruction = new RegisterVmProgramInstruction(
             RegisterVmProgramOpCode.Call,
             A: call.Arguments.Count,
-            CallableKind: callable.Kind == LinkedCallableKind.Rule
+            CallableKind: callable.Kind == GseCallableKind.Rule
                 ? RegisterVmCallableKind.Rule
                 : RegisterVmCallableKind.Select,
             ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)

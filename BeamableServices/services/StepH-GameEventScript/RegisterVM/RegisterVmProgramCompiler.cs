@@ -3,8 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Linker;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
@@ -17,13 +16,13 @@ internal static class RegisterVmProgramCompiler
         int declarationOrder,
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
         Func<GseExtensionReference, int>? externalReferenceResolver = null)
     {
         if (!TryValidateStatements(statements, callables, out var failureReason))
         {
-            throw new GseCompilationException(
+            throw new GameEventScriptCompilationException(
                 $"RegisterVM compiler does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
         }
 
@@ -55,7 +54,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateStatements(
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
@@ -73,7 +72,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateStatement(
         StatementNode statement,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (statement)
@@ -200,7 +199,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateRange(
         RangeExpressionNode range,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         if (!TryValidateExpression(range.FromExpression, callables, out failureReason))
@@ -228,7 +227,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateExpression(
         ExpressionNode expression,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (expression)
@@ -541,7 +540,7 @@ internal static class RegisterVmProgramCompiler
                     return false;
                 }
 
-                if (callable.Kind != LinkedCallableKind.Rule)
+                if (callable.Kind != GseCallableKind.Rule)
                 {
                     failureReason = $"Callable '{rulePredicate.RuleName}' is a {callable.Kind}, not a rule.";
                     return false;
@@ -693,7 +692,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateIterationSource(
         IterationSourceNode source,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (source)
@@ -719,7 +718,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidatePipelinedCollection(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         var selectors = new List<CollectionSelectorNode>();
@@ -759,7 +758,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateIndexedCollectionAccess(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         if (expression.Selector is not ExpressionSelectorNode selector)
@@ -787,7 +786,7 @@ internal static class RegisterVmProgramCompiler
     private static bool TryValidateSelector(
         CollectionSelectorNode selector,
         bool isTerminal,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (selector)
@@ -1005,7 +1004,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateDicePattern(
         DicePatternNode pattern,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         if (pattern is DiceCountPatternNode { Face: { } face } &&
@@ -1021,7 +1020,7 @@ internal static class RegisterVmProgramCompiler
 
     private static bool TryValidateObjectMatchPattern(
         ObjectMatchPatternNode pattern,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         foreach (var entry in pattern.Entries)
@@ -1053,7 +1052,7 @@ internal static class RegisterVmProgramCompiler
     }
 
     private sealed class SlotCollector(
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
         private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
@@ -1531,10 +1530,10 @@ internal static class RegisterVmProgramCompiler
 
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         Func<GseExtensionReference, int>? externalReferenceResolver)
     {
-        private readonly IReadOnlyDictionary<string, LinkedCallableDefinition> _callables = callables;
+        private readonly IReadOnlyDictionary<string, GseCallableDefinition> _callables = callables;
         private readonly Func<GseExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
         private readonly Dictionary<ExpressionNode, RegisterVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
         private readonly Dictionary<PublishStatementNode, RegisterVmPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
@@ -1643,7 +1642,7 @@ internal static class RegisterVmProgramCompiler
 
             if (publish.MessageExpression is not MessageLiteralExpressionNode message)
             {
-                throw new GseCompilationException("RegisterVM compiler does not support this publish expression.");
+                throw new GameEventScriptCompilationException("RegisterVM compiler does not support this publish expression.");
             }
 
             var argumentNames = new string[message.Arguments.Count];
@@ -1939,12 +1938,12 @@ internal static class RegisterVmProgramCompiler
                         if (!compiler._callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
                             callable.Parameters.Count != 1)
                         {
-                            throw new GseCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         if (!compiler.TryGetSlot(callable.Parameters[0], out var parameterSlot))
                         {
-                            throw new GseCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         EmitExpression(rulePredicate.Value);
@@ -1978,7 +1977,7 @@ internal static class RegisterVmProgramCompiler
                         {
                             if (!compiler.TryGetSlot(call.Name, out var handlerSlot))
                             {
-                                throw new GseCompilationException($"RegisterVM compiler does not support callable '{call.Name}'.");
+                                throw new GameEventScriptCompilationException($"RegisterVM compiler does not support callable '{call.Name}'.");
                             }
 
                             var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
@@ -2018,7 +2017,7 @@ internal static class RegisterVmProgramCompiler
                         instructions.Add(new RegisterVmProgramInstruction(
                             RegisterVmProgramOpCode.Call,
                             A: call.Arguments.Count,
-                            CallableKind: called.Kind == LinkedCallableKind.Rule
+                            CallableKind: called.Kind == GseCallableKind.Rule
                                 ? RegisterVmCallableKind.Rule
                                 : RegisterVmCallableKind.Select,
                             ExpressionProgram: callableProgram,
@@ -2031,7 +2030,7 @@ internal static class RegisterVmProgramCompiler
                     case TypeCastExpressionNode typeCast:
                         if (!compiler.TryGetCastKind(typeCast.TypeName, out var castKind))
                         {
-                            throw new GseCompilationException($"RegisterVM compiler does not support type cast '{typeCast.TypeName}'.");
+                            throw new GameEventScriptCompilationException($"RegisterVM compiler does not support type cast '{typeCast.TypeName}'.");
                         }
 
                         EmitExpression(typeCast.Value);
@@ -2095,7 +2094,7 @@ internal static class RegisterVmProgramCompiler
                         return;
 
                     default:
-                        throw new GseCompilationException($"RegisterVM compiler does not support expression node '{expression.GetType().Name}'.");
+                        throw new GameEventScriptCompilationException($"RegisterVM compiler does not support expression node '{expression.GetType().Name}'.");
                 }
             }
 
@@ -2324,7 +2323,7 @@ internal static class RegisterVmProgramCompiler
                             count: slice.Count);
 
                     default:
-                        throw new GseCompilationException($"RegisterVM compiler does not support selector node '{selector.GetType().Name}'.");
+                        throw new GameEventScriptCompilationException($"RegisterVM compiler does not support selector node '{selector.GetType().Name}'.");
                 }
             }
 
@@ -2400,7 +2399,7 @@ internal static class RegisterVmProgramCompiler
                     "combine" or "merge" => RegisterVmProgramOpCode.Combine,
                     "except" => RegisterVmProgramOpCode.Except,
                     "zip" => RegisterVmProgramOpCode.Zip,
-                    _ => throw new GseCompilationException($"RegisterVM compiler does not support binary operator '{operation}'.")
+                    _ => throw new GameEventScriptCompilationException($"RegisterVM compiler does not support binary operator '{operation}'.")
                 };
         }
     }

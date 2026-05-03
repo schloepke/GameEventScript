@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;

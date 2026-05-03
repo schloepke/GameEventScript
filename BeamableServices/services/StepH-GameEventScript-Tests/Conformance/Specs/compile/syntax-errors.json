@@ -7,8 +7,7 @@
       "name": "missing expression in let statement fails syntax analysis",
       "script": "on Broken {\n  let x be\n  publish Done\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -16,8 +15,7 @@
       "name": "malformed rule parameter fails syntax analysis",
       "script": "module BrokenCombat\nrule unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  publish Done\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -26,7 +24,6 @@
       "script": "on Broken {\n  let value be hello%&some\n  let other be @\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Syntax",
         "messageContains": "hello%&some"
       }
     },
@@ -35,8 +32,7 @@
       "name": "legacy percent modulo operator is rejected",
       "script": "on Broken {\n  let value be 10 % 3\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -44,8 +40,7 @@
       "name": "type tags are case sensitive",
       "script": "on Start(value) {\n  let numberValue as :Decimal be value\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -53,8 +48,7 @@
       "name": "legacy external handler syntax is rejected",
       "script": "external on Notify(playerId, points)",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -62,8 +56,7 @@
       "name": "sort selector requires explicit direction",
       "script": "on Sorted(items) {\n  let values be items[:sort]\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -71,8 +64,7 @@
       "name": "legacy untagged type declaration is rejected",
       "script": "on Start(value) {\n  let score as decimal be value\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -80,8 +72,7 @@
       "name": "legacy untagged unary form is rejected",
       "script": "on Start(values) {\n  let size be len values\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -89,8 +80,7 @@
       "name": "legacy floor prefix builtin is rejected",
       "script": "on Start {\n  let value be :floor 10.4\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -98,8 +88,7 @@
       "name": "legacy wrapDegree prefix builtin is rejected",
       "script": "on Start {\n  let value be :wrapDegree 370°\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -107,8 +96,7 @@
       "name": "direct range is rejected after in for loops",
       "script": "on Start {\n  for item in from 1 to 10 publish Seen(value: item)\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -116,8 +104,7 @@
       "name": "direct range is rejected after in generated collections",
       "script": "on Start {\n  let values be :list[:select item in from 1 to 5 -> item]\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -125,8 +112,7 @@
       "name": "seeded random blocks cannot be value expressions",
       "script": "on Start(seed) {\n  let values be :random with seed {\n    publish Done\n  }\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -134,8 +120,7 @@
       "name": "drop selector requires a supported scope",
       "script": "on Broken {\n  let x be :dice 4d6[:drop middle 1]\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -143,8 +128,7 @@
       "name": "dice counts must be positive integers",
       "script": "on Broken {\n  let x be :dice 0d6\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -152,8 +136,7 @@
       "name": "handler headers reject handler tag prefix",
       "script": "on :handler Shoot(unit, target) {\n  publish Done\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -161,8 +144,7 @@
       "name": "publish rejects incomplete labeled message arguments",
       "script": "on Start(unit, target) {\n  publish Shoot(unit:)\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -170,8 +152,7 @@
       "name": "prefix message and handler literals are rejected",
       "script": "on Start(unit, target) {\n  let h as :handler be :handler Shoot(unit, target)\n  let m as :message be :message Shoot(unit: unit, target: target)\n  publish :message Shoot(unit: unit, target: target)\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -179,8 +160,7 @@
       "name": "uppercase positional invocation requires identifier parameters",
       "script": "on Start(unit) {\n  let invalid be Shoot(unit + 1)\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     },
     {
@@ -188,8 +168,7 @@
       "name": "rule select and handler identifiers enforce casing",
       "script": "rule Wounded(unit) means unit.hp < unit.maxHp\nselect filter(Units) means Units\non Start(Target) {\n  publish Done\n}",
       "expectedError": {
-        "phase": "syntax",
-        "kind": "Syntax"
+        "phase": "syntax"
       }
     }
   ]

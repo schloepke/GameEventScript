@@ -3,8 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Linker;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.RegisterVM;
@@ -18,10 +17,10 @@ public sealed class RegisterCompiledGse : IGseMessageHandlerCollection
     private IGseExtensionFunction[] _boundExtensionSlots = [];
 
     internal RegisterCompiledGse(
-        RegisterGseCompilationOptions options,
+        RegisterVmCompilationOptions options,
         RegisterBytecodeModule bytecodeModule,
         IReadOnlyDictionary<string, IReadOnlyList<RegisterCompiledGseHandler>> handlers,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, RegisterVmTypeDefinition> typeDefinitions)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -37,7 +36,7 @@ public sealed class RegisterCompiledGse : IGseMessageHandlerCollection
             .ToArray();
     }
 
-    public RegisterGseCompilationOptions Options { get; }
+    public RegisterVmCompilationOptions Options { get; }
 
     public bool DiagnosticsEnabled => Options.EnableDiagnostics;
 
@@ -45,7 +44,7 @@ public sealed class RegisterCompiledGse : IGseMessageHandlerCollection
 
     internal RegisterBytecodeModule BytecodeModule { get; }
 
-    internal IReadOnlyDictionary<string, LinkedCallableDefinition> Callables { get; }
+    internal IReadOnlyDictionary<string, GseCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, RegisterVmTypeDefinition> TypeDefinitions { get; }
 

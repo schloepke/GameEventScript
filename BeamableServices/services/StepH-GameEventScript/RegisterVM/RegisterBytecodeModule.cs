@@ -8,7 +8,7 @@ using StepH.GameEventScript.Types;
 namespace StepH.GameEventScript.RegisterVM;
 
 internal sealed class RegisterBytecodeModule(
-    RegisterGseCompilationOptions options,
+    RegisterVmCompilationOptions options,
     IReadOnlyList<string> stringPool,
     IReadOnlyList<GseValue> constantPool,
     IReadOnlyList<string> signatures,
@@ -17,7 +17,7 @@ internal sealed class RegisterBytecodeModule(
     IReadOnlyList<string> typeMetadata,
     IReadOnlyList<RegisterProgram> programs)
 {
-    public RegisterGseCompilationOptions Options { get; } = options ?? throw new ArgumentNullException(nameof(options));
+    public RegisterVmCompilationOptions Options { get; } = options ?? throw new ArgumentNullException(nameof(options));
 
     public IReadOnlyList<string> StringPool { get; } = stringPool ?? throw new ArgumentNullException(nameof(stringPool));
 

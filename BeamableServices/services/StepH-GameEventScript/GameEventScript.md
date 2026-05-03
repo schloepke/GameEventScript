@@ -140,8 +140,8 @@ The module declaration is optional. If it is omitted, the parser creates an
 anonymous module name. Module names may use either lowercase identifier style or
 uppercase message style.
 
-Multiple scripts can be compiled together. Rules, selects, record types, and
-handlers from all modules are linked into one runtime module.
+Multiple scripts can be built together. Rules, selects, record types, and
+handlers from all sources are merged into one runtime module.
 
 ### Top-level declarations
 
@@ -362,7 +362,7 @@ on Start(value) {
 }
 ```
 
-Duplicate local variables in the same scope are linkage errors.
+Duplicate local variables in the same scope are module build errors.
 
 ### Control flow
 
@@ -457,7 +457,7 @@ wounded(unit)
 ```
 
 Calling an unknown rule, using the wrong arity, or using `x is rule` with a
-non-unary rule is a linkage error.
+non-unary rule is a module build error.
 
 ### Selects
 
@@ -1735,7 +1735,7 @@ Compile options use RegisterVM options:
 ```csharp
 var compiled = GameEventScriptManager.Compile(
     script,
-    new RegisterGseCompilationOptions
+    new RegisterVmCompilationOptions
     {
         EnableDiagnostics = true
     });
@@ -1809,7 +1809,7 @@ var diagnostics = new GseDiagnosticTraceCollector();
 
 var compiled = GameEventScriptManager.Compile(
     script,
-    new RegisterGseCompilationOptions { EnableDiagnostics = true });
+    new RegisterVmCompilationOptions { EnableDiagnostics = true });
 
 var host = GseHost.CreateBuilder()
     .WithDiagnosticCollector(diagnostics)
@@ -1837,13 +1837,13 @@ Host publish diagnostics are recorded independently of compile diagnostics.
 ## Errors and Limits
 
 GameEventScript is lenient at runtime, but it still rejects malformed programs at
-compile or link time.
+syntax, module-build, or VM-compile time.
 
 Syntax errors include malformed tokens, missing expressions, legacy removed
 syntax, invalid handler headers, invalid dice counts, and invalid selector
 syntax.
 
-Linkage errors include:
+Module build errors include:
 
 - missing rule/select calls
 - wrong rule/select arity

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using StepH.GameEventScript;
-using StepH.GameEventScript.Linker;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -111,11 +111,11 @@ internal static class GameEventScriptConformanceRunner
 
     internal static IGseMessageHandlerCollection CompileScripts(GameEventScriptConformanceTest test)
     {
-        var linked = LinkScripts(test);
+        var module = BuildModule(test);
         var diagnosticsEnabled = test.CompileOptions?.EnableDiagnostics ?? false;
-        return RegisterGseCompiler.Compile(
-            linked,
-            new RegisterGseCompilationOptions
+        return RegisterVmCompiler.Compile(
+            module,
+            new RegisterVmCompilationOptions
             {
                 EnableDiagnostics = diagnosticsEnabled
             });
@@ -161,17 +161,17 @@ internal static class GameEventScriptConformanceRunner
         {
             CompileScripts(testCase.Test);
         }
-        catch (GseSyntaxException exception)
+        catch (GameEventScriptSyntaxException exception)
         {
             AssertSyntaxError(testCase, expected, exception);
             return;
         }
-        catch (GseLinkageException exception)
+        catch (GameEventScriptModuleBuildException exception)
         {
-            AssertLinkageError(testCase, expected, exception);
+            AssertModuleBuildError(testCase, expected, exception);
             return;
         }
-        catch (GseCompilationException exception)
+        catch (GameEventScriptCompilationException exception)
         {
             AssertGenericCompilationError(testCase, expected, exception);
             return;
@@ -408,7 +408,7 @@ internal static class GameEventScriptConformanceRunner
     private static void AssertSyntaxError(
         GameEventScriptConformanceCase testCase,
         GameEventScriptExpectedCompileErrorSpec expected,
-        GseSyntaxException exception)
+        GameEventScriptSyntaxException exception)
     {
         if (!PhaseMatches(expected, "syntax"))
         {
@@ -416,7 +416,6 @@ internal static class GameEventScriptConformanceRunner
         }
 
         if (exception.Errors.Any(error =>
-                Matches(expected.Kind, error.Kind.ToString()) &&
                 Matches(expected.ModuleName, error.ModuleName) &&
                 MessageMatches(expected.MessageContains, error.Message, exception.Message)))
         {
@@ -426,14 +425,14 @@ internal static class GameEventScriptConformanceRunner
         Assert.Fail($"{testCase}: syntax error expectation did not match.{Environment.NewLine}{exception.Message}");
     }
 
-    private static void AssertLinkageError(
+    private static void AssertModuleBuildError(
         GameEventScriptConformanceCase testCase,
         GameEventScriptExpectedCompileErrorSpec expected,
-        GseLinkageException exception)
+        GameEventScriptModuleBuildException exception)
     {
-        if (!PhaseMatches(expected, "linkage"))
+        if (!PhaseMatches(expected, "build"))
         {
-            Assert.Fail($"{testCase}: expected phase '{expected.Phase}', but got linkage error: {exception.Message}");
+            Assert.Fail($"{testCase}: expected phase '{expected.Phase}', but got module build error: {exception.Message}");
         }
 
         if (exception.Errors.Any(error =>
@@ -446,13 +445,13 @@ internal static class GameEventScriptConformanceRunner
             return;
         }
 
-        Assert.Fail($"{testCase}: linkage error expectation did not match.{Environment.NewLine}{exception.Message}");
+        Assert.Fail($"{testCase}: module build error expectation did not match.{Environment.NewLine}{exception.Message}");
     }
 
     private static void AssertGenericCompilationError(
         GameEventScriptConformanceCase testCase,
         GameEventScriptExpectedCompileErrorSpec expected,
-        GseCompilationException exception)
+        GameEventScriptCompilationException exception)
     {
         if (!PhaseMatches(expected, "compilation") || !MessageMatches(expected.MessageContains, exception.Message))
         {
@@ -460,12 +459,15 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static LinkedGseModule LinkScripts(GameEventScriptConformanceTest test)
+    private static GseModule BuildModule(GameEventScriptConformanceTest test)
     {
-        var modules = GetSources(test)
-            .Select(source => GameEventScriptManager.ParseModule(source.Text!, source.SourceName))
-            .ToArray();
-        return GameEventScriptManager.LinkModules(modules);
+        var builder = GseModuleBuilder.Create();
+        foreach (var source in GetSources(test))
+        {
+            builder.AddScript(source.Text!, source.SourceName);
+        }
+
+        return builder.Build();
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GseMessageSignature>> GetMessageDefinitions(

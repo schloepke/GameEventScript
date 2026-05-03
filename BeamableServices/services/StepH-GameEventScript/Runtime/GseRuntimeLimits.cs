@@ -1,6 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;

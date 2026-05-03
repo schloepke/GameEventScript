@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using StepH.GameEventScript;
-using StepH.GameEventScript.Linker;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -52,8 +52,8 @@ public sealed class RegisterVmPerformanceReportTests
 
         WarmUp(input);
 
-        var linked = LinkPerformanceScript();
-        var registerVmCompile = Measure<IGseMessageHandlerCollection>("registervm compile", () => CompileScript(linked));
+        var module = BuildPerformanceModule();
+        var registerVmCompile = Measure<IGseMessageHandlerCollection>("registervm compile", () => CompileScript(module));
 
         var registerVmRun = MeasureRun(registerVmCompile.Value, input, MeasuredRuns);
 
@@ -63,20 +63,22 @@ public sealed class RegisterVmPerformanceReportTests
         WriteReport("registervm", registerVmCompile, registerVmRun);
         TestContext.WriteLine("allocation values are cumulative thread allocations, not peak live memory.");
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(CompileScript(linked)));
+        TestContext.WriteLine("RegisterVM Dump:\n" + RegisterBytecodeDumper.ToDebugText(CompileScript(module)));
     }
 
     private static void WarmUp(GseMessage input)
     {
-        var linked = LinkPerformanceScript();
-        MeasureRun(CompileScript(linked), input, WarmupRuns);
+        var module = BuildPerformanceModule();
+        MeasureRun(CompileScript(module), input, WarmupRuns);
     }
 
-    private static LinkedGseModule LinkPerformanceScript()
-        => GameEventScriptManager.LinkModules(GameEventScriptManager.ParseModule(PerformanceScript, "engine-performance.es"));
+    private static GseModule BuildPerformanceModule()
+        => GseModuleBuilder.Create()
+            .AddScript(PerformanceScript, "engine-performance.es")
+            .Build();
 
-    private static RegisterCompiledGse CompileScript(LinkedGseModule linked)
-        => RegisterGseCompiler.Compile(linked);
+    private static RegisterCompiledGse CompileScript(GseModule module)
+        => RegisterVmCompiler.Compile(module);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {

@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeVM;
-using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 
@@ -42,7 +41,7 @@ public sealed class GameEventScriptHost
 
     #region Public interface
 
-    public GameEventScriptHost Load(GameEventScriptBytecode bytecode, int? priority = null)
+    public GameEventScriptHost Load(GameEventScriptCompiled bytecode, int? priority = null)
     {
         _ = bytecode ?? throw new ArgumentNullException(nameof(bytecode));
         return Load(BytecodeVmExecutableBuilder.Build(bytecode), priority);
@@ -51,7 +50,7 @@ public sealed class GameEventScriptHost
     public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int? priority = null)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        if (handlers is CompiledGameEventScript registerCompiled)
+        if (handlers is GseBytecodeVmExecutable registerCompiled)
         {
             GameEventScriptDynamicLinker.Bind(registerCompiled, _extensionRegistry);
         }

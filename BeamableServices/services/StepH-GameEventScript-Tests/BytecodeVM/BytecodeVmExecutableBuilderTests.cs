@@ -65,9 +65,9 @@ public sealed class BytecodeVmExecutableBuilderTests
     [TestMethod]
     public void BytecodeVmRejectsUnknownStatementNodesAtCompileTime()
     {
-        var module = new GameEventScriptModule(
+        var module = new GseModule(
             new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
-            new Dictionary<string, GameEventScriptCallableDefinition>(StringComparer.Ordinal),
+            new Dictionary<string, GseCallableDefinition>(StringComparer.Ordinal),
             new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
             {
                 ["Start"] =
@@ -79,7 +79,7 @@ public sealed class BytecodeVmExecutableBuilderTests
                 ]
             });
 
-        var exception = Assert.ThrowsExactly<GameEventScriptCompilationException>(() => BytecodeVmExecutableBuilder.Build(module));
+        var exception = Assert.ThrowsExactly<GameEventScriptCompilationException>(() => GesBytecodeCompiler.Compile(module));
         StringAssert.Contains(exception.Message, "BytecodeVM execution planner does not support handler 'Start' #0");
         StringAssert.Contains(exception.Message, nameof(UnknownStatementNode));
     }

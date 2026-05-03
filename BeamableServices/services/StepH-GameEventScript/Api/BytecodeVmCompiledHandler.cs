@@ -3,14 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Compiler;
 
-namespace StepH.GameEventScript.BytecodeVM;
+namespace StepH.GameEventScript.Api;
 
-internal sealed class CompiledGameEventScriptHandler
+internal sealed class BytecodeVmCompiledHandler
 {
-    internal CompiledGameEventScriptHandler(
+    internal BytecodeVmCompiledHandler(
         string message,
         IReadOnlyList<string> parameters,
         IReadOnlyList<string> signatureLabels,
@@ -18,7 +16,6 @@ internal sealed class CompiledGameEventScriptHandler
         int declarationOrder,
         int programIndex,
         bool diagnosticsEnabled,
-        IReadOnlyList<StatementNode> statements,
         BytecodeVmExecutionPlan executionPlan)
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));
@@ -28,7 +25,6 @@ internal sealed class CompiledGameEventScriptHandler
         DeclarationOrder = declarationOrder;
         ProgramIndex = programIndex;
         DiagnosticsEnabled = diagnosticsEnabled;
-        Statements = statements?.ToArray() ?? throw new ArgumentNullException(nameof(statements));
         ExecutionPlan = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
         Definition = GameEventScriptMessageSignature.Create(message, SignatureLabels);
     }
@@ -48,8 +44,6 @@ internal sealed class CompiledGameEventScriptHandler
     internal int ProgramIndex { get; }
 
     internal bool DiagnosticsEnabled { get; }
-
-    internal IReadOnlyList<StatementNode> Statements { get; }
 
     internal BytecodeVmExecutionPlan ExecutionPlan { get; }
 }

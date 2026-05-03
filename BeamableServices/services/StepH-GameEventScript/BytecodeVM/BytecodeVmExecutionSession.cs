@@ -5,18 +5,18 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
-namespace StepH.GameEventScript.BytecodeVM;
+namespace StepH.GameEventScript.Api;
 
 internal sealed class BytecodeVmExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
-    private readonly CompiledGameEventScript _compiledScript;
+    private readonly GseBytecodeVmExecutable _compiledScript;
     private readonly GameEventScriptContext _context;
     private readonly BytecodeVmExecutionPlan _plan;
     private readonly BytecodeVmValue[] _locals;
@@ -29,7 +29,7 @@ internal sealed class BytecodeVmExecutionSession
     private bool _halted;
 
     private BytecodeVmExecutionSession(
-        CompiledGameEventScript compiledScript,
+        GseBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
         BytecodeVmExecutionPlan plan,
         bool diagnosticsEnabled)
@@ -40,14 +40,14 @@ internal sealed class BytecodeVmExecutionSession
         _diagnosticsEnabled = diagnosticsEnabled;
         _locals = new BytecodeVmValue[plan.SlotCount];
         _assignedSlots = new bool[plan.SlotCount];
-        _evaluationStack = new BytecodeVmValue[Math.Max(16, plan.MaxStackDepth + 16)];
+        _evaluationStack = new BytecodeVmValue[Math.Max(16, Math.Max(plan.MaxStackDepth, compiledScript.BytecodeModule.MaxStackDepth) + 16)];
         _randomScopes.Push(context.Random);
     }
 
     public static void InvokeHandler(
-        CompiledGameEventScript compiledScript,
+        GseBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
-        CompiledGameEventScriptHandler handler,
+        BytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
         var session = new BytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
@@ -58,7 +58,7 @@ internal sealed class BytecodeVmExecutionSession
         }
     }
 
-    private bool TryInvoke(CompiledGameEventScriptHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
+    private bool TryInvoke(BytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
         EnterScope();
         try
@@ -82,7 +82,7 @@ internal sealed class BytecodeVmExecutionSession
 
             RecordHandlerInvoked(handler.Message, args);
 
-            return TryExecuteStatements(handler.Statements);
+            return TryExecuteStatementProgram(handler.ExecutionPlan.StatementProgram);
         }
         finally
         {
@@ -101,7 +101,25 @@ internal sealed class BytecodeVmExecutionSession
         return args.TryGetValue(parameter, out value!);
     }
 
-    private bool TryExecuteStatements(IReadOnlyList<StatementNode> statements)
+    private bool TryExecuteStatementProgram(BytecodeVmStatementProgram program)
+    {
+        if (!program.CreatesScope)
+        {
+            return TryExecuteStatements(program.Statements);
+        }
+
+        EnterScope();
+        try
+        {
+            return TryExecuteStatements(program.Statements);
+        }
+        finally
+        {
+            ExitScope();
+        }
+    }
+
+    private bool TryExecuteStatements(IReadOnlyList<BytecodeVmStatement> statements)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
         {
@@ -126,60 +144,65 @@ internal sealed class BytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteStatement(StatementNode statement)
+    private bool TryExecuteStatement(BytecodeVmStatement statement)
     {
-        switch (statement)
+        switch (statement.Kind)
         {
-            case LetStatementNode let:
-                if (!TryEvaluate(let.Expression, out var letValue))
+            case BytecodeVmStatementKind.Let:
+                if (statement.ExpressionProgram is null ||
+                    string.IsNullOrEmpty(statement.Name) ||
+                    !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var letValue))
                 {
                     return false;
                 }
 
-                if (!string.IsNullOrEmpty(let.DeclaredType) &&
-                    !TryConvertDeclaredType(let.DeclaredType!, letValue, out letValue))
+                if (!string.IsNullOrEmpty(statement.DeclaredType) &&
+                    !TryConvertDeclaredType(statement.DeclaredType!, letValue, out letValue))
                 {
                     return false;
                 }
 
-                RecordLetEvaluated(let.Identifier, letValue);
-                RecordLetExpressionEvaluatedToNothing(let.Identifier, letValue);
-                return Define(let.Identifier, letValue);
+                RecordLetEvaluated(statement.Name!, letValue);
+                RecordLetExpressionEvaluatedToNothing(statement.Name!, letValue);
+                return Define(statement.Name!, letValue);
 
-            case PublishStatementNode publish:
-                return _plan.TryGetPublishLayout(publish, out var layout)
-                    ? TryPublish(layout)
-                    : TryPublish(publish.MessageExpression);
+            case BytecodeVmStatementKind.Publish:
+                return statement.PublishLayout is not null
+                    ? TryPublish(statement.PublishLayout)
+                    : statement.ExpressionProgram is not null && TryPublish(statement.ExpressionProgram);
 
-            case IfStatementNode ifStatement:
-                return TryExecuteIf(ifStatement);
+            case BytecodeVmStatementKind.If:
+                return TryExecuteIf(statement);
 
-            case ForStatementNode { Source: RangeIterationSourceNode range } forStatement:
-                return TryExecuteRangeFor(forStatement, range.RangeExpression);
+            case BytecodeVmStatementKind.ForRange:
+                return TryExecuteRangeFor(statement);
 
-            case ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement:
-                return TryExecuteCollectionFor(forStatement, collection.Expression);
+            case BytecodeVmStatementKind.ForCollection:
+                return TryExecuteCollectionFor(statement);
 
-            case ExpressionStatementNode expressionStatement:
-                if (!TryEvaluate(expressionStatement.Expression, out var expressionValue))
+            case BytecodeVmStatementKind.Expression:
+                if (statement.ExpressionProgram is null ||
+                    !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var expressionValue))
                 {
                     return false;
                 }
 
-                RecordExpressionStatementEvaluatedToNothing(expressionStatement.Expression, expressionValue);
+                RecordExpressionStatementEvaluatedToNothing(statement.DiagnosticName, expressionValue);
                 return true;
 
-            case SeededRandomStatementNode seededRandom:
-                return TryExecuteSeededRandomStatement(seededRandom);
+            case BytecodeVmStatementKind.SeededRandom:
+                return TryExecuteSeededRandomStatement(statement);
 
             default:
                 return false;
         }
     }
 
-    private bool TryExecuteSeededRandomStatement(SeededRandomStatementNode seededRandom)
+    private bool TryExecuteSeededRandomStatement(BytecodeVmStatement statement)
     {
-        if (!TryEvaluate(seededRandom.SeedExpression, out var seed))
+        if (statement.ExpressionProgram is null ||
+            statement.BodyProgram is null ||
+            !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var seed))
         {
             return false;
         }
@@ -187,7 +210,7 @@ internal sealed class BytecodeVmExecutionSession
         PushSeededRandomScope(seed.ToGameEventScriptValue());
         try
         {
-            return TryExecuteStatementBody(seededRandom.Body);
+            return TryExecuteStatementProgram(statement.BodyProgram);
         }
         finally
         {
@@ -195,44 +218,32 @@ internal sealed class BytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteIf(IfStatementNode ifStatement)
+    private bool TryExecuteIf(BytecodeVmStatement statement)
     {
-        if (!TryEvaluate(ifStatement.Condition, out var condition))
+        if (statement.ExpressionProgram is null ||
+            statement.ThenProgram is null ||
+            !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var condition))
         {
             return false;
         }
 
         if (condition.AsBoolean())
         {
-            return TryExecuteStatementBody(ifStatement.ThenBody);
+            return TryExecuteStatementProgram(statement.ThenProgram);
         }
 
-        return ifStatement.ElseBody is null ||
-               TryExecuteStatementBody(ifStatement.ElseBody);
+        return statement.ElseProgram is null ||
+               TryExecuteStatementProgram(statement.ElseProgram);
     }
 
-    private bool TryExecuteStatementBody(StatementBodyNode body)
+    private bool TryExecuteRangeFor(BytecodeVmStatement statement)
     {
-        if (!body.IsBlock)
-        {
-            return TryExecuteStatements(body.Statements);
-        }
-
-        EnterScope();
-        try
-        {
-            return TryExecuteStatements(body.Statements);
-        }
-        finally
-        {
-            ExitScope();
-        }
-    }
-
-    private bool TryExecuteRangeFor(ForStatementNode forStatement, RangeExpressionNode range)
-    {
-        if (!TryEvaluate(range.FromExpression, out var fromValue) ||
-            !TryEvaluate(range.ToExpression, out var toValue) ||
+        var source = statement.IterationSource;
+        if (source is null ||
+            source.RangeFromProgram is null ||
+            source.RangeToProgram is null ||
+            !TryExecuteExpressionProgram(source.RangeFromProgram, 0, out var fromValue) ||
+            !TryExecuteExpressionProgram(source.RangeToProgram, 0, out var toValue) ||
             !fromValue.TryGetFiniteNumber(out var fromNumber) ||
             !toValue.TryGetFiniteNumber(out var toNumber))
         {
@@ -240,8 +251,8 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         var stepNumber = 1m;
-        if (range.StepExpression is not null &&
-            (!TryEvaluate(range.StepExpression, out var stepValue) || !stepValue.TryGetFiniteNumber(out stepNumber)))
+        if (source.RangeStepProgram is not null &&
+            (!TryExecuteExpressionProgram(source.RangeStepProgram, 0, out var stepValue) || !stepValue.TryGetFiniteNumber(out stepNumber)))
         {
             return false;
         }
@@ -264,7 +275,7 @@ internal sealed class BytecodeVmExecutionSession
         {
             for (var item = from; item <= to; item += step)
             {
-                if (!TryExecuteLoopIteration(forStatement, item))
+                if (!TryExecuteLoopIteration(statement, item))
                 {
                     return false;
                 }
@@ -284,7 +295,7 @@ internal sealed class BytecodeVmExecutionSession
         {
             for (var item = from; item >= to; item += step)
             {
-                if (!TryExecuteLoopIteration(forStatement, item))
+                if (!TryExecuteLoopIteration(statement, item))
                 {
                     return false;
                 }
@@ -304,9 +315,11 @@ internal sealed class BytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteCollectionFor(ForStatementNode forStatement, ExpressionNode sourceExpression)
+    private bool TryExecuteCollectionFor(BytecodeVmStatement statement)
     {
-        if (!TryEvaluate(sourceExpression, out var sourceVmValue))
+        var source = statement.IterationSource;
+        if (source?.CollectionProgram is null ||
+            !TryExecuteExpressionProgram(source.CollectionProgram, 0, out var sourceVmValue))
         {
             return false;
         }
@@ -320,7 +333,7 @@ internal sealed class BytecodeVmExecutionSession
 
         foreach (var item in sourceValue.AsEnumerable())
         {
-            if (!TryExecuteLoopIteration(forStatement, BytecodeVmValue.FromGameEventScriptValue(item)))
+            if (!TryExecuteLoopIteration(statement, BytecodeVmValue.FromGameEventScriptValue(item)))
             {
                 return false;
             }
@@ -334,10 +347,10 @@ internal sealed class BytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteLoopIteration(ForStatementNode forStatement, long item)
-        => TryExecuteLoopIteration(forStatement, BytecodeVmValue.Integer(item));
+    private bool TryExecuteLoopIteration(BytecodeVmStatement statement, long item)
+        => TryExecuteLoopIteration(statement, BytecodeVmValue.Integer(item));
 
-    private bool TryExecuteLoopIteration(ForStatementNode forStatement, BytecodeVmValue item)
+    private bool TryExecuteLoopIteration(BytecodeVmStatement statement, BytecodeVmValue item)
     {
         if (!_context.RuntimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
@@ -348,38 +361,15 @@ internal sealed class BytecodeVmExecutionSession
         EnterScope();
         try
         {
-            return Define(forStatement.Identifier, item) &&
-                   TryExecuteStatementBody(forStatement.Body);
+            return !string.IsNullOrEmpty(statement.Name) &&
+                   statement.BodyProgram is not null &&
+                   Define(statement.Name!, item) &&
+                   TryExecuteStatementProgram(statement.BodyProgram);
         }
         finally
         {
             ExitScope();
         }
-    }
-
-    private bool TryEvaluateMessageArguments(MessageLiteralExpressionNode message, out IReadOnlyDictionary<string, GameEventScriptValue> arguments)
-    {
-        if (message.Arguments.Count == 0)
-        {
-            arguments = GameEventScriptNamedArguments.Empty;
-            return true;
-        }
-
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[message.Arguments.Count];
-        for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
-        {
-            var argument = message.Arguments[argumentIndex];
-            if (!TryEvaluate(argument.Expression, out var value))
-            {
-                arguments = GameEventScriptNamedArguments.Empty;
-                return false;
-            }
-
-            pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(argument.Name, value.ToGameEventScriptValue());
-        }
-
-        arguments = GameEventScriptNamedArguments.CreateOrdered(pairs);
-        return true;
     }
 
     private bool TryPublish(BytecodeVmPublishLayout layout)
@@ -417,9 +407,9 @@ internal sealed class BytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryPublish(ExpressionNode messageExpression)
+    private bool TryPublish(BytecodeVmExpressionProgram messageExpression)
     {
-        if (!TryEvaluate(messageExpression, out var publishValue))
+        if (!TryExecuteExpressionProgram(messageExpression, 0, out var publishValue))
         {
             return false;
         }
@@ -431,114 +421,6 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         return true;
-    }
-
-    private bool TryEvaluate(ExpressionNode expression, out BytecodeVmValue value)
-    {
-        if (_plan.TryGetExpressionProgram(expression, out var program))
-        {
-            return TryExecuteExpressionProgram(program, 0, out value);
-        }
-
-        if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
-        {
-            value = BytecodeVmValue.Nothing;
-            return true;
-        }
-
-        switch (expression)
-        {
-            case BooleanLiteralExpressionNode boolean:
-                value = BytecodeVmValue.Boolean(boolean.Value);
-                return true;
-            case IntegerLiteralExpressionNode integer:
-                value = BytecodeVmValue.Integer(integer.Value);
-                return true;
-            case DecimalLiteralExpressionNode decimalLiteral:
-                value = BytecodeVmValue.Decimal(decimalLiteral.Value);
-                return true;
-            case PercentageLiteralExpressionNode percentage:
-                value = BytecodeVmValue.Percentage(percentage.PercentValue / 100m);
-                return true;
-            case UnitDecimalLiteralExpressionNode unitDecimal:
-                value = GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                    ? BytecodeVmValue.Decimal(unitDecimal.Value, unit)
-                    : BytecodeVmValue.NaN();
-                return true;
-            case TextLiteralExpressionNode text:
-                value = BytecodeVmValue.Reference(GesText(text.Value));
-                return true;
-            case TagLiteralExpressionNode tag:
-                value = BytecodeVmValue.Reference(GesTag(tag.Name));
-                return true;
-            case HandlerLiteralExpressionNode handler:
-                value = BytecodeVmValue.Reference(GesHandler(GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels)));
-                return true;
-            case HandlerBindExpressionNode handlerBind:
-                return TryEvaluateHandlerBind(handlerBind, out value);
-            case ListLiteralExpressionNode list:
-                return TryEvaluateListLiteral(list, out value);
-            case SequenceLiteralExpressionNode sequence:
-                return TryEvaluateSequenceLiteral(sequence, out value);
-            case SetLiteralExpressionNode set:
-                return TryEvaluateSetLiteral(set, out value);
-            case DictionaryLiteralExpressionNode dictionary:
-                return TryEvaluateDictionaryLiteral(dictionary, out value);
-            case IdentifierExpressionNode identifier:
-                value = Resolve(identifier.Name);
-                return true;
-            case UnaryExpressionNode unary:
-                return TryEvaluateUnary(unary, out value);
-            case VariadicTaggedExpressionNode variadic:
-                return TryEvaluateVariadic(variadic, out value);
-            case ClampExpressionNode clamp:
-                return TryEvaluateClamp(clamp, out value);
-            case RandomExpressionNode random:
-                return TryEvaluateRandom(random, out value);
-            case RangeExpressionNode range:
-                return TryEvaluateRange(range, out value);
-            case DiceExpressionNode dice:
-                value = EvaluateDiceExpression(dice.DiceCount, dice.SideCount);
-                return true;
-            case SeededRandomExpressionNode seededRandom:
-                return TryEvaluateSeededRandomExpression(seededRandom, out value);
-            case GeneratedCollectionExpressionNode generatedCollection:
-                return TryEvaluateGeneratedCollectionExpression(generatedCollection, out value);
-            case GuardedChoiceExpressionNode guardedChoice:
-                return TryEvaluateGuardedChoiceExpression(guardedChoice, out value);
-            case BinaryExpressionNode binary:
-                return TryEvaluateBinary(binary, out value);
-            case RulePredicateExpressionNode rulePredicate:
-                return TryEvaluateRulePredicate(rulePredicate, out value);
-            case ExtensionPredicateExpressionNode extensionPredicate:
-                return TryEvaluateExtensionPredicate(extensionPredicate, out value);
-            case CallExpressionNode call:
-                return TryEvaluateCall(call, out value);
-            case ExtensionCallExpressionNode extensionCall:
-                return TryEvaluateExtensionCall(extensionCall, out value);
-            case TypeConstructorExpressionNode typeConstructor:
-                return TryEvaluateTypeConstructor(typeConstructor, out value);
-            case TypeCastExpressionNode typeCast:
-                return TryEvaluateTypeCast(typeCast, out value);
-            case TypeCheckExpressionNode typeCheck:
-                return TryEvaluateTypeCheck(typeCheck, out value);
-            case MemberAccessExpressionNode memberAccess:
-                return TryEvaluateMemberAccess(memberAccess, out value);
-            case CollectionAccessExpressionNode collectionAccess:
-                return TryEvaluateCollectionAccess(collectionAccess, out value);
-            case MessageLiteralExpressionNode message:
-                if (!TryEvaluateMessageArguments(message, out var arguments))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-
-                value = BytecodeVmValue.Reference(GesMessage(GameEventScriptMessage.Create(message.Message, arguments)));
-                return true;
-            default:
-                value = BytecodeVmValue.Nothing;
-                return false;
-        }
     }
 
     private bool TryExecuteExpressionProgram(BytecodeVmExpressionProgram program, int stackBase, out BytecodeVmValue value)
@@ -820,128 +702,6 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         value = top > stackBase ? _evaluationStack[top - 1] : BytecodeVmValue.Nothing;
-        return true;
-    }
-
-    private bool TryEvaluateHandlerBind(HandlerBindExpressionNode handlerBind, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(handlerBind.CalleeExpression, out var callee))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var arguments = new Dictionary<string, GameEventScriptValue>(handlerBind.Arguments.Count, StringComparer.Ordinal);
-        foreach (var argument in handlerBind.Arguments)
-        {
-            if (!TryEvaluate(argument.Expression, out var argumentValue))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            arguments[argument.Name] = argumentValue.ToGameEventScriptValue();
-        }
-
-        value = GameEventScriptMessageValueCodec.TryBindHandlerValue(callee.ToGameEventScriptValue(), arguments, out var message)
-            ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
-            : BytecodeVmValue.Nothing;
-        return true;
-    }
-
-    private bool TryEvaluateTypeCheck(TypeCheckExpressionNode typeCheck, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(typeCheck.Value, out var input))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        value = BytecodeVmValue.Boolean(IsValueOfType(input, typeCheck.TypeName));
-        return true;
-    }
-
-    private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out BytecodeVmValue value)
-    {
-        var items = new GameEventScriptValue[list.Items.Count];
-        for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
-        {
-            if (!TryEvaluate(list.Items[itemIndex], out var item))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            items[itemIndex] = item.ToGameEventScriptValue();
-        }
-
-        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(items));
-        return true;
-    }
-
-    private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out BytecodeVmValue value)
-    {
-        var items = new GameEventScriptValue[sequence.Items.Count];
-        for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
-        {
-            if (!TryEvaluate(sequence.Items[itemIndex], out var item))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            items[itemIndex] = item.ToGameEventScriptValue();
-        }
-
-        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSequence(items));
-        return true;
-    }
-
-    private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out BytecodeVmValue value)
-    {
-        var items = new GameEventScriptValue[set.Items.Count];
-        for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
-        {
-            if (!TryEvaluate(set.Items[itemIndex], out var item))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            items[itemIndex] = item.ToGameEventScriptValue();
-        }
-
-        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseSet(items));
-        return true;
-    }
-
-    private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out BytecodeVmValue value)
-    {
-        var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
-        foreach (var entry in dictionary.Entries)
-        {
-            if (!TryEvaluate(entry.Value, out var entryValue))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            map[entry.Key] = entryValue.ToGameEventScriptValue();
-        }
-
-        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(map));
-        return true;
-    }
-
-    private bool TryEvaluateMemberAccess(MemberAccessExpressionNode memberAccess, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(memberAccess.Target, out var target))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        value = EvaluateMemberAccess(target, memberAccess.Member);
         return true;
     }
 
@@ -1248,108 +1008,6 @@ internal sealed class BytecodeVmExecutionSession
         };
     }
 
-    private bool TryEvaluateBinary(BinaryExpressionNode binary, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(binary.Left, out var left) ||
-            !TryEvaluate(binary.Right, out var right))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        return TryEvaluateBinaryOperation(binary.Operator, left, right, out value);
-    }
-
-    private bool TryEvaluateUnary(UnaryExpressionNode unary, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(unary.Operand, out var operand))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        return TryEvaluateUnaryOperation(unary.Operator, operand, out value);
-    }
-
-    private bool TryEvaluateVariadic(VariadicTaggedExpressionNode variadic, out BytecodeVmValue value)
-    {
-        var values = new BytecodeVmValue[variadic.Arguments.Count];
-        for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
-        {
-            if (!TryEvaluate(variadic.Arguments[argumentIndex], out values[argumentIndex]))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-        }
-
-        return TryEvaluateVariadicOperation(variadic.Operator, values, 0, values.Length, out value);
-    }
-
-    private bool TryEvaluateClamp(ClampExpressionNode clamp, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(clamp.Value, out var raw) ||
-            !TryEvaluate(clamp.Minimum, out var minimum) ||
-            !TryEvaluate(clamp.Maximum, out var maximum))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        value = EvaluateClamp(raw, minimum, maximum);
-        return true;
-    }
-
-    private bool TryEvaluateRandom(RandomExpressionNode random, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(random.FromExpression, out var from) ||
-            !TryEvaluate(random.ToExpression, out var to))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        value = EvaluateRandomExpression(from, to);
-        return true;
-    }
-
-    private bool TryEvaluateRange(RangeExpressionNode range, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(range.FromExpression, out var from) ||
-            !TryEvaluate(range.ToExpression, out var to))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        if (range.StepExpression is not null)
-        {
-            if (!TryEvaluate(range.StepExpression, out var step))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            value = EvaluateRangeExpression(from, to, step);
-            return true;
-        }
-
-        value = EvaluateRangeExpression(from, to, BytecodeVmValue.Integer(1));
-        return true;
-    }
-
-    private bool TryEvaluateSeededRandomExpression(SeededRandomExpressionNode seededRandom, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(seededRandom.SeedExpression, out var seed) ||
-            !_plan.TryGetExpressionProgram(seededRandom.BodyExpression, out var bodyProgram))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        return TryEvaluateSeededRandomExpression(seed, bodyProgram, 0, out value);
-    }
-
     private bool TryEvaluateSeededRandomExpression(
         BytecodeVmValue seed,
         BytecodeVmExpressionProgram bodyProgram,
@@ -1365,65 +1023,6 @@ internal sealed class BytecodeVmExecutionSession
         {
             PopSeededRandomScope();
         }
-    }
-
-    private bool TryEvaluateGeneratedCollectionExpression(
-        GeneratedCollectionExpressionNode generatedCollection,
-        out BytecodeVmValue value)
-    {
-        if (!_plan.TryGetSlot(generatedCollection.Identifier, out var identifierSlot))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        if (!TryMaterializeIterationSource(generatedCollection.Source, out var sourceItems))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var values = new List<GameEventScriptValue>();
-        foreach (var item in sourceItems)
-        {
-            if (!_context.RuntimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
-            {
-                break;
-            }
-
-            var fastItem = BytecodeVmValue.FromGameEventScriptValue(item);
-            if (generatedCollection.Predicate is not null)
-            {
-                if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Predicate, out var predicate))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-
-                if (!predicate.AsBoolean())
-                {
-                    continue;
-                }
-            }
-
-            if (!_context.RuntimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
-            {
-                break;
-            }
-
-            if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Projection, out var projected))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            values.Add(projected.ToGameEventScriptValue());
-        }
-
-        value = BytecodeVmValue.Reference(generatedCollection.CollectionType == "set"
-            ? GameEventScriptValueFactory.GseSet(values)
-            : GameEventScriptValueFactory.GesList(values));
-        return true;
     }
 
     private bool TryExecuteGeneratedCollectionProgram(BytecodeVmGeneratedCollectionProgram program, out BytecodeVmValue value)
@@ -1477,12 +1076,13 @@ internal sealed class BytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryMaterializeIterationSource(IterationSourceNode source, out GameEventScriptValue[] items)
+    private bool TryMaterializeIterationSource(BytecodeVmIterationSourceProgram source, out GameEventScriptValue[] items)
     {
-        switch (source)
+        switch (source.Kind)
         {
-            case CollectionIterationSourceNode collection:
-                if (!TryEvaluate(collection.Expression, out var collectionValue))
+            case BytecodeVmIterationSourceKind.Collection:
+                if (source.CollectionProgram is null ||
+                    !TryExecuteExpressionProgram(source.CollectionProgram, 0, out var collectionValue))
                 {
                     items = [];
                     return false;
@@ -1498,13 +1098,25 @@ internal sealed class BytecodeVmExecutionSession
                 items = boxedCollection.AsEnumerable().ToArray();
                 return true;
 
-            case RangeIterationSourceNode range:
-                if (!TryEvaluateRange(range.RangeExpression, out var rangeValue))
+            case BytecodeVmIterationSourceKind.Range:
+                if (source.RangeFromProgram is null ||
+                    source.RangeToProgram is null ||
+                    !TryExecuteExpressionProgram(source.RangeFromProgram, 0, out var from) ||
+                    !TryExecuteExpressionProgram(source.RangeToProgram, 0, out var to))
                 {
                     items = [];
                     return false;
                 }
 
+                var step = BytecodeVmValue.Integer(1);
+                if (source.RangeStepProgram is not null &&
+                    !TryExecuteExpressionProgram(source.RangeStepProgram, 0, out step))
+                {
+                    items = [];
+                    return false;
+                }
+
+                var rangeValue = EvaluateRangeExpression(from, to, step);
                 var boxedRange = rangeValue.ToGameEventScriptValue();
                 if (!TryCheckMaterializedValue(boxedRange, "Range item count exceeds the configured limit."))
                 {
@@ -1519,25 +1131,6 @@ internal sealed class BytecodeVmExecutionSession
                 items = [];
                 return false;
         }
-    }
-
-    private bool TryEvaluateGuardedChoiceExpression(GuardedChoiceExpressionNode guardedChoice, out BytecodeVmValue value)
-    {
-        foreach (var branch in guardedChoice.Branches)
-        {
-            if (!TryEvaluate(branch.ConditionExpression, out var condition))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            if (condition.AsBoolean())
-            {
-                return TryEvaluate(branch.ValueExpression, out value);
-            }
-        }
-
-        return TryEvaluate(guardedChoice.OtherwiseExpression, out value);
     }
 
     private bool TryExecuteGuardedChoiceProgram(BytecodeVmGuardedChoiceProgram program, out BytecodeVmValue value)
@@ -1634,7 +1227,7 @@ internal sealed class BytecodeVmExecutionSession
             return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
         }
 
-        if (!_context.RuntimeBudget.TryCheckDice(new DiceExpressionNode(diceCount, sideCount)))
+        if (!_context.RuntimeBudget.TryCheckDice(diceCount, sideCount))
         {
             return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
         }
@@ -2152,155 +1745,6 @@ internal sealed class BytecodeVmExecutionSession
             ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
             : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
-    private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out BytecodeVmValue value)
-    {
-        if (!_compiledScript.Callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
-            callable.Kind != GameEventScriptCallableKind.Rule ||
-            callable.Parameters.Count != 1 ||
-            !TryEvaluate(rulePredicate.Value, out var input))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var instruction = new BytecodeVmProgramInstruction(
-            BytecodeVmProgramOpCode.RulePredicate,
-            A: -1,
-            ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
-                ? expressionProgram
-                : null,
-            DiagnosticName: callable.Name,
-            DiagnosticArgumentName: callable.Parameters[0]);
-
-        if (!TryEvaluateRulePredicate(instruction, input, stackBase: 0, out value, callable.Parameters[0]))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool TryEvaluateCall(CallExpressionNode call, out BytecodeVmValue value)
-    {
-        if (!_compiledScript.Callables.TryGetValue(call.Name, out var callable))
-        {
-            var handlerValue = Resolve(call.Name);
-            if (handlerValue.IsNothingLike())
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            var dynamicPairs = new KeyValuePair<string, GameEventScriptValue>[call.ArgumentList.Count];
-            var dynamicLabels = new string[call.ArgumentList.Count];
-            for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
-            {
-                var argument = call.ArgumentList.Arguments[argumentIndex];
-                if (!TryEvaluate(argument.Expression, out var argumentValue))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-
-                dynamicLabels[argumentIndex] = argument.Name;
-                dynamicPairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(argument.Name, argumentValue.ToGameEventScriptValue());
-            }
-
-            var dynamicArguments = GameEventScriptNamedArguments.CreateOrdered(dynamicPairs, dynamicLabels);
-            value = GameEventScriptMessageValueCodec.TryBindHandlerValue(handlerValue.ToGameEventScriptValue(), dynamicArguments, out var message)
-                ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
-                : BytecodeVmValue.Nothing;
-            return true;
-        }
-
-        if (callable.Parameters.Count != call.Arguments.Count)
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var arguments = new BytecodeVmValue[call.Arguments.Count];
-        for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
-        {
-            if (!TryEvaluate(call.Arguments[argumentIndex], out arguments[argumentIndex]))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-        }
-
-        var slots = new int[callable.Parameters.Count];
-        for (var parameterIndex = 0; parameterIndex < callable.Parameters.Count; parameterIndex++)
-        {
-            if (!_plan.TryGetSlot(callable.Parameters[parameterIndex], out slots[parameterIndex]))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-        }
-
-        var instruction = new BytecodeVmProgramInstruction(
-            BytecodeVmProgramOpCode.Call,
-            A: call.Arguments.Count,
-            CallableKind: callable.Kind == GameEventScriptCallableKind.Rule
-                ? BytecodeVmCallableKind.Rule
-                : BytecodeVmCallableKind.Select,
-            ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
-                ? expressionProgram
-                : null,
-            DiagnosticName: callable.Name,
-            Names: callable.Parameters.ToArray(),
-            Slots: slots);
-
-        return TryEvaluateCallable(instruction, arguments, 0, arguments.Length, out value);
-    }
-
-    private bool TryEvaluateExtensionCall(ExtensionCallExpressionNode extensionCall, out BytecodeVmValue value)
-    {
-        var arguments = new BytecodeVmValue[extensionCall.ArgumentList.Count];
-        var labels = new string[extensionCall.ArgumentList.Count];
-        for (var argumentIndex = 0; argumentIndex < extensionCall.ArgumentList.Count; argumentIndex++)
-        {
-            var argument = extensionCall.ArgumentList.Arguments[argumentIndex];
-            labels[argumentIndex] = argument.Name;
-            if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-        }
-
-        return TryCallExtension(
-            extensionCall.ExtensionName,
-            extensionCall.FunctionName,
-            labels,
-            -1,
-            arguments,
-            0,
-            arguments.Length,
-            out value);
-    }
-
-    private bool TryEvaluateExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(extensionPredicate.Value, out var input))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var arguments = new[] { input };
-        return TryCallExtension(
-            extensionPredicate.ExtensionName,
-            extensionPredicate.FunctionName,
-            [GameEventScriptMessageSignature.UnlabeledParameterName],
-            -1,
-            arguments,
-            0,
-            1,
-            out value);
-    }
-
     private bool TryEvaluateRulePredicate(
         BytecodeVmProgramInstruction instruction,
         BytecodeVmValue input,
@@ -2414,41 +1858,6 @@ internal sealed class BytecodeVmExecutionSession
             ExitScope();
             _context.RuntimeBudget.ExitCall();
         }
-    }
-
-    private bool TryEvaluateTypeCast(TypeCastExpressionNode typeCast, out BytecodeVmValue value)
-    {
-        if (!TryEvaluate(typeCast.Value, out var input))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        if (!TryConvertDeclaredType(typeCast.TypeName, input, out value))
-        {
-            throw new InvalidOperationException($"BytecodeVM invariant failed: type cast '{typeCast.TypeName}' could not be evaluated.");
-        }
-
-        return true;
-    }
-
-    private bool TryEvaluateTypeConstructor(TypeConstructorExpressionNode constructor, out BytecodeVmValue value)
-    {
-        var arguments = new BytecodeVmValue[constructor.Arguments.Count];
-        var labels = new string[constructor.Arguments.Count];
-        for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
-        {
-            var argument = constructor.Arguments[argumentIndex];
-            labels[argumentIndex] = argument.Name;
-            if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-        }
-
-        value = EvaluateTypeConstructor(constructor.TypeName, labels, arguments, 0, arguments.Length);
-        return true;
     }
 
     private BytecodeVmValue EvaluateTypeConstructor(
@@ -2802,7 +2211,7 @@ internal sealed class BytecodeVmExecutionSession
         var sourceValues = value.AsDictionary().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         var materializedValues = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
 
-        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is null))
+        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedProgram is null))
         {
             sourceValues.TryGetValue(field.Name, out var rawValue);
             rawValue ??= GameEventScriptValue.Nothing;
@@ -2813,9 +2222,9 @@ internal sealed class BytecodeVmExecutionSession
             materializedValues[field.Name] = fieldValue;
         }
 
-        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedExpression is not null))
+        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedProgram is not null))
         {
-            var computedValue = EvaluateCustomTypeExpression(field.ComputedExpression!, sourceValues, materializedValues);
+            var computedValue = EvaluateCustomTypeExpression(field.ComputedProgram!, sourceValues, materializedValues);
             materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
         }
 
@@ -2835,13 +2244,13 @@ internal sealed class BytecodeVmExecutionSession
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
     {
         _ = typeDefinition;
-        if (field.MinimumExpression is null || field.MaximumExpression is null)
+        if (field.MinimumProgram is null || field.MaximumProgram is null)
         {
             return fieldValue;
         }
 
-        var minimum = EvaluateCustomTypeExpression(field.MinimumExpression, sourceValues, materializedValues);
-        var maximum = EvaluateCustomTypeExpression(field.MaximumExpression, sourceValues, materializedValues);
+        var minimum = EvaluateCustomTypeExpression(field.MinimumProgram, sourceValues, materializedValues);
+        var maximum = EvaluateCustomTypeExpression(field.MaximumProgram, sourceValues, materializedValues);
         if (!GameEventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, minimum) ||
             !GameEventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
             !GameEventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
@@ -2873,7 +2282,7 @@ internal sealed class BytecodeVmExecutionSession
     }
 
     private GameEventScriptValue EvaluateCustomTypeExpression(
-        ExpressionNode expression,
+        BytecodeVmExpressionProgram expressionProgram,
         IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
     {
@@ -2896,7 +2305,7 @@ internal sealed class BytecodeVmExecutionSession
                 }
             }
 
-            return TryEvaluate(expression, out var value)
+            return TryExecuteExpressionProgram(expressionProgram, 0, out var value)
                 ? value.ToGameEventScriptValue()
                 : GameEventScriptValue.Nothing;
         }
@@ -3924,7 +3333,7 @@ internal sealed class BytecodeVmExecutionSession
     private bool TryEvaluateTakePattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        DicePatternNode pattern,
+        BytecodeVmDicePattern pattern,
         out GameEventScriptValue value)
     {
         if (!IsPatternSequence(target))
@@ -3948,7 +3357,7 @@ internal sealed class BytecodeVmExecutionSession
     private bool TryEvaluateSequencePattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        DicePatternNode? pattern,
+        BytecodeVmDicePattern? pattern,
         out bool matches)
     {
         if (pattern is null || !IsPatternSequence(target))
@@ -3963,14 +3372,14 @@ internal sealed class BytecodeVmExecutionSession
 
         switch (pattern)
         {
-            case DiceCountPatternNode countPattern:
+            case BytecodeVmDiceCountPattern countPattern:
                 return TryMatchDiceCountPattern(counts, countPattern, out matches);
 
-            case DiceFullHousePatternNode:
+            case BytecodeVmFullHousePattern:
                 matches = counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 });
                 return true;
 
-            case DiceStraightPatternNode:
+            case BytecodeVmStraightPattern:
                 matches = MatchStraight(items);
                 return true;
 
@@ -3982,12 +3391,12 @@ internal sealed class BytecodeVmExecutionSession
 
     private bool TryMatchDiceCountPattern(
         IReadOnlyDictionary<GameEventScriptValue, int> counts,
-        DiceCountPatternNode pattern,
+        BytecodeVmDiceCountPattern pattern,
         out bool matches)
     {
-        if (pattern.Face is not null)
+        if (pattern.FaceProgram is not null)
         {
-            if (!TryEvaluate(pattern.Face, out var face))
+            if (!TryExecuteExpressionProgram(pattern.FaceProgram, 0, out var face))
             {
                 matches = false;
                 return false;
@@ -4029,7 +3438,7 @@ internal sealed class BytecodeVmExecutionSession
 
     private bool TryTakeSequencePattern(
         IReadOnlyList<GameEventScriptValue> items,
-        DicePatternNode pattern,
+        BytecodeVmDicePattern pattern,
         out IReadOnlyList<GameEventScriptValue> takenItems)
     {
         var counts = items
@@ -4038,13 +3447,13 @@ internal sealed class BytecodeVmExecutionSession
 
         switch (pattern)
         {
-            case DiceCountPatternNode countPattern:
+            case BytecodeVmDiceCountPattern countPattern:
                 return TryTakeCountPattern(items, counts, countPattern, out takenItems);
 
-            case DiceFullHousePatternNode:
+            case BytecodeVmFullHousePattern:
                 return TryTakeFullHouse(items, counts, out takenItems);
 
-            case DiceStraightPatternNode:
+            case BytecodeVmStraightPattern:
                 return TryTakeStraight(items, out takenItems);
 
             default:
@@ -4056,12 +3465,12 @@ internal sealed class BytecodeVmExecutionSession
     private bool TryTakeCountPattern(
         IReadOnlyList<GameEventScriptValue> items,
         IReadOnlyDictionary<GameEventScriptValue, int> counts,
-        DiceCountPatternNode pattern,
+        BytecodeVmDiceCountPattern pattern,
         out IReadOnlyList<GameEventScriptValue> takenItems)
     {
-        if (pattern.Face is not null)
+        if (pattern.FaceProgram is not null)
         {
-            if (!TryEvaluate(pattern.Face, out var face))
+            if (!TryExecuteExpressionProgram(pattern.FaceProgram, 0, out var face))
             {
                 takenItems = Array.Empty<GameEventScriptValue>();
                 return false;
@@ -4198,7 +3607,7 @@ internal sealed class BytecodeVmExecutionSession
     private bool TryEvaluateObjectMatchSelector(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        ObjectMatchPatternNode? pattern,
+        BytecodeVmObjectMatchPattern? pattern,
         out bool matches)
     {
         if (pattern is null || target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Set or GameEventScriptValueKind.Dice))
@@ -4226,7 +3635,7 @@ internal sealed class BytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryMatchesObjectPattern(GameEventScriptValue value, ObjectMatchPatternNode pattern, out bool matches)
+    private bool TryMatchesObjectPattern(GameEventScriptValue value, BytecodeVmObjectMatchPattern pattern, out bool matches)
     {
         if (value.Kind != GameEventScriptValueKind.Dictionary)
         {
@@ -4245,8 +3654,8 @@ internal sealed class BytecodeVmExecutionSession
 
             switch (entry.Value)
             {
-                case ObjectMatchExpressionValueNode expressionValue:
-                    if (!TryEvaluate(expressionValue.Expression, out var expected))
+                case BytecodeVmObjectMatchExpressionValue expressionValue:
+                    if (!TryExecuteExpressionProgram(expressionValue.ExpressionProgram, 0, out var expected))
                     {
                         matches = false;
                         return false;
@@ -4260,7 +3669,7 @@ internal sealed class BytecodeVmExecutionSession
 
                     break;
 
-                case ObjectMatchNestedValueNode nestedValue:
+                case BytecodeVmObjectMatchNestedValue nestedValue:
                     if (!TryMatchesObjectPattern(actual, nestedValue.Pattern, out var nestedMatches))
                     {
                         matches = false;
@@ -4428,266 +3837,6 @@ internal sealed class BytecodeVmExecutionSession
         BytecodeVmValue item,
         out BytecodeVmValue value)
         => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
-
-    private bool TryEvaluateExpressionWithTemporarySlot(
-        int slot,
-        BytecodeVmValue slotValue,
-        ExpressionNode expression,
-        out BytecodeVmValue value)
-    {
-        if ((uint)slot >= (uint)_locals.Length)
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var hadValue = _assignedSlots[slot];
-        var previous = _locals[slot];
-        _locals[slot] = slotValue;
-        _assignedSlots[slot] = true;
-        try
-        {
-            return TryEvaluate(expression, out value);
-        }
-        finally
-        {
-            RestoreSlot(slot, hadValue, previous);
-        }
-    }
-
-    private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out BytecodeVmValue value)
-    {
-        if (expression.Selector is ExpressionSelectorNode expressionSelector)
-        {
-            if (!TryEvaluate(expression.Target, out var target) ||
-                !TryEvaluate(expressionSelector.Expression, out var selector))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            value = EvaluateIndexedAccess(target, selector);
-            return true;
-        }
-
-        var selectors = new List<CollectionSelectorNode>();
-        ExpressionNode source = expression;
-        while (source is CollectionAccessExpressionNode collectionAccess)
-        {
-            selectors.Add(collectionAccess.Selector);
-            source = collectionAccess.Target;
-        }
-
-        selectors.Reverse();
-        if (selectors.Count == 0 || !TryEvaluate(source, out var sourceValue))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var sourceItems = sourceValue.ToGameEventScriptValue().AsList();
-        var prefixCount = Math.Max(0, selectors.Count - 1);
-        var terminal = selectors[^1];
-        return terminal switch
-        {
-            SumSelectorNode sum => TryEvaluateSum(sourceItems, selectors, prefixCount, sum, out value),
-            AverageSelectorNode average => TryEvaluateAverage(sourceItems, selectors, prefixCount, average, out value),
-            CountSelectorNode count => TryEvaluateCount(sourceItems, selectors, prefixCount, count, out value),
-            EdgeSelectorNode edge => TryEvaluateEdge(sourceItems, selectors, prefixCount, edge, out value),
-            _ => Fail(out value)
-        };
-    }
-
-    private bool TryEvaluateSum(
-        IReadOnlyList<GameEventScriptValue> sourceItems,
-        IReadOnlyList<CollectionSelectorNode> selectors,
-        int prefixCount,
-        SumSelectorNode selector,
-        out BytecodeVmValue value)
-    {
-        var hasValue = false;
-        var sum = BytecodeVmValue.Decimal(0m);
-        var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
-        {
-            if (!TryEvaluateProjection(selector.Identifier, selector.Projection, item, out var projected))
-            {
-                return false;
-            }
-
-            sum = hasValue ? BytecodeVmValue.Add(sum, projected) : projected;
-            hasValue = true;
-            return true;
-        });
-
-        value = hasValue ? sum : BytecodeVmValue.Decimal(0m);
-        return ok;
-    }
-
-    private bool TryEvaluateAverage(
-        IReadOnlyList<GameEventScriptValue> sourceItems,
-        IReadOnlyList<CollectionSelectorNode> selectors,
-        int prefixCount,
-        AverageSelectorNode selector,
-        out BytecodeVmValue value)
-    {
-        var count = 0L;
-        var sum = BytecodeVmValue.Decimal(0m);
-        var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
-        {
-            if (!TryEvaluateProjection(selector.Identifier, selector.Projection, item, out var projected))
-            {
-                return false;
-            }
-
-            sum = count == 0 ? projected : BytecodeVmValue.Add(sum, projected);
-            count++;
-            return true;
-        });
-
-        value = ok && count > 0 && sum.TryGetFiniteNumber(out var number)
-            ? BytecodeVmValue.Decimal(number / count, sum.Unit)
-            : BytecodeVmValue.Nothing;
-        return ok;
-    }
-
-    private bool TryEvaluateCount(
-        IReadOnlyList<GameEventScriptValue> sourceItems,
-        IReadOnlyList<CollectionSelectorNode> selectors,
-        int prefixCount,
-        CountSelectorNode selector,
-        out BytecodeVmValue value)
-    {
-        var count = 0L;
-        var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
-        {
-            if (!TryEvaluateProjection(selector.Identifier, selector.Predicate, item, out var predicate))
-            {
-                return false;
-            }
-
-            if (predicate.AsBoolean())
-            {
-                count++;
-            }
-
-            return true;
-        });
-
-        value = BytecodeVmValue.Integer(count);
-        return ok;
-    }
-
-    private bool TryEvaluateEdge(
-        IReadOnlyList<GameEventScriptValue> sourceItems,
-        IReadOnlyList<CollectionSelectorNode> selectors,
-        int prefixCount,
-        EdgeSelectorNode selector,
-        out BytecodeVmValue value)
-    {
-        BytecodeVmValue first = BytecodeVmValue.Nothing;
-        BytecodeVmValue last = BytecodeVmValue.Nothing;
-        var count = 0;
-        var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
-        {
-            if (!string.IsNullOrEmpty(selector.Identifier) &&
-                selector.Predicate is not null &&
-                (!TryEvaluateProjection(selector.Identifier!, selector.Predicate, item, out var predicate) || !predicate.AsBoolean()))
-            {
-                return true;
-            }
-
-            first = count == 0 ? item : first;
-            last = item;
-            count++;
-            return true;
-        });
-
-        value = selector.Mode switch
-        {
-            "first" => count > 0 ? first : BytecodeVmValue.Nothing,
-            "last" => count > 0 ? last : BytecodeVmValue.Nothing,
-            "single" => count == 1 ? first : BytecodeVmValue.Nothing,
-            _ => BytecodeVmValue.Nothing
-        };
-        return ok;
-    }
-
-    private bool TryForEachPipelineItem(
-        IReadOnlyList<GameEventScriptValue> sourceItems,
-        IReadOnlyList<CollectionSelectorNode> selectors,
-        int prefixCount,
-        Func<BytecodeVmValue, bool> action)
-    {
-        for (var index = 0; index < sourceItems.Count; index++)
-        {
-            if (!TryApplyPipelinePrefix(BytecodeVmValue.FromGameEventScriptValue(sourceItems[index]), selectors, 0, prefixCount, action))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private bool TryApplyPipelinePrefix(
-        BytecodeVmValue item,
-        IReadOnlyList<CollectionSelectorNode> selectors,
-        int index,
-        int prefixCount,
-        Func<BytecodeVmValue, bool> action)
-    {
-        if (index >= prefixCount)
-        {
-            return action(item);
-        }
-
-        switch (selectors[index])
-        {
-            case FilterSelectorNode filter:
-                if (!TryEvaluateProjection(filter.Identifier, filter.Predicate, item, out var predicate))
-                {
-                    return false;
-                }
-
-                return !predicate.AsBoolean() ||
-                       TryApplyPipelinePrefix(item, selectors, index + 1, prefixCount, action);
-
-            case SelectSelectorNode select:
-                return TryEvaluateProjection(select.Identifier, select.Projection, item, out var selected) &&
-                       TryApplyPipelinePrefix(selected, selectors, index + 1, prefixCount, action);
-
-            default:
-                return false;
-        }
-    }
-
-    private bool TryEvaluateProjection(string identifier, ExpressionNode expression, BytecodeVmValue item, out BytecodeVmValue value)
-    {
-        if (!_plan.TryGetSlot(identifier, out var slot))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        if ((uint)slot >= (uint)_locals.Length)
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        var hadValue = _assignedSlots[slot];
-        var previous = _locals[slot];
-        _locals[slot] = item;
-        _assignedSlots[slot] = true;
-        try
-        {
-            return TryEvaluate(expression, out value);
-        }
-        finally
-        {
-            RestoreSlot(slot, hadValue, previous);
-        }
-    }
 
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
@@ -4926,14 +4075,14 @@ internal sealed class BytecodeVmExecutionSession
             $"Publish argument '{argumentName}' evaluated to Nothing.");
     }
 
-    private void RecordExpressionStatementEvaluatedToNothing(ExpressionNode expression, BytecodeVmValue value)
+    private void RecordExpressionStatementEvaluatedToNothing(string? diagnosticName, BytecodeVmValue value)
     {
         if (!_diagnosticsEnabled || value.Kind != BytecodeVmValueKind.Nothing)
         {
             return;
         }
 
-        var name = expression.GetType().Name;
+        var name = string.IsNullOrWhiteSpace(diagnosticName) ? "Expression" : diagnosticName;
         RecordDiagnostic(
             GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
             name,

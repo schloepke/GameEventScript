@@ -11,14 +11,9 @@ internal enum GameEventScriptCallableKind
     Select
 }
 
-/// <summary>
-/// Represents a compiled module of Game Event Scripts, containing type definitions,
-/// callable definitions, and event handler definitions. Designed to facilitate
-/// execution or further compilation processes for game event scripting.
-/// </summary>
-public sealed class GameEventScriptModule
+internal sealed class GseModule
 {
-    internal GameEventScriptModule(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+    internal GseModule(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers)
     {
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
@@ -28,12 +23,12 @@ public sealed class GameEventScriptModule
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 
-    internal IReadOnlyDictionary<string, GameEventScriptCallableDefinition> Callables { get; }
+    internal IReadOnlyDictionary<string, GseCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> Handlers { get; }
 }
 
-internal sealed class GameEventScriptCallableDefinition(
+internal sealed class GseCallableDefinition(
     string name,
     IReadOnlyList<ParameterNode> parameterList,
     ExpressionNode expression,

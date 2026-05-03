@@ -11,7 +11,7 @@ internal static class GesOptimizer
 {
     private static readonly ISet<string> EmptyTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-    public static GameEventScriptModule Optimize(GameEventScriptModule module)
+    public static GseModule Optimize(GseModule module)
     {
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
 
@@ -32,7 +32,7 @@ internal static class GesOptimizer
                 .ToArray(),
             StringComparer.Ordinal);
 
-        return new GameEventScriptModule(
+        return new GseModule(
             optimizedTypes,
             optimizedCallables,
             optimizedHandlers);
@@ -49,7 +49,7 @@ internal static class GesOptimizer
             }).ToArray()
         };
 
-    private static GameEventScriptCallableDefinition OptimizeCallableDefinition(GameEventScriptCallableDefinition definition, ISet<string> knownTypeNames)
+    private static GseCallableDefinition OptimizeCallableDefinition(GseCallableDefinition definition, ISet<string> knownTypeNames)
     {
         var optimized = OptimizeExpression(definition.Expression, knownTypeNames);
         if (definition.Kind == GameEventScriptCallableKind.Rule)
@@ -57,7 +57,7 @@ internal static class GesOptimizer
             optimized = EnsureBooleanRuleExpression(optimized);
         }
 
-        return new GameEventScriptCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
+        return new GseCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
     private static EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)

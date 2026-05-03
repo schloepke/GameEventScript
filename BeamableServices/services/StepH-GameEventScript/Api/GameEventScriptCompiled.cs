@@ -2,15 +2,14 @@
 
 using System;
 using System.Collections.Generic;
-using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
-namespace StepH.GameEventScript.Compiler;
+namespace StepH.GameEventScript.Api;
 
-public sealed class GameEventScriptBytecode
+public sealed class GameEventScriptCompiled
 {
-    internal GameEventScriptBytecode(
+    internal GameEventScriptCompiled(
         GameEventScriptCompilationOptions options,
         IReadOnlyList<string> stringPool,
         IReadOnlyList<GameEventScriptValue> constantPool,
@@ -19,7 +18,9 @@ public sealed class GameEventScriptBytecode
         IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
         IReadOnlyList<string> typeMetadata,
         IReadOnlyList<GameEventScriptBytecodeProgram> programs,
-        GameEventScriptModule? sourceModule = null)
+        IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> handlers,
+        IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions,
+        int maxStackDepth)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         StringPool = stringPool ?? throw new ArgumentNullException(nameof(stringPool));
@@ -29,7 +30,9 @@ public sealed class GameEventScriptBytecode
         NamedArgumentLayouts = namedArgumentLayouts ?? throw new ArgumentNullException(nameof(namedArgumentLayouts));
         TypeMetadata = typeMetadata ?? throw new ArgumentNullException(nameof(typeMetadata));
         Programs = programs ?? throw new ArgumentNullException(nameof(programs));
-        SourceModule = sourceModule;
+        Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
+        MaxStackDepth = Math.Max(1, maxStackDepth);
     }
 
     public GameEventScriptCompilationOptions Options { get; }
@@ -48,5 +51,9 @@ public sealed class GameEventScriptBytecode
 
     public IReadOnlyList<GameEventScriptBytecodeProgram> Programs { get; }
 
-    internal GameEventScriptModule? SourceModule { get; }
+    internal IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> Handlers { get; }
+
+    internal IReadOnlyDictionary<string, BytecodeVmTypeDefinition> TypeDefinitions { get; }
+
+    internal int MaxStackDepth { get; }
 }

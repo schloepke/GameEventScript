@@ -68,17 +68,17 @@ public sealed class GameEventScriptBuilder
     /// </summary>
     /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
     /// <returns>The generated GameEventScript bytecode.</returns>
-    public GameEventScriptBytecode Compile(GameEventScriptCompilationOptions? options = null)
+    public GameEventScriptCompiled Compile(GameEventScriptCompilationOptions? options = null)
         => GesBytecodeCompiler.Compile(BuildModule(), options);
 
     /// <summary>
     /// Builds and returns a new internal module model based on the configured sources.
     /// </summary>
-    /// <returns>A built <see cref="GameEventScriptModule"/> instance.</returns>
+    /// <returns>A built <see cref="GseModule"/> instance.</returns>
     /// <exception cref="GameEventScriptModuleBuildException">
     /// Thrown when errors are encountered during the build process.
     /// </exception>
-    internal GameEventScriptModule BuildModule()
+    internal GseModule BuildModule()
     {
         var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(_modules, errors);
@@ -111,7 +111,7 @@ public sealed class GameEventScriptBuilder
 
         errors.ThrowIfAny();
 
-        var moduleResult = new GameEventScriptModule(typeDefinitions, callables, handlers);
+        var moduleResult = new GseModule(typeDefinitions, callables, handlers);
         return _optimize ? GesOptimizer.Optimize(moduleResult) : moduleResult;
     }
 
@@ -205,15 +205,15 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static Dictionary<string, GameEventScriptCallableDefinition> BuildCallableDefinitionMap(
+    private static Dictionary<string, GseCallableDefinition> BuildCallableDefinitionMap(
         IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
         IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions)
     {
-        var map = new Dictionary<string, GameEventScriptCallableDefinition>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GseCallableDefinition>(StringComparer.Ordinal);
 
         foreach (var pair in ruleDefinitions)
         {
-            map[pair.Key] = new GameEventScriptCallableDefinition(
+            map[pair.Key] = new GseCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
@@ -223,7 +223,7 @@ public sealed class GameEventScriptBuilder
 
         foreach (var pair in selectDefinitions)
         {
-            map[pair.Key] = new GameEventScriptCallableDefinition(
+            map[pair.Key] = new GseCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,

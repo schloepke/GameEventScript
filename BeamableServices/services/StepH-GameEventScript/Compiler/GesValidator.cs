@@ -18,7 +18,7 @@ internal static class GesValidator
         public void Declare(string name) => _variables.Add(name);
     }
 
-    internal static void ValidateModule(ParsedModule eventScriptModule, IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+    internal static void ValidateModule(ParsedModule eventScriptModule, IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, GesValidationErrors errors)
     {
         foreach (var typeDefinition in eventScriptModule.TypeDefinitions)
@@ -181,7 +181,7 @@ internal static class GesValidator
     private static void ValidateStatementReferences(
         ParsedModule moduleContext,
         StatementNode statement,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         ValidationScope scope)
@@ -259,7 +259,7 @@ internal static class GesValidator
     private static void ValidateStatementBodyReferences(
         ParsedModule moduleContext,
         StatementBodyNode body,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         ValidationScope parentScope)
@@ -274,7 +274,7 @@ internal static class GesValidator
     private static void ValidateExpressionReferences(
         ParsedModule moduleContext,
         ExpressionNode expression,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -557,7 +557,7 @@ internal static class GesValidator
     private static void ValidateIterationSourceReferences(
         ParsedModule moduleContext,
         IterationSourceNode source,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -575,7 +575,7 @@ internal static class GesValidator
     private static void ValidateCollectionSelectorReferences(
         ParsedModule moduleContext,
         CollectionSelectorNode selector,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -770,7 +770,7 @@ internal static class GesValidator
     private static void ValidateCallExpression(
         ParsedModule moduleContext,
         CallExpressionNode call,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -823,7 +823,7 @@ internal static class GesValidator
     private static void ValidateTypeConstructorExpression(
         ParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {

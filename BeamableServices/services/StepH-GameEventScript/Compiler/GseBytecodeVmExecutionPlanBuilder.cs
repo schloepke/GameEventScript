@@ -4,20 +4,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
-namespace StepH.GameEventScript.BytecodeVM;
+namespace StepH.GameEventScript.Compiler;
 
-internal static class BytecodeVmExecutionPlanBuilder
+internal static class GseBytecodeVmExecutionPlanBuilder
 {
     public static BytecodeVmExecutionPlan CompileHandlerPlan(
         string messageName,
         int declarationOrder,
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
         Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
     {
@@ -41,21 +40,46 @@ internal static class BytecodeVmExecutionPlanBuilder
         }
 
         var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver);
-        foreach (var statement in statements)
-        {
-            programCompiler.CompileStatementPrograms(statement);
-        }
+        var statementProgram = programCompiler.CompileStatementProgram(statements, createsScope: false);
 
         return BytecodeVmExecutionPlan.Create(
             slotCollector.Slots,
-            programCompiler.ExpressionPrograms,
-            programCompiler.PublishLayouts,
+            statementProgram,
             programCompiler.MaxStackDepth);
+    }
+
+    public static IReadOnlyDictionary<string, BytecodeVmTypeDefinition> CompileTypeDefinitions(
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
+    {
+        var result = new Dictionary<string, BytecodeVmTypeDefinition>(StringComparer.Ordinal);
+        foreach (var typeDefinition in typeDefinitions.Values)
+        {
+            var slotCollector = new SlotCollector(callables, typeDefinitions);
+            slotCollector.CollectTypeDefinitions();
+            var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver);
+            var fields = new BytecodeVmTypeFieldDefinition[typeDefinition.Fields.Count];
+            for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
+            {
+                var field = typeDefinition.Fields[fieldIndex];
+                fields[fieldIndex] = new BytecodeVmTypeFieldDefinition(
+                    field.Name,
+                    field.TypeName,
+                    field.MinimumExpression is null ? null : programCompiler.CompileExpression(field.MinimumExpression),
+                    field.MaximumExpression is null ? null : programCompiler.CompileExpression(field.MaximumExpression),
+                    field.ComputedExpression is null ? null : programCompiler.CompileExpression(field.ComputedExpression));
+            }
+
+            result[typeDefinition.Name] = new BytecodeVmTypeDefinition(typeDefinition.Name, fields);
+        }
+
+        return result;
     }
 
     private static bool TryValidateStatements(
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
@@ -73,7 +97,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateStatement(
         StatementNode statement,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (statement)
@@ -200,7 +224,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateRange(
         RangeExpressionNode range,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         if (!TryValidateExpression(range.FromExpression, callables, out failureReason))
@@ -228,7 +252,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateExpression(
         ExpressionNode expression,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (expression)
@@ -693,7 +717,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateIterationSource(
         IterationSourceNode source,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (source)
@@ -719,7 +743,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidatePipelinedCollection(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         var selectors = new List<CollectionSelectorNode>();
@@ -759,7 +783,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateIndexedCollectionAccess(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         if (expression.Selector is not ExpressionSelectorNode selector)
@@ -787,7 +811,7 @@ internal static class BytecodeVmExecutionPlanBuilder
     private static bool TryValidateSelector(
         CollectionSelectorNode selector,
         bool isTerminal,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         switch (selector)
@@ -1005,7 +1029,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateDicePattern(
         DicePatternNode pattern,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         if (pattern is DiceCountPatternNode { Face: { } face } &&
@@ -1021,7 +1045,7 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateObjectMatchPattern(
         ObjectMatchPatternNode pattern,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         out string failureReason)
     {
         foreach (var entry in pattern.Entries)
@@ -1053,7 +1077,7 @@ internal static class BytecodeVmExecutionPlanBuilder
     }
 
     private sealed class SlotCollector(
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
         private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
@@ -1531,94 +1555,69 @@ internal static class BytecodeVmExecutionPlanBuilder
 
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         Func<GameEventScriptExtensionReference, int>? externalReferenceResolver)
     {
-        private readonly IReadOnlyDictionary<string, GameEventScriptCallableDefinition> _callables = callables;
+        private readonly IReadOnlyDictionary<string, GseCallableDefinition> _callables = callables;
         private readonly Func<GameEventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
         private readonly Dictionary<ExpressionNode, BytecodeVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
-        private readonly Dictionary<PublishStatementNode, BytecodeVmPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
-
-        public IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> ExpressionPrograms => _expressionPrograms;
-
-        public IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> PublishLayouts => _publishLayouts;
 
         public int MaxStackDepth { get; private set; } = 1;
 
-        public void CompileStatementPrograms(StatementNode statement)
-        {
-            switch (statement)
+        public BytecodeVmStatementProgram CompileStatementProgram(IReadOnlyList<StatementNode> statements, bool createsScope)
+            => new(statements.Select(CompileStatement).ToArray(), createsScope);
+
+        private BytecodeVmStatement CompileStatement(StatementNode statement)
+            => statement switch
             {
-                case LetStatementNode let:
-                    CompileExpression(let.Expression);
-                    break;
+                LetStatementNode let => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.Let,
+                    name: let.Identifier,
+                    declaredType: let.DeclaredType,
+                    expressionProgram: CompileExpression(let.Expression)),
 
-                case PublishStatementNode { MessageExpression: MessageLiteralExpressionNode } publish:
-                    CompilePublishLayout(publish);
-                    break;
+                PublishStatementNode { MessageExpression: MessageLiteralExpressionNode } publish => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.Publish,
+                    publishLayout: CompilePublishLayout(publish)),
 
-                case PublishStatementNode publish:
-                    CompileExpression(publish.MessageExpression);
-                    break;
+                PublishStatementNode publish => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.Publish,
+                    expressionProgram: CompileExpression(publish.MessageExpression)),
 
-                case IfStatementNode ifStatement:
-                    CompileExpression(ifStatement.Condition);
-                    foreach (var nested in ifStatement.ThenBody.Statements)
-                    {
-                        CompileStatementPrograms(nested);
-                    }
+                IfStatementNode ifStatement => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.If,
+                    expressionProgram: CompileExpression(ifStatement.Condition),
+                    thenProgram: CompileStatementProgram(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock),
+                    elseProgram: ifStatement.ElseBody is null
+                        ? null
+                        : CompileStatementProgram(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock)),
 
-                    if (ifStatement.ElseBody is not null)
-                    {
-                        foreach (var nested in ifStatement.ElseBody.Statements)
-                        {
-                            CompileStatementPrograms(nested);
-                        }
-                    }
+                ForStatementNode { Source: RangeIterationSourceNode range } forStatement => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.ForRange,
+                    name: forStatement.Identifier,
+                    iterationSource: CompileIterationSource(range),
+                    bodyProgram: CompileStatementProgram(forStatement.Body.Statements, forStatement.Body.IsBlock)),
 
-                    break;
+                ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.ForCollection,
+                    name: forStatement.Identifier,
+                    iterationSource: CompileIterationSource(collection),
+                    bodyProgram: CompileStatementProgram(forStatement.Body.Statements, forStatement.Body.IsBlock)),
 
-                case ForStatementNode { Source: RangeIterationSourceNode range } forStatement:
-                    CompileExpression(range.RangeExpression.FromExpression);
-                    CompileExpression(range.RangeExpression.ToExpression);
-                    if (range.RangeExpression.StepExpression is not null)
-                    {
-                        CompileExpression(range.RangeExpression.StepExpression);
-                    }
+                ExpressionStatementNode expressionStatement => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.Expression,
+                    expressionProgram: CompileExpression(expressionStatement.Expression),
+                    diagnosticName: expressionStatement.Expression.GetType().Name),
 
-                    foreach (var nested in forStatement.Body.Statements)
-                    {
-                        CompileStatementPrograms(nested);
-                    }
+                SeededRandomStatementNode seededRandom => new BytecodeVmStatement(
+                    BytecodeVmStatementKind.SeededRandom,
+                    expressionProgram: CompileExpression(seededRandom.SeedExpression),
+                    bodyProgram: CompileStatementProgram(seededRandom.Body.Statements, seededRandom.Body.IsBlock)),
 
-                    break;
+                _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support statement '{statement.GetType().Name}'.")
+            };
 
-                case ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement:
-                    CompileExpression(collection.Expression);
-
-                    foreach (var nested in forStatement.Body.Statements)
-                    {
-                        CompileStatementPrograms(nested);
-                    }
-
-                    break;
-
-                case ExpressionStatementNode expressionStatement:
-                    CompileExpression(expressionStatement.Expression);
-                    break;
-
-                case SeededRandomStatementNode seededRandom:
-                    CompileExpression(seededRandom.SeedExpression);
-                    foreach (var nested in seededRandom.Body.Statements)
-                    {
-                        CompileStatementPrograms(nested);
-                    }
-
-                    break;
-            }
-        }
-
-        private BytecodeVmExpressionProgram CompileExpression(ExpressionNode expression)
+        public BytecodeVmExpressionProgram CompileExpression(ExpressionNode expression)
         {
             if (_expressionPrograms.TryGetValue(expression, out var program))
             {
@@ -1636,11 +1635,6 @@ internal static class BytecodeVmExecutionPlanBuilder
 
         private BytecodeVmPublishLayout CompilePublishLayout(PublishStatementNode publish)
         {
-            if (_publishLayouts.TryGetValue(publish, out var layout))
-            {
-                return layout;
-            }
-
             if (publish.MessageExpression is not MessageLiteralExpressionNode message)
             {
                 throw new GameEventScriptCompilationException("BytecodeVM execution planner does not support this publish expression.");
@@ -1655,14 +1649,32 @@ internal static class BytecodeVmExecutionPlanBuilder
                 argumentPrograms[argumentIndex] = CompileExpression(argument.Expression);
             }
 
-            layout = new BytecodeVmPublishLayout(
+            return new BytecodeVmPublishLayout(
                 GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
                 GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
                 argumentNames,
                 argumentPrograms);
-            _publishLayouts[publish] = layout;
-            return layout;
         }
+
+        private BytecodeVmIterationSourceProgram CompileIterationSource(IterationSourceNode source)
+            => source switch
+            {
+                CollectionIterationSourceNode collection => new BytecodeVmIterationSourceProgram(
+                    BytecodeVmIterationSourceKind.Collection,
+                    CompileExpression(collection.Expression),
+                    null,
+                    null,
+                    null),
+
+                RangeIterationSourceNode range => new BytecodeVmIterationSourceProgram(
+                    BytecodeVmIterationSourceKind.Range,
+                    null,
+                    CompileExpression(range.RangeExpression.FromExpression),
+                    CompileExpression(range.RangeExpression.ToExpression),
+                    range.RangeExpression.StepExpression is null ? null : CompileExpression(range.RangeExpression.StepExpression)),
+
+                _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support iteration source '{source.GetType().Name}'.")
+            };
 
         private bool TryGetSlot(string name, out int slot)
             => slots.TryGetValue(name, out slot);
@@ -2113,7 +2125,7 @@ internal static class BytecodeVmExecutionPlanBuilder
                 return new BytecodeVmGeneratedCollectionProgram(
                     generatedCollection.CollectionType,
                     RequireSlot(generatedCollection.Identifier),
-                    generatedCollection.Source,
+                    compiler.CompileIterationSource(generatedCollection.Source),
                     predicateProgram,
                     projectionProgram);
             }
@@ -2212,21 +2224,21 @@ internal static class BytecodeVmExecutionPlanBuilder
                             BytecodeVmSelectorKind.Pattern,
                             -1,
                             null,
-                            dicePattern: pattern.Pattern);
+                            dicePattern: CompileDicePattern(pattern.Pattern));
 
                     case ObjectMatchSelectorNode objectMatch when isTerminal:
                         return new BytecodeVmSelectorProgram(
                             BytecodeVmSelectorKind.ObjectMatch,
                             -1,
                             null,
-                            objectPattern: objectMatch.Pattern);
+                            objectPattern: CompileObjectMatchPattern(objectMatch.Pattern));
 
                     case TakePatternSelectorNode takePattern when isTerminal:
                         return new BytecodeVmSelectorProgram(
                             BytecodeVmSelectorKind.TakePattern,
                             -1,
                             null,
-                            dicePattern: takePattern.Pattern);
+                            dicePattern: CompileDicePattern(takePattern.Pattern));
 
                     case MinSelectorNode min when isTerminal:
                         return new BytecodeVmSelectorProgram(
@@ -2337,6 +2349,37 @@ internal static class BytecodeVmExecutionPlanBuilder
                 return slot;
             }
 
+            private BytecodeVmDicePattern CompileDicePattern(DicePatternNode pattern)
+                => pattern switch
+                {
+                    DiceFullHousePatternNode => new BytecodeVmFullHousePattern(),
+                    DiceStraightPatternNode => new BytecodeVmStraightPattern(),
+                    DiceCountPatternNode count => new BytecodeVmDiceCountPattern(
+                        count.Count,
+                        count.Face is null ? null : compiler.CompileExpression(count.Face)),
+                    _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support dice pattern '{pattern.GetType().Name}'.")
+                };
+
+            private BytecodeVmObjectMatchPattern CompileObjectMatchPattern(ObjectMatchPatternNode pattern)
+            {
+                var entries = new BytecodeVmObjectMatchEntry[pattern.Entries.Count];
+                for (var index = 0; index < pattern.Entries.Count; index++)
+                {
+                    var entry = pattern.Entries[index];
+                    entries[index] = new BytecodeVmObjectMatchEntry(entry.Key, CompileObjectMatchValue(entry.Value));
+                }
+
+                return new BytecodeVmObjectMatchPattern(entries);
+            }
+
+            private BytecodeVmObjectMatchValue CompileObjectMatchValue(ObjectMatchValueNode value)
+                => value switch
+                {
+                    ObjectMatchExpressionValueNode expression => new BytecodeVmObjectMatchExpressionValue(compiler.CompileExpression(expression.Expression)),
+                    ObjectMatchNestedValueNode nested => new BytecodeVmObjectMatchNestedValue(CompileObjectMatchPattern(nested.Pattern)),
+                    _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support object match value '{value.GetType().Name}'.")
+                };
+
             private void EmitLoadConstant(BytecodeVmValue value)
             {
                 instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadConstant, Constant: value));
@@ -2403,50 +2446,6 @@ internal static class BytecodeVmExecutionPlanBuilder
                 };
         }
     }
-}
-
-internal sealed class BytecodeVmExecutionPlan
-{
-    private readonly IReadOnlyDictionary<string, int> _slots;
-    private readonly IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> _expressionPrograms;
-    private readonly IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> _publishLayouts;
-
-    private BytecodeVmExecutionPlan(
-        IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> expressionPrograms,
-        IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> publishLayouts,
-        int maxStackDepth)
-    {
-        _slots = slots;
-        _expressionPrograms = expressionPrograms;
-        _publishLayouts = publishLayouts;
-        SlotCount = slots.Count;
-        MaxStackDepth = maxStackDepth;
-    }
-
-    public int SlotCount { get; }
-
-    public int MaxStackDepth { get; }
-
-    public static BytecodeVmExecutionPlan Create(
-        IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> expressionPrograms,
-        IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> publishLayouts,
-        int maxStackDepth)
-        => new(
-            new Dictionary<string, int>(slots, StringComparer.Ordinal),
-            new Dictionary<ExpressionNode, BytecodeVmExpressionProgram>(expressionPrograms, ReferenceEqualityComparer<ExpressionNode>.Instance),
-            new Dictionary<PublishStatementNode, BytecodeVmPublishLayout>(publishLayouts, ReferenceEqualityComparer<PublishStatementNode>.Instance),
-            maxStackDepth);
-
-    public bool TryGetSlot(string name, out int slot)
-        => _slots.TryGetValue(name, out slot);
-
-    public bool TryGetExpressionProgram(ExpressionNode expression, out BytecodeVmExpressionProgram program)
-        => _expressionPrograms.TryGetValue(expression, out program!);
-
-    public bool TryGetPublishLayout(PublishStatementNode publish, out BytecodeVmPublishLayout layout)
-        => _publishLayouts.TryGetValue(publish, out layout!);
 }
 
 internal sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>

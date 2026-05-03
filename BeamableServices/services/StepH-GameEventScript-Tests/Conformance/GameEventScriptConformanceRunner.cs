@@ -453,7 +453,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static GameEventScriptBytecode CompileBytecode(GameEventScriptConformanceTest test)
+    private static GameEventScriptCompiled CompileBytecode(GameEventScriptConformanceTest test)
     {
         var builder = GameEventScriptBuilder.Create();
         foreach (var source in GetSources(test))

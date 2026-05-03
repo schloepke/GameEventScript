@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace StepH.GameEventScript.Compiler;
+namespace StepH.GameEventScript.Api;
 
 public sealed class GameEventScriptBytecodeProgram(
     string name,

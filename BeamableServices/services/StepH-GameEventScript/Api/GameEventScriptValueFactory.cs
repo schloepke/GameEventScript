@@ -34,7 +34,7 @@ public static class GameEventScriptValueFactory
     /// with an optional unit.
     /// </summary>
     /// <param name="value">The decimal value to encapsulate.</param>
-    /// <param name="unit">An optional unit of type <see cref="GameEventScriptDecimalUnits.GameEventScriptDecimalUnit"/>
+    /// <param name="unit">An optional unit of type <see cref="GameEventScriptDecimalUnit"/>
     /// representing the measurement unit of the value. Defaults to null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the decimal value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

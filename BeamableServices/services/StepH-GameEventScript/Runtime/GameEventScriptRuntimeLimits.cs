@@ -1,7 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
@@ -145,17 +144,17 @@ internal sealed class GameEventScriptRuntimeBudget(GameEventScriptContext contex
         return false;
     }
 
-    public bool TryCheckDice(DiceExpressionNode diceExpression)
+    public bool TryCheckDice(int diceCount, int sideCount)
     {
-        if (Limits.MaxDiceCount > 0 && diceExpression.DiceCount > Limits.MaxDiceCount)
+        if (Limits.MaxDiceCount > 0 && diceCount > Limits.MaxDiceCount)
         {
-            ReportLimit("MaxDiceCount", $"Dice count {diceExpression.DiceCount} exceeds the configured limit.", Limits.MaxDiceCount);
+            ReportLimit("MaxDiceCount", $"Dice count {diceCount} exceeds the configured limit.", Limits.MaxDiceCount);
             return false;
         }
 
-        if (Limits.MaxDiceSides > 0 && diceExpression.SideCount > Limits.MaxDiceSides)
+        if (Limits.MaxDiceSides > 0 && sideCount > Limits.MaxDiceSides)
         {
-            ReportLimit("MaxDiceSides", $"Dice side count {diceExpression.SideCount} exceeds the configured limit.", Limits.MaxDiceSides);
+            ReportLimit("MaxDiceSides", $"Dice side count {sideCount} exceeds the configured limit.", Limits.MaxDiceSides);
             return false;
         }
 

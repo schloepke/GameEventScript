@@ -12,7 +12,7 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesBytecodeCompiler
 {
-    public static GameEventScriptBytecode Compile(GameEventScriptModule module, GameEventScriptCompilationOptions? options = null)
+    public static GameEventScriptCompiled Compile(GseModule module, GameEventScriptCompilationOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new GameEventScriptCompilationOptions();
@@ -20,7 +20,7 @@ internal static class GesBytecodeCompiler
         return builder.Build();
     }
 
-    private sealed class CompilerBuilder(GameEventScriptModule module, GameEventScriptCompilationOptions options)
+    private sealed class CompilerBuilder(GseModule module, GameEventScriptCompilationOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
@@ -35,13 +35,19 @@ internal static class GesBytecodeCompiler
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
         private readonly List<string> _typeMetadata = [];
         private readonly List<GameEventScriptBytecodeProgram> _programs = [];
-        public GameEventScriptBytecode Build()
+        public GameEventScriptCompiled Build()
         {
             CompileMetadata();
             CompileGlobalDefinitions();
             CompileHandlers();
+            var typeDefinitions = GseBytecodeVmExecutionPlanBuilder.CompileTypeDefinitions(
+                module.Callables,
+                module.TypeDefinitions,
+                ResolveExternalReference);
+            var handlers = BuildHandlers();
+            var maxStackDepth = Math.Max(GetMaxStackDepth(handlers), GetMaxStackDepth(typeDefinitions));
 
-            return new GameEventScriptBytecode(
+            return new GameEventScriptCompiled(
                 options,
                 _stringPool.ToArray(),
                 _constantPool.ToArray(),
@@ -50,8 +56,81 @@ internal static class GesBytecodeCompiler
                 _namedArgumentLayouts.ToArray(),
                 _typeMetadata.ToArray(),
                 _programs.ToArray(),
-                module);
+                handlers,
+                typeDefinitions,
+                maxStackDepth);
         }
+
+        private IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> BuildHandlers()
+        {
+            return module.Handlers.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<BytecodeVmCompiledHandler>)pair.Value
+                    .Select((handler, index) => new BytecodeVmCompiledHandler(
+                        pair.Key,
+                        handler.Parameters,
+                        handler.SignatureLabels,
+                        GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels),
+                        index,
+                        FindProgramIndex($"handler:{pair.Key}#{index}"),
+                        options.EnableDiagnostics,
+                        GseBytecodeVmExecutionPlanBuilder.CompileHandlerPlan(
+                            pair.Key,
+                            index,
+                            handler.Parameters,
+                            handler.Statements,
+                            module.Callables,
+                            module.TypeDefinitions,
+                            ResolveExternalReference)))
+                    .ToArray(),
+                StringComparer.Ordinal);
+        }
+
+        private int FindProgramIndex(string programName)
+        {
+            for (var index = 0; index < _programs.Count; index++)
+            {
+                if (string.Equals(_programs[index].Name, programName, StringComparison.Ordinal))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        private int ResolveExternalReference(GameEventScriptExtensionReference reference)
+        {
+            if (GameEventScriptStandardExtensions.IsStandardReference(reference))
+            {
+                return -1;
+            }
+
+            for (var index = 0; index < _externalReferences.Count; index++)
+            {
+                if (string.Equals(_externalReferences[index].SignatureId, reference.SignatureId, StringComparison.Ordinal))
+                {
+                    return index;
+                }
+            }
+
+            throw new InvalidOperationException($"BytecodeVM invariant failed: external reference '{reference.SignatureId}' was not emitted into bytecode.");
+        }
+
+        private static int GetMaxStackDepth(IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> handlers)
+            => handlers.Count == 0
+                ? 1
+                : handlers.Values.SelectMany(group => group).Select(handler => handler.ExecutionPlan.MaxStackDepth).DefaultIfEmpty(1).Max();
+
+        private static int GetMaxStackDepth(IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions)
+            => typeDefinitions.Count == 0
+                ? 1
+                : typeDefinitions.Values.SelectMany(type => type.Fields).SelectMany(field => new[]
+                {
+                    field.MinimumProgram,
+                    field.MaximumProgram,
+                    field.ComputedProgram
+                }).Where(program => program is not null).Select(program => program!.MaxStackDepth).DefaultIfEmpty(1).Max();
 
         private void CompileMetadata()
         {
@@ -85,7 +164,7 @@ internal static class GesBytecodeCompiler
             }
         }
 
-        private void CompileCallable(GameEventScriptCallableDefinition callable)
+        private void CompileCallable(GseCallableDefinition callable)
         {
             var instructions = new List<GameEventScriptInstruction>
             {

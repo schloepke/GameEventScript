@@ -6,9 +6,9 @@ using StepH.GameEventScript.BytecodeVM;
 
 namespace StepH.GameEventScript.Runtime;
 
-public static class GameEventScriptDynamicLinker
+internal static class GameEventScriptDynamicLinker
 {
-    public static void Bind(CompiledGameEventScript compiledScript, IGameEventScriptExtensionRegistry registry)
+    public static void Bind(GseBytecodeVmExecutable compiledScript, IGameEventScriptExtensionRegistry registry)
     {
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
         _ = registry ?? throw new ArgumentNullException(nameof(registry));

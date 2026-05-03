@@ -1,28 +1,28 @@
 using System.Globalization;
 using System.Text;
-using StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Extensions;
 
 /// <summary>
 /// Provides functionality to generate a human-readable representation of the bytecode
-/// within a <see cref="GameEventScriptBytecode"/> instance. This utility is useful for debugging
+/// within a <see cref="GameEventScriptCompiled"/> instance. This utility is useful for debugging
 /// and analyzing the structure, references, and instructions of compiled game event scripts.
 /// </summary>
 public static class GameEventScriptBytecodeDumper
 {
     /// <summary>
-    /// Dumps the bytecode of the specified <see cref="GameEventScriptBytecode"/> instance
+    /// Dumps the bytecode of the specified <see cref="GameEventScriptCompiled"/> instance
     /// into a readable string format for debugging and analysis.
     /// </summary>
     /// <param name="module">
-    /// The <see cref="GameEventScriptBytecode"/> instance whose bytecode will be dumped.
+    /// The <see cref="GameEventScriptCompiled"/> instance whose bytecode will be dumped.
     /// </param>
     /// <returns>
     /// A string representation of the bytecode, including diagnostics, string pools, signatures,
     /// type metadata, external references, constants, named argument layouts, and programs.
     /// </returns>
-    public static string DumpBytecode(this GameEventScriptBytecode module)
+    public static string DumpBytecode(this GameEventScriptCompiled module)
     {
         var builder = new StringBuilder();
         builder.AppendLine("gameeventscript bytecode v1");
@@ -78,7 +78,7 @@ public static class GameEventScriptBytecodeDumper
         return builder.ToString();
     }
 
-    private static void AppendInstructionOperands(StringBuilder builder, GameEventScriptBytecode module, GameEventScriptInstruction instruction)
+    private static void AppendInstructionOperands(StringBuilder builder, GameEventScriptCompiled module, GameEventScriptInstruction instruction)
     {
         switch (instruction.OpCode)
         {
@@ -148,7 +148,7 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendStringOperand(StringBuilder builder, GameEventScriptBytecode module, string name, int index)
+    private static void AppendStringOperand(StringBuilder builder, GameEventScriptCompiled module, string name, int index)
     {
         if (index < 0)
         {
@@ -162,7 +162,7 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendTypeOperand(StringBuilder builder, GameEventScriptBytecode module, string name, int index)
+    private static void AppendTypeOperand(StringBuilder builder, GameEventScriptCompiled module, string name, int index)
     {
         if (index < 0)
         {
@@ -176,7 +176,7 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendConstantOperand(StringBuilder builder, GameEventScriptBytecode module, string name, int index)
+    private static void AppendConstantOperand(StringBuilder builder, GameEventScriptCompiled module, string name, int index)
     {
         if (index < 0)
         {

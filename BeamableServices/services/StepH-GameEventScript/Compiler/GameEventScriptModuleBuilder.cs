@@ -11,7 +11,7 @@ namespace StepH.GameEventScript.Compiler;
 /// Allows the addition of scripts, script files, parsed modules, and
 /// supports enabling or disabling optimization during the module-building process.
 /// </summary>
-public sealed partial class GameEventScriptModuleBuilder
+public sealed class GameEventScriptModuleBuilder
 {
     private readonly List<ParsedModule> _modules = [];
     private bool _optimize = true;
@@ -75,41 +75,38 @@ public sealed partial class GameEventScriptModuleBuilder
     /// </exception>
     public GameEventScriptModule Build()
     {
-        var errors = new List<GameEventScriptModuleBuildError>();
+        var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(_modules, errors);
         var ruleDefinitions = BuildRuleDefinitionMap(_modules, errors);
         var selectDefinitions = BuildSelectDefinitionMap(_modules, errors);
-        var callableDefinitions = BuildCallableDefinitionMap(ruleDefinitions, selectDefinitions);
-        var handlers = BuildHandlerMap(_modules, errors)
-            .ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<EventHandlerNode>)pair.Value.AsReadOnly(),
-                StringComparer.Ordinal);
+        var callables = BuildCallableDefinitionMap(ruleDefinitions, selectDefinitions);
+        var handlers = BuildHandlerMap(_modules)
+            .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EventHandlerNode>)pair.Value, StringComparer.Ordinal);
 
-        foreach (var ruleName in ruleDefinitions.Keys.Where(selectDefinitions.ContainsKey))
+        foreach (var conflictName in ruleDefinitions.Keys.Where(selectDefinitions.ContainsKey))
         {
-            var conflictModule = _modules.FirstOrDefault(module =>
-                module.RuleDefinitions.Any(rule => rule.Name == ruleName) ||
-                module.SelectDefinitions.Any(select => select.Name == ruleName));
-            errors.Add(CreateError(
+            var conflictModule = _modules.FirstOrDefault(module => module.SelectDefinitions.Any(select => string.Equals(select.Name, conflictName, StringComparison.Ordinal))) ??
+                                 _modules.FirstOrDefault(module => module.RuleDefinitions.Any(rule => string.Equals(rule.Name, conflictName, StringComparison.Ordinal)));
+            var conflictNode = conflictModule?.SelectDefinitions.FirstOrDefault(select => string.Equals(select.Name, conflictName, StringComparison.Ordinal)) ??
+                               (ScriptNode?)conflictModule?.RuleDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, conflictName, StringComparison.Ordinal));
+
+            errors.Add(
                 conflictModule,
-                $"Global definition '{ruleName}' is defined as both rule and select",
-                ruleName,
+                $"Name '{conflictName}' is declared as both a rule and a select",
+                conflictName,
                 GameEventScriptSymbolKind.GlobalDefinition,
-                GameEventScriptModuleBuildErrorKind.RuleSelectConflict));
+                GameEventScriptModuleBuildErrorKind.RuleSelectConflict,
+                conflictNode);
         }
 
         foreach (var module in _modules)
         {
-            ValidateModule(module, callableDefinitions, typeDefinitions, errors);
+            GesValidator.ValidateModule(module, callables, typeDefinitions, errors);
         }
 
-        if (errors.Count > 0)
-        {
-            throw new GameEventScriptModuleBuildException(errors);
-        }
+        errors.ThrowIfAny();
 
-        var moduleResult = new GameEventScriptModule(typeDefinitions, callableDefinitions, handlers);
+        var moduleResult = new GameEventScriptModule(typeDefinitions, callables, handlers);
         return _optimize ? GesOptimizer.Optimize(moduleResult) : moduleResult;
     }
 
@@ -120,25 +117,122 @@ public sealed partial class GameEventScriptModuleBuilder
     /// <returns>A compiled game event script that can be executed within the scripting environment.</returns>
     public CompiledGameEventScript Compile(GameEventScriptCompilationOptions? options = null) => RegisterVmCompiler.Compile(Build(), options);
 
-    private static GameEventScriptModuleBuildError CreateError(
-        ParsedModule? module,
-        string message,
-        string symbol,
-        GameEventScriptSymbolKind symbolKind,
-        GameEventScriptModuleBuildErrorKind kind,
-        int? line = null,
-        int? column = null,
-        int? endLine = null,
-        int? endColumn = null)
+    private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedModule> modules)
     {
-        var resolvedModuleName = module?.ModuleName ?? "UnknownModule";
-        var resolvedSourceName = module?.SourceName ?? "UnknownSource";
-        return new GameEventScriptModuleBuildError(
-            message,
-            resolvedModuleName,
-            symbol,
-            symbolKind,
-            kind,
-            new GameEventScriptSourceLocation(resolvedSourceName, line, column, endLine, endColumn, resolvedModuleName));
+        var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
+
+        foreach (var module in modules)
+        {
+            foreach (var handler in module.Handlers)
+            {
+                if (!map.TryGetValue(handler.Message, out var handlers))
+                {
+                    handlers = [];
+                    map[handler.Message] = handlers;
+                }
+
+                handlers.Add(handler);
+            }
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<ParsedModule> modules, GesValidationErrors errors)
+    {
+        var map = new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
+        foreach (var module in modules)
+        {
+            foreach (var typeDefinition in module.TypeDefinitions)
+            {
+                if (!map.TryAdd(typeDefinition.Name, typeDefinition))
+                {
+                    errors.Add(
+                        module,
+                        $"Type '{typeDefinition.Name}' is defined more than once",
+                        typeDefinition.Name,
+                        GameEventScriptSymbolKind.Type,
+                        GameEventScriptModuleBuildErrorKind.DuplicateType,
+                        typeDefinition);
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<ParsedModule> modules, GesValidationErrors errors)
+    {
+        var map = new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal);
+        foreach (var module in modules)
+        {
+            foreach (var ruleDefinition in module.RuleDefinitions)
+            {
+                if (!map.TryAdd(ruleDefinition.Name, ruleDefinition))
+                {
+                    errors.Add(
+                        module,
+                        $"Rule '{ruleDefinition.Name}' is defined more than once",
+                        ruleDefinition.Name,
+                        GameEventScriptSymbolKind.Rule,
+                        GameEventScriptModuleBuildErrorKind.DuplicateRule,
+                        ruleDefinition);
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<ParsedModule> modules, GesValidationErrors errors)
+    {
+        var map = new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal);
+        foreach (var module in modules)
+        {
+            foreach (var selectDefinition in module.SelectDefinitions)
+            {
+                if (!map.TryAdd(selectDefinition.Name, selectDefinition))
+                {
+                    errors.Add(
+                        module,
+                        $"Select '{selectDefinition.Name}' is defined more than once",
+                        selectDefinition.Name,
+                        GameEventScriptSymbolKind.Select,
+                        GameEventScriptModuleBuildErrorKind.DuplicateSelect,
+                        selectDefinition);
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, GameEventScriptCallableDefinition> BuildCallableDefinitionMap(
+        IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
+        IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions)
+    {
+        var map = new Dictionary<string, GameEventScriptCallableDefinition>(StringComparer.Ordinal);
+
+        foreach (var pair in ruleDefinitions)
+        {
+            map[pair.Key] = new GameEventScriptCallableDefinition(
+                pair.Key,
+                pair.Value.ParameterList.ToArray(),
+                pair.Value.Expression,
+                GameEventScriptCallableKind.Rule,
+                pair.Value.SourceRange);
+        }
+
+        foreach (var pair in selectDefinitions)
+        {
+            map[pair.Key] = new GameEventScriptCallableDefinition(
+                pair.Key,
+                pair.Value.ParameterList.ToArray(),
+                pair.Value.Expression,
+                GameEventScriptCallableKind.Select,
+                pair.Value.SourceRange);
+        }
+
+        return map;
     }
 }

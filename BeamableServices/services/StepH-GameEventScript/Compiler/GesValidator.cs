@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace StepH.GameEventScript.Compiler;
 
-public sealed partial class GameEventScriptModuleBuilder
+internal static class GesValidator
 {
     private sealed class ValidationScope(IEnumerable<string>? names = null)
     {
@@ -17,8 +17,8 @@ public sealed partial class GameEventScriptModuleBuilder
         public void Declare(string name) => _variables.Add(name);
     }
 
-    private static void ValidateModule(ParsedModule eventScriptModule, IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, List<GameEventScriptModuleBuildError> errors)
+    internal static void ValidateModule(ParsedModule eventScriptModule, IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, GesValidationErrors errors)
     {
         foreach (var typeDefinition in eventScriptModule.TypeDefinitions)
         {
@@ -77,12 +77,14 @@ public sealed partial class GameEventScriptModuleBuilder
 
             foreach (var duplicateParameter in duplicateParameters)
             {
-                errors.Add(CreateError(
+                var duplicateParameterNode = ruleDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+                errors.Add(
                     eventScriptModule,
                     $"Rule '{ruleDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
                     ruleDefinition.Name,
                     GameEventScriptSymbolKind.Rule,
-                    GameEventScriptModuleBuildErrorKind.DuplicateDefinitionParameter));
+                    GameEventScriptModuleBuildErrorKind.DuplicateDefinitionParameter,
+                    duplicateParameterNode);
             }
 
             ValidateExpressionReferences(eventScriptModule, ruleDefinition.Expression, callables, typeDefinitions, errors);
@@ -116,12 +118,14 @@ public sealed partial class GameEventScriptModuleBuilder
 
             foreach (var duplicateParameter in duplicateParameters)
             {
-                errors.Add(CreateError(
+                var duplicateParameterNode = selectDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+                errors.Add(
                     eventScriptModule,
                     $"Select '{selectDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
                     selectDefinition.Name,
                     GameEventScriptSymbolKind.Select,
-                    GameEventScriptModuleBuildErrorKind.DuplicateDefinitionParameter));
+                    GameEventScriptModuleBuildErrorKind.DuplicateDefinitionParameter,
+                    duplicateParameterNode);
             }
 
             ValidateExpressionReferences(eventScriptModule, selectDefinition.Expression, callables, typeDefinitions, errors);
@@ -155,12 +159,14 @@ public sealed partial class GameEventScriptModuleBuilder
 
             foreach (var duplicateParameter in duplicateParameters)
             {
-                errors.Add(CreateError(
+                var duplicateParameterNode = handler.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+                errors.Add(
                     eventScriptModule,
                     $"Handler '{handler.Message}' declares parameter '{duplicateParameter}' more than once",
                     handler.Message,
                     GameEventScriptSymbolKind.Handler,
-                    GameEventScriptModuleBuildErrorKind.DuplicateHandlerParameter));
+                    GameEventScriptModuleBuildErrorKind.DuplicateHandlerParameter,
+                    duplicateParameterNode);
             }
 
             var handlerScope = new ValidationScope(handler.Parameters);
@@ -176,7 +182,7 @@ public sealed partial class GameEventScriptModuleBuilder
         StatementNode statement,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors,
+        GesValidationErrors errors,
         ValidationScope scope)
     {
         switch (statement)
@@ -196,12 +202,13 @@ public sealed partial class GameEventScriptModuleBuilder
                     errors);
                 if (scope.ContainsInCurrentScope(let.Identifier))
                 {
-                    errors.Add(CreateError(
+                    errors.Add(
                         moduleContext,
                         $"Variable '{let.Identifier}' is already declared in the current scope",
                         let.Identifier,
                         GameEventScriptSymbolKind.Variable,
-                        GameEventScriptModuleBuildErrorKind.DuplicateVariable));
+                        GameEventScriptModuleBuildErrorKind.DuplicateVariable,
+                        let);
                     return;
                 }
 
@@ -253,7 +260,7 @@ public sealed partial class GameEventScriptModuleBuilder
         StatementBodyNode body,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors,
+        GesValidationErrors errors,
         ValidationScope parentScope)
     {
         var bodyScope = body.IsBlock ? ValidationScope.CreateChild() : parentScope;
@@ -268,7 +275,7 @@ public sealed partial class GameEventScriptModuleBuilder
         ExpressionNode expression,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         while (true)
         {
@@ -406,12 +413,12 @@ public sealed partial class GameEventScriptModuleBuilder
                         callableDefinition.Kind != GameEventScriptCallableKind.Rule ||
                         callableDefinition.Parameters.Count != 1)
                     {
-                        errors.Add(CreateError(
+                        errors.Add(
                             moduleContext,
                             $"Rule '{rulePredicate.RuleName}' must exist and declare exactly one parameter to be used with 'is'",
                             rulePredicate.RuleName,
                             GameEventScriptSymbolKind.Rule,
-                            GameEventScriptModuleBuildErrorKind.InvalidRulePredicate));
+                            GameEventScriptModuleBuildErrorKind.InvalidRulePredicate);
                     }
 
                     expression = rulePredicate.Value;
@@ -551,7 +558,7 @@ public sealed partial class GameEventScriptModuleBuilder
         IterationSourceNode source,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         switch (source)
         {
@@ -569,7 +576,7 @@ public sealed partial class GameEventScriptModuleBuilder
         CollectionSelectorNode selector,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         switch (selector)
         {
@@ -764,18 +771,18 @@ public sealed partial class GameEventScriptModuleBuilder
         CallExpressionNode call,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         if (!callables.TryGetValue(call.Name, out var callable))
         {
             if (call.ArgumentList.Arguments.All(argument => argument.Label is null))
             {
-                errors.Add(CreateError(
+                errors.Add(
                     moduleContext,
                     $"No rule or select named '{call.Name}' exists",
                     call.Name,
                     GameEventScriptSymbolKind.GlobalDefinition,
-                    GameEventScriptModuleBuildErrorKind.MissingRuleOrSelect));
+                    GameEventScriptModuleBuildErrorKind.MissingRuleOrSelect);
             }
 
             return;
@@ -791,7 +798,7 @@ public sealed partial class GameEventScriptModuleBuilder
         string name,
         IReadOnlyList<string> expectedLabels,
         IReadOnlyList<ArgumentNode> arguments,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         var count = Math.Min(expectedLabels.Count, arguments.Count);
         for (var index = 0; index < count; index++)
@@ -803,12 +810,12 @@ public sealed partial class GameEventScriptModuleBuilder
                 continue;
             }
 
-            errors.Add(CreateError(
+            errors.Add(
                 moduleContext,
                 $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
                 name,
                 kind == GameEventScriptCallableKind.Rule ? GameEventScriptSymbolKind.Rule : GameEventScriptSymbolKind.Select,
-                kind == GameEventScriptCallableKind.Rule ? GameEventScriptModuleBuildErrorKind.WrongRuleArity : GameEventScriptModuleBuildErrorKind.WrongSelectArity));
+                kind == GameEventScriptCallableKind.Rule ? GameEventScriptModuleBuildErrorKind.WrongRuleArity : GameEventScriptModuleBuildErrorKind.WrongSelectArity);
         }
     }
 
@@ -817,7 +824,7 @@ public sealed partial class GameEventScriptModuleBuilder
         TypeConstructorExpressionNode constructor,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         ValidateDuplicateNamedArguments(moduleContext, constructor.TypeName, constructor.Arguments, errors);
         foreach (var argument in constructor.Arguments)
@@ -870,7 +877,7 @@ public sealed partial class GameEventScriptModuleBuilder
     private static void ValidateBuiltinTypeConstructor(
         ParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         switch (constructor.TypeName)
         {
@@ -898,7 +905,7 @@ public sealed partial class GameEventScriptModuleBuilder
         ParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
         IReadOnlyList<string> labels,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
         {
@@ -943,7 +950,7 @@ public sealed partial class GameEventScriptModuleBuilder
         ParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
         IReadOnlyList<string> labels,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         var previousIndex = -1;
         for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
@@ -996,13 +1003,13 @@ public sealed partial class GameEventScriptModuleBuilder
         ParsedModule moduleContext,
         string typeName,
         string message,
-        List<GameEventScriptModuleBuildError> errors)
-        => errors.Add(CreateError(
+        GesValidationErrors errors)
+        => errors.Add(
             moduleContext,
             message,
             typeName,
             GameEventScriptSymbolKind.Type,
-            GameEventScriptModuleBuildErrorKind.InvalidTypeConstructor));
+            GameEventScriptModuleBuildErrorKind.InvalidTypeConstructor);
 
     private static void ValidateCallArity(
         ParsedModule moduleContext,
@@ -1010,16 +1017,16 @@ public sealed partial class GameEventScriptModuleBuilder
         string name,
         int expectedCount,
         int actualCount,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         if (expectedCount != actualCount)
         {
-            errors.Add(CreateError(
+            errors.Add(
                 moduleContext,
                 $"{kind} '{name}' expects {expectedCount} argument(s) but received {actualCount}",
                 name,
                 kind == GameEventScriptCallableKind.Rule ? GameEventScriptSymbolKind.Rule : GameEventScriptSymbolKind.Select,
-                kind == GameEventScriptCallableKind.Rule ? GameEventScriptModuleBuildErrorKind.WrongRuleArity : GameEventScriptModuleBuildErrorKind.WrongSelectArity));
+                kind == GameEventScriptCallableKind.Rule ? GameEventScriptModuleBuildErrorKind.WrongRuleArity : GameEventScriptModuleBuildErrorKind.WrongSelectArity);
         }
     }
 
@@ -1027,7 +1034,7 @@ public sealed partial class GameEventScriptModuleBuilder
         ParsedModule moduleContext,
         string symbolName,
         IReadOnlyList<ArgumentNode> arguments,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         var duplicateArguments = arguments
             .Where(argument => argument.Label is not null)
@@ -1037,19 +1044,21 @@ public sealed partial class GameEventScriptModuleBuilder
 
         foreach (var duplicateArgument in duplicateArguments)
         {
-            errors.Add(CreateError(
+            var duplicateArgumentNode = arguments.Last(argument => string.Equals(argument.Name, duplicateArgument, StringComparison.Ordinal));
+            errors.Add(
                 moduleContext,
                 $"Named argument '{duplicateArgument}' is declared more than once",
                 symbolName,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptModuleBuildErrorKind.DuplicatePublishArgument));
+                GameEventScriptModuleBuildErrorKind.DuplicatePublishArgument,
+                duplicateArgumentNode);
         }
     }
 
     private static void ValidateDuplicateHandlerLiteralParameters(
         ParsedModule moduleContext,
         HandlerLiteralExpressionNode handlerLiteral,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         var duplicateParameters = handlerLiteral.Parameters
             .GroupBy(parameter => parameter, StringComparer.Ordinal)
@@ -1058,12 +1067,14 @@ public sealed partial class GameEventScriptModuleBuilder
 
         foreach (var duplicateParameter in duplicateParameters)
         {
-            errors.Add(CreateError(
+            var duplicateParameterNode = handlerLiteral.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+            errors.Add(
                 moduleContext,
                 $"Handler literal '{handlerLiteral.Message}' declares parameter '{duplicateParameter}' more than once",
                 handlerLiteral.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptModuleBuildErrorKind.DuplicateHandlerParameter));
+                GameEventScriptModuleBuildErrorKind.DuplicateHandlerParameter,
+                duplicateParameterNode);
         }
     }
 
@@ -1073,19 +1084,19 @@ public sealed partial class GameEventScriptModuleBuilder
         string symbol,
         GameEventScriptSymbolKind symbolKind,
         string message,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         if (IsIdentifierCase(name))
         {
             return;
         }
 
-        errors.Add(CreateError(
+        errors.Add(
             moduleContext,
             message,
             symbol,
             symbolKind,
-            GameEventScriptModuleBuildErrorKind.InvalidIdentifierCase));
+            GameEventScriptModuleBuildErrorKind.InvalidIdentifierCase);
     }
 
     private static void ValidateMessageCase(
@@ -1094,19 +1105,19 @@ public sealed partial class GameEventScriptModuleBuilder
         string symbol,
         GameEventScriptSymbolKind symbolKind,
         string message,
-        List<GameEventScriptModuleBuildError> errors)
+        GesValidationErrors errors)
     {
         if (IsMessageCase(name))
         {
             return;
         }
 
-        errors.Add(CreateError(
+        errors.Add(
             moduleContext,
             message,
             symbol,
             symbolKind,
-            GameEventScriptModuleBuildErrorKind.InvalidMessageCase));
+            GameEventScriptModuleBuildErrorKind.InvalidMessageCase);
     }
 
     private static bool IsIdentifierCase(string name)
@@ -1143,121 +1154,5 @@ public sealed partial class GameEventScriptModuleBuilder
         }
 
         return true;
-    }
-
-    private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedModule> modules, List<GameEventScriptModuleBuildError> errors)
-    {
-        var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
-
-        foreach (var module in modules)
-        {
-            foreach (var handler in module.Handlers)
-            {
-                if (!map.TryGetValue(handler.Message, out var handlers))
-                {
-                    handlers = [];
-                    map[handler.Message] = handlers;
-                }
-
-                handlers.Add(handler);
-            }
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<ParsedModule> modules, List<GameEventScriptModuleBuildError> errors)
-    {
-        var map = new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
-        foreach (var module in modules)
-        {
-            foreach (var typeDefinition in module.TypeDefinitions)
-            {
-                if (!map.TryAdd(typeDefinition.Name, typeDefinition))
-                {
-                    errors.Add(CreateError(
-                        module,
-                        $"Type '{typeDefinition.Name}' is defined more than once",
-                        typeDefinition.Name,
-                        GameEventScriptSymbolKind.Type,
-                        GameEventScriptModuleBuildErrorKind.DuplicateType));
-                }
-            }
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<ParsedModule> modules, List<GameEventScriptModuleBuildError> errors)
-    {
-        var map = new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal);
-        foreach (var module in modules)
-        {
-            foreach (var ruleDefinition in module.RuleDefinitions)
-            {
-                if (!map.TryAdd(ruleDefinition.Name, ruleDefinition))
-                {
-                    errors.Add(CreateError(
-                        module,
-                        $"Rule '{ruleDefinition.Name}' is defined more than once",
-                        ruleDefinition.Name,
-                        GameEventScriptSymbolKind.Rule,
-                        GameEventScriptModuleBuildErrorKind.DuplicateRule));
-                }
-            }
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<ParsedModule> modules, List<GameEventScriptModuleBuildError> errors)
-    {
-        var map = new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal);
-        foreach (var module in modules)
-        {
-            foreach (var selectDefinition in module.SelectDefinitions)
-            {
-                if (!map.TryAdd(selectDefinition.Name, selectDefinition))
-                {
-                    errors.Add(CreateError(
-                        module,
-                        $"Select '{selectDefinition.Name}' is defined more than once",
-                        selectDefinition.Name,
-                        GameEventScriptSymbolKind.Select,
-                        GameEventScriptModuleBuildErrorKind.DuplicateSelect));
-                }
-            }
-        }
-
-        return map;
-    }
-
-    private static Dictionary<string, GameEventScriptCallableDefinition> BuildCallableDefinitionMap(
-        IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
-        IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions)
-    {
-        var map = new Dictionary<string, GameEventScriptCallableDefinition>(StringComparer.Ordinal);
-
-        foreach (var pair in ruleDefinitions)
-        {
-            map[pair.Key] = new GameEventScriptCallableDefinition(
-                pair.Key,
-                pair.Value.ParameterList.ToArray(),
-                pair.Value.Expression,
-                GameEventScriptCallableKind.Rule,
-                pair.Value.SourceRange);
-        }
-
-        foreach (var pair in selectDefinitions)
-        {
-            map[pair.Key] = new GameEventScriptCallableDefinition(
-                pair.Key,
-                pair.Value.ParameterList.ToArray(),
-                pair.Value.Expression,
-                GameEventScriptCallableKind.Select,
-                pair.Value.SourceRange);
-        }
-
-        return map;
     }
 }

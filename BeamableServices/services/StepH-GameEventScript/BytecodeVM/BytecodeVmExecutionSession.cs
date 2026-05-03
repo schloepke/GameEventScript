@@ -415,7 +415,7 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         var boxed = publishValue.ToGameEventScriptValue();
-        if (GameEventScriptMessageValueCodec.TryReadMessageValue(boxed, out var message))
+        if (GesMessageValueCodec.TryReadMessageValue(boxed, out var message))
         {
             _context.Publish(message);
         }
@@ -842,8 +842,8 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, names);
-        return GameEventScriptMessageValueCodec.TryBindHandlerValue(callee.ToGameEventScriptValue(), arguments, out var message)
-            ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
+        return GesMessageValueCodec.TryBindHandlerValue(callee.ToGameEventScriptValue(), arguments, out var message)
+            ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateMessageValue(message))
             : BytecodeVmValue.Nothing;
     }
 
@@ -874,7 +874,7 @@ internal sealed class BytecodeVmExecutionSession
             arguments[argumentIndex] = ToGameEventScriptFastValue(stack[start + argumentIndex]);
         }
 
-        if (GameEventScriptStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
+        if (GesStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
         {
             value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
             return true;
@@ -908,7 +908,7 @@ internal sealed class BytecodeVmExecutionSession
             BytecodeVmValueKind.Integer => GameEventScriptFastValue.FromInteger(value.IntegerValue),
             BytecodeVmValueKind.Decimal => GameEventScriptFastValue.FromDecimal(value.Number, value.Unit),
             BytecodeVmValueKind.Percentage => GameEventScriptFastValue.FromPercentage(value.Number),
-            BytecodeVmValueKind.Reference => GameEventScriptFastValue.FromGameEventScriptValue(value.ReferenceValue ?? GameEventScriptValue.Nothing),
+            BytecodeVmValueKind.Reference => GameEventScriptFastValue.FromGameEventScriptValue(value.ReferenceValue ?? GameEventScriptNothingValue.Instance),
             _ => GameEventScriptFastValue.Nothing
         };
 
@@ -996,9 +996,9 @@ internal sealed class BytecodeVmExecutionSession
             "list" => value.ReferenceValue?.IsList() ?? false,
             "range" => value.ReferenceValue?.IsRange() ?? false,
             "message" => value.ReferenceValue is { } messageValue &&
-                         (messageValue.Kind == GameEventScriptValueKind.Message || GameEventScriptMessageValueCodec.TryReadMessageValue(messageValue, out _)),
+                         (messageValue.Kind == GameEventScriptValueKind.Message || GesMessageValueCodec.TryReadMessageValue(messageValue, out _)),
             "handler" => value.ReferenceValue is { } handlerValue &&
-                         (handlerValue.Kind == GameEventScriptValueKind.Handler || GameEventScriptMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
+                         (handlerValue.Kind == GameEventScriptValueKind.Handler || GesMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
             "dictionary" => value.ReferenceValue?.IsDictionary() ?? false,
             "set" => value.ReferenceValue?.IsSet() ?? false,
             "dice" => value.ReferenceValue?.IsDice() ?? false,
@@ -1165,8 +1165,8 @@ internal sealed class BytecodeVmExecutionSession
         var fromRaw = fromValue.ToGameEventScriptValue();
         var toRaw = toValue.ToGameEventScriptValue();
 
-        if (GameEventScriptValueAlu.TryUnwrapOptionalForOperation(fromRaw, out var unwrappedFrom) &&
-            GameEventScriptValueAlu.TryUnwrapOptionalForOperation(toRaw, out var unwrappedTo) &&
+        if (GesValueOperations.TryUnwrapOptionalForOperation(fromRaw, out var unwrappedFrom) &&
+            GesValueOperations.TryUnwrapOptionalForOperation(toRaw, out var unwrappedTo) &&
             unwrappedFrom.Kind == GameEventScriptValueKind.Integer &&
             unwrappedTo.Kind == GameEventScriptValueKind.Integer)
         {
@@ -1182,8 +1182,8 @@ internal sealed class BytecodeVmExecutionSession
                 : BytecodeVmValue.Nothing;
         }
 
-        if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(toRaw, out var toNumber) ||
+        if (!GesValueOperations.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(toRaw, out var toNumber) ||
             !fromNumber.IsFinite ||
             !toNumber.IsFinite)
         {
@@ -1204,9 +1204,9 @@ internal sealed class BytecodeVmExecutionSession
 
     private static BytecodeVmValue EvaluateRangeExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue, BytecodeVmValue stepValue)
     {
-        if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(fromValue.ToGameEventScriptValue(), out var fromNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(toValue.ToGameEventScriptValue(), out var toNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(stepValue.ToGameEventScriptValue(), out var stepNumber) ||
+        if (!GesValueOperations.TryCoerceNumericForOperation(fromValue.ToGameEventScriptValue(), out var fromNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(toValue.ToGameEventScriptValue(), out var toNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(stepValue.ToGameEventScriptValue(), out var stepNumber) ||
             !fromNumber.IsFinite ||
             !toNumber.IsFinite ||
             !stepNumber.IsFinite)
@@ -1215,9 +1215,9 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         return BytecodeVmValue.Reference(GesRange(
-            GameEventScriptValueAlu.ToIntegerSaturated(fromNumber.Value),
-            GameEventScriptValueAlu.ToIntegerSaturated(toNumber.Value),
-            GameEventScriptValueAlu.ToIntegerSaturated(stepNumber.Value)));
+            GesValueOperations.ToIntegerSaturated(fromNumber.Value),
+            GesValueOperations.ToIntegerSaturated(toNumber.Value),
+            GesValueOperations.ToIntegerSaturated(stepNumber.Value)));
     }
 
     private BytecodeVmValue EvaluateDiceExpression(int diceCount, int sideCount)
@@ -1288,8 +1288,8 @@ internal sealed class BytecodeVmExecutionSession
 
         value = operation switch
         {
-            "min" => BytecodeVmValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
-            "max" => BytecodeVmValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
+            "min" => BytecodeVmValue.FromGameEventScriptValue(GesValueOperations.EvaluateMinMax(boxedValues, isMax: false)),
+            "max" => BytecodeVmValue.FromGameEventScriptValue(GesValueOperations.EvaluateMinMax(boxedValues, isMax: true)),
             _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown variadic operator '{operation}'.")
         };
 
@@ -1313,8 +1313,8 @@ internal sealed class BytecodeVmExecutionSession
             return true;
         }
 
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
-            !GameEventScriptValueAlu.TryUnwrapOptionalForOperation(rightRaw, out var right))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
+            !GesValueOperations.TryUnwrapOptionalForOperation(rightRaw, out var right))
         {
             value = BytecodeVmValue.Reference(GesOptionalNone());
             return true;
@@ -1325,8 +1325,8 @@ internal sealed class BytecodeVmExecutionSession
             "|" => BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean()),
             "^" => BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
             "&" => BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean()),
-            "=" or "==" => BytecodeVmValue.Boolean(GameEventScriptValueAlu.AreEqual(left, right)),
-            "<>" => BytecodeVmValue.Boolean(!GameEventScriptValueAlu.AreEqual(left, right)),
+            "=" or "==" => BytecodeVmValue.Boolean(GesValueOperations.AreEqual(left, right)),
+            "<>" => BytecodeVmValue.Boolean(!GesValueOperations.AreEqual(left, right)),
             "in" => BytecodeVmValue.Boolean(right.Contains(left)),
             "value in" => BytecodeVmValue.Boolean(right.ContainsValue(left)),
             "starts with" => BytecodeVmValue.Boolean(left.StartsWith(right)),
@@ -1342,10 +1342,10 @@ internal sealed class BytecodeVmExecutionSession
             "div" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "div", right)),
             "mod" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
             "rem" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
-            "intersect" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionIntersect(left, right)),
-            "combine" or "merge" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionCombine(left, right)),
-            "except" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionExcept(left, right)),
-            "zip" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionZip(left, right)),
+            "intersect" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionIntersect(left, right)),
+            "combine" or "merge" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionCombine(left, right)),
+            "except" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionExcept(left, right)),
+            "zip" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionZip(left, right)),
             _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown binary operator '{operation}'.")
         };
 
@@ -1400,86 +1400,86 @@ internal sealed class BytecodeVmExecutionSession
     }
 
     private static bool TryCompare(GameEventScriptValue left, GameEventScriptValue right, Func<int, bool> predicate)
-        => GameEventScriptValueAlu.TryCompareNumericValues(left, right, out var comparison) &&
+        => GesValueOperations.TryCompareNumericValues(left, right, out var comparison) &&
            predicate(comparison);
 
     private static GameEventScriptValue EvaluateAddBinary(GameEventScriptValue left, GameEventScriptValue right)
     {
-        if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "+", right, out var vector))
+        if (GesValueOperations.TryEvaluateVectorBinary(left, "+", right, out var vector))
         {
             return vector;
         }
 
-        if (GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
+        if (GesValueOperations.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
         {
             return percentage;
         }
 
-        if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out var unit))
+        if (GesValueOperations.TryEvaluateUnitBinary(left, "+", right, out var unit))
         {
             return unit;
         }
 
-        if (GameEventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) &&
-            GameEventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
+        if (GesValueOperations.TryCoerceNumericForOperation(left, out var leftNumeric) &&
+            GesValueOperations.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
-            return GameEventScriptValueAlu.ToGameEventScriptNumericResult(left, "+", right, GameEventScriptValueAlu.AddNumeric(leftNumeric, rightNumeric));
+            return GesValueOperations.ToGameEventScriptNumericResult(left, "+", right, GesValueOperations.AddNumeric(leftNumeric, rightNumeric));
         }
 
-        if (GameEventScriptValueAlu.TryCombineWithPlus(left, right, out var combined))
+        if (GesValueOperations.TryCombineWithPlus(left, right, out var combined))
         {
             return combined;
         }
 
         return left.IsText() || right.IsText()
-            ? GesText($"{GameEventScriptValueAlu.ToText(left)}{GameEventScriptValueAlu.ToText(right)}")
+            ? GesText($"{GesValueOperations.ToText(left)}{GesValueOperations.ToText(right)}")
             : GesDecimalNaN();
     }
 
     private static GameEventScriptValue EvaluateNumericBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)
     {
-        if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, operation, right, out var vector))
+        if (GesValueOperations.TryEvaluateVectorBinary(left, operation, right, out var vector))
         {
             return vector;
         }
 
-        if (GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
+        if (GesValueOperations.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
         {
             return percentage;
         }
 
-        if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, operation, right, out var unit))
+        if (GesValueOperations.TryEvaluateUnitBinary(left, operation, right, out var unit))
         {
             return unit;
         }
 
-        if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
+        if (!GesValueOperations.TryCoerceNumericForOperation(left, out var leftNumeric) ||
+            !GesValueOperations.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
             return GesDecimalNaN();
         }
 
         var result = operation switch
         {
-            "-" => GameEventScriptValueAlu.SubtractNumeric(leftNumeric, rightNumeric),
-            "*" => GameEventScriptValueAlu.MultiplyNumeric(leftNumeric, rightNumeric),
-            "/" => GameEventScriptValueAlu.DivideNumeric(leftNumeric, rightNumeric),
-            "div" => GameEventScriptValueAlu.IntegerDivideNumeric(leftNumeric, rightNumeric),
-            "mod" => GameEventScriptValueAlu.ModuloNumeric(leftNumeric, rightNumeric),
-            "rem" => GameEventScriptValueAlu.RemainderNumeric(leftNumeric, rightNumeric),
-            _ => GameEventScriptValueAlu.NumericValue.NaN()
+            "-" => GesValueOperations.SubtractNumeric(leftNumeric, rightNumeric),
+            "*" => GesValueOperations.MultiplyNumeric(leftNumeric, rightNumeric),
+            "/" => GesValueOperations.DivideNumeric(leftNumeric, rightNumeric),
+            "div" => GesValueOperations.IntegerDivideNumeric(leftNumeric, rightNumeric),
+            "mod" => GesValueOperations.ModuloNumeric(leftNumeric, rightNumeric),
+            "rem" => GesValueOperations.RemainderNumeric(leftNumeric, rightNumeric),
+            _ => GesValueOperations.NumericValue.NaN()
         };
-        return GameEventScriptValueAlu.ToGameEventScriptNumericResult(left, operation, right, result);
+        return GesValueOperations.ToGameEventScriptNumericResult(left, operation, right, result);
     }
 
     private static GameEventScriptValue EvaluateNegateUnary(GameEventScriptValue operand)
     {
         if (operand.IsNothing())
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(operand, out var unwrapped))
         {
             return GesOptionalNone();
         }
@@ -1489,7 +1489,7 @@ internal sealed class BytecodeVmExecutionSession
             return GesPercentage(-unwrapped.AsNumber());
         }
 
-        if (GameEventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
+        if (GesValueOperations.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
         {
             return vectorNegation;
         }
@@ -1499,19 +1499,19 @@ internal sealed class BytecodeVmExecutionSession
             return GesDecimal(-unwrapped.AsNumber(), unit);
         }
 
-        return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number)
-            ? GameEventScriptValueAlu.ToGameEventScriptDecimal(GameEventScriptValueAlu.NegateNumeric(number))
-            : GameEventScriptValue.Nothing;
+        return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number)
+            ? GesValueOperations.ToGameEventScriptDecimal(GesValueOperations.NegateNumeric(number))
+            : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue EvaluateNotUnary(GameEventScriptValue operand)
     {
         if (operand.IsNothing())
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
-        return GameEventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped)
+        return GesValueOperations.TryUnwrapOptionalForOperation(operand, out var unwrapped)
             ? GesBoolean(!unwrapped.AsBoolean())
             : GesOptionalNone();
     }
@@ -1533,7 +1533,7 @@ internal sealed class BytecodeVmExecutionSession
             GameEventScriptValueKind.Set => GesInteger(operand.AsSet().Count),
             GameEventScriptValueKind.Dice => GesInteger(operand.AsDice().Rolls.Count),
             GameEventScriptValueKind.Optional => GesInteger(operand.AsOptional().HasValue ? 1 : 0),
-            _ => GameEventScriptValue.Nothing
+            _ => GameEventScriptNothingValue.Instance
         };
     }
 
@@ -1541,12 +1541,12 @@ internal sealed class BytecodeVmExecutionSession
     {
         if (!GameEventScriptRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         return _context.RuntimeBudget.TryCheckRangeLength(length, "Range length exceeds the configured limit.")
             ? GesInteger(length)
-            : GameEventScriptValue.Nothing;
+            : GameEventScriptNothingValue.Instance;
     }
 
     private GameEventScriptValue CountEnumerableWithBudget(IEnumerable<GameEventScriptValue> values, string detail)
@@ -1556,7 +1556,7 @@ internal sealed class BytecodeVmExecutionSession
         {
             if (!_context.RuntimeBudget.TryConsumeLoopIteration(detail))
             {
-                return GameEventScriptValue.Nothing;
+                return GameEventScriptNothingValue.Instance;
             }
 
             count++;
@@ -1593,17 +1593,17 @@ internal sealed class BytecodeVmExecutionSession
     {
         if (operand.IsNothing())
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
-        if (GameEventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out var vectorLength))
+        if (GesValueOperations.TryEvaluateVectorUnary(operand, "abs", out var vectorLength))
         {
             return vectorLength;
         }
 
-        return GameEventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
+        return GesValueOperations.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
             ? GesDecimal(Math.Abs(number.Value))
-            : GameEventScriptValue.Nothing;
+            : GameEventScriptNothingValue.Instance;
     }
 
     private static BytecodeVmValue EvaluateClamp(BytecodeVmValue rawValue, BytecodeVmValue minimumValue, BytecodeVmValue maximumValue)
@@ -1612,16 +1612,16 @@ internal sealed class BytecodeVmExecutionSession
         var minimum = minimumValue.ToGameEventScriptValue();
         var maximum = maximumValue.ToGameEventScriptValue();
 
-        if (!GameEventScriptValueAlu.HaveCompatibleNumericUnits(raw, minimum) ||
-            !GameEventScriptValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
-            !GameEventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+        if (!GesValueOperations.HaveCompatibleNumericUnits(raw, minimum) ||
+            !GesValueOperations.HaveCompatibleNumericUnits(raw, maximum) ||
+            !GesValueOperations.HaveCompatibleNumericUnits(minimum, maximum))
         {
             return BytecodeVmValue.NaN();
         }
 
-        if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(raw, out var rawNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber) ||
+        if (!GesValueOperations.TryCoerceNumericForOperation(raw, out var rawNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(maximum, out var maximumNumber) ||
             !rawNumber.IsFinite ||
             !minimumNumber.IsFinite ||
             !maximumNumber.IsFinite)
@@ -1928,7 +1928,7 @@ internal sealed class BytecodeVmExecutionSession
             string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
             string.Equals(labels[1], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
-            return GameEventScriptValueAlu.TryCreateVector3(
+            return GesValueOperations.TryCreateVector3(
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
                 out var lifted)
@@ -1946,7 +1946,7 @@ internal sealed class BytecodeVmExecutionSession
                 labeledComponents[labels![index]] = stack[start + index].ToGameEventScriptValue();
             }
 
-            return GameEventScriptValueAlu.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
+            return GesValueOperations.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
                 ? BytecodeVmValue.FromGameEventScriptValue(vector)
                 : BytecodeVmValue.Nothing;
         }
@@ -1958,13 +1958,13 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         return expectedCount == 2
-            ? GameEventScriptValueAlu.TryCreateVector2(
+            ? GesValueOperations.TryCreateVector2(
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
                 out var vector2)
                 ? BytecodeVmValue.FromGameEventScriptValue(vector2)
                 : BytecodeVmValue.Nothing
-            : GameEventScriptValueAlu.TryCreateVector3(
+            : GesValueOperations.TryCreateVector3(
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
                 stack[start + 2].ToGameEventScriptValue(),
@@ -1980,7 +1980,7 @@ internal sealed class BytecodeVmExecutionSession
         {
             "nothing" => BytecodeVmValue.Nothing,
             "tag" => BytecodeVmValue.Reference(GesTag(boxed.AsText())),
-            "text" => BytecodeVmValue.Reference(GesText(GameEventScriptValueAlu.ToText(boxed))),
+            "text" => BytecodeVmValue.Reference(GesText(GesValueOperations.ToText(boxed))),
             "percentage" => BytecodeVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
             "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Degree)),
             "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Meter)),
@@ -1994,16 +1994,16 @@ internal sealed class BytecodeVmExecutionSession
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
                 ? BytecodeVmValue.Reference(GesList(boxed.AsList()))
                 : BytecodeVmValue.Nothing,
-            "range" => BytecodeVmValue.Reference(boxed.IsRange() ? boxed : GameEventScriptValue.Nothing),
+            "range" => BytecodeVmValue.Reference(boxed.IsRange() ? boxed : GameEventScriptNothingValue.Instance),
             "message" => boxed.Kind == GameEventScriptValueKind.Message
                 ? input
-                : GameEventScriptMessageValueCodec.TryReadMessageValue(boxed, out var message)
-                    ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
+                : GesMessageValueCodec.TryReadMessageValue(boxed, out var message)
+                    ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateMessageValue(message))
                     : BytecodeVmValue.Nothing,
             "handler" => boxed.Kind == GameEventScriptValueKind.Handler
                 ? input
-                : GameEventScriptMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
-                    ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateHandlerValue(handler))
+                : GesMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
+                    ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateHandlerValue(handler))
                     : BytecodeVmValue.Nothing,
             "dictionary" => BytecodeVmValue.Reference(GseDictionary(boxed.AsDictionary())),
             "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
@@ -2044,24 +2044,24 @@ internal sealed class BytecodeVmExecutionSession
 
     private static GameEventScriptValue ConvertToDecimal(GameEventScriptValue value)
     {
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
         {
             return GesDecimalNaN();
         }
 
-        if (GameEventScriptValueAlu.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
+        if (GesValueOperations.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
         {
             return vectorWithoutUnit;
         }
 
-        return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrappedNumber, out var number)
-            ? GameEventScriptValueAlu.ToGameEventScriptDecimal(number)
+        return GesValueOperations.TryCoerceNumericForOperation(unwrappedNumber, out var number)
+            ? GesValueOperations.ToGameEventScriptDecimal(number)
             : GesDecimalNaN();
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
     {
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
             return GesDecimalNaN();
         }
@@ -2076,7 +2076,7 @@ internal sealed class BytecodeVmExecutionSession
             return GesDecimalNaN();
         }
 
-        if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) ||
+        if (!GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) ||
             !number.IsFinite)
         {
             return GesDecimalNaN();
@@ -2092,12 +2092,12 @@ internal sealed class BytecodeVmExecutionSession
 
     private static GameEventScriptValue ConvertToDecimalUnit(GameEventScriptValue value, GameEventScriptDecimalUnit unit)
     {
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
             return GesDecimalNaN();
         }
 
-        if (GameEventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+        if (GesValueOperations.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
         {
             return vectorWithUnit;
         }
@@ -2108,7 +2108,7 @@ internal sealed class BytecodeVmExecutionSession
         }
 
         if (unwrapped.Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer &&
-            GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) &&
+            GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) &&
             number.IsFinite)
         {
             return GesDecimal(number.Value, unit);
@@ -2119,9 +2119,9 @@ internal sealed class BytecodeVmExecutionSession
 
     private static GameEventScriptValue ConvertToVector2(GameEventScriptValue value)
     {
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         if (unwrapped is GameEventScriptVector2Value vector2)
@@ -2136,26 +2136,26 @@ internal sealed class BytecodeVmExecutionSession
 
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
             unwrapped.TryGetDictionaryMember("y", out var y) &&
-            GameEventScriptValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
+            GesValueOperations.TryCreateVector2(x, y, out var vectorFromMembers))
         {
             return vectorFromMembers;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 2 &&
-            GameEventScriptValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
+            GesValueOperations.TryCreateVector2(items[0], items[1], out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
-        return GameEventScriptValue.Nothing;
+        return GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToVector3(GameEventScriptValue value)
     {
-        if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         if (unwrapped is GameEventScriptVector3Value vector3)
@@ -2173,31 +2173,31 @@ internal sealed class BytecodeVmExecutionSession
         {
             if (unwrapped.TryGetDictionaryMember("z", out var z))
             {
-                return GameEventScriptValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
+                return GesValueOperations.TryCreateVector3(x, y, z, out var vectorFromMembers)
                     ? vectorFromMembers
-                    : GameEventScriptValue.Nothing;
+                    : GameEventScriptNothingValue.Instance;
             }
 
-            return GameEventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is GameEventScriptVector2Value xy
+            return GesValueOperations.TryCreateVector2(x, y, out var xyVector) && xyVector is GameEventScriptVector2Value xy
                 ? GesVector3(xy.X, xy.Y, 0m, xy.Unit)
                 : xyVector;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 3 &&
-            GameEventScriptValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
+            GesValueOperations.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
         if (items.Count >= 2 &&
-            GameEventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
+            GesValueOperations.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
             xyVectorFromItems is GameEventScriptVector2Value xyFromItems)
         {
             return GesVector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
-        return GameEventScriptValue.Nothing;
+        return GameEventScriptNothingValue.Instance;
     }
 
     private GameEventScriptValue ConvertToCustomType(GameEventScriptValue value, BytecodeVmTypeDefinition typeDefinition)
@@ -2214,7 +2214,7 @@ internal sealed class BytecodeVmExecutionSession
         foreach (var field in typeDefinition.Fields.Where(field => field.ComputedProgram is null))
         {
             sourceValues.TryGetValue(field.Name, out var rawValue);
-            rawValue ??= GameEventScriptValue.Nothing;
+            rawValue ??= GameEventScriptNothingValue.Instance;
 
             var fieldValue = ConvertValueToDeclaredType(rawValue, field.TypeName);
             fieldValue = ApplyFieldClamp(typeDefinition, field, fieldValue, sourceValues, materializedValues);
@@ -2234,7 +2234,7 @@ internal sealed class BytecodeVmExecutionSession
     private GameEventScriptValue ConvertValueToDeclaredType(GameEventScriptValue value, string declaredType)
         => TryConvertDeclaredType(declaredType, BytecodeVmValue.FromGameEventScriptValue(value), out var converted)
             ? converted.ToGameEventScriptValue()
-            : GameEventScriptValue.Nothing;
+            : GameEventScriptNothingValue.Instance;
 
     private GameEventScriptValue ApplyFieldClamp(
         BytecodeVmTypeDefinition typeDefinition,
@@ -2251,16 +2251,16 @@ internal sealed class BytecodeVmExecutionSession
 
         var minimum = EvaluateCustomTypeExpression(field.MinimumProgram, sourceValues, materializedValues);
         var maximum = EvaluateCustomTypeExpression(field.MaximumProgram, sourceValues, materializedValues);
-        if (!GameEventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, minimum) ||
-            !GameEventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
-            !GameEventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
+        if (!GesValueOperations.HaveCompatibleNumericUnits(fieldValue, minimum) ||
+            !GesValueOperations.HaveCompatibleNumericUnits(fieldValue, maximum) ||
+            !GesValueOperations.HaveCompatibleNumericUnits(minimum, maximum))
         {
             return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
-        if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
-            !GameEventScriptValueAlu.TryCoerceNumericForOperation(maximum, out var maximumNumber))
+        if (!GesValueOperations.TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
+            !GesValueOperations.TryCoerceNumericForOperation(maximum, out var maximumNumber))
         {
             return fieldValue;
         }
@@ -2293,7 +2293,7 @@ internal sealed class BytecodeVmExecutionSession
             {
                 if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
                 {
-                    return GameEventScriptValue.Nothing;
+                    return GameEventScriptNothingValue.Instance;
                 }
             }
 
@@ -2301,13 +2301,13 @@ internal sealed class BytecodeVmExecutionSession
             {
                 if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
                 {
-                    return GameEventScriptValue.Nothing;
+                    return GameEventScriptNothingValue.Instance;
                 }
             }
 
             return TryExecuteExpressionProgram(expressionProgram, 0, out var value)
                 ? value.ToGameEventScriptValue()
-                : GameEventScriptValue.Nothing;
+                : GameEventScriptNothingValue.Instance;
         }
         finally
         {
@@ -2366,7 +2366,7 @@ internal sealed class BytecodeVmExecutionSession
                 ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
                 : false,
             BytecodeVmSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
-                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(GameEventScriptCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
+                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(GesCollectionOperations.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
                 : false,
             BytecodeVmSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
             BytecodeVmSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
@@ -2719,10 +2719,10 @@ internal sealed class BytecodeVmExecutionSession
                 }
 
                 int comparison;
-                if (GameEventScriptValueAlu.TryCoerceNumericForOperation(candidateProjection, out _) &&
-                    GameEventScriptValueAlu.TryCoerceNumericForOperation(bestProjection, out _))
+                if (GesValueOperations.TryCoerceNumericForOperation(candidateProjection, out _) &&
+                    GesValueOperations.TryCoerceNumericForOperation(bestProjection, out _))
                 {
-                    if (!GameEventScriptValueAlu.TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
+                    if (!GesValueOperations.TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
                     {
                         return false;
                     }
@@ -2853,7 +2853,7 @@ internal sealed class BytecodeVmExecutionSession
         var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GameEventScriptListValue.Empty;
         if (terminal.ExpressionProgram is null || terminal.IdentifierSlot < 0)
         {
-            value = BytecodeVmValue.FromGameEventScriptValue(GameEventScriptCollectionOperators.Distinct(target, items));
+            value = BytecodeVmValue.FromGameEventScriptValue(GesCollectionOperations.Distinct(target, items));
             return true;
         }
 
@@ -2953,7 +2953,7 @@ internal sealed class BytecodeVmExecutionSession
         value = BytecodeVmValue.FromGameEventScriptValue(target.Kind switch
         {
             GameEventScriptValueKind.Dice or GameEventScriptValueKind.List or GameEventScriptValueKind.Set or GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(ordered),
-            _ => GameEventScriptValue.Nothing
+            _ => GameEventScriptNothingValue.Instance
         });
         return true;
     }
@@ -3159,7 +3159,7 @@ internal sealed class BytecodeVmExecutionSession
     }
 
     private static decimal EvaluatePositiveWeight(GameEventScriptValue value)
-        => GameEventScriptValueAlu.TryCoerceNumericForOperation(value, out var number) && number.IsFinite
+        => GesValueOperations.TryCoerceNumericForOperation(value, out var number) && number.IsFinite
             ? Math.Max(0m, number.Value)
             : 0m;
 
@@ -3287,7 +3287,7 @@ internal sealed class BytecodeVmExecutionSession
     {
         if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         return GameEventScriptValueFactory.GesList(items.Reverse().ToArray());
@@ -3297,13 +3297,13 @@ internal sealed class BytecodeVmExecutionSession
     {
         if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         var drawn = items.Take(count).ToArray();
         if (count == 1)
         {
-            return drawn.Length == 0 ? GameEventScriptValue.Nothing : drawn[0];
+            return drawn.Length == 0 ? GameEventScriptNothingValue.Instance : drawn[0];
         }
 
         return target.Kind == GameEventScriptValueKind.Dice ? GseDice(GameEventScriptDiceValue.Create(drawn.Select(item => (int)item.AsInteger()))) : GesList(drawn);
@@ -3313,7 +3313,7 @@ internal sealed class BytecodeVmExecutionSession
     {
         if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         var shuffled = items.ToArray();
@@ -3338,13 +3338,13 @@ internal sealed class BytecodeVmExecutionSession
     {
         if (!IsPatternSequence(target))
         {
-            value = GameEventScriptValue.Nothing;
+            value = GameEventScriptNothingValue.Instance;
             return true;
         }
 
         if (!TryTakeSequencePattern(items, pattern, out var takenItems))
         {
-            value = GameEventScriptValue.Nothing;
+            value = GameEventScriptNothingValue.Instance;
             return true;
         }
 
@@ -3514,7 +3514,7 @@ internal sealed class BytecodeVmExecutionSession
 
             foreach (var pairCandidate in EnumerateDistinctInSourceOrder(items))
             {
-                if (GameEventScriptValueAlu.AreEqual(pairCandidate, tripleCandidate))
+                if (GesValueOperations.AreEqual(pairCandidate, tripleCandidate))
                 {
                     continue;
                 }
@@ -3661,7 +3661,7 @@ internal sealed class BytecodeVmExecutionSession
                         return false;
                     }
 
-                    if (!GameEventScriptValueAlu.AreEqual(actual, expected.ToGameEventScriptValue()))
+                    if (!GesValueOperations.AreEqual(actual, expected.ToGameEventScriptValue()))
                     {
                         matches = false;
                         return true;
@@ -3721,7 +3721,7 @@ internal sealed class BytecodeVmExecutionSession
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(selectedItems),
             GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(selectedItems),
-            _ => GameEventScriptValue.Nothing
+            _ => GameEventScriptNothingValue.Instance
         };
     }
 
@@ -3733,7 +3733,7 @@ internal sealed class BytecodeVmExecutionSession
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
-            _ => GameEventScriptValue.Nothing
+            _ => GameEventScriptNothingValue.Instance
         };
     }
 
@@ -4057,7 +4057,7 @@ internal sealed class BytecodeVmExecutionSession
         RecordDiagnostic(
             GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
             identifier,
-            CreateSingleArgument(identifier, GameEventScriptValue.Nothing),
+            CreateSingleArgument(identifier, GameEventScriptNothingValue.Instance),
             $"Let '{identifier}' expression evaluated to Nothing.");
     }
 
@@ -4071,7 +4071,7 @@ internal sealed class BytecodeVmExecutionSession
         RecordDiagnostic(
             GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
             argumentName,
-            CreateSingleArgument(argumentName, GameEventScriptValue.Nothing),
+            CreateSingleArgument(argumentName, GameEventScriptNothingValue.Instance),
             $"Publish argument '{argumentName}' evaluated to Nothing.");
     }
 
@@ -4086,7 +4086,7 @@ internal sealed class BytecodeVmExecutionSession
         RecordDiagnostic(
             GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
             name,
-            CreateSingleArgument(name, GameEventScriptValue.Nothing),
+            CreateSingleArgument(name, GameEventScriptNothingValue.Instance),
             "Expression statement evaluated to Nothing.");
     }
 
@@ -4095,7 +4095,7 @@ internal sealed class BytecodeVmExecutionSession
         string name,
         IReadOnlyDictionary<string, GameEventScriptValue> arguments,
         string? detail = null)
-        => GameEventScriptInvocationKernel.RecordDiagnostic(_context, _diagnosticsEnabled, kind, name, arguments, detail);
+        => GesInvocationKernel.RecordDiagnostic(_context, _diagnosticsEnabled, kind, name, arguments, detail);
 
     private static GameEventScriptNamedArguments CreateSingleArgument(string name, GameEventScriptValue value)
         => GameEventScriptNamedArguments.CreateOrdered(
@@ -4204,13 +4204,13 @@ internal readonly record struct BytecodeVmValue(
     public GameEventScriptValue ToGameEventScriptValue()
         => Kind switch
         {
-            BytecodeVmValueKind.Nothing => GameEventScriptValue.Nothing,
+            BytecodeVmValueKind.Nothing => GameEventScriptNothingValue.Instance,
             BytecodeVmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(BooleanValue),
             BytecodeVmValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue),
             BytecodeVmValueKind.Decimal => GameEventScriptValueFactory.GesDecimal(Number, Unit),
             BytecodeVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(Number),
-            BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptValue.Nothing,
-            _ => GameEventScriptValue.Nothing
+            BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptNothingValue.Instance,
+            _ => GameEventScriptNothingValue.Instance
         };
 
     public static bool AreEqual(BytecodeVmValue left, BytecodeVmValue right)
@@ -4267,7 +4267,7 @@ internal readonly record struct BytecodeVmValue(
             return false;
         }
 
-        return GameEventScriptValueAlu.TryCompareNumeric(leftNumber, rightNumber, out comparison);
+        return GesValueOperations.TryCompareNumeric(leftNumber, rightNumber, out comparison);
     }
 
     public static BytecodeVmValue Add(BytecodeVmValue left, BytecodeVmValue right)
@@ -4290,12 +4290,12 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return GameEventScriptValueAlu.TryAddFinite(leftPrimitive, rightPrimitive, out var sum)
+            return GesValueOperations.TryAddFinite(leftPrimitive, rightPrimitive, out var sum)
                 ? FromFinitePrimitiveNumericResult(left, "+", right, sum, left.Unit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.AddNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.AddNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -4304,13 +4304,13 @@ internal readonly record struct BytecodeVmValue(
         {
             var leftValue = left.ToGameEventScriptValue();
             var rightValue = right.ToGameEventScriptValue();
-            if (GameEventScriptValueAlu.TryCombineWithPlus(leftValue, rightValue, out var combined))
+            if (GesValueOperations.TryCombineWithPlus(leftValue, rightValue, out var combined))
             {
                 return FromGameEventScriptValue(combined);
             }
 
             return leftValue.IsText() || rightValue.IsText()
-                ? Reference(GesText($"{GameEventScriptValueAlu.ToText(leftValue)}{GameEventScriptValueAlu.ToText(rightValue)}"))
+                ? Reference(GesText($"{GesValueOperations.ToText(leftValue)}{GesValueOperations.ToText(rightValue)}"))
                 : NaN();
         }
 
@@ -4319,7 +4319,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(GameEventScriptValueAlu.AddNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GesValueOperations.AddNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static BytecodeVmValue Subtract(BytecodeVmValue left, BytecodeVmValue right)
@@ -4342,13 +4342,13 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return GameEventScriptValueAlu.TryNegateFinite(rightPrimitive, out var negatedRight) &&
-                   GameEventScriptValueAlu.TryAddFinite(leftPrimitive, negatedRight, out var difference)
+            return GesValueOperations.TryNegateFinite(rightPrimitive, out var negatedRight) &&
+                   GesValueOperations.TryAddFinite(leftPrimitive, negatedRight, out var difference)
                 ? FromFinitePrimitiveNumericResult(left, "-", right, difference, left.Unit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.SubtractNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.SubtractNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -4363,7 +4363,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(GameEventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GesValueOperations.SubtractNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static BytecodeVmValue Multiply(BytecodeVmValue left, BytecodeVmValue right)
@@ -4386,12 +4386,12 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return GameEventScriptValueAlu.TryMultiplyFinite(leftPrimitive, rightPrimitive, out var product)
+            return GesValueOperations.TryMultiplyFinite(leftPrimitive, rightPrimitive, out var product)
                 ? FromFinitePrimitiveNumericResult(left, "*", right, product, left.Unit ?? right.Unit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.MultiplyNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.MultiplyNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     left.Unit ?? right.Unit);
         }
 
@@ -4406,7 +4406,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(GameEventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
+        return FromDecimalNumeric(GesValueOperations.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
     }
 
     public static BytecodeVmValue Divide(BytecodeVmValue left, BytecodeVmValue right)
@@ -4429,12 +4429,12 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && GameEventScriptValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
+            return rightPrimitive != 0m && GesValueOperations.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
                 ? Decimal(quotient, primitiveResultUnit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.DivideNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.DivideNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     primitiveResultUnit);
         }
 
@@ -4449,7 +4449,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(GameEventScriptValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
+        return FromDecimalNumeric(GesValueOperations.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
     public static BytecodeVmValue IntegerDivide(BytecodeVmValue left, BytecodeVmValue right)
@@ -4467,12 +4467,12 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && GameEventScriptValueAlu.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
+            return rightPrimitive != 0m && GesValueOperations.TryDivideFinite(leftPrimitive, rightPrimitive, out var quotient)
                 ? FromFinitePrimitiveNumericResult(left, "div", right, Math.Floor(quotient), primitiveResultUnit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.IntegerDivideNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.IntegerDivideNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     primitiveResultUnit);
         }
 
@@ -4487,7 +4487,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        var result = GameEventScriptValueAlu.IntegerDivideNumeric(leftNumber, rightNumber);
+        var result = GesValueOperations.IntegerDivideNumeric(leftNumber, rightNumber);
         return resultUnit is null && result.IsFinite && TryToInteger(result.Value, out var integer)
             ? Integer(integer)
             : FromDecimalNumeric(result, resultUnit);
@@ -4509,12 +4509,12 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && GameEventScriptValueAlu.TryModuloFinite(leftPrimitive, rightPrimitive, out var modulo)
+            return rightPrimitive != 0m && GesValueOperations.TryModuloFinite(leftPrimitive, rightPrimitive, out var modulo)
                 ? FromFinitePrimitiveNumericResult(left, "mod", right, modulo, left.Unit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.ModuloNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.ModuloNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -4530,7 +4530,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(GameEventScriptValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GesValueOperations.ModuloNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     public static BytecodeVmValue Remainder(BytecodeVmValue left, BytecodeVmValue right)
@@ -4549,12 +4549,12 @@ internal readonly record struct BytecodeVmValue(
                 return NaN();
             }
 
-            return rightPrimitive != 0m && GameEventScriptValueAlu.TryRemainderFinite(leftPrimitive, rightPrimitive, out var remainder)
+            return rightPrimitive != 0m && GesValueOperations.TryRemainderFinite(leftPrimitive, rightPrimitive, out var remainder)
                 ? FromFinitePrimitiveNumericResult(left, "rem", right, remainder, left.Unit)
                 : FromDecimalNumeric(
-                    GameEventScriptValueAlu.RemainderNumeric(
-                        GameEventScriptValueAlu.NumericValue.Finite(leftPrimitive),
-                        GameEventScriptValueAlu.NumericValue.Finite(rightPrimitive)),
+                    GesValueOperations.RemainderNumeric(
+                        GesValueOperations.NumericValue.Finite(leftPrimitive),
+                        GesValueOperations.NumericValue.Finite(rightPrimitive)),
                     left.Unit);
         }
 
@@ -4570,7 +4570,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        return FromDecimalNumeric(GameEventScriptValueAlu.RemainderNumeric(leftNumber, rightNumber), leftUnit);
+        return FromDecimalNumeric(GesValueOperations.RemainderNumeric(leftNumber, rightNumber), leftUnit);
     }
 
     private static bool TryGetDivideResultUnit(
@@ -4610,7 +4610,7 @@ internal readonly record struct BytecodeVmValue(
 
         if (leftIsPercentage && rightIsPercentage)
         {
-            return FromPercentageNumeric(GameEventScriptValueAlu.AddNumeric(leftNumber, rightNumber));
+            return FromPercentageNumeric(GesValueOperations.AddNumeric(leftNumber, rightNumber));
         }
 
         if (leftIsPercentage)
@@ -4618,8 +4618,8 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        var delta = GameEventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
-        return FromDecimalNumeric(GameEventScriptValueAlu.AddNumeric(leftNumber, delta), leftUnit);
+        var delta = GesValueOperations.MultiplyNumeric(leftNumber, rightNumber);
+        return FromDecimalNumeric(GesValueOperations.AddNumeric(leftNumber, delta), leftUnit);
     }
 
     private static BytecodeVmValue SubtractPercentage(BytecodeVmValue left, BytecodeVmValue right)
@@ -4632,7 +4632,7 @@ internal readonly record struct BytecodeVmValue(
 
         if (leftIsPercentage && rightIsPercentage)
         {
-            return FromPercentageNumeric(GameEventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber));
+            return FromPercentageNumeric(GesValueOperations.SubtractNumeric(leftNumber, rightNumber));
         }
 
         if (leftIsPercentage)
@@ -4640,8 +4640,8 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        var delta = GameEventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
-        return FromDecimalNumeric(GameEventScriptValueAlu.SubtractNumeric(leftNumber, delta), leftUnit);
+        var delta = GesValueOperations.MultiplyNumeric(leftNumber, rightNumber);
+        return FromDecimalNumeric(GesValueOperations.SubtractNumeric(leftNumber, delta), leftUnit);
     }
 
     private static BytecodeVmValue MultiplyPercentage(BytecodeVmValue left, BytecodeVmValue right)
@@ -4652,7 +4652,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        var result = GameEventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber);
+        var result = GesValueOperations.MultiplyNumeric(leftNumber, rightNumber);
         if (leftIsPercentage && rightIsPercentage)
         {
             return FromPercentageNumeric(result);
@@ -4681,7 +4681,7 @@ internal readonly record struct BytecodeVmValue(
             return NaN();
         }
 
-        var result = GameEventScriptValueAlu.DivideNumeric(leftNumber, rightNumber);
+        var result = GesValueOperations.DivideNumeric(leftNumber, rightNumber);
         if (leftIsPercentage && rightIsPercentage)
         {
             return FromDecimalNumeric(result);
@@ -4696,34 +4696,34 @@ internal readonly record struct BytecodeVmValue(
     }
 
     private bool TryGetNumeric(
-        out GameEventScriptValueAlu.NumericValue number,
+        out GesValueOperations.NumericValue number,
         out GameEventScriptDecimalUnit? unit,
         out bool isPercentage)
     {
         switch (Kind)
         {
             case BytecodeVmValueKind.Boolean:
-                number = GameEventScriptValueAlu.NumericValue.Finite(BooleanValue ? 1m : 0m);
+                number = GesValueOperations.NumericValue.Finite(BooleanValue ? 1m : 0m);
                 unit = null;
                 isPercentage = false;
                 return true;
             case BytecodeVmValueKind.Integer:
-                number = GameEventScriptValueAlu.NumericValue.Finite(IntegerValue);
+                number = GesValueOperations.NumericValue.Finite(IntegerValue);
                 unit = null;
                 isPercentage = false;
                 return true;
             case BytecodeVmValueKind.Decimal:
-                number = GameEventScriptValueAlu.NumericValue.Finite(Number);
+                number = GesValueOperations.NumericValue.Finite(Number);
                 unit = Unit;
                 isPercentage = false;
                 return true;
             case BytecodeVmValueKind.Percentage:
-                number = GameEventScriptValueAlu.NumericValue.Finite(Number);
+                number = GesValueOperations.NumericValue.Finite(Number);
                 unit = null;
                 isPercentage = true;
                 return true;
             case BytecodeVmValueKind.Reference when ReferenceValue is { } reference &&
-                                                       GameEventScriptValueAlu.TryCoerceNumericForOperation(reference, out var referenceNumber):
+                                                       GesValueOperations.TryCoerceNumericForOperation(reference, out var referenceNumber):
                 number = referenceNumber;
                 unit = GameEventScriptValue.TryGetDecimalUnit(reference, out var referenceUnit) ? referenceUnit : null;
                 isPercentage = reference.IsPercentage();
@@ -4771,7 +4771,7 @@ internal readonly record struct BytecodeVmValue(
             return false;
         }
 
-        if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left.ToGameEventScriptValue(), operation, right.ToGameEventScriptValue(), out var vectorValue))
+        if (GesValueOperations.TryEvaluateVectorBinary(left.ToGameEventScriptValue(), operation, right.ToGameEventScriptValue(), out var vectorValue))
         {
             value = FromGameEventScriptValue(vectorValue);
             return true;
@@ -4785,10 +4785,10 @@ internal readonly record struct BytecodeVmValue(
         => Kind == BytecodeVmValueKind.Nothing ||
            ReferenceValue is { } reference && reference.IsNothing();
 
-    private static BytecodeVmValue FromDecimalNumeric(GameEventScriptValueAlu.NumericValue number, GameEventScriptDecimalUnit? unit = null)
+    private static BytecodeVmValue FromDecimalNumeric(GesValueOperations.NumericValue number, GameEventScriptDecimalUnit? unit = null)
         => number.IsFinite
             ? Decimal(number.Value, unit)
-            : Reference(GameEventScriptValueAlu.ToGameEventScriptDecimal(number));
+            : Reference(GesValueOperations.ToGameEventScriptDecimal(number));
 
     private static BytecodeVmValue FromFinitePrimitiveNumericResult(
         BytecodeVmValue left,
@@ -4808,7 +4808,7 @@ internal readonly record struct BytecodeVmValue(
             ? Integer(integer)
             : Decimal(value, unit);
 
-    private static BytecodeVmValue FromPercentageNumeric(GameEventScriptValueAlu.NumericValue number)
+    private static BytecodeVmValue FromPercentageNumeric(GesValueOperations.NumericValue number)
         => number.IsFinite
             ? Percentage(number.Value)
             : FromDecimalNumeric(number);

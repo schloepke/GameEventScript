@@ -9,6 +9,6 @@ public static class GameEventScriptManager
 {
     public static GameEventScriptBuilder CreateBuilder() => GameEventScriptBuilder.Create();
 
-    public static GameEventScriptCompiled Compile(string input, GameEventScriptCompilationOptions? options = null) => CreateBuilder().AddScript(input).Compile(options);
+    public static GameEventScriptCompiled Compile(string input, GameEventScriptCompileOptions? options = null) => CreateBuilder().AddScript(input).Compile(options);
 
 }

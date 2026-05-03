@@ -16,10 +16,10 @@ public enum GameEventScriptSequenceMode
 
 public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptSequenceValue Empty = new(GameEventScriptSequenceMode.Values, Nothing);
+    public static readonly GameEventScriptSequenceValue Empty = new(GameEventScriptSequenceMode.Values, GameEventScriptNothingValue.Instance);
 
     public static GameEventScriptSequenceValue Create(GameEventScriptSequenceMode mode, GameEventScriptValue? source)
-        => mode == GameEventScriptSequenceMode.Values && (source == null || source.IsNothing()) ? Empty : new GameEventScriptSequenceValue(mode, source ?? Nothing);
+        => mode == GameEventScriptSequenceMode.Values && (source == null || source.IsNothing()) ? Empty : new GameEventScriptSequenceValue(mode, source ?? GameEventScriptNothingValue.Instance);
 
     private GameEventScriptSequenceValue(GameEventScriptSequenceMode mode, GameEventScriptValue source)
     {

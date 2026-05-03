@@ -109,13 +109,13 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
         var index = selector.AsInteger();
         if (index <= 0 || index > GetLength())
         {
-            return Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         var value = (decimal)From + ((decimal)index - 1m) * Step;
         if (value < long.MinValue || value > long.MaxValue)
         {
-            return Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         return GesInteger((long)value);

@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
@@ -7,7 +5,7 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal static class GameEventScriptMessageValueCodec
+internal static class GesMessageValueCodec
 {
     public static GameEventScriptValue CreateHandlerValue(GameEventScriptMessageSignature signature)
     {

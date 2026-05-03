@@ -27,8 +27,6 @@ public sealed class GameEventScriptConformanceTest
 
     public GameEventScriptRuntimeLimitsSpec? RuntimeLimits { get; set; }
 
-    public int? MaxProcessedEventsPerRun { get; set; }
-
     public List<GameEventScriptExternalSubscriberSpec>? ExternalSubscribers { get; set; }
 
     public List<GameEventScriptApiStepSpec>? Steps { get; set; }
@@ -90,6 +88,8 @@ public sealed class GameEventScriptApiStepSpec
 
 public sealed class GameEventScriptCompileOptionsSpec
 {
+    public bool? Optimize { get; set; }
+
     public bool? EnableDiagnostics { get; set; }
 }
 
@@ -117,6 +117,8 @@ public sealed class GameEventScriptExternalPublishSpec
 
 public sealed class GameEventScriptRuntimeLimitsSpec
 {
+    public int? MaxProcessedEventsPerRun { get; set; }
+
     public int? MaxExecutionSteps { get; set; }
 
     public int? MaxLoopIterations { get; set; }

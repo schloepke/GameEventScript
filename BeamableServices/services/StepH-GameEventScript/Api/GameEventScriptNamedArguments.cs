@@ -36,7 +36,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
         var index = 0;
         foreach (var pair in values)
         {
-            orderedPairs[index++] = new KeyValuePair<string, GameEventScriptValue>(pair.Key, pair.Value ?? GameEventScriptValue.Nothing);
+            orderedPairs[index++] = new KeyValuePair<string, GameEventScriptValue>(pair.Key, pair.Value ?? GameEventScriptNothingValue.Instance);
         }
 
         return CreateOrdered(orderedPairs);
@@ -52,7 +52,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// <returns>A normalized read-only dictionary where null values are replaced with "Nothing".
     /// If the input collection is null or empty, an empty collection is returned.</returns>
     public static IReadOnlyDictionary<string, GameEventScriptValue> Normalize(IReadOnlyDictionary<string, GameEventScriptValue>? values)
-        => values is null || values.Count == 0 ? Empty : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptValue.Nothing, StringComparer.Ordinal);
+        => values is null || values.Count == 0 ? Empty : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptNothingValue.Instance, StringComparer.Ordinal);
 
     /// <summary>
     /// Retrieves the value associated with the specified key from the collection of named arguments.
@@ -157,7 +157,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
         for (var index = 0; index < orderedPairs.Length; index++)
         {
             var pair = orderedPairs[index];
-            var value = pair.Value ?? GameEventScriptValue.Nothing;
+            var value = pair.Value ?? GameEventScriptNothingValue.Instance;
             if (!ReferenceEquals(value, pair.Value))
             {
                 pair = new KeyValuePair<string, GameEventScriptValue>(pair.Key, value);

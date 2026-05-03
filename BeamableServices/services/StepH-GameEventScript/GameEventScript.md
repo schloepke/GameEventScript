@@ -189,7 +189,8 @@ published output. Messages emitted through `publish` are observable outputs.
 ### Subscriber order
 
 Subscribers are matched by message signature. Matching subscribers run by host
-priority, then by registration order for equal priority.
+priority, then by registration order for equal priority. Higher priority values
+run earlier; `0` is normal priority.
 
 Script handlers are subscribers. Host callbacks registered with `Subscribe` are
 also subscribers. They participate in the same dispatch order.
@@ -1736,7 +1737,7 @@ Compile options use the public GameEventScript options type:
 ```csharp
 var bytecode = GameEventScriptManager.Compile(
     script,
-    new GameEventScriptCompilationOptions
+    new GameEventScriptCompileOptions
     {
         EnableDiagnostics = true
 });
@@ -1776,9 +1777,6 @@ host.Publish(GameEventScriptMessage.Message(
 - `WithDiagnosticCollector(...)`
 - `WithPublishedMessageObserver(...)`
 - `WithRuntimeLimits(...)`
-- `WithMaxProcessedEventsPerRun(...)`
-- `WithScriptHandlerPriority(...)`
-- `WithExternalHandlerPriority(...)`
 
 External subscribers can be registered with `Subscribe`.
 
@@ -1790,6 +1788,11 @@ host.Subscribe(
         // host callback
     });
 ```
+
+`Load` and `Subscribe` accept an optional `priority`. The normal priority is
+`0`; higher values run earlier and lower values run later. When priorities are
+equal, registration order is preserved. Script handlers and external
+subscribers use the same priority model.
 
 External subscriber exceptions are swallowed by runtime dispatch so that host
 callbacks remain lenient like script handlers.
@@ -1803,7 +1806,7 @@ var diagnostics = new GameEventScriptDiagnosticTraceCollector();
 
 var bytecode = GameEventScriptManager.Compile(
     script,
-    new GameEventScriptCompilationOptions { EnableDiagnostics = true });
+    new GameEventScriptCompileOptions { EnableDiagnostics = true });
 
 var host = GameEventScriptHost.CreateBuilder()
     .WithDiagnosticCollector(diagnostics)
@@ -1858,6 +1861,7 @@ Runtime limits prevent runaway scripts.
 ```csharp
 var limits = new GameEventScriptRuntimeLimits
 {
+    MaxProcessedEventsPerRun = 64,
     MaxExecutionSteps = 100_000,
     MaxLoopIterations = 100_000,
     MaxCallDepth = 64,
@@ -1868,8 +1872,8 @@ var limits = new GameEventScriptRuntimeLimits
 };
 ```
 
-`MaxProcessedEventsPerRun` is a host setting that limits how many queued events
-one `Publish` call may process.
+`MaxProcessedEventsPerRun` limits how many queued events one `Publish` call may
+process.
 
 When a runtime budget is reached, execution stops leniently and a
 `RuntimeLimitReached` diagnostic is recorded when diagnostics are available.

@@ -95,9 +95,7 @@ internal readonly record struct BytecodeVmProgramInstruction(
     string[]? Names = null,
     int[]? Slots = null);
 
-internal sealed class BytecodeVmExpressionProgram(
-    BytecodeVmProgramInstruction[] instructions,
-    int maxStackDepth)
+internal sealed class BytecodeVmExpressionProgram(BytecodeVmProgramInstruction[] instructions, int maxStackDepth)
 {
     public BytecodeVmProgramInstruction[] Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
 

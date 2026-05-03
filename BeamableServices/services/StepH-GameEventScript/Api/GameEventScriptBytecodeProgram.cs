@@ -5,12 +5,7 @@ using System.Collections.Generic;
 
 namespace StepH.GameEventScript.Api;
 
-public sealed class GameEventScriptBytecodeProgram(
-    string name,
-    IReadOnlyList<GameEventScriptInstruction> instructions,
-    int registerCount,
-    int localCount,
-    bool createsScope = false)
+public sealed class GameEventScriptBytecodeProgram(string name, IReadOnlyList<GameEventScriptInstruction> instructions, int registerCount, int localCount, bool createsScope = false)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
@@ -22,3 +17,5 @@ public sealed class GameEventScriptBytecodeProgram(
 
     public bool CreatesScope { get; } = createsScope;
 }
+
+public readonly record struct GameEventScriptInstruction(GameEventScriptOpCode OpCode, int A = -1, int B = -1, int C = -1, int D = -1);

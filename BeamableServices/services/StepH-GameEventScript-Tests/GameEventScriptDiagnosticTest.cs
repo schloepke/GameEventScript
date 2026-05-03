@@ -48,13 +48,16 @@ public class GameEventScriptDiagnosticTest
     {
         var bytecode = GameEventScriptBuilder.Create()
             .AddScript(script)
-            .Compile(new GameEventScriptCompilationOptions { EnableDiagnostics = true });
+            .Compile(new GameEventScriptCompileOptions { EnableDiagnostics = true });
         
         var input = Create("Start", ("startPosition", GameEventScriptValueFactory.GesVector2(20, 15)));
         
         var collector = new GameEventScriptDiagnosticTraceCollector();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithMaxProcessedEventsPerRun(128)
+            .WithRuntimeLimits(new GameEventScriptRuntimeLimits
+            {
+                MaxProcessedEventsPerRun = 128
+            })
             .WithDiagnosticCollector(collector)
             .Build()
             .Load(bytecode);

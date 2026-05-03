@@ -2,7 +2,9 @@
 
 namespace StepH.GameEventScript.Api;
 
-public sealed class GameEventScriptCompilationOptions
+public sealed class GameEventScriptCompileOptions
 {
+    public bool Optimize { get; init; } = true;
+
     public bool EnableDiagnostics { get; init; }
 }

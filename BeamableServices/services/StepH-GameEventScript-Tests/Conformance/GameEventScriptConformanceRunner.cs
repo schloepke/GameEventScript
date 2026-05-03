@@ -85,11 +85,6 @@ internal static class GameEventScriptConformanceRunner
             .WithDiagnosticCollector(collector)
             .WithPublishedMessageObserver(published.Add);
 
-        if (test.MaxProcessedEventsPerRun.HasValue)
-        {
-            builder.WithMaxProcessedEventsPerRun(test.MaxProcessedEventsPerRun.Value);
-        }
-
         var host = builder.Build().Load(compiled);
         RegisterExternalSubscribers(testCase, host);
         if (test.Steps is null || test.Steps.Count == 0)
@@ -155,19 +150,9 @@ internal static class GameEventScriptConformanceRunner
         {
             CompileScripts(testCase.Test);
         }
-        catch (GameEventScriptSyntaxException exception)
+        catch (GameEventScriptCompileException exception)
         {
-            AssertSyntaxError(testCase, expected, exception);
-            return;
-        }
-        catch (GameEventScriptModuleBuildException exception)
-        {
-            AssertModuleBuildError(testCase, expected, exception);
-            return;
-        }
-        catch (GameEventScriptCompilationException exception)
-        {
-            AssertGenericCompilationError(testCase, expected, exception);
+            AssertCompileError(testCase, expected, exception);
             return;
         }
 
@@ -263,7 +248,7 @@ internal static class GameEventScriptConformanceRunner
                         context.Publish(GameEventScriptMessage.Create(publish.Name!, args));
                     }
                 },
-                subscriber.Priority);
+                subscriber.Priority ?? 0);
         }
     }
 
@@ -399,37 +384,23 @@ internal static class GameEventScriptConformanceRunner
                (actual.Detail?.Contains(detailContains, StringComparison.Ordinal) ?? false);
     }
 
-    private static void AssertSyntaxError(
+    private static void AssertCompileError(
         GameEventScriptConformanceCase testCase,
         GameEventScriptExpectedCompileErrorSpec expected,
-        GameEventScriptSyntaxException exception)
+        GameEventScriptCompileException exception)
     {
-        if (!PhaseMatches(expected, "syntax"))
+        if (exception.Errors.Count == 0)
         {
-            Assert.Fail($"{testCase}: expected phase '{expected.Phase}', but got syntax error: {exception.Message}");
-        }
-
-        if (exception.Errors.Any(error =>
-                Matches(expected.ModuleName, error.ModuleName) &&
-                MessageMatches(expected.MessageContains, error.Message, exception.Message)))
-        {
+            AssertGenericCompilationError(testCase, expected, exception);
             return;
         }
 
-        Assert.Fail($"{testCase}: syntax error expectation did not match.{Environment.NewLine}{exception.Message}");
-    }
+        var expectedPhase = string.IsNullOrWhiteSpace(expected.Phase) ? null : expected.Phase;
+        var matchingErrors = exception.Errors.Where(error =>
+            expectedPhase is null ||
+            PhaseMatches(expected, error.Kind == GameEventScriptCompileErrorKind.Syntax ? "syntax" : "build"));
 
-    private static void AssertModuleBuildError(
-        GameEventScriptConformanceCase testCase,
-        GameEventScriptExpectedCompileErrorSpec expected,
-        GameEventScriptModuleBuildException exception)
-    {
-        if (!PhaseMatches(expected, "build"))
-        {
-            Assert.Fail($"{testCase}: expected phase '{expected.Phase}', but got module build error: {exception.Message}");
-        }
-
-        if (exception.Errors.Any(error =>
+        if (matchingErrors.Any(error =>
                 Matches(expected.Kind, error.Kind.ToString()) &&
                 Matches(expected.Symbol, error.Symbol) &&
                 Matches(expected.SymbolKind, error.SymbolKind.ToString()) &&
@@ -439,13 +410,13 @@ internal static class GameEventScriptConformanceRunner
             return;
         }
 
-        Assert.Fail($"{testCase}: module build error expectation did not match.{Environment.NewLine}{exception.Message}");
+        Assert.Fail($"{testCase}: compile error expectation did not match.{Environment.NewLine}{exception.Message}");
     }
 
     private static void AssertGenericCompilationError(
         GameEventScriptConformanceCase testCase,
         GameEventScriptExpectedCompileErrorSpec expected,
-        GameEventScriptCompilationException exception)
+        GameEventScriptCompileException exception)
     {
         if (!PhaseMatches(expected, "compilation") || !MessageMatches(expected.MessageContains, exception.Message))
         {
@@ -461,8 +432,9 @@ internal static class GameEventScriptConformanceRunner
             builder.AddScript(source.Text!, source.SourceName);
         }
 
-        return builder.Compile(new GameEventScriptCompilationOptions
+        return builder.Compile(new GameEventScriptCompileOptions
         {
+            Optimize = test.CompileOptions?.Optimize ?? true,
             EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false
         });
     }
@@ -532,6 +504,7 @@ internal static class GameEventScriptConformanceRunner
 
         return new GameEventScriptRuntimeLimits
         {
+            MaxProcessedEventsPerRun = spec.MaxProcessedEventsPerRun ?? defaults.MaxProcessedEventsPerRun,
             MaxExecutionSteps = spec.MaxExecutionSteps ?? defaults.MaxExecutionSteps,
             MaxLoopIterations = spec.MaxLoopIterations ?? defaults.MaxLoopIterations,
             MaxCallDepth = spec.MaxCallDepth ?? defaults.MaxCallDepth,

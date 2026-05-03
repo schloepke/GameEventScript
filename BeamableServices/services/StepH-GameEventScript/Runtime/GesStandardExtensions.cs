@@ -1,12 +1,10 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal static class GameEventScriptStandardExtensions
+internal static class GesStandardExtensions
 {
     private const decimal Pi = 3.1415926535897932384626433833m;
 
@@ -82,7 +80,7 @@ internal static class GameEventScriptStandardExtensions
             _ => 0m
         };
 
-        return GameEventScriptFastValue.FromInteger(GameEventScriptValueAlu.ToIntegerSaturated(rounded));
+        return GameEventScriptFastValue.FromInteger(GesValueOperations.ToIntegerSaturated(rounded));
     }
 
     private static GameEventScriptFastValue EvaluateDegree(string functionName, GameEventScriptFastValue input)
@@ -98,7 +96,7 @@ internal static class GameEventScriptStandardExtensions
     {
         if (input.IsReferenceBacked)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateWrapDegree(input.ToGameEventScriptValue()));
+            return GameEventScriptFastValue.FromGameEventScriptValue(GesValueOperations.EvaluateWrapDegree(input.ToGameEventScriptValue()));
         }
 
         if (input.Unit.HasValue && input.Unit.Value != GameEventScriptDecimalUnit.Degree)
@@ -148,76 +146,76 @@ internal static class GameEventScriptStandardExtensions
         }
     }
 
-    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptFastValue input, out GameEventScriptValueAlu.NumericValue number)
+    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptFastValue input, out GesValueOperations.NumericValue number)
     {
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+            if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
             {
-                number = GameEventScriptValueAlu.NumericValue.NaN();
+                number = GesValueOperations.NumericValue.NaN();
                 return true;
             }
 
             if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var unit) && unit != GameEventScriptDecimalUnit.Degree)
             {
-                number = GameEventScriptValueAlu.NumericValue.NaN();
+                number = GesValueOperations.NumericValue.NaN();
                 return false;
             }
 
-            return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
+            return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
         if (input.Unit.HasValue && input.Unit.Value != GameEventScriptDecimalUnit.Degree)
         {
-            number = GameEventScriptValueAlu.NumericValue.NaN();
+            number = GesValueOperations.NumericValue.NaN();
             return false;
         }
 
         return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadUnitlessNumeric(GameEventScriptFastValue input, out GameEventScriptValueAlu.NumericValue number)
+    private static bool TryReadUnitlessNumeric(GameEventScriptFastValue input, out GesValueOperations.NumericValue number)
     {
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+            if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
             {
-                number = GameEventScriptValueAlu.NumericValue.NaN();
+                number = GesValueOperations.NumericValue.NaN();
                 return true;
             }
 
             if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out _))
             {
-                number = GameEventScriptValueAlu.NumericValue.NaN();
+                number = GesValueOperations.NumericValue.NaN();
                 return false;
             }
 
-            return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
+            return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
         if (input.Unit.HasValue)
         {
-            number = GameEventScriptValueAlu.NumericValue.NaN();
+            number = GesValueOperations.NumericValue.NaN();
             return false;
         }
 
         return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadNumeric(GameEventScriptFastValue input, out GameEventScriptValueAlu.NumericValue number)
+    private static bool TryReadNumeric(GameEventScriptFastValue input, out GesValueOperations.NumericValue number)
     {
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
+            if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
             {
-                number = GameEventScriptValueAlu.NumericValue.NaN();
+                number = GesValueOperations.NumericValue.NaN();
                 return true;
             }
 
-            return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out number);
+            return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
         switch (input.Kind)
@@ -226,7 +224,7 @@ internal static class GameEventScriptStandardExtensions
             case GameEventScriptValueKind.Integer:
             case GameEventScriptValueKind.Percentage:
             case GameEventScriptValueKind.Boolean:
-                number = GameEventScriptValueAlu.NumericValue.Finite(input.Number);
+                number = GesValueOperations.NumericValue.Finite(input.Number);
                 return true;
             default:
                 number = default;

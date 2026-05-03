@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -112,10 +113,11 @@ internal sealed class GesLexer
     private int _line = 1;
     private int _column = 1;
 
-    public GesLexer(string input)
+    public GesLexer(string input, GameEventScriptCompileOptions? options = null)
     {
         _input = input ?? throw new ArgumentNullException(nameof(input));
         _length = _input.Length;
+        _ = options ?? new GameEventScriptCompileOptions();
     }
 
     public IEnumerable<GesToken> Tokenize()

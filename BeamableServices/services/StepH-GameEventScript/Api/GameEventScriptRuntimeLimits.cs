@@ -1,0 +1,127 @@
+namespace StepH.GameEventScript.Api;
+
+/// <summary>
+/// Represents runtime execution limits for a game event script, providing control over various
+/// script execution parameters such as loop iterations, call stack depth, and allowed operations.
+/// This ensures that scripts execute within predefined boundaries to prevent excessive resource usage
+/// or infinite execution.
+/// </summary>
+public sealed class GameEventScriptRuntimeLimits
+{
+    /// <summary>
+    /// Provides the default configuration for runtime limits used in game event script execution.
+    /// This property returns a shared instance of <see cref="GameEventScriptRuntimeLimits"/>
+    /// with predefined limits for event processing, execution steps, and loop iterations.
+    /// </summary>
+    /// <remarks>
+    /// The default instance is used as a fallback if no custom limits are specified
+    /// during the creation of a runtime context or host. This ensures that
+    /// reasonable constraints are in place to avoid excessive resource usage during script execution.
+    /// </remarks>
+    public static GameEventScriptRuntimeLimits Default { get; } = new();
+
+    /// <summary>
+    /// Specifies the maximum number of events that can be processed in a single execution run.
+    /// This property ensures that excessive event processing does not lead to prolonged execution times
+    /// or resource exhaustion, providing a safeguard for runtime performance and stability.
+    /// </summary>
+    /// <remarks>
+    /// The default value is set to 64 but can be customized to suit specific application requirements.
+    /// Adjusting this property allows developers to fine-tune the balance between processing capacity
+    /// and runtime efficiency. Exceeding this limit in a single run will skip additional events until the next cycle.
+    /// </remarks>
+    public int MaxProcessedEventsPerRun { get; init; } = 64;
+
+    /// <summary>
+    /// Specifies the maximum number of execution steps allowed during the evaluation of a game event script.
+    /// This limit is used to control the computational workload of scripts and to prevent scripts
+    /// from consuming excessive runtime resources or entering infinite execution loops.
+    /// </summary>
+    /// <remarks>
+    /// The value of this property defines an upper bound on the number of discrete steps
+    /// a script is permitted to execute before being halted. A step typically corresponds to a fundamental
+    /// operation or instruction within the script's runtime environment. Setting this limit ensures
+    /// predictable script performance and safeguards against potential misuse or unintentional excessive
+    /// resource consumption.
+    /// </remarks>
+    public int MaxExecutionSteps { get; init; } = 100_000;
+
+    /// <summary>
+    /// Defines the maximum number of iterations allowed for loops during the execution of a game event script.
+    /// This property sets an upper limit to prevent scripts from running indefinitely or consuming excessive resources.
+    /// </summary>
+    /// <remarks>
+    /// A value of 100,000 is the default limit, ensuring a balance between flexibility in script design
+    /// and safeguarding system performance. Custom limits can be configured through the runtime specification
+    /// if needed for specific use cases. When this limit is reached, the script execution is halted
+    /// to preserve resources and maintain stability.
+    /// </remarks>
+    public int MaxLoopIterations { get; init; } = 100_000;
+
+    /// <summary>
+    /// Defines the maximum allowable depth of the call stack during game event script execution.
+    /// This property sets a limit on the number of nested function or method calls
+    /// in a script, ensuring that scripts terminate within a controlled depth to avoid
+    /// stack overflow or excessive resource consumption.
+    /// </summary>
+    /// <remarks>
+    /// The value of this property is used to monitor and restrict the depth of recursive or nested
+    /// calls during script execution. If the number of nested calls exceeds this limit,
+    /// the script runtime will halt further execution to prevent resource exhaustion.
+    /// </remarks>
+    public int MaxCallDepth { get; init; } = 64;
+
+    /// <summary>
+    /// Specifies the maximum number of items allowed in a range-based operation
+    /// during game event script execution. This limit helps ensure that range operations,
+    /// such as enumerating over a collection or processing a sequence, do not exhaust
+    /// resources by creating excessively large intermediate collections or performing
+    /// operations on an overly large dataset.
+    /// </summary>
+    /// <remarks>
+    /// This property is commonly used to enforce bounds on script-driven operations that
+    /// involve ranges, such as generating collections or iterating over sequences. If a range
+    /// exceeds the specified limit, the script runtime may terminate execution, or the
+    /// relevant operation could fail with a diagnostic error.
+    /// </remarks>
+    public int MaxRangeItems { get; init; } = 10_000;
+
+    /// <summary>
+    /// Specifies the maximum number of items that can be generated in a collection during script execution.
+    /// </summary>
+    /// <remarks>
+    /// This limit serves to control resource usage by restricting the size of dynamically created collections
+    /// within game event scripts. When the count of generated items in a collection exceeds this limit,
+    /// the script runtime will signal that the limit has been reached, preventing further additions to the collection.
+    /// Adjusting this value allows customization of runtime behavior based on application requirements.
+    /// </remarks>
+    public int MaxGeneratedCollectionItems { get; init; } = 10_000;
+
+    /// <summary>
+    /// Specifies the maximum number of dice that can be processed during the execution
+    /// of a game event script. This limit ensures controlled usage of resources
+    /// when handling random number generation mechanics in scripts.
+    /// </summary>
+    /// <remarks>
+    /// The value of this property represents the upper bound on the allowable
+    /// number of dice rolls in a single script execution. Exceeding this limit during
+    /// runtime will result in a diagnostic event being reported and the operation
+    /// being disallowed. This safeguard prevents excessive resource consumption
+    /// caused by handling an unreasonably high number of dice rolls.
+    /// </remarks>
+    public int MaxDiceCount { get; init; } = 1_000;
+
+    /// <summary>
+    /// Specifies the maximum number of sides that a single dice can have in a game event script.
+    /// This property imposes an upper limit on how large the side count for any dice roll can be,
+    /// providing a constraint to prevent excessive computational complexity or unrealistic scenarios.
+    /// </summary>
+    /// <remarks>
+    /// This limit helps ensure that dice rolls remain computationally manageable
+    /// and consistent with the intended design of the game event scripting system.
+    /// Scripts that attempt to define a dice with a side count exceeding this value
+    /// will be terminated or flagged as exceeding runtime limits.
+    /// </remarks>
+    public int MaxDiceSides { get; init; } = 1_000_000;
+}
+

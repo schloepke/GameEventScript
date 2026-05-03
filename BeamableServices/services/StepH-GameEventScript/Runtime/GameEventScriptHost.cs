@@ -11,43 +11,37 @@ namespace StepH.GameEventScript.Runtime;
 
 public sealed class GameEventScriptHost
 {
+    private const int NormalPriority = 0;
+
     private readonly GameEventScriptRandomGenerator _random;
     private readonly IGameEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly Action<GameEventScriptMessage>? _publishedMessageObserver;
     private readonly IGameEventScriptExtensionRegistry _extensionRegistry;
     private readonly GameEventScriptRuntimeLimits _runtimeLimits;
-    private readonly int _maxProcessedEventsPerRun;
-    private readonly int _defaultScriptHandlerPriority;
-    private readonly int _defaultExternalHandlerPriority;
     private readonly Dictionary<string, List<MessageSubscription>> _dispatchIndex = new(StringComparer.Ordinal);
     private long _nextRegistrationOrder;
 
     internal GameEventScriptHost(GameEventScriptRandomGenerator random, IGameEventScriptDiagnosticCollector? diagnosticCollector, Action<GameEventScriptMessage>? publishedMessageObserver,
-        IGameEventScriptExtensionRegistry extensionRegistry,
-        GameEventScriptRuntimeLimits runtimeLimits, int maxProcessedEventsPerRun,
-        int defaultScriptHandlerPriority, int defaultExternalHandlerPriority)
+        IGameEventScriptExtensionRegistry? extensionRegistry, GameEventScriptRuntimeLimits? runtimeLimits)
     {
         _random = random;
         _diagnosticCollector = diagnosticCollector;
         _publishedMessageObserver = publishedMessageObserver;
         _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
-        _maxProcessedEventsPerRun = maxProcessedEventsPerRun <= 0 ? GameEventScriptHostBuilder.DefaultMaxProcessedEventsPerRun : maxProcessedEventsPerRun;
-        _defaultScriptHandlerPriority = defaultScriptHandlerPriority;
-        _defaultExternalHandlerPriority = defaultExternalHandlerPriority;
     }
 
     public static GameEventScriptHostBuilder CreateBuilder() => new();
 
     #region Public interface
 
-    public GameEventScriptHost Load(GameEventScriptCompiled bytecode, int? priority = null)
+    public GameEventScriptHost Load(GameEventScriptCompiled bytecode, int priority = NormalPriority)
     {
         _ = bytecode ?? throw new ArgumentNullException(nameof(bytecode));
         return Load(BytecodeVmExecutableBuilder.Build(bytecode), priority);
     }
 
-    public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int? priority = null)
+    public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
         if (handlers is GseBytecodeVmExecutable registerCompiled)
@@ -59,7 +53,7 @@ public sealed class GameEventScriptHost
         {
             Register(new MessageSubscription(
                 handler.Signature,
-                priority ?? _defaultScriptHandlerPriority,
+                priority,
                 _nextRegistrationOrder++,
                 handler.Handler));
         }
@@ -67,18 +61,18 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int? priority = null)
+    public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = NormalPriority)
         => Subscribe(Create(!string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message must not be null or whitespace", nameof(message)),
             parameterNames ?? throw new ArgumentNullException(nameof(parameterNames))), handler, priority);
 
-    public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptContext> handler, int? priority = null)
+    public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = NormalPriority)
     {
-        Register(new MessageSubscription(signature ?? throw new ArgumentNullException(nameof(signature)), priority ?? _defaultExternalHandlerPriority, _nextRegistrationOrder++,
+        Register(new MessageSubscription(signature ?? throw new ArgumentNullException(nameof(signature)), priority, _nextRegistrationOrder++,
             handler ?? throw new ArgumentNullException(nameof(handler))));
         return this;
     }
 
-    public GameEventScriptHost Subscribe(IGameEventScriptMessageHandlerCollection handlers, int? priority = null)
+    public GameEventScriptHost Subscribe(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
         foreach (var handler in handlers.Handlers)
@@ -91,12 +85,12 @@ public sealed class GameEventScriptHost
 
     public void Publish(GameEventScriptMessage message)
     {
-        if (message is null || string.IsNullOrWhiteSpace(message.Name))
+        if (string.IsNullOrWhiteSpace(message.Name))
         {
             return;
         }
 
-        var state = new GameEventScriptRunState(_maxProcessedEventsPerRun, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits);
+        var state = new GameEventScriptRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits);
         state.Enqueue(message);
         Drain(state);
     }
@@ -182,7 +176,7 @@ public sealed class GameEventScriptHost
 
     private static int CompareDispatchOrder(MessageSubscription left, MessageSubscription right)
     {
-        var priorityComparison = left.Priority.CompareTo(right.Priority);
+        var priorityComparison = right.Priority.CompareTo(left.Priority);
         return priorityComparison != 0
             ? priorityComparison
             : left.RegistrationOrder.CompareTo(right.RegistrationOrder);
@@ -195,14 +189,13 @@ public sealed class GameEventScriptHost
         private int _processedEvents;
 
         public GameEventScriptRunState(
-            int maxProcessedEventsPerRun,
             GameEventScriptRandomGenerator random,
             IGameEventScriptDiagnosticCollector? diagnosticCollector,
             Action<GameEventScriptMessage>? publishedMessageObserver,
             IGameEventScriptExtensionRegistry extensionRegistry,
             GameEventScriptRuntimeLimits runtimeLimits)
         {
-            _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
+            _maxProcessedEventsPerRun = runtimeLimits.MaxProcessedEventsPerRun;
             PublishedMessageObserver = publishedMessageObserver;
             Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, runtimeLimits: runtimeLimits, extensionRegistry: extensionRegistry);
         }
@@ -213,7 +206,7 @@ public sealed class GameEventScriptHost
 
         public void Enqueue(GameEventScriptMessage message)
         {
-            if (message is null || string.IsNullOrWhiteSpace(message.Name))
+            if (string.IsNullOrWhiteSpace(message.Name))
             {
                 return;
             }
@@ -235,7 +228,7 @@ public sealed class GameEventScriptHost
 
         public bool TryStartProcessingEvent()
         {
-            if (_processedEvents >= _maxProcessedEventsPerRun)
+            if (_maxProcessedEventsPerRun > 0 && _processedEvents >= _maxProcessedEventsPerRun)
             {
                 return false;
             }

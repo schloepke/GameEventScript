@@ -44,7 +44,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "external subscribers run after script handlers by default priority",
+      "name": "equal priority preserves script then external registration order",
       "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Notify(value) {\n  publish SeenByScript(value: value + 1)\n}",
       "externalSubscribers": [
         {
@@ -146,6 +146,56 @@
               "name": "ExternalSecond",
               "args": {
                 "order": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "higher priority subscribers run first",
+      "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Notify(value) {\n  publish SeenByScript(value: value + 1)\n}",
+      "externalSubscribers": [
+        {
+          "message": "Notify",
+          "parameters": ["value"],
+          "priority": 10,
+          "publish": [
+            {
+              "name": "SeenByExternal",
+              "args": {
+                "marker": { "type": ":text", "value": "external" }
+              }
+            }
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":decimal", "value": "4" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": {
+                "value": { "type": ":decimal", "value": "4" }
+              }
+            },
+            {
+              "name": "SeenByExternal",
+              "args": {
+                "marker": { "type": ":text", "value": "external" }
+              }
+            },
+            {
+              "name": "SeenByScript",
+              "args": {
+                "value": { "type": ":decimal", "value": "5" }
               }
             }
           ]

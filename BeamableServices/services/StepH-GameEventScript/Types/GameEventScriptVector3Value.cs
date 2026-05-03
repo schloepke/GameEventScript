@@ -61,7 +61,7 @@ public sealed class GameEventScriptVector3Value : GameEventScriptValue
             return true;
         }
 
-        value = Nothing;
+        value = GameEventScriptNothingValue.Instance;
         return false;
     }
 

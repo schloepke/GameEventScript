@@ -13,7 +13,7 @@ public sealed class GameEventScriptSetValue : GameEventScriptValue
     public static GameEventScriptSetValue Create(IEnumerable<GameEventScriptValue>? values, IComparer<GameEventScriptValue>? comparer = null)
     {
         if (values == null) return Empty;
-        var set = new SortedSet<GameEventScriptValue>(values.Select(value => value ?? Nothing), comparer ?? StableComparer);
+        var set = new SortedSet<GameEventScriptValue>(values.Select(value => value ?? GameEventScriptNothingValue.Instance), comparer ?? StableComparer);
         return set.Count == 0 ? Empty : new GameEventScriptSetValue(set);
     }
 

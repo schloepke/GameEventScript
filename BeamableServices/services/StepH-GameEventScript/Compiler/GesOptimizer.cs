@@ -11,8 +11,9 @@ internal static class GesOptimizer
 {
     private static readonly ISet<string> EmptyTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-    public static GseModule Optimize(GseModule module)
+    public static GseModule Optimize(GseModule module, GameEventScriptCompileOptions? options = null)
     {
+        _ = options ?? new GameEventScriptCompileOptions();
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
 
         var optimizedTypes = module.TypeDefinitions.ToDictionary(
@@ -431,7 +432,7 @@ internal static class GesOptimizer
             extensionCall.ExtensionName,
             extensionCall.FunctionName,
             extensionCall.Arguments.Select(argument => argument.Name).ToArray());
-        if (!GameEventScriptStandardExtensions.IsStandardReference(reference))
+        if (!GesStandardExtensions.IsStandardReference(reference))
         {
             return false;
         }
@@ -447,7 +448,7 @@ internal static class GesOptimizer
             arguments[index] = GameEventScriptFastValue.FromGameEventScriptValue(argument);
         }
 
-        return GameEventScriptStandardExtensions.TryInvoke(reference, arguments, out var value) &&
+        return GesStandardExtensions.TryInvoke(reference, arguments, out var value) &&
                TryConvertValueToLiteral(value.ToGameEventScriptValue(), out folded);
     }
 
@@ -485,7 +486,7 @@ internal static class GesOptimizer
                 {
                     if (!TryEvaluateConstant(itemExpression, out var item))
                     {
-                        value = GameEventScriptValue.Nothing;
+                        value = GameEventScriptNothingValue.Instance;
                         return false;
                     }
 
@@ -502,7 +503,7 @@ internal static class GesOptimizer
                 {
                     if (!TryEvaluateConstant(itemExpression, out var item))
                     {
-                        value = GameEventScriptValue.Nothing;
+                        value = GameEventScriptNothingValue.Instance;
                         return false;
                     }
 
@@ -519,7 +520,7 @@ internal static class GesOptimizer
                 {
                     if (!TryEvaluateConstant(entry.Value, out var item))
                     {
-                        value = GameEventScriptValue.Nothing;
+                        value = GameEventScriptNothingValue.Instance;
                         return false;
                     }
 
@@ -533,7 +534,7 @@ internal static class GesOptimizer
             {
                 if (!TryEvaluateConstant(castExpression.Value, out var source))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
@@ -551,14 +552,14 @@ internal static class GesOptimizer
             case BinaryExpressionNode binaryExpression:
                 return TryEvaluateConstantBinary(binaryExpression, out value);
             default:
-                value = GameEventScriptValue.Nothing;
+                value = GameEventScriptNothingValue.Instance;
                 return false;
         }
     }
 
     private static bool TryEvaluateConstantTypeConstructor(TypeConstructorExpressionNode constructor, ISet<string> knownTypeNames, out GameEventScriptValue value)
     {
-        value = GameEventScriptValue.Nothing;
+        value = GameEventScriptNothingValue.Instance;
         if (constructor.TypeName is "vector2" or "vector3")
         {
             return TryEvaluateConstantVectorConstructor(constructor, out value);
@@ -581,7 +582,7 @@ internal static class GesOptimizer
 
     private static bool TryEvaluateConstantVectorConstructor(TypeConstructorExpressionNode constructor, out GameEventScriptValue value)
     {
-        value = GameEventScriptValue.Nothing;
+        value = GameEventScriptNothingValue.Instance;
         if (constructor.Arguments.Count == 1 &&
             constructor.Arguments[0].Label is null &&
             TryEvaluateConstant(constructor.Arguments[0].Expression, out var source))
@@ -596,7 +597,7 @@ internal static class GesOptimizer
             TryEvaluateConstant(constructor.Arguments[0].Expression, out var xy) &&
             TryEvaluateConstant(constructor.Arguments[1].Expression, out var z))
         {
-            return GameEventScriptValueAlu.TryCreateVector3(xy, z, out value) && !value.IsNothing();
+            return GesValueOperations.TryCreateVector3(xy, z, out value) && !value.IsNothing();
         }
 
         if (constructor.Arguments.Count == 0 || constructor.Arguments.All(argument => argument.Label is not null))
@@ -612,7 +613,7 @@ internal static class GesOptimizer
                 labeledComponents[argument.Label!] = component;
             }
 
-            return GameEventScriptValueAlu.TryCreateVectorFromLabeledComponents(constructor.TypeName, labeledComponents, out value) &&
+            return GesValueOperations.TryCreateVectorFromLabeledComponents(constructor.TypeName, labeledComponents, out value) &&
                    !value.IsNothing();
         }
 
@@ -632,15 +633,15 @@ internal static class GesOptimizer
         }
 
         return expectedCount == 2
-            ? GameEventScriptValueAlu.TryCreateVector2(components[0], components[1], out value)
-            : GameEventScriptValueAlu.TryCreateVector3(components[0], components[1], components[2], out value);
+            ? GesValueOperations.TryCreateVector2(components[0], components[1], out value)
+            : GesValueOperations.TryCreateVector3(components[0], components[1], components[2], out value);
     }
 
     private static bool TryEvaluateConstantUnary(UnaryExpressionNode unary, out GameEventScriptValue value)
     {
         if (!TryEvaluateConstant(unary.Operand, out var operand))
         {
-            value = GameEventScriptValue.Nothing;
+            value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
@@ -649,7 +650,7 @@ internal static class GesOptimizer
             case "-":
                 if (operand.IsNothing())
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return true;
                 }
 
@@ -665,7 +666,7 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out value))
+                if (GesValueOperations.TryEvaluateVectorUnary(unwrapped, "-", out value))
                 {
                     return true;
                 }
@@ -678,7 +679,7 @@ internal static class GesOptimizer
 
                 if (!TryCoerceNumericForOperation(unwrapped, out var numeric))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return true;
                 }
 
@@ -687,7 +688,7 @@ internal static class GesOptimizer
             case "!":
                 if (operand.IsNothing())
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return true;
                 }
 
@@ -706,15 +707,15 @@ internal static class GesOptimizer
                 value = GameEventScriptValueFactory.GesBoolean(operand.IsSemanticallyEmpty());
                 return true;
             case "abs":
-                if (GameEventScriptValueAlu.TryEvaluateVectorUnary(operand, "abs", out value))
+                if (GesValueOperations.TryEvaluateVectorUnary(operand, "abs", out value))
                 {
                     return true;
                 }
 
-                value = GameEventScriptValue.Nothing;
+                value = GameEventScriptNothingValue.Instance;
                 return false;
             default:
-                value = GameEventScriptValue.Nothing;
+                value = GameEventScriptNothingValue.Instance;
                 return false;
         }
     }
@@ -723,7 +724,7 @@ internal static class GesOptimizer
     {
         if (!TryEvaluateConstant(binary.Left, out var leftRaw) || !TryEvaluateConstant(binary.Right, out var rightRaw))
         {
-            value = GameEventScriptValue.Nothing;
+            value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
@@ -748,7 +749,7 @@ internal static class GesOptimizer
 
         if (leftRaw.IsNothing() || rightRaw.IsNothing())
         {
-            value = GameEventScriptValue.Nothing;
+            value = GameEventScriptNothingValue.Instance;
             return true;
         }
 
@@ -788,17 +789,17 @@ internal static class GesOptimizer
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
             case "+":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "+", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "+", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, "+", right, out value))
+                if (GesValueOperations.TryEvaluatePercentageBinary(left, "+", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "+", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "+", right, out value))
                 {
                     return true;
                 }
@@ -806,24 +807,24 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftNumeric) ||
                     !TryCoerceNumericForOperation(right, out var rightNumeric))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptNumericResult(left, "+", right, AddNumeric(leftNumeric, rightNumeric));
                 return true;
             case "-":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "-", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "-", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, "-", right, out value))
+                if (GesValueOperations.TryEvaluatePercentageBinary(left, "-", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "-", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "-", right, out value))
                 {
                     return true;
                 }
@@ -831,24 +832,24 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftMinus) ||
                     !TryCoerceNumericForOperation(right, out var rightMinus))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "*", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "*", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, "*", right, out value))
+                if (GesValueOperations.TryEvaluatePercentageBinary(left, "*", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "*", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "*", right, out value))
                 {
                     return true;
                 }
@@ -856,24 +857,24 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftMultiply) ||
                     !TryCoerceNumericForOperation(right, out var rightMultiply))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "/", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "/", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, "/", right, out value))
+                if (GesValueOperations.TryEvaluatePercentageBinary(left, "/", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "/", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "/", right, out value))
                 {
                     return true;
                 }
@@ -881,19 +882,19 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftDivide) ||
                     !TryCoerceNumericForOperation(right, out var rightDivide))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case "mod":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "mod", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "mod", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "mod", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "mod", right, out value))
                 {
                     return true;
                 }
@@ -901,19 +902,19 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftModulo) ||
                     !TryCoerceNumericForOperation(right, out var rightModulo))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
                 return true;
             case "div":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "div", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "div", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "div", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "div", right, out value))
                 {
                     return true;
                 }
@@ -921,19 +922,19 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftIntegerDivide) ||
                     !TryCoerceNumericForOperation(right, out var rightIntegerDivide))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
                 return true;
             case "rem":
-                if (GameEventScriptValueAlu.TryEvaluateVectorBinary(left, "rem", right, out value))
+                if (GesValueOperations.TryEvaluateVectorBinary(left, "rem", right, out value))
                 {
                     return true;
                 }
 
-                if (GameEventScriptValueAlu.TryEvaluateUnitBinary(left, "rem", right, out value))
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "rem", right, out value))
                 {
                     return true;
                 }
@@ -941,21 +942,21 @@ internal static class GesOptimizer
                 if (!TryCoerceNumericForOperation(left, out var leftRemainder) ||
                     !TryCoerceNumericForOperation(right, out var rightRemainder))
                 {
-                    value = GameEventScriptValue.Nothing;
+                    value = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
                 value = ToGameEventScriptNumericResult(left, "rem", right, RemainderNumeric(leftRemainder, rightRemainder));
                 return true;
             default:
-                value = GameEventScriptValue.Nothing;
+                value = GameEventScriptNothingValue.Instance;
                 return false;
         }
     }
 
     private static GameEventScriptValue EvaluateNumericComparison(GameEventScriptValue left, GameEventScriptValue right, Func<int, bool> predicate)
     {
-        if (!GameEventScriptValueAlu.TryCompareNumericValues(left, right, out var comparison))
+        if (!GesValueOperations.TryCompareNumericValues(left, right, out var comparison))
         {
             return GameEventScriptValueFactory.GesBoolean(false);
         }
@@ -968,7 +969,7 @@ internal static class GesOptimizer
         switch (declaredType)
         {
             case "nothing":
-                converted = GameEventScriptValue.Nothing;
+                converted = GameEventScriptNothingValue.Instance;
                 return true;
             case "tag":
                 converted = GameEventScriptValueFactory.GesTag(value.AsText());
@@ -1007,13 +1008,13 @@ internal static class GesOptimizer
                 converted = GameEventScriptValueFactory.GesList(value.AsList());
                 return true;
             case "range":
-                converted = value.IsRange() ? value : GameEventScriptValue.Nothing;
+                converted = value.IsRange() ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "message":
-                converted = value.Kind == GameEventScriptValueKind.Message ? value : GameEventScriptValue.Nothing;
+                converted = value.Kind == GameEventScriptValueKind.Message ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "handler":
-                converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptValue.Nothing;
+                converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "dictionary":
                 converted = GameEventScriptValueFactory.GseDictionary(value.AsDictionary());
@@ -1032,7 +1033,7 @@ internal static class GesOptimizer
             default:
                 if (knownTypeNames.Contains(declaredType))
                 {
-                    converted = GameEventScriptValue.Nothing;
+                    converted = GameEventScriptNothingValue.Instance;
                     return false;
                 }
 
@@ -1048,7 +1049,7 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
-        if (GameEventScriptValueAlu.TryEraseVectorUnit(unwrapped, out var vectorWithoutUnit))
+        if (GesValueOperations.TryEraseVectorUnit(unwrapped, out var vectorWithoutUnit))
         {
             return vectorWithoutUnit;
         }
@@ -1110,7 +1111,7 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
-        if (GameEventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+        if (GesValueOperations.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
         {
             return vectorWithUnit;
         }
@@ -1134,7 +1135,7 @@ internal static class GesOptimizer
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         if (unwrapped is GameEventScriptVector2Value vector2)
@@ -1149,26 +1150,26 @@ internal static class GesOptimizer
 
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
             unwrapped.TryGetDictionaryMember("y", out var y) &&
-            GameEventScriptValueAlu.TryCreateVector2(x, y, out var vectorFromMembers))
+            GesValueOperations.TryCreateVector2(x, y, out var vectorFromMembers))
         {
             return vectorFromMembers;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 2 &&
-            GameEventScriptValueAlu.TryCreateVector2(items[0], items[1], out var vectorFromItems))
+            GesValueOperations.TryCreateVector2(items[0], items[1], out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
-        return GameEventScriptValue.Nothing;
+        return GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToVector3(GameEventScriptValue value)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return GameEventScriptValue.Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         if (unwrapped is GameEventScriptVector3Value vector3)
@@ -1186,31 +1187,31 @@ internal static class GesOptimizer
         {
             if (unwrapped.TryGetDictionaryMember("z", out var z))
             {
-                return GameEventScriptValueAlu.TryCreateVector3(x, y, z, out var vectorFromMembers)
+                return GesValueOperations.TryCreateVector3(x, y, z, out var vectorFromMembers)
                     ? vectorFromMembers
-                    : GameEventScriptValue.Nothing;
+                    : GameEventScriptNothingValue.Instance;
             }
 
-            return GameEventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is GameEventScriptVector2Value xy
+            return GesValueOperations.TryCreateVector2(x, y, out var xyVector) && xyVector is GameEventScriptVector2Value xy
                 ? GameEventScriptValueFactory.GesVector3(xy.X, xy.Y, 0m, xy.Unit)
                 : xyVector;
         }
 
         var items = unwrapped.AsList();
         if (items.Count >= 3 &&
-            GameEventScriptValueAlu.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
+            GesValueOperations.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
         if (items.Count >= 2 &&
-            GameEventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
+            GesValueOperations.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
             xyVectorFromItems is GameEventScriptVector2Value xyFromItems)
         {
             return GameEventScriptValueFactory.GesVector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
-        return GameEventScriptValue.Nothing;
+        return GameEventScriptNothingValue.Instance;
     }
 
     private static bool TryUnwrapOptional(GameEventScriptValue value, out GameEventScriptValue unwrapped)

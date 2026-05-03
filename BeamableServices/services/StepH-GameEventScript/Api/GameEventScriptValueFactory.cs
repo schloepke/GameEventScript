@@ -14,6 +14,13 @@ namespace StepH.GameEventScript.Api;
 public static class GameEventScriptValueFactory
 {
     /// <summary>
+    /// Returns a predefined instance representing the "nothing" value
+    /// for GameEventScript operations.
+    /// </summary>
+    /// <returns>A <see cref="GameEventScriptValue"/> instance representing nothing.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static GameEventScriptValue GesNothing() => GameEventScriptNothingValue.Instance;
+    /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a text value.
     /// </summary>
     /// <param name="value">The text value to encapsulate. Cannot be null or empty.</param>

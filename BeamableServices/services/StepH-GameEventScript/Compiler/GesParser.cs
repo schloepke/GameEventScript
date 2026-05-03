@@ -11,24 +11,28 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed class GesParser
 {
-    public static ParsedModule Parse(string script, string? sourceName = null)
+    public static ParsedScript Parse(string script, string? sourceName = null, GameEventScriptCompileOptions? options = null)
     {
         _ = script ?? throw new ArgumentNullException(nameof(script));
+        options ??= new GameEventScriptCompileOptions();
 
         var normalizedScript = script.Replace("\r\n", "\n").Replace('\r', '\n');
         var hash = ComputeShortHash(normalizedScript);
-        var rawTokens = new GesLexer(normalizedScript).Tokenize().ToList();
+        var rawTokens = new GesLexer(normalizedScript, options).Tokenize().ToList();
         var moduleName = TryResolveModuleName(rawTokens) ?? $"AnonymousModule_{hash}";
         var resolvedSourceName = string.IsNullOrWhiteSpace(sourceName) ? $"UnknownSource_{hash}" : sourceName;
         var tokens = new List<GesToken>();
-        var initialErrors = new List<GameEventScriptSyntaxError>();
+        var initialErrors = new List<GameEventScriptCompileError>();
         foreach (var token in rawTokens)
         {
             if (token.Kind == Illegal)
             {
-                initialErrors.Add(new GameEventScriptSyntaxError(
+                initialErrors.Add(new GameEventScriptCompileError(
                     $"Illegal token '{token.Text}'",
                     moduleName,
+                    token.Text,
+                    GameEventScriptSymbolKind.Unknown,
+                    GameEventScriptCompileErrorKind.Syntax,
                     new GameEventScriptSourceLocation(resolvedSourceName, token.Line, token.Column, token.EndLine, token.EndColumn, moduleName)));
                 continue;
             }
@@ -69,10 +73,10 @@ internal sealed class GesParser
     private readonly IReadOnlyList<GesToken> _tokens;
     private readonly string _moduleName;
     private readonly string _sourceName;
-    private readonly List<GameEventScriptSyntaxError> _errors;
+    private readonly List<GameEventScriptCompileError> _errors;
     private int _index;
 
-    private GesParser(IReadOnlyList<GesToken> tokens, string moduleName, string sourceName, IReadOnlyList<GameEventScriptSyntaxError> initialErrors)
+    private GesParser(IReadOnlyList<GesToken> tokens, string moduleName, string sourceName, IReadOnlyList<GameEventScriptCompileError> initialErrors)
     {
         _tokens = tokens;
         _moduleName = moduleName;
@@ -111,7 +115,7 @@ internal sealed class GesParser
     private T WithRange<T>(T node, ScriptNode? first, ScriptNode? last = null) where T : ScriptNode
         => node with { SourceRange = MergeRanges(first, last) };
 
-    private ParsedModule ParseScript()
+    private ParsedScript ParseScript()
     {
         var typeDefinitions = new List<TypeDefinitionNode>();
         var ruleDefinitions = new List<RuleDefinitionNode>();
@@ -153,10 +157,10 @@ internal sealed class GesParser
 
         if (_errors.Count > 0)
         {
-            throw new GameEventScriptSyntaxException(_errors);
+            throw new GameEventScriptCompileException(_errors);
         }
 
-        var module = new ParsedModule(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
+        var module = new ParsedScript(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
         var firstToken = _tokens.FirstOrDefault();
         if (firstToken.Kind == EndOfFile)
         {
@@ -2513,9 +2517,12 @@ internal sealed class GesParser
 
     private void AddParseError(GameEventScriptParseException exception)
     {
-        _errors.Add(new GameEventScriptSyntaxError(
+        _errors.Add(new GameEventScriptCompileError(
             exception.Message,
             _moduleName,
+            string.Empty,
+            GameEventScriptSymbolKind.Unknown,
+            GameEventScriptCompileErrorKind.Syntax,
             new GameEventScriptSourceLocation(_sourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, _moduleName)));
     }
 

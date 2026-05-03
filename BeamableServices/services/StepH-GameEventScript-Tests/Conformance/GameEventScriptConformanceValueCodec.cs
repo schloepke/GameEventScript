@@ -56,7 +56,7 @@ internal static class GameEventScriptConformanceValueCodec
         switch (type)
         {
             case ":nothing":
-                return GameEventScriptValue.Nothing;
+                return GameEventScriptNothingValue.Instance;
             case ":text":
                 return GameEventScriptValueFactory.GesText(RequireString(element, "value", "text value"));
             case ":tag":

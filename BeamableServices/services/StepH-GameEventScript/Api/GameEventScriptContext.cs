@@ -29,7 +29,7 @@ public sealed class GameEventScriptContext
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
         DiagnosticCollector = diagnosticCollector;
         RuntimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
-        RuntimeBudget = new GameEventScriptRuntimeBudget(this, RuntimeLimits);
+        RuntimeBudget = new GseRuntimeBudget(this, RuntimeLimits);
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
@@ -107,5 +107,5 @@ public sealed class GameEventScriptContext
     public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
         => DiagnosticCollector?.Record(kind, name, arguments, detail);
 
-    internal GameEventScriptRuntimeBudget RuntimeBudget { get; }
+    internal GseRuntimeBudget RuntimeBudget { get; }
 }

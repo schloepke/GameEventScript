@@ -5,33 +5,14 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
 
-public sealed class GameEventScriptRuntimeLimits
-{
-    public static GameEventScriptRuntimeLimits Default { get; } = new();
-
-    public int MaxExecutionSteps { get; init; } = 100_000;
-
-    public int MaxLoopIterations { get; init; } = 100_000;
-
-    public int MaxCallDepth { get; init; } = 64;
-
-    public int MaxRangeItems { get; init; } = 10_000;
-
-    public int MaxGeneratedCollectionItems { get; init; } = 10_000;
-
-    public int MaxDiceCount { get; init; } = 1_000;
-
-    public int MaxDiceSides { get; init; } = 1_000_000;
-}
-
-internal sealed class GameEventScriptRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
+internal sealed class GseRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;
     private int _callDepth;
     private bool _exhausted;
 
-    public GameEventScriptRuntimeLimits Limits { get; } = limits ?? GameEventScriptRuntimeLimits.Default;
+    public GameEventScriptRuntimeLimits Limits { get; } = limits;
 
     public bool IsExhausted => _exhausted;
 

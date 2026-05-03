@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptOptionalValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptOptionalValue None = new(false, Nothing);
+    public static readonly GameEventScriptOptionalValue None = new(false, GameEventScriptNothingValue.Instance);
 
     public static GameEventScriptOptionalValue Create(GameEventScriptValue? value) => value == null ? None : new GameEventScriptOptionalValue(true, value);
 
@@ -19,7 +19,7 @@ public sealed class GameEventScriptOptionalValue : GameEventScriptValue
     private readonly GameEventScriptValue _value;
 
     public bool HasValue { get; }
-    public GameEventScriptValue Value => HasValue ? _value : Nothing;
+    public GameEventScriptValue Value => HasValue ? _value : GameEventScriptNothingValue.Instance;
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Optional;
 
     public override GameEventScriptOptionalValue AsOptional() => this;

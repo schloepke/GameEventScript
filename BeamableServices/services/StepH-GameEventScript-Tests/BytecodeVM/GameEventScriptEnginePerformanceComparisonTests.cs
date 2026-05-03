@@ -97,7 +97,10 @@ public sealed class BytecodeVmPerformanceReportTests
         var publishedCount = 0;
         var lastMessage = GameEventScriptMessage.Empty;
         var host = GameEventScriptHost.CreateBuilder()
-            .WithMaxProcessedEventsPerRun(128)
+            .WithRuntimeLimits(new GameEventScriptRuntimeLimits
+            {
+                MaxProcessedEventsPerRun = 128
+            })
             .WithPublishedMessageObserver(message =>
             {
                 publishedCount++;

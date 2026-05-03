@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
@@ -10,7 +11,7 @@ namespace StepH.GameEventScript.Api;
 public sealed class GameEventScriptCompiled
 {
     internal GameEventScriptCompiled(
-        GameEventScriptCompilationOptions options,
+        GameEventScriptCompileOptions options,
         IReadOnlyList<string> stringPool,
         IReadOnlyList<GameEventScriptValue> constantPool,
         IReadOnlyList<string> signatures,
@@ -35,7 +36,7 @@ public sealed class GameEventScriptCompiled
         MaxStackDepth = Math.Max(1, maxStackDepth);
     }
 
-    public GameEventScriptCompilationOptions Options { get; }
+    public GameEventScriptCompileOptions Options { get; }
 
     public IReadOnlyList<string> StringPool { get; }
 

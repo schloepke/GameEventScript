@@ -7,16 +7,16 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed class GesValidationErrors
 {
-    private readonly List<GameEventScriptModuleBuildError> _errors = [];
+    private readonly List<GameEventScriptCompileError> _errors = [];
 
     public int Count => _errors.Count;
 
     public void Add(
-        ParsedModule? module,
+        ParsedScript? module,
         string message,
         string symbol,
         GameEventScriptSymbolKind symbolKind,
-        GameEventScriptModuleBuildErrorKind kind,
+        GameEventScriptCompileErrorKind kind,
         ScriptNode? sourceNode = null)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
@@ -38,18 +38,18 @@ internal sealed class GesValidationErrors
             sourceLocation = sourceLocation with { SourceName = sourceName };
         }
 
-        _errors.Add(new GameEventScriptModuleBuildError(message, moduleName, symbol, symbolKind, kind, sourceLocation));
+        _errors.Add(new GameEventScriptCompileError(message, moduleName, symbol, symbolKind, kind, sourceLocation));
     }
 
     public void ThrowIfAny()
     {
         if (_errors.Count > 0)
         {
-            throw new GameEventScriptModuleBuildException(_errors);
+            throw new GameEventScriptCompileException(_errors);
         }
     }
 
-    private static ScriptNode? FindSourceNode(ParsedModule? module, string symbol, GameEventScriptSymbolKind symbolKind)
+    private static ScriptNode? FindSourceNode(ParsedScript? module, string symbol, GameEventScriptSymbolKind symbolKind)
     {
         if (module is null)
         {
@@ -73,9 +73,9 @@ internal sealed class GesValidationErrors
         };
     }
 
-    private static ScriptNode? FindVariableNode(ParsedModule module, string symbol)
+    private static ScriptNode? FindVariableNode(ParsedScript parsedScript, string symbol)
     {
-        foreach (var type in module.TypeDefinitions)
+        foreach (var type in parsedScript.TypeDefinitions)
         {
             var field = type.Fields.FirstOrDefault(candidate => string.Equals(candidate.Name, symbol, StringComparison.Ordinal));
             if (field is not null)
@@ -84,7 +84,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var rule in module.RuleDefinitions)
+        foreach (var rule in parsedScript.RuleDefinitions)
         {
             var parameter = rule.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
             if (parameter is not null)
@@ -99,7 +99,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var select in module.SelectDefinitions)
+        foreach (var select in parsedScript.SelectDefinitions)
         {
             var parameter = select.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
             if (parameter is not null)
@@ -114,7 +114,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var handler in module.Handlers)
+        foreach (var handler in parsedScript.Handlers)
         {
             var parameter = handler.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
             if (parameter is not null)
@@ -132,9 +132,9 @@ internal sealed class GesValidationErrors
         return null;
     }
 
-    private static ScriptNode? FindNodeInModule(ParsedModule module, string symbol)
+    private static ScriptNode? FindNodeInModule(ParsedScript parsedScript, string symbol)
     {
-        foreach (var handler in module.Handlers)
+        foreach (var handler in parsedScript.Handlers)
         {
             var statementNode = FindNodeInStatements(handler.Statements, symbol);
             if (statementNode is not null)
@@ -143,7 +143,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var rule in module.RuleDefinitions)
+        foreach (var rule in parsedScript.RuleDefinitions)
         {
             var expressionNode = FindNodeInExpression(rule.Expression, symbol);
             if (expressionNode is not null)
@@ -152,7 +152,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var select in module.SelectDefinitions)
+        foreach (var select in parsedScript.SelectDefinitions)
         {
             var expressionNode = FindNodeInExpression(select.Expression, symbol);
             if (expressionNode is not null)

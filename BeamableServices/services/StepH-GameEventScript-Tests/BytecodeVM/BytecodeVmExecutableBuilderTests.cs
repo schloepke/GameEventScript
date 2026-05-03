@@ -79,7 +79,7 @@ public sealed class BytecodeVmExecutableBuilderTests
                 ]
             });
 
-        var exception = Assert.ThrowsExactly<GameEventScriptCompilationException>(() => GesBytecodeCompiler.Compile(module));
+        var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() => GesBytecodeCompiler.Compile(module));
         StringAssert.Contains(exception.Message, "BytecodeVM execution planner does not support handler 'Start' #0");
         StringAssert.Contains(exception.Message, nameof(UnknownStatementNode));
     }
@@ -172,7 +172,7 @@ public sealed class BytecodeVmExecutableBuilderTests
         host.Publish(Create("Start", ("flag", GameEventScriptValueFactory.GesBoolean(true))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["inner"]);
+        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["inner"]);
     }
 
     [TestMethod]
@@ -241,8 +241,8 @@ public sealed class BytecodeVmExecutableBuilderTests
             ]))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["item"]);
-        Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["inner"]);
+        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["item"]);
+        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["inner"]);
     }
 
     [TestMethod]
@@ -342,8 +342,8 @@ public sealed class BytecodeVmExecutableBuilderTests
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByVariableKey"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(20), published[0].Arguments["itemByIndex"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesText("Knight"), published[0].Arguments["nestedName"]);
-        Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["missingMember"]);
-        Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["missingIndex"]);
+        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["missingMember"]);
+        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["missingIndex"]);
     }
 
     [TestMethod]
@@ -597,13 +597,13 @@ public sealed class BytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(
                 script,
-                new GameEventScriptCompilationOptions { EnableDiagnostics = true }));
+                new GameEventScriptCompileOptions { EnableDiagnostics = true }));
 
         host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["score"]);
-        Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["missingValue"]);
+        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["missingValue"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["isHigh"]);
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.ParameterBound && diagnostic.Name == "value"));
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.HandlerInvoked && diagnostic.Name == "Start"));

@@ -25,7 +25,7 @@ internal abstract record ScriptNode
 
 // Root node of the syntax tree
 
-internal sealed record ParsedModule(string ModuleName, string SourceName, IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<RuleDefinitionNode> RuleDefinitions, IReadOnlyList<SelectDefinitionNode> SelectDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
+internal sealed record ParsedScript(string ModuleName, string SourceName, IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<RuleDefinitionNode> RuleDefinitions, IReadOnlyList<SelectDefinitionNode> SelectDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
 
 // Type/Rule/Select/Handler nodes
 

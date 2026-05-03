@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
@@ -12,15 +13,15 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesBytecodeCompiler
 {
-    public static GameEventScriptCompiled Compile(GseModule module, GameEventScriptCompilationOptions? options = null)
+    public static GameEventScriptCompiled Compile(GseModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
-        var compileOptions = options ?? new GameEventScriptCompilationOptions();
+        var compileOptions = options ?? new GameEventScriptCompileOptions();
         var builder = new CompilerBuilder(module, compileOptions);
         return builder.Build();
     }
 
-    private sealed class CompilerBuilder(GseModule module, GameEventScriptCompilationOptions options)
+    private sealed class CompilerBuilder(GseModule module, GameEventScriptCompileOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
@@ -101,7 +102,7 @@ internal static class GesBytecodeCompiler
 
         private int ResolveExternalReference(GameEventScriptExtensionReference reference)
         {
-            if (GameEventScriptStandardExtensions.IsStandardReference(reference))
+            if (GesStandardExtensions.IsStandardReference(reference))
             {
                 return -1;
             }
@@ -322,7 +323,7 @@ internal static class GesBytecodeCompiler
 
         private int AddExternalReference(GameEventScriptExtensionReference reference)
         {
-            if (GameEventScriptStandardExtensions.IsStandardReference(reference))
+            if (GesStandardExtensions.IsStandardReference(reference))
             {
                 return -1;
             }

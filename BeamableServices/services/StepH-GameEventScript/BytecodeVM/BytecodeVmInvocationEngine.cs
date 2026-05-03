@@ -10,7 +10,7 @@ internal static class BytecodeVmInvocationEngine
 {
     public static void InvokeMessage(GseBytecodeVmExecutable compiledScript, GameEventScriptContext context, GameEventScriptMessage message)
     {
-        foreach (var handler in GameEventScriptInvocationKernel.GetMatchingHandlers(compiledScript.DispatchIndex, message)) InvokeHandler(compiledScript, context, handler, message);
+        foreach (var handler in GesInvocationKernel.GetMatchingHandlers(compiledScript.DispatchIndex, message)) InvokeHandler(compiledScript, context, handler, message);
     }
 
     public static void InvokeHandler(GseBytecodeVmExecutable compiledScript, GameEventScriptContext context, BytecodeVmCompiledHandler handler, GameEventScriptMessage message)

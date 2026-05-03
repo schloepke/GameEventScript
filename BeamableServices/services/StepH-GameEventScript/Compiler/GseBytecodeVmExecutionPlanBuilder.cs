@@ -22,7 +22,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
     {
         if (!TryValidateStatements(statements, callables, out var failureReason))
         {
-            throw new GameEventScriptCompilationException(
+            throw new GameEventScriptCompileException(
                 $"BytecodeVM execution planner does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
         }
 
@@ -1614,7 +1614,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                     expressionProgram: CompileExpression(seededRandom.SeedExpression),
                     bodyProgram: CompileStatementProgram(seededRandom.Body.Statements, seededRandom.Body.IsBlock)),
 
-                _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support statement '{statement.GetType().Name}'.")
+                _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support statement '{statement.GetType().Name}'.")
             };
 
         public BytecodeVmExpressionProgram CompileExpression(ExpressionNode expression)
@@ -1637,7 +1637,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
         {
             if (publish.MessageExpression is not MessageLiteralExpressionNode message)
             {
-                throw new GameEventScriptCompilationException("BytecodeVM execution planner does not support this publish expression.");
+                throw new GameEventScriptCompileException("BytecodeVM execution planner does not support this publish expression.");
             }
 
             var argumentNames = new string[message.Arguments.Count];
@@ -1673,7 +1673,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                     CompileExpression(range.RangeExpression.ToExpression),
                     range.RangeExpression.StepExpression is null ? null : CompileExpression(range.RangeExpression.StepExpression)),
 
-                _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support iteration source '{source.GetType().Name}'.")
+                _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support iteration source '{source.GetType().Name}'.")
             };
 
         private bool TryGetSlot(string name, out int slot)
@@ -1950,12 +1950,12 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                         if (!compiler._callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
                             callable.Parameters.Count != 1)
                         {
-                            throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         if (!compiler.TryGetSlot(callable.Parameters[0], out var parameterSlot))
                         {
-                            throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         EmitExpression(rulePredicate.Value);
@@ -1989,7 +1989,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                         {
                             if (!compiler.TryGetSlot(call.Name, out var handlerSlot))
                             {
-                                throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support callable '{call.Name}'.");
+                                throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support callable '{call.Name}'.");
                             }
 
                             var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
@@ -2042,7 +2042,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                     case TypeCastExpressionNode typeCast:
                         if (!compiler.TryGetCastKind(typeCast.TypeName, out var castKind))
                         {
-                            throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support type cast '{typeCast.TypeName}'.");
+                            throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support type cast '{typeCast.TypeName}'.");
                         }
 
                         EmitExpression(typeCast.Value);
@@ -2106,7 +2106,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                         return;
 
                     default:
-                        throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support expression node '{expression.GetType().Name}'.");
+                        throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support expression node '{expression.GetType().Name}'.");
                 }
             }
 
@@ -2335,7 +2335,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                             count: slice.Count);
 
                     default:
-                        throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support selector node '{selector.GetType().Name}'.");
+                        throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support selector node '{selector.GetType().Name}'.");
                 }
             }
 
@@ -2357,7 +2357,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                     DiceCountPatternNode count => new BytecodeVmDiceCountPattern(
                         count.Count,
                         count.Face is null ? null : compiler.CompileExpression(count.Face)),
-                    _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support dice pattern '{pattern.GetType().Name}'.")
+                    _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support dice pattern '{pattern.GetType().Name}'.")
                 };
 
             private BytecodeVmObjectMatchPattern CompileObjectMatchPattern(ObjectMatchPatternNode pattern)
@@ -2377,7 +2377,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                 {
                     ObjectMatchExpressionValueNode expression => new BytecodeVmObjectMatchExpressionValue(compiler.CompileExpression(expression.Expression)),
                     ObjectMatchNestedValueNode nested => new BytecodeVmObjectMatchNestedValue(CompileObjectMatchPattern(nested.Pattern)),
-                    _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support object match value '{value.GetType().Name}'.")
+                    _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support object match value '{value.GetType().Name}'.")
                 };
 
             private void EmitLoadConstant(BytecodeVmValue value)
@@ -2442,7 +2442,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                     "combine" or "merge" => BytecodeVmProgramOpCode.Combine,
                     "except" => BytecodeVmProgramOpCode.Except,
                     "zip" => BytecodeVmProgramOpCode.Zip,
-                    _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support binary operator '{operation}'.")
+                    _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support binary operator '{operation}'.")
                 };
         }
     }

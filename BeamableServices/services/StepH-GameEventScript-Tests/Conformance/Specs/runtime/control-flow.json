@@ -86,7 +86,7 @@
       "kind": "scriptApi",
       "name": "processing limit stops event loops",
       "script": "on Start {\n  publish Loop\n}\n\non Loop {\n  publish Start\n}",
-      "maxProcessedEventsPerRun": 4,
+      "runtimeLimits": { "maxProcessedEventsPerRun": 4 },
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

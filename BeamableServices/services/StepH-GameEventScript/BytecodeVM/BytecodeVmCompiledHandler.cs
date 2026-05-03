@@ -1,22 +1,14 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.Api;
 
-namespace StepH.GameEventScript.Api;
+namespace StepH.GameEventScript.BytecodeVM;
 
 internal sealed class BytecodeVmCompiledHandler
 {
-    internal BytecodeVmCompiledHandler(
-        string message,
-        IReadOnlyList<string> parameters,
-        IReadOnlyList<string> signatureLabels,
-        string signatureId,
-        int declarationOrder,
-        int programIndex,
-        bool diagnosticsEnabled,
-        BytecodeVmExecutionPlan executionPlan)
+    internal BytecodeVmCompiledHandler(string message, IReadOnlyList<string> parameters, IReadOnlyList<string> signatureLabels, string signatureId, int declarationOrder, int programIndex,
+        bool diagnosticsEnabled, BytecodeVmExecutionPlan executionPlan)
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));
         Parameters = parameters?.ToArray() ?? throw new ArgumentNullException(nameof(parameters));

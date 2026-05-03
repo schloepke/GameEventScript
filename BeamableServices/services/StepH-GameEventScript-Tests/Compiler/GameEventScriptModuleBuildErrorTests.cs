@@ -4,7 +4,7 @@ using StepH.GameEventScript.Compiler;
 namespace StepH_GameEventScript_Tests.Compiler;
 
 [TestClass]
-public sealed class GameEventScriptModuleBuildErrorTests
+public sealed class GameEventScriptCompileErrorTests
 {
     [TestMethod]
     public void ModuleBuildErrorsUseParserSourceRanges()
@@ -19,12 +19,12 @@ public sealed class GameEventScriptModuleBuildErrorTests
             }
             """;
 
-        var exception = Assert.ThrowsExactly<GameEventScriptModuleBuildException>(() =>
+        var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() =>
             GameEventScriptBuilder.Create()
                 .AddScript(script, "location.ges")
                 .BuildModule());
 
-        var error = exception.Errors.Single(error => error.Kind == GameEventScriptModuleBuildErrorKind.DuplicateVariable);
+        var error = exception.Errors.Single(error => error.Kind == GameEventScriptCompileErrorKind.DuplicateVariable);
         Assert.AreEqual("Location", error.ModuleName);
         Assert.AreEqual("location.ges", error.SourceLocation.SourceName);
         Assert.AreEqual(5, error.SourceLocation.Line);

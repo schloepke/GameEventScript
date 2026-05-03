@@ -5,15 +5,23 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Runtime;
 
+public interface IGameEventScriptExtensionRegistry
+{
+    bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function);
+}
+
+public interface IGameEventScriptExtensionFunction
+{
+    GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments);
+}
+
 public sealed class GameEventScriptExtensionReference
 {
-    public GameEventScriptExtensionReference(
-        string? extensionName,
-        string? functionName,
-        IEnumerable<string?>? argumentLabels)
+    public GameEventScriptExtensionReference(string? extensionName, string? functionName, IEnumerable<string?>? argumentLabels)
     {
         ExtensionName = NormalizeName(extensionName);
         FunctionName = NormalizeName(functionName);
@@ -48,15 +56,7 @@ public readonly struct GameEventScriptFastValue
 {
     private readonly GameEventScriptValue? _reference;
 
-    private GameEventScriptFastValue(
-        GameEventScriptValueKind kind,
-        long integer,
-        decimal number,
-        decimal x,
-        decimal y,
-        decimal z,
-        bool boolean,
-        GameEventScriptDecimalUnit? unit,
+    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, decimal number, decimal x, decimal y, decimal z, bool boolean, GameEventScriptDecimalUnit? unit,
         GameEventScriptValue? reference)
     {
         Kind = kind;
@@ -75,9 +75,7 @@ public readonly struct GameEventScriptFastValue
     public long Integer => Kind switch
     {
         GameEventScriptValueKind.Integer => IntegerValue,
-        GameEventScriptValueKind.Decimal => IsReferenceBacked
-            ? ToGameEventScriptValue().AsInteger()
-            : GameEventScriptValueAlu.ToIntegerSaturated(NumberValue),
+        GameEventScriptValueKind.Decimal => IsReferenceBacked ? ToGameEventScriptValue().AsInteger() : GesValueOperations.ToIntegerSaturated(NumberValue),
         GameEventScriptValueKind.Percentage => ToIntegerPercentage(NumberValue),
         GameEventScriptValueKind.Boolean => BooleanValue ? 1 : 0,
         _ => ToGameEventScriptValue().AsInteger()
@@ -86,9 +84,7 @@ public readonly struct GameEventScriptFastValue
     public decimal Number => Kind switch
     {
         GameEventScriptValueKind.Integer => IntegerValue,
-        GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked
-            ? ToGameEventScriptValue().AsNumber()
-            : NumberValue,
+        GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsNumber() : NumberValue,
         GameEventScriptValueKind.Boolean => BooleanValue ? 1m : 0m,
         _ => ToGameEventScriptValue().AsNumber()
     };
@@ -97,9 +93,7 @@ public readonly struct GameEventScriptFastValue
     {
         GameEventScriptValueKind.Boolean => BooleanValue,
         GameEventScriptValueKind.Integer => IntegerValue != 0,
-        GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked
-            ? ToGameEventScriptValue().AsBoolean()
-            : NumberValue != 0m,
+        GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsBoolean() : NumberValue != 0m,
         GameEventScriptValueKind.Vector2 => X != 0m || Y != 0m,
         GameEventScriptValueKind.Vector3 => X != 0m || Y != 0m || Z != 0m,
         _ => ToGameEventScriptValue().AsBoolean()
@@ -123,149 +117,60 @@ public readonly struct GameEventScriptFastValue
 
     private bool BooleanValue { get; }
 
-    public static GameEventScriptFastValue Nothing { get; } = new(
-        GameEventScriptValueKind.Nothing,
-        0,
-        0m,
-        0m,
-        0m,
-        0m,
-        false,
-        null,
-        null);
+    public static GameEventScriptFastValue Nothing { get; } = new(GameEventScriptValueKind.Nothing, 0, 0m, 0m, 0m, 0m, false, null, null);
 
-    public static GameEventScriptFastValue FromGameEventScriptValue(GameEventScriptValue value)
-        => value switch
-        {
-            null => Nothing,
-            _ when value.IsNothing() => Nothing,
-            GameEventScriptBooleanValue boolean => FromBoolean(boolean.Value),
-            GameEventScriptIntegerValue integer => FromInteger(integer.Value),
-            GameEventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => FromDecimal(decimalValue.Value, decimalValue.Unit),
-            GameEventScriptPercentageValue percentage => FromPercentage(percentage.Ratio),
-            GameEventScriptVector2Value vector2 => FromVector2(vector2.X, vector2.Y, vector2.Unit),
-            GameEventScriptVector3Value vector3 => FromVector3(vector3.X, vector3.Y, vector3.Z, vector3.Unit),
-            _ => new GameEventScriptFastValue(
-                value.Kind,
-                0,
-                0m,
-                0m,
-                0m,
-                0m,
-                value.AsBoolean(),
-                null,
-                value)
-        };
+    public static GameEventScriptFastValue FromGameEventScriptValue(GameEventScriptValue value) => value switch
+    {
+        null => Nothing,
+        _ when value.IsNothing() => Nothing,
+        GameEventScriptBooleanValue boolean => FromBoolean(boolean.Value),
+        GameEventScriptIntegerValue integer => FromInteger(integer.Value),
+        GameEventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => FromDecimal(decimalValue.Value, decimalValue.Unit),
+        GameEventScriptPercentageValue percentage => FromPercentage(percentage.Ratio),
+        GameEventScriptVector2Value vector2 => FromVector2(vector2.X, vector2.Y, vector2.Unit),
+        GameEventScriptVector3Value vector3 => FromVector3(vector3.X, vector3.Y, vector3.Z, vector3.Unit),
+        _ => new GameEventScriptFastValue(value.Kind, 0, 0m, 0m, 0m, 0m, value.AsBoolean(), null, value)
+    };
 
     public static GameEventScriptFastValue FromBoolean(bool value)
-        => new(
-            GameEventScriptValueKind.Boolean,
-            value ? 1 : 0,
-            value ? 1m : 0m,
-            0m,
-            0m,
-            0m,
-            value,
-            null,
-            null);
+        => new(GameEventScriptValueKind.Boolean, value ? 1 : 0, value ? 1m : 0m, 0m, 0m, 0m, value, null, null);
 
     public static GameEventScriptFastValue FromInteger(long value)
-        => new(
-            GameEventScriptValueKind.Integer,
-            value,
-            value,
-            0m,
-            0m,
-            0m,
-            value != 0,
-            null,
-            null);
+        => new(GameEventScriptValueKind.Integer, value, value, 0m, 0m, 0m, value != 0, null, null);
 
     public static GameEventScriptFastValue FromDecimal(decimal value, GameEventScriptDecimalUnit? unit = null)
-        => new(
-            GameEventScriptValueKind.Decimal,
-            GameEventScriptValueAlu.ToIntegerSaturated(value),
-            value,
-            0m,
-            0m,
-            0m,
-            value != 0m,
-            unit,
-            null);
+        => new(GameEventScriptValueKind.Decimal, GesValueOperations.ToIntegerSaturated(value), value, 0m, 0m, 0m, value != 0m, unit, null);
 
     public static GameEventScriptFastValue FromPercentage(decimal ratio)
-        => new(
-            GameEventScriptValueKind.Percentage,
-            ToIntegerPercentage(ratio),
-            ratio,
-            0m,
-            0m,
-            0m,
-            ratio != 0m,
-            null,
-            null);
+        => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0m, 0m, 0m, ratio != 0m, null, null);
 
     public static GameEventScriptFastValue FromVector2(decimal x, decimal y, GameEventScriptDecimalUnit? unit = null)
-        => new(
-            GameEventScriptValueKind.Vector2,
-            0,
-            0m,
-            x,
-            y,
-            0m,
-            x != 0m || y != 0m,
-            unit,
-            null);
+        => new(GameEventScriptValueKind.Vector2, 0, 0m, x, y, 0m, x != 0m || y != 0m, unit, null);
 
     public static GameEventScriptFastValue FromVector3(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
-        => new(
-            GameEventScriptValueKind.Vector3,
-            0,
-            0m,
-            x,
-            y,
-            z,
-            x != 0m || y != 0m || z != 0m,
-            unit,
-            null);
+        => new(GameEventScriptValueKind.Vector3, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
 
-    public static GameEventScriptFastValue FromText(string value) => FromGameEventScriptValue(GameEventScriptValueFactory.GesText(value));
+    public static GameEventScriptFastValue FromText(string value)
+        => FromGameEventScriptValue(GesText(value));
+
+    private static long ToIntegerPercentage(decimal ratio)
+        => GesValueOperations.ToIntegerSaturated(decimal.Truncate(ratio * 100m));
 
     public GameEventScriptValue ToGameEventScriptValue()
     {
-        if (_reference is not null)
-        {
-            return _reference;
-        }
-
+        if (_reference is not null) return _reference;
         return Kind switch
         {
-            GameEventScriptValueKind.Nothing => GameEventScriptValue.Nothing,
-            GameEventScriptValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(BooleanValue),
-            GameEventScriptValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue),
-            GameEventScriptValueKind.Decimal => GameEventScriptValueFactory.GesDecimal(NumberValue, Unit),
-            GameEventScriptValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(NumberValue),
-            GameEventScriptValueKind.Vector2 => GameEventScriptValueFactory.GesVector2(X, Y, Unit),
-            GameEventScriptValueKind.Vector3 => GameEventScriptValueFactory.GesVector3(X, Y, Z, Unit),
-            _ => GameEventScriptValue.Nothing
+            GameEventScriptValueKind.Nothing => GesNothing(),
+            GameEventScriptValueKind.Boolean => GesBoolean(BooleanValue),
+            GameEventScriptValueKind.Integer => GesInteger(IntegerValue),
+            GameEventScriptValueKind.Decimal => GesDecimal(NumberValue, Unit),
+            GameEventScriptValueKind.Percentage => GesPercentage(NumberValue),
+            GameEventScriptValueKind.Vector2 => GesVector2(X, Y, Unit),
+            GameEventScriptValueKind.Vector3 => GesVector3(X, Y, Z, Unit),
+            _ => GesNothing()
         };
     }
-
-    private static long ToIntegerPercentage(decimal ratio)
-    {
-        var percent = decimal.Truncate(ratio * 100m);
-        return GameEventScriptValueAlu.ToIntegerSaturated(percent);
-    }
-}
-
-public interface IGameEventScriptExtensionFunction
-{
-    GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments);
-}
-
-public interface IGameEventScriptExtensionRegistry
-{
-    bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function);
 }
 
 public sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry

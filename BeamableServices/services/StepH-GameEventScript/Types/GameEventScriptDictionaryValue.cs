@@ -19,7 +19,7 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
         foreach (var pair in values)
         {
             if (pair.Key == null) continue;
-            map[pair.Key] = pair.Value ?? Nothing;
+            map[pair.Key] = pair.Value ?? GameEventScriptNothingValue.Instance;
         }
         return map.Count == 0 ? Empty : new GameEventScriptDictionaryValue(map);
     }
@@ -34,7 +34,7 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
         foreach (var pair in values)
         {
             if (pair.Key == null || IsHiddenKey(pair.Key)) continue;
-            map[pair.Key] = pair.Value ?? Nothing;
+            map[pair.Key] = pair.Value ?? GameEventScriptNothingValue.Instance;
         }
         return new GameEventScriptDictionaryValue(map);
     }
@@ -66,7 +66,7 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
     public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
     {
         if (!IsHiddenKey(key)) return Storage.TryGetValue(key, out value);
-        value = Nothing;
+        value = GameEventScriptNothingValue.Instance;
         return false;
 
     }

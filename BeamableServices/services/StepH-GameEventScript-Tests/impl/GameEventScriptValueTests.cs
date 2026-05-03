@@ -211,18 +211,18 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void NumericAluDistinguishesModuloAndRemainder()
     {
-        var seven = GameEventScriptValueAlu.NumericValue.Finite(7m);
-        var minusSeven = GameEventScriptValueAlu.NumericValue.Finite(-7m);
-        var three = GameEventScriptValueAlu.NumericValue.Finite(3m);
-        var minusThree = GameEventScriptValueAlu.NumericValue.Finite(-3m);
+        var seven = GesValueOperations.NumericValue.Finite(7m);
+        var minusSeven = GesValueOperations.NumericValue.Finite(-7m);
+        var three = GesValueOperations.NumericValue.Finite(3m);
+        var minusThree = GesValueOperations.NumericValue.Finite(-3m);
 
-        Assert.AreEqual(-3m, GameEventScriptValueAlu.IntegerDivideNumeric(minusSeven, three).Value);
-        Assert.AreEqual(-3m, GameEventScriptValueAlu.IntegerDivideNumeric(seven, minusThree).Value);
-        Assert.AreEqual(3m, GameEventScriptValueAlu.IntegerDivideNumeric(GameEventScriptValueAlu.NumericValue.Finite(7.5m), GameEventScriptValueAlu.NumericValue.Finite(2m)).Value);
-        Assert.AreEqual(2m, GameEventScriptValueAlu.ModuloNumeric(minusSeven, three).Value);
-        Assert.AreEqual(-2m, GameEventScriptValueAlu.ModuloNumeric(seven, minusThree).Value);
-        Assert.AreEqual(-1m, GameEventScriptValueAlu.RemainderNumeric(minusSeven, three).Value);
-        Assert.AreEqual(1m, GameEventScriptValueAlu.RemainderNumeric(seven, minusThree).Value);
+        Assert.AreEqual(-3m, GesValueOperations.IntegerDivideNumeric(minusSeven, three).Value);
+        Assert.AreEqual(-3m, GesValueOperations.IntegerDivideNumeric(seven, minusThree).Value);
+        Assert.AreEqual(3m, GesValueOperations.IntegerDivideNumeric(GesValueOperations.NumericValue.Finite(7.5m), GesValueOperations.NumericValue.Finite(2m)).Value);
+        Assert.AreEqual(2m, GesValueOperations.ModuloNumeric(minusSeven, three).Value);
+        Assert.AreEqual(-2m, GesValueOperations.ModuloNumeric(seven, minusThree).Value);
+        Assert.AreEqual(-1m, GesValueOperations.RemainderNumeric(minusSeven, three).Value);
+        Assert.AreEqual(1m, GesValueOperations.RemainderNumeric(seven, minusThree).Value);
     }
 
     [TestMethod]
@@ -277,7 +277,7 @@ public class GameEventScriptValueScenarios
 
     private static GameEventScriptValue EvaluatePercentageBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)
     {
-        Assert.IsTrue(GameEventScriptValueAlu.TryEvaluatePercentageBinary(left, operation, right, out var value));
+        Assert.IsTrue(GesValueOperations.TryEvaluatePercentageBinary(left, operation, right, out var value));
         return value;
     }
 

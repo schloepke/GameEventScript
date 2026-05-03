@@ -34,16 +34,14 @@ public enum GameEventScriptValueKind
 public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, IEquatable<GameEventScriptValue>
 {
     internal const string HiddenTypeKey = "__type";
-    private static readonly IComparer<GameEventScriptValue> StableComparerInstance = new StableGameEventScriptValueComparer();
-    private static readonly GameEventScriptValue NothingInstance = GameEventScriptNothingValue.Instance;
 
     protected GameEventScriptValue()
     {
     }
 
     public abstract GameEventScriptValueKind Kind { get; }
-    public static IComparer<GameEventScriptValue> StableComparer => StableComparerInstance;
-    public static GameEventScriptValue Nothing => NothingInstance;
+    
+    public static IComparer<GameEventScriptValue> StableComparer { get; } = new StableGameEventScriptValueComparer();
 
     public bool IsNumber() => Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer or GameEventScriptValueKind.Percentage;
     public bool IsNothing() => Kind == GameEventScriptValueKind.Nothing;
@@ -77,7 +75,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsInfinity() => this is GameEventScriptDecimalValue { IsInfinityValue: true };
     public bool IsNegativeInfinity() => this is GameEventScriptDecimalValue { IsNegativeInfinityValue: true };
 
-    public int CompareTo(GameEventScriptValue? other) => other is null ? 1 : StableComparerInstance.Compare(this, other);
+    public int CompareTo(GameEventScriptValue? other) => other is null ? 1 : StableComparer.Compare(this, other);
 
     public virtual GameEventScriptOptionalValue AsOptional() => GameEventScriptOptionalValue.Create(this);
 
@@ -85,7 +83,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => GameEventScriptDictionaryValue.EmptyView;
 
-    public virtual ISet<GameEventScriptValue> AsSet() => new SortedSet<GameEventScriptValue>(StableComparerInstance);
+    public virtual ISet<GameEventScriptValue> AsSet() => new SortedSet<GameEventScriptValue>(StableComparer);
 
     public virtual GameEventScriptDiceValue AsDice() => GameEventScriptDiceValue.Empty;
 
@@ -103,7 +101,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     {
         if (IsNothing() || selector.IsNothing())
         {
-            return Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         if (!selector.TryUnwrapOptional(out var lookup))
@@ -137,7 +135,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
     {
-        value = Nothing;
+        value = GameEventScriptNothingValue.Instance;
         return false;
     }
 
@@ -145,7 +143,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     {
         if (Kind is GameEventScriptValueKind.Dictionary or GameEventScriptValueKind.Message or GameEventScriptValueKind.Handler)
         {
-            return Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         return LookupSequential(AsList(), selector);
@@ -367,7 +365,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
                 break;
             case GameEventScriptValueKind.Set:
-                foreach (var item in AsSet().OrderBy(x => x, StableComparerInstance)) hash.Add(item);
+                foreach (var item in AsSet().OrderBy(x => x, StableComparer)) hash.Add(item);
                 break;
             case GameEventScriptValueKind.Dice:
                 foreach (var roll in AsDice().Rolls) hash.Add(roll);
@@ -387,7 +385,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public static implicit operator GameEventScriptValue(float value) => GameEventScriptDecimalValue.Create(value);
     public static implicit operator GameEventScriptValue(double value) => GameEventScriptDecimalValue.Create(value);
 
-    private static GameEventScriptValue RequireNotNull(GameEventScriptValue? value) => value ?? Nothing;
+    private static GameEventScriptValue RequireNotNull(GameEventScriptValue? value) => value ?? GameEventScriptNothingValue.Instance;
 
     private static int GetSortRank(GameEventScriptValue value)
     {
@@ -422,7 +420,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
         for (var i = 0; i < left.Count; i++)
         {
-            var byItem = StableComparerInstance.Compare(left[i], right[i]);
+            var byItem = StableComparer.Compare(left[i], right[i]);
             if (byItem != 0) return byItem;
         }
 
@@ -442,7 +440,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             var byKey = StringComparer.Ordinal.Compare(leftPairs[i].Key, rightPairs[i].Key);
             if (byKey != 0) return byKey;
 
-            var byValue = StableComparerInstance.Compare(leftPairs[i].Value, rightPairs[i].Value);
+            var byValue = StableComparer.Compare(leftPairs[i].Value, rightPairs[i].Value);
             if (byValue != 0) return byValue;
         }
 
@@ -454,7 +452,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         var index = AsInt(selector);
         if (index <= 0 || index > items.Count)
         {
-            return Nothing;
+            return GameEventScriptNothingValue.Instance;
         }
 
         return items[index - 1];
@@ -605,8 +603,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.List => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Dictionary => CompareDictionary(left.AsDictionary(), right.AsDictionary()),
                 GameEventScriptValueKind.Set => CompareSequence(
-                    left.AsSet().OrderBy(x => x, StableComparerInstance).ToArray(),
-                    right.AsSet().OrderBy(x => x, StableComparerInstance).ToArray()),
+                    left.AsSet().OrderBy(x => x, StableComparer).ToArray(),
+                    right.AsSet().OrderBy(x => x, StableComparer).ToArray()),
                 GameEventScriptValueKind.Dice => CompareDice(left.AsDice(), right.AsDice()),
                 _ => left.Kind.CompareTo(right.Kind)
             };
@@ -617,7 +615,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             if (!left.HasValue && !right.HasValue) return 0;
             if (!left.HasValue) return -1;
             if (!right.HasValue) return 1;
-            return StableComparerInstance.Compare(left.Value, right.Value);
+            return StableComparer.Compare(left.Value, right.Value);
         }
 
         private static int CompareDice(GameEventScriptDiceValue left, GameEventScriptDiceValue right)

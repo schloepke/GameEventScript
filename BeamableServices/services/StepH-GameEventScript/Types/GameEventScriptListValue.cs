@@ -17,7 +17,7 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
     public static GameEventScriptListValue Create(IEnumerable<GameEventScriptValue>? values)
     {
         if (values == null) return Empty;
-        var list = values.Select(value => value ?? Nothing).ToArray();
+        var list = values.Select(value => value ?? GameEventScriptNothingValue.Instance).ToArray();
         return list.Length == 0 ? Empty : new GameEventScriptListValue(new ReadOnlyCollection<GameEventScriptValue>(list));
     }
 

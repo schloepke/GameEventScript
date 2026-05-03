@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +6,7 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal static class GameEventScriptCollectionOperators
+internal static class GesCollectionOperations
 {
     public static GameEventScriptValue Sort(GameEventScriptValue target, IEnumerable<GameEventScriptValue> items, string direction)
     {
@@ -107,7 +105,7 @@ internal static class GameEventScriptCollectionOperators
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
-            _ => GameEventScriptValue.Nothing
+            _ => GameEventScriptNothingValue.Instance
         };
     }
 
@@ -119,7 +117,7 @@ internal static class GameEventScriptCollectionOperators
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
-            _ => GameEventScriptValue.Nothing
+            _ => GameEventScriptNothingValue.Instance
         };
     }
 }

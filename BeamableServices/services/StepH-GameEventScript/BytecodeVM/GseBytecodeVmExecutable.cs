@@ -17,7 +17,7 @@ internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     private IGameEventScriptExtensionFunction[] _boundExtensionSlots = [];
 
     internal GseBytecodeVmExecutable(
-        GameEventScriptCompilationOptions options,
+        GameEventScriptCompileOptions options,
         GameEventScriptCompiled bytecodeModule,
         IReadOnlyDictionary<string, IReadOnlyList<BytecodeVmCompiledHandler>> handlers,
         IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions)
@@ -28,13 +28,13 @@ internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
 
         var handlerList = Handlers.Values.SelectMany(handlerGroup => handlerGroup).ToArray();
-        _dispatchIndex = GameEventScriptInvocationKernel.BuildDispatchIndex(handlerList, handler => handler.SignatureId, handler => handler.DeclarationOrder);
+        _dispatchIndex = GesInvocationKernel.BuildDispatchIndex(handlerList, handler => handler.SignatureId, handler => handler.DeclarationOrder);
         _messageHandlers = handlerList
             .Select(handler => (handler.Definition, (Action<GameEventScriptMessage, GameEventScriptContext>)((message, context) => InvokeHandler(handler, message, context))))
             .ToArray();
     }
 
-    public GameEventScriptCompilationOptions Options { get; }
+    public GameEventScriptCompileOptions Options { get; }
 
     public bool DiagnosticsEnabled => Options.EnableDiagnostics;
 

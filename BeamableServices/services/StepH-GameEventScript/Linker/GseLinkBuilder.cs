@@ -46,54 +46,27 @@ public sealed partial class GseLinkBuilder
         var ruleDefinitions = GseLinkBuilder.BuildRuleDefinitionMap(_modules, errors);
         var selectDefinitions = GseLinkBuilder.BuildSelectDefinitionMap(_modules, errors);
         var callableDefinitions = GseLinkBuilder.BuildCallableDefinitionMap(ruleDefinitions, selectDefinitions);
-        var handlers = GseLinkBuilder.BuildHandlerMap(_modules, errors)
-            .ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<EventHandlerNode>)pair.Value.AsReadOnly(),
-                StringComparer.Ordinal);
+        var handlers = GseLinkBuilder.BuildHandlerMap(_modules, errors).ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EventHandlerNode>)pair.Value.AsReadOnly(), StringComparer.Ordinal);
 
         foreach (var ruleName in ruleDefinitions.Keys.Where(selectDefinitions.ContainsKey))
         {
-            var conflictModule = _modules.FirstOrDefault(module =>
-                module.RuleDefinitions.Any(rule => rule.Name == ruleName) ||
-                module.SelectDefinitions.Any(select => select.Name == ruleName));
-            errors.Add(CreateError(
-                conflictModule,
-                $"Global definition '{ruleName}' is defined as both rule and select",
-                ruleName,
-                GseSymbolKind.GlobalDefinition,
+            var conflictModule = _modules.FirstOrDefault(module => module.RuleDefinitions.Any(rule => rule.Name == ruleName) || module.SelectDefinitions.Any(select => select.Name == ruleName));
+            errors.Add(CreateError(conflictModule, $"Global definition '{ruleName}' is defined as both rule and select", ruleName, GseSymbolKind.GlobalDefinition,
                 GseLinkageErrorKind.RuleSelectConflict));
         }
 
         foreach (var module in _modules)
         {
-            GseLinkBuilder.ValidateModule(module, callableDefinitions, typeDefinitions, errors);
+            ValidateModule(module, callableDefinitions, typeDefinitions, errors);
         }
 
-        if (errors.Count > 0)
-        {
-            throw new GseLinkageException(errors);
-        }
-
-        var linkedModule = new LinkedGseModule(
-            typeDefinitions,
-            callableDefinitions,
-            handlers,
-            _modules.Count);
-
+        if (errors.Count > 0) throw new GseLinkageException(errors);
+        var linkedModule = new LinkedGseModule(typeDefinitions, callableDefinitions, handlers, _modules.Count);
         return GseLinkOptimizer.Optimize(linkedModule);
     }
 
-    private static GseLinkageError CreateError(
-        GseModule module,
-        string message,
-        string symbol,
-        GseSymbolKind symbolKind,
-        GseLinkageErrorKind kind,
-        int? line = null,
-        int? column = null,
-        int? endLine = null,
-        int? endColumn = null)
+    private static GseLinkageError CreateError(GseModule module, string message, string symbol, GseSymbolKind symbolKind, GseLinkageErrorKind kind, int? line = null, int? column = null,
+        int? endLine = null, int? endColumn = null)
     {
         var resolvedModuleName = module.ModuleName;
         var resolvedSourceName = module.SourceName;

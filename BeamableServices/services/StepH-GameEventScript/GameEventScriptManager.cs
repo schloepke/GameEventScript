@@ -38,8 +38,8 @@ public sealed class GseSyntaxException(IReadOnlyList<GseSyntaxError> errors) : G
 
     private static string BuildMessage(IReadOnlyList<GseSyntaxError> errors)
         => errors.Count == 0
-            ? "Gse syntax analysis failed."
-            : $"Gse syntax analysis failed with {errors.Count} error(s):{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", errors.Select(it => it.ToString()))}";
+            ? "GameEventScript syntax analysis failed."
+            : $"GameEventScript syntax analysis failed with {errors.Count} error(s):{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", errors.Select(it => it.ToString()))}";
 }
 
 public sealed class GseLinkageException(IReadOnlyList<GseLinkageError> errors) : GseCompilationException(BuildMessage(errors))
@@ -48,8 +48,8 @@ public sealed class GseLinkageException(IReadOnlyList<GseLinkageError> errors) :
 
     private static string BuildMessage(IReadOnlyList<GseLinkageError> errors)
         => errors.Count == 0
-            ? "Gse linkage failed."
-            : $"Gse linkage failed with {errors.Count} error(s):{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", errors.Select(it => it.ToString()))}";
+            ? "GameEventScript linkage failed."
+            : $"GameEventScript linkage failed with {errors.Count} error(s):{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", errors.Select(it => it.ToString()))}";
 }
 
 public sealed record GseSyntaxError(
@@ -104,8 +104,7 @@ public enum GseSymbolKind
 
 public enum GseSyntaxErrorKind
 {
-    Lexer,
-    Parser
+    Syntax
 }
 
 public sealed record GseSourceLocation(

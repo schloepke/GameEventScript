@@ -225,7 +225,7 @@ public static class RegisterGseCompiler
                         _handlerProgramIndices.TryGetValue((pair.Key, index), out var programIndex) ? programIndex : -1,
                         options.EnableDiagnostics,
                         handler.Statements,
-                        RegisterVmFastPathAnalyzer.CreateHandlerPlan(handler.Parameters, handler.Statements, module.Callables, module.TypeDefinitions, AddExternalReference)))
+                        RegisterVmProgramCompiler.CompileHandlerPlan(pair.Key, index, handler.Parameters, handler.Statements, module.Callables, module.TypeDefinitions, AddExternalReference)))
                     .ToArray(),
                 StringComparer.Ordinal);
         }

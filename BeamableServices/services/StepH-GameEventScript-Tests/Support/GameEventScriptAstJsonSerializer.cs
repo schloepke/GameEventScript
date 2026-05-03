@@ -1,13 +1,12 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StepH.GameEventScript.Linker;
+using StepH.GameEventScript.Parser;
 
-namespace StepH.GameEventScript.Parser;
+namespace StepH_GameEventScript_Tests.Support;
 
-public static class GseAstJsonSerializer
+internal static class GameEventScriptAstJsonSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -16,10 +15,9 @@ public static class GseAstJsonSerializer
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    public static string ToJson(this GseModule module, JsonSerializerOptions? options = null)
-        => JsonSerializer.Serialize(module, options ?? SerializerOptions);
-    
-    public static string ToJson(this LinkedGseModule module, JsonSerializerOptions? options = null)
+    internal static string ToJson(this GseModule module, JsonSerializerOptions? options = null)
         => JsonSerializer.Serialize(module, options ?? SerializerOptions);
 
+    internal static string ToJson(this LinkedGseModule module, JsonSerializerOptions? options = null)
+        => JsonSerializer.Serialize(module, options ?? SerializerOptions);
 }

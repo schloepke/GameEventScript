@@ -12,51 +12,50 @@ using static StepH.GameEventScript.Types.GseValueFactory;
 
 namespace StepH.GameEventScript.RegisterVM;
 
-internal sealed class RegisterVmFastExecutionSession
+internal sealed class RegisterVmExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
     private readonly RegisterCompiledGse _compiledScript;
     private readonly GseContext _context;
-    private readonly RegisterVmFastPathPlan _plan;
-    private readonly RegisterFastValue[] _locals;
+    private readonly RegisterVmExecutionPlan _plan;
+    private readonly RegisterVmValue[] _locals;
     private readonly bool[] _assignedSlots;
-    private readonly RegisterFastValue[] _evaluationStack;
+    private readonly RegisterVmValue[] _evaluationStack;
     private readonly bool _diagnosticsEnabled;
     private readonly List<LocalChange> _changes = [];
     private readonly List<int> _scopeMarks = [];
     private readonly Stack<GseRandomGenerator> _randomScopes = new();
     private bool _halted;
 
-    private RegisterVmFastExecutionSession(
+    private RegisterVmExecutionSession(
         RegisterCompiledGse compiledScript,
         GseContext context,
-        RegisterVmFastPathPlan plan,
+        RegisterVmExecutionPlan plan,
         bool diagnosticsEnabled)
     {
         _compiledScript = compiledScript;
         _context = context;
         _plan = plan;
         _diagnosticsEnabled = diagnosticsEnabled;
-        _locals = new RegisterFastValue[plan.SlotCount];
+        _locals = new RegisterVmValue[plan.SlotCount];
         _assignedSlots = new bool[plan.SlotCount];
-        _evaluationStack = new RegisterFastValue[Math.Max(16, plan.MaxStackDepth + 16)];
+        _evaluationStack = new RegisterVmValue[Math.Max(16, plan.MaxStackDepth + 16)];
         _randomScopes.Push(context.Random);
     }
 
-    public static bool TryInvokeHandler(
+    public static void InvokeHandler(
         RegisterCompiledGse compiledScript,
         GseContext context,
         RegisterCompiledGseHandler handler,
         IReadOnlyDictionary<string, GseValue> args)
     {
-        if (!handler.FastPathPlan.IsSupported)
+        var session = new RegisterVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
+        if (!session.TryInvoke(handler, args))
         {
-            return false;
+            throw new InvalidOperationException(
+                $"RegisterVM invariant failed: handler '{handler.SignatureId}' #{handler.DeclarationOrder} could not be executed by its compiled execution plan.");
         }
-
-        var session = new RegisterVmFastExecutionSession(compiledScript, context, handler.FastPathPlan, handler.DiagnosticsEnabled);
-        return session.TryInvoke(handler, args);
     }
 
     private bool TryInvoke(RegisterCompiledGseHandler handler, IReadOnlyDictionary<string, GseValue> args)
@@ -75,7 +74,7 @@ internal sealed class RegisterVmFastExecutionSession
 
                 RecordParameterBound(parameter, value);
 
-                if (!Define(parameter, RegisterFastValue.FromGseValue(value)))
+                if (!Define(parameter, RegisterVmValue.FromGseValue(value)))
                 {
                     return false;
                 }
@@ -307,12 +306,12 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryExecuteCollectionFor(ForStatementNode forStatement, ExpressionNode sourceExpression)
     {
-        if (!TryEvaluate(sourceExpression, out var sourceFastValue))
+        if (!TryEvaluate(sourceExpression, out var sourceVmValue))
         {
             return false;
         }
 
-        var sourceValue = sourceFastValue.ToGseValue();
+        var sourceValue = sourceVmValue.ToGseValue();
         if (GseRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
             !_context.RuntimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
         {
@@ -321,7 +320,7 @@ internal sealed class RegisterVmFastExecutionSession
 
         foreach (var item in sourceValue.AsEnumerable())
         {
-            if (!TryExecuteLoopIteration(forStatement, RegisterFastValue.FromGseValue(item)))
+            if (!TryExecuteLoopIteration(forStatement, RegisterVmValue.FromGseValue(item)))
             {
                 return false;
             }
@@ -336,9 +335,9 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryExecuteLoopIteration(ForStatementNode forStatement, long item)
-        => TryExecuteLoopIteration(forStatement, RegisterFastValue.Integer(item));
+        => TryExecuteLoopIteration(forStatement, RegisterVmValue.Integer(item));
 
-    private bool TryExecuteLoopIteration(ForStatementNode forStatement, RegisterFastValue item)
+    private bool TryExecuteLoopIteration(ForStatementNode forStatement, RegisterVmValue item)
     {
         if (!_context.RuntimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
@@ -383,7 +382,7 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private bool TryPublish(RegisterFastPublishLayout layout)
+    private bool TryPublish(RegisterVmPublishLayout layout)
     {
         var argumentNames = layout.ArgumentNames;
         var argumentPrograms = layout.ArgumentPrograms;
@@ -434,7 +433,7 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private bool TryEvaluate(ExpressionNode expression, out RegisterFastValue value)
+    private bool TryEvaluate(ExpressionNode expression, out RegisterVmValue value)
     {
         if (_plan.TryGetExpressionProgram(expression, out var program))
         {
@@ -443,37 +442,37 @@ internal sealed class RegisterVmFastExecutionSession
 
         if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return true;
         }
 
         switch (expression)
         {
             case BooleanLiteralExpressionNode boolean:
-                value = RegisterFastValue.Boolean(boolean.Value);
+                value = RegisterVmValue.Boolean(boolean.Value);
                 return true;
             case IntegerLiteralExpressionNode integer:
-                value = RegisterFastValue.Integer(integer.Value);
+                value = RegisterVmValue.Integer(integer.Value);
                 return true;
             case DecimalLiteralExpressionNode decimalLiteral:
-                value = RegisterFastValue.Decimal(decimalLiteral.Value);
+                value = RegisterVmValue.Decimal(decimalLiteral.Value);
                 return true;
             case PercentageLiteralExpressionNode percentage:
-                value = RegisterFastValue.Percentage(percentage.PercentValue / 100m);
+                value = RegisterVmValue.Percentage(percentage.PercentValue / 100m);
                 return true;
             case UnitDecimalLiteralExpressionNode unitDecimal:
                 value = GseDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                    ? RegisterFastValue.Decimal(unitDecimal.Value, unit)
-                    : RegisterFastValue.NaN();
+                    ? RegisterVmValue.Decimal(unitDecimal.Value, unit)
+                    : RegisterVmValue.NaN();
                 return true;
             case TextLiteralExpressionNode text:
-                value = RegisterFastValue.Reference(Text(text.Value));
+                value = RegisterVmValue.Reference(Text(text.Value));
                 return true;
             case TagLiteralExpressionNode tag:
-                value = RegisterFastValue.Reference(Tag(tag.Name));
+                value = RegisterVmValue.Reference(Tag(tag.Name));
                 return true;
             case HandlerLiteralExpressionNode handler:
-                value = RegisterFastValue.Reference(GseValueFactory.Handler(
+                value = RegisterVmValue.Reference(GseValueFactory.Handler(
                     new GseMessageSignature(handler.Message, handler.SignatureLabels)));
                 return true;
             case HandlerBindExpressionNode handlerBind:
@@ -531,23 +530,23 @@ internal sealed class RegisterVmFastExecutionSession
             case MessageLiteralExpressionNode message:
                 if (!TryEvaluateMessageArguments(message, out var arguments))
                 {
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
                 }
 
-                value = RegisterFastValue.Reference(Message(new GseMessage(message.Message, arguments)));
+                value = RegisterVmValue.Reference(Message(new GseMessage(message.Message, arguments)));
                 return true;
             default:
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
         }
     }
 
-    private bool TryExecuteExpressionProgram(RegisterFastExpressionProgram program, int stackBase, out RegisterFastValue value)
+    private bool TryExecuteExpressionProgram(RegisterVmExpressionProgram program, int stackBase, out RegisterVmValue value)
     {
         if (stackBase + program.MaxStackDepth > _evaluationStack.Length)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -555,7 +554,7 @@ internal sealed class RegisterVmFastExecutionSession
         var instructions = program.Instructions;
         if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return true;
         }
 
@@ -564,66 +563,66 @@ internal sealed class RegisterVmFastExecutionSession
             var instruction = instructions[instructionIndex];
             switch (instruction.OpCode)
             {
-                case RegisterFastOpCode.LoadConstant:
+                case RegisterVmProgramOpCode.LoadConstant:
                     _evaluationStack[top++] = instruction.Constant;
                     break;
 
-                case RegisterFastOpCode.LoadSlot:
+                case RegisterVmProgramOpCode.LoadSlot:
                     _evaluationStack[top++] = ResolveSlot(instruction.A);
                     break;
 
-                case RegisterFastOpCode.Or:
-                case RegisterFastOpCode.Xor:
-                case RegisterFastOpCode.And:
-                case RegisterFastOpCode.Equal:
-                case RegisterFastOpCode.NotEqual:
-                case RegisterFastOpCode.Less:
-                case RegisterFastOpCode.Greater:
-                case RegisterFastOpCode.LessOrEqual:
-                case RegisterFastOpCode.GreaterOrEqual:
-                case RegisterFastOpCode.Add:
-                case RegisterFastOpCode.Subtract:
-                case RegisterFastOpCode.Multiply:
-                case RegisterFastOpCode.Divide:
-                case RegisterFastOpCode.IntegerDivide:
-                case RegisterFastOpCode.Modulo:
-                case RegisterFastOpCode.Remainder:
-                case RegisterFastOpCode.Default:
-                case RegisterFastOpCode.Contains:
-                case RegisterFastOpCode.ContainsValue:
-                case RegisterFastOpCode.StartsWith:
-                case RegisterFastOpCode.EndsWith:
-                case RegisterFastOpCode.Intersect:
-                case RegisterFastOpCode.Combine:
-                case RegisterFastOpCode.Except:
-                case RegisterFastOpCode.Zip:
+                case RegisterVmProgramOpCode.Or:
+                case RegisterVmProgramOpCode.Xor:
+                case RegisterVmProgramOpCode.And:
+                case RegisterVmProgramOpCode.Equal:
+                case RegisterVmProgramOpCode.NotEqual:
+                case RegisterVmProgramOpCode.Less:
+                case RegisterVmProgramOpCode.Greater:
+                case RegisterVmProgramOpCode.LessOrEqual:
+                case RegisterVmProgramOpCode.GreaterOrEqual:
+                case RegisterVmProgramOpCode.Add:
+                case RegisterVmProgramOpCode.Subtract:
+                case RegisterVmProgramOpCode.Multiply:
+                case RegisterVmProgramOpCode.Divide:
+                case RegisterVmProgramOpCode.IntegerDivide:
+                case RegisterVmProgramOpCode.Modulo:
+                case RegisterVmProgramOpCode.Remainder:
+                case RegisterVmProgramOpCode.Default:
+                case RegisterVmProgramOpCode.Contains:
+                case RegisterVmProgramOpCode.ContainsValue:
+                case RegisterVmProgramOpCode.StartsWith:
+                case RegisterVmProgramOpCode.EndsWith:
+                case RegisterVmProgramOpCode.Intersect:
+                case RegisterVmProgramOpCode.Combine:
+                case RegisterVmProgramOpCode.Except:
+                case RegisterVmProgramOpCode.Zip:
                     var right = _evaluationStack[--top];
                     var left = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateProgramBinary(instruction.OpCode, left, right);
                     break;
 
-                case RegisterFastOpCode.Unary:
+                case RegisterVmProgramOpCode.Unary:
                     if (!TryEvaluateUnaryOperation(instruction.DiagnosticName, _evaluationStack[top - 1], out var unaryValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top - 1] = unaryValue;
                     break;
 
-                case RegisterFastOpCode.Variadic:
+                case RegisterVmProgramOpCode.Variadic:
                     top -= instruction.A;
                     if (!TryEvaluateVariadicOperation(instruction.DiagnosticName, _evaluationStack, top, instruction.A, out var variadicValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = variadicValue;
                     break;
 
-                case RegisterFastOpCode.Clamp:
+                case RegisterVmProgramOpCode.Clamp:
                     top -= 3;
                     _evaluationStack[top] = EvaluateClamp(
                         _evaluationStack[top],
@@ -632,42 +631,42 @@ internal sealed class RegisterVmFastExecutionSession
                     top++;
                     break;
 
-                case RegisterFastOpCode.Random:
+                case RegisterVmProgramOpCode.Random:
                     var to = _evaluationStack[--top];
                     var from = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateRandomExpression(from, to);
                     break;
 
-                case RegisterFastOpCode.Range:
+                case RegisterVmProgramOpCode.Range:
                     top -= instruction.A;
                     _evaluationStack[top] = EvaluateRangeExpression(
                         _evaluationStack[top],
                         _evaluationStack[top + 1],
-                        instruction.A == 3 ? _evaluationStack[top + 2] : RegisterFastValue.Integer(1));
+                        instruction.A == 3 ? _evaluationStack[top + 2] : RegisterVmValue.Integer(1));
                     top++;
                     break;
 
-                case RegisterFastOpCode.Dice:
+                case RegisterVmProgramOpCode.Dice:
                     _evaluationStack[top++] = EvaluateDiceExpression(instruction.A, instruction.B);
                     break;
 
-                case RegisterFastOpCode.SeededRandom:
+                case RegisterVmProgramOpCode.SeededRandom:
                     var seed = _evaluationStack[--top];
                     if (instruction.ExpressionProgram is null ||
                         !TryEvaluateSeededRandomExpression(seed, instruction.ExpressionProgram, top, out var seededValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = seededValue;
                     break;
 
-                case RegisterFastOpCode.Cast:
+                case RegisterVmProgramOpCode.Cast:
                     _evaluationStack[top - 1] = EvaluateProgramCast(instruction.CastKind, _evaluationStack[top - 1]);
                     break;
 
-                case RegisterFastOpCode.TypeConstructor:
+                case RegisterVmProgramOpCode.TypeConstructor:
                     top -= instruction.A;
                     _evaluationStack[top] = EvaluateTypeConstructor(
                         instruction.DiagnosticName,
@@ -678,69 +677,69 @@ internal sealed class RegisterVmFastExecutionSession
                     top++;
                     break;
 
-                case RegisterFastOpCode.TypeCheck:
-                    _evaluationStack[top - 1] = RegisterFastValue.Boolean(IsValueOfType(
+                case RegisterVmProgramOpCode.TypeCheck:
+                    _evaluationStack[top - 1] = RegisterVmValue.Boolean(IsValueOfType(
                         _evaluationStack[top - 1],
                         instruction.DiagnosticName));
                     break;
 
-                case RegisterFastOpCode.RulePredicate:
+                case RegisterVmProgramOpCode.RulePredicate:
                     var input = _evaluationStack[--top];
                     if (!TryEvaluateRulePredicate(instruction, input, top, out var predicateValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = predicateValue;
                     break;
 
-                case RegisterFastOpCode.Call:
+                case RegisterVmProgramOpCode.Call:
                     top -= instruction.A;
                     if (!TryEvaluateCallable(instruction, _evaluationStack, top, instruction.A, out var callValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = callValue;
                     break;
 
-                case RegisterFastOpCode.MemberAccess:
+                case RegisterVmProgramOpCode.MemberAccess:
                     _evaluationStack[top - 1] = EvaluateMemberAccess(_evaluationStack[top - 1], instruction.DiagnosticName);
                     break;
 
-                case RegisterFastOpCode.IndexedAccess:
+                case RegisterVmProgramOpCode.IndexedAccess:
                     var selector = _evaluationStack[--top];
                     var target = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateIndexedAccess(target, selector);
                     break;
 
-                case RegisterFastOpCode.BuildList:
+                case RegisterVmProgramOpCode.BuildList:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildListValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case RegisterFastOpCode.BuildSequence:
+                case RegisterVmProgramOpCode.BuildSequence:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSequenceValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case RegisterFastOpCode.BuildSet:
+                case RegisterVmProgramOpCode.BuildSet:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSetValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case RegisterFastOpCode.BuildDictionary:
+                case RegisterVmProgramOpCode.BuildDictionary:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildDictionaryValue(_evaluationStack, top, instruction.A, instruction.Names);
                     top++;
                     break;
 
-                case RegisterFastOpCode.BuildMessage:
+                case RegisterVmProgramOpCode.BuildMessage:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildMessageValue(
                         _evaluationStack,
@@ -752,7 +751,7 @@ internal sealed class RegisterVmFastExecutionSession
                     top++;
                     break;
 
-                case RegisterFastOpCode.BindHandler:
+                case RegisterVmProgramOpCode.BindHandler:
                     top -= instruction.A + 1;
                     _evaluationStack[top] = BindHandlerValue(
                         _evaluationStack[top],
@@ -763,7 +762,7 @@ internal sealed class RegisterVmFastExecutionSession
                     top++;
                     break;
 
-                case RegisterFastOpCode.CallExtension:
+                case RegisterVmProgramOpCode.CallExtension:
                     top -= instruction.A;
                     if (!TryCallExtension(
                             instruction.DiagnosticName,
@@ -775,40 +774,40 @@ internal sealed class RegisterVmFastExecutionSession
                             instruction.A,
                             out var extensionValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = extensionValue;
                     break;
 
-                case RegisterFastOpCode.Pipeline:
+                case RegisterVmProgramOpCode.Pipeline:
                     if (instruction.PipelineProgram is null ||
                         !TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = pipelineValue;
                     break;
 
-                case RegisterFastOpCode.GeneratedCollection:
+                case RegisterVmProgramOpCode.GeneratedCollection:
                     if (instruction.GeneratedCollectionProgram is null ||
                         !TryExecuteGeneratedCollectionProgram(instruction.GeneratedCollectionProgram, out var generatedValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = generatedValue;
                     break;
 
-                case RegisterFastOpCode.GuardedChoice:
+                case RegisterVmProgramOpCode.GuardedChoice:
                     if (instruction.GuardedChoiceProgram is null ||
                         !TryExecuteGuardedChoiceProgram(instruction.GuardedChoiceProgram, out var guardedValue))
                     {
-                        value = RegisterFastValue.Nothing;
+                        value = RegisterVmValue.Nothing;
                         return false;
                     }
 
@@ -816,20 +815,20 @@ internal sealed class RegisterVmFastExecutionSession
                     break;
 
                 default:
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
             }
         }
 
-        value = top > stackBase ? _evaluationStack[top - 1] : RegisterFastValue.Nothing;
+        value = top > stackBase ? _evaluationStack[top - 1] : RegisterVmValue.Nothing;
         return true;
     }
 
-    private bool TryEvaluateHandlerBind(HandlerBindExpressionNode handlerBind, out RegisterFastValue value)
+    private bool TryEvaluateHandlerBind(HandlerBindExpressionNode handlerBind, out RegisterVmValue value)
     {
         if (!TryEvaluate(handlerBind.CalleeExpression, out var callee))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -838,7 +837,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryEvaluate(argument.Expression, out var argumentValue))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -846,100 +845,100 @@ internal sealed class RegisterVmFastExecutionSession
         }
 
         value = GseMessageValueCodec.TryBindHandlerValue(callee.ToGseValue(), arguments, out var message)
-            ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
-            : RegisterFastValue.Nothing;
+            ? RegisterVmValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
+            : RegisterVmValue.Nothing;
         return true;
     }
 
-    private bool TryEvaluateTypeCheck(TypeCheckExpressionNode typeCheck, out RegisterFastValue value)
+    private bool TryEvaluateTypeCheck(TypeCheckExpressionNode typeCheck, out RegisterVmValue value)
     {
         if (!TryEvaluate(typeCheck.Value, out var input))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Boolean(IsValueOfType(input, typeCheck.TypeName));
+        value = RegisterVmValue.Boolean(IsValueOfType(input, typeCheck.TypeName));
         return true;
     }
 
-    private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out RegisterFastValue value)
+    private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out RegisterVmValue value)
     {
         var items = new GseValue[list.Items.Count];
         for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(list.Items[itemIndex], out var item))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
             items[itemIndex] = item.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.List(items));
+        value = RegisterVmValue.Reference(GseValueFactory.List(items));
         return true;
     }
 
-    private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out RegisterFastValue value)
+    private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out RegisterVmValue value)
     {
         var items = new GseValue[sequence.Items.Count];
         for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(sequence.Items[itemIndex], out var item))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
             items[itemIndex] = item.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.Sequence(items));
+        value = RegisterVmValue.Reference(GseValueFactory.Sequence(items));
         return true;
     }
 
-    private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out RegisterFastValue value)
+    private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out RegisterVmValue value)
     {
         var items = new GseValue[set.Items.Count];
         for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(set.Items[itemIndex], out var item))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
             items[itemIndex] = item.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.Set(items));
+        value = RegisterVmValue.Reference(GseValueFactory.Set(items));
         return true;
     }
 
-    private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out RegisterFastValue value)
+    private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out RegisterVmValue value)
     {
         var map = new Dictionary<string, GseValue>(StringComparer.Ordinal);
         foreach (var entry in dictionary.Entries)
         {
             if (!TryEvaluate(entry.Value, out var entryValue))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
             map[entry.Key] = entryValue.ToGseValue();
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.Dictionary(map));
+        value = RegisterVmValue.Reference(GseValueFactory.Dictionary(map));
         return true;
     }
 
-    private bool TryEvaluateMemberAccess(MemberAccessExpressionNode memberAccess, out RegisterFastValue value)
+    private bool TryEvaluateMemberAccess(MemberAccessExpressionNode memberAccess, out RegisterVmValue value)
     {
         if (!TryEvaluate(memberAccess.Target, out var target))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -947,36 +946,36 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private static RegisterFastValue EvaluateMemberAccess(RegisterFastValue target, string? member)
+    private static RegisterVmValue EvaluateMemberAccess(RegisterVmValue target, string? member)
     {
         if (string.IsNullOrEmpty(member))
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         var targetValue = target.ToGseValue();
         if (targetValue.IsNothing())
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         return targetValue.TryGetDictionaryMember(member, out var value)
-            ? RegisterFastValue.FromGseValue(value)
-            : RegisterFastValue.Nothing;
+            ? RegisterVmValue.FromGseValue(value)
+            : RegisterVmValue.Nothing;
     }
 
-    private static RegisterFastValue EvaluateIndexedAccess(RegisterFastValue target, RegisterFastValue selector)
+    private static RegisterVmValue EvaluateIndexedAccess(RegisterVmValue target, RegisterVmValue selector)
     {
         var selectorValue = selector.ToGseValue();
         if (selectorValue.IsNothing())
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
-        return RegisterFastValue.FromGseValue(target.ToGseValue().Lookup(selectorValue));
+        return RegisterVmValue.FromGseValue(target.ToGseValue().Lookup(selectorValue));
     }
 
-    private static RegisterFastValue BuildListValue(RegisterFastValue[] stack, int start, int count)
+    private static RegisterVmValue BuildListValue(RegisterVmValue[] stack, int start, int count)
     {
         var items = new GseValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
@@ -984,10 +983,10 @@ internal sealed class RegisterVmFastExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(GseValueFactory.List(items));
+        return RegisterVmValue.Reference(GseValueFactory.List(items));
     }
 
-    private static RegisterFastValue BuildSequenceValue(RegisterFastValue[] stack, int start, int count)
+    private static RegisterVmValue BuildSequenceValue(RegisterVmValue[] stack, int start, int count)
     {
         var items = new GseValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
@@ -995,10 +994,10 @@ internal sealed class RegisterVmFastExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(GseValueFactory.Sequence(items));
+        return RegisterVmValue.Reference(GseValueFactory.Sequence(items));
     }
 
-    private static RegisterFastValue BuildSetValue(RegisterFastValue[] stack, int start, int count)
+    private static RegisterVmValue BuildSetValue(RegisterVmValue[] stack, int start, int count)
     {
         var items = new GseValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
@@ -1006,14 +1005,14 @@ internal sealed class RegisterVmFastExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(GseValueFactory.Set(items));
+        return RegisterVmValue.Reference(GseValueFactory.Set(items));
     }
 
-    private static RegisterFastValue BuildDictionaryValue(RegisterFastValue[] stack, int start, int count, string[]? names)
+    private static RegisterVmValue BuildDictionaryValue(RegisterVmValue[] stack, int start, int count, string[]? names)
     {
         if (names is null || names.Length != count)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         var map = new Dictionary<string, GseValue>(count, StringComparer.Ordinal);
@@ -1022,11 +1021,11 @@ internal sealed class RegisterVmFastExecutionSession
             map[names[entryIndex]] = stack[start + entryIndex].ToGseValue();
         }
 
-        return RegisterFastValue.Reference(GseValueFactory.Dictionary(map));
+        return RegisterVmValue.Reference(GseValueFactory.Dictionary(map));
     }
 
-    private static RegisterFastValue BuildMessageValue(
-        RegisterFastValue[] stack,
+    private static RegisterVmValue BuildMessageValue(
+        RegisterVmValue[] stack,
         int start,
         int count,
         string[]? names,
@@ -1038,12 +1037,12 @@ internal sealed class RegisterVmFastExecutionSession
             names is null ||
             names.Length != count)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         if (count == 0)
         {
-            return RegisterFastValue.Reference(Message(GseMessage.CreatePrecomputed(
+            return RegisterVmValue.Reference(Message(GseMessage.CreatePrecomputed(
                 messageName,
                 GseNamedArguments.Empty,
                 signatureId)));
@@ -1057,22 +1056,22 @@ internal sealed class RegisterVmFastExecutionSession
                 stack[start + argumentIndex].ToGseValue());
         }
 
-        return RegisterFastValue.Reference(Message(GseMessage.CreatePrecomputed(
+        return RegisterVmValue.Reference(Message(GseMessage.CreatePrecomputed(
             messageName,
             GseNamedArguments.CreateOrdered(pairs),
             signatureId)));
     }
 
-    private static RegisterFastValue BindHandlerValue(
-        RegisterFastValue callee,
-        RegisterFastValue[] stack,
+    private static RegisterVmValue BindHandlerValue(
+        RegisterVmValue callee,
+        RegisterVmValue[] stack,
         int start,
         int count,
         string[]? names)
     {
         if (names is null || names.Length != count)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         var pairs = new KeyValuePair<string, GseValue>[count];
@@ -1085,8 +1084,8 @@ internal sealed class RegisterVmFastExecutionSession
 
         var arguments = GseNamedArguments.CreateOrdered(pairs, names);
         return GseMessageValueCodec.TryBindHandlerValue(callee.ToGseValue(), arguments, out var message)
-            ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
-            : RegisterFastValue.Nothing;
+            ? RegisterVmValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
+            : RegisterVmValue.Nothing;
     }
 
     private bool TryCallExtension(
@@ -1094,12 +1093,12 @@ internal sealed class RegisterVmFastExecutionSession
         string? functionName,
         string[]? labels,
         int referenceIndex,
-        RegisterFastValue[] stack,
+        RegisterVmValue[] stack,
         int start,
         int count,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
-        value = RegisterFastValue.Nothing;
+        value = RegisterVmValue.Nothing;
         if (string.IsNullOrWhiteSpace(extensionName) ||
             string.IsNullOrWhiteSpace(functionName))
         {
@@ -1118,7 +1117,7 @@ internal sealed class RegisterVmFastExecutionSession
 
         if (GseStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
         {
-            value = RegisterFastValue.FromGseFastValue(standardValue);
+            value = RegisterVmValue.FromGseFastValue(standardValue);
             return true;
         }
 
@@ -1138,77 +1137,77 @@ internal sealed class RegisterVmFastExecutionSession
             }
         }
 
-        value = RegisterFastValue.FromGseFastValue(function.Invoke(new GseExtensionContext(_context), arguments));
+        value = RegisterVmValue.FromGseFastValue(function.Invoke(new GseExtensionContext(_context), arguments));
         return true;
     }
 
-    private static GseFastValue ToGseFastValue(RegisterFastValue value)
+    private static GseFastValue ToGseFastValue(RegisterVmValue value)
         => value.Kind switch
         {
-            RegisterFastValueKind.Nothing => GseFastValue.Nothing,
-            RegisterFastValueKind.Boolean => GseFastValue.FromBoolean(value.BooleanValue),
-            RegisterFastValueKind.Integer => GseFastValue.FromInteger(value.IntegerValue),
-            RegisterFastValueKind.Decimal => GseFastValue.FromDecimal(value.Number, value.Unit),
-            RegisterFastValueKind.Percentage => GseFastValue.FromPercentage(value.Number),
-            RegisterFastValueKind.Reference => GseFastValue.FromGseValue(value.ReferenceValue ?? GseValue.Nothing),
+            RegisterVmValueKind.Nothing => GseFastValue.Nothing,
+            RegisterVmValueKind.Boolean => GseFastValue.FromBoolean(value.BooleanValue),
+            RegisterVmValueKind.Integer => GseFastValue.FromInteger(value.IntegerValue),
+            RegisterVmValueKind.Decimal => GseFastValue.FromDecimal(value.Number, value.Unit),
+            RegisterVmValueKind.Percentage => GseFastValue.FromPercentage(value.Number),
+            RegisterVmValueKind.Reference => GseFastValue.FromGseValue(value.ReferenceValue ?? GseValue.Nothing),
             _ => GseFastValue.Nothing
         };
 
-    private RegisterFastValue EvaluateProgramBinary(RegisterFastOpCode opCode, RegisterFastValue left, RegisterFastValue right)
+    private RegisterVmValue EvaluateProgramBinary(RegisterVmProgramOpCode opCode, RegisterVmValue left, RegisterVmValue right)
     {
-        if (opCode != RegisterFastOpCode.Default &&
+        if (opCode != RegisterVmProgramOpCode.Default &&
             (left.IsNothingLike() || right.IsNothingLike()))
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         switch (opCode)
         {
-            case RegisterFastOpCode.Or:
-                return RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean());
-            case RegisterFastOpCode.Xor:
-                return RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
-            case RegisterFastOpCode.And:
-                return RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean());
-            case RegisterFastOpCode.Equal:
-                return RegisterFastValue.Boolean(RegisterFastValue.AreEqual(left, right));
-            case RegisterFastOpCode.NotEqual:
-                return RegisterFastValue.Boolean(!RegisterFastValue.AreEqual(left, right));
-            case RegisterFastOpCode.Less:
-                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
-            case RegisterFastOpCode.Greater:
-                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var greaterComparison) && greaterComparison > 0);
-            case RegisterFastOpCode.LessOrEqual:
-                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var lessOrEqualComparison) && lessOrEqualComparison <= 0);
-            case RegisterFastOpCode.GreaterOrEqual:
-                return RegisterFastValue.Boolean(RegisterFastValue.TryCompareNumeric(left, right, out var greaterOrEqualComparison) && greaterOrEqualComparison >= 0);
-            case RegisterFastOpCode.Add:
-                return RegisterFastValue.Add(left, right);
-            case RegisterFastOpCode.Subtract:
-                return RegisterFastValue.Subtract(left, right);
-            case RegisterFastOpCode.Multiply:
-                return RegisterFastValue.Multiply(left, right);
-            case RegisterFastOpCode.Divide:
-                return RegisterFastValue.Divide(left, right);
-            case RegisterFastOpCode.IntegerDivide:
-                return RegisterFastValue.IntegerDivide(left, right);
-            case RegisterFastOpCode.Modulo:
-                return RegisterFastValue.Modulo(left, right);
-            case RegisterFastOpCode.Remainder:
-                return RegisterFastValue.Remainder(left, right);
+            case RegisterVmProgramOpCode.Or:
+                return RegisterVmValue.Boolean(left.AsBoolean() || right.AsBoolean());
+            case RegisterVmProgramOpCode.Xor:
+                return RegisterVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
+            case RegisterVmProgramOpCode.And:
+                return RegisterVmValue.Boolean(left.AsBoolean() && right.AsBoolean());
+            case RegisterVmProgramOpCode.Equal:
+                return RegisterVmValue.Boolean(RegisterVmValue.AreEqual(left, right));
+            case RegisterVmProgramOpCode.NotEqual:
+                return RegisterVmValue.Boolean(!RegisterVmValue.AreEqual(left, right));
+            case RegisterVmProgramOpCode.Less:
+                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
+            case RegisterVmProgramOpCode.Greater:
+                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var greaterComparison) && greaterComparison > 0);
+            case RegisterVmProgramOpCode.LessOrEqual:
+                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var lessOrEqualComparison) && lessOrEqualComparison <= 0);
+            case RegisterVmProgramOpCode.GreaterOrEqual:
+                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var greaterOrEqualComparison) && greaterOrEqualComparison >= 0);
+            case RegisterVmProgramOpCode.Add:
+                return RegisterVmValue.Add(left, right);
+            case RegisterVmProgramOpCode.Subtract:
+                return RegisterVmValue.Subtract(left, right);
+            case RegisterVmProgramOpCode.Multiply:
+                return RegisterVmValue.Multiply(left, right);
+            case RegisterVmProgramOpCode.Divide:
+                return RegisterVmValue.Divide(left, right);
+            case RegisterVmProgramOpCode.IntegerDivide:
+                return RegisterVmValue.IntegerDivide(left, right);
+            case RegisterVmProgramOpCode.Modulo:
+                return RegisterVmValue.Modulo(left, right);
+            case RegisterVmProgramOpCode.Remainder:
+                return RegisterVmValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
                     ? value
-                    : RegisterFastValue.Unsupported();
+                    : throw new InvalidOperationException($"RegisterVM invariant failed: binary opcode '{opCode}' could not be evaluated.");
         }
     }
 
-    private RegisterFastValue EvaluateProgramCast(RegisterFastCastKind castKind, RegisterFastValue input)
+    private RegisterVmValue EvaluateProgramCast(RegisterVmCastKind castKind, RegisterVmValue input)
         => TryConvertDeclaredType(GetCastTypeName(castKind), input, out var value)
             ? value
-            : RegisterFastValue.Unsupported();
+            : throw new InvalidOperationException($"RegisterVM invariant failed: cast '{castKind}' could not be evaluated.");
 
-    private static bool IsValueOfType(RegisterFastValue value, string? typeName)
+    private static bool IsValueOfType(RegisterVmValue value, string? typeName)
     {
         if (string.IsNullOrEmpty(typeName))
         {
@@ -1217,22 +1216,22 @@ internal sealed class RegisterVmFastExecutionSession
 
         return typeName switch
         {
-            "nothing" => value.Kind == RegisterFastValueKind.Nothing || (value.ReferenceValue?.IsNothing() ?? false),
+            "nothing" => value.Kind == RegisterVmValueKind.Nothing || (value.ReferenceValue?.IsNothing() ?? false),
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
-            "percentage" => value.Kind == RegisterFastValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
-            "degree" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == GseDecimalUnit.Degree ||
+            "percentage" => value.Kind == RegisterVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
+            "degree" => value.Kind == RegisterVmValueKind.Decimal && value.Unit == GseDecimalUnit.Degree ||
                         (value.ReferenceValue?.IsDecimalUnit(GseDecimalUnit.Degree) ?? false),
-            "meter" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == GseDecimalUnit.Meter ||
+            "meter" => value.Kind == RegisterVmValueKind.Decimal && value.Unit == GseDecimalUnit.Meter ||
                        (value.ReferenceValue?.IsDecimalUnit(GseDecimalUnit.Meter) ?? false),
-            "second" => value.Kind == RegisterFastValueKind.Decimal && value.Unit == GseDecimalUnit.Second ||
+            "second" => value.Kind == RegisterVmValueKind.Decimal && value.Unit == GseDecimalUnit.Second ||
                         (value.ReferenceValue?.IsDecimalUnit(GseDecimalUnit.Second) ?? false),
             "vector2" => value.ReferenceValue?.IsVector2() ?? false,
             "vector3" => value.ReferenceValue?.IsVector3() ?? false,
-            "decimal" => value.Kind is RegisterFastValueKind.Integer or RegisterFastValueKind.Decimal or RegisterFastValueKind.Percentage ||
+            "decimal" => value.Kind is RegisterVmValueKind.Integer or RegisterVmValueKind.Decimal or RegisterVmValueKind.Percentage ||
                          (value.ReferenceValue?.IsNumber() ?? false),
-            "integer" => value.Kind == RegisterFastValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
-            "boolean" => value.Kind == RegisterFastValueKind.Boolean || value.ReferenceValue?.Kind == GseValueKind.Boolean,
+            "integer" => value.Kind == RegisterVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
+            "boolean" => value.Kind == RegisterVmValueKind.Boolean || value.ReferenceValue?.Kind == GseValueKind.Boolean,
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "sequence" => value.ReferenceValue?.IsSequence() ?? false,
             "list" => value.ReferenceValue?.IsList() ?? false,
@@ -1250,37 +1249,37 @@ internal sealed class RegisterVmFastExecutionSession
         };
     }
 
-    private bool TryEvaluateBinary(BinaryExpressionNode binary, out RegisterFastValue value)
+    private bool TryEvaluateBinary(BinaryExpressionNode binary, out RegisterVmValue value)
     {
         if (!TryEvaluate(binary.Left, out var left) ||
             !TryEvaluate(binary.Right, out var right))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         return TryEvaluateBinaryOperation(binary.Operator, left, right, out value);
     }
 
-    private bool TryEvaluateUnary(UnaryExpressionNode unary, out RegisterFastValue value)
+    private bool TryEvaluateUnary(UnaryExpressionNode unary, out RegisterVmValue value)
     {
         if (!TryEvaluate(unary.Operand, out var operand))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         return TryEvaluateUnaryOperation(unary.Operator, operand, out value);
     }
 
-    private bool TryEvaluateVariadic(VariadicTaggedExpressionNode variadic, out RegisterFastValue value)
+    private bool TryEvaluateVariadic(VariadicTaggedExpressionNode variadic, out RegisterVmValue value)
     {
-        var values = new RegisterFastValue[variadic.Arguments.Count];
+        var values = new RegisterVmValue[variadic.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
         {
             if (!TryEvaluate(variadic.Arguments[argumentIndex], out values[argumentIndex]))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
         }
@@ -1288,13 +1287,13 @@ internal sealed class RegisterVmFastExecutionSession
         return TryEvaluateVariadicOperation(variadic.Operator, values, 0, values.Length, out value);
     }
 
-    private bool TryEvaluateClamp(ClampExpressionNode clamp, out RegisterFastValue value)
+    private bool TryEvaluateClamp(ClampExpressionNode clamp, out RegisterVmValue value)
     {
         if (!TryEvaluate(clamp.Value, out var raw) ||
             !TryEvaluate(clamp.Minimum, out var minimum) ||
             !TryEvaluate(clamp.Maximum, out var maximum))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1302,12 +1301,12 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private bool TryEvaluateRandom(RandomExpressionNode random, out RegisterFastValue value)
+    private bool TryEvaluateRandom(RandomExpressionNode random, out RegisterVmValue value)
     {
         if (!TryEvaluate(random.FromExpression, out var from) ||
             !TryEvaluate(random.ToExpression, out var to))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1315,12 +1314,12 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private bool TryEvaluateRange(RangeExpressionNode range, out RegisterFastValue value)
+    private bool TryEvaluateRange(RangeExpressionNode range, out RegisterVmValue value)
     {
         if (!TryEvaluate(range.FromExpression, out var from) ||
             !TryEvaluate(range.ToExpression, out var to))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1328,7 +1327,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryEvaluate(range.StepExpression, out var step))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -1336,16 +1335,16 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         }
 
-        value = EvaluateRangeExpression(from, to, RegisterFastValue.Integer(1));
+        value = EvaluateRangeExpression(from, to, RegisterVmValue.Integer(1));
         return true;
     }
 
-    private bool TryEvaluateSeededRandomExpression(SeededRandomExpressionNode seededRandom, out RegisterFastValue value)
+    private bool TryEvaluateSeededRandomExpression(SeededRandomExpressionNode seededRandom, out RegisterVmValue value)
     {
         if (!TryEvaluate(seededRandom.SeedExpression, out var seed) ||
             !_plan.TryGetExpressionProgram(seededRandom.BodyExpression, out var bodyProgram))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1353,10 +1352,10 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateSeededRandomExpression(
-        RegisterFastValue seed,
-        RegisterFastExpressionProgram bodyProgram,
+        RegisterVmValue seed,
+        RegisterVmExpressionProgram bodyProgram,
         int stackBase,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         PushSeededRandomScope(seed.ToGseValue());
         try
@@ -1371,17 +1370,17 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateGeneratedCollectionExpression(
         GeneratedCollectionExpressionNode generatedCollection,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         if (!_plan.TryGetSlot(generatedCollection.Identifier, out var identifierSlot))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         if (!TryMaterializeIterationSource(generatedCollection.Source, out var sourceItems))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1393,12 +1392,12 @@ internal sealed class RegisterVmFastExecutionSession
                 break;
             }
 
-            var fastItem = RegisterFastValue.FromGseValue(item);
+            var fastItem = RegisterVmValue.FromGseValue(item);
             if (generatedCollection.Predicate is not null)
             {
                 if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Predicate, out var predicate))
                 {
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
                 }
 
@@ -1415,24 +1414,24 @@ internal sealed class RegisterVmFastExecutionSession
 
             if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Projection, out var projected))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
             values.Add(projected.ToGseValue());
         }
 
-        value = RegisterFastValue.Reference(generatedCollection.CollectionType == "set"
+        value = RegisterVmValue.Reference(generatedCollection.CollectionType == "set"
             ? GseValueFactory.Set(values)
             : GseValueFactory.List(values));
         return true;
     }
 
-    private bool TryExecuteGeneratedCollectionProgram(RegisterFastGeneratedCollectionProgram program, out RegisterFastValue value)
+    private bool TryExecuteGeneratedCollectionProgram(RegisterVmGeneratedCollectionProgram program, out RegisterVmValue value)
     {
         if (!TryMaterializeIterationSource(program.Source, out var sourceItems))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1444,12 +1443,12 @@ internal sealed class RegisterVmFastExecutionSession
                 break;
             }
 
-            var fastItem = RegisterFastValue.FromGseValue(item);
+            var fastItem = RegisterVmValue.FromGseValue(item);
             if (program.PredicateProgram is not null)
             {
                 if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.PredicateProgram, 0, out var predicate))
                 {
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
                 }
 
@@ -1466,14 +1465,14 @@ internal sealed class RegisterVmFastExecutionSession
 
             if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.ProjectionProgram, 0, out var projected))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
             values.Add(projected.ToGseValue());
         }
 
-        value = RegisterFastValue.Reference(program.CollectionType == "set"
+        value = RegisterVmValue.Reference(program.CollectionType == "set"
             ? GseValueFactory.Set(values)
             : GseValueFactory.List(values));
         return true;
@@ -1523,13 +1522,13 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private bool TryEvaluateGuardedChoiceExpression(GuardedChoiceExpressionNode guardedChoice, out RegisterFastValue value)
+    private bool TryEvaluateGuardedChoiceExpression(GuardedChoiceExpressionNode guardedChoice, out RegisterVmValue value)
     {
         foreach (var branch in guardedChoice.Branches)
         {
             if (!TryEvaluate(branch.ConditionExpression, out var condition))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -1542,13 +1541,13 @@ internal sealed class RegisterVmFastExecutionSession
         return TryEvaluate(guardedChoice.OtherwiseExpression, out value);
     }
 
-    private bool TryExecuteGuardedChoiceProgram(RegisterFastGuardedChoiceProgram program, out RegisterFastValue value)
+    private bool TryExecuteGuardedChoiceProgram(RegisterVmGuardedChoiceProgram program, out RegisterVmValue value)
     {
         var conditions = program.ConditionPrograms;
         var values = program.ValuePrograms;
         if (conditions.Length != values.Length)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -1556,7 +1555,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryExecuteExpressionProgram(conditions[branchIndex], 0, out var condition))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -1569,7 +1568,7 @@ internal sealed class RegisterVmFastExecutionSession
         return TryExecuteExpressionProgram(program.OtherwiseProgram, 0, out value);
     }
 
-    private RegisterFastValue EvaluateRandomExpression(RegisterFastValue fromValue, RegisterFastValue toValue)
+    private RegisterVmValue EvaluateRandomExpression(RegisterVmValue fromValue, RegisterVmValue toValue)
     {
         var fromRaw = fromValue.ToGseValue();
         var toRaw = toValue.ToGseValue();
@@ -1587,8 +1586,8 @@ internal sealed class RegisterVmFastExecutionSession
             }
 
             return TryNextInclusiveInt(from, to, out var next)
-                ? RegisterFastValue.Integer(next)
-                : RegisterFastValue.Nothing;
+                ? RegisterVmValue.Integer(next)
+                : RegisterVmValue.Nothing;
         }
 
         if (!GseValueAlu.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
@@ -1596,22 +1595,22 @@ internal sealed class RegisterVmFastExecutionSession
             !fromNumber.IsFinite ||
             !toNumber.IsFinite)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         var lower = Math.Min(fromNumber.Value, toNumber.Value);
         var upper = Math.Max(fromNumber.Value, toNumber.Value);
         if (lower == upper)
         {
-            return RegisterFastValue.Decimal(lower);
+            return RegisterVmValue.Decimal(lower);
         }
 
         return TryNextInclusiveDecimal(lower, upper, out var nextDecimal)
-            ? RegisterFastValue.Decimal(nextDecimal)
-            : RegisterFastValue.Nothing;
+            ? RegisterVmValue.Decimal(nextDecimal)
+            : RegisterVmValue.Nothing;
     }
 
-    private static RegisterFastValue EvaluateRangeExpression(RegisterFastValue fromValue, RegisterFastValue toValue, RegisterFastValue stepValue)
+    private static RegisterVmValue EvaluateRangeExpression(RegisterVmValue fromValue, RegisterVmValue toValue, RegisterVmValue stepValue)
     {
         if (!GseValueAlu.TryCoerceNumericForOperation(fromValue.ToGseValue(), out var fromNumber) ||
             !GseValueAlu.TryCoerceNumericForOperation(toValue.ToGseValue(), out var toNumber) ||
@@ -1620,25 +1619,25 @@ internal sealed class RegisterVmFastExecutionSession
             !toNumber.IsFinite ||
             !stepNumber.IsFinite)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
-        return RegisterFastValue.Reference(Range(
+        return RegisterVmValue.Reference(Range(
             GseValueAlu.ToIntegerSaturated(fromNumber.Value),
             GseValueAlu.ToIntegerSaturated(toNumber.Value),
             GseValueAlu.ToIntegerSaturated(stepNumber.Value)));
     }
 
-    private RegisterFastValue EvaluateDiceExpression(int diceCount, int sideCount)
+    private RegisterVmValue EvaluateDiceExpression(int diceCount, int sideCount)
     {
         if (diceCount <= 0 || sideCount <= 0)
         {
-            return RegisterFastValue.Reference(Dice(GseDiceValue.Empty));
+            return RegisterVmValue.Reference(Dice(GseDiceValue.Empty));
         }
 
         if (!_context.RuntimeBudget.TryCheckDice(new DiceExpressionNode(diceCount, sideCount)))
         {
-            return RegisterFastValue.Reference(Dice(GseDiceValue.Empty));
+            return RegisterVmValue.Reference(Dice(GseDiceValue.Empty));
         }
 
         var rolls = new int[diceCount];
@@ -1646,46 +1645,46 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryNextInclusiveInt(1, sideCount, out var roll))
             {
-                return RegisterFastValue.Reference(Dice(GseDiceValue.Empty));
+                return RegisterVmValue.Reference(Dice(GseDiceValue.Empty));
             }
 
             rolls[i] = roll;
         }
 
-        return RegisterFastValue.Reference(Dice(GseDiceValue.GseDice(rolls)));
+        return RegisterVmValue.Reference(Dice(GseDiceValue.GseDice(rolls)));
     }
 
-    private bool TryEvaluateUnaryOperation(string? operation, RegisterFastValue operand, out RegisterFastValue value)
+    private bool TryEvaluateUnaryOperation(string? operation, RegisterVmValue operand, out RegisterVmValue value)
     {
         var boxed = operand.ToGseValue();
         value = operation switch
         {
-            "-" => RegisterFastValue.FromGseValue(EvaluateNegateUnary(boxed)),
-            "!" => RegisterFastValue.FromGseValue(EvaluateNotUnary(boxed)),
-            "has value" => RegisterFastValue.Boolean(boxed.HasSemanticValue()),
-            "empty" => RegisterFastValue.Boolean(boxed.IsSemanticallyEmpty()),
-            "len" => RegisterFastValue.FromGseValue(EvaluateLenUnary(boxed)),
-            "chance" => RegisterFastValue.FromGseValue(EvaluateChanceUnary(boxed)),
-            "keys" => RegisterFastValue.Reference(Keys(boxed)),
-            "values" => RegisterFastValue.Reference(Values(boxed)),
-            "entries" => RegisterFastValue.Reference(Entries(boxed)),
-            "abs" => RegisterFastValue.FromGseValue(EvaluateAbsUnary(boxed)),
-            _ => RegisterFastValue.Unsupported()
+            "-" => RegisterVmValue.FromGseValue(EvaluateNegateUnary(boxed)),
+            "!" => RegisterVmValue.FromGseValue(EvaluateNotUnary(boxed)),
+            "has value" => RegisterVmValue.Boolean(boxed.HasSemanticValue()),
+            "empty" => RegisterVmValue.Boolean(boxed.IsSemanticallyEmpty()),
+            "len" => RegisterVmValue.FromGseValue(EvaluateLenUnary(boxed)),
+            "chance" => RegisterVmValue.FromGseValue(EvaluateChanceUnary(boxed)),
+            "keys" => RegisterVmValue.Reference(Keys(boxed)),
+            "values" => RegisterVmValue.Reference(Values(boxed)),
+            "entries" => RegisterVmValue.Reference(Entries(boxed)),
+            "abs" => RegisterVmValue.FromGseValue(EvaluateAbsUnary(boxed)),
+            _ => throw new InvalidOperationException($"RegisterVM invariant failed: unknown unary operator '{operation}'.")
         };
 
-        return value.Kind != RegisterFastValueKind.Unsupported;
+        return true;
     }
 
     private bool TryEvaluateVariadicOperation(
         string? operation,
-        RegisterFastValue[] stack,
+        RegisterVmValue[] stack,
         int start,
         int count,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         if (count == 0)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return true;
         }
 
@@ -1697,98 +1696,98 @@ internal sealed class RegisterVmFastExecutionSession
 
         value = operation switch
         {
-            "min" => RegisterFastValue.FromGseValue(GseValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
-            "max" => RegisterFastValue.FromGseValue(GseValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
-            _ => RegisterFastValue.Unsupported()
+            "min" => RegisterVmValue.FromGseValue(GseValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
+            "max" => RegisterVmValue.FromGseValue(GseValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
+            _ => throw new InvalidOperationException($"RegisterVM invariant failed: unknown variadic operator '{operation}'.")
         };
 
-        return value.Kind != RegisterFastValueKind.Unsupported;
+        return true;
     }
 
-    private bool TryEvaluateBinaryOperation(string operation, RegisterFastValue leftRawFast, RegisterFastValue rightRawFast, out RegisterFastValue value)
+    private bool TryEvaluateBinaryOperation(string operation, RegisterVmValue leftRawValue, RegisterVmValue rightRawValue, out RegisterVmValue value)
     {
-        var leftRaw = leftRawFast.ToGseValue();
-        var rightRaw = rightRawFast.ToGseValue();
+        var leftRaw = leftRawValue.ToGseValue();
+        var rightRaw = rightRawValue.ToGseValue();
 
         if (operation == "default")
         {
-            value = RegisterFastValue.FromGseValue(EvaluateDefaultBinary(leftRaw, rightRaw));
+            value = RegisterVmValue.FromGseValue(EvaluateDefaultBinary(leftRaw, rightRaw));
             return true;
         }
 
         if (leftRaw.IsNothing() || rightRaw.IsNothing())
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return true;
         }
 
         if (!GseValueAlu.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
             !GseValueAlu.TryUnwrapOptionalForOperation(rightRaw, out var right))
         {
-            value = RegisterFastValue.Reference(OptionalNone());
+            value = RegisterVmValue.Reference(OptionalNone());
             return true;
         }
 
         value = operation switch
         {
-            "|" => RegisterFastValue.Boolean(left.AsBoolean() || right.AsBoolean()),
-            "^" => RegisterFastValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
-            "&" => RegisterFastValue.Boolean(left.AsBoolean() && right.AsBoolean()),
-            "=" or "==" => RegisterFastValue.Boolean(GseValueAlu.AreEqual(left, right)),
-            "<>" => RegisterFastValue.Boolean(!GseValueAlu.AreEqual(left, right)),
-            "in" => RegisterFastValue.Boolean(right.Contains(left)),
-            "value in" => RegisterFastValue.Boolean(right.ContainsValue(left)),
-            "starts with" => RegisterFastValue.Boolean(left.StartsWith(right)),
-            "ends with" => RegisterFastValue.Boolean(left.EndsWith(right)),
-            "<" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison < 0)),
-            ">" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison > 0)),
-            "<=" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison <= 0)),
-            ">=" => RegisterFastValue.Boolean(TryCompare(left, right, static comparison => comparison >= 0)),
-            "+" => RegisterFastValue.FromGseValue(EvaluateAddBinary(left, right)),
-            "-" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "-", right)),
-            "*" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "*", right)),
-            "/" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "/", right)),
-            "div" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "div", right)),
-            "mod" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "mod", right)),
-            "rem" => RegisterFastValue.FromGseValue(EvaluateNumericBinary(left, "rem", right)),
-            "intersect" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionIntersect(left, right)),
-            "combine" or "merge" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionCombine(left, right)),
-            "except" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionExcept(left, right)),
-            "zip" => RegisterFastValue.Reference(GseValueAlu.EvaluateCollectionZip(left, right)),
-            _ => RegisterFastValue.Unsupported()
+            "|" => RegisterVmValue.Boolean(left.AsBoolean() || right.AsBoolean()),
+            "^" => RegisterVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
+            "&" => RegisterVmValue.Boolean(left.AsBoolean() && right.AsBoolean()),
+            "=" or "==" => RegisterVmValue.Boolean(GseValueAlu.AreEqual(left, right)),
+            "<>" => RegisterVmValue.Boolean(!GseValueAlu.AreEqual(left, right)),
+            "in" => RegisterVmValue.Boolean(right.Contains(left)),
+            "value in" => RegisterVmValue.Boolean(right.ContainsValue(left)),
+            "starts with" => RegisterVmValue.Boolean(left.StartsWith(right)),
+            "ends with" => RegisterVmValue.Boolean(left.EndsWith(right)),
+            "<" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison < 0)),
+            ">" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison > 0)),
+            "<=" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison <= 0)),
+            ">=" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison >= 0)),
+            "+" => RegisterVmValue.FromGseValue(EvaluateAddBinary(left, right)),
+            "-" => RegisterVmValue.FromGseValue(EvaluateNumericBinary(left, "-", right)),
+            "*" => RegisterVmValue.FromGseValue(EvaluateNumericBinary(left, "*", right)),
+            "/" => RegisterVmValue.FromGseValue(EvaluateNumericBinary(left, "/", right)),
+            "div" => RegisterVmValue.FromGseValue(EvaluateNumericBinary(left, "div", right)),
+            "mod" => RegisterVmValue.FromGseValue(EvaluateNumericBinary(left, "mod", right)),
+            "rem" => RegisterVmValue.FromGseValue(EvaluateNumericBinary(left, "rem", right)),
+            "intersect" => RegisterVmValue.Reference(GseValueAlu.EvaluateCollectionIntersect(left, right)),
+            "combine" or "merge" => RegisterVmValue.Reference(GseValueAlu.EvaluateCollectionCombine(left, right)),
+            "except" => RegisterVmValue.Reference(GseValueAlu.EvaluateCollectionExcept(left, right)),
+            "zip" => RegisterVmValue.Reference(GseValueAlu.EvaluateCollectionZip(left, right)),
+            _ => throw new InvalidOperationException($"RegisterVM invariant failed: unknown binary operator '{operation}'.")
         };
 
-        return value.Kind != RegisterFastValueKind.Unsupported;
+        return true;
     }
 
-    private static string GetBinaryOperator(RegisterFastOpCode opCode)
+    private static string GetBinaryOperator(RegisterVmProgramOpCode opCode)
         => opCode switch
         {
-            RegisterFastOpCode.Or => "|",
-            RegisterFastOpCode.Xor => "^",
-            RegisterFastOpCode.And => "&",
-            RegisterFastOpCode.Equal => "=",
-            RegisterFastOpCode.NotEqual => "<>",
-            RegisterFastOpCode.Less => "<",
-            RegisterFastOpCode.Greater => ">",
-            RegisterFastOpCode.LessOrEqual => "<=",
-            RegisterFastOpCode.GreaterOrEqual => ">=",
-            RegisterFastOpCode.Add => "+",
-            RegisterFastOpCode.Subtract => "-",
-            RegisterFastOpCode.Multiply => "*",
-            RegisterFastOpCode.Divide => "/",
-            RegisterFastOpCode.IntegerDivide => "div",
-            RegisterFastOpCode.Modulo => "mod",
-            RegisterFastOpCode.Remainder => "rem",
-            RegisterFastOpCode.Default => "default",
-            RegisterFastOpCode.Contains => "in",
-            RegisterFastOpCode.ContainsValue => "value in",
-            RegisterFastOpCode.StartsWith => "starts with",
-            RegisterFastOpCode.EndsWith => "ends with",
-            RegisterFastOpCode.Intersect => "intersect",
-            RegisterFastOpCode.Combine => "combine",
-            RegisterFastOpCode.Except => "except",
-            RegisterFastOpCode.Zip => "zip",
+            RegisterVmProgramOpCode.Or => "|",
+            RegisterVmProgramOpCode.Xor => "^",
+            RegisterVmProgramOpCode.And => "&",
+            RegisterVmProgramOpCode.Equal => "=",
+            RegisterVmProgramOpCode.NotEqual => "<>",
+            RegisterVmProgramOpCode.Less => "<",
+            RegisterVmProgramOpCode.Greater => ">",
+            RegisterVmProgramOpCode.LessOrEqual => "<=",
+            RegisterVmProgramOpCode.GreaterOrEqual => ">=",
+            RegisterVmProgramOpCode.Add => "+",
+            RegisterVmProgramOpCode.Subtract => "-",
+            RegisterVmProgramOpCode.Multiply => "*",
+            RegisterVmProgramOpCode.Divide => "/",
+            RegisterVmProgramOpCode.IntegerDivide => "div",
+            RegisterVmProgramOpCode.Modulo => "mod",
+            RegisterVmProgramOpCode.Remainder => "rem",
+            RegisterVmProgramOpCode.Default => "default",
+            RegisterVmProgramOpCode.Contains => "in",
+            RegisterVmProgramOpCode.ContainsValue => "value in",
+            RegisterVmProgramOpCode.StartsWith => "starts with",
+            RegisterVmProgramOpCode.EndsWith => "ends with",
+            RegisterVmProgramOpCode.Intersect => "intersect",
+            RegisterVmProgramOpCode.Combine => "combine",
+            RegisterVmProgramOpCode.Except => "except",
+            RegisterVmProgramOpCode.Zip => "zip",
             _ => string.Empty
         };
 
@@ -2015,7 +2014,7 @@ internal sealed class RegisterVmFastExecutionSession
             : GseValue.Nothing;
     }
 
-    private static RegisterFastValue EvaluateClamp(RegisterFastValue rawValue, RegisterFastValue minimumValue, RegisterFastValue maximumValue)
+    private static RegisterVmValue EvaluateClamp(RegisterVmValue rawValue, RegisterVmValue minimumValue, RegisterVmValue maximumValue)
     {
         var raw = rawValue.ToGseValue();
         var minimum = minimumValue.ToGseValue();
@@ -2025,7 +2024,7 @@ internal sealed class RegisterVmFastExecutionSession
             !GseValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
             !GseValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
         {
-            return RegisterFastValue.NaN();
+            return RegisterVmValue.NaN();
         }
 
         if (!GseValueAlu.TryCoerceNumericForOperation(raw, out var rawNumber) ||
@@ -2035,13 +2034,13 @@ internal sealed class RegisterVmFastExecutionSession
             !minimumNumber.IsFinite ||
             !maximumNumber.IsFinite)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
         GseValue.TryGetDecimalUnit(raw, out var unit);
-        return RegisterFastValue.FromGseValue(Decimal(
+        return RegisterVmValue.FromGseValue(Decimal(
             Math.Min(Math.Max(rawNumber.Value, lower), upper),
             raw.HasDecimalUnit() ? unit : null));
     }
@@ -2154,19 +2153,19 @@ internal sealed class RegisterVmFastExecutionSession
             ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{GseDecimalUnits.ToTypeName(value.Unit.Value)}"
             : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
-    private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterFastValue value)
+    private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterVmValue value)
     {
         if (!_compiledScript.Callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
             callable.Kind != LinkedCallableKind.Rule ||
             callable.Parameters.Count != 1 ||
             !TryEvaluate(rulePredicate.Value, out var input))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        var instruction = new RegisterFastInstruction(
-            RegisterFastOpCode.RulePredicate,
+        var instruction = new RegisterVmProgramInstruction(
+            RegisterVmProgramOpCode.RulePredicate,
             A: -1,
             ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
                 ? expressionProgram
@@ -2182,14 +2181,14 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private bool TryEvaluateCall(CallExpressionNode call, out RegisterFastValue value)
+    private bool TryEvaluateCall(CallExpressionNode call, out RegisterVmValue value)
     {
         if (!_compiledScript.Callables.TryGetValue(call.Name, out var callable))
         {
             var handlerValue = Resolve(call.Name);
             if (handlerValue.IsNothingLike())
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -2200,7 +2199,7 @@ internal sealed class RegisterVmFastExecutionSession
                 var argument = call.ArgumentList.Arguments[argumentIndex];
                 if (!TryEvaluate(argument.Expression, out var argumentValue))
                 {
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
                 }
 
@@ -2210,23 +2209,23 @@ internal sealed class RegisterVmFastExecutionSession
 
             var dynamicArguments = GseNamedArguments.CreateOrdered(dynamicPairs, dynamicLabels);
             value = GseMessageValueCodec.TryBindHandlerValue(handlerValue.ToGseValue(), dynamicArguments, out var message)
-                ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
-                : RegisterFastValue.Nothing;
+                ? RegisterVmValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
+                : RegisterVmValue.Nothing;
             return true;
         }
 
         if (callable.Parameters.Count != call.Arguments.Count)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        var arguments = new RegisterFastValue[call.Arguments.Count];
+        var arguments = new RegisterVmValue[call.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
         {
             if (!TryEvaluate(call.Arguments[argumentIndex], out arguments[argumentIndex]))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
         }
@@ -2236,17 +2235,17 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!_plan.TryGetSlot(callable.Parameters[parameterIndex], out slots[parameterIndex]))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
         }
 
-        var instruction = new RegisterFastInstruction(
-            RegisterFastOpCode.Call,
+        var instruction = new RegisterVmProgramInstruction(
+            RegisterVmProgramOpCode.Call,
             A: call.Arguments.Count,
             CallableKind: callable.Kind == LinkedCallableKind.Rule
-                ? RegisterFastCallableKind.Rule
-                : RegisterFastCallableKind.Select,
+                ? RegisterVmCallableKind.Rule
+                : RegisterVmCallableKind.Select,
             ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
                 ? expressionProgram
                 : null,
@@ -2257,9 +2256,9 @@ internal sealed class RegisterVmFastExecutionSession
         return TryEvaluateCallable(instruction, arguments, 0, arguments.Length, out value);
     }
 
-    private bool TryEvaluateExtensionCall(ExtensionCallExpressionNode extensionCall, out RegisterFastValue value)
+    private bool TryEvaluateExtensionCall(ExtensionCallExpressionNode extensionCall, out RegisterVmValue value)
     {
-        var arguments = new RegisterFastValue[extensionCall.ArgumentList.Count];
+        var arguments = new RegisterVmValue[extensionCall.ArgumentList.Count];
         var labels = new string[extensionCall.ArgumentList.Count];
         for (var argumentIndex = 0; argumentIndex < extensionCall.ArgumentList.Count; argumentIndex++)
         {
@@ -2267,7 +2266,7 @@ internal sealed class RegisterVmFastExecutionSession
             labels[argumentIndex] = argument.Name;
             if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
         }
@@ -2283,11 +2282,11 @@ internal sealed class RegisterVmFastExecutionSession
             out value);
     }
 
-    private bool TryEvaluateExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, out RegisterFastValue value)
+    private bool TryEvaluateExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, out RegisterVmValue value)
     {
         if (!TryEvaluate(extensionPredicate.Value, out var input))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -2304,13 +2303,13 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateRulePredicate(
-        RegisterFastInstruction instruction,
-        RegisterFastValue input,
+        RegisterVmProgramInstruction instruction,
+        RegisterVmValue input,
         int stackBase,
-        out RegisterFastValue value,
+        out RegisterVmValue value,
         string? parameterName = null)
     {
-        value = RegisterFastValue.Nothing;
+        value = RegisterVmValue.Nothing;
         if (instruction.ExpressionProgram is null)
         {
             return false;
@@ -2328,11 +2327,11 @@ internal sealed class RegisterVmFastExecutionSession
                 RecordRuleCalled(instruction, input);
                 if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, input, instruction.ExpressionProgram, stackBase, out value))
                 {
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
                 }
 
-                value = RegisterFastValue.Boolean(value.AsBoolean());
+                value = RegisterVmValue.Boolean(value.AsBoolean());
                 return true;
             }
             finally
@@ -2349,11 +2348,11 @@ internal sealed class RegisterVmFastExecutionSession
             if (!parameterDefined ||
                 !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
-            value = RegisterFastValue.Boolean(value.AsBoolean());
+            value = RegisterVmValue.Boolean(value.AsBoolean());
             return true;
         }
         finally
@@ -2364,13 +2363,13 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryEvaluateCallable(
-        RegisterFastInstruction instruction,
-        RegisterFastValue[] stack,
+        RegisterVmProgramInstruction instruction,
+        RegisterVmValue[] stack,
         int start,
         int count,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
-        value = RegisterFastValue.Nothing;
+        value = RegisterVmValue.Nothing;
         if (instruction.ExpressionProgram is null ||
             instruction.Slots is null ||
             instruction.Names is null ||
@@ -2394,7 +2393,7 @@ internal sealed class RegisterVmFastExecutionSession
             {
                 if (!DefineSlot(instruction.Slots[argumentIndex], stack[start + argumentIndex]))
                 {
-                    value = RegisterFastValue.Nothing;
+                    value = RegisterVmValue.Nothing;
                     return false;
                 }
             }
@@ -2404,9 +2403,9 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            if (instruction.CallableKind == RegisterFastCallableKind.Rule)
+            if (instruction.CallableKind == RegisterVmCallableKind.Rule)
             {
-                value = RegisterFastValue.Boolean(value.AsBoolean());
+                value = RegisterVmValue.Boolean(value.AsBoolean());
             }
 
             return true;
@@ -2418,25 +2417,25 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private bool TryEvaluateTypeCast(TypeCastExpressionNode typeCast, out RegisterFastValue value)
+    private bool TryEvaluateTypeCast(TypeCastExpressionNode typeCast, out RegisterVmValue value)
     {
         if (!TryEvaluate(typeCast.Value, out var input))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         if (!TryConvertDeclaredType(typeCast.TypeName, input, out value))
         {
-            value = RegisterFastValue.Unsupported();
+            throw new InvalidOperationException($"RegisterVM invariant failed: type cast '{typeCast.TypeName}' could not be evaluated.");
         }
 
-        return value.Kind != RegisterFastValueKind.Unsupported;
+        return true;
     }
 
-    private bool TryEvaluateTypeConstructor(TypeConstructorExpressionNode constructor, out RegisterFastValue value)
+    private bool TryEvaluateTypeConstructor(TypeConstructorExpressionNode constructor, out RegisterVmValue value)
     {
-        var arguments = new RegisterFastValue[constructor.Arguments.Count];
+        var arguments = new RegisterVmValue[constructor.Arguments.Count];
         var labels = new string[constructor.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
         {
@@ -2444,7 +2443,7 @@ internal sealed class RegisterVmFastExecutionSession
             labels[argumentIndex] = argument.Name;
             if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
         }
@@ -2453,16 +2452,16 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private RegisterFastValue EvaluateTypeConstructor(
+    private RegisterVmValue EvaluateTypeConstructor(
         string? typeName,
         string[]? labels,
-        RegisterFastValue[] stack,
+        RegisterVmValue[] stack,
         int start,
         int count)
     {
         if (string.IsNullOrEmpty(typeName))
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         if (typeName is "vector2" or "vector3")
@@ -2480,29 +2479,29 @@ internal sealed class RegisterVmFastExecutionSession
                     : GseMessageSignature.UnlabeledParameterName;
                 if (string.Equals(label, GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
                 {
-                    return RegisterFastValue.Nothing;
+                    return RegisterVmValue.Nothing;
                 }
 
                 values[label] = stack[start + index].ToGseValue();
             }
 
-            return RegisterFastValue.FromGseValue(ConvertToCustomType(Dictionary(values), typeDefinition));
+            return RegisterVmValue.FromGseValue(ConvertToCustomType(Dictionary(values), typeDefinition));
         }
 
         if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], GseMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         return TryConvertDeclaredType(typeName, stack[start], out var converted)
             ? converted
-            : RegisterFastValue.Nothing;
+            : RegisterVmValue.Nothing;
     }
 
-    private RegisterFastValue EvaluateVectorConstructor(
+    private RegisterVmValue EvaluateVectorConstructor(
         string typeName,
         string[]? labels,
-        RegisterFastValue[] stack,
+        RegisterVmValue[] stack,
         int start,
         int count)
     {
@@ -2512,7 +2511,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             return TryConvertDeclaredType(typeName, stack[start], out var converted)
                 ? converted
-                : RegisterFastValue.Nothing;
+                : RegisterVmValue.Nothing;
         }
 
         if (typeName == "vector3" &&
@@ -2525,8 +2524,8 @@ internal sealed class RegisterVmFastExecutionSession
                 stack[start].ToGseValue(),
                 stack[start + 1].ToGseValue(),
                 out var lifted)
-                ? RegisterFastValue.FromGseValue(lifted)
-                : RegisterFastValue.Nothing;
+                ? RegisterVmValue.FromGseValue(lifted)
+                : RegisterVmValue.Nothing;
         }
 
         if (count == 0 || labels is { Length: var labelCount } &&
@@ -2540,14 +2539,14 @@ internal sealed class RegisterVmFastExecutionSession
             }
 
             return GseValueAlu.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
-                ? RegisterFastValue.FromGseValue(vector)
-                : RegisterFastValue.Nothing;
+                ? RegisterVmValue.FromGseValue(vector)
+                : RegisterVmValue.Nothing;
         }
 
         var expectedCount = typeName == "vector2" ? 2 : 3;
         if (count != expectedCount)
         {
-            return RegisterFastValue.Nothing;
+            return RegisterVmValue.Nothing;
         }
 
         return expectedCount == 2
@@ -2555,83 +2554,83 @@ internal sealed class RegisterVmFastExecutionSession
                 stack[start].ToGseValue(),
                 stack[start + 1].ToGseValue(),
                 out var vector2)
-                ? RegisterFastValue.FromGseValue(vector2)
-                : RegisterFastValue.Nothing
+                ? RegisterVmValue.FromGseValue(vector2)
+                : RegisterVmValue.Nothing
             : GseValueAlu.TryCreateVector3(
                 stack[start].ToGseValue(),
                 stack[start + 1].ToGseValue(),
                 stack[start + 2].ToGseValue(),
                 out var vector3)
-                ? RegisterFastValue.FromGseValue(vector3)
-                : RegisterFastValue.Nothing;
+                ? RegisterVmValue.FromGseValue(vector3)
+                : RegisterVmValue.Nothing;
     }
 
-    private bool TryConvertDeclaredType(string declaredType, RegisterFastValue input, out RegisterFastValue value)
+    private bool TryConvertDeclaredType(string declaredType, RegisterVmValue input, out RegisterVmValue value)
     {
         var boxed = input.ToGseValue();
         value = declaredType switch
         {
-            "nothing" => RegisterFastValue.Nothing,
-            "tag" => RegisterFastValue.Reference(Tag(boxed.AsText())),
-            "text" => RegisterFastValue.Reference(Text(GseValueAlu.ToText(boxed))),
-            "percentage" => RegisterFastValue.FromGseValue(ConvertToPercentage(boxed)),
-            "degree" => RegisterFastValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Degree)),
-            "meter" => RegisterFastValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Meter)),
-            "second" => RegisterFastValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Second)),
-            "vector2" => RegisterFastValue.Reference(ConvertToVector2(boxed)),
-            "vector3" => RegisterFastValue.Reference(ConvertToVector3(boxed)),
-            "boolean" => RegisterFastValue.Boolean(boxed.AsBoolean()),
-            "integer" => RegisterFastValue.Integer(boxed.AsInteger()),
-            "decimal" or "number" => RegisterFastValue.FromGseValue(ConvertToDecimal(boxed)),
-            "sequence" => RegisterFastValue.Reference(boxed.IsSequence() ? boxed : GseValueFactory.Sequence(boxed.AsEnumerable())),
+            "nothing" => RegisterVmValue.Nothing,
+            "tag" => RegisterVmValue.Reference(Tag(boxed.AsText())),
+            "text" => RegisterVmValue.Reference(Text(GseValueAlu.ToText(boxed))),
+            "percentage" => RegisterVmValue.FromGseValue(ConvertToPercentage(boxed)),
+            "degree" => RegisterVmValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Degree)),
+            "meter" => RegisterVmValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Meter)),
+            "second" => RegisterVmValue.FromGseValue(ConvertToDecimalUnit(boxed, GseDecimalUnit.Second)),
+            "vector2" => RegisterVmValue.Reference(ConvertToVector2(boxed)),
+            "vector3" => RegisterVmValue.Reference(ConvertToVector3(boxed)),
+            "boolean" => RegisterVmValue.Boolean(boxed.AsBoolean()),
+            "integer" => RegisterVmValue.Integer(boxed.AsInteger()),
+            "decimal" or "number" => RegisterVmValue.FromGseValue(ConvertToDecimal(boxed)),
+            "sequence" => RegisterVmValue.Reference(boxed.IsSequence() ? boxed : GseValueFactory.Sequence(boxed.AsEnumerable())),
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
-                ? RegisterFastValue.Reference(List(boxed.AsList()))
-                : RegisterFastValue.Nothing,
-            "range" => RegisterFastValue.Reference(boxed.IsRange() ? boxed : GseValue.Nothing),
+                ? RegisterVmValue.Reference(List(boxed.AsList()))
+                : RegisterVmValue.Nothing,
+            "range" => RegisterVmValue.Reference(boxed.IsRange() ? boxed : GseValue.Nothing),
             "message" => boxed.Kind == GseValueKind.Message
                 ? input
                 : GseMessageValueCodec.TryReadMessageValue(boxed, out var message)
-                    ? RegisterFastValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
-                    : RegisterFastValue.Nothing,
+                    ? RegisterVmValue.Reference(GseMessageValueCodec.CreateMessageValue(message))
+                    : RegisterVmValue.Nothing,
             "handler" => boxed.Kind == GseValueKind.Handler
                 ? input
                 : GseMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
-                    ? RegisterFastValue.Reference(GseMessageValueCodec.CreateHandlerValue(handler))
-                    : RegisterFastValue.Nothing,
-            "dictionary" => RegisterFastValue.Reference(Dictionary(boxed.AsDictionary())),
+                    ? RegisterVmValue.Reference(GseMessageValueCodec.CreateHandlerValue(handler))
+                    : RegisterVmValue.Nothing,
+            "dictionary" => RegisterVmValue.Reference(Dictionary(boxed.AsDictionary())),
             "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
-                ? RegisterFastValue.Reference(Set(boxed.AsSet()))
-                : RegisterFastValue.Nothing,
-            "dice" => RegisterFastValue.Reference(Dice(boxed.AsDice())),
+                ? RegisterVmValue.Reference(Set(boxed.AsSet()))
+                : RegisterVmValue.Nothing,
+            "dice" => RegisterVmValue.Reference(Dice(boxed.AsDice())),
             "optional" => boxed.IsOptional()
                 ? input
                 : boxed.IsNothing()
-                    ? RegisterFastValue.Reference(OptionalNone())
-                    : RegisterFastValue.Reference(OptionalSome(boxed)),
+                    ? RegisterVmValue.Reference(OptionalNone())
+                    : RegisterVmValue.Reference(OptionalSome(boxed)),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
-                ? RegisterFastValue.FromGseValue(ConvertToCustomType(boxed, typeDefinition))
+                ? RegisterVmValue.FromGseValue(ConvertToCustomType(boxed, typeDefinition))
                 : input
         };
 
-        return value.Kind != RegisterFastValueKind.Unsupported;
+        return true;
     }
 
     private bool TryCheckMaterializedValue(GseValue value, string detail)
         => !GseRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
            _context.RuntimeBudget.TryCheckRangeLength(length, detail);
 
-    private static string GetCastTypeName(RegisterFastCastKind castKind)
+    private static string GetCastTypeName(RegisterVmCastKind castKind)
         => castKind switch
         {
-            RegisterFastCastKind.Boolean => "boolean",
-            RegisterFastCastKind.Integer => "integer",
-            RegisterFastCastKind.Decimal => "decimal",
-            RegisterFastCastKind.Number => "number",
-            RegisterFastCastKind.Percentage => "percentage",
-            RegisterFastCastKind.Degree => "degree",
-            RegisterFastCastKind.Meter => "meter",
-            RegisterFastCastKind.Second => "second",
-            RegisterFastCastKind.Sequence => "sequence",
+            RegisterVmCastKind.Boolean => "boolean",
+            RegisterVmCastKind.Integer => "integer",
+            RegisterVmCastKind.Decimal => "decimal",
+            RegisterVmCastKind.Number => "number",
+            RegisterVmCastKind.Percentage => "percentage",
+            RegisterVmCastKind.Degree => "degree",
+            RegisterVmCastKind.Meter => "meter",
+            RegisterVmCastKind.Second => "second",
+            RegisterVmCastKind.Sequence => "sequence",
             _ => string.Empty
         };
 
@@ -2825,7 +2824,7 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private GseValue ConvertValueToDeclaredType(GseValue value, string declaredType)
-        => TryConvertDeclaredType(declaredType, RegisterFastValue.FromGseValue(value), out var converted)
+        => TryConvertDeclaredType(declaredType, RegisterVmValue.FromGseValue(value), out var converted)
             ? converted.ToGseValue()
             : GseValue.Nothing;
 
@@ -2884,7 +2883,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             foreach (var pair in sourceValues)
             {
-                if (!Define(pair.Key, RegisterFastValue.FromGseValue(pair.Value)))
+                if (!Define(pair.Key, RegisterVmValue.FromGseValue(pair.Value)))
                 {
                     return GseValue.Nothing;
                 }
@@ -2892,7 +2891,7 @@ internal sealed class RegisterVmFastExecutionSession
 
             foreach (var pair in materializedValues)
             {
-                if (!Define(pair.Key, RegisterFastValue.FromGseValue(pair.Value)))
+                if (!Define(pair.Key, RegisterVmValue.FromGseValue(pair.Value)))
                 {
                     return GseValue.Nothing;
                 }
@@ -2908,18 +2907,18 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private bool TryExecutePipelineProgram(RegisterFastPipelineProgram pipeline, out RegisterFastValue value)
+    private bool TryExecutePipelineProgram(RegisterVmPipelineProgram pipeline, out RegisterVmValue value)
     {
         if (!TryExecuteExpressionProgram(pipeline.SourceProgram, 0, out var sourceValue))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         var sourceTarget = sourceValue.ToGseValue();
         if (!TryCheckMaterializedValue(sourceTarget, "Collection access would enumerate more range items than allowed."))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return true;
         }
 
@@ -2929,46 +2928,46 @@ internal sealed class RegisterVmFastExecutionSession
             : GseListValue.Empty;
         return pipeline.TerminalSelector.Kind switch
         {
-            RegisterFastSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
+            RegisterVmSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
                 ? TryExecuteProgramPattern(terminalTarget, patternItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterFastSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
+            RegisterVmSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
                 ? TryExecuteProgramObjectMatch(terminalTarget, objectItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterFastSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
+            RegisterVmSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
                 ? TryExecuteProgramTakePattern(terminalTarget, takePatternItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterFastSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
-            RegisterFastSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
-            RegisterFastSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
-            RegisterFastSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
+            RegisterVmSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
+            RegisterVmSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
+            RegisterVmSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
+            RegisterVmSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
                 ? TryExecuteProgramChoose(chooseItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterFastSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
-                ? SetValue(RegisterFastValue.FromGseValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
+            RegisterVmSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
+                ? SetValue(RegisterVmValue.FromGseValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
                 : false,
-            RegisterFastSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
-                ? SetValue(RegisterFastValue.FromGseValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
+            RegisterVmSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
+                ? SetValue(RegisterVmValue.FromGseValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
                 : false,
-            RegisterFastSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
-                ? SetValue(RegisterFastValue.FromGseValue(GseCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
+            RegisterVmSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
+                ? SetValue(RegisterVmValue.FromGseValue(GseCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
                 : false,
-            RegisterFastSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
-            RegisterFastSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
-            RegisterFastSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
-            RegisterFastSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
-                ? SetValue(RegisterFastValue.FromGseValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
+            RegisterVmSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
+            RegisterVmSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
+            RegisterVmSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
+            RegisterVmSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
+                ? SetValue(RegisterVmValue.FromGseValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
                 : false,
-            RegisterFastSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
-                ? SetValue(RegisterFastValue.FromGseValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
+            RegisterVmSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
+                ? SetValue(RegisterVmValue.FromGseValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
                 : false,
             _ => Fail(out value)
         };
@@ -2976,13 +2975,13 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryExecuteProgramFilter(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3002,23 +3001,23 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             }))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.List(result));
+        value = RegisterVmValue.Reference(GseValueFactory.List(result));
         return true;
     }
 
     private bool TryExecuteProgramSelect(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3034,30 +3033,30 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             }))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.List(result));
+        value = RegisterVmValue.Reference(GseValueFactory.List(result));
         return true;
     }
 
     private bool TryExecuteProgramPredicate(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         var isAny = string.Equals(terminal.EdgeMode, "any", StringComparison.Ordinal);
         if (!isAny && !string.Equals(terminal.EdgeMode, "all", StringComparison.Ordinal))
         {
-            value = RegisterFastValue.Boolean(false);
+            value = RegisterVmValue.Boolean(false);
             return true;
         }
 
@@ -3084,38 +3083,38 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             }, stopWhen: () => isAny ? result : !result))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Boolean(result);
+        value = RegisterVmValue.Boolean(result);
         return true;
     }
 
     private bool TryExecuteProgramSum(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         var hasValue = false;
-        var sum = RegisterFastValue.Decimal(0m);
+        var sum = RegisterVmValue.Decimal(0m);
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
+                    RegisterVmValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3126,42 +3125,42 @@ internal sealed class RegisterVmFastExecutionSession
 
             if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projected))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
-            sum = hasValue ? RegisterFastValue.Add(sum, projected) : projected;
+            sum = hasValue ? RegisterVmValue.Add(sum, projected) : projected;
             hasValue = true;
         }
 
-        value = hasValue ? sum : RegisterFastValue.Decimal(0m);
+        value = hasValue ? sum : RegisterVmValue.Decimal(0m);
         return true;
     }
 
     private bool TryExecuteProgramAverage(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         var count = 0L;
-        var sum = RegisterFastValue.Decimal(0m);
+        var sum = RegisterVmValue.Decimal(0m);
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
+                    RegisterVmValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3172,29 +3171,29 @@ internal sealed class RegisterVmFastExecutionSession
 
             if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projected))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
-            sum = count == 0 ? projected : RegisterFastValue.Add(sum, projected);
+            sum = count == 0 ? projected : RegisterVmValue.Add(sum, projected);
             count++;
         }
 
         value = count > 0 && sum.TryGetFiniteNumber(out var number)
-            ? RegisterFastValue.Decimal(number / count, sum.Unit)
-            : RegisterFastValue.Nothing;
+            ? RegisterVmValue.Decimal(number / count, sum.Unit)
+            : RegisterVmValue.Nothing;
         return true;
     }
 
     private bool TryExecuteProgramCount(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3203,12 +3202,12 @@ internal sealed class RegisterVmFastExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
+                    RegisterVmValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3219,7 +3218,7 @@ internal sealed class RegisterVmFastExecutionSession
 
             if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3229,29 +3228,29 @@ internal sealed class RegisterVmFastExecutionSession
             }
         }
 
-        value = RegisterFastValue.Integer(count);
+        value = RegisterVmValue.Integer(count);
         return true;
     }
 
     private bool TryExecuteProgramEdge(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
-        RegisterFastValue first = RegisterFastValue.Nothing;
-        RegisterFastValue last = RegisterFastValue.Nothing;
+        RegisterVmValue first = RegisterVmValue.Nothing;
+        RegisterVmValue last = RegisterVmValue.Nothing;
         var count = 0;
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
+                    RegisterVmValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3273,28 +3272,28 @@ internal sealed class RegisterVmFastExecutionSession
 
         value = terminal.EdgeMode switch
         {
-            "first" => count > 0 ? first : RegisterFastValue.Nothing,
-            "last" => count > 0 ? last : RegisterFastValue.Nothing,
-            "single" => count == 1 ? first : RegisterFastValue.Nothing,
-            _ => RegisterFastValue.Nothing
+            "first" => count > 0 ? first : RegisterVmValue.Nothing,
+            "last" => count > 0 ? last : RegisterVmValue.Nothing,
+            "single" => count == 1 ? first : RegisterVmValue.Nothing,
+            _ => RegisterVmValue.Nothing
         };
         return true;
     }
 
     private bool TryExecuteProgramExtrema(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
+        RegisterVmPipelineProgram pipeline,
         bool isMax,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        RegisterFastValue bestItem = RegisterFastValue.Nothing;
+        RegisterVmValue bestItem = RegisterVmValue.Nothing;
         GseValue? bestProjection = null;
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
@@ -3334,23 +3333,23 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             }))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = bestProjection is null ? RegisterFastValue.Nothing : bestItem;
+        value = bestProjection is null ? RegisterVmValue.Nothing : bestItem;
         return true;
     }
 
     private bool TryExecuteProgramDictionary(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3383,25 +3382,25 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             }))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.Dictionary(result));
+        value = RegisterVmValue.Reference(GseValueFactory.Dictionary(result));
         return true;
     }
 
     private bool TryExecuteProgramContains(
         IReadOnlyList<GseValue> sourceItems,
         GseValue terminalTarget,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null ||
             !TryExecuteExpressionProgram(terminal.ExpressionProgram, 0, out var needle))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3423,10 +3422,10 @@ internal sealed class RegisterVmFastExecutionSession
         var boxedNeedle = needle.ToGseValue();
         value = terminal.EdgeMode switch
         {
-            "single" => RegisterFastValue.Boolean(target.Contains(boxedNeedle)),
-            "all" => RegisterFastValue.Boolean(EnumerateListLikeValue(boxedNeedle).All(target.Contains)),
-            "any" => RegisterFastValue.Boolean(EnumerateListLikeValue(boxedNeedle).Any(target.Contains)),
-            _ => RegisterFastValue.Boolean(false)
+            "single" => RegisterVmValue.Boolean(target.Contains(boxedNeedle)),
+            "all" => RegisterVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).All(target.Contains)),
+            "any" => RegisterVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).Any(target.Contains)),
+            _ => RegisterVmValue.Boolean(false)
         };
         return true;
     }
@@ -3434,8 +3433,8 @@ internal sealed class RegisterVmFastExecutionSession
     private bool TryExecuteProgramDistinct(
         IReadOnlyList<GseValue> sourceItems,
         GseValue terminalTarget,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (!TryMaterializePipelineItems(sourceItems, pipeline, out var items, out value))
@@ -3446,7 +3445,7 @@ internal sealed class RegisterVmFastExecutionSession
         var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GseListValue.Empty;
         if (terminal.ExpressionProgram is null || terminal.IdentifierSlot < 0)
         {
-            value = RegisterFastValue.FromGseValue(GseCollectionOperators.Distinct(target, items));
+            value = RegisterVmValue.FromGseValue(GseCollectionOperators.Distinct(target, items));
             return true;
         }
 
@@ -3454,9 +3453,9 @@ internal sealed class RegisterVmFastExecutionSession
         var seenKeys = new HashSet<GseValue>();
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromGseValue(item), out var key))
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterVmValue.FromGseValue(item), out var key))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3466,19 +3465,19 @@ internal sealed class RegisterVmFastExecutionSession
             }
         }
 
-        value = RegisterFastValue.FromGseValue(MaterializeDistinctItems(target, distinctItems));
+        value = RegisterVmValue.FromGseValue(MaterializeDistinctItems(target, distinctItems));
         return true;
     }
 
     private bool TryExecuteProgramGroupBy(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3501,11 +3500,11 @@ internal sealed class RegisterVmFastExecutionSession
                 return true;
             }))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.Dictionary(groups.ToDictionary(
+        value = RegisterVmValue.Reference(GseValueFactory.Dictionary(groups.ToDictionary(
             pair => pair.Key,
             pair => GseValueFactory.List(pair.Value),
             StringComparer.Ordinal)));
@@ -3515,23 +3514,23 @@ internal sealed class RegisterVmFastExecutionSession
     private bool TryExecuteProgramOrderBy(
         IReadOnlyList<GseValue> sourceItems,
         GseValue terminalTarget,
-        RegisterFastPipelineProgram pipeline,
-        out RegisterFastValue value)
+        RegisterVmPipelineProgram pipeline,
+        out RegisterVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null ||
             !TryMaterializePipelineItems(sourceItems, pipeline, out var items, out value))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         var pairs = new List<(GseValue Item, GseValue Key)>(items.Length);
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterFastValue.FromGseValue(item), out var key))
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterVmValue.FromGseValue(item), out var key))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -3543,7 +3542,7 @@ internal sealed class RegisterVmFastExecutionSession
             : GseValue.StableComparer;
         var ordered = pairs.OrderBy(pair => pair.Key, comparer).Select(pair => pair.Item).ToArray();
         var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GseListValue.Empty;
-        value = RegisterFastValue.FromGseValue(target.Kind switch
+        value = RegisterVmValue.FromGseValue(target.Kind switch
         {
             GseValueKind.Dice or GseValueKind.List or GseValueKind.Set or GseValueKind.Range => GseValueFactory.List(ordered),
             _ => GseValue.Nothing
@@ -3554,77 +3553,77 @@ internal sealed class RegisterVmFastExecutionSession
     private bool TryExecuteProgramPattern(
         GseValue target,
         IReadOnlyList<GseValue> items,
-        RegisterFastSelectorProgram selector,
-        out RegisterFastValue value)
+        RegisterVmSelectorProgram selector,
+        out RegisterVmValue value)
     {
         if (selector.DicePattern is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         if (!TryEvaluateSequencePattern(target, items, selector.DicePattern, out var matches))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Boolean(matches);
+        value = RegisterVmValue.Boolean(matches);
         return true;
     }
 
     private bool TryExecuteProgramObjectMatch(
         GseValue target,
         IReadOnlyList<GseValue> items,
-        RegisterFastSelectorProgram selector,
-        out RegisterFastValue value)
+        RegisterVmSelectorProgram selector,
+        out RegisterVmValue value)
     {
         if (selector.ObjectPattern is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         if (!TryEvaluateObjectMatchSelector(target, items, selector.ObjectPattern, out var matches))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.Boolean(matches);
+        value = RegisterVmValue.Boolean(matches);
         return true;
     }
 
     private bool TryExecuteProgramTakePattern(
         GseValue target,
         IReadOnlyList<GseValue> items,
-        RegisterFastSelectorProgram selector,
-        out RegisterFastValue value)
+        RegisterVmSelectorProgram selector,
+        out RegisterVmValue value)
     {
         if (selector.DicePattern is null)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         if (!TryEvaluateTakePattern(target, items, selector.DicePattern, out var result))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
-        value = RegisterFastValue.FromGseValue(result);
+        value = RegisterVmValue.FromGseValue(result);
         return true;
     }
 
     private bool TryExecuteProgramChoose(
         IReadOnlyList<GseValue> items,
-        RegisterFastSelectorProgram selector,
-        out RegisterFastValue value)
+        RegisterVmSelectorProgram selector,
+        out RegisterVmValue value)
     {
         if (!TryFilterChooseCandidates(items, selector, out var candidates))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -3633,7 +3632,7 @@ internal sealed class RegisterVmFastExecutionSession
         {
             if (!TryChooseWeightedItems(candidates, selector.Count, selector.SecondaryIdentifierSlot, selector.SecondaryExpressionProgram, out chosen))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
         }
@@ -3649,18 +3648,18 @@ internal sealed class RegisterVmFastExecutionSession
         if (selector.Count == 1)
         {
             value = chosen.Count == 0
-                ? RegisterFastValue.Nothing
-                : RegisterFastValue.FromGseValue(chosen[0]);
+                ? RegisterVmValue.Nothing
+                : RegisterVmValue.FromGseValue(chosen[0]);
             return true;
         }
 
-        value = RegisterFastValue.Reference(GseValueFactory.List(chosen));
+        value = RegisterVmValue.Reference(GseValueFactory.List(chosen));
         return true;
     }
 
     private bool TryFilterChooseCandidates(
         IReadOnlyList<GseValue> items,
-        RegisterFastSelectorProgram selector,
+        RegisterVmSelectorProgram selector,
         out IReadOnlyList<GseValue> candidates)
     {
         if (selector.ExpressionProgram is null || selector.IdentifierSlot < 0)
@@ -3672,7 +3671,7 @@ internal sealed class RegisterVmFastExecutionSession
         var filtered = new List<GseValue>();
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, RegisterFastValue.FromGseValue(item), out var predicate))
+            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, RegisterVmValue.FromGseValue(item), out var predicate))
             {
                 candidates = [];
                 return false;
@@ -3692,7 +3691,7 @@ internal sealed class RegisterVmFastExecutionSession
         IReadOnlyList<GseValue> candidates,
         int count,
         int identifierSlot,
-        RegisterFastExpressionProgram weightProgram,
+        RegisterVmExpressionProgram weightProgram,
         out IReadOnlyList<GseValue> chosen)
     {
         var remaining = candidates.ToList();
@@ -3705,7 +3704,7 @@ internal sealed class RegisterVmFastExecutionSession
 
             foreach (var candidate in remaining)
             {
-                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, RegisterFastValue.FromGseValue(candidate), out var weightValue))
+                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, RegisterVmValue.FromGseValue(candidate), out var weightValue))
                 {
                     chosen = [];
                     return false;
@@ -3776,14 +3775,14 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryForEachIncludedPipelineItem(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastSelectorProgram[] prefixSelectors,
-        Func<RegisterFastValue, bool> action,
+        RegisterVmSelectorProgram[] prefixSelectors,
+        Func<RegisterVmValue, bool> action,
         Func<bool>? stopWhen = null)
     {
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterFastValue.FromGseValue(sourceItems[itemIndex]),
+                    RegisterVmValue.FromGseValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3812,16 +3811,16 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryMaterializePipelineItems(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastPipelineProgram pipeline,
+        RegisterVmPipelineProgram pipeline,
         out GseValue[] items,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
         => TryMaterializePipelineItems(sourceItems, pipeline.PrefixSelectors, out items, out value);
 
     private bool TryMaterializePipelineItems(
         IReadOnlyList<GseValue> sourceItems,
-        RegisterFastSelectorProgram[] prefixSelectors,
+        RegisterVmSelectorProgram[] prefixSelectors,
         out GseValue[] items,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         var result = new List<GseValue>(sourceItems.Count);
         if (!TryForEachIncludedPipelineItem(sourceItems, prefixSelectors, item =>
@@ -3831,12 +3830,12 @@ internal sealed class RegisterVmFastExecutionSession
             }))
         {
             items = [];
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         items = result.ToArray();
-        value = RegisterFastValue.Nothing;
+        value = RegisterVmValue.Nothing;
         return true;
     }
 
@@ -3870,7 +3869,7 @@ internal sealed class RegisterVmFastExecutionSession
             : value.AsList();
     }
 
-    private static bool SetValue(RegisterFastValue input, out RegisterFastValue value)
+    private static bool SetValue(RegisterVmValue input, out RegisterVmValue value)
     {
         value = input;
         return true;
@@ -4288,7 +4287,7 @@ internal sealed class RegisterVmFastExecutionSession
     private static GseValue EvaluateSequenceSliceSelector(
         GseValue target,
         IReadOnlyList<GseValue> items,
-        RegisterFastSelectorProgram selector)
+        RegisterVmSelectorProgram selector)
     {
         if (selector.Count <= 0)
         {
@@ -4377,9 +4376,9 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryApplyProgramPipelinePrefix(
-        RegisterFastValue item,
-        RegisterFastSelectorProgram[] prefixSelectors,
-        out RegisterFastValue value,
+        RegisterVmValue item,
+        RegisterVmSelectorProgram[] prefixSelectors,
+        out RegisterVmValue value,
         out bool include)
     {
         value = item;
@@ -4395,7 +4394,7 @@ internal sealed class RegisterVmFastExecutionSession
 
             switch (selector.Kind)
             {
-                case RegisterFastSelectorKind.Filter:
+                case RegisterVmSelectorKind.Filter:
                     if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, value, out var predicate))
                     {
                         return false;
@@ -4409,7 +4408,7 @@ internal sealed class RegisterVmFastExecutionSession
 
                     break;
 
-                case RegisterFastSelectorKind.Select:
+                case RegisterVmSelectorKind.Select:
                     if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, value, out var selected))
                     {
                         return false;
@@ -4428,20 +4427,20 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryEvaluateProgramProjection(
         int identifierSlot,
-        RegisterFastExpressionProgram expressionProgram,
-        RegisterFastValue item,
-        out RegisterFastValue value)
+        RegisterVmExpressionProgram expressionProgram,
+        RegisterVmValue item,
+        out RegisterVmValue value)
         => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
 
     private bool TryEvaluateExpressionWithTemporarySlot(
         int slot,
-        RegisterFastValue slotValue,
+        RegisterVmValue slotValue,
         ExpressionNode expression,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -4459,14 +4458,14 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out RegisterFastValue value)
+    private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out RegisterVmValue value)
     {
         if (expression.Selector is ExpressionSelectorNode expressionSelector)
         {
             if (!TryEvaluate(expression.Target, out var target) ||
                 !TryEvaluate(expressionSelector.Expression, out var selector))
             {
-                value = RegisterFastValue.Nothing;
+                value = RegisterVmValue.Nothing;
                 return false;
             }
 
@@ -4485,7 +4484,7 @@ internal sealed class RegisterVmFastExecutionSession
         selectors.Reverse();
         if (selectors.Count == 0 || !TryEvaluate(source, out var sourceValue))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -4507,10 +4506,10 @@ internal sealed class RegisterVmFastExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         SumSelectorNode selector,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         var hasValue = false;
-        var sum = RegisterFastValue.Decimal(0m);
+        var sum = RegisterVmValue.Decimal(0m);
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
         {
             if (!TryEvaluateProjection(selector.Identifier, selector.Projection, item, out var projected))
@@ -4518,12 +4517,12 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            sum = hasValue ? RegisterFastValue.Add(sum, projected) : projected;
+            sum = hasValue ? RegisterVmValue.Add(sum, projected) : projected;
             hasValue = true;
             return true;
         });
 
-        value = hasValue ? sum : RegisterFastValue.Decimal(0m);
+        value = hasValue ? sum : RegisterVmValue.Decimal(0m);
         return ok;
     }
 
@@ -4532,10 +4531,10 @@ internal sealed class RegisterVmFastExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         AverageSelectorNode selector,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         var count = 0L;
-        var sum = RegisterFastValue.Decimal(0m);
+        var sum = RegisterVmValue.Decimal(0m);
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
         {
             if (!TryEvaluateProjection(selector.Identifier, selector.Projection, item, out var projected))
@@ -4543,14 +4542,14 @@ internal sealed class RegisterVmFastExecutionSession
                 return false;
             }
 
-            sum = count == 0 ? projected : RegisterFastValue.Add(sum, projected);
+            sum = count == 0 ? projected : RegisterVmValue.Add(sum, projected);
             count++;
             return true;
         });
 
         value = ok && count > 0 && sum.TryGetFiniteNumber(out var number)
-            ? RegisterFastValue.Decimal(number / count, sum.Unit)
-            : RegisterFastValue.Nothing;
+            ? RegisterVmValue.Decimal(number / count, sum.Unit)
+            : RegisterVmValue.Nothing;
         return ok;
     }
 
@@ -4559,7 +4558,7 @@ internal sealed class RegisterVmFastExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         CountSelectorNode selector,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         var count = 0L;
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
@@ -4577,7 +4576,7 @@ internal sealed class RegisterVmFastExecutionSession
             return true;
         });
 
-        value = RegisterFastValue.Integer(count);
+        value = RegisterVmValue.Integer(count);
         return ok;
     }
 
@@ -4586,10 +4585,10 @@ internal sealed class RegisterVmFastExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         EdgeSelectorNode selector,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
-        RegisterFastValue first = RegisterFastValue.Nothing;
-        RegisterFastValue last = RegisterFastValue.Nothing;
+        RegisterVmValue first = RegisterVmValue.Nothing;
+        RegisterVmValue last = RegisterVmValue.Nothing;
         var count = 0;
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
         {
@@ -4608,10 +4607,10 @@ internal sealed class RegisterVmFastExecutionSession
 
         value = selector.Mode switch
         {
-            "first" => count > 0 ? first : RegisterFastValue.Nothing,
-            "last" => count > 0 ? last : RegisterFastValue.Nothing,
-            "single" => count == 1 ? first : RegisterFastValue.Nothing,
-            _ => RegisterFastValue.Nothing
+            "first" => count > 0 ? first : RegisterVmValue.Nothing,
+            "last" => count > 0 ? last : RegisterVmValue.Nothing,
+            "single" => count == 1 ? first : RegisterVmValue.Nothing,
+            _ => RegisterVmValue.Nothing
         };
         return ok;
     }
@@ -4620,11 +4619,11 @@ internal sealed class RegisterVmFastExecutionSession
         IReadOnlyList<GseValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
-        Func<RegisterFastValue, bool> action)
+        Func<RegisterVmValue, bool> action)
     {
         for (var index = 0; index < sourceItems.Count; index++)
         {
-            if (!TryApplyPipelinePrefix(RegisterFastValue.FromGseValue(sourceItems[index]), selectors, 0, prefixCount, action))
+            if (!TryApplyPipelinePrefix(RegisterVmValue.FromGseValue(sourceItems[index]), selectors, 0, prefixCount, action))
             {
                 return false;
             }
@@ -4634,11 +4633,11 @@ internal sealed class RegisterVmFastExecutionSession
     }
 
     private bool TryApplyPipelinePrefix(
-        RegisterFastValue item,
+        RegisterVmValue item,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int index,
         int prefixCount,
-        Func<RegisterFastValue, bool> action)
+        Func<RegisterVmValue, bool> action)
     {
         if (index >= prefixCount)
         {
@@ -4665,17 +4664,17 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private bool TryEvaluateProjection(string identifier, ExpressionNode expression, RegisterFastValue item, out RegisterFastValue value)
+    private bool TryEvaluateProjection(string identifier, ExpressionNode expression, RegisterVmValue item, out RegisterVmValue value)
     {
         if (!_plan.TryGetSlot(identifier, out var slot))
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
         if ((uint)slot >= (uint)_locals.Length)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -4695,14 +4694,14 @@ internal sealed class RegisterVmFastExecutionSession
 
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
-        RegisterFastValue slotValue,
-        RegisterFastExpressionProgram expressionProgram,
+        RegisterVmValue slotValue,
+        RegisterVmExpressionProgram expressionProgram,
         int stackBase,
-        out RegisterFastValue value)
+        out RegisterVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
         {
-            value = RegisterFastValue.Nothing;
+            value = RegisterVmValue.Nothing;
             return false;
         }
 
@@ -4720,7 +4719,7 @@ internal sealed class RegisterVmFastExecutionSession
         }
     }
 
-    private void RestoreSlot(int slot, bool hadValue, RegisterFastValue previous)
+    private void RestoreSlot(int slot, bool hadValue, RegisterVmValue previous)
     {
         if (hadValue)
         {
@@ -4729,7 +4728,7 @@ internal sealed class RegisterVmFastExecutionSession
         }
         else
         {
-            _locals[slot] = RegisterFastValue.Nothing;
+            _locals[slot] = RegisterVmValue.Nothing;
             _assignedSlots[slot] = false;
         }
     }
@@ -4751,7 +4750,7 @@ internal sealed class RegisterVmFastExecutionSession
             }
             else
             {
-                _locals[change.Slot] = RegisterFastValue.Nothing;
+                _locals[change.Slot] = RegisterVmValue.Nothing;
                 _assignedSlots[change.Slot] = false;
             }
         }
@@ -4759,7 +4758,7 @@ internal sealed class RegisterVmFastExecutionSession
         _changes.RemoveRange(mark, _changes.Count - mark);
     }
 
-    private bool Define(string name, RegisterFastValue value)
+    private bool Define(string name, RegisterVmValue value)
     {
         if (!_plan.TryGetSlot(name, out var slot))
         {
@@ -4769,7 +4768,7 @@ internal sealed class RegisterVmFastExecutionSession
         return DefineSlot(slot, value);
     }
 
-    private bool DefineSlot(int slot, RegisterFastValue value)
+    private bool DefineSlot(int slot, RegisterVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
         {
@@ -4784,15 +4783,15 @@ internal sealed class RegisterVmFastExecutionSession
         return true;
     }
 
-    private RegisterFastValue Resolve(string name)
+    private RegisterVmValue Resolve(string name)
         => _plan.TryGetSlot(name, out var slot) && _assignedSlots[slot]
             ? _locals[slot]
-            : RegisterFastValue.Nothing;
+            : RegisterVmValue.Nothing;
 
-    private RegisterFastValue ResolveSlot(int slot)
+    private RegisterVmValue ResolveSlot(int slot)
         => (uint)slot < (uint)_locals.Length && _assignedSlots[slot]
             ? _locals[slot]
-            : RegisterFastValue.Nothing;
+            : RegisterVmValue.Nothing;
 
     private bool TryConsumeExecutionStep(string detail)
     {
@@ -4830,7 +4829,7 @@ internal sealed class RegisterVmFastExecutionSession
             $"Bound '{parameter}'");
     }
 
-    private void RecordLetEvaluated(string identifier, RegisterFastValue value)
+    private void RecordLetEvaluated(string identifier, RegisterVmValue value)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4858,7 +4857,7 @@ internal sealed class RegisterVmFastExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordRuleCalled(RegisterFastInstruction instruction, RegisterFastValue input)
+    private void RecordRuleCalled(RegisterVmProgramInstruction instruction, RegisterVmValue input)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4874,7 +4873,7 @@ internal sealed class RegisterVmFastExecutionSession
             $"rule '{ruleName}' called");
     }
 
-    private void RecordCallableCalled(RegisterFastInstruction instruction, RegisterFastValue[] stack, int start, int count)
+    private void RecordCallableCalled(RegisterVmProgramInstruction instruction, RegisterVmValue[] stack, int start, int count)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4891,10 +4890,10 @@ internal sealed class RegisterVmFastExecutionSession
                 stack[start + argumentIndex].ToGseValue());
         }
 
-        var kind = instruction.CallableKind == RegisterFastCallableKind.Rule
+        var kind = instruction.CallableKind == RegisterVmCallableKind.Rule
             ? GseDiagnosticEventKind.RuleCalled
             : GseDiagnosticEventKind.SelectCalled;
-        var kindText = instruction.CallableKind == RegisterFastCallableKind.Rule ? "rule" : "select";
+        var kindText = instruction.CallableKind == RegisterVmCallableKind.Rule ? "rule" : "select";
         RecordDiagnostic(
             kind,
             callableName,
@@ -4902,9 +4901,9 @@ internal sealed class RegisterVmFastExecutionSession
             $"{kindText} '{callableName}' called");
     }
 
-    private void RecordLetExpressionEvaluatedToNothing(string identifier, RegisterFastValue value)
+    private void RecordLetExpressionEvaluatedToNothing(string identifier, RegisterVmValue value)
     {
-        if (!_diagnosticsEnabled || value.Kind != RegisterFastValueKind.Nothing)
+        if (!_diagnosticsEnabled || value.Kind != RegisterVmValueKind.Nothing)
         {
             return;
         }
@@ -4916,9 +4915,9 @@ internal sealed class RegisterVmFastExecutionSession
             $"Let '{identifier}' expression evaluated to Nothing.");
     }
 
-    private void RecordPublishArgumentEvaluatedToNothing(string argumentName, RegisterFastValue value)
+    private void RecordPublishArgumentEvaluatedToNothing(string argumentName, RegisterVmValue value)
     {
-        if (!_diagnosticsEnabled || value.Kind != RegisterFastValueKind.Nothing)
+        if (!_diagnosticsEnabled || value.Kind != RegisterVmValueKind.Nothing)
         {
             return;
         }
@@ -4930,9 +4929,9 @@ internal sealed class RegisterVmFastExecutionSession
             $"Publish argument '{argumentName}' evaluated to Nothing.");
     }
 
-    private void RecordExpressionStatementEvaluatedToNothing(ExpressionNode expression, RegisterFastValue value)
+    private void RecordExpressionStatementEvaluatedToNothing(ExpressionNode expression, RegisterVmValue value)
     {
-        if (!_diagnosticsEnabled || value.Kind != RegisterFastValueKind.Nothing)
+        if (!_diagnosticsEnabled || value.Kind != RegisterVmValueKind.Nothing)
         {
             return;
         }
@@ -4958,9 +4957,9 @@ internal sealed class RegisterVmFastExecutionSession
             new KeyValuePair<string, GseValue>(name, value)
         ]);
 
-    private static bool Fail(out RegisterFastValue value)
+    private static bool Fail(out RegisterVmValue value)
     {
-        value = RegisterFastValue.Nothing;
+        value = RegisterVmValue.Nothing;
         return false;
     }
 
@@ -4971,52 +4970,48 @@ internal sealed class RegisterVmFastExecutionSession
         return (long)value;
     }
 
-    private readonly record struct LocalChange(int Slot, bool HadValue, RegisterFastValue PreviousValue);
+    private readonly record struct LocalChange(int Slot, bool HadValue, RegisterVmValue PreviousValue);
 }
 
-internal enum RegisterFastValueKind
+internal enum RegisterVmValueKind
 {
     Nothing,
     Boolean,
     Integer,
     Decimal,
     Percentage,
-    Reference,
-    Unsupported
+    Reference
 }
 
-internal readonly record struct RegisterFastValue(
-    RegisterFastValueKind Kind,
+internal readonly record struct RegisterVmValue(
+    RegisterVmValueKind Kind,
     decimal Number,
     long IntegerValue,
     bool BooleanValue,
     GseDecimalUnit? Unit,
     GseValue? ReferenceValue)
 {
-    public static RegisterFastValue Nothing { get; } = new(RegisterFastValueKind.Nothing, 0m, 0, false, null, null);
+    public static RegisterVmValue Nothing { get; } = new(RegisterVmValueKind.Nothing, 0m, 0, false, null, null);
 
-    public static RegisterFastValue Boolean(bool value)
-        => new(RegisterFastValueKind.Boolean, value ? 1m : 0m, value ? 1 : 0, value, null, null);
+    public static RegisterVmValue Boolean(bool value)
+        => new(RegisterVmValueKind.Boolean, value ? 1m : 0m, value ? 1 : 0, value, null, null);
 
-    public static RegisterFastValue Integer(long value)
-        => new(RegisterFastValueKind.Integer, value, value, value != 0, null, null);
+    public static RegisterVmValue Integer(long value)
+        => new(RegisterVmValueKind.Integer, value, value, value != 0, null, null);
 
-    public static RegisterFastValue Decimal(decimal value, GseDecimalUnit? unit = null)
-        => new(RegisterFastValueKind.Decimal, value, ToLongSaturated(value), value != 0m, unit, null);
+    public static RegisterVmValue Decimal(decimal value, GseDecimalUnit? unit = null)
+        => new(RegisterVmValueKind.Decimal, value, ToLongSaturated(value), value != 0m, unit, null);
 
-    public static RegisterFastValue Percentage(decimal ratio)
-        => new(RegisterFastValueKind.Percentage, ratio, ToLongSaturated(ratio * 100m), ratio != 0m, null, null);
+    public static RegisterVmValue Percentage(decimal ratio)
+        => new(RegisterVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100m), ratio != 0m, null, null);
 
-    public static RegisterFastValue Reference(GseValue value)
-        => new(RegisterFastValueKind.Reference, 0m, 0, value.AsBoolean(), null, value);
+    public static RegisterVmValue Reference(GseValue value)
+        => new(RegisterVmValueKind.Reference, 0m, 0, value.AsBoolean(), null, value);
 
-    public static RegisterFastValue Unsupported()
-        => new(RegisterFastValueKind.Unsupported, 0m, 0, false, null, null);
-
-    public static RegisterFastValue NaN()
+    public static RegisterVmValue NaN()
         => Reference(DecimalNaN());
 
-    public static RegisterFastValue FromGseValue(GseValue value)
+    public static RegisterVmValue FromGseValue(GseValue value)
         => value switch
         {
             GseBooleanValue boolean => Boolean(boolean.Value),
@@ -5026,7 +5021,7 @@ internal readonly record struct RegisterFastValue(
             _ => Reference(value)
         };
 
-    public static RegisterFastValue FromGseFastValue(GseFastValue value)
+    public static RegisterVmValue FromGseFastValue(GseFastValue value)
         => value.Kind switch
         {
             GseValueKind.Nothing => Nothing,
@@ -5040,11 +5035,11 @@ internal readonly record struct RegisterFastValue(
     public bool AsBoolean()
         => Kind switch
         {
-            RegisterFastValueKind.Boolean => BooleanValue,
-            RegisterFastValueKind.Integer => IntegerValue != 0,
-            RegisterFastValueKind.Decimal => Number != 0m,
-            RegisterFastValueKind.Percentage => Number != 0m,
-            RegisterFastValueKind.Reference => ReferenceValue?.AsBoolean() ?? false,
+            RegisterVmValueKind.Boolean => BooleanValue,
+            RegisterVmValueKind.Integer => IntegerValue != 0,
+            RegisterVmValueKind.Decimal => Number != 0m,
+            RegisterVmValueKind.Percentage => Number != 0m,
+            RegisterVmValueKind.Reference => ReferenceValue?.AsBoolean() ?? false,
             _ => false
         };
 
@@ -5063,16 +5058,16 @@ internal readonly record struct RegisterFastValue(
     public GseValue ToGseValue()
         => Kind switch
         {
-            RegisterFastValueKind.Nothing => GseValue.Nothing,
-            RegisterFastValueKind.Boolean => GseValueFactory.Boolean(BooleanValue),
-            RegisterFastValueKind.Integer => GseValueFactory.Integer(IntegerValue),
-            RegisterFastValueKind.Decimal => GseValueFactory.Decimal(Number, Unit),
-            RegisterFastValueKind.Percentage => GseValueFactory.Percentage(Number),
-            RegisterFastValueKind.Reference => ReferenceValue ?? GseValue.Nothing,
+            RegisterVmValueKind.Nothing => GseValue.Nothing,
+            RegisterVmValueKind.Boolean => GseValueFactory.Boolean(BooleanValue),
+            RegisterVmValueKind.Integer => GseValueFactory.Integer(IntegerValue),
+            RegisterVmValueKind.Decimal => GseValueFactory.Decimal(Number, Unit),
+            RegisterVmValueKind.Percentage => GseValueFactory.Percentage(Number),
+            RegisterVmValueKind.Reference => ReferenceValue ?? GseValue.Nothing,
             _ => GseValue.Nothing
         };
 
-    public static bool AreEqual(RegisterFastValue left, RegisterFastValue right)
+    public static bool AreEqual(RegisterVmValue left, RegisterVmValue right)
     {
         if (left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) &&
             right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
@@ -5098,12 +5093,12 @@ internal readonly record struct RegisterFastValue(
         return left.ToGseValue().Equals(right.ToGseValue());
     }
 
-    public static int CompareNumeric(RegisterFastValue left, RegisterFastValue right)
+    public static int CompareNumeric(RegisterVmValue left, RegisterVmValue right)
     {
         return TryCompareNumeric(left, right, out var comparison) ? comparison : 0;
     }
 
-    public static bool TryCompareNumeric(RegisterFastValue left, RegisterFastValue right, out int comparison)
+    public static bool TryCompareNumeric(RegisterVmValue left, RegisterVmValue right, out int comparison)
     {
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
@@ -5129,7 +5124,7 @@ internal readonly record struct RegisterFastValue(
         return GseValueAlu.TryCompareNumeric(leftNumber, rightNumber, out comparison);
     }
 
-    public static RegisterFastValue Add(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue Add(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "+", right, out var vectorResult))
         {
@@ -5181,7 +5176,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.AddNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static RegisterFastValue Subtract(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue Subtract(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "-", right, out var vectorResult))
         {
@@ -5225,7 +5220,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.SubtractNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static RegisterFastValue Multiply(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue Multiply(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "*", right, out var vectorResult))
         {
@@ -5268,7 +5263,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
     }
 
-    public static RegisterFastValue Divide(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue Divide(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "/", right, out var vectorResult))
         {
@@ -5311,7 +5306,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
-    public static RegisterFastValue IntegerDivide(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue IntegerDivide(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "div", right, out var vectorResult))
         {
@@ -5352,7 +5347,7 @@ internal readonly record struct RegisterFastValue(
             : FromDecimalNumeric(result, resultUnit);
     }
 
-    public static RegisterFastValue Modulo(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue Modulo(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "mod", right, out var vectorResult))
         {
@@ -5392,7 +5387,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static RegisterFastValue Remainder(RegisterFastValue left, RegisterFastValue right)
+    public static RegisterVmValue Remainder(RegisterVmValue left, RegisterVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "rem", right, out var vectorResult))
         {
@@ -5459,7 +5454,7 @@ internal readonly record struct RegisterFastValue(
         return false;
     }
 
-    private static RegisterFastValue AddPercentage(RegisterFastValue left, RegisterFastValue right)
+    private static RegisterVmValue AddPercentage(RegisterVmValue left, RegisterVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
@@ -5481,7 +5476,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.AddNumeric(leftNumber, delta), leftUnit);
     }
 
-    private static RegisterFastValue SubtractPercentage(RegisterFastValue left, RegisterFastValue right)
+    private static RegisterVmValue SubtractPercentage(RegisterVmValue left, RegisterVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
@@ -5503,7 +5498,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(GseValueAlu.SubtractNumeric(leftNumber, delta), leftUnit);
     }
 
-    private static RegisterFastValue MultiplyPercentage(RegisterFastValue left, RegisterFastValue right)
+    private static RegisterVmValue MultiplyPercentage(RegisterVmValue left, RegisterVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
@@ -5527,7 +5522,7 @@ internal readonly record struct RegisterFastValue(
         return FromDecimalNumeric(result, leftUnit);
     }
 
-    private static RegisterFastValue DividePercentage(RegisterFastValue left, RegisterFastValue right)
+    private static RegisterVmValue DividePercentage(RegisterVmValue left, RegisterVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
@@ -5561,27 +5556,27 @@ internal readonly record struct RegisterFastValue(
     {
         switch (Kind)
         {
-            case RegisterFastValueKind.Boolean:
+            case RegisterVmValueKind.Boolean:
                 number = GseValueAlu.NumericValue.Finite(BooleanValue ? 1m : 0m);
                 unit = null;
                 isPercentage = false;
                 return true;
-            case RegisterFastValueKind.Integer:
+            case RegisterVmValueKind.Integer:
                 number = GseValueAlu.NumericValue.Finite(IntegerValue);
                 unit = null;
                 isPercentage = false;
                 return true;
-            case RegisterFastValueKind.Decimal:
+            case RegisterVmValueKind.Decimal:
                 number = GseValueAlu.NumericValue.Finite(Number);
                 unit = Unit;
                 isPercentage = false;
                 return true;
-            case RegisterFastValueKind.Percentage:
+            case RegisterVmValueKind.Percentage:
                 number = GseValueAlu.NumericValue.Finite(Number);
                 unit = null;
                 isPercentage = true;
                 return true;
-            case RegisterFastValueKind.Reference when ReferenceValue is { } reference &&
+            case RegisterVmValueKind.Reference when ReferenceValue is { } reference &&
                                                        GseValueAlu.TryCoerceNumericForOperation(reference, out var referenceNumber):
                 number = referenceNumber;
                 unit = GseValue.TryGetDecimalUnit(reference, out var referenceUnit) ? referenceUnit : null;
@@ -5599,14 +5594,14 @@ internal readonly record struct RegisterFastValue(
     {
         switch (Kind)
         {
-            case RegisterFastValueKind.Boolean:
+            case RegisterVmValueKind.Boolean:
                 number = BooleanValue ? 1m : 0m;
                 return true;
-            case RegisterFastValueKind.Integer:
+            case RegisterVmValueKind.Integer:
                 number = IntegerValue;
                 return true;
-            case RegisterFastValueKind.Decimal:
-            case RegisterFastValueKind.Percentage:
+            case RegisterVmValueKind.Decimal:
+            case RegisterVmValueKind.Percentage:
                 number = Number;
                 return true;
             default:
@@ -5616,13 +5611,13 @@ internal readonly record struct RegisterFastValue(
     }
 
     private bool IsPercentageLike()
-        => Kind == RegisterFastValueKind.Percentage ||
+        => Kind == RegisterVmValueKind.Percentage ||
            ReferenceValue is { } reference && reference.IsPercentage();
 
     private bool IsVectorLike()
         => ReferenceValue is GseVector2Value or GseVector3Value;
 
-    private static bool TryEvaluateVectorBinary(RegisterFastValue left, string operation, RegisterFastValue right, out RegisterFastValue value)
+    private static bool TryEvaluateVectorBinary(RegisterVmValue left, string operation, RegisterVmValue right, out RegisterVmValue value)
     {
         if (!left.IsVectorLike() && !right.IsVectorLike())
         {
@@ -5641,18 +5636,18 @@ internal readonly record struct RegisterFastValue(
     }
 
     public bool IsNothingLike()
-        => Kind == RegisterFastValueKind.Nothing ||
+        => Kind == RegisterVmValueKind.Nothing ||
            ReferenceValue is { } reference && reference.IsNothing();
 
-    private static RegisterFastValue FromDecimalNumeric(GseValueAlu.NumericValue number, GseDecimalUnit? unit = null)
+    private static RegisterVmValue FromDecimalNumeric(GseValueAlu.NumericValue number, GseDecimalUnit? unit = null)
         => number.IsFinite
             ? Decimal(number.Value, unit)
             : Reference(GseValueAlu.ToGseDecimal(number));
 
-    private static RegisterFastValue FromFinitePrimitiveNumericResult(
-        RegisterFastValue left,
+    private static RegisterVmValue FromFinitePrimitiveNumericResult(
+        RegisterVmValue left,
         string operation,
-        RegisterFastValue right,
+        RegisterVmValue right,
         decimal value,
         GseDecimalUnit? unit = null)
         => unit is null &&
@@ -5661,13 +5656,13 @@ internal readonly record struct RegisterFastValue(
             ? Integer(quotient)
             : unit is null &&
            operation is "+" or "-" or "*" or "mod" or "rem" &&
-           left.Kind == RegisterFastValueKind.Integer &&
-           right.Kind == RegisterFastValueKind.Integer &&
+           left.Kind == RegisterVmValueKind.Integer &&
+           right.Kind == RegisterVmValueKind.Integer &&
            TryToInteger(value, out var integer)
             ? Integer(integer)
             : Decimal(value, unit);
 
-    private static RegisterFastValue FromPercentageNumeric(GseValueAlu.NumericValue number)
+    private static RegisterVmValue FromPercentageNumeric(GseValueAlu.NumericValue number)
         => number.IsFinite
             ? Percentage(number.Value)
             : FromDecimalNumeric(number);

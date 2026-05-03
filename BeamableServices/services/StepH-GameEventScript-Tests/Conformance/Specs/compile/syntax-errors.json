@@ -8,7 +8,7 @@
       "script": "on Broken {\n  let x be\n  publish Done\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -17,7 +17,7 @@
       "script": "module BrokenCombat\nrule unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  publish Done\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Lexer"
+        "kind": "Syntax"
       }
     },
     {
@@ -26,7 +26,7 @@
       "script": "on Broken {\n  let value be hello%&some\n  let other be @\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Lexer",
+        "kind": "Syntax",
         "messageContains": "hello%&some"
       }
     },
@@ -36,7 +36,7 @@
       "script": "on Broken {\n  let value be 10 % 3\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Lexer"
+        "kind": "Syntax"
       }
     },
     {
@@ -45,7 +45,7 @@
       "script": "on Start(value) {\n  let numberValue as :Decimal be value\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -54,7 +54,7 @@
       "script": "external on Notify(playerId, points)",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -63,7 +63,7 @@
       "script": "on Sorted(items) {\n  let values be items[:sort]\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -72,7 +72,7 @@
       "script": "on Start(value) {\n  let score as decimal be value\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -81,7 +81,7 @@
       "script": "on Start(values) {\n  let size be len values\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -90,7 +90,7 @@
       "script": "on Start {\n  let value be :floor 10.4\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -99,7 +99,7 @@
       "script": "on Start {\n  let value be :wrapDegree 370°\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -108,7 +108,7 @@
       "script": "on Start {\n  for item in from 1 to 10 publish Seen(value: item)\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -117,7 +117,7 @@
       "script": "on Start {\n  let values be :list[:select item in from 1 to 5 -> item]\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -126,7 +126,7 @@
       "script": "on Start(seed) {\n  let values be :random with seed {\n    publish Done\n  }\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -135,7 +135,7 @@
       "script": "on Broken {\n  let x be :dice 4d6[:drop middle 1]\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -144,7 +144,7 @@
       "script": "on Broken {\n  let x be :dice 0d6\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -153,7 +153,7 @@
       "script": "on :handler Shoot(unit, target) {\n  publish Done\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -162,7 +162,7 @@
       "script": "on Start(unit, target) {\n  publish Shoot(unit:)\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -171,7 +171,7 @@
       "script": "on Start(unit, target) {\n  let h as :handler be :handler Shoot(unit, target)\n  let m as :message be :message Shoot(unit: unit, target: target)\n  publish :message Shoot(unit: unit, target: target)\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -180,7 +180,7 @@
       "script": "on Start(unit) {\n  let invalid be Shoot(unit + 1)\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     },
     {
@@ -189,7 +189,7 @@
       "script": "rule Wounded(unit) means unit.hp < unit.maxHp\nselect filter(Units) means Units\non Start(Target) {\n  publish Done\n}",
       "expectedError": {
         "phase": "syntax",
-        "kind": "Parser"
+        "kind": "Syntax"
       }
     }
   ]

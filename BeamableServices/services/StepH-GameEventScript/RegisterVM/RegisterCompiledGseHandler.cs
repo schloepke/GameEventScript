@@ -18,7 +18,7 @@ public sealed class RegisterCompiledGseHandler
         int programIndex,
         bool diagnosticsEnabled,
         IReadOnlyList<StatementNode> statements,
-        RegisterVmFastPathPlan fastPathPlan)
+        RegisterVmExecutionPlan executionPlan)
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));
         Parameters = parameters?.ToArray() ?? throw new ArgumentNullException(nameof(parameters));
@@ -28,7 +28,7 @@ public sealed class RegisterCompiledGseHandler
         ProgramIndex = programIndex;
         DiagnosticsEnabled = diagnosticsEnabled;
         Statements = statements?.ToArray() ?? throw new ArgumentNullException(nameof(statements));
-        FastPathPlan = fastPathPlan ?? throw new ArgumentNullException(nameof(fastPathPlan));
+        ExecutionPlan = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
         Definition = new GseMessageSignature(message, SignatureLabels);
     }
 
@@ -50,7 +50,5 @@ public sealed class RegisterCompiledGseHandler
 
     internal IReadOnlyList<StatementNode> Statements { get; }
 
-    internal RegisterVmFastPathPlan FastPathPlan { get; }
-
-    internal bool SupportsFastPath => FastPathPlan.IsSupported;
+    internal RegisterVmExecutionPlan ExecutionPlan { get; }
 }

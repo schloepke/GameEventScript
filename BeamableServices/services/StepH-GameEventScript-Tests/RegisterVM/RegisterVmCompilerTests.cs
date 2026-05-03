@@ -1,4 +1,6 @@
 using StepH.GameEventScript;
+using StepH.GameEventScript.Linker;
+using StepH.GameEventScript.Parser;
 using StepH.GameEventScript.RegisterVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -60,6 +62,29 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
+    public void RegisterVmRejectsUnknownStatementNodesAtCompileTime()
+    {
+        var module = new LinkedGseModule(
+            new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
+            new Dictionary<string, LinkedCallableDefinition>(StringComparer.Ordinal),
+            new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
+            {
+                ["Start"] =
+                [
+                    new EventHandlerNode(
+                        "Start",
+                        Array.Empty<ParameterNode>(),
+                        [new UnknownStatementNode()])
+                ]
+            },
+            sourceCount: 1);
+
+        var exception = Assert.ThrowsExactly<GseCompilationException>(() => RegisterGseCompiler.Compile(module));
+        StringAssert.Contains(exception.Message, "RegisterVM compiler does not support handler 'Start' #0");
+        StringAssert.Contains(exception.Message, nameof(UnknownStatementNode));
+    }
+
+    [TestMethod]
     public void RegisterVmRunsGeneratedCollectionsByDefault()
     {
         const string script =
@@ -86,7 +111,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsIfElseFastPath()
+    public void RegisterVmRunsIfElse()
     {
         const string script =
             """
@@ -151,7 +176,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsCollectionForFastPath()
+    public void RegisterVmRunsCollectionFor()
     {
         const string script =
             """
@@ -221,7 +246,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsTypedLetFastPath()
+    public void RegisterVmRunsTypedLet()
     {
         const string script =
             """
@@ -262,7 +287,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsMemberAndIndexedAccessFastPath()
+    public void RegisterVmRunsMemberAndIndexedAccess()
     {
         const string script =
             """
@@ -322,7 +347,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsCollectionLiteralsFastPath()
+    public void RegisterVmRunsCollectionLiterals()
     {
         const string script =
             """
@@ -388,7 +413,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsTypeCheckFastPath()
+    public void RegisterVmRunsTypeCheck()
     {
         const string script =
             """
@@ -465,7 +490,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsDirectMessageLiteralExpressionFastPath()
+    public void RegisterVmRunsDirectMessageLiteralExpression()
     {
         const string script =
             """
@@ -501,7 +526,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsHandlerLiteralAndBindFastPath()
+    public void RegisterVmRunsHandlerLiteralAndBind()
     {
         const string script =
             """
@@ -548,7 +573,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmFastPathEmitsDiagnosticsWhenEnabled()
+    public void RegisterVmEmitsDiagnosticsWhenEnabled()
     {
         const string script =
             """
@@ -821,4 +846,6 @@ public sealed class RegisterVmCompilerTests
         public GseFastValue Invoke(GseExtensionContext context, ReadOnlySpan<GseFastValue> arguments)
             => invoke(context, arguments);
     }
+
+    private sealed record UnknownStatementNode : StatementNode;
 }

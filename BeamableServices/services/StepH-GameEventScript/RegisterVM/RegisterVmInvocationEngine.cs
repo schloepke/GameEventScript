@@ -13,12 +13,6 @@ internal static class RegisterVmInvocationEngine
 
     public static void InvokeHandler(RegisterCompiledGse compiledScript, GseContext context, RegisterCompiledGseHandler handler, GseMessage message)
     {
-        if (handler.SupportsFastPath && RegisterVmFastExecutionSession.TryInvokeHandler(compiledScript, context, handler, message.Arguments)) return;
-
-        throw new RegisterVmUnsupportedException(message.Name, handler.SignatureId, handler.DeclarationOrder, GetUnsupportedReason(handler));
+        RegisterVmExecutionSession.InvokeHandler(compiledScript, context, handler, message.Arguments);
     }
-
-    private static string GetUnsupportedReason(RegisterCompiledGseHandler handler) => !handler.SupportsFastPath
-        ? handler.FastPathPlan.UnsupportedReason ?? "Handler is not supported by the RegisterVM fast path."
-        : "RegisterVM fast-path execution returned unsupported at runtime.";
 }

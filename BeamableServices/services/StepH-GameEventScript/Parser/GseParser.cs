@@ -10,16 +10,16 @@ namespace StepH.GameEventScript.Parser;
 
 
 /// <summary>
-/// A utility class responsible for parsing Event Script source code into a structured syntax tree.
+/// A utility class responsible for parsing GameEventScript source code into a structured syntax tree.
 /// This class serves as the entry point for transforming raw script strings
 /// into an abstract representation of the script for further processing or compilation.
 /// </summary>
 public sealed class GseParser
 {
     /// <summary>
-    /// Parses the provided Event Script string into an GseModule, which represents the root node of the syntax tree.
+    /// Parses the provided GameEventScript string into an GseModule, which represents the root node of the syntax tree.
     /// </summary>
-    /// <param name="script">The Event Script source code to be parsed.</param>
+    /// <param name="script">The GameEventScript source code to be parsed.</param>
     /// <param name="sourceName">An optional source name used for diagnostics.</param>
     /// <returns>An <see cref="GseModule"/> representing the parsed syntax tree structure.</returns>
     public static GseModule Parse(string script, string? sourceName = null)
@@ -40,7 +40,7 @@ public sealed class GseParser
                 initialErrors.Add(new GseSyntaxError(
                     $"Illegal token '{token.Text}'",
                     moduleName,
-                    GseSyntaxErrorKind.Lexer,
+                    GseSyntaxErrorKind.Syntax,
                     new GseSourceLocation(resolvedSourceName, token.Line, token.Column, token.EndLine, token.EndColumn, moduleName)));
                 continue;
             }
@@ -2531,7 +2531,7 @@ public sealed class GseParser
         _errors.Add(new GseSyntaxError(
             exception.Message,
             _moduleName,
-            GseSyntaxErrorKind.Parser,
+            GseSyntaxErrorKind.Syntax,
             new GseSourceLocation(_sourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, _moduleName)));
     }
 

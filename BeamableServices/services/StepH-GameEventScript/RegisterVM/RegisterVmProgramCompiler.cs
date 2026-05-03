@@ -10,18 +10,21 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.RegisterVM;
 
-internal static class RegisterVmFastPathAnalyzer
+internal static class RegisterVmProgramCompiler
 {
-    public static RegisterVmFastPathPlan CreateHandlerPlan(
+    public static RegisterVmExecutionPlan CompileHandlerPlan(
+        string messageName,
+        int declarationOrder,
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
         Func<GseExtensionReference, int>? externalReferenceResolver = null)
     {
-        if (!SupportsHandler(statements, callables, out var unsupportedReason))
+        if (!TryValidateStatements(statements, callables, out var failureReason))
         {
-            return RegisterVmFastPathPlan.Unsupported(unsupportedReason);
+            throw new GseCompilationException(
+                $"RegisterVM compiler does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
         }
 
         var slotCollector = new SlotCollector(callables, typeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal));
@@ -43,195 +46,190 @@ internal static class RegisterVmFastPathAnalyzer
             programCompiler.CompileStatementPrograms(statement);
         }
 
-        return RegisterVmFastPathPlan.Create(
+        return RegisterVmExecutionPlan.Create(
             slotCollector.Slots,
             programCompiler.ExpressionPrograms,
             programCompiler.PublishLayouts,
             programCompiler.MaxStackDepth);
     }
 
-    public static bool SupportsHandler(
-        IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables)
-        => SupportsHandler(statements, callables, out _);
-
-    private static bool SupportsHandler(
+    private static bool TryValidateStatements(
         IReadOnlyList<StatementNode> statements,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
         {
-            if (!SupportsStatement(statements[statementIndex], callables, out unsupportedReason))
+            if (!TryValidateStatement(statements[statementIndex], callables, out failureReason))
             {
-                unsupportedReason = $"Statement {statementIndex}: {unsupportedReason}";
+                failureReason = $"Statement {statementIndex}: {failureReason}";
                 return false;
             }
         }
 
-        unsupportedReason = string.Empty;
+        failureReason = string.Empty;
         return true;
     }
 
-    private static bool SupportsStatement(
+    private static bool TryValidateStatement(
         StatementNode statement,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         switch (statement)
         {
             case LetStatementNode let:
                 if (!string.IsNullOrEmpty(let.DeclaredType) &&
-                    !SupportsDeclaredType(let.DeclaredType!))
+                    !IsKnownDeclaredType(let.DeclaredType!))
                 {
-                    unsupportedReason = $"Typed let '{let.Identifier}' with type '{let.DeclaredType}' is not supported by the RegisterVM fast path yet.";
+                    failureReason = $"Typed let '{let.Identifier}' with type '{let.DeclaredType}' is not currently supported.";
                     return false;
                 }
 
-                if (!SupportsExpression(let.Expression, callables, out unsupportedReason))
+                if (!TryValidateExpression(let.Expression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Let '{let.Identifier}' expression: {unsupportedReason}";
+                    failureReason = $"Let '{let.Identifier}' expression: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case PublishStatementNode publish:
-                if (!SupportsExpression(publish.MessageExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(publish.MessageExpression, callables, out failureReason))
                 {
-                    unsupportedReason = publish.MessageExpression is MessageLiteralExpressionNode
-                        ? $"Publish message expression: {unsupportedReason}"
-                        : $"Publish expression: {unsupportedReason}";
+                    failureReason = publish.MessageExpression is MessageLiteralExpressionNode
+                        ? $"Publish message expression: {failureReason}"
+                        : $"Publish expression: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case IfStatementNode ifStatement:
-                if (!SupportsExpression(ifStatement.Condition, callables, out unsupportedReason))
+                if (!TryValidateExpression(ifStatement.Condition, callables, out failureReason))
                 {
-                    unsupportedReason = $"If condition: {unsupportedReason}";
+                    failureReason = $"If condition: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsHandler(ifStatement.ThenBody.Statements, callables, out unsupportedReason))
+                if (!TryValidateStatements(ifStatement.ThenBody.Statements, callables, out failureReason))
                 {
-                    unsupportedReason = $"If then body: {unsupportedReason}";
+                    failureReason = $"If then body: {failureReason}";
                     return false;
                 }
 
                 if (ifStatement.ElseBody is not null &&
-                    !SupportsHandler(ifStatement.ElseBody.Statements, callables, out unsupportedReason))
+                    !TryValidateStatements(ifStatement.ElseBody.Statements, callables, out failureReason))
                 {
-                    unsupportedReason = $"If else body: {unsupportedReason}";
+                    failureReason = $"If else body: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ForStatementNode { Source: RangeIterationSourceNode range } forStatement:
-                if (!SupportsRange(range.RangeExpression, callables, out unsupportedReason))
+                if (!TryValidateRange(range.RangeExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"For range: {unsupportedReason}";
+                    failureReason = $"For range: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsHandler(forStatement.Body.Statements, callables, out unsupportedReason))
+                if (!TryValidateStatements(forStatement.Body.Statements, callables, out failureReason))
                 {
-                    unsupportedReason = $"For body: {unsupportedReason}";
+                    failureReason = $"For body: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement:
-                if (!SupportsExpression(collection.Expression, callables, out unsupportedReason))
+                if (!TryValidateExpression(collection.Expression, callables, out failureReason))
                 {
-                    unsupportedReason = $"For collection source: {unsupportedReason}";
+                    failureReason = $"For collection source: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsHandler(forStatement.Body.Statements, callables, out unsupportedReason))
+                if (!TryValidateStatements(forStatement.Body.Statements, callables, out failureReason))
                 {
-                    unsupportedReason = $"For body: {unsupportedReason}";
+                    failureReason = $"For body: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ForStatementNode forStatement:
-                unsupportedReason = $"For source '{forStatement.Source.GetType().Name}' is not supported by the RegisterVM fast path.";
+                failureReason = $"For source '{forStatement.Source.GetType().Name}' is not currently supported.";
                 return false;
 
             case ExpressionStatementNode expressionStatement:
-                if (!SupportsExpression(expressionStatement.Expression, callables, out unsupportedReason))
+                if (!TryValidateExpression(expressionStatement.Expression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Expression statement: {unsupportedReason}";
+                    failureReason = $"Expression statement: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case SeededRandomStatementNode seededRandom:
-                if (!SupportsExpression(seededRandom.SeedExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(seededRandom.SeedExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Seeded random seed: {unsupportedReason}";
+                    failureReason = $"Seeded random seed: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsHandler(seededRandom.Body.Statements, callables, out unsupportedReason))
+                if (!TryValidateStatements(seededRandom.Body.Statements, callables, out failureReason))
                 {
-                    unsupportedReason = $"Seeded random body: {unsupportedReason}";
+                    failureReason = $"Seeded random body: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             default:
-                unsupportedReason = $"Statement '{statement.GetType().Name}' is not supported by the RegisterVM fast path.";
+                failureReason = $"Statement '{statement.GetType().Name}' is not currently supported.";
                 return false;
         }
     }
 
-    private static bool SupportsRange(
+    private static bool TryValidateRange(
         RangeExpressionNode range,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
-        if (!SupportsExpression(range.FromExpression, callables, out unsupportedReason))
+        if (!TryValidateExpression(range.FromExpression, callables, out failureReason))
         {
-            unsupportedReason = $"Range start: {unsupportedReason}";
+            failureReason = $"Range start: {failureReason}";
             return false;
         }
 
-        if (!SupportsExpression(range.ToExpression, callables, out unsupportedReason))
+        if (!TryValidateExpression(range.ToExpression, callables, out failureReason))
         {
-            unsupportedReason = $"Range end: {unsupportedReason}";
+            failureReason = $"Range end: {failureReason}";
             return false;
         }
 
         if (range.StepExpression is not null &&
-            !SupportsExpression(range.StepExpression, callables, out unsupportedReason))
+            !TryValidateExpression(range.StepExpression, callables, out failureReason))
         {
-            unsupportedReason = $"Range step: {unsupportedReason}";
+            failureReason = $"Range step: {failureReason}";
             return false;
         }
 
-        unsupportedReason = string.Empty;
+        failureReason = string.Empty;
         return true;
     }
 
-    private static bool SupportsExpression(
+    private static bool TryValidateExpression(
         ExpressionNode expression,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         switch (expression)
         {
@@ -243,335 +241,335 @@ internal static class RegisterVmFastPathAnalyzer
             case TextLiteralExpressionNode:
             case TagLiteralExpressionNode:
             case IdentifierExpressionNode:
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case MessageLiteralExpressionNode message:
                 for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
                 {
                     var argument = message.Arguments[argumentIndex];
-                    if (!SupportsExpression(argument.Expression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(argument.Expression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Message argument '{argument.Name}': {unsupportedReason}";
+                        failureReason = $"Message argument '{argument.Name}': {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case HandlerLiteralExpressionNode:
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case HandlerBindExpressionNode handlerBind:
-                if (!SupportsExpression(handlerBind.CalleeExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(handlerBind.CalleeExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Handler bind callee: {unsupportedReason}";
+                    failureReason = $"Handler bind callee: {failureReason}";
                     return false;
                 }
 
                 for (var argumentIndex = 0; argumentIndex < handlerBind.Arguments.Count; argumentIndex++)
                 {
                     var argument = handlerBind.Arguments[argumentIndex];
-                    if (!SupportsExpression(argument.Expression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(argument.Expression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Handler bind argument '{argument.Name}': {unsupportedReason}";
+                        failureReason = $"Handler bind argument '{argument.Name}': {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ExtensionCallExpressionNode extensionCall:
                 for (var argumentIndex = 0; argumentIndex < extensionCall.Arguments.Count; argumentIndex++)
                 {
-                    if (!SupportsExpression(extensionCall.Arguments[argumentIndex].Expression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(extensionCall.Arguments[argumentIndex].Expression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Extension argument {argumentIndex}: {unsupportedReason}";
+                        failureReason = $"Extension argument {argumentIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case TypeConstructorExpressionNode typeConstructor:
                 for (var argumentIndex = 0; argumentIndex < typeConstructor.Arguments.Count; argumentIndex++)
                 {
-                    if (!SupportsExpression(typeConstructor.Arguments[argumentIndex].Expression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(typeConstructor.Arguments[argumentIndex].Expression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Type constructor argument {argumentIndex}: {unsupportedReason}";
+                        failureReason = $"Type constructor argument {argumentIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ListLiteralExpressionNode list:
                 for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
                 {
-                    if (!SupportsExpression(list.Items[itemIndex], callables, out unsupportedReason))
+                    if (!TryValidateExpression(list.Items[itemIndex], callables, out failureReason))
                     {
-                        unsupportedReason = $"List item {itemIndex}: {unsupportedReason}";
+                        failureReason = $"List item {itemIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case SequenceLiteralExpressionNode sequence:
                 for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
                 {
-                    if (!SupportsExpression(sequence.Items[itemIndex], callables, out unsupportedReason))
+                    if (!TryValidateExpression(sequence.Items[itemIndex], callables, out failureReason))
                     {
-                        unsupportedReason = $"Sequence item {itemIndex}: {unsupportedReason}";
+                        failureReason = $"Sequence item {itemIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case SetLiteralExpressionNode set:
                 for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
                 {
-                    if (!SupportsExpression(set.Items[itemIndex], callables, out unsupportedReason))
+                    if (!TryValidateExpression(set.Items[itemIndex], callables, out failureReason))
                     {
-                        unsupportedReason = $"Set item {itemIndex}: {unsupportedReason}";
+                        failureReason = $"Set item {itemIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case DictionaryLiteralExpressionNode dictionary:
                 for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
                 {
                     var entry = dictionary.Entries[entryIndex];
-                    if (!SupportsExpression(entry.Value, callables, out unsupportedReason))
+                    if (!TryValidateExpression(entry.Value, callables, out failureReason))
                     {
-                        unsupportedReason = $"Dictionary entry '{entry.Key}': {unsupportedReason}";
+                        failureReason = $"Dictionary entry '{entry.Key}': {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case UnaryExpressionNode unary:
-                if (!SupportsUnaryOperator(unary.Operator))
+                if (!IsKnownUnaryOperator(unary.Operator))
                 {
-                    unsupportedReason = $"Unary operator '{unary.Operator}' is not supported by the RegisterVM fast path.";
+                    failureReason = $"Unary operator '{unary.Operator}' is not currently supported.";
                     return false;
                 }
 
-                if (!SupportsExpression(unary.Operand, callables, out unsupportedReason))
+                if (!TryValidateExpression(unary.Operand, callables, out failureReason))
                 {
-                    unsupportedReason = $"Unary operand: {unsupportedReason}";
+                    failureReason = $"Unary operand: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case VariadicTaggedExpressionNode variadic:
-                if (!SupportsVariadicTaggedOperator(variadic.Operator))
+                if (!IsKnownVariadicTaggedOperator(variadic.Operator))
                 {
-                    unsupportedReason = $"Variadic operator '{variadic.Operator}' is not supported by the RegisterVM fast path.";
+                    failureReason = $"Variadic operator '{variadic.Operator}' is not currently supported.";
                     return false;
                 }
 
                 for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
                 {
-                    if (!SupportsExpression(variadic.Arguments[argumentIndex], callables, out unsupportedReason))
+                    if (!TryValidateExpression(variadic.Arguments[argumentIndex], callables, out failureReason))
                     {
-                        unsupportedReason = $"Variadic argument {argumentIndex}: {unsupportedReason}";
+                        failureReason = $"Variadic argument {argumentIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ClampExpressionNode clamp:
-                if (!SupportsExpression(clamp.Value, callables, out unsupportedReason))
+                if (!TryValidateExpression(clamp.Value, callables, out failureReason))
                 {
-                    unsupportedReason = $"Clamp value: {unsupportedReason}";
+                    failureReason = $"Clamp value: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsExpression(clamp.Minimum, callables, out unsupportedReason))
+                if (!TryValidateExpression(clamp.Minimum, callables, out failureReason))
                 {
-                    unsupportedReason = $"Clamp minimum: {unsupportedReason}";
+                    failureReason = $"Clamp minimum: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsExpression(clamp.Maximum, callables, out unsupportedReason))
+                if (!TryValidateExpression(clamp.Maximum, callables, out failureReason))
                 {
-                    unsupportedReason = $"Clamp maximum: {unsupportedReason}";
+                    failureReason = $"Clamp maximum: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case RandomExpressionNode random:
-                if (!SupportsExpression(random.FromExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(random.FromExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Random start: {unsupportedReason}";
+                    failureReason = $"Random start: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsExpression(random.ToExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(random.ToExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Random end: {unsupportedReason}";
+                    failureReason = $"Random end: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case RangeExpressionNode range:
-                return SupportsRange(range, callables, out unsupportedReason);
+                return TryValidateRange(range, callables, out failureReason);
 
             case DiceExpressionNode:
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case SeededRandomExpressionNode seededRandom:
-                if (!SupportsExpression(seededRandom.SeedExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(seededRandom.SeedExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Seeded random seed: {unsupportedReason}";
+                    failureReason = $"Seeded random seed: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsExpression(seededRandom.BodyExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(seededRandom.BodyExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Seeded random body: {unsupportedReason}";
+                    failureReason = $"Seeded random body: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case GeneratedCollectionExpressionNode generatedCollection:
-                if (!SupportsIterationSource(generatedCollection.Source, callables, out unsupportedReason))
+                if (!TryValidateIterationSource(generatedCollection.Source, callables, out failureReason))
                 {
-                    unsupportedReason = $"Generated collection source: {unsupportedReason}";
+                    failureReason = $"Generated collection source: {failureReason}";
                     return false;
                 }
 
                 if (generatedCollection.Predicate is not null &&
-                    !SupportsExpression(generatedCollection.Predicate, callables, out unsupportedReason))
+                    !TryValidateExpression(generatedCollection.Predicate, callables, out failureReason))
                 {
-                    unsupportedReason = $"Generated collection predicate: {unsupportedReason}";
+                    failureReason = $"Generated collection predicate: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsExpression(generatedCollection.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(generatedCollection.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Generated collection projection: {unsupportedReason}";
+                    failureReason = $"Generated collection projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case GuardedChoiceExpressionNode guardedChoice:
                 for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
                 {
                     var branch = guardedChoice.Branches[branchIndex];
-                    if (!SupportsExpression(branch.ConditionExpression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(branch.ConditionExpression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Guarded choice branch {branchIndex} condition: {unsupportedReason}";
+                        failureReason = $"Guarded choice branch {branchIndex} condition: {failureReason}";
                         return false;
                     }
 
-                    if (!SupportsExpression(branch.ValueExpression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(branch.ValueExpression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Guarded choice branch {branchIndex} value: {unsupportedReason}";
+                        failureReason = $"Guarded choice branch {branchIndex} value: {failureReason}";
                         return false;
                     }
                 }
 
-                if (!SupportsExpression(guardedChoice.OtherwiseExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(guardedChoice.OtherwiseExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Guarded choice otherwise: {unsupportedReason}";
+                    failureReason = $"Guarded choice otherwise: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case BinaryExpressionNode binary:
-                if (!SupportsBinaryOperator(binary.Operator))
+                if (!IsKnownBinaryOperator(binary.Operator))
                 {
-                    unsupportedReason = $"Binary operator '{binary.Operator}' is not supported by the RegisterVM fast path.";
+                    failureReason = $"Binary operator '{binary.Operator}' is not currently supported.";
                     return false;
                 }
 
-                if (!SupportsExpression(binary.Left, callables, out unsupportedReason))
+                if (!TryValidateExpression(binary.Left, callables, out failureReason))
                 {
-                    unsupportedReason = $"Binary left operand: {unsupportedReason}";
+                    failureReason = $"Binary left operand: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsExpression(binary.Right, callables, out unsupportedReason))
+                if (!TryValidateExpression(binary.Right, callables, out failureReason))
                 {
-                    unsupportedReason = $"Binary right operand: {unsupportedReason}";
+                    failureReason = $"Binary right operand: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case RulePredicateExpressionNode rulePredicate:
-                if (!SupportsExpression(rulePredicate.Value, callables, out unsupportedReason))
+                if (!TryValidateExpression(rulePredicate.Value, callables, out failureReason))
                 {
-                    unsupportedReason = $"Rule predicate value: {unsupportedReason}";
+                    failureReason = $"Rule predicate value: {failureReason}";
                     return false;
                 }
 
                 if (!callables.TryGetValue(rulePredicate.RuleName, out var callable))
                 {
-                    unsupportedReason = $"Rule '{rulePredicate.RuleName}' was not found.";
+                    failureReason = $"Rule '{rulePredicate.RuleName}' was not found.";
                     return false;
                 }
 
                 if (callable.Kind != LinkedCallableKind.Rule)
                 {
-                    unsupportedReason = $"Callable '{rulePredicate.RuleName}' is a {callable.Kind}, not a rule.";
+                    failureReason = $"Callable '{rulePredicate.RuleName}' is a {callable.Kind}, not a rule.";
                     return false;
                 }
 
                 if (callable.Parameters.Count != 1)
                 {
-                    unsupportedReason = $"Rule '{rulePredicate.RuleName}' has {callable.Parameters.Count} parameters; only unary rule predicates are supported.";
+                    failureReason = $"Rule '{rulePredicate.RuleName}' has {callable.Parameters.Count} parameters; only unary rule predicates are supported.";
                     return false;
                 }
 
-                if (!SupportsExpression(callable.Expression, callables, out unsupportedReason))
+                if (!TryValidateExpression(callable.Expression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Rule '{rulePredicate.RuleName}' expression: {unsupportedReason}";
+                    failureReason = $"Rule '{rulePredicate.RuleName}' expression: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ExtensionPredicateExpressionNode extensionPredicate:
-                if (!SupportsExpression(extensionPredicate.Value, callables, out unsupportedReason))
+                if (!TryValidateExpression(extensionPredicate.Value, callables, out failureReason))
                 {
-                    unsupportedReason = $"Extension predicate value: {unsupportedReason}";
+                    failureReason = $"Extension predicate value: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case CallExpressionNode call:
@@ -579,112 +577,112 @@ internal static class RegisterVmFastPathAnalyzer
                 {
                     foreach (var argument in call.ArgumentList.Arguments)
                     {
-                        if (!SupportsExpression(argument.Expression, callables, out unsupportedReason))
+                        if (!TryValidateExpression(argument.Expression, callables, out failureReason))
                         {
-                            unsupportedReason = $"Handler bind argument: {unsupportedReason}";
+                            failureReason = $"Handler bind argument: {failureReason}";
                             return false;
                         }
                     }
 
-                    unsupportedReason = string.Empty;
+                    failureReason = string.Empty;
                     return true;
                 }
 
                 if (called.Parameters.Count != call.Arguments.Count)
                 {
-                    unsupportedReason = $"Callable '{call.Name}' expects {called.Parameters.Count} arguments but received {call.Arguments.Count}.";
+                    failureReason = $"Callable '{call.Name}' expects {called.Parameters.Count} arguments but received {call.Arguments.Count}.";
                     return false;
                 }
 
                 for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
                 {
-                    if (!SupportsExpression(call.Arguments[argumentIndex], callables, out unsupportedReason))
+                    if (!TryValidateExpression(call.Arguments[argumentIndex], callables, out failureReason))
                     {
-                        unsupportedReason = $"Call argument {argumentIndex}: {unsupportedReason}";
+                        failureReason = $"Call argument {argumentIndex}: {failureReason}";
                         return false;
                     }
                 }
 
-                if (!SupportsExpression(called.Expression, callables, out unsupportedReason))
+                if (!TryValidateExpression(called.Expression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Callable '{call.Name}' expression: {unsupportedReason}";
+                    failureReason = $"Callable '{call.Name}' expression: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case TypeCastExpressionNode typeCast:
-                if (!SupportsExpression(typeCast.Value, callables, out unsupportedReason))
+                if (!TryValidateExpression(typeCast.Value, callables, out failureReason))
                 {
-                    unsupportedReason = $"Type cast value: {unsupportedReason}";
+                    failureReason = $"Type cast value: {failureReason}";
                     return false;
                 }
 
-                if (!SupportsTypeCast(typeCast.TypeName))
+                if (!IsKnownTypeCast(typeCast.TypeName))
                 {
-                    unsupportedReason = $"Type cast '{typeCast.TypeName}' is not supported by the RegisterVM fast path.";
+                    failureReason = $"Type cast '{typeCast.TypeName}' is not currently supported.";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case TypeCheckExpressionNode typeCheck:
-                if (!SupportsExpression(typeCheck.Value, callables, out unsupportedReason))
+                if (!TryValidateExpression(typeCheck.Value, callables, out failureReason))
                 {
-                    unsupportedReason = $"Type check value: {unsupportedReason}";
+                    failureReason = $"Type check value: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case MemberAccessExpressionNode memberAccess:
-                if (!SupportsExpression(memberAccess.Target, callables, out unsupportedReason))
+                if (!TryValidateExpression(memberAccess.Target, callables, out failureReason))
                 {
-                    unsupportedReason = $"Member access target: {unsupportedReason}";
+                    failureReason = $"Member access target: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case CollectionAccessExpressionNode collectionAccess:
-                if (SupportsPipelinedCollection(collectionAccess, callables, out unsupportedReason) ||
-                    SupportsIndexedCollectionAccess(collectionAccess, callables, out unsupportedReason))
+                if (TryValidatePipelinedCollection(collectionAccess, callables, out failureReason) ||
+                    TryValidateIndexedCollectionAccess(collectionAccess, callables, out failureReason))
                 {
-                    unsupportedReason = string.Empty;
+                    failureReason = string.Empty;
                     return true;
                 }
 
                 return false;
 
             default:
-                unsupportedReason = $"Expression '{expression.GetType().Name}' is not supported by the RegisterVM fast path.";
+                failureReason = $"Expression '{expression.GetType().Name}' is not currently supported.";
                 return false;
         }
     }
 
-    private static bool SupportsBinaryOperator(string operation)
+    private static bool IsKnownBinaryOperator(string operation)
         => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or
             "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" or
             "&" or "|" or "^" or "default" or "in" or "value in" or
             "starts with" or "ends with" or
             "intersect" or "combine" or "merge" or "except" or "zip";
 
-    private static bool SupportsUnaryOperator(string operation)
+    private static bool IsKnownUnaryOperator(string operation)
         => operation is "-" or "!" or "has value" or "empty" or
             "len" or "chance" or "keys" or "values" or "entries" or
             "abs";
 
-    private static bool SupportsVariadicTaggedOperator(string operation)
+    private static bool IsKnownVariadicTaggedOperator(string operation)
         => operation is "min" or "max";
 
-    private static bool SupportsTypeCast(string typeName)
+    private static bool IsKnownTypeCast(string typeName)
         => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second" or "sequence";
 
-    private static bool SupportsDeclaredType(string typeName)
+    private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
             "vector2" or "vector3" or
@@ -693,36 +691,36 @@ internal static class RegisterVmFastPathAnalyzer
             "dictionary" or "set" or "dice" or "optional" ||
             !string.IsNullOrWhiteSpace(typeName);
 
-    private static bool SupportsIterationSource(
+    private static bool TryValidateIterationSource(
         IterationSourceNode source,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         switch (source)
         {
             case CollectionIterationSourceNode collection:
-                if (!SupportsExpression(collection.Expression, callables, out unsupportedReason))
+                if (!TryValidateExpression(collection.Expression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Collection source expression: {unsupportedReason}";
+                    failureReason = $"Collection source expression: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case RangeIterationSourceNode range:
-                return SupportsRange(range.RangeExpression, callables, out unsupportedReason);
+                return TryValidateRange(range.RangeExpression, callables, out failureReason);
 
             default:
-                unsupportedReason = $"Iteration source '{source.GetType().Name}' is not supported.";
+                failureReason = $"Iteration source '{source.GetType().Name}' is not supported.";
                 return false;
         }
     }
 
-    private static bool SupportsPipelinedCollection(
+    private static bool TryValidatePipelinedCollection(
         CollectionAccessExpressionNode expression,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         var selectors = new List<CollectionSelectorNode>();
         ExpressionNode source = expression;
@@ -735,229 +733,229 @@ internal static class RegisterVmFastPathAnalyzer
         selectors.Reverse();
         if (selectors.Count == 0)
         {
-            unsupportedReason = "Collection access did not contain a selector.";
+            failureReason = "Collection access did not contain a selector.";
             return false;
         }
 
-        if (!SupportsExpression(source, callables, out unsupportedReason))
+        if (!TryValidateExpression(source, callables, out failureReason))
         {
-            unsupportedReason = $"Collection source: {unsupportedReason}";
+            failureReason = $"Collection source: {failureReason}";
             return false;
         }
 
         for (var i = 0; i < selectors.Count; i++)
         {
             var isTerminal = i == selectors.Count - 1;
-            if (!SupportsSelector(selectors[i], isTerminal, callables, out unsupportedReason))
+            if (!TryValidateSelector(selectors[i], isTerminal, callables, out failureReason))
             {
-                unsupportedReason = $"Collection selector {i}: {unsupportedReason}";
+                failureReason = $"Collection selector {i}: {failureReason}";
                 return false;
             }
         }
 
-        unsupportedReason = string.Empty;
+        failureReason = string.Empty;
         return true;
     }
 
-    private static bool SupportsIndexedCollectionAccess(
+    private static bool TryValidateIndexedCollectionAccess(
         CollectionAccessExpressionNode expression,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         if (expression.Selector is not ExpressionSelectorNode selector)
         {
-            unsupportedReason = $"Collection selector '{expression.Selector.GetType().Name}' is not a direct index/key expression.";
+            failureReason = $"Collection selector '{expression.Selector.GetType().Name}' is not a direct index/key expression.";
             return false;
         }
 
-        if (!SupportsExpression(expression.Target, callables, out unsupportedReason))
+        if (!TryValidateExpression(expression.Target, callables, out failureReason))
         {
-            unsupportedReason = $"Collection access target: {unsupportedReason}";
+            failureReason = $"Collection access target: {failureReason}";
             return false;
         }
 
-        if (!SupportsExpression(selector.Expression, callables, out unsupportedReason))
+        if (!TryValidateExpression(selector.Expression, callables, out failureReason))
         {
-            unsupportedReason = $"Collection access selector: {unsupportedReason}";
+            failureReason = $"Collection access selector: {failureReason}";
             return false;
         }
 
-        unsupportedReason = string.Empty;
+        failureReason = string.Empty;
         return true;
     }
 
-    private static bool SupportsSelector(
+    private static bool TryValidateSelector(
         CollectionSelectorNode selector,
         bool isTerminal,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         switch (selector)
         {
             case FilterSelectorNode filter:
-                if (!SupportsExpression(filter.Predicate, callables, out unsupportedReason))
+                if (!TryValidateExpression(filter.Predicate, callables, out failureReason))
                 {
-                    unsupportedReason = $"Filter predicate: {unsupportedReason}";
+                    failureReason = $"Filter predicate: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case SelectSelectorNode select:
-                if (!SupportsExpression(select.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(select.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Select projection: {unsupportedReason}";
+                    failureReason = $"Select projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case PredicateSelectorNode predicate when isTerminal:
-                if (!SupportsExpression(predicate.Predicate, callables, out unsupportedReason))
+                if (!TryValidateExpression(predicate.Predicate, callables, out failureReason))
                 {
-                    unsupportedReason = $"Predicate selector predicate: {unsupportedReason}";
+                    failureReason = $"Predicate selector predicate: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case SumSelectorNode sum when isTerminal:
-                if (!SupportsExpression(sum.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(sum.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Sum projection: {unsupportedReason}";
+                    failureReason = $"Sum projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case AverageSelectorNode average when isTerminal:
-                if (!SupportsExpression(average.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(average.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Average projection: {unsupportedReason}";
+                    failureReason = $"Average projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case CountSelectorNode count when isTerminal:
-                if (!SupportsExpression(count.Predicate, callables, out unsupportedReason))
+                if (!TryValidateExpression(count.Predicate, callables, out failureReason))
                 {
-                    unsupportedReason = $"Count predicate: {unsupportedReason}";
+                    failureReason = $"Count predicate: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case EdgeSelectorNode edge when isTerminal:
                 if (edge.Predicate is not null &&
-                    !SupportsExpression(edge.Predicate, callables, out unsupportedReason))
+                    !TryValidateExpression(edge.Predicate, callables, out failureReason))
                 {
-                    unsupportedReason = $"Edge predicate: {unsupportedReason}";
+                    failureReason = $"Edge predicate: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case PatternSelectorNode pattern when isTerminal:
-                if (!SupportsDicePattern(pattern.Pattern, callables, out unsupportedReason))
+                if (!TryValidateDicePattern(pattern.Pattern, callables, out failureReason))
                 {
-                    unsupportedReason = $"Pattern selector: {unsupportedReason}";
+                    failureReason = $"Pattern selector: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ObjectMatchSelectorNode objectMatch when isTerminal:
-                if (!SupportsObjectMatchPattern(objectMatch.Pattern, callables, out unsupportedReason))
+                if (!TryValidateObjectMatchPattern(objectMatch.Pattern, callables, out failureReason))
                 {
-                    unsupportedReason = $"Object match selector: {unsupportedReason}";
+                    failureReason = $"Object match selector: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case TakePatternSelectorNode takePattern when isTerminal:
-                if (!SupportsDicePattern(takePattern.Pattern, callables, out unsupportedReason))
+                if (!TryValidateDicePattern(takePattern.Pattern, callables, out failureReason))
                 {
-                    unsupportedReason = $"Take pattern selector: {unsupportedReason}";
+                    failureReason = $"Take pattern selector: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case MinSelectorNode min when isTerminal:
-                if (!SupportsExpression(min.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(min.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Min projection: {unsupportedReason}";
+                    failureReason = $"Min projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case MaxSelectorNode max when isTerminal:
-                if (!SupportsExpression(max.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(max.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Max projection: {unsupportedReason}";
+                    failureReason = $"Max projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case DictionarySelectorNode dictionary when isTerminal:
-                if (!SupportsExpression(dictionary.KeyProjection, callables, out unsupportedReason))
+                if (!TryValidateExpression(dictionary.KeyProjection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Dictionary key projection: {unsupportedReason}";
+                    failureReason = $"Dictionary key projection: {failureReason}";
                     return false;
                 }
 
                 if (dictionary.ValueProjection is not null &&
-                    !SupportsExpression(dictionary.ValueProjection, callables, out unsupportedReason))
+                    !TryValidateExpression(dictionary.ValueProjection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Dictionary value projection: {unsupportedReason}";
+                    failureReason = $"Dictionary value projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ContainsSelectorNode contains when isTerminal:
-                if (!SupportsExpression(contains.ValueExpression, callables, out unsupportedReason))
+                if (!TryValidateExpression(contains.ValueExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Contains value: {unsupportedReason}";
+                    failureReason = $"Contains value: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case ChooseSelectorNode choose when isTerminal:
                 if (choose.Predicate is not null &&
-                    !SupportsExpression(choose.Predicate, callables, out unsupportedReason))
+                    !TryValidateExpression(choose.Predicate, callables, out failureReason))
                 {
-                    unsupportedReason = $"Choose predicate: {unsupportedReason}";
+                    failureReason = $"Choose predicate: {failureReason}";
                     return false;
                 }
 
                 if (choose.WeightExpression is not null &&
-                    !SupportsExpression(choose.WeightExpression, callables, out unsupportedReason))
+                    !TryValidateExpression(choose.WeightExpression, callables, out failureReason))
                 {
-                    unsupportedReason = $"Choose weight: {unsupportedReason}";
+                    failureReason = $"Choose weight: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case DrawSelectorNode when isTerminal:
@@ -965,84 +963,84 @@ internal static class RegisterVmFastPathAnalyzer
             case SortSelectorNode when isTerminal:
             case ReverseSelectorNode when isTerminal:
             case SequenceSliceSelectorNode when isTerminal:
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case DistinctSelectorNode distinct when isTerminal:
                 if (distinct.Projection is not null &&
-                    !SupportsExpression(distinct.Projection, callables, out unsupportedReason))
+                    !TryValidateExpression(distinct.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Distinct projection: {unsupportedReason}";
+                    failureReason = $"Distinct projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case GroupBySelectorNode groupBy when isTerminal:
-                if (!SupportsExpression(groupBy.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(groupBy.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Group projection: {unsupportedReason}";
+                    failureReason = $"Group projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             case OrderBySelectorNode orderBy when isTerminal:
-                if (!SupportsExpression(orderBy.Projection, callables, out unsupportedReason))
+                if (!TryValidateExpression(orderBy.Projection, callables, out failureReason))
                 {
-                    unsupportedReason = $"Order projection: {unsupportedReason}";
+                    failureReason = $"Order projection: {failureReason}";
                     return false;
                 }
 
-                unsupportedReason = string.Empty;
+                failureReason = string.Empty;
                 return true;
 
             default:
-                unsupportedReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} RegisterVM fast-path selector.";
+                failureReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} RegisterVM selector.";
                 return false;
         }
     }
 
-    private static bool SupportsDicePattern(
+    private static bool TryValidateDicePattern(
         DicePatternNode pattern,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         if (pattern is DiceCountPatternNode { Face: { } face } &&
-            !SupportsExpression(face, callables, out unsupportedReason))
+            !TryValidateExpression(face, callables, out failureReason))
         {
-            unsupportedReason = $"Dice count face: {unsupportedReason}";
+            failureReason = $"Dice count face: {failureReason}";
             return false;
         }
 
-        unsupportedReason = string.Empty;
+        failureReason = string.Empty;
         return true;
     }
 
-    private static bool SupportsObjectMatchPattern(
+    private static bool TryValidateObjectMatchPattern(
         ObjectMatchPatternNode pattern,
         IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
-        out string unsupportedReason)
+        out string failureReason)
     {
         foreach (var entry in pattern.Entries)
         {
             switch (entry.Value)
             {
                 case ObjectMatchExpressionValueNode expressionValue:
-                    if (!SupportsExpression(expressionValue.Expression, callables, out unsupportedReason))
+                    if (!TryValidateExpression(expressionValue.Expression, callables, out failureReason))
                     {
-                        unsupportedReason = $"Object field '{entry.Key}': {unsupportedReason}";
+                        failureReason = $"Object field '{entry.Key}': {failureReason}";
                         return false;
                     }
 
                     break;
 
                 case ObjectMatchNestedValueNode nestedValue:
-                    if (!SupportsObjectMatchPattern(nestedValue.Pattern, callables, out unsupportedReason))
+                    if (!TryValidateObjectMatchPattern(nestedValue.Pattern, callables, out failureReason))
                     {
-                        unsupportedReason = $"Object field '{entry.Key}': {unsupportedReason}";
+                        failureReason = $"Object field '{entry.Key}': {failureReason}";
                         return false;
                     }
 
@@ -1050,7 +1048,7 @@ internal static class RegisterVmFastPathAnalyzer
             }
         }
 
-        unsupportedReason = string.Empty;
+        failureReason = string.Empty;
         return true;
     }
 
@@ -1538,12 +1536,12 @@ internal static class RegisterVmFastPathAnalyzer
     {
         private readonly IReadOnlyDictionary<string, LinkedCallableDefinition> _callables = callables;
         private readonly Func<GseExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
-        private readonly Dictionary<ExpressionNode, RegisterFastExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
-        private readonly Dictionary<PublishStatementNode, RegisterFastPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
+        private readonly Dictionary<ExpressionNode, RegisterVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
+        private readonly Dictionary<PublishStatementNode, RegisterVmPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
 
-        public IReadOnlyDictionary<ExpressionNode, RegisterFastExpressionProgram> ExpressionPrograms => _expressionPrograms;
+        public IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> ExpressionPrograms => _expressionPrograms;
 
-        public IReadOnlyDictionary<PublishStatementNode, RegisterFastPublishLayout> PublishLayouts => _publishLayouts;
+        public IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> PublishLayouts => _publishLayouts;
 
         public int MaxStackDepth { get; private set; } = 1;
 
@@ -1620,23 +1618,23 @@ internal static class RegisterVmFastPathAnalyzer
             }
         }
 
-        private RegisterFastExpressionProgram CompileExpression(ExpressionNode expression)
+        private RegisterVmExpressionProgram CompileExpression(ExpressionNode expression)
         {
             if (_expressionPrograms.TryGetValue(expression, out var program))
             {
                 return program;
             }
 
-            var instructions = new List<RegisterFastInstruction>();
+            var instructions = new List<RegisterVmProgramInstruction>();
             var builder = new ExpressionBuilder(this, instructions);
             builder.EmitExpression(expression);
-            program = new RegisterFastExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
+            program = new RegisterVmExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
             _expressionPrograms[expression] = program;
             MaxStackDepth = Math.Max(MaxStackDepth, program.MaxStackDepth + 8);
             return program;
         }
 
-        private RegisterFastPublishLayout CompilePublishLayout(PublishStatementNode publish)
+        private RegisterVmPublishLayout CompilePublishLayout(PublishStatementNode publish)
         {
             if (_publishLayouts.TryGetValue(publish, out var layout))
             {
@@ -1645,11 +1643,11 @@ internal static class RegisterVmFastPathAnalyzer
 
             if (publish.MessageExpression is not MessageLiteralExpressionNode message)
             {
-                throw new InvalidOperationException("Unsupported RegisterVM publish expression.");
+                throw new GseCompilationException("RegisterVM compiler does not support this publish expression.");
             }
 
             var argumentNames = new string[message.Arguments.Count];
-            var argumentPrograms = new RegisterFastExpressionProgram[message.Arguments.Count];
+            var argumentPrograms = new RegisterVmExpressionProgram[message.Arguments.Count];
             for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
             {
                 var argument = message.Arguments[argumentIndex];
@@ -1657,7 +1655,7 @@ internal static class RegisterVmFastPathAnalyzer
                 argumentPrograms[argumentIndex] = CompileExpression(argument.Expression);
             }
 
-            layout = new RegisterFastPublishLayout(
+            layout = new RegisterVmPublishLayout(
                 GseMessageSignature.NormalizeMessageName(message.Message),
                 GseMessageSignature.CreateSignatureId(message.Message, argumentNames),
                 argumentNames,
@@ -1669,26 +1667,26 @@ internal static class RegisterVmFastPathAnalyzer
         private bool TryGetSlot(string name, out int slot)
             => slots.TryGetValue(name, out slot);
 
-        private bool TryGetCastKind(string typeName, out RegisterFastCastKind kind)
+        private bool TryGetCastKind(string typeName, out RegisterVmCastKind kind)
         {
             kind = typeName switch
             {
-                "boolean" => RegisterFastCastKind.Boolean,
-                "integer" => RegisterFastCastKind.Integer,
-                "decimal" => RegisterFastCastKind.Decimal,
-                "number" => RegisterFastCastKind.Number,
-                "percentage" => RegisterFastCastKind.Percentage,
-                "degree" => RegisterFastCastKind.Degree,
-                "meter" => RegisterFastCastKind.Meter,
-                "second" => RegisterFastCastKind.Second,
-                "sequence" => RegisterFastCastKind.Sequence,
+                "boolean" => RegisterVmCastKind.Boolean,
+                "integer" => RegisterVmCastKind.Integer,
+                "decimal" => RegisterVmCastKind.Decimal,
+                "number" => RegisterVmCastKind.Number,
+                "percentage" => RegisterVmCastKind.Percentage,
+                "degree" => RegisterVmCastKind.Degree,
+                "meter" => RegisterVmCastKind.Meter,
+                "second" => RegisterVmCastKind.Second,
+                "sequence" => RegisterVmCastKind.Sequence,
                 _ => default
             };
 
-            return SupportsTypeCast(typeName);
+            return IsKnownTypeCast(typeName);
         }
 
-        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<RegisterFastInstruction> instructions)
+        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<RegisterVmProgramInstruction> instructions)
         {
             private int _stackDepth;
 
@@ -1699,39 +1697,39 @@ internal static class RegisterVmFastPathAnalyzer
                 switch (expression)
                 {
                     case BooleanLiteralExpressionNode boolean:
-                        EmitLoadConstant(RegisterFastValue.Boolean(boolean.Value));
+                        EmitLoadConstant(RegisterVmValue.Boolean(boolean.Value));
                         return;
 
                     case IntegerLiteralExpressionNode integer:
-                        EmitLoadConstant(RegisterFastValue.Integer(integer.Value));
+                        EmitLoadConstant(RegisterVmValue.Integer(integer.Value));
                         return;
 
                     case DecimalLiteralExpressionNode decimalLiteral:
-                        EmitLoadConstant(RegisterFastValue.Decimal(decimalLiteral.Value));
+                        EmitLoadConstant(RegisterVmValue.Decimal(decimalLiteral.Value));
                         return;
 
                     case PercentageLiteralExpressionNode percentage:
-                        EmitLoadConstant(RegisterFastValue.Percentage(percentage.PercentValue / 100m));
+                        EmitLoadConstant(RegisterVmValue.Percentage(percentage.PercentValue / 100m));
                         return;
 
                     case UnitDecimalLiteralExpressionNode unitDecimal:
                         EmitLoadConstant(GseDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                            ? RegisterFastValue.Decimal(unitDecimal.Value, unit)
-                            : RegisterFastValue.NaN());
+                            ? RegisterVmValue.Decimal(unitDecimal.Value, unit)
+                            : RegisterVmValue.NaN());
                         return;
 
                     case TextLiteralExpressionNode text:
-                        EmitLoadConstant(RegisterFastValue.Reference(GseValueFactory.Text(text.Value)));
+                        EmitLoadConstant(RegisterVmValue.Reference(GseValueFactory.Text(text.Value)));
                         return;
 
                     case TagLiteralExpressionNode tag:
-                        EmitLoadConstant(RegisterFastValue.Reference(GseValueFactory.Tag(tag.Name)));
+                        EmitLoadConstant(RegisterVmValue.Reference(GseValueFactory.Tag(tag.Name)));
                         return;
 
                     case HandlerLiteralExpressionNode handler:
                     {
                         var parameterNames = handler.SignatureLabels.ToArray();
-                        EmitLoadConstant(RegisterFastValue.Reference(GseValueFactory.Handler(
+                        EmitLoadConstant(RegisterVmValue.Reference(GseValueFactory.Handler(
                             new GseMessageSignature(handler.Message, parameterNames))));
                         return;
                     }
@@ -1745,8 +1743,8 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.BuildMessage,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.BuildMessage,
                             A: message.Arguments.Count,
                             DiagnosticName: GseMessageSignature.NormalizeMessageName(message.Message),
                             DiagnosticArgumentName: GseMessageSignature.CreateSignatureId(message.Message, argumentNames),
@@ -1764,8 +1762,8 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.BindHandler,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.BindHandler,
                             A: handlerBind.Arguments.Count,
                             Names: bindArgumentNames));
                         CollapseValuesToSingle(handlerBind.Arguments.Count + 1);
@@ -1784,8 +1782,8 @@ internal static class RegisterVmFastPathAnalyzer
                             extensionCall.ExtensionName,
                             extensionCall.FunctionName,
                             extensionArgumentNames);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.CallExtension,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.CallExtension,
                             A: extensionCall.Arguments.Count,
                             B: extensionReferenceIndex,
                             DiagnosticName: extensionCall.ExtensionName,
@@ -1800,7 +1798,7 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildList, A: list.Items.Count));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.BuildList, A: list.Items.Count));
                         CollapseValuesToSingle(list.Items.Count);
                         return;
 
@@ -1810,7 +1808,7 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildSequence, A: sequence.Items.Count));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.BuildSequence, A: sequence.Items.Count));
                         CollapseValuesToSingle(sequence.Items.Count);
                         return;
 
@@ -1820,7 +1818,7 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.BuildSet, A: set.Items.Count));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.BuildSet, A: set.Items.Count));
                         CollapseValuesToSingle(set.Items.Count);
                         return;
 
@@ -1833,8 +1831,8 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(entry.Value);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.BuildDictionary,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.BuildDictionary,
                             A: dictionary.Entries.Count,
                             Names: names));
                         CollapseValuesToSingle(dictionary.Entries.Count);
@@ -1846,14 +1844,14 @@ internal static class RegisterVmFastPathAnalyzer
                             throw new InvalidOperationException($"Missing RegisterVM local slot '{identifier.Name}'.");
                         }
 
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.LoadSlot, slot));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.LoadSlot, slot));
                         Push();
                         return;
 
                     case UnaryExpressionNode unary:
                         EmitExpression(unary.Operand);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.Unary,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.Unary,
                             DiagnosticName: unary.Operator));
                         return;
 
@@ -1863,8 +1861,8 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(argument);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.Variadic,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.Variadic,
                             A: variadic.Arguments.Count,
                             DiagnosticName: variadic.Operator));
                         CollapseValuesToSingle(variadic.Arguments.Count);
@@ -1874,14 +1872,14 @@ internal static class RegisterVmFastPathAnalyzer
                         EmitExpression(clamp.Value);
                         EmitExpression(clamp.Minimum);
                         EmitExpression(clamp.Maximum);
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Clamp));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Clamp));
                         CollapseValuesToSingle(3);
                         return;
 
                     case RandomExpressionNode random:
                         EmitExpression(random.FromExpression);
                         EmitExpression(random.ToExpression);
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Random));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Random));
                         Pop();
                         return;
 
@@ -1895,13 +1893,13 @@ internal static class RegisterVmFastPathAnalyzer
                             rangeValueCount = 3;
                         }
 
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Range, A: rangeValueCount));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Range, A: rangeValueCount));
                         CollapseValuesToSingle(rangeValueCount);
                         return;
 
                     case DiceExpressionNode dice:
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.Dice,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.Dice,
                             A: dice.DiceCount,
                             B: dice.SideCount));
                         Push();
@@ -1911,21 +1909,21 @@ internal static class RegisterVmFastPathAnalyzer
                         EmitExpression(seededRandom.SeedExpression);
                         var seededBodyProgram = compiler.CompileExpression(seededRandom.BodyExpression);
                         AccountNestedProgram(argumentCount: 1, seededBodyProgram);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.SeededRandom,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.SeededRandom,
                             ExpressionProgram: seededBodyProgram));
                         return;
 
                     case GeneratedCollectionExpressionNode generatedCollection:
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.GeneratedCollection,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.GeneratedCollection,
                             GeneratedCollectionProgram: CompileGeneratedCollection(generatedCollection)));
                         Push();
                         return;
 
                     case GuardedChoiceExpressionNode guardedChoice:
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.GuardedChoice,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.GuardedChoice,
                             GuardedChoiceProgram: CompileGuardedChoice(guardedChoice)));
                         Push();
                         return;
@@ -1933,7 +1931,7 @@ internal static class RegisterVmFastPathAnalyzer
                     case BinaryExpressionNode binary:
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
-                        instructions.Add(new RegisterFastInstruction(ToBinaryOpCode(binary.Operator)));
+                        instructions.Add(new RegisterVmProgramInstruction(ToBinaryOpCode(binary.Operator)));
                         Pop();
                         return;
 
@@ -1941,19 +1939,19 @@ internal static class RegisterVmFastPathAnalyzer
                         if (!compiler._callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
                             callable.Parameters.Count != 1)
                         {
-                            throw new InvalidOperationException($"Unsupported RegisterVM rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GseCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         if (!compiler.TryGetSlot(callable.Parameters[0], out var parameterSlot))
                         {
-                            throw new InvalidOperationException($"Unsupported RegisterVM rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GseCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         EmitExpression(rulePredicate.Value);
                         var rulePredicateProgram = compiler.CompileExpression(callable.Expression);
                         AccountNestedProgram(argumentCount: 1, rulePredicateProgram);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.RulePredicate,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.RulePredicate,
                             parameterSlot,
                             ExpressionProgram: rulePredicateProgram,
                             DiagnosticName: callable.Name,
@@ -1966,8 +1964,8 @@ internal static class RegisterVmFastPathAnalyzer
                             extensionPredicate.ExtensionName,
                             extensionPredicate.FunctionName,
                             [GseMessageSignature.UnlabeledParameterName]);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.CallExtension,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
                             DiagnosticName: extensionPredicate.ExtensionName,
@@ -1980,11 +1978,11 @@ internal static class RegisterVmFastPathAnalyzer
                         {
                             if (!compiler.TryGetSlot(call.Name, out var handlerSlot))
                             {
-                                throw new InvalidOperationException($"Unsupported RegisterVM callable '{call.Name}'.");
+                                throw new GseCompilationException($"RegisterVM compiler does not support callable '{call.Name}'.");
                             }
 
                             var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
-                            instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.LoadSlot, A: handlerSlot));
+                            instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.LoadSlot, A: handlerSlot));
                             Push();
                             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
                             {
@@ -1993,8 +1991,8 @@ internal static class RegisterVmFastPathAnalyzer
                                 EmitExpression(argument.Expression);
                             }
 
-                            instructions.Add(new RegisterFastInstruction(
-                                RegisterFastOpCode.BindHandler,
+                            instructions.Add(new RegisterVmProgramInstruction(
+                                RegisterVmProgramOpCode.BindHandler,
                                 A: call.ArgumentList.Count,
                                 Names: dynamicBindArgumentNames));
                             CollapseValuesToSingle(call.ArgumentList.Count + 1);
@@ -2017,12 +2015,12 @@ internal static class RegisterVmFastPathAnalyzer
 
                         var callableProgram = compiler.CompileExpression(called.Expression);
                         AccountNestedProgram(call.Arguments.Count, callableProgram);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.Call,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.Call,
                             A: call.Arguments.Count,
                             CallableKind: called.Kind == LinkedCallableKind.Rule
-                                ? RegisterFastCallableKind.Rule
-                                : RegisterFastCallableKind.Select,
+                                ? RegisterVmCallableKind.Rule
+                                : RegisterVmCallableKind.Select,
                             ExpressionProgram: callableProgram,
                             DiagnosticName: called.Name,
                             Names: called.Parameters.ToArray(),
@@ -2033,11 +2031,11 @@ internal static class RegisterVmFastPathAnalyzer
                     case TypeCastExpressionNode typeCast:
                         if (!compiler.TryGetCastKind(typeCast.TypeName, out var castKind))
                         {
-                            throw new InvalidOperationException($"Unsupported RegisterVM type cast '{typeCast.TypeName}'.");
+                            throw new GseCompilationException($"RegisterVM compiler does not support type cast '{typeCast.TypeName}'.");
                         }
 
                         EmitExpression(typeCast.Value);
-                        instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Cast, CastKind: castKind));
+                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Cast, CastKind: castKind));
                         return;
 
                     case TypeConstructorExpressionNode typeConstructor:
@@ -2046,7 +2044,7 @@ internal static class RegisterVmFastPathAnalyzer
                             compiler.TryGetCastKind(typeConstructor.TypeName, out var constructorCastKind))
                         {
                             EmitExpression(typeConstructor.Arguments[0].Expression);
-                            instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.Cast, CastKind: constructorCastKind));
+                            instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Cast, CastKind: constructorCastKind));
                             return;
                         }
 
@@ -2058,8 +2056,8 @@ internal static class RegisterVmFastPathAnalyzer
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.TypeConstructor,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.TypeConstructor,
                             A: typeConstructor.Arguments.Count,
                             DiagnosticName: typeConstructor.TypeName,
                             Names: constructorArgumentNames));
@@ -2068,15 +2066,15 @@ internal static class RegisterVmFastPathAnalyzer
 
                     case TypeCheckExpressionNode typeCheck:
                         EmitExpression(typeCheck.Value);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.TypeCheck,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.TypeCheck,
                             DiagnosticName: typeCheck.TypeName));
                         return;
 
                     case MemberAccessExpressionNode memberAccess:
                         EmitExpression(memberAccess.Target);
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.MemberAccess,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.MemberAccess,
                             DiagnosticName: memberAccess.Member));
                         return;
 
@@ -2085,23 +2083,23 @@ internal static class RegisterVmFastPathAnalyzer
                         {
                             EmitExpression(collectionAccess.Target);
                             EmitExpression(selector.Expression);
-                            instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.IndexedAccess));
+                            instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.IndexedAccess));
                             Pop();
                             return;
                         }
 
-                        instructions.Add(new RegisterFastInstruction(
-                            RegisterFastOpCode.Pipeline,
+                        instructions.Add(new RegisterVmProgramInstruction(
+                            RegisterVmProgramOpCode.Pipeline,
                             PipelineProgram: CompilePipeline(collectionAccess)));
                         Push();
                         return;
 
                     default:
-                        throw new InvalidOperationException($"Unsupported RegisterVM expression program node '{expression.GetType().Name}'.");
+                        throw new GseCompilationException($"RegisterVM compiler does not support expression node '{expression.GetType().Name}'.");
                 }
             }
 
-            private RegisterFastGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
+            private RegisterVmGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
             {
                 var predicateProgram = generatedCollection.Predicate is null
                     ? null
@@ -2113,7 +2111,7 @@ internal static class RegisterVmFastPathAnalyzer
                 }
 
                 AccountNestedProgram(0, projectionProgram);
-                return new RegisterFastGeneratedCollectionProgram(
+                return new RegisterVmGeneratedCollectionProgram(
                     generatedCollection.CollectionType,
                     RequireSlot(generatedCollection.Identifier),
                     generatedCollection.Source,
@@ -2121,10 +2119,10 @@ internal static class RegisterVmFastPathAnalyzer
                     projectionProgram);
             }
 
-            private RegisterFastGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
+            private RegisterVmGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
             {
-                var valuePrograms = new RegisterFastExpressionProgram[guardedChoice.Branches.Count];
-                var conditionPrograms = new RegisterFastExpressionProgram[guardedChoice.Branches.Count];
+                var valuePrograms = new RegisterVmExpressionProgram[guardedChoice.Branches.Count];
+                var conditionPrograms = new RegisterVmExpressionProgram[guardedChoice.Branches.Count];
                 for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
                 {
                     var branch = guardedChoice.Branches[branchIndex];
@@ -2136,10 +2134,10 @@ internal static class RegisterVmFastPathAnalyzer
 
                 var otherwiseProgram = compiler.CompileExpression(guardedChoice.OtherwiseExpression);
                 AccountNestedProgram(0, otherwiseProgram);
-                return new RegisterFastGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
+                return new RegisterVmGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
             }
 
-            private RegisterFastPipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
+            private RegisterVmPipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
             {
                 var selectors = new List<CollectionSelectorNode>();
                 ExpressionNode source = expression;
@@ -2150,102 +2148,102 @@ internal static class RegisterVmFastPathAnalyzer
                 }
 
                 selectors.Reverse();
-                var prefixSelectors = new List<RegisterFastSelectorProgram>(Math.Max(0, selectors.Count - 1));
+                var prefixSelectors = new List<RegisterVmSelectorProgram>(Math.Max(0, selectors.Count - 1));
                 for (var i = 0; i < selectors.Count - 1; i++)
                 {
                     prefixSelectors.Add(CompileSelector(selectors[i], isTerminal: false));
                 }
 
-                return new RegisterFastPipelineProgram(
+                return new RegisterVmPipelineProgram(
                     compiler.CompileExpression(source),
                     prefixSelectors.ToArray(),
                     CompileSelector(selectors[^1], isTerminal: true));
             }
 
-            private RegisterFastSelectorProgram CompileSelector(CollectionSelectorNode selector, bool isTerminal)
+            private RegisterVmSelectorProgram CompileSelector(CollectionSelectorNode selector, bool isTerminal)
             {
                 switch (selector)
                 {
                     case FilterSelectorNode filter:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Filter,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Filter,
                             RequireSlot(filter.Identifier),
                             compiler.CompileExpression(filter.Predicate));
 
                     case SelectSelectorNode select:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Select,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Select,
                             RequireSlot(select.Identifier),
                             compiler.CompileExpression(select.Projection));
 
                     case PredicateSelectorNode predicate when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Predicate,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Predicate,
                             RequireSlot(predicate.Identifier),
                             compiler.CompileExpression(predicate.Predicate),
                             predicate.Operator);
 
                     case SumSelectorNode sum when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Sum,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Sum,
                             RequireSlot(sum.Identifier),
                             compiler.CompileExpression(sum.Projection));
 
                     case AverageSelectorNode average when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Average,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Average,
                             RequireSlot(average.Identifier),
                             compiler.CompileExpression(average.Projection));
 
                     case CountSelectorNode count when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Count,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Count,
                             RequireSlot(count.Identifier),
                             compiler.CompileExpression(count.Predicate));
 
                     case EdgeSelectorNode edge when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Edge,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Edge,
                             string.IsNullOrEmpty(edge.Identifier) ? -1 : RequireSlot(edge.Identifier!),
                             edge.Predicate is null ? null : compiler.CompileExpression(edge.Predicate),
                             edge.Mode);
 
                     case PatternSelectorNode pattern when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Pattern,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Pattern,
                             -1,
                             null,
                             dicePattern: pattern.Pattern);
 
                     case ObjectMatchSelectorNode objectMatch when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.ObjectMatch,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.ObjectMatch,
                             -1,
                             null,
                             objectPattern: objectMatch.Pattern);
 
                     case TakePatternSelectorNode takePattern when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.TakePattern,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.TakePattern,
                             -1,
                             null,
                             dicePattern: takePattern.Pattern);
 
                     case MinSelectorNode min when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Min,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Min,
                             RequireSlot(min.Identifier),
                             compiler.CompileExpression(min.Projection));
 
                     case MaxSelectorNode max when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Max,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Max,
                             RequireSlot(max.Identifier),
                             compiler.CompileExpression(max.Projection));
 
                     case DictionarySelectorNode dictionary when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Dictionary,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Dictionary,
                             RequireSlot(dictionary.Identifier),
                             compiler.CompileExpression(dictionary.KeyProjection),
                             secondaryExpressionProgram: dictionary.ValueProjection is null
@@ -2253,15 +2251,15 @@ internal static class RegisterVmFastPathAnalyzer
                                 : compiler.CompileExpression(dictionary.ValueProjection));
 
                     case ContainsSelectorNode contains when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Contains,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Contains,
                             -1,
                             compiler.CompileExpression(contains.ValueExpression),
                             contains.Mode);
 
                     case ChooseSelectorNode choose when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Choose,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Choose,
                             string.IsNullOrEmpty(choose.Identifier) ? -1 : RequireSlot(choose.Identifier!),
                             choose.Predicate is null ? null : compiler.CompileExpression(choose.Predicate),
                             count: choose.Count,
@@ -2272,53 +2270,53 @@ internal static class RegisterVmFastPathAnalyzer
                             flag: choose.AtRandom);
 
                     case DrawSelectorNode draw when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Draw,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Draw,
                             -1,
                             null,
                             count: draw.Count);
 
                     case ShuffleSelectorNode when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Shuffle,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Shuffle,
                             -1,
                             null);
 
                     case SortSelectorNode sort when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Sort,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Sort,
                             -1,
                             null,
                             sort.Direction);
 
                     case DistinctSelectorNode distinct when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Distinct,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Distinct,
                             string.IsNullOrEmpty(distinct.Identifier) ? -1 : RequireSlot(distinct.Identifier!),
                             distinct.Projection is null ? null : compiler.CompileExpression(distinct.Projection));
 
                     case GroupBySelectorNode groupBy when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.GroupBy,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.GroupBy,
                             RequireSlot(groupBy.Identifier),
                             compiler.CompileExpression(groupBy.Projection));
 
                     case OrderBySelectorNode orderBy when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.OrderBy,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.OrderBy,
                             RequireSlot(orderBy.Identifier),
                             compiler.CompileExpression(orderBy.Projection),
                             orderBy.Direction);
 
                     case ReverseSelectorNode when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.Reverse,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.Reverse,
                             -1,
                             null);
 
                     case SequenceSliceSelectorNode slice when isTerminal:
-                        return new RegisterFastSelectorProgram(
-                            RegisterFastSelectorKind.SequenceSlice,
+                        return new RegisterVmSelectorProgram(
+                            RegisterVmSelectorKind.SequenceSlice,
                             -1,
                             null,
                             slice.Operation,
@@ -2326,7 +2324,7 @@ internal static class RegisterVmFastPathAnalyzer
                             count: slice.Count);
 
                     default:
-                        throw new InvalidOperationException($"Unsupported RegisterVM selector program node '{selector.GetType().Name}'.");
+                        throw new GseCompilationException($"RegisterVM compiler does not support selector node '{selector.GetType().Name}'.");
                 }
             }
 
@@ -2340,9 +2338,9 @@ internal static class RegisterVmFastPathAnalyzer
                 return slot;
             }
 
-            private void EmitLoadConstant(RegisterFastValue value)
+            private void EmitLoadConstant(RegisterVmValue value)
             {
-                instructions.Add(new RegisterFastInstruction(RegisterFastOpCode.LoadConstant, Constant: value));
+                instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.LoadConstant, Constant: value));
                 Push();
             }
 
@@ -2354,7 +2352,7 @@ internal static class RegisterVmFastPathAnalyzer
 
             private void Pop() => _stackDepth = Math.Max(0, _stackDepth - 1);
 
-            private void AccountNestedProgram(int argumentCount, RegisterFastExpressionProgram program)
+            private void AccountNestedProgram(int argumentCount, RegisterVmExpressionProgram program)
             {
                 var nestedStackBaseDepth = Math.Max(0, _stackDepth - argumentCount);
                 MaxStackDepth = Math.Max(MaxStackDepth, nestedStackBaseDepth + program.MaxStackDepth);
@@ -2374,102 +2372,81 @@ internal static class RegisterVmFastPathAnalyzer
                 _stackDepth = Math.Max(1, _stackDepth - valueCount + 1);
             }
 
-            private static RegisterFastOpCode ToBinaryOpCode(string operation)
+            private static RegisterVmProgramOpCode ToBinaryOpCode(string operation)
                 => operation switch
                 {
-                    "|" => RegisterFastOpCode.Or,
-                    "^" => RegisterFastOpCode.Xor,
-                    "&" => RegisterFastOpCode.And,
-                    "=" or "==" => RegisterFastOpCode.Equal,
-                    "<>" => RegisterFastOpCode.NotEqual,
-                    "<" => RegisterFastOpCode.Less,
-                    ">" => RegisterFastOpCode.Greater,
-                    "<=" => RegisterFastOpCode.LessOrEqual,
-                    ">=" => RegisterFastOpCode.GreaterOrEqual,
-                    "+" => RegisterFastOpCode.Add,
-                    "-" => RegisterFastOpCode.Subtract,
-                    "*" => RegisterFastOpCode.Multiply,
-                    "/" => RegisterFastOpCode.Divide,
-                    "div" => RegisterFastOpCode.IntegerDivide,
-                    "mod" => RegisterFastOpCode.Modulo,
-                    "rem" => RegisterFastOpCode.Remainder,
-                    "default" => RegisterFastOpCode.Default,
-                    "in" => RegisterFastOpCode.Contains,
-                    "value in" => RegisterFastOpCode.ContainsValue,
-                    "starts with" => RegisterFastOpCode.StartsWith,
-                    "ends with" => RegisterFastOpCode.EndsWith,
-                    "intersect" => RegisterFastOpCode.Intersect,
-                    "combine" or "merge" => RegisterFastOpCode.Combine,
-                    "except" => RegisterFastOpCode.Except,
-                    "zip" => RegisterFastOpCode.Zip,
-                    _ => throw new InvalidOperationException($"Unsupported RegisterVM binary operator '{operation}'.")
+                    "|" => RegisterVmProgramOpCode.Or,
+                    "^" => RegisterVmProgramOpCode.Xor,
+                    "&" => RegisterVmProgramOpCode.And,
+                    "=" or "==" => RegisterVmProgramOpCode.Equal,
+                    "<>" => RegisterVmProgramOpCode.NotEqual,
+                    "<" => RegisterVmProgramOpCode.Less,
+                    ">" => RegisterVmProgramOpCode.Greater,
+                    "<=" => RegisterVmProgramOpCode.LessOrEqual,
+                    ">=" => RegisterVmProgramOpCode.GreaterOrEqual,
+                    "+" => RegisterVmProgramOpCode.Add,
+                    "-" => RegisterVmProgramOpCode.Subtract,
+                    "*" => RegisterVmProgramOpCode.Multiply,
+                    "/" => RegisterVmProgramOpCode.Divide,
+                    "div" => RegisterVmProgramOpCode.IntegerDivide,
+                    "mod" => RegisterVmProgramOpCode.Modulo,
+                    "rem" => RegisterVmProgramOpCode.Remainder,
+                    "default" => RegisterVmProgramOpCode.Default,
+                    "in" => RegisterVmProgramOpCode.Contains,
+                    "value in" => RegisterVmProgramOpCode.ContainsValue,
+                    "starts with" => RegisterVmProgramOpCode.StartsWith,
+                    "ends with" => RegisterVmProgramOpCode.EndsWith,
+                    "intersect" => RegisterVmProgramOpCode.Intersect,
+                    "combine" or "merge" => RegisterVmProgramOpCode.Combine,
+                    "except" => RegisterVmProgramOpCode.Except,
+                    "zip" => RegisterVmProgramOpCode.Zip,
+                    _ => throw new GseCompilationException($"RegisterVM compiler does not support binary operator '{operation}'.")
                 };
         }
     }
 }
 
-internal sealed class RegisterVmFastPathPlan
+internal sealed class RegisterVmExecutionPlan
 {
     private readonly IReadOnlyDictionary<string, int> _slots;
-    private readonly IReadOnlyDictionary<ExpressionNode, RegisterFastExpressionProgram> _expressionPrograms;
-    private readonly IReadOnlyDictionary<PublishStatementNode, RegisterFastPublishLayout> _publishLayouts;
+    private readonly IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> _expressionPrograms;
+    private readonly IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> _publishLayouts;
 
-    private RegisterVmFastPathPlan(
-        bool isSupported,
+    private RegisterVmExecutionPlan(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<ExpressionNode, RegisterFastExpressionProgram> expressionPrograms,
-        IReadOnlyDictionary<PublishStatementNode, RegisterFastPublishLayout> publishLayouts,
-        int maxStackDepth,
-        string? unsupportedReason)
+        IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> expressionPrograms,
+        IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> publishLayouts,
+        int maxStackDepth)
     {
-        IsSupported = isSupported;
         _slots = slots;
         _expressionPrograms = expressionPrograms;
         _publishLayouts = publishLayouts;
         SlotCount = slots.Count;
         MaxStackDepth = maxStackDepth;
-        UnsupportedReason = unsupportedReason;
     }
-
-    public bool IsSupported { get; }
-
-    public string? UnsupportedReason { get; }
 
     public int SlotCount { get; }
 
     public int MaxStackDepth { get; }
 
-    public static RegisterVmFastPathPlan Unsupported(string unsupportedReason)
-        => new(
-            false,
-            new Dictionary<string, int>(StringComparer.Ordinal),
-            new Dictionary<ExpressionNode, RegisterFastExpressionProgram>(ReferenceEqualityComparer<ExpressionNode>.Instance),
-            new Dictionary<PublishStatementNode, RegisterFastPublishLayout>(ReferenceEqualityComparer<PublishStatementNode>.Instance),
-            1,
-            string.IsNullOrWhiteSpace(unsupportedReason)
-                ? "Handler is not supported by the RegisterVM fast path."
-                : unsupportedReason);
-
-    public static RegisterVmFastPathPlan Create(
+    public static RegisterVmExecutionPlan Create(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<ExpressionNode, RegisterFastExpressionProgram> expressionPrograms,
-        IReadOnlyDictionary<PublishStatementNode, RegisterFastPublishLayout> publishLayouts,
+        IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> expressionPrograms,
+        IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> publishLayouts,
         int maxStackDepth)
         => new(
-            true,
             new Dictionary<string, int>(slots, StringComparer.Ordinal),
-            new Dictionary<ExpressionNode, RegisterFastExpressionProgram>(expressionPrograms, ReferenceEqualityComparer<ExpressionNode>.Instance),
-            new Dictionary<PublishStatementNode, RegisterFastPublishLayout>(publishLayouts, ReferenceEqualityComparer<PublishStatementNode>.Instance),
-            maxStackDepth,
-            null);
+            new Dictionary<ExpressionNode, RegisterVmExpressionProgram>(expressionPrograms, ReferenceEqualityComparer<ExpressionNode>.Instance),
+            new Dictionary<PublishStatementNode, RegisterVmPublishLayout>(publishLayouts, ReferenceEqualityComparer<PublishStatementNode>.Instance),
+            maxStackDepth);
 
     public bool TryGetSlot(string name, out int slot)
         => _slots.TryGetValue(name, out slot);
 
-    public bool TryGetExpressionProgram(ExpressionNode expression, out RegisterFastExpressionProgram program)
+    public bool TryGetExpressionProgram(ExpressionNode expression, out RegisterVmExpressionProgram program)
         => _expressionPrograms.TryGetValue(expression, out program!);
 
-    public bool TryGetPublishLayout(PublishStatementNode publish, out RegisterFastPublishLayout layout)
+    public bool TryGetPublishLayout(PublishStatementNode publish, out RegisterVmPublishLayout layout)
         => _publishLayouts.TryGetValue(publish, out layout!);
 }
 

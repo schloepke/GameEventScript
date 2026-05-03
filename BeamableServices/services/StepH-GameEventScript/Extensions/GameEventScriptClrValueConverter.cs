@@ -18,7 +18,7 @@ namespace StepH.GameEventScript.Extensions;
 /// Supported types include numeric types, string, boolean, collections, dictionaries,
 /// and custom GameEventScript-specific types such as <see cref="GameEventScriptDiceValue"/>.
 /// </remarks>
-public static class GesClrValueConverter
+public static class GameEventScriptClrValueConverter
 {
     /// <summary>
     /// Converts the given object to a <see cref="GameEventScriptValue"/> type.

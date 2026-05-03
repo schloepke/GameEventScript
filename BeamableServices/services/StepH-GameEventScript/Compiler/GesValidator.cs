@@ -18,7 +18,7 @@ internal static class GesValidator
         public void Declare(string name) => _variables.Add(name);
     }
 
-    internal static void ValidateModule(ParsedScript parsedScript, IReadOnlyDictionary<string, GseCallableDefinition> callables,
+    internal static void ValidateModule(ParsedScript parsedScript, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, GameEventScriptCompileOptions options, GesValidationErrors errors)
     {
         _ = options;
@@ -182,7 +182,7 @@ internal static class GesValidator
     private static void ValidateStatementReferences(
         ParsedScript parsedScriptContext,
         StatementNode statement,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         ValidationScope scope)
@@ -260,7 +260,7 @@ internal static class GesValidator
     private static void ValidateStatementBodyReferences(
         ParsedScript parsedScriptContext,
         StatementBodyNode body,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors,
         ValidationScope parentScope)
@@ -275,7 +275,7 @@ internal static class GesValidator
     private static void ValidateExpressionReferences(
         ParsedScript parsedScriptContext,
         ExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -362,27 +362,6 @@ internal static class GesValidator
                                 messageLiteral.Message,
                                 GameEventScriptSymbolKind.Message,
                                 $"Message literal '{messageLiteral.Message}' declares invalid argument name '{argument.Label}'",
-                                errors);
-                        }
-
-                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors);
-                    }
-
-                    return;
-
-                case HandlerBindExpressionNode handlerBind:
-                    ValidateDuplicateNamedArguments(parsedScriptContext, "handler bind", handlerBind.Arguments, errors);
-                    ValidateExpressionReferences(parsedScriptContext, handlerBind.CalleeExpression, callables, typeDefinitions, errors);
-                    foreach (var argument in handlerBind.Arguments)
-                    {
-                        if (argument.Label is not null)
-                        {
-                            ValidateIdentifierCase(
-                                parsedScriptContext,
-                                argument.Label,
-                                "handler bind",
-                                GameEventScriptSymbolKind.Handler,
-                                $"Handler binding declares invalid argument name '{argument.Label}'",
                                 errors);
                         }
 
@@ -558,7 +537,7 @@ internal static class GesValidator
     private static void ValidateIterationSourceReferences(
         ParsedScript parsedScriptContext,
         IterationSourceNode source,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -576,7 +555,7 @@ internal static class GesValidator
     private static void ValidateCollectionSelectorReferences(
         ParsedScript parsedScriptContext,
         CollectionSelectorNode selector,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -771,7 +750,7 @@ internal static class GesValidator
     private static void ValidateCallExpression(
         ParsedScript parsedScriptContext,
         CallExpressionNode call,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
@@ -824,7 +803,7 @@ internal static class GesValidator
     private static void ValidateTypeConstructorExpression(
         ParsedScript parsedScriptContext,
         TypeConstructorExpressionNode constructor,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {

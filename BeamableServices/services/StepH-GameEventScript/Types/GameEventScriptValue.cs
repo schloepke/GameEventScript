@@ -752,7 +752,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             rolls.Add((int)integer);
         }
 
-        value = GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(rolls));
+        value = GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(rolls));
         return true;
     }
 

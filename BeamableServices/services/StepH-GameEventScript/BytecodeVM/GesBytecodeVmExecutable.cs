@@ -6,7 +6,7 @@ using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.BytecodeVM;
 
-internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCollection
+internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCollection
 {
     private readonly IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptContext> Handler)> _messageHandlers;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _dispatchIndex;
@@ -14,7 +14,7 @@ internal sealed class GseBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     private IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _boundExtensions = new Dictionary<string, IGameEventScriptExtensionFunction>(StringComparer.Ordinal);
     private IGameEventScriptExtensionFunction[] _boundExtensionSlots = [];
 
-    internal GseBytecodeVmExecutable(
+    internal GesBytecodeVmExecutable(
         GameEventScriptCompileOptions options,
         GameEventScriptCompiled bytecodeModule,
         IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers,

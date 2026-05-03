@@ -112,7 +112,7 @@ internal static class GesValueOperations
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
         {
-            return GameEventScriptValueFactory.GseSet(left.AsSet().Concat(right.AsSet()));
+            return GameEventScriptValueFactory.GesSet(left.AsSet().Concat(right.AsSet()));
         }
 
         if (left.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice &&
@@ -132,13 +132,13 @@ internal static class GesValueOperations
             var map = left.AsDictionary()
                 .Where(pair => rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return GameEventScriptValueFactory.GseDictionary(map);
+            return GameEventScriptValueFactory.GesDictionary(map);
         }
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
         {
             var rightSet = right.AsSet();
-            return GameEventScriptValueFactory.GseSet(left.AsSet().Where(item => rightSet.Contains(item)));
+            return GameEventScriptValueFactory.GesSet(left.AsSet().Where(item => rightSet.Contains(item)));
         }
 
         if (left.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice &&
@@ -172,13 +172,13 @@ internal static class GesValueOperations
             var map = left.AsDictionary()
                 .Where(pair => !rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return GameEventScriptValueFactory.GseDictionary(map);
+            return GameEventScriptValueFactory.GesDictionary(map);
         }
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
         {
             var rightSet = right.AsSet();
-            return GameEventScriptValueFactory.GseSet(left.AsSet().Where(item => !rightSet.Contains(item)));
+            return GameEventScriptValueFactory.GesSet(left.AsSet().Where(item => !rightSet.Contains(item)));
         }
 
         if (left.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice &&
@@ -218,7 +218,7 @@ internal static class GesValueOperations
         var zipped = new List<GameEventScriptValue>(count);
         for (var i = 0; i < count; i++)
         {
-            zipped.Add(GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+            zipped.Add(GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
             {
                 ["left"] = leftItems[i],
                 ["right"] = rightItems[i]
@@ -236,7 +236,7 @@ internal static class GesValueOperations
             map[pair.Key] = pair.Value;
         }
 
-        return GameEventScriptValueFactory.GseDictionary(map);
+        return GameEventScriptValueFactory.GesDictionary(map);
     }
 
     public static bool AreEqual(GameEventScriptValue left, GameEventScriptValue right) => left.Equals(right);

@@ -70,19 +70,19 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
+        value = GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
         return true;
     }
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = GseSet([]);
+        value = GesSet([]);
         return true;
     }
 
     internal override bool TryConvertToDice(out GameEventScriptValue value)
     {
-        value = GseDice(GameEventScriptDiceValue.Empty);
+        value = GesDice(GameEventScriptDiceValue.Empty);
         return true;
     }
 }

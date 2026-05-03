@@ -49,7 +49,7 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = GseDictionary(AsDictionary());
+        value = GesDictionary(AsDictionary());
         return true;
     }
 

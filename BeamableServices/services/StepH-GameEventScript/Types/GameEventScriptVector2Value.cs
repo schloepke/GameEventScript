@@ -82,7 +82,7 @@ public sealed class GameEventScriptVector2Value : GameEventScriptValue
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = GseDictionary(Members);
+        value = GesDictionary(Members);
         return true;
     }
 }

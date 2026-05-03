@@ -79,7 +79,7 @@ public sealed class BytecodeVmPerformanceReportTests
             .AddScript(PerformanceScript, "engine-performance.es")
             .Compile();
 
-    private static GseBytecodeVmExecutable BuildExecutable(GameEventScriptCompiled bytecode)
+    private static GesBytecodeVmExecutable BuildExecutable(GameEventScriptCompiled bytecode)
         => GesBytecodeVmExecutableBuilder.Build(bytecode);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)

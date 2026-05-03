@@ -89,7 +89,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
             foreach (var pair in dictionarySource.VisibleView.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
-                yield return GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+                yield return GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
                 {
                     ["key"] = GesTag(pair.Key),
                     ["value"] = pair.Value
@@ -152,7 +152,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = GseSet(AsEnumerable());
+        value = GesSet(AsEnumerable());
         return true;
     }
 

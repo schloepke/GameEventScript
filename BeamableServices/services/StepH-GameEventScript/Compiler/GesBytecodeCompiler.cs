@@ -13,7 +13,7 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesBytecodeCompiler
 {
-    public static GameEventScriptCompiled Compile(GseModule module, GameEventScriptCompileOptions? options = null)
+    public static GameEventScriptCompiled Compile(GesModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new GameEventScriptCompileOptions();
@@ -21,7 +21,7 @@ internal static class GesBytecodeCompiler
         return builder.Build();
     }
 
-    private sealed class CompilerBuilder(GseModule module, GameEventScriptCompileOptions options)
+    private sealed class CompilerBuilder(GesModule module, GameEventScriptCompileOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
@@ -41,7 +41,7 @@ internal static class GesBytecodeCompiler
             CompileMetadata();
             CompileGlobalDefinitions();
             CompileHandlers();
-            var typeDefinitions = GseBytecodeVmExecutionPlanBuilder.CompileTypeDefinitions(
+            var typeDefinitions = GesBytecodeVmExecutionPlanBuilder.CompileTypeDefinitions(
                 module.Callables,
                 module.TypeDefinitions,
                 ResolveExternalReference);
@@ -75,7 +75,7 @@ internal static class GesBytecodeCompiler
                         index,
                         FindProgramIndex($"handler:{pair.Key}#{index}"),
                         options.EnableDiagnostics,
-                        GseBytecodeVmExecutionPlanBuilder.CompileHandlerPlan(
+                        GesBytecodeVmExecutionPlanBuilder.CompileHandlerPlan(
                             pair.Key,
                             index,
                             handler.Parameters,
@@ -165,7 +165,7 @@ internal static class GesBytecodeCompiler
             }
         }
 
-        private void CompileCallable(GseCallableDefinition callable)
+        private void CompileCallable(GesCallableDefinition callable)
         {
             var instructions = new List<GameEventScriptInstruction>
             {
@@ -457,15 +457,6 @@ internal static class GesBytecodeCompiler
                     }
 
                     return "handler";
-                case HandlerBindExpressionNode handlerBind:
-                    GetExpressionDebugName(handlerBind.CalleeExpression);
-                    foreach (var argument in handlerBind.Arguments)
-                    {
-                        AddString(argument.Name);
-                        GetExpressionDebugName(argument.Expression);
-                    }
-
-                    return "handlerBind";
                 case CallExpressionNode call:
                     AddString(call.Name);
                     foreach (var argument in call.ArgumentList.Arguments)
@@ -582,14 +573,6 @@ internal static class GesBytecodeCompiler
                     return;
                 case MessageLiteralExpressionNode message:
                     foreach (var argument in message.Arguments)
-                    {
-                        CollectExternalReferences(argument.Expression);
-                    }
-
-                    return;
-                case HandlerBindExpressionNode bind:
-                    CollectExternalReferences(bind.CalleeExpression);
-                    foreach (var argument in bind.Arguments)
                     {
                         CollectExternalReferences(argument.Expression);
                     }

@@ -11,7 +11,7 @@ internal static class GesOptimizer
 {
     private static readonly ISet<string> EmptyTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-    public static GseModule Optimize(GseModule module, GameEventScriptCompileOptions? options = null)
+    public static GesModule Optimize(GesModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = options ?? new GameEventScriptCompileOptions();
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
@@ -33,7 +33,7 @@ internal static class GesOptimizer
                 .ToArray(),
             StringComparer.Ordinal);
 
-        return new GseModule(
+        return new GesModule(
             optimizedTypes,
             optimizedCallables,
             optimizedHandlers);
@@ -50,7 +50,7 @@ internal static class GesOptimizer
             }).ToArray()
         };
 
-    private static GseCallableDefinition OptimizeCallableDefinition(GseCallableDefinition definition, ISet<string> knownTypeNames)
+    private static GesCallableDefinition OptimizeCallableDefinition(GesCallableDefinition definition, ISet<string> knownTypeNames)
     {
         var optimized = OptimizeExpression(definition.Expression, knownTypeNames);
         if (definition.Kind == GameEventScriptCallableKind.Rule)
@@ -58,7 +58,7 @@ internal static class GesOptimizer
             optimized = EnsureBooleanRuleExpression(optimized);
         }
 
-        return new GseCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
+        return new GesCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
     private static EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)
@@ -232,14 +232,6 @@ internal static class GesOptimizer
             MessageLiteralExpressionNode message => message with
             {
                 ArgumentList = new ArgumentListNode(message.Arguments.Select(argument => argument with
-                {
-                    Expression = OptimizeExpression(argument.Expression, knownTypeNames)
-                }).ToArray())
-            },
-            HandlerBindExpressionNode bind => bind with
-            {
-                CalleeExpression = OptimizeExpression(bind.CalleeExpression, knownTypeNames),
-                ArgumentList = new ArgumentListNode(bind.Arguments.Select(argument => argument with
                 {
                     Expression = OptimizeExpression(argument.Expression, knownTypeNames)
                 }).ToArray())
@@ -510,7 +502,7 @@ internal static class GesOptimizer
                     items.Add(item);
                 }
 
-                value = GameEventScriptValueFactory.GseSet(items);
+                value = GameEventScriptValueFactory.GesSet(items);
                 return true;
             }
             case DictionaryLiteralExpressionNode dictionaryLiteral:
@@ -527,7 +519,7 @@ internal static class GesOptimizer
                     items[entry.Key] = item;
                 }
 
-                value = GameEventScriptValueFactory.GseDictionary(items);
+                value = GameEventScriptValueFactory.GesDictionary(items);
                 return true;
             }
             case TypeCastExpressionNode castExpression:
@@ -1017,13 +1009,13 @@ internal static class GesOptimizer
                 converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "dictionary":
-                converted = GameEventScriptValueFactory.GseDictionary(value.AsDictionary());
+                converted = GameEventScriptValueFactory.GesDictionary(value.AsDictionary());
                 return true;
             case "set":
-                converted = GameEventScriptValueFactory.GseSet(value.AsSet());
+                converted = GameEventScriptValueFactory.GesSet(value.AsSet());
                 return true;
             case "dice":
-                converted = GameEventScriptValueFactory.GseDice(value.AsDice());
+                converted = GameEventScriptValueFactory.GesDice(value.AsDice());
                 return true;
             case "optional":
                 converted = value.IsOptional()

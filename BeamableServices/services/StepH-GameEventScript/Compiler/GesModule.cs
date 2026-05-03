@@ -11,9 +11,9 @@ internal enum GameEventScriptCallableKind
     Select
 }
 
-internal sealed class GseModule
+internal sealed class GesModule
 {
-    internal GseModule(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GseCallableDefinition> callables,
+    internal GesModule(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers)
     {
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
@@ -23,12 +23,12 @@ internal sealed class GseModule
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 
-    internal IReadOnlyDictionary<string, GseCallableDefinition> Callables { get; }
+    internal IReadOnlyDictionary<string, GesCallableDefinition> Callables { get; }
 
     internal IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> Handlers { get; }
 }
 
-internal sealed class GseCallableDefinition(
+internal sealed class GesCallableDefinition(
     string name,
     IReadOnlyList<ParameterNode> parameterList,
     ExpressionNode expression,

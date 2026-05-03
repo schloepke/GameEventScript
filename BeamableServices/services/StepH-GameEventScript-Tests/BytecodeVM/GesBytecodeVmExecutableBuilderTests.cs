@@ -65,9 +65,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     [TestMethod]
     public void BytecodeVmRejectsUnknownStatementNodesAtCompileTime()
     {
-        var module = new GseModule(
+        var module = new GesModule(
             new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
-            new Dictionary<string, GseCallableDefinition>(StringComparer.Ordinal),
+            new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal),
             new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
             {
                 ["Start"] =
@@ -305,11 +305,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             }
             """;
 
-        var unitOne = GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>
+        var unitOne = GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
         {
             ["name"] = GameEventScriptValueFactory.GesText("Scout")
         });
-        var unitTwo = GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>
+        var unitTwo = GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
         {
             ["name"] = GameEventScriptValueFactory.GesText("Knight")
         });
@@ -322,7 +322,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         host.Publish(Create(
             "Start",
-            ("player", GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>
+            ("player", GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
             {
                 ["hp"] = GameEventScriptValueFactory.GesInteger(12)
             })),
@@ -408,8 +408,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var tagValues = published[0].Arguments["tagValues"].AsSet();
         Assert.HasCount(2, tagValues);
         Assert.AreEqual(GameEventScriptValueFactory.GesList([]), published[0].Arguments["emptyList"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GseSet([]), published[0].Arguments["emptySet"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>()), published[0].Arguments["emptyDict"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesSet([]), published[0].Arguments["emptySet"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>()), published[0].Arguments["emptyDict"]);
     }
 
     [TestMethod]
@@ -460,7 +460,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         host.Publish(Create(
             "Start",
-            ("custom", GameEventScriptValueFactory.GseCustomType("gauge", new Dictionary<string, GameEventScriptValue>
+            ("custom", GameEventScriptValueFactory.GesCustomType("gauge", new Dictionary<string, GameEventScriptValue>
             {
                 ["current"] = GameEventScriptValueFactory.GesInteger(5)
             })),

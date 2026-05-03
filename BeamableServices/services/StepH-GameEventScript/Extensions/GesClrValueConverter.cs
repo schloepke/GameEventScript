@@ -36,7 +36,7 @@ public static class GesClrValueConverter
             case null:
                 return GameEventScriptValueFactory.GesOptionalNone();
             case GameEventScriptDiceValue dice:
-                return GameEventScriptValueFactory.GseDice(dice);
+                return GameEventScriptValueFactory.GesDice(dice);
             case GameEventScriptValue eventScriptValue:
                 return eventScriptValue;
             case string text:
@@ -70,9 +70,9 @@ public static class GesClrValueConverter
         }
 
         if (TryExtractStringDictionary(value, out var dictionaryEntries))
-            return GameEventScriptValueFactory.GseDictionary(dictionaryEntries.ToDictionary(x => x.Key, x => x.Value.ToGseType(), StringComparer.Ordinal));
-        if (value is ISet<GameEventScriptValue> typedSet) return GameEventScriptValueFactory.GseSet(typedSet);
-        if (value is not (IEnumerable enumerable and not string)) return GameEventScriptValueFactory.GseDictionary(ExtractObjectMembers(value));
+            return GameEventScriptValueFactory.GesDictionary(dictionaryEntries.ToDictionary(x => x.Key, x => x.Value.ToGseType(), StringComparer.Ordinal));
+        if (value is ISet<GameEventScriptValue> typedSet) return GameEventScriptValueFactory.GesSet(typedSet);
+        if (value is not (IEnumerable enumerable and not string)) return GameEventScriptValueFactory.GesDictionary(ExtractObjectMembers(value));
         var list = (from object? item in enumerable select item.ToGseType()).ToList();
         return GameEventScriptValueFactory.GesList(list);
     }

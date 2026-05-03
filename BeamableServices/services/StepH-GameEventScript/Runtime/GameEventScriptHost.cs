@@ -44,7 +44,7 @@ public sealed class GameEventScriptHost
     public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        if (handlers is GseBytecodeVmExecutable registerCompiled)
+        if (handlers is GesBytecodeVmExecutable registerCompiled)
         {
             GesDynamicLinker.Bind(registerCompiled, _extensionRegistry);
         }

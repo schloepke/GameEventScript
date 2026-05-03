@@ -22,7 +22,7 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
             ["name"] = GesText(message.Name),
-            ["arguments"] = GseDictionary(message.Arguments),
+            ["arguments"] = GesDictionary(message.Arguments),
             ["signatureid"] = GesText(message.SignatureId)
         };
 
@@ -51,7 +51,7 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = GseDictionary(AsDictionary());
+        value = GesDictionary(AsDictionary());
         return true;
     }
 

@@ -171,7 +171,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = GseSet(AsEnumerable());
+        value = GesSet(AsEnumerable());
         return true;
     }
 

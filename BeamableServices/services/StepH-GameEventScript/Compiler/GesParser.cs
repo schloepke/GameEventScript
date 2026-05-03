@@ -1633,33 +1633,6 @@ internal sealed class GesParser
             : ParseListLiteralExpression();
     }
 
-    private HandlerLiteralExpressionNode ParseHandlerLiteralExpression()
-    {
-        SkipNewLines();
-        var startToken = Current;
-        var message = Expect(Message).Text;
-        var parameters = new List<ParameterNode>();
-
-        if (Match(LeftParen))
-        {
-            SkipNewLines();
-            if (!Is(RightParen))
-            {
-                parameters.Add(ParseParameter());
-                while (Match(Comma))
-                {
-                    SkipNewLines();
-                    parameters.Add(ParseParameter());
-                }
-            }
-
-            SkipNewLines();
-            Expect(RightParen);
-        }
-
-        return WithRange(new HandlerLiteralExpressionNode(message, parameters), startToken);
-    }
-
     private MessageLiteralExpressionNode ParseMessageLiteralExpressionCore()
     {
         SkipNewLines();
@@ -1744,29 +1717,9 @@ internal sealed class GesParser
         return WithRange(new ListLiteralExpressionNode(items), startToken);
     }
 
-    private SetLiteralExpressionNode ParseSetLiteralExpression()
-    {
-        var startToken = Current;
-        Expect(LeftBracket);
-        var items = new List<ExpressionNode>();
-        SkipNewLines();
-        if (!Is(RightBracket))
-        {
-            items.Add(ParseExpression());
-            while (Match(Comma))
-            {
-                SkipNewLines();
-                items.Add(ParseExpression());
-            }
-        }
-
-        SkipNewLines();
-        Expect(RightBracket);
-        return WithRange(new SetLiteralExpressionNode(items), startToken);
-    }
-
     private ExpressionNode ParseCollectionFactoryExpression(string collectionType)
     {
+        var startToken = Previous;
         Expect(LeftBracket);
         SkipNewLines();
 
@@ -1792,8 +1745,8 @@ internal sealed class GesParser
             }
 
             SkipNewLines();
-            Expect(RightBracket);
-            return new SetLiteralExpressionNode(items);
+            var endToken = Expect(RightBracket);
+            return WithRange(new SetLiteralExpressionNode(items), startToken, endToken);
         }
 
         var token = Current;

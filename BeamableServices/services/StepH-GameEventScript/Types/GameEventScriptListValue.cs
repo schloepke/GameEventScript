@@ -51,7 +51,7 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = GseSet(Items);
+        value = GesSet(Items);
         return true;
     }
 

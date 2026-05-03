@@ -256,7 +256,6 @@ internal sealed class GesValidationErrors
                 .Select(entry => FindNodeInExpression(entry.Value, symbol))
                 .FirstOrDefault(node => node is not null),
             MessageLiteralExpressionNode message => FindNodeInArguments(message.Arguments, symbol),
-            HandlerBindExpressionNode bind => FindNodeInExpression(bind.CalleeExpression, symbol) ?? FindNodeInArguments(bind.Arguments, symbol),
             CallExpressionNode call => FindNodeInArguments(call.ArgumentList.Arguments, symbol),
             ExtensionCallExpressionNode extension => FindNodeInArguments(extension.Arguments, symbol),
             TypeConstructorExpressionNode constructor => FindNodeInArguments(constructor.Arguments, symbol),

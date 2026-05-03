@@ -13,7 +13,7 @@ internal sealed class GesBytecodeVmExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
-    private readonly GseBytecodeVmExecutable _compiledScript;
+    private readonly GesBytecodeVmExecutable _compiledScript;
     private readonly GameEventScriptContext _context;
     private readonly BytecodeVmExecutionPlan _plan;
     private readonly BytecodeVmValue[] _locals;
@@ -26,7 +26,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool _halted;
 
     private GesBytecodeVmExecutionSession(
-        GseBytecodeVmExecutable compiledScript,
+        GesBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
         BytecodeVmExecutionPlan plan,
         bool diagnosticsEnabled)
@@ -42,7 +42,7 @@ internal sealed class GesBytecodeVmExecutionSession
     }
 
     public static void InvokeHandler(
-        GseBytecodeVmExecutable compiledScript,
+        GesBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
         GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
@@ -761,7 +761,7 @@ internal sealed class GesBytecodeVmExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
         }
 
-        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GseSet(items));
+        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSet(items));
     }
 
     private static BytecodeVmValue BuildDictionaryValue(BytecodeVmValue[] stack, int start, int count, string[]? names)
@@ -777,7 +777,7 @@ internal sealed class GesBytecodeVmExecutionSession
             map[names[entryIndex]] = stack[start + entryIndex].ToGameEventScriptValue();
         }
 
-        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(map));
+        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesDictionary(map));
     }
 
     private static BytecodeVmValue BuildMessageValue(
@@ -1068,7 +1068,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
 
         value = BytecodeVmValue.Reference(program.CollectionType == "set"
-            ? GameEventScriptValueFactory.GseSet(values)
+            ? GameEventScriptValueFactory.GesSet(values)
             : GameEventScriptValueFactory.GesList(values));
         return true;
     }
@@ -1221,12 +1221,12 @@ internal sealed class GesBytecodeVmExecutionSession
     {
         if (diceCount <= 0 || sideCount <= 0)
         {
-            return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
+            return BytecodeVmValue.Reference(GesDice(GameEventScriptDiceValue.Empty));
         }
 
         if (!_context.RuntimeBudget.TryCheckDice(diceCount, sideCount))
         {
-            return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
+            return BytecodeVmValue.Reference(GesDice(GameEventScriptDiceValue.Empty));
         }
 
         var rolls = new int[diceCount];
@@ -1234,13 +1234,13 @@ internal sealed class GesBytecodeVmExecutionSession
         {
             if (!TryNextInclusiveInt(1, sideCount, out var roll))
             {
-                return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
+                return BytecodeVmValue.Reference(GesDice(GameEventScriptDiceValue.Empty));
             }
 
             rolls[i] = roll;
         }
 
-        return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Create(rolls)));
+        return BytecodeVmValue.Reference(GesDice(GameEventScriptDiceValue.Create(rolls)));
     }
 
     private bool TryEvaluateUnaryOperation(string? operation, BytecodeVmValue operand, out BytecodeVmValue value)
@@ -1890,7 +1890,7 @@ internal sealed class GesBytecodeVmExecutionSession
                 values[label] = stack[start + index].ToGameEventScriptValue();
             }
 
-            return BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(GseDictionary(values), typeDefinition));
+            return BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(GesDictionary(values), typeDefinition));
         }
 
         if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
@@ -2002,11 +2002,11 @@ internal sealed class GesBytecodeVmExecutionSession
                 : GesMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
                     ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateHandlerValue(handler))
                     : BytecodeVmValue.Nothing,
-            "dictionary" => BytecodeVmValue.Reference(GseDictionary(boxed.AsDictionary())),
+            "dictionary" => BytecodeVmValue.Reference(GesDictionary(boxed.AsDictionary())),
             "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
-                ? BytecodeVmValue.Reference(GseSet(boxed.AsSet()))
+                ? BytecodeVmValue.Reference(GesSet(boxed.AsSet()))
                 : BytecodeVmValue.Nothing,
-            "dice" => BytecodeVmValue.Reference(GseDice(boxed.AsDice())),
+            "dice" => BytecodeVmValue.Reference(GesDice(boxed.AsDice())),
             "optional" => boxed.IsOptional()
                 ? input
                 : boxed.IsNothing()
@@ -2225,7 +2225,7 @@ internal sealed class GesBytecodeVmExecutionSession
             materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
         }
 
-        return GameEventScriptValueFactory.GseCustomType(typeDefinition.Name, materializedValues);
+        return GameEventScriptValueFactory.GesCustomType(typeDefinition.Name, materializedValues);
     }
 
     private GameEventScriptValue ConvertValueToDeclaredType(GameEventScriptValue value, string declaredType)
@@ -2791,7 +2791,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return false;
         }
 
-        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(result));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesDictionary(result));
         return true;
     }
 
@@ -2909,7 +2909,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return false;
         }
 
-        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(groups.ToDictionary(
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesDictionary(groups.ToDictionary(
             pair => pair.Key,
             pair => GameEventScriptValueFactory.GesList(pair.Value),
             StringComparer.Ordinal)));
@@ -3303,7 +3303,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return drawn.Length == 0 ? GameEventScriptNothingValue.Instance : drawn[0];
         }
 
-        return target.Kind == GameEventScriptValueKind.Dice ? GseDice(GameEventScriptDiceValue.Create(drawn.Select(item => (int)item.AsInteger()))) : GesList(drawn);
+        return target.Kind == GameEventScriptValueKind.Dice ? GesDice(GameEventScriptDiceValue.Create(drawn.Select(item => (int)item.AsInteger()))) : GesList(drawn);
     }
 
     private GameEventScriptValue EvaluateShuffleSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)
@@ -3346,7 +3346,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
 
         value = target.Kind == GameEventScriptValueKind.Dice
-            ? GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(takenItems.Select(item => (int)item.AsInteger())))
+            ? GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(takenItems.Select(item => (int)item.AsInteger())))
             : GameEventScriptValueFactory.GesList(takenItems);
         return true;
     }
@@ -3695,7 +3695,7 @@ internal sealed class GesBytecodeVmExecutionSession
         if (selector.Count <= 0)
         {
             return target.Kind == GameEventScriptValueKind.Dice
-                ? GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Empty)
+                ? GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Empty)
                 : GameEventScriptValueFactory.GesList(Array.Empty<GameEventScriptValue>());
         }
 
@@ -3715,7 +3715,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
         return target.Kind switch
         {
-            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(selectedItems),
             GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(selectedItems),
             _ => GameEventScriptNothingValue.Instance
@@ -3726,7 +3726,7 @@ internal sealed class GesBytecodeVmExecutionSession
     {
         return target.Kind switch
         {
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GseSet(items),
+            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesSet(items),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),

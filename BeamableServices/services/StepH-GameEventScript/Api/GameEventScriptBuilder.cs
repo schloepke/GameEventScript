@@ -96,11 +96,11 @@ public sealed class GameEventScriptBuilder
     /// <summary>
     /// Builds and returns a new internal module model based on the configured sources.
     /// </summary>
-    /// <returns>A built <see cref="GseModule"/> instance.</returns>
+    /// <returns>A built <see cref="GesModule"/> instance.</returns>
     /// <exception cref="GameEventScriptCompileException">
     /// Thrown when errors are encountered during the build process.
     /// </exception>
-    internal GseModule BuildModule(GameEventScriptCompileOptions? options = null)
+    internal GesModule BuildModule(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
         var modules = _sources
@@ -137,7 +137,7 @@ public sealed class GameEventScriptBuilder
 
         errors.ThrowIfAny();
 
-        var moduleResult = new GseModule(typeDefinitions, callables, handlers);
+        var moduleResult = new GesModule(typeDefinitions, callables, handlers);
         return compileOptions.Optimize ? GesOptimizer.Optimize(moduleResult, compileOptions) : moduleResult;
     }
 
@@ -233,14 +233,14 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static Dictionary<string, GseCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
+    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
         IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions)
     {
-        var map = new Dictionary<string, GseCallableDefinition>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
 
         foreach (var pair in ruleDefinitions)
         {
-            map[pair.Key] = new GseCallableDefinition(
+            map[pair.Key] = new GesCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
@@ -250,7 +250,7 @@ public sealed class GameEventScriptBuilder
 
         foreach (var pair in selectDefinitions)
         {
-            map[pair.Key] = new GseCallableDefinition(
+            map[pair.Key] = new GesCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,

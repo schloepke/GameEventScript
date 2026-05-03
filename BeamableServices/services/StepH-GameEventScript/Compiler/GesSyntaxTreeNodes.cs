@@ -93,11 +93,6 @@ internal sealed record MessageLiteralExpressionNode(string Message, ArgumentList
     public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
 }
 
-internal sealed record HandlerBindExpressionNode(ExpressionNode CalleeExpression, ArgumentListNode ArgumentList) : ExpressionNode
-{
-    public IReadOnlyList<ArgumentNode> Arguments => ArgumentList.Arguments;
-}
-
 internal sealed record CallExpressionNode(string Name, ArgumentListNode ArgumentList) : ExpressionNode
 {
     public IReadOnlyList<ExpressionNode> Arguments => ArgumentList.Expressions;

@@ -22,8 +22,8 @@ public class GameEventScriptValueScenarios
         var sourceSet = new HashSet<GameEventScriptValue> { 1m, 2m };
 
         var listValue = GesList(sourceList);
-        var dictionaryValue = GseDictionary(sourceDictionary);
-        var setValue = GseSet(sourceSet);
+        var dictionaryValue = GesDictionary(sourceDictionary);
+        var setValue = GesSet(sourceSet);
 
         sourceList.Add(3m);
         sourceDictionary["b"] = 2m;
@@ -42,12 +42,12 @@ public class GameEventScriptValueScenarios
         Assert.ThrowsExactly<NotSupportedException>(() => ((IList<GameEventScriptValue>)listView)[0] = 9m);
         Assert.AreEqual(1m, listValue.AsList()[0].AsNumber());
 
-        var dictionaryValue = GseDictionary(new Dictionary<string, GameEventScriptValue> { ["a"] = 1m });
+        var dictionaryValue = GesDictionary(new Dictionary<string, GameEventScriptValue> { ["a"] = 1m });
         var dictionaryView = dictionaryValue.AsDictionary();
         Assert.ThrowsExactly<NotSupportedException>(() => ((IDictionary<string, GameEventScriptValue>)dictionaryView)["b"] = 2m);
         Assert.HasCount(1, dictionaryValue.AsDictionary());
 
-        var setValue = GseSet([1m, 2m]);
+        var setValue = GesSet([1m, 2m]);
         var setCopy = setValue.AsSet();
         setCopy.Add(3m);
         Assert.HasCount(2, setValue.AsSet());
@@ -59,9 +59,9 @@ public class GameEventScriptValueScenarios
         Assert.AreSame(GesText(string.Empty), GesText(string.Empty));
         Assert.AreSame(GesOptionalNone(), GesOptionalNone());
         Assert.AreSame(GesList(null), GesList(Array.Empty<GameEventScriptValue>()));
-        Assert.AreSame(GseDictionary(null), GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
-        Assert.AreSame(GseSet(null), GseSet(Array.Empty<GameEventScriptValue>()));
-        Assert.AreSame(GseDice((GameEventScriptDiceValue?)null), GameEventScriptDiceValue.Create(Array.Empty<int>()));
+        Assert.AreSame(GesDictionary(null), GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
+        Assert.AreSame(GesSet(null), GesSet(Array.Empty<GameEventScriptValue>()));
+        Assert.AreSame(GesDice((GameEventScriptDiceValue?)null), GameEventScriptDiceValue.Create(Array.Empty<int>()));
         Assert.AreSame(GesMessage(GameEventScriptMessage.Empty), GesMessage(GameEventScriptMessage.Empty));
         Assert.AreSame(GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])), GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])));
     }
@@ -228,7 +228,7 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void SetsStayCanonicallySorted()
     {
-        var setValue = GseSet([GesDecimal(3m), GesText("z"), GesInteger(1), GesText("a"), GesBoolean(false), GesDecimal(2m)]);
+        var setValue = GesSet([GesDecimal(3m), GesText("z"), GesInteger(1), GesText("a"), GesBoolean(false), GesDecimal(2m)]);
 
         var ordered = setValue.AsSet().ToArray();
 

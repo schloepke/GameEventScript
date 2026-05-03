@@ -10,14 +10,14 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Compiler;
 
-internal static class GseBytecodeVmExecutionPlanBuilder
+internal static class GesBytecodeVmExecutionPlanBuilder
 {
     public static BytecodeVmExecutionPlan CompileHandlerPlan(
         string messageName,
         int declarationOrder,
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
         Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
     {
@@ -50,7 +50,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
     }
 
     public static IReadOnlyDictionary<string, BytecodeVmTypeDefinition> CompileTypeDefinitions(
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
     {
@@ -80,7 +80,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateStatements(
         IReadOnlyList<StatementNode> statements,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
@@ -98,7 +98,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateStatement(
         StatementNode statement,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         switch (statement)
@@ -225,7 +225,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateRange(
         RangeExpressionNode range,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         if (!TryValidateExpression(range.FromExpression, callables, out failureReason))
@@ -253,7 +253,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateExpression(
         ExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         switch (expression)
@@ -284,26 +284,6 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                 return true;
 
             case HandlerLiteralExpressionNode:
-                failureReason = string.Empty;
-                return true;
-
-            case HandlerBindExpressionNode handlerBind:
-                if (!TryValidateExpression(handlerBind.CalleeExpression, callables, out failureReason))
-                {
-                    failureReason = $"Handler bind callee: {failureReason}";
-                    return false;
-                }
-
-                for (var argumentIndex = 0; argumentIndex < handlerBind.Arguments.Count; argumentIndex++)
-                {
-                    var argument = handlerBind.Arguments[argumentIndex];
-                    if (!TryValidateExpression(argument.Expression, callables, out failureReason))
-                    {
-                        failureReason = $"Handler bind argument '{argument.Name}': {failureReason}";
-                        return false;
-                    }
-                }
-
                 failureReason = string.Empty;
                 return true;
 
@@ -718,7 +698,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateIterationSource(
         IterationSourceNode source,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         switch (source)
@@ -744,7 +724,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidatePipelinedCollection(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         var selectors = new List<CollectionSelectorNode>();
@@ -784,7 +764,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateIndexedCollectionAccess(
         CollectionAccessExpressionNode expression,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         if (expression.Selector is not ExpressionSelectorNode selector)
@@ -812,7 +792,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
     private static bool TryValidateSelector(
         CollectionSelectorNode selector,
         bool isTerminal,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         switch (selector)
@@ -1030,7 +1010,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateDicePattern(
         DicePatternNode pattern,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         if (pattern is DiceCountPatternNode { Face: { } face } &&
@@ -1046,7 +1026,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private static bool TryValidateObjectMatchPattern(
         ObjectMatchPatternNode pattern,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         out string failureReason)
     {
         foreach (var entry in pattern.Entries)
@@ -1078,7 +1058,7 @@ internal static class GseBytecodeVmExecutionPlanBuilder
     }
 
     private sealed class SlotCollector(
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
         private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
@@ -1203,15 +1183,6 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
                 case MessageLiteralExpressionNode message:
                     foreach (var argument in message.Arguments)
-                    {
-                        CollectExpression(argument.Expression);
-                    }
-
-                    break;
-
-                case HandlerBindExpressionNode handlerBind:
-                    CollectExpression(handlerBind.CalleeExpression);
-                    foreach (var argument in handlerBind.Arguments)
                     {
                         CollectExpression(argument.Expression);
                     }
@@ -1556,10 +1527,10 @@ internal static class GseBytecodeVmExecutionPlanBuilder
 
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<string, GseCallableDefinition> callables,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
         Func<GameEventScriptExtensionReference, int>? externalReferenceResolver)
     {
-        private readonly IReadOnlyDictionary<string, GseCallableDefinition> _callables = callables;
+        private readonly IReadOnlyDictionary<string, GesCallableDefinition> _callables = callables;
         private readonly Func<GameEventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
         private readonly Dictionary<ExpressionNode, BytecodeVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
 
@@ -1762,23 +1733,6 @@ internal static class GseBytecodeVmExecutionPlanBuilder
                             DiagnosticArgumentName: GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
                             Names: argumentNames));
                         CollapseValuesToSingle(message.Arguments.Count);
-                        return;
-
-                    case HandlerBindExpressionNode handlerBind:
-                        var bindArgumentNames = new string[handlerBind.Arguments.Count];
-                        EmitExpression(handlerBind.CalleeExpression);
-                        for (var argumentIndex = 0; argumentIndex < handlerBind.Arguments.Count; argumentIndex++)
-                        {
-                            var argument = handlerBind.Arguments[argumentIndex];
-                            bindArgumentNames[argumentIndex] = argument.Name;
-                            EmitExpression(argument.Expression);
-                        }
-
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.BindHandler,
-                            A: handlerBind.Arguments.Count,
-                            Names: bindArgumentNames));
-                        CollapseValuesToSingle(handlerBind.Arguments.Count + 1);
                         return;
 
                     case ExtensionCallExpressionNode extensionCall:

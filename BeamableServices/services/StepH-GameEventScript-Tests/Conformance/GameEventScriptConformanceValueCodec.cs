@@ -85,11 +85,11 @@ internal static class GameEventScriptConformanceValueCodec
             case ":list":
                 return GameEventScriptValueFactory.GesList(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
             case ":dictionary":
-                return GameEventScriptValueFactory.GseDictionary(DecodeEntries(element));
+                return GameEventScriptValueFactory.GesDictionary(DecodeEntries(element));
             case ":set":
-                return GameEventScriptValueFactory.GseSet(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
+                return GameEventScriptValueFactory.GesSet(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
             case ":dice":
-                return GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
+                return GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
             case ":range":
                 return GameEventScriptValueFactory.GesRange(
                     RequireInt64(element, "from", "range start"),
@@ -98,7 +98,7 @@ internal static class GameEventScriptConformanceValueCodec
             case ":message":
                 return GameEventScriptValueFactory.GesMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
             default:
-                return GameEventScriptValueFactory.GseCustomType(type[1..], DecodeEntries(element));
+                return GameEventScriptValueFactory.GesCustomType(type[1..], DecodeEntries(element));
         }
     }
 

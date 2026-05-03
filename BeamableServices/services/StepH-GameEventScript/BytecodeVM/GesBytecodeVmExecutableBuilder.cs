@@ -5,10 +5,10 @@ namespace StepH.GameEventScript.BytecodeVM;
 
 internal static class GesBytecodeVmExecutableBuilder
 {
-    public static GseBytecodeVmExecutable Build(GameEventScriptCompiled compiled)
+    public static GesBytecodeVmExecutable Build(GameEventScriptCompiled compiled)
     {
         _ = compiled ?? throw new ArgumentNullException(nameof(compiled));
-        return new GseBytecodeVmExecutable(
+        return new GesBytecodeVmExecutable(
             compiled.Options,
             compiled,
             compiled.Handlers,

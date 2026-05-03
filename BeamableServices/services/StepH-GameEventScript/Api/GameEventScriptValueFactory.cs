@@ -235,7 +235,7 @@ public static class GameEventScriptValueFactory
     /// <param name="values">The dictionary containing key-value pairs where keys are strings and values are instances of <see cref="GameEventScriptValue"/>. Can be null.</param>
     /// <returns>A new <see cref="GameEventScriptDictionaryValue"/> instance representing the key-value pairs.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GseDictionary(IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptDictionaryValue.Create(values);
+    public static GameEventScriptValue GesDictionary(IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptDictionaryValue.Create(values);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a custom type value.
@@ -244,7 +244,7 @@ public static class GameEventScriptValueFactory
     /// <param name="values">The dictionary of field names and their respective <see cref="GameEventScriptValue"/> values. Can be null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance encapsulating the custom type with the specified fields.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GseCustomType(string typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptDictionaryValue.Create(typeName, values);
+    public static GameEventScriptValue GesCustomType(string typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptDictionaryValue.Create(typeName, values);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a set of values.
@@ -252,7 +252,7 @@ public static class GameEventScriptValueFactory
     /// <param name="values">The collection of <see cref="GameEventScriptValue"/> elements to include in the set. Can be null to create an empty set.</param>
     /// <returns>A new <see cref="GameEventScriptSetValue"/> instance containing the specified values.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GseSet(IEnumerable<GameEventScriptValue>? values) => GameEventScriptSetValue.Create(values);
+    public static GameEventScriptValue GesSet(IEnumerable<GameEventScriptValue>? values) => GameEventScriptSetValue.Create(values);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a dice value.
@@ -260,7 +260,7 @@ public static class GameEventScriptValueFactory
     /// <param name="diceValue">The dice value to encapsulate. Can be null, in which case an empty dice value is created.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the dice value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GseDice(GameEventScriptDiceValue? diceValue) => GameEventScriptDiceValue.Create(diceValue);
+    public static GameEventScriptValue GesDice(GameEventScriptDiceValue? diceValue) => GameEventScriptDiceValue.Create(diceValue);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a dice roll result.
@@ -268,5 +268,5 @@ public static class GameEventScriptValueFactory
     /// <param name="rolls">An enumerable collection of integers representing the dice rolls. Can be null to represent no rolls.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance encapsulating the dice roll data.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GseDice(IEnumerable<int>? rolls) => GameEventScriptDiceValue.Create(rolls);
+    public static GameEventScriptValue GesDice(IEnumerable<int>? rolls) => GameEventScriptDiceValue.Create(rolls);
 }

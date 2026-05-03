@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
@@ -36,7 +37,7 @@ internal static class GameEventScriptValueAlu
         {
             if (!TryGetCommonNumericUnit(values, out _))
             {
-                return GameEventScriptValueFactory.DecimalNaN();
+                return GameEventScriptValueFactory.GesDecimalNaN();
             }
 
             var numericBest = values[0];
@@ -46,7 +47,7 @@ internal static class GameEventScriptValueAlu
                 TryCoerceNumericForOperation(values[i], out var number);
                 if (!TryCompareNumeric(number, bestNumber, out var comparison))
                 {
-                    return GameEventScriptValueFactory.DecimalNaN();
+                    return GameEventScriptValueFactory.GesDecimalNaN();
                 }
 
                 if ((isMax && comparison > 0) || (!isMax && comparison < 0))
@@ -82,19 +83,19 @@ internal static class GameEventScriptValueAlu
 
         if (left.Kind == GameEventScriptValueKind.List && right.Kind == GameEventScriptValueKind.List)
         {
-            value = GameEventScriptValueFactory.List(left.AsList().Concat(right.AsList()));
+            value = GameEventScriptValueFactory.GesList(left.AsList().Concat(right.AsList()));
             return true;
         }
 
         if (left.Kind == GameEventScriptValueKind.List)
         {
-            value = GameEventScriptValueFactory.List(left.AsList().Append(right));
+            value = GameEventScriptValueFactory.GesList(left.AsList().Append(right));
             return true;
         }
 
         if (right.Kind == GameEventScriptValueKind.List)
         {
-            value = GameEventScriptValueFactory.List(new[] { left }.Concat(right.AsList()));
+            value = GameEventScriptValueFactory.GesList(new[] { left }.Concat(right.AsList()));
             return true;
         }
 
@@ -111,13 +112,13 @@ internal static class GameEventScriptValueAlu
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
         {
-            return GameEventScriptValueFactory.Set(left.AsSet().Concat(right.AsSet()));
+            return GameEventScriptValueFactory.GseSet(left.AsSet().Concat(right.AsSet()));
         }
 
         if (left.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice &&
             right.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice)
         {
-            return GameEventScriptValueFactory.List(left.AsList().Concat(right.AsList()));
+            return GameEventScriptValueFactory.GesList(left.AsList().Concat(right.AsList()));
         }
 
         return GameEventScriptValue.Nothing;
@@ -131,13 +132,13 @@ internal static class GameEventScriptValueAlu
             var map = left.AsDictionary()
                 .Where(pair => rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return GameEventScriptValueFactory.Dictionary(map);
+            return GameEventScriptValueFactory.GseDictionary(map);
         }
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
         {
             var rightSet = right.AsSet();
-            return GameEventScriptValueFactory.Set(left.AsSet().Where(item => rightSet.Contains(item)));
+            return GameEventScriptValueFactory.GseSet(left.AsSet().Where(item => rightSet.Contains(item)));
         }
 
         if (left.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice &&
@@ -157,7 +158,7 @@ internal static class GameEventScriptValueAlu
                 remaining.RemoveAt(index);
             }
 
-            return GameEventScriptValueFactory.List(result);
+            return GameEventScriptValueFactory.GesList(result);
         }
 
         return GameEventScriptValue.Nothing;
@@ -171,13 +172,13 @@ internal static class GameEventScriptValueAlu
             var map = left.AsDictionary()
                 .Where(pair => !rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return GameEventScriptValueFactory.Dictionary(map);
+            return GameEventScriptValueFactory.GseDictionary(map);
         }
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
         {
             var rightSet = right.AsSet();
-            return GameEventScriptValueFactory.Set(left.AsSet().Where(item => !rightSet.Contains(item)));
+            return GameEventScriptValueFactory.GseSet(left.AsSet().Where(item => !rightSet.Contains(item)));
         }
 
         if (left.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice &&
@@ -197,7 +198,7 @@ internal static class GameEventScriptValueAlu
                 result.Add(item);
             }
 
-            return GameEventScriptValueFactory.List(result);
+            return GameEventScriptValueFactory.GesList(result);
         }
 
         return GameEventScriptValue.Nothing;
@@ -217,14 +218,14 @@ internal static class GameEventScriptValueAlu
         var zipped = new List<GameEventScriptValue>(count);
         for (var i = 0; i < count; i++)
         {
-            zipped.Add(GameEventScriptValueFactory.Dictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+            zipped.Add(GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
             {
                 ["left"] = leftItems[i],
                 ["right"] = rightItems[i]
             }));
         }
 
-        return GameEventScriptValueFactory.List(zipped);
+        return GameEventScriptValueFactory.GesList(zipped);
     }
 
     public static GameEventScriptValue EvaluateDictionaryCombine(GameEventScriptValue left, GameEventScriptValue right)
@@ -235,7 +236,7 @@ internal static class GameEventScriptValueAlu
             map[pair.Key] = pair.Value;
         }
 
-        return GameEventScriptValueFactory.Dictionary(map);
+        return GameEventScriptValueFactory.GseDictionary(map);
     }
 
     public static bool AreEqual(GameEventScriptValue left, GameEventScriptValue right) => left.Equals(right);
@@ -331,11 +332,11 @@ internal static class GameEventScriptValueAlu
     {
         return number.Kind switch
         {
-            NumericKind.Finite => GameEventScriptValueFactory.Decimal(number.Value, unit),
-            NumericKind.NaN => GameEventScriptValueFactory.DecimalNaN(),
-            NumericKind.PositiveInfinity => GameEventScriptValueFactory.DecimalInfinity(),
-            NumericKind.NegativeInfinity => GameEventScriptValueFactory.DecimalNegativeInfinity(),
-            _ => GameEventScriptValueFactory.DecimalNaN()
+            NumericKind.Finite => GameEventScriptValueFactory.GesDecimal(number.Value, unit),
+            NumericKind.NaN => GameEventScriptValueFactory.GesDecimalNaN(),
+            NumericKind.PositiveInfinity => GameEventScriptValueFactory.GesDecimalInfinity(),
+            NumericKind.NegativeInfinity => GameEventScriptValueFactory.GesDecimalNegativeInfinity(),
+            _ => GameEventScriptValueFactory.GesDecimalNaN()
         };
     }
 
@@ -350,7 +351,7 @@ internal static class GameEventScriptValueAlu
             operation == "div" &&
             TryToInteger(number, out var quotient))
         {
-            return GameEventScriptValueFactory.Integer(quotient);
+            return GameEventScriptValueFactory.GesInteger(quotient);
         }
 
         if (unit is null &&
@@ -359,7 +360,7 @@ internal static class GameEventScriptValueAlu
             right.Kind == GameEventScriptValueKind.Integer &&
             TryToInteger(number, out var integer))
         {
-            return GameEventScriptValueFactory.Integer(integer);
+            return GameEventScriptValueFactory.GesInteger(integer);
         }
 
         return ToGameEventScriptDecimal(number, unit);
@@ -378,7 +379,7 @@ internal static class GameEventScriptValueAlu
         if (!TryCoerceNumericForOperation(left, out var leftNumber) ||
             !TryCoerceNumericForOperation(right, out var rightNumber))
         {
-            value = GameEventScriptValueFactory.DecimalNaN();
+            value = GameEventScriptValueFactory.GesDecimalNaN();
             return true;
         }
 
@@ -386,7 +387,7 @@ internal static class GameEventScriptValueAlu
         var rightHasUnit = GameEventScriptValue.TryGetDecimalUnit(right, out var rightUnit);
         if (leftIsPercentage && rightHasUnit && operation is "+" or "-" or "/")
         {
-            value = GameEventScriptValueFactory.DecimalNaN();
+            value = GameEventScriptValueFactory.GesDecimalNaN();
             return true;
         }
 
@@ -398,7 +399,7 @@ internal static class GameEventScriptValueAlu
                 "-" => ToGameEventScriptPercentage(SubtractNumeric(leftNumber, rightNumber)),
                 "*" => ToGameEventScriptPercentage(MultiplyNumeric(leftNumber, rightNumber)),
                 "/" => ToGameEventScriptDecimal(DivideNumeric(leftNumber, rightNumber)),
-                _ => GameEventScriptValueFactory.DecimalNaN()
+                _ => GameEventScriptValueFactory.GesDecimalNaN()
             };
             return true;
         }
@@ -407,7 +408,7 @@ internal static class GameEventScriptValueAlu
         {
             if (leftIsPercentage)
             {
-                value = GameEventScriptValueFactory.DecimalNaN();
+                value = GameEventScriptValueFactory.GesDecimalNaN();
                 return true;
             }
 
@@ -460,7 +461,7 @@ internal static class GameEventScriptValueAlu
         if (!TryCoerceNumericForOperation(left, out var leftNumber) ||
             !TryCoerceNumericForOperation(right, out var rightNumber))
         {
-            value = GameEventScriptValueFactory.DecimalNaN();
+            value = GameEventScriptValueFactory.GesDecimalNaN();
             return true;
         }
 
@@ -478,7 +479,7 @@ internal static class GameEventScriptValueAlu
 
         if (!valid)
         {
-            value = GameEventScriptValueFactory.DecimalNaN();
+            value = GameEventScriptValueFactory.GesDecimalNaN();
             return true;
         }
 
@@ -510,7 +511,7 @@ internal static class GameEventScriptValueAlu
 
         if (operation is "div" or "mod" or "rem")
         {
-            value = GameEventScriptValueFactory.DecimalNaN();
+            value = GameEventScriptValueFactory.GesDecimalNaN();
             return true;
         }
 
@@ -520,7 +521,7 @@ internal static class GameEventScriptValueAlu
             {
                 value = operation == "+"
                     ? GameEventScriptValue.Nothing
-                    : GameEventScriptValueFactory.DecimalNaN();
+                    : GameEventScriptValueFactory.GesDecimalNaN();
                 return operation != "+";
             }
 
@@ -528,7 +529,7 @@ internal static class GameEventScriptValueAlu
                 leftVector.Dimension != rightVector.Dimension ||
                 leftVector.Unit != rightVector.Unit)
             {
-                value = GameEventScriptValueFactory.DecimalNaN();
+                value = GameEventScriptValueFactory.GesDecimalNaN();
                 return true;
             }
 
@@ -551,7 +552,7 @@ internal static class GameEventScriptValueAlu
         {
             if (leftIsVector && rightIsVector)
             {
-                value = GameEventScriptValueFactory.DecimalNaN();
+                value = GameEventScriptValueFactory.GesDecimalNaN();
                 return true;
             }
 
@@ -565,7 +566,7 @@ internal static class GameEventScriptValueAlu
         {
             value = leftIsVector && !rightIsVector
                 ? ScaleVector(leftVector, right, operation)
-                : GameEventScriptValueFactory.DecimalNaN();
+                : GameEventScriptValueFactory.GesDecimalNaN();
             return true;
         }
 
@@ -631,7 +632,7 @@ internal static class GameEventScriptValueAlu
 
             if (!TryReadVectorComponent(pair.Value, out values[index], out var componentUnit, out var invalid))
             {
-                value = invalid ? GameEventScriptValueFactory.DecimalNaN() : GameEventScriptValue.Nothing;
+                value = invalid ? GameEventScriptValueFactory.GesDecimalNaN() : GameEventScriptValue.Nothing;
                 return invalid;
             }
 
@@ -644,14 +645,14 @@ internal static class GameEventScriptValueAlu
 
             if (unit != componentUnit)
             {
-                value = GameEventScriptValueFactory.DecimalNaN();
+                value = GameEventScriptValueFactory.GesDecimalNaN();
                 return true;
             }
         }
 
         value = labels.Length == 2
-            ? GameEventScriptValueFactory.Vector2(values[0], values[1], unit)
-            : GameEventScriptValueFactory.Vector3(values[0], values[1], values[2], unit);
+            ? GameEventScriptValueFactory.GesVector2(values[0], values[1], unit)
+            : GameEventScriptValueFactory.GesVector3(values[0], values[1], values[2], unit);
         return true;
     }
 
@@ -665,8 +666,8 @@ internal static class GameEventScriptValueAlu
         }
 
         return TryCreateVector3(
-            GameEventScriptValueFactory.Decimal(vector2.X, vector2.Unit),
-            GameEventScriptValueFactory.Decimal(vector2.Y, vector2.Unit),
+            GameEventScriptValueFactory.GesDecimal(vector2.X, vector2.Unit),
+            GameEventScriptValueFactory.GesDecimal(vector2.Y, vector2.Unit),
             z,
             out value);
     }
@@ -676,10 +677,10 @@ internal static class GameEventScriptValueAlu
         switch (value)
         {
             case GameEventScriptVector2Value vector2:
-                converted = GameEventScriptValueFactory.Vector2(vector2.X, vector2.Y);
+                converted = GameEventScriptValueFactory.GesVector2(vector2.X, vector2.Y);
                 return true;
             case GameEventScriptVector3Value vector3:
-                converted = GameEventScriptValueFactory.Vector3(vector3.X, vector3.Y, vector3.Z);
+                converted = GameEventScriptValueFactory.GesVector3(vector3.X, vector3.Y, vector3.Z);
                 return true;
             default:
                 converted = GameEventScriptValue.Nothing;
@@ -693,13 +694,13 @@ internal static class GameEventScriptValueAlu
         {
             case GameEventScriptVector2Value vector2:
                 converted = vector2.Unit.HasValue && vector2.Unit.Value != unit
-                    ? GameEventScriptValueFactory.DecimalNaN()
-                    : GameEventScriptValueFactory.Vector2(vector2.X, vector2.Y, unit);
+                    ? GameEventScriptValueFactory.GesDecimalNaN()
+                    : GameEventScriptValueFactory.GesVector2(vector2.X, vector2.Y, unit);
                 return true;
             case GameEventScriptVector3Value vector3:
                 converted = vector3.Unit.HasValue && vector3.Unit.Value != unit
-                    ? GameEventScriptValueFactory.DecimalNaN()
-                    : GameEventScriptValueFactory.Vector3(vector3.X, vector3.Y, vector3.Z, unit);
+                    ? GameEventScriptValueFactory.GesDecimalNaN()
+                    : GameEventScriptValueFactory.GesVector3(vector3.X, vector3.Y, vector3.Z, unit);
                 return true;
             default:
                 converted = GameEventScriptValue.Nothing;
@@ -716,22 +717,22 @@ internal static class GameEventScriptValueAlu
 
         if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var unit) && unit != GameEventScriptDecimalUnit.Degree)
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         if (unwrapped.Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer &&
             TryCoerceNumericForOperation(unwrapped, out var number) &&
             number.IsFinite)
         {
-            return GameEventScriptValueFactory.Degree(GameEventScriptValue.WrapDegrees(number.Value));
+            return GameEventScriptValueFactory.GesDegree(GameEventScriptValue.WrapDegrees(number.Value));
         }
 
-        return GameEventScriptValueFactory.DecimalNaN();
+        return GameEventScriptValueFactory.GesDecimalNaN();
     }
 
     public static bool TryCompareNumericValues(GameEventScriptValue left, GameEventScriptValue right, out int comparison)
@@ -816,7 +817,7 @@ internal static class GameEventScriptValueAlu
         {
             if (!TryReadVectorComponent(components[index], out values[index], out var componentUnit, out var invalid))
             {
-                value = invalid ? GameEventScriptValueFactory.DecimalNaN() : GameEventScriptValue.Nothing;
+                value = invalid ? GameEventScriptValueFactory.GesDecimalNaN() : GameEventScriptValue.Nothing;
                 return invalid;
             }
 
@@ -829,14 +830,14 @@ internal static class GameEventScriptValueAlu
 
             if (unit != componentUnit)
             {
-                value = GameEventScriptValueFactory.DecimalNaN();
+                value = GameEventScriptValueFactory.GesDecimalNaN();
                 return true;
             }
         }
 
         value = dimension == 2
-            ? GameEventScriptValueFactory.Vector2(values[0], values[1], unit)
-            : GameEventScriptValueFactory.Vector3(values[0], values[1], values[2], unit);
+            ? GameEventScriptValueFactory.GesVector2(values[0], values[1], unit)
+            : GameEventScriptValueFactory.GesVector3(values[0], values[1], values[2], unit);
         return true;
     }
 
@@ -871,18 +872,18 @@ internal static class GameEventScriptValueAlu
     {
         if (!TryCoerceNumericForOperation(scalar, out var scalarNumber) || !scalarNumber.IsFinite)
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         var scalarHasUnit = GameEventScriptValue.TryGetDecimalUnit(scalar, out var scalarUnit);
         if (!TryGetVectorScalarResultUnit(vector.Unit, scalarHasUnit ? scalarUnit : null, operation, out var resultUnit))
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         if (operation == "/" && scalarNumber.Value == 0m)
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         var x = operation == "*"
@@ -947,12 +948,12 @@ internal static class GameEventScriptValueAlu
     {
         if (!x.IsFinite || !y.IsFinite || !z.IsFinite)
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         return dimension == 2
-            ? GameEventScriptValueFactory.Vector2(x.Value, y.Value, unit)
-            : GameEventScriptValueFactory.Vector3(x.Value, y.Value, z.Value, unit);
+            ? GameEventScriptValueFactory.GesVector2(x.Value, y.Value, unit)
+            : GameEventScriptValueFactory.GesVector3(x.Value, y.Value, z.Value, unit);
     }
 
     private static GameEventScriptValue EvaluateVectorLength(VectorComponents vector)
@@ -963,20 +964,20 @@ internal static class GameEventScriptValueAlu
             var length = Math.Sqrt(squared);
             if (double.IsNaN(length) || double.IsInfinity(length))
             {
-                return GameEventScriptValueFactory.DecimalNaN();
+                return GameEventScriptValueFactory.GesDecimalNaN();
             }
 
-            return GameEventScriptValueFactory.Decimal((decimal)length, vector.Unit);
+            return GameEventScriptValueFactory.GesDecimal((decimal)length, vector.Unit);
         }
         catch (OverflowException)
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
     }
 
     private static GameEventScriptValue ToGameEventScriptPercentage(NumericValue number)
         => number.IsFinite
-            ? GameEventScriptValueFactory.Percentage(number.Value)
+            ? GameEventScriptValueFactory.GesPercentage(number.Value)
             : ToGameEventScriptDecimal(number);
 
     public static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)

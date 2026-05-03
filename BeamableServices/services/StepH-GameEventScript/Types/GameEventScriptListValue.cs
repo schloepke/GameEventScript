@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -14,7 +14,7 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
 
     public static readonly GameEventScriptListValue Empty = new(EmptyItems);
 
-    public static GameEventScriptListValue GameEventScriptList(IEnumerable<GameEventScriptValue>? values)
+    public static GameEventScriptListValue Create(IEnumerable<GameEventScriptValue>? values)
     {
         if (values == null) return Empty;
         var list = values.Select(value => value ?? Nothing).ToArray();
@@ -51,7 +51,7 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = Set(Items);
+        value = GseSet(Items);
         return true;
     }
 

@@ -3,18 +3,18 @@
 using System;
 using System.Collections.Generic;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.Compiler;
 
-internal sealed class RegisterProgram(
+public sealed class GameEventScriptBytecodeProgram(
     string name,
-    IReadOnlyList<RegisterInstruction> instructions,
+    IReadOnlyList<GameEventScriptInstruction> instructions,
     int registerCount,
     int localCount,
     bool createsScope = false)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
-    public IReadOnlyList<RegisterInstruction> Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
+    public IReadOnlyList<GameEventScriptInstruction> Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
 
     public int RegisterCount { get; } = registerCount;
 

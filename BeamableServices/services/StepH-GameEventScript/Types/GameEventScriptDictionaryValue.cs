@@ -12,7 +12,7 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
     public static readonly GameEventScriptDictionaryValue Empty = new(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
     public static IReadOnlyDictionary<string, GameEventScriptValue> EmptyView => Empty.VisibleView;
 
-    public static GameEventScriptDictionaryValue GameEventScriptDictionary(IReadOnlyDictionary<string, GameEventScriptValue>? values)
+    public static GameEventScriptDictionaryValue Create(IReadOnlyDictionary<string, GameEventScriptValue>? values)
     {
         if (values == null || values.Count == 0) return Empty;
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
@@ -24,11 +24,11 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
         return map.Count == 0 ? Empty : new GameEventScriptDictionaryValue(map);
     }
 
-    public static GameEventScriptDictionaryValue GameEventScriptCustomType(string? typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values)
+    public static GameEventScriptDictionaryValue Create(string? typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values)
     {
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
-            [HiddenTypeKey] = GameEventScriptTagValue.GameEventScriptTag(typeName)
+            [HiddenTypeKey] = GameEventScriptTagValue.Create(typeName)
         };
         if (values == null) return new GameEventScriptDictionaryValue(map);
         foreach (var pair in values)

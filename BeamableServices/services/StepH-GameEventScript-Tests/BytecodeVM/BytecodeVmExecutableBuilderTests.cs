@@ -1,14 +1,16 @@
 using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.RegisterVM;
+using StepH.GameEventScript.BytecodeVM;
+using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.GameEventScriptMessage;
+using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
-namespace StepH_GameEventScript_Tests.RegisterVM;
+namespace StepH_GameEventScript_Tests.BytecodeVM;
 
 [TestClass]
-public sealed class RegisterVmCompilerTests
+public sealed class BytecodeVmExecutableBuilderTests
 {
     [TestMethod]
     public void DebugDumpIsDeterministic()
@@ -25,18 +27,18 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var first = GameEventScriptBytecodeDumper.ToDebugText(GameEventScriptManager.Compile(script));
-        var second = GameEventScriptBytecodeDumper.ToDebugText(GameEventScriptManager.Compile(script));
+        var first = GameEventScriptManager.Compile(script).DumpBytecode();
+        var second = GameEventScriptManager.Compile(script).DumpBytecode();
 
         Assert.AreEqual(first, second);
-        StringAssert.Contains(first, "registervm bytecode v1");
+        StringAssert.Contains(first, "gameeventscript bytecode v1");
         StringAssert.Contains(first, "program");
         StringAssert.Contains(first, "EvaluateExpression");
         StringAssert.Contains(first, "Publish");
     }
 
     [TestMethod]
-    public void RegisterVmCanRunThroughHostContract()
+    public void BytecodeVmCanRunThroughHostContract()
     {
         const string script =
             """
@@ -53,15 +55,15 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start"));
+        host.Publish(Create("Start"));
 
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(3), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["value"]);
     }
 
     [TestMethod]
-    public void RegisterVmRejectsUnknownStatementNodesAtCompileTime()
+    public void BytecodeVmRejectsUnknownStatementNodesAtCompileTime()
     {
         var module = new GameEventScriptModule(
             new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
@@ -77,13 +79,13 @@ public sealed class RegisterVmCompilerTests
                 ]
             });
 
-        var exception = Assert.ThrowsExactly<GameEventScriptCompilationException>(() => RegisterVmCompiler.Compile(module));
-        StringAssert.Contains(exception.Message, "RegisterVM compiler does not support handler 'Start' #0");
+        var exception = Assert.ThrowsExactly<GameEventScriptCompilationException>(() => BytecodeVmExecutableBuilder.Build(module));
+        StringAssert.Contains(exception.Message, "BytecodeVM execution planner does not support handler 'Start' #0");
         StringAssert.Contains(exception.Message, nameof(UnknownStatementNode));
     }
 
     [TestMethod]
-    public void RegisterVmRunsGeneratedCollectionsByDefault()
+    public void BytecodeVmRunsGeneratedCollectionsByDefault()
     {
         const string script =
             """
@@ -101,15 +103,15 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start"));
+        host.Publish(Create("Start"));
 
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(3), published[0].Arguments["count"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["count"]);
     }
 
     [TestMethod]
-    public void RegisterVmRunsIfElse()
+    public void BytecodeVmRunsIfElse()
     {
         const string script =
             """
@@ -135,18 +137,18 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start", ("first", GameEventScriptValueFactory.Boolean(true)), ("second", GameEventScriptValueFactory.Boolean(false))));
-        host.Publish(Message("Start", ("first", GameEventScriptValueFactory.Boolean(false)), ("second", GameEventScriptValueFactory.Boolean(true))));
-        host.Publish(Message("Start", ("first", GameEventScriptValueFactory.Boolean(false)), ("second", GameEventScriptValueFactory.Boolean(false))));
+        host.Publish(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(true)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
+        host.Publish(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(true))));
+        host.Publish(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
 
         Assert.HasCount(3, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(1), published[0].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(2), published[1].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(3), published[2].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(1), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[1].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[2].Arguments["value"]);
     }
 
     [TestMethod]
-    public void RegisterVmIfBlockDoesNotLeakLocals()
+    public void BytecodeVmIfBlockDoesNotLeakLocals()
     {
         const string script =
             """
@@ -167,14 +169,14 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start", ("flag", GameEventScriptValueFactory.Boolean(true))));
+        host.Publish(Create("Start", ("flag", GameEventScriptValueFactory.GesBoolean(true))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["inner"]);
     }
 
     [TestMethod]
-    public void RegisterVmRunsCollectionFor()
+    public void BytecodeVmRunsCollectionFor()
     {
         const string script =
             """
@@ -195,22 +197,22 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message(
+        host.Publish(Create(
             "Start",
-            ("items", GameEventScriptValueFactory.List(
+            ("items", GameEventScriptValueFactory.GesList(
             [
-                GameEventScriptValueFactory.Integer(1),
-                GameEventScriptValueFactory.Integer(2),
-                GameEventScriptValueFactory.Integer(3)
+                GameEventScriptValueFactory.GesInteger(1),
+                GameEventScriptValueFactory.GesInteger(2),
+                GameEventScriptValueFactory.GesInteger(3)
             ]))));
 
         Assert.HasCount(2, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(4), published[0].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(6), published[1].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(4), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(6), published[1].Arguments["value"]);
     }
 
     [TestMethod]
-    public void RegisterVmCollectionForBlockDoesNotLeakLocals()
+    public void BytecodeVmCollectionForBlockDoesNotLeakLocals()
     {
         const string script =
             """
@@ -231,11 +233,11 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message(
+        host.Publish(Create(
             "Start",
-            ("items", GameEventScriptValueFactory.List(
+            ("items", GameEventScriptValueFactory.GesList(
             [
-                GameEventScriptValueFactory.Integer(1)
+                GameEventScriptValueFactory.GesInteger(1)
             ]))));
 
         Assert.HasCount(1, published);
@@ -244,7 +246,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmRunsTypedLet()
+    public void BytecodeVmRunsTypedLet()
     {
         const string script =
             """
@@ -270,22 +272,22 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start"));
+        host.Publish(Create("Start"));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Decimal(12.2m), published[0].Arguments["numberOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(12.2m), published[0].Arguments["numberOk"]);
         Assert.IsTrue(published[0].Arguments["numberFail"].IsNaN());
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(12), published[0].Arguments["integerOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Percentage(0.05m), published[0].Arguments["percentageOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Decimal(450m, GameEventScriptDecimalUnit.Degree), published[0].Arguments["degreeOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("43.9°"), published[0].Arguments["textOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Decimal(43.9m), published[0].Arguments["unitErased"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["integerOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesPercentage(0.05m), published[0].Arguments["percentageOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(450m, GameEventScriptDecimalUnit.Degree), published[0].Arguments["degreeOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("43.9°"), published[0].Arguments["textOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(43.9m), published[0].Arguments["unitErased"]);
         Assert.HasCount(2, published[0].Arguments["listOk"].AsList());
         Assert.IsFalse(published[0].Arguments["optionalNone"].AsOptional().HasValue);
     }
 
     [TestMethod]
-    public void RegisterVmRunsMemberAndIndexedAccess()
+    public void BytecodeVmRunsMemberAndIndexedAccess()
     {
         const string script =
             """
@@ -303,13 +305,13 @@ public sealed class RegisterVmCompilerTests
             }
             """;
 
-        var unitOne = GameEventScriptValueFactory.Dictionary(new Dictionary<string, GameEventScriptValue>
+        var unitOne = GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>
         {
-            ["name"] = GameEventScriptValueFactory.Text("Scout")
+            ["name"] = GameEventScriptValueFactory.GesText("Scout")
         });
-        var unitTwo = GameEventScriptValueFactory.Dictionary(new Dictionary<string, GameEventScriptValue>
+        var unitTwo = GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>
         {
-            ["name"] = GameEventScriptValueFactory.Text("Knight")
+            ["name"] = GameEventScriptValueFactory.GesText("Knight")
         });
 
         var published = new List<GameEventScriptMessage>();
@@ -318,34 +320,34 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message(
+        host.Publish(Create(
             "Start",
-            ("player", GameEventScriptValueFactory.Dictionary(new Dictionary<string, GameEventScriptValue>
+            ("player", GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>
             {
-                ["hp"] = GameEventScriptValueFactory.Integer(12)
+                ["hp"] = GameEventScriptValueFactory.GesInteger(12)
             })),
-            ("key", GameEventScriptValueFactory.Text("hp")),
-            ("items", GameEventScriptValueFactory.List(
+            ("key", GameEventScriptValueFactory.GesText("hp")),
+            ("items", GameEventScriptValueFactory.GesList(
             [
-                GameEventScriptValueFactory.Integer(10),
-                GameEventScriptValueFactory.Integer(20),
-                GameEventScriptValueFactory.Integer(30)
+                GameEventScriptValueFactory.GesInteger(10),
+                GameEventScriptValueFactory.GesInteger(20),
+                GameEventScriptValueFactory.GesInteger(30)
             ])),
-            ("index", GameEventScriptValueFactory.Integer(2)),
-            ("units", GameEventScriptValueFactory.List([unitOne, unitTwo]))));
+            ("index", GameEventScriptValueFactory.GesInteger(2)),
+            ("units", GameEventScriptValueFactory.GesList([unitOne, unitTwo]))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(12), published[0].Arguments["hpByMember"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(12), published[0].Arguments["hpByTagKey"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(12), published[0].Arguments["hpByVariableKey"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(20), published[0].Arguments["itemByIndex"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Knight"), published[0].Arguments["nestedName"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByMember"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByTagKey"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByVariableKey"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(20), published[0].Arguments["itemByIndex"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Knight"), published[0].Arguments["nestedName"]);
         Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["missingMember"]);
         Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["missingIndex"]);
     }
 
     [TestMethod]
-    public void RegisterVmRunsCollectionLiterals()
+    public void BytecodeVmRunsCollectionLiterals()
     {
         const string script =
             """
@@ -382,36 +384,36 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start", ("seed", GameEventScriptValueFactory.Integer(7))));
+        host.Publish(Create("Start", ("seed", GameEventScriptValueFactory.GesInteger(7))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(7), published[0].Arguments["listFirst"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(14), published[0].Arguments["listSecond"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("nested"), published[0].Arguments["nestedLabel"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(12), published[0].Arguments["hp"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(2), published[0].Arguments["nestedSecond"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["listFirst"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(14), published[0].Arguments["listSecond"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("nested"), published[0].Arguments["nestedLabel"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hp"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[0].Arguments["nestedSecond"]);
 
         var list = published[0].Arguments["list"].AsList();
         Assert.HasCount(3, list);
 
         var set = published[0].Arguments["setValues"].AsSet();
         Assert.HasCount(2, set);
-        CollectionAssert.Contains(set.ToList(), GameEventScriptValueFactory.Integer(3));
-        CollectionAssert.Contains(set.ToList(), GameEventScriptValueFactory.Integer(7));
+        CollectionAssert.Contains(set.ToList(), GameEventScriptValueFactory.GesInteger(3));
+        CollectionAssert.Contains(set.ToList(), GameEventScriptValueFactory.GesInteger(7));
 
         var dictionary = published[0].Arguments["dict"].AsDictionary();
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Scout"), dictionary["name"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(12), dictionary["hp"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Scout"), dictionary["name"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), dictionary["hp"]);
 
         var tagValues = published[0].Arguments["tagValues"].AsSet();
         Assert.HasCount(2, tagValues);
-        Assert.AreEqual(GameEventScriptValueFactory.List([]), published[0].Arguments["emptyList"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Set([]), published[0].Arguments["emptySet"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Dictionary(new Dictionary<string, GameEventScriptValue>()), published[0].Arguments["emptyDict"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesList([]), published[0].Arguments["emptyList"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GseSet([]), published[0].Arguments["emptySet"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GseDictionary(new Dictionary<string, GameEventScriptValue>()), published[0].Arguments["emptyDict"]);
     }
 
     [TestMethod]
-    public void RegisterVmRunsTypeCheck()
+    public void BytecodeVmRunsTypeCheck()
     {
         const string script =
             """
@@ -456,39 +458,39 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message(
+        host.Publish(Create(
             "Start",
-            ("custom", GameEventScriptValueFactory.CustomType("gauge", new Dictionary<string, GameEventScriptValue>
+            ("custom", GameEventScriptValueFactory.GseCustomType("gauge", new Dictionary<string, GameEventScriptValue>
             {
-                ["current"] = GameEventScriptValueFactory.Integer(5)
+                ["current"] = GameEventScriptValueFactory.GesInteger(5)
             })),
-            ("msg", GameEventScriptValueFactory.Message(Message("Ping", ("value", GameEventScriptValueFactory.Integer(1))))),
-            ("handler", GameEventScriptValueFactory.Handler(GameEventScriptMessageSignature.MessageSignature("Ping", ["value"])))));
+            ("msg", GameEventScriptValueFactory.GesMessage(Create("Ping", ("value", GameEventScriptValueFactory.GesInteger(1))))),
+            ("handler", GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["value"])))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["intIsInteger"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["intIsDecimal"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["percentIsDecimal"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["degreeIsDecimal"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["degreeIsDegree"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["meterIsMeter"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["secondIsSecond"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["textIsText"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["tagIsTag"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["boolIsBoolean"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["listIsList"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["dictIsDictionary"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["setIsSet"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["customIsGauge"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["customIsDictionary"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["msgIsMessage"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(false), published[0].Arguments["msgIsDictionary"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["handlerIsHandler"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["missingIsNothing"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsInteger"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsDecimal"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["percentIsDecimal"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsDecimal"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsDegree"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["meterIsMeter"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["secondIsSecond"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["textIsText"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["tagIsTag"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["boolIsBoolean"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["listIsList"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["dictIsDictionary"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["setIsSet"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["customIsGauge"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["customIsDictionary"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["msgIsMessage"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(false), published[0].Arguments["msgIsDictionary"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["handlerIsHandler"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["missingIsNothing"]);
     }
 
     [TestMethod]
-    public void RegisterVmRunsDirectMessageLiteralExpression()
+    public void BytecodeVmRunsDirectMessageLiteralExpression()
     {
         const string script =
             """
@@ -513,18 +515,18 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start", ("value", GameEventScriptValueFactory.Integer(21))));
+        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(21))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["isMessage"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Success"), published[0].Arguments["name"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Success(message,value)"), published[0].Arguments["signature"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("world"), published[0].Arguments["text"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Decimal(42m), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["isMessage"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["name"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["signature"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("world"), published[0].Arguments["text"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(42m), published[0].Arguments["value"]);
     }
 
     [TestMethod]
-    public void RegisterVmRunsHandlerLiteralAndBind()
+    public void BytecodeVmRunsHandlerLiteralAndBind()
     {
         const string script =
             """
@@ -555,23 +557,23 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start", ("success", GameEventScriptValueFactory.Boolean(true))));
+        host.Publish(Create("Start", ("success", GameEventScriptValueFactory.GesBoolean(true))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["handlerIsHandler"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Success"), published[0].Arguments["handlerName"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Success(message,value)"), published[0].Arguments["handlerSignature"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("value"), published[0].Arguments["secondParameter"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["messageIsMessage"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Success"), published[0].Arguments["messageName"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("Success(message,value)"), published[0].Arguments["messageSignature"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Text("hello"), published[0].Arguments["text"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["invalidIsNothing"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["handlerIsHandler"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["handlerName"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["handlerSignature"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("value"), published[0].Arguments["secondParameter"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["messageIsMessage"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["messageName"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["messageSignature"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("hello"), published[0].Arguments["text"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["invalidIsNothing"]);
     }
 
     [TestMethod]
-    public void RegisterVmEmitsDiagnosticsWhenEnabled()
+    public void BytecodeVmEmitsDiagnosticsWhenEnabled()
     {
         const string script =
             """
@@ -597,12 +599,12 @@ public sealed class RegisterVmCompilerTests
                 script,
                 new GameEventScriptCompilationOptions { EnableDiagnostics = true }));
 
-        host.Publish(Message("Start", ("value", GameEventScriptValueFactory.Integer(5))));
+        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(7), published[0].Arguments["score"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["score"]);
         Assert.AreEqual(GameEventScriptValue.Nothing, published[0].Arguments["missingValue"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Boolean(true), published[0].Arguments["isHigh"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["isHigh"]);
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.ParameterBound && diagnostic.Name == "value"));
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.HandlerInvoked && diagnostic.Name == "Start"));
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.LetEvaluated && diagnostic.Name == "score"));
@@ -612,7 +614,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmStandardExtensionsAreIntrinsicAndDoNotRequireDynamicLinking()
+    public void BytecodeVmStandardExtensionsAreIntrinsicAndDoNotRequireDynamicLinking()
     {
         const string script =
             """
@@ -624,7 +626,7 @@ public sealed class RegisterVmCompilerTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var dump = GameEventScriptBytecodeDumper.ToDebugText(compiled);
+        var dump = compiled.DumpBytecode();
 
         StringAssert.Contains(dump, "externalReferences[0]");
         Assert.IsFalse(dump.Contains("integer.floor(_)", StringComparison.Ordinal));
@@ -636,18 +638,18 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(compiled);
 
-        host.Publish(Message(
+        host.Publish(Create(
             "Start",
-            ("value", GameEventScriptValueFactory.Decimal(10.4m)),
-            ("heading", GameEventScriptValueFactory.Degree(-10))));
+            ("value", GameEventScriptValueFactory.GesDecimal(10.4m)),
+            ("heading", GameEventScriptValueFactory.GesDegree(-10))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(10), published[0].Arguments["floor"]);
-        Assert.AreEqual(GameEventScriptValueFactory.Degree(350), published[0].Arguments["wrapped"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(10), published[0].Arguments["floor"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDegree(350), published[0].Arguments["wrapped"]);
     }
 
     [TestMethod]
-    public void RegisterVmDynamicLinkBindsExtensionReferencesOnHostLoad()
+    public void BytecodeVmDynamicLinkBindsExtensionReferencesOnHostLoad()
     {
         const string script =
             """
@@ -660,7 +662,7 @@ public sealed class RegisterVmCompilerTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var dump = GameEventScriptBytecodeDumper.ToDebugText(compiled);
+        var dump = compiled.DumpBytecode();
 
         StringAssert.Contains(dump, "externalReferences[1]");
         StringAssert.Contains(dump, "math.floor(_)");
@@ -676,20 +678,20 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(compiled);
 
-        host.Publish(Message(
+        host.Publish(Create(
             "Start",
-            ("values", GameEventScriptValueFactory.List(
+            ("values", GameEventScriptValueFactory.GesList(
             [
-                GameEventScriptValueFactory.Decimal(2.9m),
-                GameEventScriptValueFactory.Decimal(5.1m)
+                GameEventScriptValueFactory.GesDecimal(2.9m),
+                GameEventScriptValueFactory.GesDecimal(5.1m)
             ]))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Decimal(2m), published[0].Arguments["first"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(2m), published[0].Arguments["first"]);
     }
 
     [TestMethod]
-    public void RegisterVmDynamicLinkReportsMissingExtensionFunctionWithSignature()
+    public void BytecodeVmDynamicLinkReportsMissingExtensionFunctionWithSignature()
     {
         const string script =
             """
@@ -713,7 +715,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmDynamicLinkKeepsLabeledArgumentsPositional()
+    public void BytecodeVmDynamicLinkKeepsLabeledArgumentsPositional()
     {
         const string script =
             """
@@ -726,7 +728,7 @@ public sealed class RegisterVmCompilerTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var dump = GameEventScriptBytecodeDumper.ToDebugText(compiled);
+        var dump = compiled.DumpBytecode();
 
         StringAssert.Contains(dump, "nav.shortestTurn(to,from)");
         var exception = Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() =>
@@ -738,7 +740,7 @@ public sealed class RegisterVmCompilerTests
     }
 
     [TestMethod]
-    public void RegisterVmStandardExtensionsCannotBeOverriddenByRegistry()
+    public void BytecodeVmStandardExtensionsCannotBeOverriddenByRegistry()
     {
         const string script =
             """
@@ -756,10 +758,10 @@ public sealed class RegisterVmCompilerTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Message("Start", ("value", GameEventScriptValueFactory.Decimal(10.9m))));
+        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(10.9m))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.Integer(10), published[0].Arguments["floor"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(10), published[0].Arguments["floor"]);
     }
 
     private sealed class TestExtensionRegistry : IGameEventScriptExtensionRegistry

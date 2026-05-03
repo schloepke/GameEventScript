@@ -1,19 +1,31 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System.Globalization;
 using System.Text;
+using StepH.GameEventScript.Compiler;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.Extensions;
 
+/// <summary>
+/// Provides functionality to generate a human-readable representation of the bytecode
+/// within a <see cref="GameEventScriptBytecode"/> instance. This utility is useful for debugging
+/// and analyzing the structure, references, and instructions of compiled game event scripts.
+/// </summary>
 public static class GameEventScriptBytecodeDumper
 {
-    public static string ToDebugText(CompiledGameEventScript compiledScript)
-        => ToDebugText(compiledScript.BytecodeModule);
-
-    internal static string ToDebugText(RegisterBytecodeModule module)
+    /// <summary>
+    /// Dumps the bytecode of the specified <see cref="GameEventScriptBytecode"/> instance
+    /// into a readable string format for debugging and analysis.
+    /// </summary>
+    /// <param name="module">
+    /// The <see cref="GameEventScriptBytecode"/> instance whose bytecode will be dumped.
+    /// </param>
+    /// <returns>
+    /// A string representation of the bytecode, including diagnostics, string pools, signatures,
+    /// type metadata, external references, constants, named argument layouts, and programs.
+    /// </returns>
+    public static string DumpBytecode(this GameEventScriptBytecode module)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("registervm bytecode v1");
+        builder.AppendLine("gameeventscript bytecode v1");
         builder.Append("diagnostics: ").AppendLine(module.Options.EnableDiagnostics ? "on" : "off");
         AppendPool(builder, "strings", module.StringPool);
         AppendPool(builder, "signatures", module.Signatures);
@@ -66,68 +78,68 @@ public static class GameEventScriptBytecodeDumper
         return builder.ToString();
     }
 
-    private static void AppendInstructionOperands(StringBuilder builder, RegisterBytecodeModule module, RegisterInstruction instruction)
+    private static void AppendInstructionOperands(StringBuilder builder, GameEventScriptBytecode module, GameEventScriptInstruction instruction)
     {
         switch (instruction.OpCode)
         {
-            case RegisterOpCode.LoadParameter:
+            case GameEventScriptOpCode.LoadParameter:
                 AppendStringOperand(builder, module, "parameter", instruction.A);
                 AppendRegisterOperand(builder, "target", instruction.B);
                 break;
 
-            case RegisterOpCode.LoadConstant:
+            case GameEventScriptOpCode.LoadConstant:
                 AppendConstantOperand(builder, module, "constant", instruction.A);
                 AppendRegisterOperand(builder, "target", instruction.B);
                 break;
 
-            case RegisterOpCode.EvaluateExpression:
+            case GameEventScriptOpCode.EvaluateExpression:
                 AppendStringOperand(builder, module, "expr", instruction.A);
                 AppendRegisterOperand(builder, "target", instruction.B);
                 break;
 
-            case RegisterOpCode.StoreLocal:
+            case GameEventScriptOpCode.StoreLocal:
                 AppendStringOperand(builder, module, "name", instruction.A);
                 AppendIndexOperand(builder, "local", instruction.B);
                 AppendTypeOperand(builder, module, "type", instruction.C);
                 break;
 
-            case RegisterOpCode.Publish:
+            case GameEventScriptOpCode.Publish:
                 AppendIndexOperand(builder, "exprInstr", instruction.A);
                 break;
 
-            case RegisterOpCode.JumpIfFalse:
+            case GameEventScriptOpCode.JumpIfFalse:
                 AppendIndexOperand(builder, "conditionInstr", instruction.A);
                 AppendProgramOperand(builder, "then", instruction.B);
                 AppendProgramOperand(builder, "else", instruction.C);
                 break;
 
-            case RegisterOpCode.Jump:
+            case GameEventScriptOpCode.Jump:
                 AppendProgramOperand(builder, "target", instruction.A);
                 break;
 
-            case RegisterOpCode.ForEach:
+            case GameEventScriptOpCode.ForEach:
                 AppendStringOperand(builder, module, "item", instruction.A);
                 AppendStringOperand(builder, module, "source", instruction.B);
                 AppendProgramOperand(builder, "body", instruction.C);
                 break;
 
-            case RegisterOpCode.SeededRandom:
+            case GameEventScriptOpCode.SeededRandom:
                 AppendIndexOperand(builder, "seedInstr", instruction.A);
                 AppendProgramOperand(builder, "body", instruction.B);
                 break;
 
-            case RegisterOpCode.Call:
+            case GameEventScriptOpCode.Call:
                 AppendStringOperand(builder, module, "callable", instruction.A);
                 AppendRegisterOperand(builder, "target", instruction.B);
                 AppendIndexOperand(builder, "argc", instruction.C);
                 break;
 
-            case RegisterOpCode.Return:
+            case GameEventScriptOpCode.Return:
                 AppendRegisterOperand(builder, "value", instruction.A);
                 break;
 
-            case RegisterOpCode.EnterScope:
-            case RegisterOpCode.ExitScope:
+            case GameEventScriptOpCode.EnterScope:
+            case GameEventScriptOpCode.ExitScope:
                 break;
 
             default:
@@ -136,7 +148,7 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendStringOperand(StringBuilder builder, RegisterBytecodeModule module, string name, int index)
+    private static void AppendStringOperand(StringBuilder builder, GameEventScriptBytecode module, string name, int index)
     {
         if (index < 0)
         {
@@ -150,7 +162,7 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendTypeOperand(StringBuilder builder, RegisterBytecodeModule module, string name, int index)
+    private static void AppendTypeOperand(StringBuilder builder, GameEventScriptBytecode module, string name, int index)
     {
         if (index < 0)
         {
@@ -164,7 +176,7 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendConstantOperand(StringBuilder builder, RegisterBytecodeModule module, string name, int index)
+    private static void AppendConstantOperand(StringBuilder builder, GameEventScriptBytecode module, string name, int index)
     {
         if (index < 0)
         {
@@ -208,7 +220,7 @@ public static class GameEventScriptBytecodeDumper
         builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
     }
 
-    private static void AppendRawOperands(StringBuilder builder, RegisterInstruction instruction)
+    private static void AppendRawOperands(StringBuilder builder, GameEventScriptInstruction instruction)
     {
         AppendIndexOperand(builder, "a", instruction.A);
         AppendIndexOperand(builder, "b", instruction.B);

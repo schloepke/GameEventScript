@@ -1,4 +1,5 @@
 using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 
 namespace StepH_GameEventScript_Tests.impl;
@@ -14,9 +15,9 @@ public class GesOptimizerTests
             rule always() means '12.5' as :decimal
             """;
 
-        var module = GameEventScriptModuleBuilder.Create()
+        var module = GameEventScriptBuilder.Create()
             .AddScript(script, "optimizer.es")
-            .Build();
+            .BuildModule();
 
         var rule = module.Callables["always"];
         Assert.AreEqual(GameEventScriptCallableKind.Rule, rule.Kind);
@@ -41,9 +42,9 @@ public class GesOptimizerTests
             }
             """;
 
-        var module = GameEventScriptModuleBuilder.Create()
+        var module = GameEventScriptBuilder.Create()
             .AddScript(script, "constant-math.es")
-            .Build();
+            .BuildModule();
 
         var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();
         var let = handler.Statements.OfType<LetStatementNode>().Single();

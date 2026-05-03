@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -33,7 +34,7 @@ internal static class GameEventScriptConformanceValueCodec
             args = DecodeArguments(argsElement);
         }
 
-        return GameEventScriptMessage.Message(name, args);
+        return GameEventScriptMessage.Create(name, args);
     }
 
     public static Dictionary<string, GameEventScriptValue> DecodeArguments(JsonElement element)
@@ -57,24 +58,24 @@ internal static class GameEventScriptConformanceValueCodec
             case ":nothing":
                 return GameEventScriptValue.Nothing;
             case ":text":
-                return GameEventScriptValueFactory.Text(RequireString(element, "value", "text value"));
+                return GameEventScriptValueFactory.GesText(RequireString(element, "value", "text value"));
             case ":tag":
-                return GameEventScriptValueFactory.Tag(RequireString(element, "value", "tag value"));
+                return GameEventScriptValueFactory.GesTag(RequireString(element, "value", "tag value"));
             case ":boolean":
-                return GameEventScriptValueFactory.Boolean(RequireBoolean(element, "value", "boolean value"));
+                return GameEventScriptValueFactory.GesBoolean(RequireBoolean(element, "value", "boolean value"));
             case ":integer":
-                return GameEventScriptValueFactory.Integer(RequireInt64(element, "value", "integer value"));
+                return GameEventScriptValueFactory.GesInteger(RequireInt64(element, "value", "integer value"));
             case ":decimal":
                 return DecodeDecimalValue(element);
             case ":percentage":
-                return GameEventScriptValueFactory.Percentage(RequireDecimal(element, "value", "percentage ratio"));
+                return GameEventScriptValueFactory.GesPercentage(RequireDecimal(element, "value", "percentage ratio"));
             case ":vector2":
-                return GameEventScriptValueFactory.Vector2(
+                return GameEventScriptValueFactory.GesVector2(
                     RequireDecimal(element, "x", "vector2 x component"),
                     RequireDecimal(element, "y", "vector2 y component"),
                     DecodeOptionalDecimalUnit(element));
             case ":vector3":
-                return GameEventScriptValueFactory.Vector3(
+                return GameEventScriptValueFactory.GesVector3(
                     RequireDecimal(element, "x", "vector3 x component"),
                     RequireDecimal(element, "y", "vector3 y component"),
                     RequireDecimal(element, "z", "vector3 z component"),
@@ -82,22 +83,22 @@ internal static class GameEventScriptConformanceValueCodec
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
-                return GameEventScriptValueFactory.List(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
+                return GameEventScriptValueFactory.GesList(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
             case ":dictionary":
-                return GameEventScriptValueFactory.Dictionary(DecodeEntries(element));
+                return GameEventScriptValueFactory.GseDictionary(DecodeEntries(element));
             case ":set":
-                return GameEventScriptValueFactory.Set(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
+                return GameEventScriptValueFactory.GseSet(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
             case ":dice":
-                return GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.GameEventScriptDice(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
+                return GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
             case ":range":
-                return GameEventScriptValueFactory.Range(
+                return GameEventScriptValueFactory.GesRange(
                     RequireInt64(element, "from", "range start"),
                     RequireInt64(element, "to", "range end"),
                     TryGetProperty(element, "step", out var stepElement) ? ReadInt64(stepElement, "range step") : 1L);
             case ":message":
-                return GameEventScriptValueFactory.Message(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
+                return GameEventScriptValueFactory.GesMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
             default:
-                return GameEventScriptValueFactory.CustomType(type[1..], DecodeEntries(element));
+                return GameEventScriptValueFactory.GseCustomType(type[1..], DecodeEntries(element));
         }
     }
 
@@ -178,10 +179,10 @@ internal static class GameEventScriptConformanceValueCodec
 
         return value switch
         {
-            "NaN" => GameEventScriptValueFactory.DecimalNaN(),
-            "Infinity" => GameEventScriptValueFactory.DecimalInfinity(),
-            "-Infinity" => GameEventScriptValueFactory.DecimalNegativeInfinity(),
-            _ => GameEventScriptValueFactory.Decimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
+            "NaN" => GameEventScriptValueFactory.GesDecimalNaN(),
+            "Infinity" => GameEventScriptValueFactory.GesDecimalInfinity(),
+            "-Infinity" => GameEventScriptValueFactory.GesDecimalNegativeInfinity(),
+            _ => GameEventScriptValueFactory.GesDecimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
         };
     }
 
@@ -216,10 +217,10 @@ internal static class GameEventScriptConformanceValueCodec
         var hasValue = RequireBoolean(element, "hasValue", "optional hasValue");
         if (!hasValue)
         {
-            return GameEventScriptValueFactory.OptionalNone();
+            return GameEventScriptValueFactory.GesOptionalNone();
         }
 
-        return GameEventScriptValueFactory.OptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
+        return GameEventScriptValueFactory.GesOptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
     }
 
     private static IReadOnlyDictionary<string, GameEventScriptValue> DecodeEntries(JsonElement element)
@@ -314,7 +315,7 @@ internal static class GameEventScriptConformanceValueCodec
 
         if (value.Unit.HasValue)
         {
-            node["unit"] = ToCanonicalTypeName(GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value));
+            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
         }
 
         return node;
@@ -331,7 +332,7 @@ internal static class GameEventScriptConformanceValueCodec
 
         if (value.Unit.HasValue)
         {
-            node["unit"] = ToCanonicalTypeName(GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value));
+            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
         }
 
         return node;
@@ -349,7 +350,7 @@ internal static class GameEventScriptConformanceValueCodec
 
         if (value.Unit.HasValue)
         {
-            node["unit"] = ToCanonicalTypeName(GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value));
+            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
         }
 
         return node;

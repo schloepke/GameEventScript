@@ -8,7 +8,7 @@ public sealed class GameEventScriptOptionalValue : GameEventScriptValue
 {
     public static readonly GameEventScriptOptionalValue None = new(false, Nothing);
 
-    public static GameEventScriptOptionalValue GameEventScriptOptionalSome(GameEventScriptValue? value) => value == null ? None : new GameEventScriptOptionalValue(true, value);
+    public static GameEventScriptOptionalValue Create(GameEventScriptValue? value) => value == null ? None : new GameEventScriptOptionalValue(true, value);
 
     private GameEventScriptOptionalValue(bool hasValue, GameEventScriptValue value)
     {

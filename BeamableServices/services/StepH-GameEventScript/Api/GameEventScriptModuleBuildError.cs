@@ -1,4 +1,6 @@
-namespace StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.Compiler;
+
+namespace StepH.GameEventScript.Api;
 
 /// <summary>
 /// Represents a specific error encountered during the build process of a GameEventScript module.

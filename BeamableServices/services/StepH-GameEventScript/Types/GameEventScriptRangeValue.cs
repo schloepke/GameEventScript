@@ -1,13 +1,13 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System.Collections.Generic;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptRangeValue : GameEventScriptValue
 {
-    public static GameEventScriptRangeValue GameEventScriptRange(long from, long to, long step) => new(from, to, step);
+    public static GameEventScriptRangeValue Create(long from, long to, long step) => new(from, to, step);
 
     private GameEventScriptRangeValue(long from, long to, long step)
     {
@@ -40,7 +40,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
         }
 
         var value = needle.AsInteger();
-        if (!Integer(value).Equals(needle))
+        if (!GesInteger(value).Equals(needle))
         {
             return false;
         }
@@ -76,7 +76,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
                 var current = From;
                 while (current <= To)
                 {
-                    yield return Integer(current);
+                    yield return GesInteger(current);
                     var next = current + Step;
                     if (next <= current)
                     {
@@ -93,7 +93,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
         var descendingCurrent = From;
         while (descendingCurrent >= To)
         {
-            yield return Integer(descendingCurrent);
+            yield return GesInteger(descendingCurrent);
             var next = descendingCurrent + Step;
             if (next >= descendingCurrent)
             {
@@ -118,7 +118,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
             return Nothing;
         }
 
-        return Integer((long)value);
+        return GesInteger((long)value);
     }
 
     private long GetLength()
@@ -159,19 +159,19 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List(AsEnumerable());
+        value = GesList(AsEnumerable());
         return true;
     }
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = Set(AsEnumerable());
+        value = GseSet(AsEnumerable());
         return true;
     }
 

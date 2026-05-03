@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
@@ -11,18 +12,18 @@ internal static class GameEventScriptMessageValueCodec
     public static GameEventScriptValue CreateHandlerValue(GameEventScriptMessageSignature signature)
     {
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
-        return GameEventScriptValueFactory.Handler(signature);
+        return GameEventScriptValueFactory.GesHandler(signature);
     }
 
     public static GameEventScriptValue CreateMessageValue(GameEventScriptMessage message)
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
-        return GameEventScriptValueFactory.Message(message);
+        return GameEventScriptValueFactory.GesMessage(message);
     }
 
     public static bool TryReadHandlerValue(GameEventScriptValue value, out GameEventScriptMessageSignature signature)
     {
-        signature = new GameEventScriptMessageSignature(string.Empty, []);
+        signature = GameEventScriptMessageSignature.Empty;
         if (value is not GameEventScriptHandlerValue handler)
         {
             return false;
@@ -34,7 +35,7 @@ internal static class GameEventScriptMessageValueCodec
 
     public static bool TryReadMessageValue(GameEventScriptValue value, out GameEventScriptMessage message)
     {
-        message = new GameEventScriptMessage(string.Empty);
+        message = GameEventScriptMessage.Empty;
         if (value is not GameEventScriptMessageValue typedMessage)
         {
             return false;
@@ -46,7 +47,7 @@ internal static class GameEventScriptMessageValueCodec
 
     public static bool TryBindHandlerValue(GameEventScriptValue handlerValue, IReadOnlyDictionary<string, GameEventScriptValue> arguments, out GameEventScriptMessage message)
     {
-        message = GameEventScriptMessage.EmptyMessage;
+        message = GameEventScriptMessage.Empty;
         if (!TryReadHandlerValue(handlerValue, out var handler))
         {
             return false;
@@ -59,7 +60,7 @@ internal static class GameEventScriptMessageValueCodec
             return false;
         }
 
-        message = new GameEventScriptMessage(handler.Name, normalizedArguments);
+        message = GameEventScriptMessage.Create(handler.Name, normalizedArguments);
         return true;
     }
 }

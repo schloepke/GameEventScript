@@ -1,9 +1,9 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.Compiler;
 
-internal readonly record struct RegisterInstruction(
-    RegisterOpCode OpCode,
+public readonly record struct GameEventScriptInstruction(
+    GameEventScriptOpCode OpCode,
     int A = -1,
     int B = -1,
     int C = -1,

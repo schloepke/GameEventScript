@@ -3,9 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.BytecodeVM;
 
 internal sealed class CompiledGameEventScriptHandler
 {
@@ -18,7 +19,7 @@ internal sealed class CompiledGameEventScriptHandler
         int programIndex,
         bool diagnosticsEnabled,
         IReadOnlyList<StatementNode> statements,
-        RegisterVmExecutionPlan executionPlan)
+        BytecodeVmExecutionPlan executionPlan)
     {
         Message = message ?? throw new ArgumentNullException(nameof(message));
         Parameters = parameters?.ToArray() ?? throw new ArgumentNullException(nameof(parameters));
@@ -29,7 +30,7 @@ internal sealed class CompiledGameEventScriptHandler
         DiagnosticsEnabled = diagnosticsEnabled;
         Statements = statements?.ToArray() ?? throw new ArgumentNullException(nameof(statements));
         ExecutionPlan = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
-        Definition = new GameEventScriptMessageSignature(message, SignatureLabels);
+        Definition = GameEventScriptMessageSignature.Create(message, SignatureLabels);
     }
 
     public string Message { get; }
@@ -50,5 +51,5 @@ internal sealed class CompiledGameEventScriptHandler
 
     internal IReadOnlyList<StatementNode> Statements { get; }
 
-    internal RegisterVmExecutionPlan ExecutionPlan { get; }
+    internal BytecodeVmExecutionPlan ExecutionPlan { get; }
 }

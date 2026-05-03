@@ -1,9 +1,10 @@
 using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.RegisterVM;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.GameEventScriptMessage;
+using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests;
 
@@ -45,19 +46,18 @@ public class GameEventScriptDiagnosticTest
     [TestMethod]
     public void DisplayingDiagnosticsTest()
     {
-        var module = GameEventScriptModuleBuilder.Create()
+        var bytecode = GameEventScriptBuilder.Create()
             .AddScript(script)
-            .Build();
-        var compiledModule = RegisterVmCompiler.Compile(module, new GameEventScriptCompilationOptions { EnableDiagnostics = true });
+            .Compile(new GameEventScriptCompilationOptions { EnableDiagnostics = true });
         
-        var input = Message("Start", ("startPosition", GameEventScriptValueFactory.Vector2(20, 15)));
+        var input = Create("Start", ("startPosition", GameEventScriptValueFactory.GesVector2(20, 15)));
         
         var collector = new GameEventScriptDiagnosticTraceCollector();
         var host = GameEventScriptHost.CreateBuilder()
             .WithMaxProcessedEventsPerRun(128)
             .WithDiagnosticCollector(collector)
             .Build()
-            .Load(compiledModule);
+            .Load(bytecode);
         
         host.Publish(input);
         

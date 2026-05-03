@@ -1,4 +1,4 @@
-namespace StepH.GameEventScript.Compiler;
+namespace StepH.GameEventScript.Api;
 
 /// <summary>
 /// Describes a syntax error reported while parsing GameEventScript source.

@@ -5,8 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.RegisterVM;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
@@ -14,7 +15,7 @@ namespace StepH_GameEventScript_Tests.Conformance;
 
 internal static class GameEventScriptConformanceRunner
 {
-    internal const string RegisterVmEngine = "registervm";
+    internal const string BytecodeVmEngine = "bytecodevm";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -31,7 +32,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    internal static IEnumerable<GameEventScriptConformanceCase> EnumerateRegisterVmScriptApiCases(string specDirectory)
+    internal static IEnumerable<GameEventScriptConformanceCase> EnumerateBytecodeVmScriptApiCases(string specDirectory)
     {
         foreach (var (file, suite, test) in EnumerateTests(specDirectory))
         {
@@ -39,7 +40,7 @@ internal static class GameEventScriptConformanceRunner
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
             if (string.Equals(test.Kind, "scriptApi", StringComparison.OrdinalIgnoreCase))
             {
-                yield return new GameEventScriptConformanceCase(file, suite.Name!, test, RegisterVmEngine);
+                yield return new GameEventScriptConformanceCase(file, suite.Name!, test, BytecodeVmEngine);
             }
         }
     }
@@ -111,14 +112,7 @@ internal static class GameEventScriptConformanceRunner
 
     internal static IGameEventScriptMessageHandlerCollection CompileScripts(GameEventScriptConformanceTest test)
     {
-        var module = BuildModule(test);
-        var diagnosticsEnabled = test.CompileOptions?.EnableDiagnostics ?? false;
-        return RegisterVmCompiler.Compile(
-            module,
-            new GameEventScriptCompilationOptions
-            {
-                EnableDiagnostics = diagnosticsEnabled
-            });
+        return BytecodeVmExecutableBuilder.Build(CompileBytecode(test));
     }
 
     private static IEnumerable<GameEventScriptConformanceCase> EnumerateConformanceCases(string specDirectory)
@@ -127,7 +121,7 @@ internal static class GameEventScriptConformanceRunner
         {
             ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
-            yield return new GameEventScriptConformanceCase(file, suite.Name!, test, UsesRuntimeEngine(test.Kind) ? RegisterVmEngine : null);
+            yield return new GameEventScriptConformanceCase(file, suite.Name!, test, UsesRuntimeEngine(test.Kind) ? BytecodeVmEngine : null);
         }
     }
 
@@ -186,7 +180,7 @@ internal static class GameEventScriptConformanceRunner
                             ?? throw new InvalidOperationException($"{testCase}: messageApi tests require signature.");
 
         ValidateRequired(signatureSpec.Name, "messageApi signature name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-        var signature = new GameEventScriptMessageSignature(signatureSpec.Name!, signatureSpec.Parameters ?? []);
+        var signature = GameEventScriptMessageSignature.Create(signatureSpec.Name!, signatureSpec.Parameters ?? []);
         var message = GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(testCase.Test.Message, "messageApi message", testCase));
 
         AssertOptionalEquals(testCase, "signature id", testCase.Test.ExpectedSignatureId, signature.SignatureId);
@@ -266,7 +260,7 @@ internal static class GameEventScriptConformanceRunner
                                 ? new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
                                 : GameEventScriptConformanceValueCodec.DecodeArguments(publish.Args);
 
-                        context.Publish(GameEventScriptMessage.Message(publish.Name!, args));
+                        context.Publish(GameEventScriptMessage.Create(publish.Name!, args));
                     }
                 },
                 subscriber.Priority);
@@ -459,15 +453,18 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static GameEventScriptModule BuildModule(GameEventScriptConformanceTest test)
+    private static GameEventScriptBytecode CompileBytecode(GameEventScriptConformanceTest test)
     {
-        var builder = GameEventScriptModuleBuilder.Create();
+        var builder = GameEventScriptBuilder.Create();
         foreach (var source in GetSources(test))
         {
             builder.AddScript(source.Text!, source.SourceName);
         }
 
-        return builder.Build();
+        return builder.Compile(new GameEventScriptCompilationOptions
+        {
+            EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false
+        });
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(

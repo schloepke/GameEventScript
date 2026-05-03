@@ -2,9 +2,11 @@
 
 using System;
 using System.Collections.Generic;
-using StepH.GameEventScript.RegisterVM;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.BytecodeVM;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.GameEventScriptMessageSignature;
+using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -40,6 +42,12 @@ public sealed class GameEventScriptHost
 
     #region Public interface
 
+    public GameEventScriptHost Load(GameEventScriptBytecode bytecode, int? priority = null)
+    {
+        _ = bytecode ?? throw new ArgumentNullException(nameof(bytecode));
+        return Load(BytecodeVmExecutableBuilder.Build(bytecode), priority);
+    }
+
     public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int? priority = null)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
@@ -61,7 +69,7 @@ public sealed class GameEventScriptHost
     }
 
     public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int? priority = null)
-        => Subscribe(MessageSignature(!string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message must not be null or whitespace", nameof(message)),
+        => Subscribe(Create(!string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message must not be null or whitespace", nameof(message)),
             parameterNames ?? throw new ArgumentNullException(nameof(parameterNames))), handler, priority);
 
     public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptContext> handler, int? priority = null)
@@ -93,12 +101,6 @@ public sealed class GameEventScriptHost
         state.Enqueue(message);
         Drain(state);
     }
-
-    public void Publish(string message, params (string Name, GameEventScriptValue Value)[] args)
-        => Publish(GameEventScriptMessage.Message(message, args));
-
-    public void Publish(string message, params (string Name, object? Value)[] args)
-        => Publish(GameEventScriptMessage.Message(message, args));
 
     #endregion
 
@@ -203,7 +205,7 @@ public sealed class GameEventScriptHost
         {
             _maxProcessedEventsPerRun = maxProcessedEventsPerRun;
             PublishedMessageObserver = publishedMessageObserver;
-            Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, publishCallbackRecordsDiagnostics: true, runtimeLimits: runtimeLimits, extensionRegistry: extensionRegistry);
+            Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, runtimeLimits: runtimeLimits, extensionRegistry: extensionRegistry);
         }
 
         public GameEventScriptContext Context { get; }

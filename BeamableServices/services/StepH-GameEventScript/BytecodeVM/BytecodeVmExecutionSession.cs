@@ -4,42 +4,43 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.BytecodeVM;
 
-internal sealed class RegisterVmExecutionSession
+internal sealed class BytecodeVmExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
     private readonly CompiledGameEventScript _compiledScript;
     private readonly GameEventScriptContext _context;
-    private readonly RegisterVmExecutionPlan _plan;
-    private readonly RegisterVmValue[] _locals;
+    private readonly BytecodeVmExecutionPlan _plan;
+    private readonly BytecodeVmValue[] _locals;
     private readonly bool[] _assignedSlots;
-    private readonly RegisterVmValue[] _evaluationStack;
+    private readonly BytecodeVmValue[] _evaluationStack;
     private readonly bool _diagnosticsEnabled;
     private readonly List<LocalChange> _changes = [];
     private readonly List<int> _scopeMarks = [];
     private readonly Stack<GameEventScriptRandomGenerator> _randomScopes = new();
     private bool _halted;
 
-    private RegisterVmExecutionSession(
+    private BytecodeVmExecutionSession(
         CompiledGameEventScript compiledScript,
         GameEventScriptContext context,
-        RegisterVmExecutionPlan plan,
+        BytecodeVmExecutionPlan plan,
         bool diagnosticsEnabled)
     {
         _compiledScript = compiledScript;
         _context = context;
         _plan = plan;
         _diagnosticsEnabled = diagnosticsEnabled;
-        _locals = new RegisterVmValue[plan.SlotCount];
+        _locals = new BytecodeVmValue[plan.SlotCount];
         _assignedSlots = new bool[plan.SlotCount];
-        _evaluationStack = new RegisterVmValue[Math.Max(16, plan.MaxStackDepth + 16)];
+        _evaluationStack = new BytecodeVmValue[Math.Max(16, plan.MaxStackDepth + 16)];
         _randomScopes.Push(context.Random);
     }
 
@@ -49,11 +50,11 @@ internal sealed class RegisterVmExecutionSession
         CompiledGameEventScriptHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
-        var session = new RegisterVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
+        var session = new BytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
         if (!session.TryInvoke(handler, args))
         {
             throw new InvalidOperationException(
-                $"RegisterVM invariant failed: handler '{handler.SignatureId}' #{handler.DeclarationOrder} could not be executed by its compiled execution plan.");
+                $"BytecodeVM invariant failed: handler '{handler.SignatureId}' #{handler.DeclarationOrder} could not be executed by its compiled execution plan.");
         }
     }
 
@@ -73,7 +74,7 @@ internal sealed class RegisterVmExecutionSession
 
                 RecordParameterBound(parameter, value);
 
-                if (!Define(parameter, RegisterVmValue.FromGameEventScriptValue(value)))
+                if (!Define(parameter, BytecodeVmValue.FromGameEventScriptValue(value)))
                 {
                     return false;
                 }
@@ -319,7 +320,7 @@ internal sealed class RegisterVmExecutionSession
 
         foreach (var item in sourceValue.AsEnumerable())
         {
-            if (!TryExecuteLoopIteration(forStatement, RegisterVmValue.FromGameEventScriptValue(item)))
+            if (!TryExecuteLoopIteration(forStatement, BytecodeVmValue.FromGameEventScriptValue(item)))
             {
                 return false;
             }
@@ -334,9 +335,9 @@ internal sealed class RegisterVmExecutionSession
     }
 
     private bool TryExecuteLoopIteration(ForStatementNode forStatement, long item)
-        => TryExecuteLoopIteration(forStatement, RegisterVmValue.Integer(item));
+        => TryExecuteLoopIteration(forStatement, BytecodeVmValue.Integer(item));
 
-    private bool TryExecuteLoopIteration(ForStatementNode forStatement, RegisterVmValue item)
+    private bool TryExecuteLoopIteration(ForStatementNode forStatement, BytecodeVmValue item)
     {
         if (!_context.RuntimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
@@ -381,7 +382,7 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private bool TryPublish(RegisterVmPublishLayout layout)
+    private bool TryPublish(BytecodeVmPublishLayout layout)
     {
         var argumentNames = layout.ArgumentNames;
         var argumentPrograms = layout.ArgumentPrograms;
@@ -432,7 +433,7 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private bool TryEvaluate(ExpressionNode expression, out RegisterVmValue value)
+    private bool TryEvaluate(ExpressionNode expression, out BytecodeVmValue value)
     {
         if (_plan.TryGetExpressionProgram(expression, out var program))
         {
@@ -441,38 +442,37 @@ internal sealed class RegisterVmExecutionSession
 
         if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return true;
         }
 
         switch (expression)
         {
             case BooleanLiteralExpressionNode boolean:
-                value = RegisterVmValue.Boolean(boolean.Value);
+                value = BytecodeVmValue.Boolean(boolean.Value);
                 return true;
             case IntegerLiteralExpressionNode integer:
-                value = RegisterVmValue.Integer(integer.Value);
+                value = BytecodeVmValue.Integer(integer.Value);
                 return true;
             case DecimalLiteralExpressionNode decimalLiteral:
-                value = RegisterVmValue.Decimal(decimalLiteral.Value);
+                value = BytecodeVmValue.Decimal(decimalLiteral.Value);
                 return true;
             case PercentageLiteralExpressionNode percentage:
-                value = RegisterVmValue.Percentage(percentage.PercentValue / 100m);
+                value = BytecodeVmValue.Percentage(percentage.PercentValue / 100m);
                 return true;
             case UnitDecimalLiteralExpressionNode unitDecimal:
                 value = GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                    ? RegisterVmValue.Decimal(unitDecimal.Value, unit)
-                    : RegisterVmValue.NaN();
+                    ? BytecodeVmValue.Decimal(unitDecimal.Value, unit)
+                    : BytecodeVmValue.NaN();
                 return true;
             case TextLiteralExpressionNode text:
-                value = RegisterVmValue.Reference(Text(text.Value));
+                value = BytecodeVmValue.Reference(GesText(text.Value));
                 return true;
             case TagLiteralExpressionNode tag:
-                value = RegisterVmValue.Reference(Tag(tag.Name));
+                value = BytecodeVmValue.Reference(GesTag(tag.Name));
                 return true;
             case HandlerLiteralExpressionNode handler:
-                value = RegisterVmValue.Reference(GameEventScriptValueFactory.Handler(
-                    new GameEventScriptMessageSignature(handler.Message, handler.SignatureLabels)));
+                value = BytecodeVmValue.Reference(GesHandler(GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels)));
                 return true;
             case HandlerBindExpressionNode handlerBind:
                 return TryEvaluateHandlerBind(handlerBind, out value);
@@ -529,23 +529,23 @@ internal sealed class RegisterVmExecutionSession
             case MessageLiteralExpressionNode message:
                 if (!TryEvaluateMessageArguments(message, out var arguments))
                 {
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
                 }
 
-                value = RegisterVmValue.Reference(Message(new GameEventScriptMessage(message.Message, arguments)));
+                value = BytecodeVmValue.Reference(GesMessage(GameEventScriptMessage.Create(message.Message, arguments)));
                 return true;
             default:
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
         }
     }
 
-    private bool TryExecuteExpressionProgram(RegisterVmExpressionProgram program, int stackBase, out RegisterVmValue value)
+    private bool TryExecuteExpressionProgram(BytecodeVmExpressionProgram program, int stackBase, out BytecodeVmValue value)
     {
         if (stackBase + program.MaxStackDepth > _evaluationStack.Length)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -553,7 +553,7 @@ internal sealed class RegisterVmExecutionSession
         var instructions = program.Instructions;
         if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return true;
         }
 
@@ -562,66 +562,66 @@ internal sealed class RegisterVmExecutionSession
             var instruction = instructions[instructionIndex];
             switch (instruction.OpCode)
             {
-                case RegisterVmProgramOpCode.LoadConstant:
+                case BytecodeVmProgramOpCode.LoadConstant:
                     _evaluationStack[top++] = instruction.Constant;
                     break;
 
-                case RegisterVmProgramOpCode.LoadSlot:
+                case BytecodeVmProgramOpCode.LoadSlot:
                     _evaluationStack[top++] = ResolveSlot(instruction.A);
                     break;
 
-                case RegisterVmProgramOpCode.Or:
-                case RegisterVmProgramOpCode.Xor:
-                case RegisterVmProgramOpCode.And:
-                case RegisterVmProgramOpCode.Equal:
-                case RegisterVmProgramOpCode.NotEqual:
-                case RegisterVmProgramOpCode.Less:
-                case RegisterVmProgramOpCode.Greater:
-                case RegisterVmProgramOpCode.LessOrEqual:
-                case RegisterVmProgramOpCode.GreaterOrEqual:
-                case RegisterVmProgramOpCode.Add:
-                case RegisterVmProgramOpCode.Subtract:
-                case RegisterVmProgramOpCode.Multiply:
-                case RegisterVmProgramOpCode.Divide:
-                case RegisterVmProgramOpCode.IntegerDivide:
-                case RegisterVmProgramOpCode.Modulo:
-                case RegisterVmProgramOpCode.Remainder:
-                case RegisterVmProgramOpCode.Default:
-                case RegisterVmProgramOpCode.Contains:
-                case RegisterVmProgramOpCode.ContainsValue:
-                case RegisterVmProgramOpCode.StartsWith:
-                case RegisterVmProgramOpCode.EndsWith:
-                case RegisterVmProgramOpCode.Intersect:
-                case RegisterVmProgramOpCode.Combine:
-                case RegisterVmProgramOpCode.Except:
-                case RegisterVmProgramOpCode.Zip:
+                case BytecodeVmProgramOpCode.Or:
+                case BytecodeVmProgramOpCode.Xor:
+                case BytecodeVmProgramOpCode.And:
+                case BytecodeVmProgramOpCode.Equal:
+                case BytecodeVmProgramOpCode.NotEqual:
+                case BytecodeVmProgramOpCode.Less:
+                case BytecodeVmProgramOpCode.Greater:
+                case BytecodeVmProgramOpCode.LessOrEqual:
+                case BytecodeVmProgramOpCode.GreaterOrEqual:
+                case BytecodeVmProgramOpCode.Add:
+                case BytecodeVmProgramOpCode.Subtract:
+                case BytecodeVmProgramOpCode.Multiply:
+                case BytecodeVmProgramOpCode.Divide:
+                case BytecodeVmProgramOpCode.IntegerDivide:
+                case BytecodeVmProgramOpCode.Modulo:
+                case BytecodeVmProgramOpCode.Remainder:
+                case BytecodeVmProgramOpCode.Default:
+                case BytecodeVmProgramOpCode.Contains:
+                case BytecodeVmProgramOpCode.ContainsValue:
+                case BytecodeVmProgramOpCode.StartsWith:
+                case BytecodeVmProgramOpCode.EndsWith:
+                case BytecodeVmProgramOpCode.Intersect:
+                case BytecodeVmProgramOpCode.Combine:
+                case BytecodeVmProgramOpCode.Except:
+                case BytecodeVmProgramOpCode.Zip:
                     var right = _evaluationStack[--top];
                     var left = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateProgramBinary(instruction.OpCode, left, right);
                     break;
 
-                case RegisterVmProgramOpCode.Unary:
+                case BytecodeVmProgramOpCode.Unary:
                     if (!TryEvaluateUnaryOperation(instruction.DiagnosticName, _evaluationStack[top - 1], out var unaryValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top - 1] = unaryValue;
                     break;
 
-                case RegisterVmProgramOpCode.Variadic:
+                case BytecodeVmProgramOpCode.Variadic:
                     top -= instruction.A;
                     if (!TryEvaluateVariadicOperation(instruction.DiagnosticName, _evaluationStack, top, instruction.A, out var variadicValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = variadicValue;
                     break;
 
-                case RegisterVmProgramOpCode.Clamp:
+                case BytecodeVmProgramOpCode.Clamp:
                     top -= 3;
                     _evaluationStack[top] = EvaluateClamp(
                         _evaluationStack[top],
@@ -630,42 +630,42 @@ internal sealed class RegisterVmExecutionSession
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.Random:
+                case BytecodeVmProgramOpCode.Random:
                     var to = _evaluationStack[--top];
                     var from = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateRandomExpression(from, to);
                     break;
 
-                case RegisterVmProgramOpCode.Range:
+                case BytecodeVmProgramOpCode.Range:
                     top -= instruction.A;
                     _evaluationStack[top] = EvaluateRangeExpression(
                         _evaluationStack[top],
                         _evaluationStack[top + 1],
-                        instruction.A == 3 ? _evaluationStack[top + 2] : RegisterVmValue.Integer(1));
+                        instruction.A == 3 ? _evaluationStack[top + 2] : BytecodeVmValue.Integer(1));
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.Dice:
+                case BytecodeVmProgramOpCode.Dice:
                     _evaluationStack[top++] = EvaluateDiceExpression(instruction.A, instruction.B);
                     break;
 
-                case RegisterVmProgramOpCode.SeededRandom:
+                case BytecodeVmProgramOpCode.SeededRandom:
                     var seed = _evaluationStack[--top];
                     if (instruction.ExpressionProgram is null ||
                         !TryEvaluateSeededRandomExpression(seed, instruction.ExpressionProgram, top, out var seededValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = seededValue;
                     break;
 
-                case RegisterVmProgramOpCode.Cast:
+                case BytecodeVmProgramOpCode.Cast:
                     _evaluationStack[top - 1] = EvaluateProgramCast(instruction.CastKind, _evaluationStack[top - 1]);
                     break;
 
-                case RegisterVmProgramOpCode.TypeConstructor:
+                case BytecodeVmProgramOpCode.TypeConstructor:
                     top -= instruction.A;
                     _evaluationStack[top] = EvaluateTypeConstructor(
                         instruction.DiagnosticName,
@@ -676,69 +676,69 @@ internal sealed class RegisterVmExecutionSession
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.TypeCheck:
-                    _evaluationStack[top - 1] = RegisterVmValue.Boolean(IsValueOfType(
+                case BytecodeVmProgramOpCode.TypeCheck:
+                    _evaluationStack[top - 1] = BytecodeVmValue.Boolean(IsValueOfType(
                         _evaluationStack[top - 1],
                         instruction.DiagnosticName));
                     break;
 
-                case RegisterVmProgramOpCode.RulePredicate:
+                case BytecodeVmProgramOpCode.RulePredicate:
                     var input = _evaluationStack[--top];
                     if (!TryEvaluateRulePredicate(instruction, input, top, out var predicateValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = predicateValue;
                     break;
 
-                case RegisterVmProgramOpCode.Call:
+                case BytecodeVmProgramOpCode.Call:
                     top -= instruction.A;
                     if (!TryEvaluateCallable(instruction, _evaluationStack, top, instruction.A, out var callValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = callValue;
                     break;
 
-                case RegisterVmProgramOpCode.MemberAccess:
+                case BytecodeVmProgramOpCode.MemberAccess:
                     _evaluationStack[top - 1] = EvaluateMemberAccess(_evaluationStack[top - 1], instruction.DiagnosticName);
                     break;
 
-                case RegisterVmProgramOpCode.IndexedAccess:
+                case BytecodeVmProgramOpCode.IndexedAccess:
                     var selector = _evaluationStack[--top];
                     var target = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateIndexedAccess(target, selector);
                     break;
 
-                case RegisterVmProgramOpCode.BuildList:
+                case BytecodeVmProgramOpCode.BuildList:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildListValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.BuildSequence:
+                case BytecodeVmProgramOpCode.BuildSequence:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSequenceValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.BuildSet:
+                case BytecodeVmProgramOpCode.BuildSet:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSetValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.BuildDictionary:
+                case BytecodeVmProgramOpCode.BuildDictionary:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildDictionaryValue(_evaluationStack, top, instruction.A, instruction.Names);
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.BuildMessage:
+                case BytecodeVmProgramOpCode.BuildMessage:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildMessageValue(
                         _evaluationStack,
@@ -750,7 +750,7 @@ internal sealed class RegisterVmExecutionSession
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.BindHandler:
+                case BytecodeVmProgramOpCode.BindHandler:
                     top -= instruction.A + 1;
                     _evaluationStack[top] = BindHandlerValue(
                         _evaluationStack[top],
@@ -761,7 +761,7 @@ internal sealed class RegisterVmExecutionSession
                     top++;
                     break;
 
-                case RegisterVmProgramOpCode.CallExtension:
+                case BytecodeVmProgramOpCode.CallExtension:
                     top -= instruction.A;
                     if (!TryCallExtension(
                             instruction.DiagnosticName,
@@ -773,40 +773,40 @@ internal sealed class RegisterVmExecutionSession
                             instruction.A,
                             out var extensionValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = extensionValue;
                     break;
 
-                case RegisterVmProgramOpCode.Pipeline:
+                case BytecodeVmProgramOpCode.Pipeline:
                     if (instruction.PipelineProgram is null ||
                         !TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = pipelineValue;
                     break;
 
-                case RegisterVmProgramOpCode.GeneratedCollection:
+                case BytecodeVmProgramOpCode.GeneratedCollection:
                     if (instruction.GeneratedCollectionProgram is null ||
                         !TryExecuteGeneratedCollectionProgram(instruction.GeneratedCollectionProgram, out var generatedValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
                     _evaluationStack[top++] = generatedValue;
                     break;
 
-                case RegisterVmProgramOpCode.GuardedChoice:
+                case BytecodeVmProgramOpCode.GuardedChoice:
                     if (instruction.GuardedChoiceProgram is null ||
                         !TryExecuteGuardedChoiceProgram(instruction.GuardedChoiceProgram, out var guardedValue))
                     {
-                        value = RegisterVmValue.Nothing;
+                        value = BytecodeVmValue.Nothing;
                         return false;
                     }
 
@@ -814,20 +814,20 @@ internal sealed class RegisterVmExecutionSession
                     break;
 
                 default:
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
             }
         }
 
-        value = top > stackBase ? _evaluationStack[top - 1] : RegisterVmValue.Nothing;
+        value = top > stackBase ? _evaluationStack[top - 1] : BytecodeVmValue.Nothing;
         return true;
     }
 
-    private bool TryEvaluateHandlerBind(HandlerBindExpressionNode handlerBind, out RegisterVmValue value)
+    private bool TryEvaluateHandlerBind(HandlerBindExpressionNode handlerBind, out BytecodeVmValue value)
     {
         if (!TryEvaluate(handlerBind.CalleeExpression, out var callee))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -836,7 +836,7 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!TryEvaluate(argument.Expression, out var argumentValue))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -844,100 +844,100 @@ internal sealed class RegisterVmExecutionSession
         }
 
         value = GameEventScriptMessageValueCodec.TryBindHandlerValue(callee.ToGameEventScriptValue(), arguments, out var message)
-            ? RegisterVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
-            : RegisterVmValue.Nothing;
+            ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
+            : BytecodeVmValue.Nothing;
         return true;
     }
 
-    private bool TryEvaluateTypeCheck(TypeCheckExpressionNode typeCheck, out RegisterVmValue value)
+    private bool TryEvaluateTypeCheck(TypeCheckExpressionNode typeCheck, out BytecodeVmValue value)
     {
         if (!TryEvaluate(typeCheck.Value, out var input))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Boolean(IsValueOfType(input, typeCheck.TypeName));
+        value = BytecodeVmValue.Boolean(IsValueOfType(input, typeCheck.TypeName));
         return true;
     }
 
-    private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out RegisterVmValue value)
+    private bool TryEvaluateListLiteral(ListLiteralExpressionNode list, out BytecodeVmValue value)
     {
         var items = new GameEventScriptValue[list.Items.Count];
         for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(list.Items[itemIndex], out var item))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
             items[itemIndex] = item.ToGameEventScriptValue();
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.List(items));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(items));
         return true;
     }
 
-    private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out RegisterVmValue value)
+    private bool TryEvaluateSequenceLiteral(SequenceLiteralExpressionNode sequence, out BytecodeVmValue value)
     {
         var items = new GameEventScriptValue[sequence.Items.Count];
         for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(sequence.Items[itemIndex], out var item))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
             items[itemIndex] = item.ToGameEventScriptValue();
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.Sequence(items));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSequence(items));
         return true;
     }
 
-    private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out RegisterVmValue value)
+    private bool TryEvaluateSetLiteral(SetLiteralExpressionNode set, out BytecodeVmValue value)
     {
         var items = new GameEventScriptValue[set.Items.Count];
         for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
         {
             if (!TryEvaluate(set.Items[itemIndex], out var item))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
             items[itemIndex] = item.ToGameEventScriptValue();
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.Set(items));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseSet(items));
         return true;
     }
 
-    private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out RegisterVmValue value)
+    private bool TryEvaluateDictionaryLiteral(DictionaryLiteralExpressionNode dictionary, out BytecodeVmValue value)
     {
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
         foreach (var entry in dictionary.Entries)
         {
             if (!TryEvaluate(entry.Value, out var entryValue))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
             map[entry.Key] = entryValue.ToGameEventScriptValue();
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.Dictionary(map));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(map));
         return true;
     }
 
-    private bool TryEvaluateMemberAccess(MemberAccessExpressionNode memberAccess, out RegisterVmValue value)
+    private bool TryEvaluateMemberAccess(MemberAccessExpressionNode memberAccess, out BytecodeVmValue value)
     {
         if (!TryEvaluate(memberAccess.Target, out var target))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -945,36 +945,36 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private static RegisterVmValue EvaluateMemberAccess(RegisterVmValue target, string? member)
+    private static BytecodeVmValue EvaluateMemberAccess(BytecodeVmValue target, string? member)
     {
         if (string.IsNullOrEmpty(member))
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         var targetValue = target.ToGameEventScriptValue();
         if (targetValue.IsNothing())
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         return targetValue.TryGetDictionaryMember(member, out var value)
-            ? RegisterVmValue.FromGameEventScriptValue(value)
-            : RegisterVmValue.Nothing;
+            ? BytecodeVmValue.FromGameEventScriptValue(value)
+            : BytecodeVmValue.Nothing;
     }
 
-    private static RegisterVmValue EvaluateIndexedAccess(RegisterVmValue target, RegisterVmValue selector)
+    private static BytecodeVmValue EvaluateIndexedAccess(BytecodeVmValue target, BytecodeVmValue selector)
     {
         var selectorValue = selector.ToGameEventScriptValue();
         if (selectorValue.IsNothing())
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
-        return RegisterVmValue.FromGameEventScriptValue(target.ToGameEventScriptValue().Lookup(selectorValue));
+        return BytecodeVmValue.FromGameEventScriptValue(target.ToGameEventScriptValue().Lookup(selectorValue));
     }
 
-    private static RegisterVmValue BuildListValue(RegisterVmValue[] stack, int start, int count)
+    private static BytecodeVmValue BuildListValue(BytecodeVmValue[] stack, int start, int count)
     {
         var items = new GameEventScriptValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
@@ -982,10 +982,10 @@ internal sealed class RegisterVmExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
         }
 
-        return RegisterVmValue.Reference(GameEventScriptValueFactory.List(items));
+        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(items));
     }
 
-    private static RegisterVmValue BuildSequenceValue(RegisterVmValue[] stack, int start, int count)
+    private static BytecodeVmValue BuildSequenceValue(BytecodeVmValue[] stack, int start, int count)
     {
         var items = new GameEventScriptValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
@@ -993,10 +993,10 @@ internal sealed class RegisterVmExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
         }
 
-        return RegisterVmValue.Reference(GameEventScriptValueFactory.Sequence(items));
+        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSequence(items));
     }
 
-    private static RegisterVmValue BuildSetValue(RegisterVmValue[] stack, int start, int count)
+    private static BytecodeVmValue BuildSetValue(BytecodeVmValue[] stack, int start, int count)
     {
         var items = new GameEventScriptValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
@@ -1004,14 +1004,14 @@ internal sealed class RegisterVmExecutionSession
             items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
         }
 
-        return RegisterVmValue.Reference(GameEventScriptValueFactory.Set(items));
+        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GseSet(items));
     }
 
-    private static RegisterVmValue BuildDictionaryValue(RegisterVmValue[] stack, int start, int count, string[]? names)
+    private static BytecodeVmValue BuildDictionaryValue(BytecodeVmValue[] stack, int start, int count, string[]? names)
     {
         if (names is null || names.Length != count)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         var map = new Dictionary<string, GameEventScriptValue>(count, StringComparer.Ordinal);
@@ -1020,11 +1020,11 @@ internal sealed class RegisterVmExecutionSession
             map[names[entryIndex]] = stack[start + entryIndex].ToGameEventScriptValue();
         }
 
-        return RegisterVmValue.Reference(GameEventScriptValueFactory.Dictionary(map));
+        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(map));
     }
 
-    private static RegisterVmValue BuildMessageValue(
-        RegisterVmValue[] stack,
+    private static BytecodeVmValue BuildMessageValue(
+        BytecodeVmValue[] stack,
         int start,
         int count,
         string[]? names,
@@ -1036,12 +1036,12 @@ internal sealed class RegisterVmExecutionSession
             names is null ||
             names.Length != count)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         if (count == 0)
         {
-            return RegisterVmValue.Reference(Message(GameEventScriptMessage.CreatePrecomputed(
+            return BytecodeVmValue.Reference(GesMessage(GameEventScriptMessage.CreatePrecomputed(
                 messageName,
                 GameEventScriptNamedArguments.Empty,
                 signatureId)));
@@ -1055,22 +1055,22 @@ internal sealed class RegisterVmExecutionSession
                 stack[start + argumentIndex].ToGameEventScriptValue());
         }
 
-        return RegisterVmValue.Reference(Message(GameEventScriptMessage.CreatePrecomputed(
+        return BytecodeVmValue.Reference(GesMessage(GameEventScriptMessage.CreatePrecomputed(
             messageName,
             GameEventScriptNamedArguments.CreateOrdered(pairs),
             signatureId)));
     }
 
-    private static RegisterVmValue BindHandlerValue(
-        RegisterVmValue callee,
-        RegisterVmValue[] stack,
+    private static BytecodeVmValue BindHandlerValue(
+        BytecodeVmValue callee,
+        BytecodeVmValue[] stack,
         int start,
         int count,
         string[]? names)
     {
         if (names is null || names.Length != count)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         var pairs = new KeyValuePair<string, GameEventScriptValue>[count];
@@ -1083,8 +1083,8 @@ internal sealed class RegisterVmExecutionSession
 
         var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, names);
         return GameEventScriptMessageValueCodec.TryBindHandlerValue(callee.ToGameEventScriptValue(), arguments, out var message)
-            ? RegisterVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
-            : RegisterVmValue.Nothing;
+            ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
+            : BytecodeVmValue.Nothing;
     }
 
     private bool TryCallExtension(
@@ -1092,12 +1092,12 @@ internal sealed class RegisterVmExecutionSession
         string? functionName,
         string[]? labels,
         int referenceIndex,
-        RegisterVmValue[] stack,
+        BytecodeVmValue[] stack,
         int start,
         int count,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
-        value = RegisterVmValue.Nothing;
+        value = BytecodeVmValue.Nothing;
         if (string.IsNullOrWhiteSpace(extensionName) ||
             string.IsNullOrWhiteSpace(functionName))
         {
@@ -1116,7 +1116,7 @@ internal sealed class RegisterVmExecutionSession
 
         if (GameEventScriptStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
         {
-            value = RegisterVmValue.FromGameEventScriptFastValue(standardValue);
+            value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
             return true;
         }
 
@@ -1136,77 +1136,77 @@ internal sealed class RegisterVmExecutionSession
             }
         }
 
-        value = RegisterVmValue.FromGameEventScriptFastValue(function.Invoke(new GameEventScriptExtensionContext(_context), arguments));
+        value = BytecodeVmValue.FromGameEventScriptFastValue(function.Invoke(new GameEventScriptExtensionContext(_context), arguments));
         return true;
     }
 
-    private static GameEventScriptFastValue ToGameEventScriptFastValue(RegisterVmValue value)
+    private static GameEventScriptFastValue ToGameEventScriptFastValue(BytecodeVmValue value)
         => value.Kind switch
         {
-            RegisterVmValueKind.Nothing => GameEventScriptFastValue.Nothing,
-            RegisterVmValueKind.Boolean => GameEventScriptFastValue.FromBoolean(value.BooleanValue),
-            RegisterVmValueKind.Integer => GameEventScriptFastValue.FromInteger(value.IntegerValue),
-            RegisterVmValueKind.Decimal => GameEventScriptFastValue.FromDecimal(value.Number, value.Unit),
-            RegisterVmValueKind.Percentage => GameEventScriptFastValue.FromPercentage(value.Number),
-            RegisterVmValueKind.Reference => GameEventScriptFastValue.FromGameEventScriptValue(value.ReferenceValue ?? GameEventScriptValue.Nothing),
+            BytecodeVmValueKind.Nothing => GameEventScriptFastValue.Nothing,
+            BytecodeVmValueKind.Boolean => GameEventScriptFastValue.FromBoolean(value.BooleanValue),
+            BytecodeVmValueKind.Integer => GameEventScriptFastValue.FromInteger(value.IntegerValue),
+            BytecodeVmValueKind.Decimal => GameEventScriptFastValue.FromDecimal(value.Number, value.Unit),
+            BytecodeVmValueKind.Percentage => GameEventScriptFastValue.FromPercentage(value.Number),
+            BytecodeVmValueKind.Reference => GameEventScriptFastValue.FromGameEventScriptValue(value.ReferenceValue ?? GameEventScriptValue.Nothing),
             _ => GameEventScriptFastValue.Nothing
         };
 
-    private RegisterVmValue EvaluateProgramBinary(RegisterVmProgramOpCode opCode, RegisterVmValue left, RegisterVmValue right)
+    private BytecodeVmValue EvaluateProgramBinary(BytecodeVmProgramOpCode opCode, BytecodeVmValue left, BytecodeVmValue right)
     {
-        if (opCode != RegisterVmProgramOpCode.Default &&
+        if (opCode != BytecodeVmProgramOpCode.Default &&
             (left.IsNothingLike() || right.IsNothingLike()))
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         switch (opCode)
         {
-            case RegisterVmProgramOpCode.Or:
-                return RegisterVmValue.Boolean(left.AsBoolean() || right.AsBoolean());
-            case RegisterVmProgramOpCode.Xor:
-                return RegisterVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
-            case RegisterVmProgramOpCode.And:
-                return RegisterVmValue.Boolean(left.AsBoolean() && right.AsBoolean());
-            case RegisterVmProgramOpCode.Equal:
-                return RegisterVmValue.Boolean(RegisterVmValue.AreEqual(left, right));
-            case RegisterVmProgramOpCode.NotEqual:
-                return RegisterVmValue.Boolean(!RegisterVmValue.AreEqual(left, right));
-            case RegisterVmProgramOpCode.Less:
-                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
-            case RegisterVmProgramOpCode.Greater:
-                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var greaterComparison) && greaterComparison > 0);
-            case RegisterVmProgramOpCode.LessOrEqual:
-                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var lessOrEqualComparison) && lessOrEqualComparison <= 0);
-            case RegisterVmProgramOpCode.GreaterOrEqual:
-                return RegisterVmValue.Boolean(RegisterVmValue.TryCompareNumeric(left, right, out var greaterOrEqualComparison) && greaterOrEqualComparison >= 0);
-            case RegisterVmProgramOpCode.Add:
-                return RegisterVmValue.Add(left, right);
-            case RegisterVmProgramOpCode.Subtract:
-                return RegisterVmValue.Subtract(left, right);
-            case RegisterVmProgramOpCode.Multiply:
-                return RegisterVmValue.Multiply(left, right);
-            case RegisterVmProgramOpCode.Divide:
-                return RegisterVmValue.Divide(left, right);
-            case RegisterVmProgramOpCode.IntegerDivide:
-                return RegisterVmValue.IntegerDivide(left, right);
-            case RegisterVmProgramOpCode.Modulo:
-                return RegisterVmValue.Modulo(left, right);
-            case RegisterVmProgramOpCode.Remainder:
-                return RegisterVmValue.Remainder(left, right);
+            case BytecodeVmProgramOpCode.Or:
+                return BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean());
+            case BytecodeVmProgramOpCode.Xor:
+                return BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
+            case BytecodeVmProgramOpCode.And:
+                return BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean());
+            case BytecodeVmProgramOpCode.Equal:
+                return BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
+            case BytecodeVmProgramOpCode.NotEqual:
+                return BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(left, right));
+            case BytecodeVmProgramOpCode.Less:
+                return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
+            case BytecodeVmProgramOpCode.Greater:
+                return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var greaterComparison) && greaterComparison > 0);
+            case BytecodeVmProgramOpCode.LessOrEqual:
+                return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var lessOrEqualComparison) && lessOrEqualComparison <= 0);
+            case BytecodeVmProgramOpCode.GreaterOrEqual:
+                return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var greaterOrEqualComparison) && greaterOrEqualComparison >= 0);
+            case BytecodeVmProgramOpCode.Add:
+                return BytecodeVmValue.Add(left, right);
+            case BytecodeVmProgramOpCode.Subtract:
+                return BytecodeVmValue.Subtract(left, right);
+            case BytecodeVmProgramOpCode.Multiply:
+                return BytecodeVmValue.Multiply(left, right);
+            case BytecodeVmProgramOpCode.Divide:
+                return BytecodeVmValue.Divide(left, right);
+            case BytecodeVmProgramOpCode.IntegerDivide:
+                return BytecodeVmValue.IntegerDivide(left, right);
+            case BytecodeVmProgramOpCode.Modulo:
+                return BytecodeVmValue.Modulo(left, right);
+            case BytecodeVmProgramOpCode.Remainder:
+                return BytecodeVmValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
                     ? value
-                    : throw new InvalidOperationException($"RegisterVM invariant failed: binary opcode '{opCode}' could not be evaluated.");
+                    : throw new InvalidOperationException($"BytecodeVM invariant failed: binary opcode '{opCode}' could not be evaluated.");
         }
     }
 
-    private RegisterVmValue EvaluateProgramCast(RegisterVmCastKind castKind, RegisterVmValue input)
+    private BytecodeVmValue EvaluateProgramCast(BytecodeVmCastKind castKind, BytecodeVmValue input)
         => TryConvertDeclaredType(GetCastTypeName(castKind), input, out var value)
             ? value
-            : throw new InvalidOperationException($"RegisterVM invariant failed: cast '{castKind}' could not be evaluated.");
+            : throw new InvalidOperationException($"BytecodeVM invariant failed: cast '{castKind}' could not be evaluated.");
 
-    private static bool IsValueOfType(RegisterVmValue value, string? typeName)
+    private static bool IsValueOfType(BytecodeVmValue value, string? typeName)
     {
         if (string.IsNullOrEmpty(typeName))
         {
@@ -1215,22 +1215,22 @@ internal sealed class RegisterVmExecutionSession
 
         return typeName switch
         {
-            "nothing" => value.Kind == RegisterVmValueKind.Nothing || (value.ReferenceValue?.IsNothing() ?? false),
+            "nothing" => value.Kind == BytecodeVmValueKind.Nothing || (value.ReferenceValue?.IsNothing() ?? false),
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
-            "percentage" => value.Kind == RegisterVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
-            "degree" => value.Kind == RegisterVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Degree ||
+            "percentage" => value.Kind == BytecodeVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
+            "degree" => value.Kind == BytecodeVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Degree ||
                         (value.ReferenceValue?.IsDecimalUnit(GameEventScriptDecimalUnit.Degree) ?? false),
-            "meter" => value.Kind == RegisterVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Meter ||
+            "meter" => value.Kind == BytecodeVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Meter ||
                        (value.ReferenceValue?.IsDecimalUnit(GameEventScriptDecimalUnit.Meter) ?? false),
-            "second" => value.Kind == RegisterVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Second ||
+            "second" => value.Kind == BytecodeVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Second ||
                         (value.ReferenceValue?.IsDecimalUnit(GameEventScriptDecimalUnit.Second) ?? false),
             "vector2" => value.ReferenceValue?.IsVector2() ?? false,
             "vector3" => value.ReferenceValue?.IsVector3() ?? false,
-            "decimal" => value.Kind is RegisterVmValueKind.Integer or RegisterVmValueKind.Decimal or RegisterVmValueKind.Percentage ||
+            "decimal" => value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Decimal or BytecodeVmValueKind.Percentage ||
                          (value.ReferenceValue?.IsNumber() ?? false),
-            "integer" => value.Kind == RegisterVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
-            "boolean" => value.Kind == RegisterVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
+            "integer" => value.Kind == BytecodeVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
+            "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "sequence" => value.ReferenceValue?.IsSequence() ?? false,
             "list" => value.ReferenceValue?.IsList() ?? false,
@@ -1248,37 +1248,37 @@ internal sealed class RegisterVmExecutionSession
         };
     }
 
-    private bool TryEvaluateBinary(BinaryExpressionNode binary, out RegisterVmValue value)
+    private bool TryEvaluateBinary(BinaryExpressionNode binary, out BytecodeVmValue value)
     {
         if (!TryEvaluate(binary.Left, out var left) ||
             !TryEvaluate(binary.Right, out var right))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         return TryEvaluateBinaryOperation(binary.Operator, left, right, out value);
     }
 
-    private bool TryEvaluateUnary(UnaryExpressionNode unary, out RegisterVmValue value)
+    private bool TryEvaluateUnary(UnaryExpressionNode unary, out BytecodeVmValue value)
     {
         if (!TryEvaluate(unary.Operand, out var operand))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         return TryEvaluateUnaryOperation(unary.Operator, operand, out value);
     }
 
-    private bool TryEvaluateVariadic(VariadicTaggedExpressionNode variadic, out RegisterVmValue value)
+    private bool TryEvaluateVariadic(VariadicTaggedExpressionNode variadic, out BytecodeVmValue value)
     {
-        var values = new RegisterVmValue[variadic.Arguments.Count];
+        var values = new BytecodeVmValue[variadic.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
         {
             if (!TryEvaluate(variadic.Arguments[argumentIndex], out values[argumentIndex]))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
         }
@@ -1286,13 +1286,13 @@ internal sealed class RegisterVmExecutionSession
         return TryEvaluateVariadicOperation(variadic.Operator, values, 0, values.Length, out value);
     }
 
-    private bool TryEvaluateClamp(ClampExpressionNode clamp, out RegisterVmValue value)
+    private bool TryEvaluateClamp(ClampExpressionNode clamp, out BytecodeVmValue value)
     {
         if (!TryEvaluate(clamp.Value, out var raw) ||
             !TryEvaluate(clamp.Minimum, out var minimum) ||
             !TryEvaluate(clamp.Maximum, out var maximum))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1300,12 +1300,12 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private bool TryEvaluateRandom(RandomExpressionNode random, out RegisterVmValue value)
+    private bool TryEvaluateRandom(RandomExpressionNode random, out BytecodeVmValue value)
     {
         if (!TryEvaluate(random.FromExpression, out var from) ||
             !TryEvaluate(random.ToExpression, out var to))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1313,12 +1313,12 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private bool TryEvaluateRange(RangeExpressionNode range, out RegisterVmValue value)
+    private bool TryEvaluateRange(RangeExpressionNode range, out BytecodeVmValue value)
     {
         if (!TryEvaluate(range.FromExpression, out var from) ||
             !TryEvaluate(range.ToExpression, out var to))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1326,7 +1326,7 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!TryEvaluate(range.StepExpression, out var step))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -1334,16 +1334,16 @@ internal sealed class RegisterVmExecutionSession
             return true;
         }
 
-        value = EvaluateRangeExpression(from, to, RegisterVmValue.Integer(1));
+        value = EvaluateRangeExpression(from, to, BytecodeVmValue.Integer(1));
         return true;
     }
 
-    private bool TryEvaluateSeededRandomExpression(SeededRandomExpressionNode seededRandom, out RegisterVmValue value)
+    private bool TryEvaluateSeededRandomExpression(SeededRandomExpressionNode seededRandom, out BytecodeVmValue value)
     {
         if (!TryEvaluate(seededRandom.SeedExpression, out var seed) ||
             !_plan.TryGetExpressionProgram(seededRandom.BodyExpression, out var bodyProgram))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1351,10 +1351,10 @@ internal sealed class RegisterVmExecutionSession
     }
 
     private bool TryEvaluateSeededRandomExpression(
-        RegisterVmValue seed,
-        RegisterVmExpressionProgram bodyProgram,
+        BytecodeVmValue seed,
+        BytecodeVmExpressionProgram bodyProgram,
         int stackBase,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         PushSeededRandomScope(seed.ToGameEventScriptValue());
         try
@@ -1369,17 +1369,17 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryEvaluateGeneratedCollectionExpression(
         GeneratedCollectionExpressionNode generatedCollection,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         if (!_plan.TryGetSlot(generatedCollection.Identifier, out var identifierSlot))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         if (!TryMaterializeIterationSource(generatedCollection.Source, out var sourceItems))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1391,12 +1391,12 @@ internal sealed class RegisterVmExecutionSession
                 break;
             }
 
-            var fastItem = RegisterVmValue.FromGameEventScriptValue(item);
+            var fastItem = BytecodeVmValue.FromGameEventScriptValue(item);
             if (generatedCollection.Predicate is not null)
             {
                 if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Predicate, out var predicate))
                 {
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
                 }
 
@@ -1413,24 +1413,24 @@ internal sealed class RegisterVmExecutionSession
 
             if (!TryEvaluateExpressionWithTemporarySlot(identifierSlot, fastItem, generatedCollection.Projection, out var projected))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
             values.Add(projected.ToGameEventScriptValue());
         }
 
-        value = RegisterVmValue.Reference(generatedCollection.CollectionType == "set"
-            ? GameEventScriptValueFactory.Set(values)
-            : GameEventScriptValueFactory.List(values));
+        value = BytecodeVmValue.Reference(generatedCollection.CollectionType == "set"
+            ? GameEventScriptValueFactory.GseSet(values)
+            : GameEventScriptValueFactory.GesList(values));
         return true;
     }
 
-    private bool TryExecuteGeneratedCollectionProgram(RegisterVmGeneratedCollectionProgram program, out RegisterVmValue value)
+    private bool TryExecuteGeneratedCollectionProgram(BytecodeVmGeneratedCollectionProgram program, out BytecodeVmValue value)
     {
         if (!TryMaterializeIterationSource(program.Source, out var sourceItems))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1442,12 +1442,12 @@ internal sealed class RegisterVmExecutionSession
                 break;
             }
 
-            var fastItem = RegisterVmValue.FromGameEventScriptValue(item);
+            var fastItem = BytecodeVmValue.FromGameEventScriptValue(item);
             if (program.PredicateProgram is not null)
             {
                 if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.PredicateProgram, 0, out var predicate))
                 {
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
                 }
 
@@ -1464,16 +1464,16 @@ internal sealed class RegisterVmExecutionSession
 
             if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.ProjectionProgram, 0, out var projected))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
             values.Add(projected.ToGameEventScriptValue());
         }
 
-        value = RegisterVmValue.Reference(program.CollectionType == "set"
-            ? GameEventScriptValueFactory.Set(values)
-            : GameEventScriptValueFactory.List(values));
+        value = BytecodeVmValue.Reference(program.CollectionType == "set"
+            ? GameEventScriptValueFactory.GseSet(values)
+            : GameEventScriptValueFactory.GesList(values));
         return true;
     }
 
@@ -1521,13 +1521,13 @@ internal sealed class RegisterVmExecutionSession
         }
     }
 
-    private bool TryEvaluateGuardedChoiceExpression(GuardedChoiceExpressionNode guardedChoice, out RegisterVmValue value)
+    private bool TryEvaluateGuardedChoiceExpression(GuardedChoiceExpressionNode guardedChoice, out BytecodeVmValue value)
     {
         foreach (var branch in guardedChoice.Branches)
         {
             if (!TryEvaluate(branch.ConditionExpression, out var condition))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -1540,13 +1540,13 @@ internal sealed class RegisterVmExecutionSession
         return TryEvaluate(guardedChoice.OtherwiseExpression, out value);
     }
 
-    private bool TryExecuteGuardedChoiceProgram(RegisterVmGuardedChoiceProgram program, out RegisterVmValue value)
+    private bool TryExecuteGuardedChoiceProgram(BytecodeVmGuardedChoiceProgram program, out BytecodeVmValue value)
     {
         var conditions = program.ConditionPrograms;
         var values = program.ValuePrograms;
         if (conditions.Length != values.Length)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -1554,7 +1554,7 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!TryExecuteExpressionProgram(conditions[branchIndex], 0, out var condition))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -1567,7 +1567,7 @@ internal sealed class RegisterVmExecutionSession
         return TryExecuteExpressionProgram(program.OtherwiseProgram, 0, out value);
     }
 
-    private RegisterVmValue EvaluateRandomExpression(RegisterVmValue fromValue, RegisterVmValue toValue)
+    private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue)
     {
         var fromRaw = fromValue.ToGameEventScriptValue();
         var toRaw = toValue.ToGameEventScriptValue();
@@ -1585,8 +1585,8 @@ internal sealed class RegisterVmExecutionSession
             }
 
             return TryNextInclusiveInt(from, to, out var next)
-                ? RegisterVmValue.Integer(next)
-                : RegisterVmValue.Nothing;
+                ? BytecodeVmValue.Integer(next)
+                : BytecodeVmValue.Nothing;
         }
 
         if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
@@ -1594,22 +1594,22 @@ internal sealed class RegisterVmExecutionSession
             !fromNumber.IsFinite ||
             !toNumber.IsFinite)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         var lower = Math.Min(fromNumber.Value, toNumber.Value);
         var upper = Math.Max(fromNumber.Value, toNumber.Value);
         if (lower == upper)
         {
-            return RegisterVmValue.Decimal(lower);
+            return BytecodeVmValue.Decimal(lower);
         }
 
         return TryNextInclusiveDecimal(lower, upper, out var nextDecimal)
-            ? RegisterVmValue.Decimal(nextDecimal)
-            : RegisterVmValue.Nothing;
+            ? BytecodeVmValue.Decimal(nextDecimal)
+            : BytecodeVmValue.Nothing;
     }
 
-    private static RegisterVmValue EvaluateRangeExpression(RegisterVmValue fromValue, RegisterVmValue toValue, RegisterVmValue stepValue)
+    private static BytecodeVmValue EvaluateRangeExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue, BytecodeVmValue stepValue)
     {
         if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(fromValue.ToGameEventScriptValue(), out var fromNumber) ||
             !GameEventScriptValueAlu.TryCoerceNumericForOperation(toValue.ToGameEventScriptValue(), out var toNumber) ||
@@ -1618,25 +1618,25 @@ internal sealed class RegisterVmExecutionSession
             !toNumber.IsFinite ||
             !stepNumber.IsFinite)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
-        return RegisterVmValue.Reference(Range(
+        return BytecodeVmValue.Reference(GesRange(
             GameEventScriptValueAlu.ToIntegerSaturated(fromNumber.Value),
             GameEventScriptValueAlu.ToIntegerSaturated(toNumber.Value),
             GameEventScriptValueAlu.ToIntegerSaturated(stepNumber.Value)));
     }
 
-    private RegisterVmValue EvaluateDiceExpression(int diceCount, int sideCount)
+    private BytecodeVmValue EvaluateDiceExpression(int diceCount, int sideCount)
     {
         if (diceCount <= 0 || sideCount <= 0)
         {
-            return RegisterVmValue.Reference(Dice(GameEventScriptDiceValue.Empty));
+            return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
         }
 
         if (!_context.RuntimeBudget.TryCheckDice(new DiceExpressionNode(diceCount, sideCount)))
         {
-            return RegisterVmValue.Reference(Dice(GameEventScriptDiceValue.Empty));
+            return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
         }
 
         var rolls = new int[diceCount];
@@ -1644,31 +1644,31 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!TryNextInclusiveInt(1, sideCount, out var roll))
             {
-                return RegisterVmValue.Reference(Dice(GameEventScriptDiceValue.Empty));
+                return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Empty));
             }
 
             rolls[i] = roll;
         }
 
-        return RegisterVmValue.Reference(Dice(GameEventScriptDiceValue.GameEventScriptDice(rolls)));
+        return BytecodeVmValue.Reference(GseDice(GameEventScriptDiceValue.Create(rolls)));
     }
 
-    private bool TryEvaluateUnaryOperation(string? operation, RegisterVmValue operand, out RegisterVmValue value)
+    private bool TryEvaluateUnaryOperation(string? operation, BytecodeVmValue operand, out BytecodeVmValue value)
     {
         var boxed = operand.ToGameEventScriptValue();
         value = operation switch
         {
-            "-" => RegisterVmValue.FromGameEventScriptValue(EvaluateNegateUnary(boxed)),
-            "!" => RegisterVmValue.FromGameEventScriptValue(EvaluateNotUnary(boxed)),
-            "has value" => RegisterVmValue.Boolean(boxed.HasSemanticValue()),
-            "empty" => RegisterVmValue.Boolean(boxed.IsSemanticallyEmpty()),
-            "len" => RegisterVmValue.FromGameEventScriptValue(EvaluateLenUnary(boxed)),
-            "chance" => RegisterVmValue.FromGameEventScriptValue(EvaluateChanceUnary(boxed)),
-            "keys" => RegisterVmValue.Reference(Keys(boxed)),
-            "values" => RegisterVmValue.Reference(Values(boxed)),
-            "entries" => RegisterVmValue.Reference(Entries(boxed)),
-            "abs" => RegisterVmValue.FromGameEventScriptValue(EvaluateAbsUnary(boxed)),
-            _ => throw new InvalidOperationException($"RegisterVM invariant failed: unknown unary operator '{operation}'.")
+            "-" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNegateUnary(boxed)),
+            "!" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNotUnary(boxed)),
+            "has value" => BytecodeVmValue.Boolean(boxed.HasSemanticValue()),
+            "empty" => BytecodeVmValue.Boolean(boxed.IsSemanticallyEmpty()),
+            "len" => BytecodeVmValue.FromGameEventScriptValue(EvaluateLenUnary(boxed)),
+            "chance" => BytecodeVmValue.FromGameEventScriptValue(EvaluateChanceUnary(boxed)),
+            "keys" => BytecodeVmValue.Reference(GesKeys(boxed)),
+            "values" => BytecodeVmValue.Reference(GesValues(boxed)),
+            "entries" => BytecodeVmValue.Reference(GesEntries(boxed)),
+            "abs" => BytecodeVmValue.FromGameEventScriptValue(EvaluateAbsUnary(boxed)),
+            _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown unary operator '{operation}'.")
         };
 
         return true;
@@ -1676,14 +1676,14 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryEvaluateVariadicOperation(
         string? operation,
-        RegisterVmValue[] stack,
+        BytecodeVmValue[] stack,
         int start,
         int count,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         if (count == 0)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return true;
         }
 
@@ -1695,98 +1695,98 @@ internal sealed class RegisterVmExecutionSession
 
         value = operation switch
         {
-            "min" => RegisterVmValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
-            "max" => RegisterVmValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
-            _ => throw new InvalidOperationException($"RegisterVM invariant failed: unknown variadic operator '{operation}'.")
+            "min" => BytecodeVmValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: false)),
+            "max" => BytecodeVmValue.FromGameEventScriptValue(GameEventScriptValueAlu.EvaluateMinMax(boxedValues, isMax: true)),
+            _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown variadic operator '{operation}'.")
         };
 
         return true;
     }
 
-    private bool TryEvaluateBinaryOperation(string operation, RegisterVmValue leftRawValue, RegisterVmValue rightRawValue, out RegisterVmValue value)
+    private bool TryEvaluateBinaryOperation(string operation, BytecodeVmValue leftRawValue, BytecodeVmValue rightRawValue, out BytecodeVmValue value)
     {
         var leftRaw = leftRawValue.ToGameEventScriptValue();
         var rightRaw = rightRawValue.ToGameEventScriptValue();
 
         if (operation == "default")
         {
-            value = RegisterVmValue.FromGameEventScriptValue(EvaluateDefaultBinary(leftRaw, rightRaw));
+            value = BytecodeVmValue.FromGameEventScriptValue(EvaluateDefaultBinary(leftRaw, rightRaw));
             return true;
         }
 
         if (leftRaw.IsNothing() || rightRaw.IsNothing())
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return true;
         }
 
         if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
             !GameEventScriptValueAlu.TryUnwrapOptionalForOperation(rightRaw, out var right))
         {
-            value = RegisterVmValue.Reference(OptionalNone());
+            value = BytecodeVmValue.Reference(GesOptionalNone());
             return true;
         }
 
         value = operation switch
         {
-            "|" => RegisterVmValue.Boolean(left.AsBoolean() || right.AsBoolean()),
-            "^" => RegisterVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
-            "&" => RegisterVmValue.Boolean(left.AsBoolean() && right.AsBoolean()),
-            "=" or "==" => RegisterVmValue.Boolean(GameEventScriptValueAlu.AreEqual(left, right)),
-            "<>" => RegisterVmValue.Boolean(!GameEventScriptValueAlu.AreEqual(left, right)),
-            "in" => RegisterVmValue.Boolean(right.Contains(left)),
-            "value in" => RegisterVmValue.Boolean(right.ContainsValue(left)),
-            "starts with" => RegisterVmValue.Boolean(left.StartsWith(right)),
-            "ends with" => RegisterVmValue.Boolean(left.EndsWith(right)),
-            "<" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison < 0)),
-            ">" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison > 0)),
-            "<=" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison <= 0)),
-            ">=" => RegisterVmValue.Boolean(TryCompare(left, right, static comparison => comparison >= 0)),
-            "+" => RegisterVmValue.FromGameEventScriptValue(EvaluateAddBinary(left, right)),
-            "-" => RegisterVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "-", right)),
-            "*" => RegisterVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "*", right)),
-            "/" => RegisterVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "/", right)),
-            "div" => RegisterVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "div", right)),
-            "mod" => RegisterVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
-            "rem" => RegisterVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
-            "intersect" => RegisterVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionIntersect(left, right)),
-            "combine" or "merge" => RegisterVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionCombine(left, right)),
-            "except" => RegisterVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionExcept(left, right)),
-            "zip" => RegisterVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionZip(left, right)),
-            _ => throw new InvalidOperationException($"RegisterVM invariant failed: unknown binary operator '{operation}'.")
+            "|" => BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean()),
+            "^" => BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
+            "&" => BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean()),
+            "=" or "==" => BytecodeVmValue.Boolean(GameEventScriptValueAlu.AreEqual(left, right)),
+            "<>" => BytecodeVmValue.Boolean(!GameEventScriptValueAlu.AreEqual(left, right)),
+            "in" => BytecodeVmValue.Boolean(right.Contains(left)),
+            "value in" => BytecodeVmValue.Boolean(right.ContainsValue(left)),
+            "starts with" => BytecodeVmValue.Boolean(left.StartsWith(right)),
+            "ends with" => BytecodeVmValue.Boolean(left.EndsWith(right)),
+            "<" => BytecodeVmValue.Boolean(TryCompare(left, right, static comparison => comparison < 0)),
+            ">" => BytecodeVmValue.Boolean(TryCompare(left, right, static comparison => comparison > 0)),
+            "<=" => BytecodeVmValue.Boolean(TryCompare(left, right, static comparison => comparison <= 0)),
+            ">=" => BytecodeVmValue.Boolean(TryCompare(left, right, static comparison => comparison >= 0)),
+            "+" => BytecodeVmValue.FromGameEventScriptValue(EvaluateAddBinary(left, right)),
+            "-" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "-", right)),
+            "*" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "*", right)),
+            "/" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "/", right)),
+            "div" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "div", right)),
+            "mod" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
+            "rem" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
+            "intersect" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionIntersect(left, right)),
+            "combine" or "merge" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionCombine(left, right)),
+            "except" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionExcept(left, right)),
+            "zip" => BytecodeVmValue.Reference(GameEventScriptValueAlu.EvaluateCollectionZip(left, right)),
+            _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown binary operator '{operation}'.")
         };
 
         return true;
     }
 
-    private static string GetBinaryOperator(RegisterVmProgramOpCode opCode)
+    private static string GetBinaryOperator(BytecodeVmProgramOpCode opCode)
         => opCode switch
         {
-            RegisterVmProgramOpCode.Or => "|",
-            RegisterVmProgramOpCode.Xor => "^",
-            RegisterVmProgramOpCode.And => "&",
-            RegisterVmProgramOpCode.Equal => "=",
-            RegisterVmProgramOpCode.NotEqual => "<>",
-            RegisterVmProgramOpCode.Less => "<",
-            RegisterVmProgramOpCode.Greater => ">",
-            RegisterVmProgramOpCode.LessOrEqual => "<=",
-            RegisterVmProgramOpCode.GreaterOrEqual => ">=",
-            RegisterVmProgramOpCode.Add => "+",
-            RegisterVmProgramOpCode.Subtract => "-",
-            RegisterVmProgramOpCode.Multiply => "*",
-            RegisterVmProgramOpCode.Divide => "/",
-            RegisterVmProgramOpCode.IntegerDivide => "div",
-            RegisterVmProgramOpCode.Modulo => "mod",
-            RegisterVmProgramOpCode.Remainder => "rem",
-            RegisterVmProgramOpCode.Default => "default",
-            RegisterVmProgramOpCode.Contains => "in",
-            RegisterVmProgramOpCode.ContainsValue => "value in",
-            RegisterVmProgramOpCode.StartsWith => "starts with",
-            RegisterVmProgramOpCode.EndsWith => "ends with",
-            RegisterVmProgramOpCode.Intersect => "intersect",
-            RegisterVmProgramOpCode.Combine => "combine",
-            RegisterVmProgramOpCode.Except => "except",
-            RegisterVmProgramOpCode.Zip => "zip",
+            BytecodeVmProgramOpCode.Or => "|",
+            BytecodeVmProgramOpCode.Xor => "^",
+            BytecodeVmProgramOpCode.And => "&",
+            BytecodeVmProgramOpCode.Equal => "=",
+            BytecodeVmProgramOpCode.NotEqual => "<>",
+            BytecodeVmProgramOpCode.Less => "<",
+            BytecodeVmProgramOpCode.Greater => ">",
+            BytecodeVmProgramOpCode.LessOrEqual => "<=",
+            BytecodeVmProgramOpCode.GreaterOrEqual => ">=",
+            BytecodeVmProgramOpCode.Add => "+",
+            BytecodeVmProgramOpCode.Subtract => "-",
+            BytecodeVmProgramOpCode.Multiply => "*",
+            BytecodeVmProgramOpCode.Divide => "/",
+            BytecodeVmProgramOpCode.IntegerDivide => "div",
+            BytecodeVmProgramOpCode.Modulo => "mod",
+            BytecodeVmProgramOpCode.Remainder => "rem",
+            BytecodeVmProgramOpCode.Default => "default",
+            BytecodeVmProgramOpCode.Contains => "in",
+            BytecodeVmProgramOpCode.ContainsValue => "value in",
+            BytecodeVmProgramOpCode.StartsWith => "starts with",
+            BytecodeVmProgramOpCode.EndsWith => "ends with",
+            BytecodeVmProgramOpCode.Intersect => "intersect",
+            BytecodeVmProgramOpCode.Combine => "combine",
+            BytecodeVmProgramOpCode.Except => "except",
+            BytecodeVmProgramOpCode.Zip => "zip",
             _ => string.Empty
         };
 
@@ -1839,8 +1839,8 @@ internal sealed class RegisterVmExecutionSession
         }
 
         return left.IsText() || right.IsText()
-            ? Text($"{GameEventScriptValueAlu.ToText(left)}{GameEventScriptValueAlu.ToText(right)}")
-            : DecimalNaN();
+            ? GesText($"{GameEventScriptValueAlu.ToText(left)}{GameEventScriptValueAlu.ToText(right)}")
+            : GesDecimalNaN();
     }
 
     private static GameEventScriptValue EvaluateNumericBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)
@@ -1863,7 +1863,7 @@ internal sealed class RegisterVmExecutionSession
         if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(left, out var leftNumeric) ||
             !GameEventScriptValueAlu.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         var result = operation switch
@@ -1888,12 +1888,12 @@ internal sealed class RegisterVmExecutionSession
 
         if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped))
         {
-            return OptionalNone();
+            return GesOptionalNone();
         }
 
         if (unwrapped.IsPercentage())
         {
-            return Percentage(-unwrapped.AsNumber());
+            return GesPercentage(-unwrapped.AsNumber());
         }
 
         if (GameEventScriptValueAlu.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
@@ -1903,7 +1903,7 @@ internal sealed class RegisterVmExecutionSession
 
         if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
         {
-            return Decimal(-unwrapped.AsNumber(), unit);
+            return GesDecimal(-unwrapped.AsNumber(), unit);
         }
 
         return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number)
@@ -1919,27 +1919,27 @@ internal sealed class RegisterVmExecutionSession
         }
 
         return GameEventScriptValueAlu.TryUnwrapOptionalForOperation(operand, out var unwrapped)
-            ? Boolean(!unwrapped.AsBoolean())
-            : OptionalNone();
+            ? GesBoolean(!unwrapped.AsBoolean())
+            : GesOptionalNone();
     }
 
     private GameEventScriptValue EvaluateLenUnary(GameEventScriptValue operand)
     {
         if (operand.IsNothing())
         {
-            return Integer(0);
+            return GesInteger(0);
         }
 
         return operand.Kind switch
         {
-            GameEventScriptValueKind.Text => Integer(operand.AsText().Length),
+            GameEventScriptValueKind.Text => GesInteger(operand.AsText().Length),
             GameEventScriptValueKind.Sequence => CountEnumerableWithBudget(operand.AsEnumerable(), "Sequence length evaluation budget exhausted."),
             GameEventScriptValueKind.Range => EvaluateRangeLength(operand),
-            GameEventScriptValueKind.List => Integer(operand.AsList().Count),
-            GameEventScriptValueKind.Dictionary => Integer(operand.AsDictionary().Count),
-            GameEventScriptValueKind.Set => Integer(operand.AsSet().Count),
-            GameEventScriptValueKind.Dice => Integer(operand.AsDice().Rolls.Count),
-            GameEventScriptValueKind.Optional => Integer(operand.AsOptional().HasValue ? 1 : 0),
+            GameEventScriptValueKind.List => GesInteger(operand.AsList().Count),
+            GameEventScriptValueKind.Dictionary => GesInteger(operand.AsDictionary().Count),
+            GameEventScriptValueKind.Set => GesInteger(operand.AsSet().Count),
+            GameEventScriptValueKind.Dice => GesInteger(operand.AsDice().Rolls.Count),
+            GameEventScriptValueKind.Optional => GesInteger(operand.AsOptional().HasValue ? 1 : 0),
             _ => GameEventScriptValue.Nothing
         };
     }
@@ -1952,7 +1952,7 @@ internal sealed class RegisterVmExecutionSession
         }
 
         return _context.RuntimeBudget.TryCheckRangeLength(length, "Range length exceeds the configured limit.")
-            ? Integer(length)
+            ? GesInteger(length)
             : GameEventScriptValue.Nothing;
     }
 
@@ -1969,7 +1969,7 @@ internal sealed class RegisterVmExecutionSession
             count++;
         }
 
-        return Integer(count);
+        return GesInteger(count);
     }
 
     private GameEventScriptValue EvaluateChanceUnary(GameEventScriptValue operand)
@@ -1977,23 +1977,23 @@ internal sealed class RegisterVmExecutionSession
         var percentage = ConvertToPercentage(operand);
         if (!percentage.IsPercentage())
         {
-            return Boolean(false);
+            return GesBoolean(false);
         }
 
         var ratio = percentage.AsNumber();
         if (ratio <= 0m)
         {
-            return Boolean(false);
+            return GesBoolean(false);
         }
 
         if (ratio >= 1m)
         {
-            return Boolean(true);
+            return GesBoolean(true);
         }
 
         return TryNextInclusiveDecimal(0m, 1m, out var randomValue)
-            ? Boolean(randomValue < ratio)
-            : Boolean(false);
+            ? GesBoolean(randomValue < ratio)
+            : GesBoolean(false);
     }
 
     private static GameEventScriptValue EvaluateAbsUnary(GameEventScriptValue operand)
@@ -2009,11 +2009,11 @@ internal sealed class RegisterVmExecutionSession
         }
 
         return GameEventScriptValueAlu.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
-            ? Decimal(Math.Abs(number.Value))
+            ? GesDecimal(Math.Abs(number.Value))
             : GameEventScriptValue.Nothing;
     }
 
-    private static RegisterVmValue EvaluateClamp(RegisterVmValue rawValue, RegisterVmValue minimumValue, RegisterVmValue maximumValue)
+    private static BytecodeVmValue EvaluateClamp(BytecodeVmValue rawValue, BytecodeVmValue minimumValue, BytecodeVmValue maximumValue)
     {
         var raw = rawValue.ToGameEventScriptValue();
         var minimum = minimumValue.ToGameEventScriptValue();
@@ -2023,7 +2023,7 @@ internal sealed class RegisterVmExecutionSession
             !GameEventScriptValueAlu.HaveCompatibleNumericUnits(raw, maximum) ||
             !GameEventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
         {
-            return RegisterVmValue.NaN();
+            return BytecodeVmValue.NaN();
         }
 
         if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(raw, out var rawNumber) ||
@@ -2033,13 +2033,13 @@ internal sealed class RegisterVmExecutionSession
             !minimumNumber.IsFinite ||
             !maximumNumber.IsFinite)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
         GameEventScriptValue.TryGetDecimalUnit(raw, out var unit);
-        return RegisterVmValue.FromGameEventScriptValue(Decimal(
+        return BytecodeVmValue.FromGameEventScriptValue(GesDecimal(
             Math.Min(Math.Max(rawNumber.Value, lower), upper),
             raw.HasDecimalUnit() ? unit : null));
     }
@@ -2122,7 +2122,7 @@ internal sealed class RegisterVmExecutionSession
                     : value.IsInfinity()
                         ? "decimal:infinity"
                         : value is GameEventScriptDecimalValue { Unit: { } unit }
-                            ? $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}:{GameEventScriptDecimalUnits.ToTypeName(unit)}"
+                            ? $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}:{unit.ToTypeName()}"
                             : $"decimal:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
             GameEventScriptValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
             GameEventScriptValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
@@ -2144,27 +2144,27 @@ internal sealed class RegisterVmExecutionSession
 
     private static string BuildVector2StableSeedText(GameEventScriptVector2Value value)
         => value.Unit.HasValue
-            ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+            ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
             : $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}";
 
     private static string BuildVector3StableSeedText(GameEventScriptVector3Value value)
         => value.Unit.HasValue
-            ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{GameEventScriptDecimalUnits.ToTypeName(value.Unit.Value)}"
+            ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
             : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
-    private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out RegisterVmValue value)
+    private bool TryEvaluateRulePredicate(RulePredicateExpressionNode rulePredicate, out BytecodeVmValue value)
     {
         if (!_compiledScript.Callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
             callable.Kind != GameEventScriptCallableKind.Rule ||
             callable.Parameters.Count != 1 ||
             !TryEvaluate(rulePredicate.Value, out var input))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        var instruction = new RegisterVmProgramInstruction(
-            RegisterVmProgramOpCode.RulePredicate,
+        var instruction = new BytecodeVmProgramInstruction(
+            BytecodeVmProgramOpCode.RulePredicate,
             A: -1,
             ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
                 ? expressionProgram
@@ -2180,14 +2180,14 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private bool TryEvaluateCall(CallExpressionNode call, out RegisterVmValue value)
+    private bool TryEvaluateCall(CallExpressionNode call, out BytecodeVmValue value)
     {
         if (!_compiledScript.Callables.TryGetValue(call.Name, out var callable))
         {
             var handlerValue = Resolve(call.Name);
             if (handlerValue.IsNothingLike())
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -2198,7 +2198,7 @@ internal sealed class RegisterVmExecutionSession
                 var argument = call.ArgumentList.Arguments[argumentIndex];
                 if (!TryEvaluate(argument.Expression, out var argumentValue))
                 {
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
                 }
 
@@ -2208,23 +2208,23 @@ internal sealed class RegisterVmExecutionSession
 
             var dynamicArguments = GameEventScriptNamedArguments.CreateOrdered(dynamicPairs, dynamicLabels);
             value = GameEventScriptMessageValueCodec.TryBindHandlerValue(handlerValue.ToGameEventScriptValue(), dynamicArguments, out var message)
-                ? RegisterVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
-                : RegisterVmValue.Nothing;
+                ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
+                : BytecodeVmValue.Nothing;
             return true;
         }
 
         if (callable.Parameters.Count != call.Arguments.Count)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        var arguments = new RegisterVmValue[call.Arguments.Count];
+        var arguments = new BytecodeVmValue[call.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
         {
             if (!TryEvaluate(call.Arguments[argumentIndex], out arguments[argumentIndex]))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
         }
@@ -2234,17 +2234,17 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!_plan.TryGetSlot(callable.Parameters[parameterIndex], out slots[parameterIndex]))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
         }
 
-        var instruction = new RegisterVmProgramInstruction(
-            RegisterVmProgramOpCode.Call,
+        var instruction = new BytecodeVmProgramInstruction(
+            BytecodeVmProgramOpCode.Call,
             A: call.Arguments.Count,
             CallableKind: callable.Kind == GameEventScriptCallableKind.Rule
-                ? RegisterVmCallableKind.Rule
-                : RegisterVmCallableKind.Select,
+                ? BytecodeVmCallableKind.Rule
+                : BytecodeVmCallableKind.Select,
             ExpressionProgram: _plan.TryGetExpressionProgram(callable.Expression, out var expressionProgram)
                 ? expressionProgram
                 : null,
@@ -2255,9 +2255,9 @@ internal sealed class RegisterVmExecutionSession
         return TryEvaluateCallable(instruction, arguments, 0, arguments.Length, out value);
     }
 
-    private bool TryEvaluateExtensionCall(ExtensionCallExpressionNode extensionCall, out RegisterVmValue value)
+    private bool TryEvaluateExtensionCall(ExtensionCallExpressionNode extensionCall, out BytecodeVmValue value)
     {
-        var arguments = new RegisterVmValue[extensionCall.ArgumentList.Count];
+        var arguments = new BytecodeVmValue[extensionCall.ArgumentList.Count];
         var labels = new string[extensionCall.ArgumentList.Count];
         for (var argumentIndex = 0; argumentIndex < extensionCall.ArgumentList.Count; argumentIndex++)
         {
@@ -2265,7 +2265,7 @@ internal sealed class RegisterVmExecutionSession
             labels[argumentIndex] = argument.Name;
             if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
         }
@@ -2281,11 +2281,11 @@ internal sealed class RegisterVmExecutionSession
             out value);
     }
 
-    private bool TryEvaluateExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, out RegisterVmValue value)
+    private bool TryEvaluateExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, out BytecodeVmValue value)
     {
         if (!TryEvaluate(extensionPredicate.Value, out var input))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -2302,13 +2302,13 @@ internal sealed class RegisterVmExecutionSession
     }
 
     private bool TryEvaluateRulePredicate(
-        RegisterVmProgramInstruction instruction,
-        RegisterVmValue input,
+        BytecodeVmProgramInstruction instruction,
+        BytecodeVmValue input,
         int stackBase,
-        out RegisterVmValue value,
+        out BytecodeVmValue value,
         string? parameterName = null)
     {
-        value = RegisterVmValue.Nothing;
+        value = BytecodeVmValue.Nothing;
         if (instruction.ExpressionProgram is null)
         {
             return false;
@@ -2326,11 +2326,11 @@ internal sealed class RegisterVmExecutionSession
                 RecordRuleCalled(instruction, input);
                 if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, input, instruction.ExpressionProgram, stackBase, out value))
                 {
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
                 }
 
-                value = RegisterVmValue.Boolean(value.AsBoolean());
+                value = BytecodeVmValue.Boolean(value.AsBoolean());
                 return true;
             }
             finally
@@ -2347,11 +2347,11 @@ internal sealed class RegisterVmExecutionSession
             if (!parameterDefined ||
                 !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
-            value = RegisterVmValue.Boolean(value.AsBoolean());
+            value = BytecodeVmValue.Boolean(value.AsBoolean());
             return true;
         }
         finally
@@ -2362,13 +2362,13 @@ internal sealed class RegisterVmExecutionSession
     }
 
     private bool TryEvaluateCallable(
-        RegisterVmProgramInstruction instruction,
-        RegisterVmValue[] stack,
+        BytecodeVmProgramInstruction instruction,
+        BytecodeVmValue[] stack,
         int start,
         int count,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
-        value = RegisterVmValue.Nothing;
+        value = BytecodeVmValue.Nothing;
         if (instruction.ExpressionProgram is null ||
             instruction.Slots is null ||
             instruction.Names is null ||
@@ -2392,7 +2392,7 @@ internal sealed class RegisterVmExecutionSession
             {
                 if (!DefineSlot(instruction.Slots[argumentIndex], stack[start + argumentIndex]))
                 {
-                    value = RegisterVmValue.Nothing;
+                    value = BytecodeVmValue.Nothing;
                     return false;
                 }
             }
@@ -2402,9 +2402,9 @@ internal sealed class RegisterVmExecutionSession
                 return false;
             }
 
-            if (instruction.CallableKind == RegisterVmCallableKind.Rule)
+            if (instruction.CallableKind == BytecodeVmCallableKind.Rule)
             {
-                value = RegisterVmValue.Boolean(value.AsBoolean());
+                value = BytecodeVmValue.Boolean(value.AsBoolean());
             }
 
             return true;
@@ -2416,25 +2416,25 @@ internal sealed class RegisterVmExecutionSession
         }
     }
 
-    private bool TryEvaluateTypeCast(TypeCastExpressionNode typeCast, out RegisterVmValue value)
+    private bool TryEvaluateTypeCast(TypeCastExpressionNode typeCast, out BytecodeVmValue value)
     {
         if (!TryEvaluate(typeCast.Value, out var input))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         if (!TryConvertDeclaredType(typeCast.TypeName, input, out value))
         {
-            throw new InvalidOperationException($"RegisterVM invariant failed: type cast '{typeCast.TypeName}' could not be evaluated.");
+            throw new InvalidOperationException($"BytecodeVM invariant failed: type cast '{typeCast.TypeName}' could not be evaluated.");
         }
 
         return true;
     }
 
-    private bool TryEvaluateTypeConstructor(TypeConstructorExpressionNode constructor, out RegisterVmValue value)
+    private bool TryEvaluateTypeConstructor(TypeConstructorExpressionNode constructor, out BytecodeVmValue value)
     {
-        var arguments = new RegisterVmValue[constructor.Arguments.Count];
+        var arguments = new BytecodeVmValue[constructor.Arguments.Count];
         var labels = new string[constructor.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
         {
@@ -2442,7 +2442,7 @@ internal sealed class RegisterVmExecutionSession
             labels[argumentIndex] = argument.Name;
             if (!TryEvaluate(argument.Expression, out arguments[argumentIndex]))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
         }
@@ -2451,16 +2451,16 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private RegisterVmValue EvaluateTypeConstructor(
+    private BytecodeVmValue EvaluateTypeConstructor(
         string? typeName,
         string[]? labels,
-        RegisterVmValue[] stack,
+        BytecodeVmValue[] stack,
         int start,
         int count)
     {
         if (string.IsNullOrEmpty(typeName))
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         if (typeName is "vector2" or "vector3")
@@ -2478,29 +2478,29 @@ internal sealed class RegisterVmExecutionSession
                     : GameEventScriptMessageSignature.UnlabeledParameterName;
                 if (string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
                 {
-                    return RegisterVmValue.Nothing;
+                    return BytecodeVmValue.Nothing;
                 }
 
                 values[label] = stack[start + index].ToGameEventScriptValue();
             }
 
-            return RegisterVmValue.FromGameEventScriptValue(ConvertToCustomType(Dictionary(values), typeDefinition));
+            return BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(GseDictionary(values), typeDefinition));
         }
 
         if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         return TryConvertDeclaredType(typeName, stack[start], out var converted)
             ? converted
-            : RegisterVmValue.Nothing;
+            : BytecodeVmValue.Nothing;
     }
 
-    private RegisterVmValue EvaluateVectorConstructor(
+    private BytecodeVmValue EvaluateVectorConstructor(
         string typeName,
         string[]? labels,
-        RegisterVmValue[] stack,
+        BytecodeVmValue[] stack,
         int start,
         int count)
     {
@@ -2510,7 +2510,7 @@ internal sealed class RegisterVmExecutionSession
         {
             return TryConvertDeclaredType(typeName, stack[start], out var converted)
                 ? converted
-                : RegisterVmValue.Nothing;
+                : BytecodeVmValue.Nothing;
         }
 
         if (typeName == "vector3" &&
@@ -2523,8 +2523,8 @@ internal sealed class RegisterVmExecutionSession
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
                 out var lifted)
-                ? RegisterVmValue.FromGameEventScriptValue(lifted)
-                : RegisterVmValue.Nothing;
+                ? BytecodeVmValue.FromGameEventScriptValue(lifted)
+                : BytecodeVmValue.Nothing;
         }
 
         if (count == 0 || labels is { Length: var labelCount } &&
@@ -2538,14 +2538,14 @@ internal sealed class RegisterVmExecutionSession
             }
 
             return GameEventScriptValueAlu.TryCreateVectorFromLabeledComponents(typeName, labeledComponents, out var vector)
-                ? RegisterVmValue.FromGameEventScriptValue(vector)
-                : RegisterVmValue.Nothing;
+                ? BytecodeVmValue.FromGameEventScriptValue(vector)
+                : BytecodeVmValue.Nothing;
         }
 
         var expectedCount = typeName == "vector2" ? 2 : 3;
         if (count != expectedCount)
         {
-            return RegisterVmValue.Nothing;
+            return BytecodeVmValue.Nothing;
         }
 
         return expectedCount == 2
@@ -2553,61 +2553,61 @@ internal sealed class RegisterVmExecutionSession
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
                 out var vector2)
-                ? RegisterVmValue.FromGameEventScriptValue(vector2)
-                : RegisterVmValue.Nothing
+                ? BytecodeVmValue.FromGameEventScriptValue(vector2)
+                : BytecodeVmValue.Nothing
             : GameEventScriptValueAlu.TryCreateVector3(
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
                 stack[start + 2].ToGameEventScriptValue(),
                 out var vector3)
-                ? RegisterVmValue.FromGameEventScriptValue(vector3)
-                : RegisterVmValue.Nothing;
+                ? BytecodeVmValue.FromGameEventScriptValue(vector3)
+                : BytecodeVmValue.Nothing;
     }
 
-    private bool TryConvertDeclaredType(string declaredType, RegisterVmValue input, out RegisterVmValue value)
+    private bool TryConvertDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
     {
         var boxed = input.ToGameEventScriptValue();
         value = declaredType switch
         {
-            "nothing" => RegisterVmValue.Nothing,
-            "tag" => RegisterVmValue.Reference(Tag(boxed.AsText())),
-            "text" => RegisterVmValue.Reference(Text(GameEventScriptValueAlu.ToText(boxed))),
-            "percentage" => RegisterVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
-            "degree" => RegisterVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Degree)),
-            "meter" => RegisterVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Meter)),
-            "second" => RegisterVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Second)),
-            "vector2" => RegisterVmValue.Reference(ConvertToVector2(boxed)),
-            "vector3" => RegisterVmValue.Reference(ConvertToVector3(boxed)),
-            "boolean" => RegisterVmValue.Boolean(boxed.AsBoolean()),
-            "integer" => RegisterVmValue.Integer(boxed.AsInteger()),
-            "decimal" or "number" => RegisterVmValue.FromGameEventScriptValue(ConvertToDecimal(boxed)),
-            "sequence" => RegisterVmValue.Reference(boxed.IsSequence() ? boxed : GameEventScriptValueFactory.Sequence(boxed.AsEnumerable())),
+            "nothing" => BytecodeVmValue.Nothing,
+            "tag" => BytecodeVmValue.Reference(GesTag(boxed.AsText())),
+            "text" => BytecodeVmValue.Reference(GesText(GameEventScriptValueAlu.ToText(boxed))),
+            "percentage" => BytecodeVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
+            "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Degree)),
+            "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Meter)),
+            "second" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Second)),
+            "vector2" => BytecodeVmValue.Reference(ConvertToVector2(boxed)),
+            "vector3" => BytecodeVmValue.Reference(ConvertToVector3(boxed)),
+            "boolean" => BytecodeVmValue.Boolean(boxed.AsBoolean()),
+            "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
+            "decimal" or "number" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimal(boxed)),
+            "sequence" => BytecodeVmValue.Reference(boxed.IsSequence() ? boxed : GameEventScriptValueFactory.GesSequence(boxed.AsEnumerable())),
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
-                ? RegisterVmValue.Reference(List(boxed.AsList()))
-                : RegisterVmValue.Nothing,
-            "range" => RegisterVmValue.Reference(boxed.IsRange() ? boxed : GameEventScriptValue.Nothing),
+                ? BytecodeVmValue.Reference(GesList(boxed.AsList()))
+                : BytecodeVmValue.Nothing,
+            "range" => BytecodeVmValue.Reference(boxed.IsRange() ? boxed : GameEventScriptValue.Nothing),
             "message" => boxed.Kind == GameEventScriptValueKind.Message
                 ? input
                 : GameEventScriptMessageValueCodec.TryReadMessageValue(boxed, out var message)
-                    ? RegisterVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
-                    : RegisterVmValue.Nothing,
+                    ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateMessageValue(message))
+                    : BytecodeVmValue.Nothing,
             "handler" => boxed.Kind == GameEventScriptValueKind.Handler
                 ? input
                 : GameEventScriptMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
-                    ? RegisterVmValue.Reference(GameEventScriptMessageValueCodec.CreateHandlerValue(handler))
-                    : RegisterVmValue.Nothing,
-            "dictionary" => RegisterVmValue.Reference(Dictionary(boxed.AsDictionary())),
+                    ? BytecodeVmValue.Reference(GameEventScriptMessageValueCodec.CreateHandlerValue(handler))
+                    : BytecodeVmValue.Nothing,
+            "dictionary" => BytecodeVmValue.Reference(GseDictionary(boxed.AsDictionary())),
             "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
-                ? RegisterVmValue.Reference(Set(boxed.AsSet()))
-                : RegisterVmValue.Nothing,
-            "dice" => RegisterVmValue.Reference(Dice(boxed.AsDice())),
+                ? BytecodeVmValue.Reference(GseSet(boxed.AsSet()))
+                : BytecodeVmValue.Nothing,
+            "dice" => BytecodeVmValue.Reference(GseDice(boxed.AsDice())),
             "optional" => boxed.IsOptional()
                 ? input
                 : boxed.IsNothing()
-                    ? RegisterVmValue.Reference(OptionalNone())
-                    : RegisterVmValue.Reference(OptionalSome(boxed)),
+                    ? BytecodeVmValue.Reference(GesOptionalNone())
+                    : BytecodeVmValue.Reference(GesOptionalSome(boxed)),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
-                ? RegisterVmValue.FromGameEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
+                ? BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
                 : input
         };
 
@@ -2618,18 +2618,18 @@ internal sealed class RegisterVmExecutionSession
         => !GameEventScriptRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
            _context.RuntimeBudget.TryCheckRangeLength(length, detail);
 
-    private static string GetCastTypeName(RegisterVmCastKind castKind)
+    private static string GetCastTypeName(BytecodeVmCastKind castKind)
         => castKind switch
         {
-            RegisterVmCastKind.Boolean => "boolean",
-            RegisterVmCastKind.Integer => "integer",
-            RegisterVmCastKind.Decimal => "decimal",
-            RegisterVmCastKind.Number => "number",
-            RegisterVmCastKind.Percentage => "percentage",
-            RegisterVmCastKind.Degree => "degree",
-            RegisterVmCastKind.Meter => "meter",
-            RegisterVmCastKind.Second => "second",
-            RegisterVmCastKind.Sequence => "sequence",
+            BytecodeVmCastKind.Boolean => "boolean",
+            BytecodeVmCastKind.Integer => "integer",
+            BytecodeVmCastKind.Decimal => "decimal",
+            BytecodeVmCastKind.Number => "number",
+            BytecodeVmCastKind.Percentage => "percentage",
+            BytecodeVmCastKind.Degree => "degree",
+            BytecodeVmCastKind.Meter => "meter",
+            BytecodeVmCastKind.Second => "second",
+            BytecodeVmCastKind.Sequence => "sequence",
             _ => string.Empty
         };
 
@@ -2637,7 +2637,7 @@ internal sealed class RegisterVmExecutionSession
     {
         if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         if (GameEventScriptValueAlu.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
@@ -2647,14 +2647,14 @@ internal sealed class RegisterVmExecutionSession
 
         return GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrappedNumber, out var number)
             ? GameEventScriptValueAlu.ToGameEventScriptDecimal(number)
-            : DecimalNaN();
+            : GesDecimalNaN();
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
     {
         if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         if (unwrapped.IsPercentage())
@@ -2664,13 +2664,13 @@ internal sealed class RegisterVmExecutionSession
 
         if (unwrapped.HasDecimalUnit())
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) ||
             !number.IsFinite)
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         var ratio = unwrapped.Kind == GameEventScriptValueKind.Integer
@@ -2678,14 +2678,14 @@ internal sealed class RegisterVmExecutionSession
             : number.Value > 1m || number.Value < -1m
                 ? number.Value / 100m
                 : number.Value;
-        return Percentage(ratio);
+        return GesPercentage(ratio);
     }
 
     private static GameEventScriptValue ConvertToDecimalUnit(GameEventScriptValue value, GameEventScriptDecimalUnit unit)
     {
         if (!GameEventScriptValueAlu.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         if (GameEventScriptValueAlu.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
@@ -2695,17 +2695,17 @@ internal sealed class RegisterVmExecutionSession
 
         if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
         {
-            return DecimalNaN();
+            return GesDecimalNaN();
         }
 
         if (unwrapped.Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer &&
             GameEventScriptValueAlu.TryCoerceNumericForOperation(unwrapped, out var number) &&
             number.IsFinite)
         {
-            return Decimal(number.Value, unit);
+            return GesDecimal(number.Value, unit);
         }
 
-        return DecimalNaN();
+        return GesDecimalNaN();
     }
 
     private static GameEventScriptValue ConvertToVector2(GameEventScriptValue value)
@@ -2722,7 +2722,7 @@ internal sealed class RegisterVmExecutionSession
 
         if (unwrapped is GameEventScriptVector3Value vector3)
         {
-            return Vector2(vector3.X, vector3.Y, vector3.Unit);
+            return GesVector2(vector3.X, vector3.Y, vector3.Unit);
         }
 
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
@@ -2756,7 +2756,7 @@ internal sealed class RegisterVmExecutionSession
 
         if (unwrapped is GameEventScriptVector2Value vector2)
         {
-            return Vector3(vector2.X, vector2.Y, 0m, vector2.Unit);
+            return GesVector3(vector2.X, vector2.Y, 0m, vector2.Unit);
         }
 
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
@@ -2770,7 +2770,7 @@ internal sealed class RegisterVmExecutionSession
             }
 
             return GameEventScriptValueAlu.TryCreateVector2(x, y, out var xyVector) && xyVector is GameEventScriptVector2Value xy
-                ? Vector3(xy.X, xy.Y, 0m, xy.Unit)
+                ? GesVector3(xy.X, xy.Y, 0m, xy.Unit)
                 : xyVector;
         }
 
@@ -2785,13 +2785,13 @@ internal sealed class RegisterVmExecutionSession
             GameEventScriptValueAlu.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
             xyVectorFromItems is GameEventScriptVector2Value xyFromItems)
         {
-            return Vector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
+            return GesVector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
         return GameEventScriptValue.Nothing;
     }
 
-    private GameEventScriptValue ConvertToCustomType(GameEventScriptValue value, RegisterVmTypeDefinition typeDefinition)
+    private GameEventScriptValue ConvertToCustomType(GameEventScriptValue value, BytecodeVmTypeDefinition typeDefinition)
     {
         if (value.TryGetCustomTypeName(out var existingTypeName) &&
             string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
@@ -2819,17 +2819,17 @@ internal sealed class RegisterVmExecutionSession
             materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
         }
 
-        return GameEventScriptValueFactory.CustomType(typeDefinition.Name, materializedValues);
+        return GameEventScriptValueFactory.GseCustomType(typeDefinition.Name, materializedValues);
     }
 
     private GameEventScriptValue ConvertValueToDeclaredType(GameEventScriptValue value, string declaredType)
-        => TryConvertDeclaredType(declaredType, RegisterVmValue.FromGameEventScriptValue(value), out var converted)
+        => TryConvertDeclaredType(declaredType, BytecodeVmValue.FromGameEventScriptValue(value), out var converted)
             ? converted.ToGameEventScriptValue()
             : GameEventScriptValue.Nothing;
 
     private GameEventScriptValue ApplyFieldClamp(
-        RegisterVmTypeDefinition typeDefinition,
-        RegisterVmTypeFieldDefinition field,
+        BytecodeVmTypeDefinition typeDefinition,
+        BytecodeVmTypeFieldDefinition field,
         GameEventScriptValue fieldValue,
         IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
@@ -2846,7 +2846,7 @@ internal sealed class RegisterVmExecutionSession
             !GameEventScriptValueAlu.HaveCompatibleNumericUnits(fieldValue, maximum) ||
             !GameEventScriptValueAlu.HaveCompatibleNumericUnits(minimum, maximum))
         {
-            return GameEventScriptValueFactory.DecimalNaN();
+            return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
         if (!GameEventScriptValueAlu.TryCoerceNumericForOperation(fieldValue, out var valueNumber) ||
@@ -2860,7 +2860,7 @@ internal sealed class RegisterVmExecutionSession
         {
             if (maximumNumber.IsPositiveInfinity && minimumNumber.IsFinite && valueNumber.IsFinite)
             {
-                return GameEventScriptValueFactory.Decimal(Math.Max(valueNumber.Value, minimumNumber.Value));
+                return GameEventScriptValueFactory.GesDecimal(Math.Max(valueNumber.Value, minimumNumber.Value));
             }
 
             return fieldValue;
@@ -2869,7 +2869,7 @@ internal sealed class RegisterVmExecutionSession
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
         GameEventScriptValue.TryGetDecimalUnit(fieldValue, out var unit);
-        return GameEventScriptValueFactory.Decimal(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasDecimalUnit() ? unit : null);
+        return GameEventScriptValueFactory.GesDecimal(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasDecimalUnit() ? unit : null);
     }
 
     private GameEventScriptValue EvaluateCustomTypeExpression(
@@ -2882,7 +2882,7 @@ internal sealed class RegisterVmExecutionSession
         {
             foreach (var pair in sourceValues)
             {
-                if (!Define(pair.Key, RegisterVmValue.FromGameEventScriptValue(pair.Value)))
+                if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
                 {
                     return GameEventScriptValue.Nothing;
                 }
@@ -2890,7 +2890,7 @@ internal sealed class RegisterVmExecutionSession
 
             foreach (var pair in materializedValues)
             {
-                if (!Define(pair.Key, RegisterVmValue.FromGameEventScriptValue(pair.Value)))
+                if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
                 {
                     return GameEventScriptValue.Nothing;
                 }
@@ -2906,18 +2906,18 @@ internal sealed class RegisterVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineProgram(RegisterVmPipelineProgram pipeline, out RegisterVmValue value)
+    private bool TryExecutePipelineProgram(BytecodeVmPipelineProgram pipeline, out BytecodeVmValue value)
     {
         if (!TryExecuteExpressionProgram(pipeline.SourceProgram, 0, out var sourceValue))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         var sourceTarget = sourceValue.ToGameEventScriptValue();
         if (!TryCheckMaterializedValue(sourceTarget, "Collection access would enumerate more range items than allowed."))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return true;
         }
 
@@ -2927,46 +2927,46 @@ internal sealed class RegisterVmExecutionSession
             : GameEventScriptListValue.Empty;
         return pipeline.TerminalSelector.Kind switch
         {
-            RegisterVmSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
+            BytecodeVmSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
                 ? TryExecuteProgramPattern(terminalTarget, patternItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterVmSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
+            BytecodeVmSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
                 ? TryExecuteProgramObjectMatch(terminalTarget, objectItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterVmSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
+            BytecodeVmSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
                 ? TryExecuteProgramTakePattern(terminalTarget, takePatternItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterVmSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
-            RegisterVmSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
-            RegisterVmSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
-            RegisterVmSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
+            BytecodeVmSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
+            BytecodeVmSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
+            BytecodeVmSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
+            BytecodeVmSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
                 ? TryExecuteProgramChoose(chooseItems, pipeline.TerminalSelector, out value)
                 : false,
-            RegisterVmSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
-                ? SetValue(RegisterVmValue.FromGameEventScriptValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
+            BytecodeVmSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
+                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
                 : false,
-            RegisterVmSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
-                ? SetValue(RegisterVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
+            BytecodeVmSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
+                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
                 : false,
-            RegisterVmSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
-                ? SetValue(RegisterVmValue.FromGameEventScriptValue(GameEventScriptCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
+            BytecodeVmSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
+                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(GameEventScriptCollectionOperators.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
                 : false,
-            RegisterVmSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
-            RegisterVmSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
-            RegisterVmSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
-            RegisterVmSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
-                ? SetValue(RegisterVmValue.FromGameEventScriptValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
+            BytecodeVmSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
+            BytecodeVmSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
+            BytecodeVmSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
+            BytecodeVmSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
+                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
                 : false,
-            RegisterVmSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
-                ? SetValue(RegisterVmValue.FromGameEventScriptValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
+            BytecodeVmSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
+                ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
                 : false,
             _ => Fail(out value)
         };
@@ -2974,13 +2974,13 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryExecuteProgramFilter(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3000,23 +3000,23 @@ internal sealed class RegisterVmExecutionSession
                 return true;
             }))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.List(result));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(result));
         return true;
     }
 
     private bool TryExecuteProgramSelect(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3032,30 +3032,30 @@ internal sealed class RegisterVmExecutionSession
                 return true;
             }))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.List(result));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(result));
         return true;
     }
 
     private bool TryExecuteProgramPredicate(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         var isAny = string.Equals(terminal.EdgeMode, "any", StringComparison.Ordinal);
         if (!isAny && !string.Equals(terminal.EdgeMode, "all", StringComparison.Ordinal))
         {
-            value = RegisterVmValue.Boolean(false);
+            value = BytecodeVmValue.Boolean(false);
             return true;
         }
 
@@ -3082,38 +3082,38 @@ internal sealed class RegisterVmExecutionSession
                 return true;
             }, stopWhen: () => isAny ? result : !result))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Boolean(result);
+        value = BytecodeVmValue.Boolean(result);
         return true;
     }
 
     private bool TryExecuteProgramSum(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         var hasValue = false;
-        var sum = RegisterVmValue.Decimal(0m);
+        var sum = BytecodeVmValue.Decimal(0m);
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
+                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3124,42 +3124,42 @@ internal sealed class RegisterVmExecutionSession
 
             if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projected))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
-            sum = hasValue ? RegisterVmValue.Add(sum, projected) : projected;
+            sum = hasValue ? BytecodeVmValue.Add(sum, projected) : projected;
             hasValue = true;
         }
 
-        value = hasValue ? sum : RegisterVmValue.Decimal(0m);
+        value = hasValue ? sum : BytecodeVmValue.Decimal(0m);
         return true;
     }
 
     private bool TryExecuteProgramAverage(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         var count = 0L;
-        var sum = RegisterVmValue.Decimal(0m);
+        var sum = BytecodeVmValue.Decimal(0m);
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
+                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3170,29 +3170,29 @@ internal sealed class RegisterVmExecutionSession
 
             if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projected))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
-            sum = count == 0 ? projected : RegisterVmValue.Add(sum, projected);
+            sum = count == 0 ? projected : BytecodeVmValue.Add(sum, projected);
             count++;
         }
 
         value = count > 0 && sum.TryGetFiniteNumber(out var number)
-            ? RegisterVmValue.Decimal(number / count, sum.Unit)
-            : RegisterVmValue.Nothing;
+            ? BytecodeVmValue.Decimal(number / count, sum.Unit)
+            : BytecodeVmValue.Nothing;
         return true;
     }
 
     private bool TryExecuteProgramCount(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3201,12 +3201,12 @@ internal sealed class RegisterVmExecutionSession
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
+                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3217,7 +3217,7 @@ internal sealed class RegisterVmExecutionSession
 
             if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3227,29 +3227,29 @@ internal sealed class RegisterVmExecutionSession
             }
         }
 
-        value = RegisterVmValue.Integer(count);
+        value = BytecodeVmValue.Integer(count);
         return true;
     }
 
     private bool TryExecuteProgramEdge(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
-        RegisterVmValue first = RegisterVmValue.Nothing;
-        RegisterVmValue last = RegisterVmValue.Nothing;
+        BytecodeVmValue first = BytecodeVmValue.Nothing;
+        BytecodeVmValue last = BytecodeVmValue.Nothing;
         var count = 0;
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
+                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3271,28 +3271,28 @@ internal sealed class RegisterVmExecutionSession
 
         value = terminal.EdgeMode switch
         {
-            "first" => count > 0 ? first : RegisterVmValue.Nothing,
-            "last" => count > 0 ? last : RegisterVmValue.Nothing,
-            "single" => count == 1 ? first : RegisterVmValue.Nothing,
-            _ => RegisterVmValue.Nothing
+            "first" => count > 0 ? first : BytecodeVmValue.Nothing,
+            "last" => count > 0 ? last : BytecodeVmValue.Nothing,
+            "single" => count == 1 ? first : BytecodeVmValue.Nothing,
+            _ => BytecodeVmValue.Nothing
         };
         return true;
     }
 
     private bool TryExecuteProgramExtrema(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
+        BytecodeVmPipelineProgram pipeline,
         bool isMax,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        RegisterVmValue bestItem = RegisterVmValue.Nothing;
+        BytecodeVmValue bestItem = BytecodeVmValue.Nothing;
         GameEventScriptValue? bestProjection = null;
         if (!TryForEachIncludedPipelineItem(sourceItems, pipeline.PrefixSelectors, item =>
             {
@@ -3332,23 +3332,23 @@ internal sealed class RegisterVmExecutionSession
                 return true;
             }))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = bestProjection is null ? RegisterVmValue.Nothing : bestItem;
+        value = bestProjection is null ? BytecodeVmValue.Nothing : bestItem;
         return true;
     }
 
     private bool TryExecuteProgramDictionary(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3381,25 +3381,25 @@ internal sealed class RegisterVmExecutionSession
                 return true;
             }))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.Dictionary(result));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(result));
         return true;
     }
 
     private bool TryExecuteProgramContains(
         IReadOnlyList<GameEventScriptValue> sourceItems,
         GameEventScriptValue terminalTarget,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null ||
             !TryExecuteExpressionProgram(terminal.ExpressionProgram, 0, out var needle))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3415,16 +3415,16 @@ internal sealed class RegisterVmExecutionSession
                 return false;
             }
 
-            target = GameEventScriptValueFactory.List(targetItems);
+            target = GameEventScriptValueFactory.GesList(targetItems);
         }
 
         var boxedNeedle = needle.ToGameEventScriptValue();
         value = terminal.EdgeMode switch
         {
-            "single" => RegisterVmValue.Boolean(target.Contains(boxedNeedle)),
-            "all" => RegisterVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).All(target.Contains)),
-            "any" => RegisterVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).Any(target.Contains)),
-            _ => RegisterVmValue.Boolean(false)
+            "single" => BytecodeVmValue.Boolean(target.Contains(boxedNeedle)),
+            "all" => BytecodeVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).All(target.Contains)),
+            "any" => BytecodeVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).Any(target.Contains)),
+            _ => BytecodeVmValue.Boolean(false)
         };
         return true;
     }
@@ -3432,8 +3432,8 @@ internal sealed class RegisterVmExecutionSession
     private bool TryExecuteProgramDistinct(
         IReadOnlyList<GameEventScriptValue> sourceItems,
         GameEventScriptValue terminalTarget,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (!TryMaterializePipelineItems(sourceItems, pipeline, out var items, out value))
@@ -3444,7 +3444,7 @@ internal sealed class RegisterVmExecutionSession
         var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GameEventScriptListValue.Empty;
         if (terminal.ExpressionProgram is null || terminal.IdentifierSlot < 0)
         {
-            value = RegisterVmValue.FromGameEventScriptValue(GameEventScriptCollectionOperators.Distinct(target, items));
+            value = BytecodeVmValue.FromGameEventScriptValue(GameEventScriptCollectionOperators.Distinct(target, items));
             return true;
         }
 
@@ -3452,9 +3452,9 @@ internal sealed class RegisterVmExecutionSession
         var seenKeys = new HashSet<GameEventScriptValue>();
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterVmValue.FromGameEventScriptValue(item), out var key))
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, BytecodeVmValue.FromGameEventScriptValue(item), out var key))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3464,19 +3464,19 @@ internal sealed class RegisterVmExecutionSession
             }
         }
 
-        value = RegisterVmValue.FromGameEventScriptValue(MaterializeDistinctItems(target, distinctItems));
+        value = BytecodeVmValue.FromGameEventScriptValue(MaterializeDistinctItems(target, distinctItems));
         return true;
     }
 
     private bool TryExecuteProgramGroupBy(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3499,13 +3499,13 @@ internal sealed class RegisterVmExecutionSession
                 return true;
             }))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.Dictionary(groups.ToDictionary(
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GseDictionary(groups.ToDictionary(
             pair => pair.Key,
-            pair => GameEventScriptValueFactory.List(pair.Value),
+            pair => GameEventScriptValueFactory.GesList(pair.Value),
             StringComparer.Ordinal)));
         return true;
     }
@@ -3513,23 +3513,23 @@ internal sealed class RegisterVmExecutionSession
     private bool TryExecuteProgramOrderBy(
         IReadOnlyList<GameEventScriptValue> sourceItems,
         GameEventScriptValue terminalTarget,
-        RegisterVmPipelineProgram pipeline,
-        out RegisterVmValue value)
+        BytecodeVmPipelineProgram pipeline,
+        out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null ||
             !TryMaterializePipelineItems(sourceItems, pipeline, out var items, out value))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         var pairs = new List<(GameEventScriptValue Item, GameEventScriptValue Key)>(items.Length);
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, RegisterVmValue.FromGameEventScriptValue(item), out var key))
+            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, BytecodeVmValue.FromGameEventScriptValue(item), out var key))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -3541,9 +3541,9 @@ internal sealed class RegisterVmExecutionSession
             : GameEventScriptValue.StableComparer;
         var ordered = pairs.OrderBy(pair => pair.Key, comparer).Select(pair => pair.Item).ToArray();
         var target = pipeline.PrefixSelectors.Length == 0 ? terminalTarget : GameEventScriptListValue.Empty;
-        value = RegisterVmValue.FromGameEventScriptValue(target.Kind switch
+        value = BytecodeVmValue.FromGameEventScriptValue(target.Kind switch
         {
-            GameEventScriptValueKind.Dice or GameEventScriptValueKind.List or GameEventScriptValueKind.Set or GameEventScriptValueKind.Range => GameEventScriptValueFactory.List(ordered),
+            GameEventScriptValueKind.Dice or GameEventScriptValueKind.List or GameEventScriptValueKind.Set or GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(ordered),
             _ => GameEventScriptValue.Nothing
         });
         return true;
@@ -3552,77 +3552,77 @@ internal sealed class RegisterVmExecutionSession
     private bool TryExecuteProgramPattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        RegisterVmSelectorProgram selector,
-        out RegisterVmValue value)
+        BytecodeVmSelectorProgram selector,
+        out BytecodeVmValue value)
     {
         if (selector.DicePattern is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         if (!TryEvaluateSequencePattern(target, items, selector.DicePattern, out var matches))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Boolean(matches);
+        value = BytecodeVmValue.Boolean(matches);
         return true;
     }
 
     private bool TryExecuteProgramObjectMatch(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        RegisterVmSelectorProgram selector,
-        out RegisterVmValue value)
+        BytecodeVmSelectorProgram selector,
+        out BytecodeVmValue value)
     {
         if (selector.ObjectPattern is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         if (!TryEvaluateObjectMatchSelector(target, items, selector.ObjectPattern, out var matches))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.Boolean(matches);
+        value = BytecodeVmValue.Boolean(matches);
         return true;
     }
 
     private bool TryExecuteProgramTakePattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        RegisterVmSelectorProgram selector,
-        out RegisterVmValue value)
+        BytecodeVmSelectorProgram selector,
+        out BytecodeVmValue value)
     {
         if (selector.DicePattern is null)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         if (!TryEvaluateTakePattern(target, items, selector.DicePattern, out var result))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
-        value = RegisterVmValue.FromGameEventScriptValue(result);
+        value = BytecodeVmValue.FromGameEventScriptValue(result);
         return true;
     }
 
     private bool TryExecuteProgramChoose(
         IReadOnlyList<GameEventScriptValue> items,
-        RegisterVmSelectorProgram selector,
-        out RegisterVmValue value)
+        BytecodeVmSelectorProgram selector,
+        out BytecodeVmValue value)
     {
         if (!TryFilterChooseCandidates(items, selector, out var candidates))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -3631,7 +3631,7 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!TryChooseWeightedItems(candidates, selector.Count, selector.SecondaryIdentifierSlot, selector.SecondaryExpressionProgram, out chosen))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
         }
@@ -3647,18 +3647,18 @@ internal sealed class RegisterVmExecutionSession
         if (selector.Count == 1)
         {
             value = chosen.Count == 0
-                ? RegisterVmValue.Nothing
-                : RegisterVmValue.FromGameEventScriptValue(chosen[0]);
+                ? BytecodeVmValue.Nothing
+                : BytecodeVmValue.FromGameEventScriptValue(chosen[0]);
             return true;
         }
 
-        value = RegisterVmValue.Reference(GameEventScriptValueFactory.List(chosen));
+        value = BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(chosen));
         return true;
     }
 
     private bool TryFilterChooseCandidates(
         IReadOnlyList<GameEventScriptValue> items,
-        RegisterVmSelectorProgram selector,
+        BytecodeVmSelectorProgram selector,
         out IReadOnlyList<GameEventScriptValue> candidates)
     {
         if (selector.ExpressionProgram is null || selector.IdentifierSlot < 0)
@@ -3670,7 +3670,7 @@ internal sealed class RegisterVmExecutionSession
         var filtered = new List<GameEventScriptValue>();
         foreach (var item in items)
         {
-            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, RegisterVmValue.FromGameEventScriptValue(item), out var predicate))
+            if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, BytecodeVmValue.FromGameEventScriptValue(item), out var predicate))
             {
                 candidates = [];
                 return false;
@@ -3690,7 +3690,7 @@ internal sealed class RegisterVmExecutionSession
         IReadOnlyList<GameEventScriptValue> candidates,
         int count,
         int identifierSlot,
-        RegisterVmExpressionProgram weightProgram,
+        BytecodeVmExpressionProgram weightProgram,
         out IReadOnlyList<GameEventScriptValue> chosen)
     {
         var remaining = candidates.ToList();
@@ -3703,7 +3703,7 @@ internal sealed class RegisterVmExecutionSession
 
             foreach (var candidate in remaining)
             {
-                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, RegisterVmValue.FromGameEventScriptValue(candidate), out var weightValue))
+                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, BytecodeVmValue.FromGameEventScriptValue(candidate), out var weightValue))
                 {
                     chosen = [];
                     return false;
@@ -3774,14 +3774,14 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryForEachIncludedPipelineItem(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmSelectorProgram[] prefixSelectors,
-        Func<RegisterVmValue, bool> action,
+        BytecodeVmSelectorProgram[] prefixSelectors,
+        Func<BytecodeVmValue, bool> action,
         Func<bool>? stopWhen = null)
     {
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
-                    RegisterVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
+                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
                     prefixSelectors,
                     out var item,
                     out var include))
@@ -3810,16 +3810,16 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryMaterializePipelineItems(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmPipelineProgram pipeline,
+        BytecodeVmPipelineProgram pipeline,
         out GameEventScriptValue[] items,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
         => TryMaterializePipelineItems(sourceItems, pipeline.PrefixSelectors, out items, out value);
 
     private bool TryMaterializePipelineItems(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        RegisterVmSelectorProgram[] prefixSelectors,
+        BytecodeVmSelectorProgram[] prefixSelectors,
         out GameEventScriptValue[] items,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         var result = new List<GameEventScriptValue>(sourceItems.Count);
         if (!TryForEachIncludedPipelineItem(sourceItems, prefixSelectors, item =>
@@ -3829,12 +3829,12 @@ internal sealed class RegisterVmExecutionSession
             }))
         {
             items = [];
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         items = result.ToArray();
-        value = RegisterVmValue.Nothing;
+        value = BytecodeVmValue.Nothing;
         return true;
     }
 
@@ -3868,7 +3868,7 @@ internal sealed class RegisterVmExecutionSession
             : value.AsList();
     }
 
-    private static bool SetValue(RegisterVmValue input, out RegisterVmValue value)
+    private static bool SetValue(BytecodeVmValue input, out BytecodeVmValue value)
     {
         value = input;
         return true;
@@ -3881,7 +3881,7 @@ internal sealed class RegisterVmExecutionSession
             return GameEventScriptValue.Nothing;
         }
 
-        return GameEventScriptValueFactory.List(items.Reverse().ToArray());
+        return GameEventScriptValueFactory.GesList(items.Reverse().ToArray());
     }
 
     private static GameEventScriptValue EvaluateDrawSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items, int count)
@@ -3897,9 +3897,7 @@ internal sealed class RegisterVmExecutionSession
             return drawn.Length == 0 ? GameEventScriptValue.Nothing : drawn[0];
         }
 
-        return target.Kind == GameEventScriptValueKind.Dice
-            ? GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.GameEventScriptDice(drawn.Select(item => (int)item.AsInteger())))
-            : GameEventScriptValueFactory.List(drawn);
+        return target.Kind == GameEventScriptValueKind.Dice ? GseDice(GameEventScriptDiceValue.Create(drawn.Select(item => (int)item.AsInteger()))) : GesList(drawn);
     }
 
     private GameEventScriptValue EvaluateShuffleSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)
@@ -3914,13 +3912,13 @@ internal sealed class RegisterVmExecutionSession
         {
             if (!TryNextInclusiveInt(0, i, out var swapIndex))
             {
-                return GameEventScriptValueFactory.List(shuffled);
+                return GameEventScriptValueFactory.GesList(shuffled);
             }
 
             (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
         }
 
-        return GameEventScriptValueFactory.List(shuffled);
+        return GameEventScriptValueFactory.GesList(shuffled);
     }
 
     private bool TryEvaluateTakePattern(
@@ -3942,8 +3940,8 @@ internal sealed class RegisterVmExecutionSession
         }
 
         value = target.Kind == GameEventScriptValueKind.Dice
-            ? GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.GameEventScriptDice(takenItems.Select(item => (int)item.AsInteger())))
-            : GameEventScriptValueFactory.List(takenItems);
+            ? GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(takenItems.Select(item => (int)item.AsInteger())))
+            : GameEventScriptValueFactory.GesList(takenItems);
         return true;
     }
 
@@ -4286,13 +4284,13 @@ internal sealed class RegisterVmExecutionSession
     private static GameEventScriptValue EvaluateSequenceSliceSelector(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        RegisterVmSelectorProgram selector)
+        BytecodeVmSelectorProgram selector)
     {
         if (selector.Count <= 0)
         {
             return target.Kind == GameEventScriptValueKind.Dice
-                ? GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.Empty)
-                : GameEventScriptValueFactory.List(Array.Empty<GameEventScriptValue>());
+                ? GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Empty)
+                : GameEventScriptValueFactory.GesList(Array.Empty<GameEventScriptValue>());
         }
 
         var selectedItems = selector.SecondaryMode switch
@@ -4311,9 +4309,9 @@ internal sealed class RegisterVmExecutionSession
 
         return target.Kind switch
         {
-            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.GameEventScriptDice(selectedItems.Select(item => (int)item.AsInteger()))),
-            GameEventScriptValueKind.List => GameEventScriptValueFactory.List(selectedItems),
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.List(selectedItems),
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
+            GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(selectedItems),
+            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(selectedItems),
             _ => GameEventScriptValue.Nothing
         };
     }
@@ -4322,10 +4320,10 @@ internal sealed class RegisterVmExecutionSession
     {
         return target.Kind switch
         {
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.Set(items),
-            GameEventScriptValueKind.List => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.Range => GameEventScriptValueFactory.List(items),
+            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GseSet(items),
+            GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
             _ => GameEventScriptValue.Nothing
         };
     }
@@ -4375,9 +4373,9 @@ internal sealed class RegisterVmExecutionSession
     }
 
     private bool TryApplyProgramPipelinePrefix(
-        RegisterVmValue item,
-        RegisterVmSelectorProgram[] prefixSelectors,
-        out RegisterVmValue value,
+        BytecodeVmValue item,
+        BytecodeVmSelectorProgram[] prefixSelectors,
+        out BytecodeVmValue value,
         out bool include)
     {
         value = item;
@@ -4393,7 +4391,7 @@ internal sealed class RegisterVmExecutionSession
 
             switch (selector.Kind)
             {
-                case RegisterVmSelectorKind.Filter:
+                case BytecodeVmSelectorKind.Filter:
                     if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, value, out var predicate))
                     {
                         return false;
@@ -4407,7 +4405,7 @@ internal sealed class RegisterVmExecutionSession
 
                     break;
 
-                case RegisterVmSelectorKind.Select:
+                case BytecodeVmSelectorKind.Select:
                     if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, value, out var selected))
                     {
                         return false;
@@ -4426,20 +4424,20 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryEvaluateProgramProjection(
         int identifierSlot,
-        RegisterVmExpressionProgram expressionProgram,
-        RegisterVmValue item,
-        out RegisterVmValue value)
+        BytecodeVmExpressionProgram expressionProgram,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
         => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
 
     private bool TryEvaluateExpressionWithTemporarySlot(
         int slot,
-        RegisterVmValue slotValue,
+        BytecodeVmValue slotValue,
         ExpressionNode expression,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -4457,14 +4455,14 @@ internal sealed class RegisterVmExecutionSession
         }
     }
 
-    private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out RegisterVmValue value)
+    private bool TryEvaluateCollectionAccess(CollectionAccessExpressionNode expression, out BytecodeVmValue value)
     {
         if (expression.Selector is ExpressionSelectorNode expressionSelector)
         {
             if (!TryEvaluate(expression.Target, out var target) ||
                 !TryEvaluate(expressionSelector.Expression, out var selector))
             {
-                value = RegisterVmValue.Nothing;
+                value = BytecodeVmValue.Nothing;
                 return false;
             }
 
@@ -4483,7 +4481,7 @@ internal sealed class RegisterVmExecutionSession
         selectors.Reverse();
         if (selectors.Count == 0 || !TryEvaluate(source, out var sourceValue))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -4505,10 +4503,10 @@ internal sealed class RegisterVmExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         SumSelectorNode selector,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         var hasValue = false;
-        var sum = RegisterVmValue.Decimal(0m);
+        var sum = BytecodeVmValue.Decimal(0m);
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
         {
             if (!TryEvaluateProjection(selector.Identifier, selector.Projection, item, out var projected))
@@ -4516,12 +4514,12 @@ internal sealed class RegisterVmExecutionSession
                 return false;
             }
 
-            sum = hasValue ? RegisterVmValue.Add(sum, projected) : projected;
+            sum = hasValue ? BytecodeVmValue.Add(sum, projected) : projected;
             hasValue = true;
             return true;
         });
 
-        value = hasValue ? sum : RegisterVmValue.Decimal(0m);
+        value = hasValue ? sum : BytecodeVmValue.Decimal(0m);
         return ok;
     }
 
@@ -4530,10 +4528,10 @@ internal sealed class RegisterVmExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         AverageSelectorNode selector,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         var count = 0L;
-        var sum = RegisterVmValue.Decimal(0m);
+        var sum = BytecodeVmValue.Decimal(0m);
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
         {
             if (!TryEvaluateProjection(selector.Identifier, selector.Projection, item, out var projected))
@@ -4541,14 +4539,14 @@ internal sealed class RegisterVmExecutionSession
                 return false;
             }
 
-            sum = count == 0 ? projected : RegisterVmValue.Add(sum, projected);
+            sum = count == 0 ? projected : BytecodeVmValue.Add(sum, projected);
             count++;
             return true;
         });
 
         value = ok && count > 0 && sum.TryGetFiniteNumber(out var number)
-            ? RegisterVmValue.Decimal(number / count, sum.Unit)
-            : RegisterVmValue.Nothing;
+            ? BytecodeVmValue.Decimal(number / count, sum.Unit)
+            : BytecodeVmValue.Nothing;
         return ok;
     }
 
@@ -4557,7 +4555,7 @@ internal sealed class RegisterVmExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         CountSelectorNode selector,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         var count = 0L;
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
@@ -4575,7 +4573,7 @@ internal sealed class RegisterVmExecutionSession
             return true;
         });
 
-        value = RegisterVmValue.Integer(count);
+        value = BytecodeVmValue.Integer(count);
         return ok;
     }
 
@@ -4584,10 +4582,10 @@ internal sealed class RegisterVmExecutionSession
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
         EdgeSelectorNode selector,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
-        RegisterVmValue first = RegisterVmValue.Nothing;
-        RegisterVmValue last = RegisterVmValue.Nothing;
+        BytecodeVmValue first = BytecodeVmValue.Nothing;
+        BytecodeVmValue last = BytecodeVmValue.Nothing;
         var count = 0;
         var ok = TryForEachPipelineItem(sourceItems, selectors, prefixCount, item =>
         {
@@ -4606,10 +4604,10 @@ internal sealed class RegisterVmExecutionSession
 
         value = selector.Mode switch
         {
-            "first" => count > 0 ? first : RegisterVmValue.Nothing,
-            "last" => count > 0 ? last : RegisterVmValue.Nothing,
-            "single" => count == 1 ? first : RegisterVmValue.Nothing,
-            _ => RegisterVmValue.Nothing
+            "first" => count > 0 ? first : BytecodeVmValue.Nothing,
+            "last" => count > 0 ? last : BytecodeVmValue.Nothing,
+            "single" => count == 1 ? first : BytecodeVmValue.Nothing,
+            _ => BytecodeVmValue.Nothing
         };
         return ok;
     }
@@ -4618,11 +4616,11 @@ internal sealed class RegisterVmExecutionSession
         IReadOnlyList<GameEventScriptValue> sourceItems,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int prefixCount,
-        Func<RegisterVmValue, bool> action)
+        Func<BytecodeVmValue, bool> action)
     {
         for (var index = 0; index < sourceItems.Count; index++)
         {
-            if (!TryApplyPipelinePrefix(RegisterVmValue.FromGameEventScriptValue(sourceItems[index]), selectors, 0, prefixCount, action))
+            if (!TryApplyPipelinePrefix(BytecodeVmValue.FromGameEventScriptValue(sourceItems[index]), selectors, 0, prefixCount, action))
             {
                 return false;
             }
@@ -4632,11 +4630,11 @@ internal sealed class RegisterVmExecutionSession
     }
 
     private bool TryApplyPipelinePrefix(
-        RegisterVmValue item,
+        BytecodeVmValue item,
         IReadOnlyList<CollectionSelectorNode> selectors,
         int index,
         int prefixCount,
-        Func<RegisterVmValue, bool> action)
+        Func<BytecodeVmValue, bool> action)
     {
         if (index >= prefixCount)
         {
@@ -4663,17 +4661,17 @@ internal sealed class RegisterVmExecutionSession
         }
     }
 
-    private bool TryEvaluateProjection(string identifier, ExpressionNode expression, RegisterVmValue item, out RegisterVmValue value)
+    private bool TryEvaluateProjection(string identifier, ExpressionNode expression, BytecodeVmValue item, out BytecodeVmValue value)
     {
         if (!_plan.TryGetSlot(identifier, out var slot))
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
         if ((uint)slot >= (uint)_locals.Length)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -4693,14 +4691,14 @@ internal sealed class RegisterVmExecutionSession
 
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
-        RegisterVmValue slotValue,
-        RegisterVmExpressionProgram expressionProgram,
+        BytecodeVmValue slotValue,
+        BytecodeVmExpressionProgram expressionProgram,
         int stackBase,
-        out RegisterVmValue value)
+        out BytecodeVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
         {
-            value = RegisterVmValue.Nothing;
+            value = BytecodeVmValue.Nothing;
             return false;
         }
 
@@ -4718,7 +4716,7 @@ internal sealed class RegisterVmExecutionSession
         }
     }
 
-    private void RestoreSlot(int slot, bool hadValue, RegisterVmValue previous)
+    private void RestoreSlot(int slot, bool hadValue, BytecodeVmValue previous)
     {
         if (hadValue)
         {
@@ -4727,7 +4725,7 @@ internal sealed class RegisterVmExecutionSession
         }
         else
         {
-            _locals[slot] = RegisterVmValue.Nothing;
+            _locals[slot] = BytecodeVmValue.Nothing;
             _assignedSlots[slot] = false;
         }
     }
@@ -4749,7 +4747,7 @@ internal sealed class RegisterVmExecutionSession
             }
             else
             {
-                _locals[change.Slot] = RegisterVmValue.Nothing;
+                _locals[change.Slot] = BytecodeVmValue.Nothing;
                 _assignedSlots[change.Slot] = false;
             }
         }
@@ -4757,7 +4755,7 @@ internal sealed class RegisterVmExecutionSession
         _changes.RemoveRange(mark, _changes.Count - mark);
     }
 
-    private bool Define(string name, RegisterVmValue value)
+    private bool Define(string name, BytecodeVmValue value)
     {
         if (!_plan.TryGetSlot(name, out var slot))
         {
@@ -4767,7 +4765,7 @@ internal sealed class RegisterVmExecutionSession
         return DefineSlot(slot, value);
     }
 
-    private bool DefineSlot(int slot, RegisterVmValue value)
+    private bool DefineSlot(int slot, BytecodeVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
         {
@@ -4782,15 +4780,15 @@ internal sealed class RegisterVmExecutionSession
         return true;
     }
 
-    private RegisterVmValue Resolve(string name)
+    private BytecodeVmValue Resolve(string name)
         => _plan.TryGetSlot(name, out var slot) && _assignedSlots[slot]
             ? _locals[slot]
-            : RegisterVmValue.Nothing;
+            : BytecodeVmValue.Nothing;
 
-    private RegisterVmValue ResolveSlot(int slot)
+    private BytecodeVmValue ResolveSlot(int slot)
         => (uint)slot < (uint)_locals.Length && _assignedSlots[slot]
             ? _locals[slot]
-            : RegisterVmValue.Nothing;
+            : BytecodeVmValue.Nothing;
 
     private bool TryConsumeExecutionStep(string detail)
     {
@@ -4828,7 +4826,7 @@ internal sealed class RegisterVmExecutionSession
             $"Bound '{parameter}'");
     }
 
-    private void RecordLetEvaluated(string identifier, RegisterVmValue value)
+    private void RecordLetEvaluated(string identifier, BytecodeVmValue value)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4856,7 +4854,7 @@ internal sealed class RegisterVmExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordRuleCalled(RegisterVmProgramInstruction instruction, RegisterVmValue input)
+    private void RecordRuleCalled(BytecodeVmProgramInstruction instruction, BytecodeVmValue input)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4872,7 +4870,7 @@ internal sealed class RegisterVmExecutionSession
             $"rule '{ruleName}' called");
     }
 
-    private void RecordCallableCalled(RegisterVmProgramInstruction instruction, RegisterVmValue[] stack, int start, int count)
+    private void RecordCallableCalled(BytecodeVmProgramInstruction instruction, BytecodeVmValue[] stack, int start, int count)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4889,10 +4887,10 @@ internal sealed class RegisterVmExecutionSession
                 stack[start + argumentIndex].ToGameEventScriptValue());
         }
 
-        var kind = instruction.CallableKind == RegisterVmCallableKind.Rule
+        var kind = instruction.CallableKind == BytecodeVmCallableKind.Rule
             ? GameEventScriptDiagnosticEventKind.RuleCalled
             : GameEventScriptDiagnosticEventKind.SelectCalled;
-        var kindText = instruction.CallableKind == RegisterVmCallableKind.Rule ? "rule" : "select";
+        var kindText = instruction.CallableKind == BytecodeVmCallableKind.Rule ? "rule" : "select";
         RecordDiagnostic(
             kind,
             callableName,
@@ -4900,9 +4898,9 @@ internal sealed class RegisterVmExecutionSession
             $"{kindText} '{callableName}' called");
     }
 
-    private void RecordLetExpressionEvaluatedToNothing(string identifier, RegisterVmValue value)
+    private void RecordLetExpressionEvaluatedToNothing(string identifier, BytecodeVmValue value)
     {
-        if (!_diagnosticsEnabled || value.Kind != RegisterVmValueKind.Nothing)
+        if (!_diagnosticsEnabled || value.Kind != BytecodeVmValueKind.Nothing)
         {
             return;
         }
@@ -4914,9 +4912,9 @@ internal sealed class RegisterVmExecutionSession
             $"Let '{identifier}' expression evaluated to Nothing.");
     }
 
-    private void RecordPublishArgumentEvaluatedToNothing(string argumentName, RegisterVmValue value)
+    private void RecordPublishArgumentEvaluatedToNothing(string argumentName, BytecodeVmValue value)
     {
-        if (!_diagnosticsEnabled || value.Kind != RegisterVmValueKind.Nothing)
+        if (!_diagnosticsEnabled || value.Kind != BytecodeVmValueKind.Nothing)
         {
             return;
         }
@@ -4928,9 +4926,9 @@ internal sealed class RegisterVmExecutionSession
             $"Publish argument '{argumentName}' evaluated to Nothing.");
     }
 
-    private void RecordExpressionStatementEvaluatedToNothing(ExpressionNode expression, RegisterVmValue value)
+    private void RecordExpressionStatementEvaluatedToNothing(ExpressionNode expression, BytecodeVmValue value)
     {
-        if (!_diagnosticsEnabled || value.Kind != RegisterVmValueKind.Nothing)
+        if (!_diagnosticsEnabled || value.Kind != BytecodeVmValueKind.Nothing)
         {
             return;
         }
@@ -4956,9 +4954,9 @@ internal sealed class RegisterVmExecutionSession
             new KeyValuePair<string, GameEventScriptValue>(name, value)
         ]);
 
-    private static bool Fail(out RegisterVmValue value)
+    private static bool Fail(out BytecodeVmValue value)
     {
-        value = RegisterVmValue.Nothing;
+        value = BytecodeVmValue.Nothing;
         return false;
     }
 
@@ -4969,10 +4967,10 @@ internal sealed class RegisterVmExecutionSession
         return (long)value;
     }
 
-    private readonly record struct LocalChange(int Slot, bool HadValue, RegisterVmValue PreviousValue);
+    private readonly record struct LocalChange(int Slot, bool HadValue, BytecodeVmValue PreviousValue);
 }
 
-internal enum RegisterVmValueKind
+internal enum BytecodeVmValueKind
 {
     Nothing,
     Boolean,
@@ -4982,35 +4980,35 @@ internal enum RegisterVmValueKind
     Reference
 }
 
-internal readonly record struct RegisterVmValue(
-    RegisterVmValueKind Kind,
+internal readonly record struct BytecodeVmValue(
+    BytecodeVmValueKind Kind,
     decimal Number,
     long IntegerValue,
     bool BooleanValue,
     GameEventScriptDecimalUnit? Unit,
     GameEventScriptValue? ReferenceValue)
 {
-    public static RegisterVmValue Nothing { get; } = new(RegisterVmValueKind.Nothing, 0m, 0, false, null, null);
+    public static BytecodeVmValue Nothing { get; } = new(BytecodeVmValueKind.Nothing, 0m, 0, false, null, null);
 
-    public static RegisterVmValue Boolean(bool value)
-        => new(RegisterVmValueKind.Boolean, value ? 1m : 0m, value ? 1 : 0, value, null, null);
+    public static BytecodeVmValue Boolean(bool value)
+        => new(BytecodeVmValueKind.Boolean, value ? 1m : 0m, value ? 1 : 0, value, null, null);
 
-    public static RegisterVmValue Integer(long value)
-        => new(RegisterVmValueKind.Integer, value, value, value != 0, null, null);
+    public static BytecodeVmValue Integer(long value)
+        => new(BytecodeVmValueKind.Integer, value, value, value != 0, null, null);
 
-    public static RegisterVmValue Decimal(decimal value, GameEventScriptDecimalUnit? unit = null)
-        => new(RegisterVmValueKind.Decimal, value, ToLongSaturated(value), value != 0m, unit, null);
+    public static BytecodeVmValue Decimal(decimal value, GameEventScriptDecimalUnit? unit = null)
+        => new(BytecodeVmValueKind.Decimal, value, ToLongSaturated(value), value != 0m, unit, null);
 
-    public static RegisterVmValue Percentage(decimal ratio)
-        => new(RegisterVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100m), ratio != 0m, null, null);
+    public static BytecodeVmValue Percentage(decimal ratio)
+        => new(BytecodeVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100m), ratio != 0m, null, null);
 
-    public static RegisterVmValue Reference(GameEventScriptValue value)
-        => new(RegisterVmValueKind.Reference, 0m, 0, value.AsBoolean(), null, value);
+    public static BytecodeVmValue Reference(GameEventScriptValue value)
+        => new(BytecodeVmValueKind.Reference, 0m, 0, value.AsBoolean(), null, value);
 
-    public static RegisterVmValue NaN()
-        => Reference(DecimalNaN());
+    public static BytecodeVmValue NaN()
+        => Reference(GesDecimalNaN());
 
-    public static RegisterVmValue FromGameEventScriptValue(GameEventScriptValue value)
+    public static BytecodeVmValue FromGameEventScriptValue(GameEventScriptValue value)
         => value switch
         {
             GameEventScriptBooleanValue boolean => Boolean(boolean.Value),
@@ -5020,7 +5018,7 @@ internal readonly record struct RegisterVmValue(
             _ => Reference(value)
         };
 
-    public static RegisterVmValue FromGameEventScriptFastValue(GameEventScriptFastValue value)
+    public static BytecodeVmValue FromGameEventScriptFastValue(GameEventScriptFastValue value)
         => value.Kind switch
         {
             GameEventScriptValueKind.Nothing => Nothing,
@@ -5034,11 +5032,11 @@ internal readonly record struct RegisterVmValue(
     public bool AsBoolean()
         => Kind switch
         {
-            RegisterVmValueKind.Boolean => BooleanValue,
-            RegisterVmValueKind.Integer => IntegerValue != 0,
-            RegisterVmValueKind.Decimal => Number != 0m,
-            RegisterVmValueKind.Percentage => Number != 0m,
-            RegisterVmValueKind.Reference => ReferenceValue?.AsBoolean() ?? false,
+            BytecodeVmValueKind.Boolean => BooleanValue,
+            BytecodeVmValueKind.Integer => IntegerValue != 0,
+            BytecodeVmValueKind.Decimal => Number != 0m,
+            BytecodeVmValueKind.Percentage => Number != 0m,
+            BytecodeVmValueKind.Reference => ReferenceValue?.AsBoolean() ?? false,
             _ => false
         };
 
@@ -5057,16 +5055,16 @@ internal readonly record struct RegisterVmValue(
     public GameEventScriptValue ToGameEventScriptValue()
         => Kind switch
         {
-            RegisterVmValueKind.Nothing => GameEventScriptValue.Nothing,
-            RegisterVmValueKind.Boolean => GameEventScriptValueFactory.Boolean(BooleanValue),
-            RegisterVmValueKind.Integer => GameEventScriptValueFactory.Integer(IntegerValue),
-            RegisterVmValueKind.Decimal => GameEventScriptValueFactory.Decimal(Number, Unit),
-            RegisterVmValueKind.Percentage => GameEventScriptValueFactory.Percentage(Number),
-            RegisterVmValueKind.Reference => ReferenceValue ?? GameEventScriptValue.Nothing,
+            BytecodeVmValueKind.Nothing => GameEventScriptValue.Nothing,
+            BytecodeVmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(BooleanValue),
+            BytecodeVmValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue),
+            BytecodeVmValueKind.Decimal => GameEventScriptValueFactory.GesDecimal(Number, Unit),
+            BytecodeVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(Number),
+            BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptValue.Nothing,
             _ => GameEventScriptValue.Nothing
         };
 
-    public static bool AreEqual(RegisterVmValue left, RegisterVmValue right)
+    public static bool AreEqual(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) &&
             right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
@@ -5092,12 +5090,12 @@ internal readonly record struct RegisterVmValue(
         return left.ToGameEventScriptValue().Equals(right.ToGameEventScriptValue());
     }
 
-    public static int CompareNumeric(RegisterVmValue left, RegisterVmValue right)
+    public static int CompareNumeric(BytecodeVmValue left, BytecodeVmValue right)
     {
         return TryCompareNumeric(left, right, out var comparison) ? comparison : 0;
     }
 
-    public static bool TryCompareNumeric(RegisterVmValue left, RegisterVmValue right, out int comparison)
+    public static bool TryCompareNumeric(BytecodeVmValue left, BytecodeVmValue right, out int comparison)
     {
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
@@ -5123,7 +5121,7 @@ internal readonly record struct RegisterVmValue(
         return GameEventScriptValueAlu.TryCompareNumeric(leftNumber, rightNumber, out comparison);
     }
 
-    public static RegisterVmValue Add(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue Add(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "+", right, out var vectorResult))
         {
@@ -5163,7 +5161,7 @@ internal readonly record struct RegisterVmValue(
             }
 
             return leftValue.IsText() || rightValue.IsText()
-                ? Reference(Text($"{GameEventScriptValueAlu.ToText(leftValue)}{GameEventScriptValueAlu.ToText(rightValue)}"))
+                ? Reference(GesText($"{GameEventScriptValueAlu.ToText(leftValue)}{GameEventScriptValueAlu.ToText(rightValue)}"))
                 : NaN();
         }
 
@@ -5175,7 +5173,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.AddNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static RegisterVmValue Subtract(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue Subtract(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "-", right, out var vectorResult))
         {
@@ -5219,7 +5217,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.SubtractNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static RegisterVmValue Multiply(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue Multiply(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "*", right, out var vectorResult))
         {
@@ -5262,7 +5260,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
     }
 
-    public static RegisterVmValue Divide(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue Divide(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "/", right, out var vectorResult))
         {
@@ -5305,7 +5303,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
-    public static RegisterVmValue IntegerDivide(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue IntegerDivide(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "div", right, out var vectorResult))
         {
@@ -5346,7 +5344,7 @@ internal readonly record struct RegisterVmValue(
             : FromDecimalNumeric(result, resultUnit);
     }
 
-    public static RegisterVmValue Modulo(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue Modulo(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "mod", right, out var vectorResult))
         {
@@ -5386,7 +5384,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.ModuloNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static RegisterVmValue Remainder(RegisterVmValue left, RegisterVmValue right)
+    public static BytecodeVmValue Remainder(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (TryEvaluateVectorBinary(left, "rem", right, out var vectorResult))
         {
@@ -5453,7 +5451,7 @@ internal readonly record struct RegisterVmValue(
         return false;
     }
 
-    private static RegisterVmValue AddPercentage(RegisterVmValue left, RegisterVmValue right)
+    private static BytecodeVmValue AddPercentage(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
@@ -5475,7 +5473,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.AddNumeric(leftNumber, delta), leftUnit);
     }
 
-    private static RegisterVmValue SubtractPercentage(RegisterVmValue left, RegisterVmValue right)
+    private static BytecodeVmValue SubtractPercentage(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
@@ -5497,7 +5495,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(GameEventScriptValueAlu.SubtractNumeric(leftNumber, delta), leftUnit);
     }
 
-    private static RegisterVmValue MultiplyPercentage(RegisterVmValue left, RegisterVmValue right)
+    private static BytecodeVmValue MultiplyPercentage(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
@@ -5521,7 +5519,7 @@ internal readonly record struct RegisterVmValue(
         return FromDecimalNumeric(result, leftUnit);
     }
 
-    private static RegisterVmValue DividePercentage(RegisterVmValue left, RegisterVmValue right)
+    private static BytecodeVmValue DividePercentage(BytecodeVmValue left, BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
@@ -5555,27 +5553,27 @@ internal readonly record struct RegisterVmValue(
     {
         switch (Kind)
         {
-            case RegisterVmValueKind.Boolean:
+            case BytecodeVmValueKind.Boolean:
                 number = GameEventScriptValueAlu.NumericValue.Finite(BooleanValue ? 1m : 0m);
                 unit = null;
                 isPercentage = false;
                 return true;
-            case RegisterVmValueKind.Integer:
+            case BytecodeVmValueKind.Integer:
                 number = GameEventScriptValueAlu.NumericValue.Finite(IntegerValue);
                 unit = null;
                 isPercentage = false;
                 return true;
-            case RegisterVmValueKind.Decimal:
+            case BytecodeVmValueKind.Decimal:
                 number = GameEventScriptValueAlu.NumericValue.Finite(Number);
                 unit = Unit;
                 isPercentage = false;
                 return true;
-            case RegisterVmValueKind.Percentage:
+            case BytecodeVmValueKind.Percentage:
                 number = GameEventScriptValueAlu.NumericValue.Finite(Number);
                 unit = null;
                 isPercentage = true;
                 return true;
-            case RegisterVmValueKind.Reference when ReferenceValue is { } reference &&
+            case BytecodeVmValueKind.Reference when ReferenceValue is { } reference &&
                                                        GameEventScriptValueAlu.TryCoerceNumericForOperation(reference, out var referenceNumber):
                 number = referenceNumber;
                 unit = GameEventScriptValue.TryGetDecimalUnit(reference, out var referenceUnit) ? referenceUnit : null;
@@ -5593,14 +5591,14 @@ internal readonly record struct RegisterVmValue(
     {
         switch (Kind)
         {
-            case RegisterVmValueKind.Boolean:
+            case BytecodeVmValueKind.Boolean:
                 number = BooleanValue ? 1m : 0m;
                 return true;
-            case RegisterVmValueKind.Integer:
+            case BytecodeVmValueKind.Integer:
                 number = IntegerValue;
                 return true;
-            case RegisterVmValueKind.Decimal:
-            case RegisterVmValueKind.Percentage:
+            case BytecodeVmValueKind.Decimal:
+            case BytecodeVmValueKind.Percentage:
                 number = Number;
                 return true;
             default:
@@ -5610,13 +5608,13 @@ internal readonly record struct RegisterVmValue(
     }
 
     private bool IsPercentageLike()
-        => Kind == RegisterVmValueKind.Percentage ||
+        => Kind == BytecodeVmValueKind.Percentage ||
            ReferenceValue is { } reference && reference.IsPercentage();
 
     private bool IsVectorLike()
         => ReferenceValue is GameEventScriptVector2Value or GameEventScriptVector3Value;
 
-    private static bool TryEvaluateVectorBinary(RegisterVmValue left, string operation, RegisterVmValue right, out RegisterVmValue value)
+    private static bool TryEvaluateVectorBinary(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (!left.IsVectorLike() && !right.IsVectorLike())
         {
@@ -5635,18 +5633,18 @@ internal readonly record struct RegisterVmValue(
     }
 
     public bool IsNothingLike()
-        => Kind == RegisterVmValueKind.Nothing ||
+        => Kind == BytecodeVmValueKind.Nothing ||
            ReferenceValue is { } reference && reference.IsNothing();
 
-    private static RegisterVmValue FromDecimalNumeric(GameEventScriptValueAlu.NumericValue number, GameEventScriptDecimalUnit? unit = null)
+    private static BytecodeVmValue FromDecimalNumeric(GameEventScriptValueAlu.NumericValue number, GameEventScriptDecimalUnit? unit = null)
         => number.IsFinite
             ? Decimal(number.Value, unit)
             : Reference(GameEventScriptValueAlu.ToGameEventScriptDecimal(number));
 
-    private static RegisterVmValue FromFinitePrimitiveNumericResult(
-        RegisterVmValue left,
+    private static BytecodeVmValue FromFinitePrimitiveNumericResult(
+        BytecodeVmValue left,
         string operation,
-        RegisterVmValue right,
+        BytecodeVmValue right,
         decimal value,
         GameEventScriptDecimalUnit? unit = null)
         => unit is null &&
@@ -5655,13 +5653,13 @@ internal readonly record struct RegisterVmValue(
             ? Integer(quotient)
             : unit is null &&
            operation is "+" or "-" or "*" or "mod" or "rem" &&
-           left.Kind == RegisterVmValueKind.Integer &&
-           right.Kind == RegisterVmValueKind.Integer &&
+           left.Kind == BytecodeVmValueKind.Integer &&
+           right.Kind == BytecodeVmValueKind.Integer &&
            TryToInteger(value, out var integer)
             ? Integer(integer)
             : Decimal(value, unit);
 
-    private static RegisterVmValue FromPercentageNumeric(GameEventScriptValueAlu.NumericValue number)
+    private static BytecodeVmValue FromPercentageNumeric(GameEventScriptValueAlu.NumericValue number)
         => number.IsFinite
             ? Percentage(number.Value)
             : FromDecimalNumeric(number);

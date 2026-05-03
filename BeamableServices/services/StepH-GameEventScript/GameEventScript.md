@@ -4,8 +4,8 @@ GameEventScript is a compact scripting language for event-driven game logic. It 
 designed for rules that react to messages, inspect immutable data, publish new
 messages, and delegate specialized calculations to host-provided extensions.
 
-This guide describes the current language as implemented by the RegisterVM
-runtime.
+This guide describes the current language as compiled to GameEventScript
+bytecode and executed by the BytecodeVM runtime.
 
 ## Contents
 
@@ -60,8 +60,8 @@ Important design choices:
 - Numeric invalidity is usually represented as decimal `NaN`.
 - Messages, handlers, collections, records, vectors, dice, ranges, and tags are
   first-class values.
-- Runtime behavior is defined by the JSON conformance tests and executed by
-  RegisterVM.
+- Runtime behavior is defined by the JSON conformance tests and executed by the
+  BytecodeVM runtime.
 
 ## Program Structure
 
@@ -1714,35 +1714,45 @@ public sealed class GameExtensionRegistry : IGameEventScriptExtensionRegistry
 Load with a registry:
 
 ```csharp
-var compiled = GameEventScriptManager.Compile(script);
+var bytecode = GameEventScriptManager.Compile(script);
 
 var host = GameEventScriptHost.CreateBuilder()
     .WithRegistry(new GameExtensionRegistry())
     .Build()
-    .Load(compiled);
+    .Load(bytecode);
 ```
 
 ## Host API
 
-Compile with `GameEventScriptManager.Compile(...)`.
+Compile GameEventScript source (`.ges`) to GameEventScript bytecode (`.gesb`)
+with `GameEventScriptManager.Compile(...)`.
 
 ```csharp
-var compiled = GameEventScriptManager.Compile(script);
+var bytecode = GameEventScriptManager.Compile(script);
 ```
 
 Compile options use the public GameEventScript options type:
 
 ```csharp
-var compiled = GameEventScriptManager.Compile(
+var bytecode = GameEventScriptManager.Compile(
     script,
     new GameEventScriptCompilationOptions
     {
         EnableDiagnostics = true
-    });
+});
 ```
 
-The compiled script implements `IGameEventScriptMessageHandlerCollection`, so it can
-be loaded into a host.
+For multiple source strings or files, use `GameEventScriptBuilder` directly:
+
+```csharp
+var bytecode = GameEventScriptBuilder.Create()
+    .AddScript(script)
+    .AddFile("combat.ges")
+    .WithOptimization()
+    .Compile();
+```
+
+The host loads bytecode and builds the BytecodeVM executable internally.
 
 ```csharp
 var published = new List<GameEventScriptMessage>();
@@ -1750,27 +1760,11 @@ var published = new List<GameEventScriptMessage>();
 var host = GameEventScriptHost.CreateBuilder()
     .WithPublishedMessageObserver(message => published.Add(message))
     .Build()
-    .Load(compiled);
+    .Load(bytecode);
 
 host.Publish(GameEventScriptMessage.Message(
     "Start",
     ("value", GameEventScriptValueFactory.Integer(3))));
-```
-
-You can also invoke a compiled script directly with a `GameEventScriptContext`.
-Host orchestration is preferred for normal runtime behavior because it handles
-queueing, dynamic extension binding, subscribers, priorities, diagnostics, and
-runtime limits.
-
-```csharp
-var emitted = new List<GameEventScriptMessage>();
-var context = new GameEventScriptContext(
-    GameEventScriptRandomGenerator.Create(),
-    message => emitted.Add(message));
-
-compiled.Invoke(
-    GameEventScriptMessage.Message("Start"),
-    context);
 ```
 
 ### Host builder options
@@ -1807,14 +1801,14 @@ Diagnostics are collected through `IGameEventScriptDiagnosticCollector`.
 ```csharp
 var diagnostics = new GameEventScriptDiagnosticTraceCollector();
 
-var compiled = GameEventScriptManager.Compile(
+var bytecode = GameEventScriptManager.Compile(
     script,
     new GameEventScriptCompilationOptions { EnableDiagnostics = true });
 
 var host = GameEventScriptHost.CreateBuilder()
     .WithDiagnosticCollector(diagnostics)
     .Build()
-    .Load(compiled);
+    .Load(bytecode);
 ```
 
 Diagnostic event kinds include:

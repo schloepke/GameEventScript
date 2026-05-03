@@ -1,3 +1,4 @@
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 
 namespace StepH_GameEventScript_Tests.Compiler;
@@ -19,9 +20,9 @@ public sealed class GameEventScriptModuleBuildErrorTests
             """;
 
         var exception = Assert.ThrowsExactly<GameEventScriptModuleBuildException>(() =>
-            GameEventScriptModuleBuilder.Create()
+            GameEventScriptBuilder.Create()
                 .AddScript(script, "location.ges")
-                .Build());
+                .BuildModule());
 
         var error = exception.Errors.Single(error => error.Kind == GameEventScriptModuleBuildErrorKind.DuplicateVariable);
         Assert.AreEqual("Location", error.ModuleName);

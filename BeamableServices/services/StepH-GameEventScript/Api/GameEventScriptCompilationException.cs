@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.Compiler;
 
-namespace StepH.GameEventScript.Compiler;
+namespace StepH.GameEventScript.Api;
 
 /// <summary>
 /// Represents an exception that occurs during the compilation of GameEventScript.

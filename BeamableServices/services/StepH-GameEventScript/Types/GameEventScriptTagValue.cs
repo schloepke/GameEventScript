@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -10,7 +10,7 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
 {
     public static readonly GameEventScriptTagValue Empty = new(string.Empty);
 
-    public static GameEventScriptTagValue GameEventScriptTag(string? value) => string.IsNullOrEmpty(value) ? Empty : new GameEventScriptTagValue(value);
+    public static GameEventScriptTagValue Create(string? value) => string.IsNullOrEmpty(value) ? Empty : new GameEventScriptTagValue(value);
 
     private GameEventScriptTagValue(string value)
     {
@@ -32,19 +32,19 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
     {
         if (string.Equals(Value, "infinity", StringComparison.Ordinal))
         {
-            value = DecimalInfinity();
+            value = GesDecimalInfinity();
             return true;
         }
 
         if (string.Equals(Value, "negativeinfinity", StringComparison.Ordinal))
         {
-            value = DecimalNegativeInfinity();
+            value = GesDecimalNegativeInfinity();
             return true;
         }
 
         if (string.Equals(Value, "nan", StringComparison.Ordinal))
         {
-            value = DecimalNaN();
+            value = GesDecimalNaN();
             return true;
         }
 
@@ -54,13 +54,13 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(Value);
+        value = GesText(Value);
         return true;
     }
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List(AsList());
+        value = GesList(AsList());
         return true;
     }
 

@@ -1,3 +1,4 @@
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
@@ -33,7 +34,7 @@ public sealed class GameEventScriptFastValueTests
     public void VectorsAreStoredWithoutReferenceBackingAndRoundTripWithUnits()
     {
         var vector2 = GameEventScriptFastValue.FromVector2(3m, 4m, GameEventScriptDecimalUnit.Meter);
-        var vector3 = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.Vector3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
+        var vector3 = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesVector3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
 
         Assert.IsFalse(vector2.IsReferenceBacked);
         Assert.IsFalse(vector3.IsReferenceBacked);
@@ -46,18 +47,18 @@ public sealed class GameEventScriptFastValueTests
         Assert.AreEqual(2m, vector3.Y);
         Assert.AreEqual(3m, vector3.Z);
         Assert.AreEqual(GameEventScriptDecimalUnit.Second, vector3.Unit);
-        Assert.AreEqual(GameEventScriptValueFactory.Vector2(3m, 4m, GameEventScriptDecimalUnit.Meter), vector2.ToGameEventScriptValue());
-        Assert.AreEqual(GameEventScriptValueFactory.Vector3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), vector3.ToGameEventScriptValue());
+        Assert.AreEqual(GameEventScriptValueFactory.GesVector2(3m, 4m, GameEventScriptDecimalUnit.Meter), vector2.ToGameEventScriptValue());
+        Assert.AreEqual(GameEventScriptValueFactory.GesVector3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), vector3.ToGameEventScriptValue());
     }
 
     [TestMethod]
     public void ReferenceValuesRemainReferenceBacked()
     {
         var text = GameEventScriptFastValue.FromText("hello");
-        var nan = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
-        var list = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.List([
-            GameEventScriptValueFactory.Integer(1),
-            GameEventScriptValueFactory.Integer(2)
+        var nan = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+        var list = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesList([
+            GameEventScriptValueFactory.GesInteger(1),
+            GameEventScriptValueFactory.GesInteger(2)
         ]));
 
         Assert.IsTrue(text.IsReferenceBacked);

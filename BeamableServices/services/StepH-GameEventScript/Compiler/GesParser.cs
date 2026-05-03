@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Compiler.GesTokenKind;
 
 namespace StepH.GameEventScript.Compiler;

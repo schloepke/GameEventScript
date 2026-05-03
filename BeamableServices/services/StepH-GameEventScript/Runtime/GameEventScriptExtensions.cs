@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
@@ -228,7 +229,7 @@ public readonly struct GameEventScriptFastValue
             unit,
             null);
 
-    public static GameEventScriptFastValue FromText(string value) => FromGameEventScriptValue(GameEventScriptValueFactory.Text(value));
+    public static GameEventScriptFastValue FromText(string value) => FromGameEventScriptValue(GameEventScriptValueFactory.GesText(value));
 
     public GameEventScriptValue ToGameEventScriptValue()
     {
@@ -240,12 +241,12 @@ public readonly struct GameEventScriptFastValue
         return Kind switch
         {
             GameEventScriptValueKind.Nothing => GameEventScriptValue.Nothing,
-            GameEventScriptValueKind.Boolean => GameEventScriptValueFactory.Boolean(BooleanValue),
-            GameEventScriptValueKind.Integer => GameEventScriptValueFactory.Integer(IntegerValue),
-            GameEventScriptValueKind.Decimal => GameEventScriptValueFactory.Decimal(NumberValue, Unit),
-            GameEventScriptValueKind.Percentage => GameEventScriptValueFactory.Percentage(NumberValue),
-            GameEventScriptValueKind.Vector2 => GameEventScriptValueFactory.Vector2(X, Y, Unit),
-            GameEventScriptValueKind.Vector3 => GameEventScriptValueFactory.Vector3(X, Y, Z, Unit),
+            GameEventScriptValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(BooleanValue),
+            GameEventScriptValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue),
+            GameEventScriptValueKind.Decimal => GameEventScriptValueFactory.GesDecimal(NumberValue, Unit),
+            GameEventScriptValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(NumberValue),
+            GameEventScriptValueKind.Vector2 => GameEventScriptValueFactory.GesVector2(X, Y, Unit),
+            GameEventScriptValueKind.Vector3 => GameEventScriptValueFactory.GesVector3(X, Y, Z, Unit),
             _ => GameEventScriptValue.Nothing
         };
     }

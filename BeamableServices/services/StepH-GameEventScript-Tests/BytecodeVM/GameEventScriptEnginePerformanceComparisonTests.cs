@@ -1,15 +1,17 @@
 using System.Diagnostics;
 using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.RegisterVM;
+using StepH.GameEventScript.BytecodeVM;
+using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.GameEventScriptMessage;
+using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
-namespace StepH_GameEventScript_Tests.RegisterVM;
+namespace StepH_GameEventScript_Tests.BytecodeVM;
 
 [TestClass]
-public sealed class RegisterVmPerformanceReportTests
+public sealed class BytecodeVmPerformanceReportTests
 {
     private const int WarmupRuns = 25;
     private const int MeasuredRuns = 1_000;
@@ -45,40 +47,40 @@ public sealed class RegisterVmPerformanceReportTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void RegisterVmRuntimeCostCanBeReported()
+    public void BytecodeVmRuntimeCostCanBeReported()
     {
-        var input = Message("Start", ("values", GameEventScriptValueFactory.List(
-            Enumerable.Range(1, 50).Select(value => GameEventScriptValueFactory.Integer(value)))));
+        var input = Create("Start", ("values", GameEventScriptValueFactory.GesList(
+            Enumerable.Range(1, 50).Select(value => GameEventScriptValueFactory.GesInteger(value)))));
 
         WarmUp(input);
 
-        var module = BuildPerformanceModule();
-        var registerVmCompile = Measure<IGameEventScriptMessageHandlerCollection>("registervm compile", () => CompileScript(module));
+        var bytecodeVmCompile = Measure<GameEventScriptBytecode>("ges compile", BuildPerformanceBytecode);
+        var bytecodeVmBuild = Measure<IGameEventScriptMessageHandlerCollection>("bytecodevm build", () => BuildExecutable(bytecodeVmCompile.Value));
 
-        var registerVmRun = MeasureRun(registerVmCompile.Value, input, MeasuredRuns);
+        var bytecodeVmRun = MeasureRun(bytecodeVmBuild.Value, input, MeasuredRuns);
 
-        Assert.AreEqual(MeasuredRuns, registerVmRun.PublishedMessages);
-        Assert.AreEqual("Done", registerVmRun.LastMessage.Name);
+        Assert.AreEqual(MeasuredRuns, bytecodeVmRun.PublishedMessages);
+        Assert.AreEqual("Done", bytecodeVmRun.LastMessage.Name);
 
-        WriteReport("registervm", registerVmCompile, registerVmRun);
+        WriteReport("ges compile", bytecodeVmCompile, bytecodeVmRun);
+        WriteReport("bytecodevm build", bytecodeVmBuild, bytecodeVmRun);
         TestContext.WriteLine("allocation values are cumulative thread allocations, not peak live memory.");
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("RegisterVM Dump:\n" + GameEventScriptBytecodeDumper.ToDebugText(CompileScript(module)));
+        TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
     }
 
     private static void WarmUp(GameEventScriptMessage input)
     {
-        var module = BuildPerformanceModule();
-        MeasureRun(CompileScript(module), input, WarmupRuns);
+        MeasureRun(BuildExecutable(BuildPerformanceBytecode()), input, WarmupRuns);
     }
 
-    private static GameEventScriptModule BuildPerformanceModule()
-        => GameEventScriptModuleBuilder.Create()
+    private static GameEventScriptBytecode BuildPerformanceBytecode()
+        => GameEventScriptBuilder.Create()
             .AddScript(PerformanceScript, "engine-performance.es")
-            .Build();
+            .Compile();
 
-    private static CompiledGameEventScript CompileScript(GameEventScriptModule module)
-        => RegisterVmCompiler.Compile(module);
+    private static CompiledGameEventScript BuildExecutable(GameEventScriptBytecode bytecode)
+        => BytecodeVmExecutableBuilder.Build(bytecode);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {
@@ -93,7 +95,7 @@ public sealed class RegisterVmPerformanceReportTests
     private static EngineRunMetrics MeasureRun(IGameEventScriptMessageHandlerCollection compiled, GameEventScriptMessage input, int iterations)
     {
         var publishedCount = 0;
-        var lastMessage = GameEventScriptMessage.EmptyMessage;
+        var lastMessage = GameEventScriptMessage.Empty;
         var host = GameEventScriptHost.CreateBuilder()
             .WithMaxProcessedEventsPerRun(128)
             .WithPublishedMessageObserver(message =>

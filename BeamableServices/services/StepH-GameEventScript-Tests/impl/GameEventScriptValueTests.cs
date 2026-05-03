@@ -1,7 +1,10 @@
-using StepH.GameEventScript;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Types.GameEventScriptDecimalUnits;
+using GameEventScriptDecimalUnits = StepH.GameEventScript.Types.GameEventScriptDecimalUnits;
 
 namespace StepH_GameEventScript_Tests.impl;
 
@@ -18,9 +21,9 @@ public class GameEventScriptValueScenarios
         };
         var sourceSet = new HashSet<GameEventScriptValue> { 1m, 2m };
 
-        var listValue = List(sourceList);
-        var dictionaryValue = Dictionary(sourceDictionary);
-        var setValue = Set(sourceSet);
+        var listValue = GesList(sourceList);
+        var dictionaryValue = GseDictionary(sourceDictionary);
+        var setValue = GseSet(sourceSet);
 
         sourceList.Add(3m);
         sourceDictionary["b"] = 2m;
@@ -34,17 +37,17 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void CollectionViewsProtectTheStoredValue()
     {
-        var listValue = List([1m, 2m]);
+        var listValue = GesList([1m, 2m]);
         var listView = listValue.AsList();
         Assert.ThrowsExactly<NotSupportedException>(() => ((IList<GameEventScriptValue>)listView)[0] = 9m);
         Assert.AreEqual(1m, listValue.AsList()[0].AsNumber());
 
-        var dictionaryValue = Dictionary(new Dictionary<string, GameEventScriptValue> { ["a"] = 1m });
+        var dictionaryValue = GseDictionary(new Dictionary<string, GameEventScriptValue> { ["a"] = 1m });
         var dictionaryView = dictionaryValue.AsDictionary();
         Assert.ThrowsExactly<NotSupportedException>(() => ((IDictionary<string, GameEventScriptValue>)dictionaryView)["b"] = 2m);
         Assert.HasCount(1, dictionaryValue.AsDictionary());
 
-        var setValue = Set([1m, 2m]);
+        var setValue = GseSet([1m, 2m]);
         var setCopy = setValue.AsSet();
         setCopy.Add(3m);
         Assert.HasCount(2, setValue.AsSet());
@@ -53,20 +56,20 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void EmptyValuesUseTypedSingletons()
     {
-        Assert.AreSame(Text(string.Empty), Text(string.Empty));
-        Assert.AreSame(OptionalNone(), OptionalNone());
-        Assert.AreSame(GameEventScriptValueFactory.List(null), GameEventScriptValueFactory.List(Array.Empty<GameEventScriptValue>()));
-        Assert.AreSame(GameEventScriptValueFactory.Dictionary(null), GameEventScriptValueFactory.Dictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
-        Assert.AreSame(GameEventScriptValueFactory.Set(null), GameEventScriptValueFactory.Set(Array.Empty<GameEventScriptValue>()));
-        Assert.AreSame(GameEventScriptValueFactory.Dice(null), GameEventScriptDiceValue.GameEventScriptDice(Array.Empty<int>()));
-        Assert.AreSame(GameEventScriptValueFactory.Message(GameEventScriptMessage.EmptyMessage), GameEventScriptValueFactory.Message(new GameEventScriptMessage(string.Empty)));
-        Assert.AreSame(GameEventScriptValueFactory.Handler(new GameEventScriptMessageSignature(string.Empty, [])), GameEventScriptValueFactory.Handler(new GameEventScriptMessageSignature(string.Empty, [])));
+        Assert.AreSame(GesText(string.Empty), GesText(string.Empty));
+        Assert.AreSame(GesOptionalNone(), GesOptionalNone());
+        Assert.AreSame(GesList(null), GesList(Array.Empty<GameEventScriptValue>()));
+        Assert.AreSame(GseDictionary(null), GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
+        Assert.AreSame(GseSet(null), GseSet(Array.Empty<GameEventScriptValue>()));
+        Assert.AreSame(GseDice((GameEventScriptDiceValue?)null), GameEventScriptDiceValue.Create(Array.Empty<int>()));
+        Assert.AreSame(GesMessage(GameEventScriptMessage.Empty), GesMessage(GameEventScriptMessage.Empty));
+        Assert.AreSame(GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])), GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])));
     }
 
     [TestMethod]
     public void StableComparisonOrdersValuesDeterministically()
     {
-        var values = new List<GameEventScriptValue> { Boolean(true), Text("b"), Decimal(2m), Integer(1), OptionalNone(), Text("a") };
+        var values = new List<GameEventScriptValue> { GesBoolean(true), GesText("b"), GesDecimal(2m), GesInteger(1), GesOptionalNone(), GesText("a") };
 
         values.Sort(GameEventScriptValue.StableComparer);
 
@@ -86,8 +89,8 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void EqualPercentagesHaveEqualHashCodes()
     {
-        var left = Percentage(0.25m);
-        var right = Percentage(0.25m);
+        var left = GesPercentage(0.25m);
+        var right = GesPercentage(0.25m);
 
         Assert.AreEqual(left, right);
         Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
@@ -96,11 +99,11 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void DecimalUnitsPreserveValueUnitAndFormatting()
     {
-        var over = Degree(450m);
-        var negative = Degree(-270m);
-        var fullTurn = Degree(360m);
-        var distance = Meter(100m);
-        var duration = Seconds(15m);
+        var over = GesDegree(450m);
+        var negative = GesDegree(-270m);
+        var fullTurn = GesDegree(360m);
+        var distance = GesMeter(100m);
+        var duration = GesSeconds(15m);
 
         Assert.AreEqual(GameEventScriptValueKind.Decimal, over.Kind);
         Assert.AreEqual(450m, over.AsNumber());
@@ -109,7 +112,7 @@ public class GameEventScriptValueScenarios
         Assert.AreEqual(-270m, negative.AsNumber());
         Assert.AreEqual(360m, fullTurn.AsNumber());
         Assert.AreNotEqual(over, negative);
-        Assert.AreNotEqual(over, Decimal(450m));
+        Assert.AreNotEqual(over, GesDecimal(450m));
         Assert.AreEqual(90m, GameEventScriptValue.WrapDegrees(over.AsNumber()));
         Assert.AreEqual(90m, GameEventScriptValue.WrapDegrees(negative.AsNumber()));
         Assert.AreEqual(0m, GameEventScriptValue.WrapDegrees(fullTurn.AsNumber()));
@@ -121,21 +124,21 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void DecimalUnitsParticipateInStableOrderingButNotNumericEquality()
     {
-        var values = new List<GameEventScriptValue> { Degree(350m), Degree(10m), Decimal(10m), Meter(10m) };
+        var values = new List<GameEventScriptValue> { GesDegree(350m), GesDegree(10m), GesDecimal(10m), GesMeter(10m) };
 
         values.Sort(GameEventScriptValue.StableComparer);
 
-        Assert.AreNotEqual(Degree(10m), Decimal(10m));
-        Assert.AreNotEqual(Degree(10m), Meter(10m));
+        Assert.AreNotEqual(GesDegree(10m), GesDecimal(10m));
+        Assert.AreNotEqual(GesDegree(10m), GesMeter(10m));
         CollectionAssert.AreEqual(new[] { "10", "10°", "350°", "10m" }, values.Select(value => value.ToString()).ToArray());
     }
 
     [TestMethod]
     public void VectorValuesExposeStableComponents()
     {
-        var vector2 = Vector2(10.5m, -2m);
-        var vector2Equal = Vector2(10.5m, -2m);
-        var vector3 = Vector3(10.5m, -2m, 3m);
+        var vector2 = GesVector2(10.5m, -2m);
+        var vector2Equal = GesVector2(10.5m, -2m);
+        var vector3 = GesVector3(10.5m, -2m, 3m);
 
         Assert.AreEqual(GameEventScriptValueKind.Vector2, vector2.Kind);
         Assert.AreEqual(vector2, vector2Equal);
@@ -143,14 +146,14 @@ public class GameEventScriptValueScenarios
         Assert.AreEqual(10.5m, vector2.AsDictionary()["x"].AsNumber());
         Assert.AreEqual(-2m, vector2.AsList()[1].AsNumber());
         Assert.AreEqual(3m, vector3.AsDictionary()["z"].AsNumber());
-        Assert.AreSame(GameEventScriptVector2Value.Zero, Vector2(0m, 0m));
-        Assert.AreSame(GameEventScriptVector3Value.Zero, Vector3(0m, 0m, 0m));
+        Assert.AreSame(GameEventScriptVector2Value.Zero, GesVector2(0m, 0m));
+        Assert.AreSame(GameEventScriptVector3Value.Zero, GesVector3(0m, 0m, 0m));
         Assert.AreEqual("vector2[x: 10.5, y: -2]", vector2.ToString());
 
-        var unitVector = Vector2(0m, 0m, GameEventScriptDecimalUnit.Meter);
-        var sameComponentsDifferentUnit = Vector2(0m, 0m, GameEventScriptDecimalUnit.Second);
+        var unitVector = GesVector2(0m, 0m, GameEventScriptDecimalUnit.Meter);
+        var sameComponentsDifferentUnit = GesVector2(0m, 0m, GameEventScriptDecimalUnit.Second);
         Assert.AreNotSame(GameEventScriptVector2Value.Zero, unitVector);
-        Assert.AreNotEqual(Vector2(0m, 0m), unitVector);
+        Assert.AreNotEqual(GesVector2(0m, 0m), unitVector);
         Assert.AreNotEqual(unitVector, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitVector.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
         Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptVector2Value)unitVector).Unit);
@@ -162,8 +165,8 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void PercentagesCompareAsNumericRatios()
     {
-        var percentage = Percentage(0.25m);
-        var decimalRatio = Decimal(0.25m);
+        var percentage = GesPercentage(0.25m);
+        var decimalRatio = GesDecimal(0.25m);
 
         Assert.IsTrue(percentage.IsNumber());
         Assert.AreEqual(decimalRatio, percentage);
@@ -173,36 +176,36 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void PercentageBinaryAluAppliesRelativeBases()
     {
-        AssertDecimal(105m, EvaluatePercentageBinary(Decimal(100m), "+", Percentage(0.05m)));
-        AssertDecimal(95m, EvaluatePercentageBinary(Integer(100), "-", Percentage(0.05m)));
-        AssertDecimal(5m, EvaluatePercentageBinary(Decimal(100m), "*", Percentage(0.05m)));
-        AssertDecimal(2000m, EvaluatePercentageBinary(Integer(100), "/", Percentage(0.05m)));
-        AssertNaN(EvaluatePercentageBinary(Percentage(0.05m), "+", Decimal(100m)));
-        AssertNaN(EvaluatePercentageBinary(Percentage(0.05m), "-", Meter(100m)));
+        AssertDecimal(105m, EvaluatePercentageBinary(GesDecimal(100m), "+", GesPercentage(0.05m)));
+        AssertDecimal(95m, EvaluatePercentageBinary(GesInteger(100), "-", GesPercentage(0.05m)));
+        AssertDecimal(5m, EvaluatePercentageBinary(GesDecimal(100m), "*", GesPercentage(0.05m)));
+        AssertDecimal(2000m, EvaluatePercentageBinary(GesInteger(100), "/", GesPercentage(0.05m)));
+        AssertNaN(EvaluatePercentageBinary(GesPercentage(0.05m), "+", GesDecimal(100m)));
+        AssertNaN(EvaluatePercentageBinary(GesPercentage(0.05m), "-", GesMeter(100m)));
     }
 
     [TestMethod]
     public void PercentageBinaryAluPreservesPercentageWhenPercentageIsSubject()
     {
-        AssertPercentage(0.30m, EvaluatePercentageBinary(Percentage(0.15m), "+", Percentage(0.15m)));
-        AssertPercentage(0.10m, EvaluatePercentageBinary(Percentage(0.15m), "-", Percentage(0.05m)));
-        AssertPercentage(0.30m, EvaluatePercentageBinary(Percentage(0.15m), "*", Integer(2)));
-        AssertPercentage(0.05m, EvaluatePercentageBinary(Percentage(0.15m), "/", Integer(3)));
-        AssertDecimal(0.30m, EvaluatePercentageBinary(Integer(2), "*", Percentage(0.15m)));
-        AssertPercentage(0.0225m, EvaluatePercentageBinary(Percentage(0.15m), "*", Percentage(0.15m)));
-        AssertDecimal(1m, EvaluatePercentageBinary(Percentage(0.15m), "/", Percentage(0.15m)));
-        AssertInfinity(EvaluatePercentageBinary(Percentage(0.15m), "/", Integer(0)));
+        AssertPercentage(0.30m, EvaluatePercentageBinary(GesPercentage(0.15m), "+", GesPercentage(0.15m)));
+        AssertPercentage(0.10m, EvaluatePercentageBinary(GesPercentage(0.15m), "-", GesPercentage(0.05m)));
+        AssertPercentage(0.30m, EvaluatePercentageBinary(GesPercentage(0.15m), "*", GesInteger(2)));
+        AssertPercentage(0.05m, EvaluatePercentageBinary(GesPercentage(0.15m), "/", GesInteger(3)));
+        AssertDecimal(0.30m, EvaluatePercentageBinary(GesInteger(2), "*", GesPercentage(0.15m)));
+        AssertPercentage(0.0225m, EvaluatePercentageBinary(GesPercentage(0.15m), "*", GesPercentage(0.15m)));
+        AssertDecimal(1m, EvaluatePercentageBinary(GesPercentage(0.15m), "/", GesPercentage(0.15m)));
+        AssertInfinity(EvaluatePercentageBinary(GesPercentage(0.15m), "/", GesInteger(0)));
     }
 
     [TestMethod]
     public void PercentageBinaryAluPreservesUnitsForRelativeBases()
     {
-        AssertDecimalUnit(105m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "+", Percentage(0.05m)));
-        AssertDecimalUnit(95m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "-", Percentage(0.05m)));
-        AssertDecimalUnit(5m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "*", Percentage(0.05m)));
-        AssertDecimalUnit(5m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Percentage(0.05m), "*", Meter(100m)));
-        AssertDecimalUnit(2000m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(Meter(100m), "/", Percentage(0.05m)));
-        AssertNaN(EvaluatePercentageBinary(Percentage(0.05m), "/", Meter(100m)));
+        AssertDecimalUnit(105m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(GesMeter(100m), "+", GesPercentage(0.05m)));
+        AssertDecimalUnit(95m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(GesMeter(100m), "-", GesPercentage(0.05m)));
+        AssertDecimalUnit(5m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(GesMeter(100m), "*", GesPercentage(0.05m)));
+        AssertDecimalUnit(5m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(GesPercentage(0.05m), "*", GesMeter(100m)));
+        AssertDecimalUnit(2000m, GameEventScriptDecimalUnit.Meter, EvaluatePercentageBinary(GesMeter(100m), "/", GesPercentage(0.05m)));
+        AssertNaN(EvaluatePercentageBinary(GesPercentage(0.05m), "/", GesMeter(100m)));
     }
 
     [TestMethod]
@@ -225,7 +228,7 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void SetsStayCanonicallySorted()
     {
-        var setValue = Set([Decimal(3m), Text("z"), Integer(1), Text("a"), Boolean(false), Decimal(2m)]);
+        var setValue = GseSet([GesDecimal(3m), GesText("z"), GesInteger(1), GesText("a"), GesBoolean(false), GesDecimal(2m)]);
 
         var ordered = setValue.AsSet().ToArray();
 
@@ -245,7 +248,7 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void NegativeDiceKeepOrDropCountsProduceEmptyDice()
     {
-        var dice = GameEventScriptDiceValue.GameEventScriptDice([6, 3, 1]);
+        var dice = GameEventScriptDiceValue.Create([6, 3, 1]);
         var kept = dice.KeepHighest(-1);
         var dropped = dice.DropLowest(-1);
 
@@ -256,8 +259,8 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void RangesStopAtIntegerBoundsWithoutOverflowing()
     {
-        var ascending = Range(long.MaxValue - 1, long.MaxValue, 1).AsEnumerable().Select(value => value.AsInteger()).ToArray();
-        var descending = Range(long.MinValue + 1, long.MinValue, -1).AsEnumerable().Select(value => value.AsInteger()).ToArray();
+        var ascending = GesRange(long.MaxValue - 1, long.MaxValue).AsEnumerable().Select(value => value.AsInteger()).ToArray();
+        var descending = GesRange(long.MinValue + 1, long.MinValue, -1).AsEnumerable().Select(value => value.AsInteger()).ToArray();
 
         CollectionAssert.AreEqual(new[] { long.MaxValue - 1, long.MaxValue }, ascending);
         CollectionAssert.AreEqual(new[] { long.MinValue + 1, long.MinValue }, descending);
@@ -266,7 +269,7 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void ClrDictionariesWithNonTextKeysDoNotThrow()
     {
-        var value = GameEventScriptValueFactory.FromClr(new Dictionary<int, string> { [1] = "a" });
+        var value = new Dictionary<int, string> { [1] = "a" }.ToGseType();
 
         Assert.AreEqual(GameEventScriptValueKind.Dictionary, value.Kind);
         Assert.HasCount(0, value.AsDictionary());

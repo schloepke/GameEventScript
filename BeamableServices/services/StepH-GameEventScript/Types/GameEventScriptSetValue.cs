@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -10,7 +10,7 @@ public sealed class GameEventScriptSetValue : GameEventScriptValue
 {
     public static readonly GameEventScriptSetValue Empty = new(new SortedSet<GameEventScriptValue>(StableComparer));
 
-    public static GameEventScriptSetValue GameEventScriptSet(IEnumerable<GameEventScriptValue>? values, IComparer<GameEventScriptValue>? comparer = null)
+    public static GameEventScriptSetValue Create(IEnumerable<GameEventScriptValue>? values, IComparer<GameEventScriptValue>? comparer = null)
     {
         if (values == null) return Empty;
         var set = new SortedSet<GameEventScriptValue>(values.Select(value => value ?? Nothing), comparer ?? StableComparer);
@@ -41,7 +41,7 @@ public sealed class GameEventScriptSetValue : GameEventScriptValue
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List(AsSet());
+        value = GesList(AsSet());
         return true;
     }
 

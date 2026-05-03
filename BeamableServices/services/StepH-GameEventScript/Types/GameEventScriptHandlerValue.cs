@@ -4,7 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using StepH.GameEventScript.Api;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -20,9 +21,9 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
 
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
-            ["name"] = Text(signature.Name),
-            ["parameters"] = List(signature.Parameters.Select(parameter => GameEventScriptValueFactory.Text(parameter))),
-            ["signatureid"] = Text(signature.SignatureId)
+            ["name"] = GesText(signature.Name),
+            ["parameters"] = GesList(signature.Parameters.Select(parameter => GameEventScriptValueFactory.GesText(parameter))),
+            ["signatureid"] = GesText(signature.SignatureId)
         };
 
         _members = new ReadOnlyDictionary<string, GameEventScriptValue>(map);
@@ -42,16 +43,16 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = Dictionary(AsDictionary());
+        value = GseDictionary(AsDictionary());
         return true;
     }
 
-    public static GameEventScriptHandlerValue GameEventScriptHandler(GameEventScriptMessageSignature? signature)
+    public static GameEventScriptHandlerValue Create(GameEventScriptMessageSignature? signature)
         => signature == null || signature.SignatureId == GameEventScriptMessageSignature.Empty.SignatureId ? Empty : new GameEventScriptHandlerValue(signature);
 }

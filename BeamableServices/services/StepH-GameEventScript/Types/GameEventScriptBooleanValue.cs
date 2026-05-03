@@ -1,6 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -9,7 +9,7 @@ public sealed class GameEventScriptBooleanValue : GameEventScriptValue
     public static readonly GameEventScriptBooleanValue True = new(true);
     public static readonly GameEventScriptBooleanValue False = new(false);
 
-    public static GameEventScriptBooleanValue GameEventScriptBoolean(bool value) => value ? True : False;
+    public static GameEventScriptBooleanValue Create(bool value) => value ? True : False;
 
    private GameEventScriptBooleanValue(bool value)
     {
@@ -30,13 +30,13 @@ public sealed class GameEventScriptBooleanValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = Decimal(Value ? 1m : 0m);
+        value = GesDecimal(Value ? 1m : 0m);
         return true;
     }
 
     internal override bool TryConvertToInteger(out GameEventScriptValue value)
     {
-        value = Integer(Value ? 1 : 0);
+        value = GesInteger(Value ? 1 : 0);
         return true;
     }
 
@@ -48,7 +48,7 @@ public sealed class GameEventScriptBooleanValue : GameEventScriptValue
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 

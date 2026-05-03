@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using System.Globalization;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -10,7 +10,7 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
 {
     public static readonly GameEventScriptTextValue Empty = new(string.Empty);
 
-    public static GameEventScriptTextValue GameEventScriptText(string? value) => string.IsNullOrEmpty(value) ? Empty : new GameEventScriptTextValue(value);
+    public static GameEventScriptTextValue Create(string? value) => string.IsNullOrEmpty(value) ? Empty : new GameEventScriptTextValue(value);
 
     private GameEventScriptTextValue(string value)
     {
@@ -49,7 +49,7 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
     {
         if (decimal.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
         {
-            value = Decimal(number);
+            value = GesDecimal(number);
             return true;
         }
 
@@ -61,13 +61,13 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
     {
         if (long.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer))
         {
-            value = Integer(integer);
+            value = GesInteger(integer);
             return true;
         }
 
         if (decimal.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decimalNumber))
         {
-            value = Integer(ToIntegerSaturated(decimalNumber));
+            value = GesInteger(ToIntegerSaturated(decimalNumber));
             return true;
         }
 
@@ -79,19 +79,19 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
     {
         if (bool.TryParse(Value, out var boolean))
         {
-            value = Boolean(boolean);
+            value = GesBoolean(boolean);
             return true;
         }
 
         if (string.Equals(Value, "1", System.StringComparison.Ordinal))
         {
-            value = Boolean(true);
+            value = GesBoolean(true);
             return true;
         }
 
         if (string.Equals(Value, "0", System.StringComparison.Ordinal))
         {
-            value = Boolean(false);
+            value = GesBoolean(false);
             return true;
         }
 
@@ -107,7 +107,7 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List(AsList());
+        value = GesList(AsList());
         return true;
     }
 

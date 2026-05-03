@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Types;
 
@@ -78,7 +79,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public int CompareTo(GameEventScriptValue? other) => other is null ? 1 : StableComparerInstance.Compare(this, other);
 
-    public virtual GameEventScriptOptionalValue AsOptional() => GameEventScriptOptionalValue.GameEventScriptOptionalSome(this);
+    public virtual GameEventScriptOptionalValue AsOptional() => GameEventScriptOptionalValue.Create(this);
 
     public virtual IReadOnlyList<GameEventScriptValue> AsList() => [];
 
@@ -107,7 +108,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
         if (!selector.TryUnwrapOptional(out var lookup))
         {
-            return GameEventScriptValueFactory.OptionalNone();
+            return GameEventScriptValueFactory.GesOptionalNone();
         }
 
         var key = lookup.AsText();
@@ -166,7 +167,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     {
         if (this is GameEventScriptDecimalValue { Unit: { } unit })
         {
-            return $":{ToDisplayTypeName(GameEventScriptDecimalUnits.ToTypeName(unit))}";
+            return $":{ToDisplayTypeName(unit.ToTypeName())}";
         }
 
         return Kind switch
@@ -378,13 +379,13 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         return hash.ToHashCode();
     }
 
-    public static implicit operator GameEventScriptValue(string value) => GameEventScriptValueFactory.Text(value);
-    public static implicit operator GameEventScriptValue(bool value) => GameEventScriptValueFactory.Boolean(value);
-    public static implicit operator GameEventScriptValue(int value) => GameEventScriptValueFactory.Integer(value);
-    public static implicit operator GameEventScriptValue(long value) => GameEventScriptValueFactory.Integer(value);
-    public static implicit operator GameEventScriptValue(decimal value) => GameEventScriptValueFactory.Decimal(value);
-    public static implicit operator GameEventScriptValue(float value) => GameEventScriptDecimalValue.GameEventScriptDecimal(value);
-    public static implicit operator GameEventScriptValue(double value) => GameEventScriptDecimalValue.GameEventScriptDecimal(value);
+    public static implicit operator GameEventScriptValue(string value) => GameEventScriptValueFactory.GesText(value);
+    public static implicit operator GameEventScriptValue(bool value) => GameEventScriptValueFactory.GesBoolean(value);
+    public static implicit operator GameEventScriptValue(int value) => GameEventScriptValueFactory.GesInteger(value);
+    public static implicit operator GameEventScriptValue(long value) => GameEventScriptValueFactory.GesInteger(value);
+    public static implicit operator GameEventScriptValue(decimal value) => GameEventScriptValueFactory.GesDecimal(value);
+    public static implicit operator GameEventScriptValue(float value) => GameEventScriptDecimalValue.Create(value);
+    public static implicit operator GameEventScriptValue(double value) => GameEventScriptDecimalValue.Create(value);
 
     private static GameEventScriptValue RequireNotNull(GameEventScriptValue? value) => value ?? Nothing;
 
@@ -724,7 +725,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     }
 
     internal static IReadOnlyList<GameEventScriptValue> CreateCharacterList(string value)
-        => CreateReadOnlyList((value ?? string.Empty).Select(ch => GameEventScriptValueFactory.Text(ch.ToString())));
+        => CreateReadOnlyList((value ?? string.Empty).Select(ch => GameEventScriptValueFactory.GesText(ch.ToString())));
 
     internal static bool TryConvertSequenceToDice(IEnumerable<GameEventScriptValue>? source, out GameEventScriptValue value)
     {
@@ -753,7 +754,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             rolls.Add((int)integer);
         }
 
-        value = GameEventScriptValueFactory.Dice(GameEventScriptDiceValue.GameEventScriptDice(rolls));
+        value = GameEventScriptValueFactory.GseDice(GameEventScriptDiceValue.Create(rolls));
         return true;
     }
 
@@ -783,7 +784,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
         var formatted = value.Value.ToString("0.############################", CultureInfo.InvariantCulture);
         return value.Unit.HasValue
-            ? $"{formatted}{GameEventScriptDecimalUnits.ToSuffix(value.Unit.Value)}"
+            ? $"{formatted}{value.Unit.Value.ToSuffix()}"
             : formatted;
     }
 
@@ -852,7 +853,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     internal static string FormatDecimalComponent(decimal value, GameEventScriptDecimalUnit? unit = null)
     {
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
-        return unit.HasValue ? $"{formatted}{GameEventScriptDecimalUnits.ToSuffix(unit.Value)}" : formatted;
+        return unit.HasValue ? $"{formatted}{unit.Value.ToSuffix()}" : formatted;
     }
 
     internal static long ToIntegerPercentage(decimal ratio)

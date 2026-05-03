@@ -3,15 +3,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.BytecodeVM;
 
-internal static class RegisterVmProgramCompiler
+internal static class BytecodeVmExecutionPlanBuilder
 {
-    public static RegisterVmExecutionPlan CompileHandlerPlan(
+    public static BytecodeVmExecutionPlan CompileHandlerPlan(
         string messageName,
         int declarationOrder,
         IReadOnlyList<string> parameters,
@@ -23,7 +24,7 @@ internal static class RegisterVmProgramCompiler
         if (!TryValidateStatements(statements, callables, out var failureReason))
         {
             throw new GameEventScriptCompilationException(
-                $"RegisterVM compiler does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
+                $"BytecodeVM execution planner does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
         }
 
         var slotCollector = new SlotCollector(callables, typeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal));
@@ -45,7 +46,7 @@ internal static class RegisterVmProgramCompiler
             programCompiler.CompileStatementPrograms(statement);
         }
 
-        return RegisterVmExecutionPlan.Create(
+        return BytecodeVmExecutionPlan.Create(
             slotCollector.Slots,
             programCompiler.ExpressionPrograms,
             programCompiler.PublishLayouts,
@@ -997,7 +998,7 @@ internal static class RegisterVmProgramCompiler
                 return true;
 
             default:
-                failureReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} RegisterVM selector.";
+                failureReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} BytecodeVM selector.";
                 return false;
         }
     }
@@ -1535,12 +1536,12 @@ internal static class RegisterVmProgramCompiler
     {
         private readonly IReadOnlyDictionary<string, GameEventScriptCallableDefinition> _callables = callables;
         private readonly Func<GameEventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
-        private readonly Dictionary<ExpressionNode, RegisterVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
-        private readonly Dictionary<PublishStatementNode, RegisterVmPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
+        private readonly Dictionary<ExpressionNode, BytecodeVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
+        private readonly Dictionary<PublishStatementNode, BytecodeVmPublishLayout> _publishLayouts = new(ReferenceEqualityComparer<PublishStatementNode>.Instance);
 
-        public IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> ExpressionPrograms => _expressionPrograms;
+        public IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> ExpressionPrograms => _expressionPrograms;
 
-        public IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> PublishLayouts => _publishLayouts;
+        public IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> PublishLayouts => _publishLayouts;
 
         public int MaxStackDepth { get; private set; } = 1;
 
@@ -1617,23 +1618,23 @@ internal static class RegisterVmProgramCompiler
             }
         }
 
-        private RegisterVmExpressionProgram CompileExpression(ExpressionNode expression)
+        private BytecodeVmExpressionProgram CompileExpression(ExpressionNode expression)
         {
             if (_expressionPrograms.TryGetValue(expression, out var program))
             {
                 return program;
             }
 
-            var instructions = new List<RegisterVmProgramInstruction>();
+            var instructions = new List<BytecodeVmProgramInstruction>();
             var builder = new ExpressionBuilder(this, instructions);
             builder.EmitExpression(expression);
-            program = new RegisterVmExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
+            program = new BytecodeVmExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
             _expressionPrograms[expression] = program;
             MaxStackDepth = Math.Max(MaxStackDepth, program.MaxStackDepth + 8);
             return program;
         }
 
-        private RegisterVmPublishLayout CompilePublishLayout(PublishStatementNode publish)
+        private BytecodeVmPublishLayout CompilePublishLayout(PublishStatementNode publish)
         {
             if (_publishLayouts.TryGetValue(publish, out var layout))
             {
@@ -1642,11 +1643,11 @@ internal static class RegisterVmProgramCompiler
 
             if (publish.MessageExpression is not MessageLiteralExpressionNode message)
             {
-                throw new GameEventScriptCompilationException("RegisterVM compiler does not support this publish expression.");
+                throw new GameEventScriptCompilationException("BytecodeVM execution planner does not support this publish expression.");
             }
 
             var argumentNames = new string[message.Arguments.Count];
-            var argumentPrograms = new RegisterVmExpressionProgram[message.Arguments.Count];
+            var argumentPrograms = new BytecodeVmExpressionProgram[message.Arguments.Count];
             for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
             {
                 var argument = message.Arguments[argumentIndex];
@@ -1654,7 +1655,7 @@ internal static class RegisterVmProgramCompiler
                 argumentPrograms[argumentIndex] = CompileExpression(argument.Expression);
             }
 
-            layout = new RegisterVmPublishLayout(
+            layout = new BytecodeVmPublishLayout(
                 GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
                 GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
                 argumentNames,
@@ -1666,26 +1667,26 @@ internal static class RegisterVmProgramCompiler
         private bool TryGetSlot(string name, out int slot)
             => slots.TryGetValue(name, out slot);
 
-        private bool TryGetCastKind(string typeName, out RegisterVmCastKind kind)
+        private bool TryGetCastKind(string typeName, out BytecodeVmCastKind kind)
         {
             kind = typeName switch
             {
-                "boolean" => RegisterVmCastKind.Boolean,
-                "integer" => RegisterVmCastKind.Integer,
-                "decimal" => RegisterVmCastKind.Decimal,
-                "number" => RegisterVmCastKind.Number,
-                "percentage" => RegisterVmCastKind.Percentage,
-                "degree" => RegisterVmCastKind.Degree,
-                "meter" => RegisterVmCastKind.Meter,
-                "second" => RegisterVmCastKind.Second,
-                "sequence" => RegisterVmCastKind.Sequence,
+                "boolean" => BytecodeVmCastKind.Boolean,
+                "integer" => BytecodeVmCastKind.Integer,
+                "decimal" => BytecodeVmCastKind.Decimal,
+                "number" => BytecodeVmCastKind.Number,
+                "percentage" => BytecodeVmCastKind.Percentage,
+                "degree" => BytecodeVmCastKind.Degree,
+                "meter" => BytecodeVmCastKind.Meter,
+                "second" => BytecodeVmCastKind.Second,
+                "sequence" => BytecodeVmCastKind.Sequence,
                 _ => default
             };
 
             return IsKnownTypeCast(typeName);
         }
 
-        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<RegisterVmProgramInstruction> instructions)
+        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<BytecodeVmProgramInstruction> instructions)
         {
             private int _stackDepth;
 
@@ -1696,40 +1697,39 @@ internal static class RegisterVmProgramCompiler
                 switch (expression)
                 {
                     case BooleanLiteralExpressionNode boolean:
-                        EmitLoadConstant(RegisterVmValue.Boolean(boolean.Value));
+                        EmitLoadConstant(BytecodeVmValue.Boolean(boolean.Value));
                         return;
 
                     case IntegerLiteralExpressionNode integer:
-                        EmitLoadConstant(RegisterVmValue.Integer(integer.Value));
+                        EmitLoadConstant(BytecodeVmValue.Integer(integer.Value));
                         return;
 
                     case DecimalLiteralExpressionNode decimalLiteral:
-                        EmitLoadConstant(RegisterVmValue.Decimal(decimalLiteral.Value));
+                        EmitLoadConstant(BytecodeVmValue.Decimal(decimalLiteral.Value));
                         return;
 
                     case PercentageLiteralExpressionNode percentage:
-                        EmitLoadConstant(RegisterVmValue.Percentage(percentage.PercentValue / 100m));
+                        EmitLoadConstant(BytecodeVmValue.Percentage(percentage.PercentValue / 100m));
                         return;
 
                     case UnitDecimalLiteralExpressionNode unitDecimal:
                         EmitLoadConstant(GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                            ? RegisterVmValue.Decimal(unitDecimal.Value, unit)
-                            : RegisterVmValue.NaN());
+                            ? BytecodeVmValue.Decimal(unitDecimal.Value, unit)
+                            : BytecodeVmValue.NaN());
                         return;
 
                     case TextLiteralExpressionNode text:
-                        EmitLoadConstant(RegisterVmValue.Reference(GameEventScriptValueFactory.Text(text.Value)));
+                        EmitLoadConstant(BytecodeVmValue.Reference(GameEventScriptValueFactory.GesText(text.Value)));
                         return;
 
                     case TagLiteralExpressionNode tag:
-                        EmitLoadConstant(RegisterVmValue.Reference(GameEventScriptValueFactory.Tag(tag.Name)));
+                        EmitLoadConstant(BytecodeVmValue.Reference(GameEventScriptValueFactory.GesTag(tag.Name)));
                         return;
 
                     case HandlerLiteralExpressionNode handler:
                     {
                         var parameterNames = handler.SignatureLabels.ToArray();
-                        EmitLoadConstant(RegisterVmValue.Reference(GameEventScriptValueFactory.Handler(
-                            new GameEventScriptMessageSignature(handler.Message, parameterNames))));
+                        EmitLoadConstant(BytecodeVmValue.Reference(GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create(handler.Message, parameterNames))));
                         return;
                     }
 
@@ -1742,8 +1742,8 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.BuildMessage,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.BuildMessage,
                             A: message.Arguments.Count,
                             DiagnosticName: GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
                             DiagnosticArgumentName: GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
@@ -1761,8 +1761,8 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.BindHandler,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.BindHandler,
                             A: handlerBind.Arguments.Count,
                             Names: bindArgumentNames));
                         CollapseValuesToSingle(handlerBind.Arguments.Count + 1);
@@ -1781,8 +1781,8 @@ internal static class RegisterVmProgramCompiler
                             extensionCall.ExtensionName,
                             extensionCall.FunctionName,
                             extensionArgumentNames);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.CallExtension,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.CallExtension,
                             A: extensionCall.Arguments.Count,
                             B: extensionReferenceIndex,
                             DiagnosticName: extensionCall.ExtensionName,
@@ -1797,7 +1797,7 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.BuildList, A: list.Items.Count));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.BuildList, A: list.Items.Count));
                         CollapseValuesToSingle(list.Items.Count);
                         return;
 
@@ -1807,7 +1807,7 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.BuildSequence, A: sequence.Items.Count));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.BuildSequence, A: sequence.Items.Count));
                         CollapseValuesToSingle(sequence.Items.Count);
                         return;
 
@@ -1817,7 +1817,7 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.BuildSet, A: set.Items.Count));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.BuildSet, A: set.Items.Count));
                         CollapseValuesToSingle(set.Items.Count);
                         return;
 
@@ -1830,8 +1830,8 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(entry.Value);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.BuildDictionary,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.BuildDictionary,
                             A: dictionary.Entries.Count,
                             Names: names));
                         CollapseValuesToSingle(dictionary.Entries.Count);
@@ -1840,17 +1840,17 @@ internal static class RegisterVmProgramCompiler
                     case IdentifierExpressionNode identifier:
                         if (!compiler.TryGetSlot(identifier.Name, out var slot))
                         {
-                            throw new InvalidOperationException($"Missing RegisterVM local slot '{identifier.Name}'.");
+                            throw new InvalidOperationException($"Missing BytecodeVM local slot '{identifier.Name}'.");
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.LoadSlot, slot));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadSlot, slot));
                         Push();
                         return;
 
                     case UnaryExpressionNode unary:
                         EmitExpression(unary.Operand);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.Unary,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.Unary,
                             DiagnosticName: unary.Operator));
                         return;
 
@@ -1860,8 +1860,8 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(argument);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.Variadic,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.Variadic,
                             A: variadic.Arguments.Count,
                             DiagnosticName: variadic.Operator));
                         CollapseValuesToSingle(variadic.Arguments.Count);
@@ -1871,14 +1871,14 @@ internal static class RegisterVmProgramCompiler
                         EmitExpression(clamp.Value);
                         EmitExpression(clamp.Minimum);
                         EmitExpression(clamp.Maximum);
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Clamp));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Clamp));
                         CollapseValuesToSingle(3);
                         return;
 
                     case RandomExpressionNode random:
                         EmitExpression(random.FromExpression);
                         EmitExpression(random.ToExpression);
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Random));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Random));
                         Pop();
                         return;
 
@@ -1892,13 +1892,13 @@ internal static class RegisterVmProgramCompiler
                             rangeValueCount = 3;
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Range, A: rangeValueCount));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Range, A: rangeValueCount));
                         CollapseValuesToSingle(rangeValueCount);
                         return;
 
                     case DiceExpressionNode dice:
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.Dice,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.Dice,
                             A: dice.DiceCount,
                             B: dice.SideCount));
                         Push();
@@ -1908,21 +1908,21 @@ internal static class RegisterVmProgramCompiler
                         EmitExpression(seededRandom.SeedExpression);
                         var seededBodyProgram = compiler.CompileExpression(seededRandom.BodyExpression);
                         AccountNestedProgram(argumentCount: 1, seededBodyProgram);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.SeededRandom,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.SeededRandom,
                             ExpressionProgram: seededBodyProgram));
                         return;
 
                     case GeneratedCollectionExpressionNode generatedCollection:
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.GeneratedCollection,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.GeneratedCollection,
                             GeneratedCollectionProgram: CompileGeneratedCollection(generatedCollection)));
                         Push();
                         return;
 
                     case GuardedChoiceExpressionNode guardedChoice:
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.GuardedChoice,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.GuardedChoice,
                             GuardedChoiceProgram: CompileGuardedChoice(guardedChoice)));
                         Push();
                         return;
@@ -1930,7 +1930,7 @@ internal static class RegisterVmProgramCompiler
                     case BinaryExpressionNode binary:
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
-                        instructions.Add(new RegisterVmProgramInstruction(ToBinaryOpCode(binary.Operator)));
+                        instructions.Add(new BytecodeVmProgramInstruction(ToBinaryOpCode(binary.Operator)));
                         Pop();
                         return;
 
@@ -1938,19 +1938,19 @@ internal static class RegisterVmProgramCompiler
                         if (!compiler._callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
                             callable.Parameters.Count != 1)
                         {
-                            throw new GameEventScriptCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         if (!compiler.TryGetSlot(callable.Parameters[0], out var parameterSlot))
                         {
-                            throw new GameEventScriptCompilationException($"RegisterVM compiler does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         EmitExpression(rulePredicate.Value);
                         var rulePredicateProgram = compiler.CompileExpression(callable.Expression);
                         AccountNestedProgram(argumentCount: 1, rulePredicateProgram);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.RulePredicate,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.RulePredicate,
                             parameterSlot,
                             ExpressionProgram: rulePredicateProgram,
                             DiagnosticName: callable.Name,
@@ -1963,8 +1963,8 @@ internal static class RegisterVmProgramCompiler
                             extensionPredicate.ExtensionName,
                             extensionPredicate.FunctionName,
                             [GameEventScriptMessageSignature.UnlabeledParameterName]);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.CallExtension,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
                             DiagnosticName: extensionPredicate.ExtensionName,
@@ -1977,11 +1977,11 @@ internal static class RegisterVmProgramCompiler
                         {
                             if (!compiler.TryGetSlot(call.Name, out var handlerSlot))
                             {
-                                throw new GameEventScriptCompilationException($"RegisterVM compiler does not support callable '{call.Name}'.");
+                                throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support callable '{call.Name}'.");
                             }
 
                             var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
-                            instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.LoadSlot, A: handlerSlot));
+                            instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadSlot, A: handlerSlot));
                             Push();
                             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
                             {
@@ -1990,8 +1990,8 @@ internal static class RegisterVmProgramCompiler
                                 EmitExpression(argument.Expression);
                             }
 
-                            instructions.Add(new RegisterVmProgramInstruction(
-                                RegisterVmProgramOpCode.BindHandler,
+                            instructions.Add(new BytecodeVmProgramInstruction(
+                                BytecodeVmProgramOpCode.BindHandler,
                                 A: call.ArgumentList.Count,
                                 Names: dynamicBindArgumentNames));
                             CollapseValuesToSingle(call.ArgumentList.Count + 1);
@@ -2003,7 +2003,7 @@ internal static class RegisterVmProgramCompiler
                         {
                             if (!compiler.TryGetSlot(called.Parameters[parameterIndex], out parameterSlots[parameterIndex]))
                             {
-                                throw new InvalidOperationException($"Missing RegisterVM callable parameter slot '{called.Parameters[parameterIndex]}'.");
+                                throw new InvalidOperationException($"Missing BytecodeVM callable parameter slot '{called.Parameters[parameterIndex]}'.");
                             }
                         }
 
@@ -2014,12 +2014,12 @@ internal static class RegisterVmProgramCompiler
 
                         var callableProgram = compiler.CompileExpression(called.Expression);
                         AccountNestedProgram(call.Arguments.Count, callableProgram);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.Call,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.Call,
                             A: call.Arguments.Count,
                             CallableKind: called.Kind == GameEventScriptCallableKind.Rule
-                                ? RegisterVmCallableKind.Rule
-                                : RegisterVmCallableKind.Select,
+                                ? BytecodeVmCallableKind.Rule
+                                : BytecodeVmCallableKind.Select,
                             ExpressionProgram: callableProgram,
                             DiagnosticName: called.Name,
                             Names: called.Parameters.ToArray(),
@@ -2030,11 +2030,11 @@ internal static class RegisterVmProgramCompiler
                     case TypeCastExpressionNode typeCast:
                         if (!compiler.TryGetCastKind(typeCast.TypeName, out var castKind))
                         {
-                            throw new GameEventScriptCompilationException($"RegisterVM compiler does not support type cast '{typeCast.TypeName}'.");
+                            throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support type cast '{typeCast.TypeName}'.");
                         }
 
                         EmitExpression(typeCast.Value);
-                        instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Cast, CastKind: castKind));
+                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Cast, CastKind: castKind));
                         return;
 
                     case TypeConstructorExpressionNode typeConstructor:
@@ -2043,7 +2043,7 @@ internal static class RegisterVmProgramCompiler
                             compiler.TryGetCastKind(typeConstructor.TypeName, out var constructorCastKind))
                         {
                             EmitExpression(typeConstructor.Arguments[0].Expression);
-                            instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.Cast, CastKind: constructorCastKind));
+                            instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Cast, CastKind: constructorCastKind));
                             return;
                         }
 
@@ -2055,8 +2055,8 @@ internal static class RegisterVmProgramCompiler
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.TypeConstructor,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.TypeConstructor,
                             A: typeConstructor.Arguments.Count,
                             DiagnosticName: typeConstructor.TypeName,
                             Names: constructorArgumentNames));
@@ -2065,15 +2065,15 @@ internal static class RegisterVmProgramCompiler
 
                     case TypeCheckExpressionNode typeCheck:
                         EmitExpression(typeCheck.Value);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.TypeCheck,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.TypeCheck,
                             DiagnosticName: typeCheck.TypeName));
                         return;
 
                     case MemberAccessExpressionNode memberAccess:
                         EmitExpression(memberAccess.Target);
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.MemberAccess,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.MemberAccess,
                             DiagnosticName: memberAccess.Member));
                         return;
 
@@ -2082,23 +2082,23 @@ internal static class RegisterVmProgramCompiler
                         {
                             EmitExpression(collectionAccess.Target);
                             EmitExpression(selector.Expression);
-                            instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.IndexedAccess));
+                            instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.IndexedAccess));
                             Pop();
                             return;
                         }
 
-                        instructions.Add(new RegisterVmProgramInstruction(
-                            RegisterVmProgramOpCode.Pipeline,
+                        instructions.Add(new BytecodeVmProgramInstruction(
+                            BytecodeVmProgramOpCode.Pipeline,
                             PipelineProgram: CompilePipeline(collectionAccess)));
                         Push();
                         return;
 
                     default:
-                        throw new GameEventScriptCompilationException($"RegisterVM compiler does not support expression node '{expression.GetType().Name}'.");
+                        throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support expression node '{expression.GetType().Name}'.");
                 }
             }
 
-            private RegisterVmGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
+            private BytecodeVmGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
             {
                 var predicateProgram = generatedCollection.Predicate is null
                     ? null
@@ -2110,7 +2110,7 @@ internal static class RegisterVmProgramCompiler
                 }
 
                 AccountNestedProgram(0, projectionProgram);
-                return new RegisterVmGeneratedCollectionProgram(
+                return new BytecodeVmGeneratedCollectionProgram(
                     generatedCollection.CollectionType,
                     RequireSlot(generatedCollection.Identifier),
                     generatedCollection.Source,
@@ -2118,10 +2118,10 @@ internal static class RegisterVmProgramCompiler
                     projectionProgram);
             }
 
-            private RegisterVmGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
+            private BytecodeVmGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
             {
-                var valuePrograms = new RegisterVmExpressionProgram[guardedChoice.Branches.Count];
-                var conditionPrograms = new RegisterVmExpressionProgram[guardedChoice.Branches.Count];
+                var valuePrograms = new BytecodeVmExpressionProgram[guardedChoice.Branches.Count];
+                var conditionPrograms = new BytecodeVmExpressionProgram[guardedChoice.Branches.Count];
                 for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
                 {
                     var branch = guardedChoice.Branches[branchIndex];
@@ -2133,10 +2133,10 @@ internal static class RegisterVmProgramCompiler
 
                 var otherwiseProgram = compiler.CompileExpression(guardedChoice.OtherwiseExpression);
                 AccountNestedProgram(0, otherwiseProgram);
-                return new RegisterVmGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
+                return new BytecodeVmGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
             }
 
-            private RegisterVmPipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
+            private BytecodeVmPipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
             {
                 var selectors = new List<CollectionSelectorNode>();
                 ExpressionNode source = expression;
@@ -2147,102 +2147,102 @@ internal static class RegisterVmProgramCompiler
                 }
 
                 selectors.Reverse();
-                var prefixSelectors = new List<RegisterVmSelectorProgram>(Math.Max(0, selectors.Count - 1));
+                var prefixSelectors = new List<BytecodeVmSelectorProgram>(Math.Max(0, selectors.Count - 1));
                 for (var i = 0; i < selectors.Count - 1; i++)
                 {
                     prefixSelectors.Add(CompileSelector(selectors[i], isTerminal: false));
                 }
 
-                return new RegisterVmPipelineProgram(
+                return new BytecodeVmPipelineProgram(
                     compiler.CompileExpression(source),
                     prefixSelectors.ToArray(),
                     CompileSelector(selectors[^1], isTerminal: true));
             }
 
-            private RegisterVmSelectorProgram CompileSelector(CollectionSelectorNode selector, bool isTerminal)
+            private BytecodeVmSelectorProgram CompileSelector(CollectionSelectorNode selector, bool isTerminal)
             {
                 switch (selector)
                 {
                     case FilterSelectorNode filter:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Filter,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Filter,
                             RequireSlot(filter.Identifier),
                             compiler.CompileExpression(filter.Predicate));
 
                     case SelectSelectorNode select:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Select,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Select,
                             RequireSlot(select.Identifier),
                             compiler.CompileExpression(select.Projection));
 
                     case PredicateSelectorNode predicate when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Predicate,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Predicate,
                             RequireSlot(predicate.Identifier),
                             compiler.CompileExpression(predicate.Predicate),
                             predicate.Operator);
 
                     case SumSelectorNode sum when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Sum,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Sum,
                             RequireSlot(sum.Identifier),
                             compiler.CompileExpression(sum.Projection));
 
                     case AverageSelectorNode average when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Average,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Average,
                             RequireSlot(average.Identifier),
                             compiler.CompileExpression(average.Projection));
 
                     case CountSelectorNode count when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Count,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Count,
                             RequireSlot(count.Identifier),
                             compiler.CompileExpression(count.Predicate));
 
                     case EdgeSelectorNode edge when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Edge,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Edge,
                             string.IsNullOrEmpty(edge.Identifier) ? -1 : RequireSlot(edge.Identifier!),
                             edge.Predicate is null ? null : compiler.CompileExpression(edge.Predicate),
                             edge.Mode);
 
                     case PatternSelectorNode pattern when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Pattern,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Pattern,
                             -1,
                             null,
                             dicePattern: pattern.Pattern);
 
                     case ObjectMatchSelectorNode objectMatch when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.ObjectMatch,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.ObjectMatch,
                             -1,
                             null,
                             objectPattern: objectMatch.Pattern);
 
                     case TakePatternSelectorNode takePattern when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.TakePattern,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.TakePattern,
                             -1,
                             null,
                             dicePattern: takePattern.Pattern);
 
                     case MinSelectorNode min when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Min,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Min,
                             RequireSlot(min.Identifier),
                             compiler.CompileExpression(min.Projection));
 
                     case MaxSelectorNode max when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Max,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Max,
                             RequireSlot(max.Identifier),
                             compiler.CompileExpression(max.Projection));
 
                     case DictionarySelectorNode dictionary when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Dictionary,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Dictionary,
                             RequireSlot(dictionary.Identifier),
                             compiler.CompileExpression(dictionary.KeyProjection),
                             secondaryExpressionProgram: dictionary.ValueProjection is null
@@ -2250,15 +2250,15 @@ internal static class RegisterVmProgramCompiler
                                 : compiler.CompileExpression(dictionary.ValueProjection));
 
                     case ContainsSelectorNode contains when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Contains,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Contains,
                             -1,
                             compiler.CompileExpression(contains.ValueExpression),
                             contains.Mode);
 
                     case ChooseSelectorNode choose when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Choose,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Choose,
                             string.IsNullOrEmpty(choose.Identifier) ? -1 : RequireSlot(choose.Identifier!),
                             choose.Predicate is null ? null : compiler.CompileExpression(choose.Predicate),
                             count: choose.Count,
@@ -2269,53 +2269,53 @@ internal static class RegisterVmProgramCompiler
                             flag: choose.AtRandom);
 
                     case DrawSelectorNode draw when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Draw,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Draw,
                             -1,
                             null,
                             count: draw.Count);
 
                     case ShuffleSelectorNode when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Shuffle,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Shuffle,
                             -1,
                             null);
 
                     case SortSelectorNode sort when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Sort,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Sort,
                             -1,
                             null,
                             sort.Direction);
 
                     case DistinctSelectorNode distinct when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Distinct,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Distinct,
                             string.IsNullOrEmpty(distinct.Identifier) ? -1 : RequireSlot(distinct.Identifier!),
                             distinct.Projection is null ? null : compiler.CompileExpression(distinct.Projection));
 
                     case GroupBySelectorNode groupBy when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.GroupBy,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.GroupBy,
                             RequireSlot(groupBy.Identifier),
                             compiler.CompileExpression(groupBy.Projection));
 
                     case OrderBySelectorNode orderBy when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.OrderBy,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.OrderBy,
                             RequireSlot(orderBy.Identifier),
                             compiler.CompileExpression(orderBy.Projection),
                             orderBy.Direction);
 
                     case ReverseSelectorNode when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.Reverse,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.Reverse,
                             -1,
                             null);
 
                     case SequenceSliceSelectorNode slice when isTerminal:
-                        return new RegisterVmSelectorProgram(
-                            RegisterVmSelectorKind.SequenceSlice,
+                        return new BytecodeVmSelectorProgram(
+                            BytecodeVmSelectorKind.SequenceSlice,
                             -1,
                             null,
                             slice.Operation,
@@ -2323,7 +2323,7 @@ internal static class RegisterVmProgramCompiler
                             count: slice.Count);
 
                     default:
-                        throw new GameEventScriptCompilationException($"RegisterVM compiler does not support selector node '{selector.GetType().Name}'.");
+                        throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support selector node '{selector.GetType().Name}'.");
                 }
             }
 
@@ -2331,15 +2331,15 @@ internal static class RegisterVmProgramCompiler
             {
                 if (!compiler.TryGetSlot(name, out var slot))
                 {
-                    throw new InvalidOperationException($"Missing RegisterVM local slot '{name}'.");
+                    throw new InvalidOperationException($"Missing BytecodeVM local slot '{name}'.");
                 }
 
                 return slot;
             }
 
-            private void EmitLoadConstant(RegisterVmValue value)
+            private void EmitLoadConstant(BytecodeVmValue value)
             {
-                instructions.Add(new RegisterVmProgramInstruction(RegisterVmProgramOpCode.LoadConstant, Constant: value));
+                instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadConstant, Constant: value));
                 Push();
             }
 
@@ -2351,7 +2351,7 @@ internal static class RegisterVmProgramCompiler
 
             private void Pop() => _stackDepth = Math.Max(0, _stackDepth - 1);
 
-            private void AccountNestedProgram(int argumentCount, RegisterVmExpressionProgram program)
+            private void AccountNestedProgram(int argumentCount, BytecodeVmExpressionProgram program)
             {
                 var nestedStackBaseDepth = Math.Max(0, _stackDepth - argumentCount);
                 MaxStackDepth = Math.Max(MaxStackDepth, nestedStackBaseDepth + program.MaxStackDepth);
@@ -2371,50 +2371,50 @@ internal static class RegisterVmProgramCompiler
                 _stackDepth = Math.Max(1, _stackDepth - valueCount + 1);
             }
 
-            private static RegisterVmProgramOpCode ToBinaryOpCode(string operation)
+            private static BytecodeVmProgramOpCode ToBinaryOpCode(string operation)
                 => operation switch
                 {
-                    "|" => RegisterVmProgramOpCode.Or,
-                    "^" => RegisterVmProgramOpCode.Xor,
-                    "&" => RegisterVmProgramOpCode.And,
-                    "=" or "==" => RegisterVmProgramOpCode.Equal,
-                    "<>" => RegisterVmProgramOpCode.NotEqual,
-                    "<" => RegisterVmProgramOpCode.Less,
-                    ">" => RegisterVmProgramOpCode.Greater,
-                    "<=" => RegisterVmProgramOpCode.LessOrEqual,
-                    ">=" => RegisterVmProgramOpCode.GreaterOrEqual,
-                    "+" => RegisterVmProgramOpCode.Add,
-                    "-" => RegisterVmProgramOpCode.Subtract,
-                    "*" => RegisterVmProgramOpCode.Multiply,
-                    "/" => RegisterVmProgramOpCode.Divide,
-                    "div" => RegisterVmProgramOpCode.IntegerDivide,
-                    "mod" => RegisterVmProgramOpCode.Modulo,
-                    "rem" => RegisterVmProgramOpCode.Remainder,
-                    "default" => RegisterVmProgramOpCode.Default,
-                    "in" => RegisterVmProgramOpCode.Contains,
-                    "value in" => RegisterVmProgramOpCode.ContainsValue,
-                    "starts with" => RegisterVmProgramOpCode.StartsWith,
-                    "ends with" => RegisterVmProgramOpCode.EndsWith,
-                    "intersect" => RegisterVmProgramOpCode.Intersect,
-                    "combine" or "merge" => RegisterVmProgramOpCode.Combine,
-                    "except" => RegisterVmProgramOpCode.Except,
-                    "zip" => RegisterVmProgramOpCode.Zip,
-                    _ => throw new GameEventScriptCompilationException($"RegisterVM compiler does not support binary operator '{operation}'.")
+                    "|" => BytecodeVmProgramOpCode.Or,
+                    "^" => BytecodeVmProgramOpCode.Xor,
+                    "&" => BytecodeVmProgramOpCode.And,
+                    "=" or "==" => BytecodeVmProgramOpCode.Equal,
+                    "<>" => BytecodeVmProgramOpCode.NotEqual,
+                    "<" => BytecodeVmProgramOpCode.Less,
+                    ">" => BytecodeVmProgramOpCode.Greater,
+                    "<=" => BytecodeVmProgramOpCode.LessOrEqual,
+                    ">=" => BytecodeVmProgramOpCode.GreaterOrEqual,
+                    "+" => BytecodeVmProgramOpCode.Add,
+                    "-" => BytecodeVmProgramOpCode.Subtract,
+                    "*" => BytecodeVmProgramOpCode.Multiply,
+                    "/" => BytecodeVmProgramOpCode.Divide,
+                    "div" => BytecodeVmProgramOpCode.IntegerDivide,
+                    "mod" => BytecodeVmProgramOpCode.Modulo,
+                    "rem" => BytecodeVmProgramOpCode.Remainder,
+                    "default" => BytecodeVmProgramOpCode.Default,
+                    "in" => BytecodeVmProgramOpCode.Contains,
+                    "value in" => BytecodeVmProgramOpCode.ContainsValue,
+                    "starts with" => BytecodeVmProgramOpCode.StartsWith,
+                    "ends with" => BytecodeVmProgramOpCode.EndsWith,
+                    "intersect" => BytecodeVmProgramOpCode.Intersect,
+                    "combine" or "merge" => BytecodeVmProgramOpCode.Combine,
+                    "except" => BytecodeVmProgramOpCode.Except,
+                    "zip" => BytecodeVmProgramOpCode.Zip,
+                    _ => throw new GameEventScriptCompilationException($"BytecodeVM execution planner does not support binary operator '{operation}'.")
                 };
         }
     }
 }
 
-internal sealed class RegisterVmExecutionPlan
+internal sealed class BytecodeVmExecutionPlan
 {
     private readonly IReadOnlyDictionary<string, int> _slots;
-    private readonly IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> _expressionPrograms;
-    private readonly IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> _publishLayouts;
+    private readonly IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> _expressionPrograms;
+    private readonly IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> _publishLayouts;
 
-    private RegisterVmExecutionPlan(
+    private BytecodeVmExecutionPlan(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> expressionPrograms,
-        IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> publishLayouts,
+        IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> expressionPrograms,
+        IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> publishLayouts,
         int maxStackDepth)
     {
         _slots = slots;
@@ -2428,24 +2428,24 @@ internal sealed class RegisterVmExecutionPlan
 
     public int MaxStackDepth { get; }
 
-    public static RegisterVmExecutionPlan Create(
+    public static BytecodeVmExecutionPlan Create(
         IReadOnlyDictionary<string, int> slots,
-        IReadOnlyDictionary<ExpressionNode, RegisterVmExpressionProgram> expressionPrograms,
-        IReadOnlyDictionary<PublishStatementNode, RegisterVmPublishLayout> publishLayouts,
+        IReadOnlyDictionary<ExpressionNode, BytecodeVmExpressionProgram> expressionPrograms,
+        IReadOnlyDictionary<PublishStatementNode, BytecodeVmPublishLayout> publishLayouts,
         int maxStackDepth)
         => new(
             new Dictionary<string, int>(slots, StringComparer.Ordinal),
-            new Dictionary<ExpressionNode, RegisterVmExpressionProgram>(expressionPrograms, ReferenceEqualityComparer<ExpressionNode>.Instance),
-            new Dictionary<PublishStatementNode, RegisterVmPublishLayout>(publishLayouts, ReferenceEqualityComparer<PublishStatementNode>.Instance),
+            new Dictionary<ExpressionNode, BytecodeVmExpressionProgram>(expressionPrograms, ReferenceEqualityComparer<ExpressionNode>.Instance),
+            new Dictionary<PublishStatementNode, BytecodeVmPublishLayout>(publishLayouts, ReferenceEqualityComparer<PublishStatementNode>.Instance),
             maxStackDepth);
 
     public bool TryGetSlot(string name, out int slot)
         => _slots.TryGetValue(name, out slot);
 
-    public bool TryGetExpressionProgram(ExpressionNode expression, out RegisterVmExpressionProgram program)
+    public bool TryGetExpressionProgram(ExpressionNode expression, out BytecodeVmExpressionProgram program)
         => _expressionPrograms.TryGetValue(expression, out program!);
 
-    public bool TryGetPublishLayout(PublishStatementNode publish, out RegisterVmPublishLayout layout)
+    public bool TryGetPublishLayout(PublishStatementNode publish, out BytecodeVmPublishLayout layout)
         => _publishLayouts.TryGetValue(publish, out layout!);
 }
 

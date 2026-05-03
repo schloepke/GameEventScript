@@ -2,78 +2,83 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using StepH.GameEventScript.RegisterVM;
+using StepH.GameEventScript.Compiler;
 
-namespace StepH.GameEventScript.Compiler;
+namespace StepH.GameEventScript.Api;
 
 /// <summary>
-/// Provides functionality to construct and compile game event script modules.
-/// Allows the addition of scripts, script files, parsed modules, and
-/// supports enabling or disabling optimization during the module-building process.
+/// Provides functionality to compile GameEventScript source files into bytecode.
 /// </summary>
-public sealed class GameEventScriptModuleBuilder
+public sealed class GameEventScriptBuilder
 {
     private readonly List<ParsedModule> _modules = [];
     private bool _optimize = true;
 
     /// <summary>
-    /// Creates an instance of the GameEventScriptModuleBuilder.
+    /// Creates an instance of the GameEventScriptBuilder.
     /// </summary>
-    /// <returns>A new instance of the GameEventScriptModuleBuilder.</returns>
-    public static GameEventScriptModuleBuilder Create() => new();
+    /// <returns>A new instance of the GameEventScriptBuilder.</returns>
+    public static GameEventScriptBuilder Create() => new();
 
     /// <summary>
-    /// Enables or disables optimization for the module-building process.
+    /// Enables or disables optimization before bytecode generation.
     /// </summary>
     /// <param name="enabled">A boolean value indicating whether optimization should be enabled. Defaults to true.</param>
-    /// <returns>The current instance of <see cref="GameEventScriptModuleBuilder"/> with the specified optimization setting applied.</returns>
-    public GameEventScriptModuleBuilder WithOptimization(bool enabled = true)
+    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified optimization setting applied.</returns>
+    public GameEventScriptBuilder WithOptimization(bool enabled = true)
     {
         _optimize = enabled;
         return this;
     }
 
     /// <summary>
-    /// Adds a script to the module builder.
+    /// Adds a GameEventScript source string to the builder.
     /// </summary>
     /// <param name="text">The content of the script to be added.</param>
     /// <param name="sourceName">
     /// An optional string representing the source name of the script (e.g., file name).
     /// </param>
     /// <returns>
-    /// The current instance of <see cref="GameEventScriptModuleBuilder"/> to allow method chaining.
+    /// The current instance of <see cref="GameEventScriptBuilder"/> to allow method chaining.
     /// </returns>
-    public GameEventScriptModuleBuilder AddScript(string text, string? sourceName = null)
+    public GameEventScriptBuilder AddScript(string text, string? sourceName = null)
     {
         _modules.Add(GesParser.Parse(text, sourceName));
         return this;
     }
 
     /// <summary>
-    /// Adds a script file to the module builder by reading its content from the specified file path.
+    /// Adds a GameEventScript source file by reading its content from the specified file path.
     /// </summary>
     /// <param name="path">The path to the script file to be added.</param>
     /// <returns>
-    /// The current instance of <see cref="GameEventScriptModuleBuilder"/> to allow method chaining.
+    /// The current instance of <see cref="GameEventScriptBuilder"/> to allow method chaining.
     /// </returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when the provided <paramref name="path"/> is null.
     /// </exception>
-    public GameEventScriptModuleBuilder AddFile(string path)
+    public GameEventScriptBuilder AddFile(string path)
     {
         _ = path ?? throw new ArgumentNullException(nameof(path));
         return AddScript(File.ReadAllText(path), path);
     }
 
     /// <summary>
-    /// Builds and returns a new instance of the <see cref="GameEventScriptModule"/> class
-    /// based on the currently configured modules and their definitions.
+    /// Compiles the configured GameEventScript sources into GameEventScript bytecode.
     /// </summary>
-    /// <returns>A compiled <see cref="GameEventScriptModule"/> instance.</returns>
+    /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
+    /// <returns>The generated GameEventScript bytecode.</returns>
+    public GameEventScriptBytecode Compile(GameEventScriptCompilationOptions? options = null)
+        => GesBytecodeCompiler.Compile(BuildModule(), options);
+
+    /// <summary>
+    /// Builds and returns a new internal module model based on the configured sources.
+    /// </summary>
+    /// <returns>A built <see cref="GameEventScriptModule"/> instance.</returns>
     /// <exception cref="GameEventScriptModuleBuildException">
     /// Thrown when errors are encountered during the build process.
     /// </exception>
-    public GameEventScriptModule Build()
+    internal GameEventScriptModule BuildModule()
     {
         var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(_modules, errors);
@@ -109,13 +114,6 @@ public sealed class GameEventScriptModuleBuilder
         var moduleResult = new GameEventScriptModule(typeDefinitions, callables, handlers);
         return _optimize ? GesOptimizer.Optimize(moduleResult) : moduleResult;
     }
-
-    /// <summary>
-    /// Compiles the game event script module into a final executable form.
-    /// </summary>
-    /// <param name="options">Optional compilation options that specify settings for the compilation process.</param>
-    /// <returns>A compiled game event script that can be executed within the scripting environment.</returns>
-    public CompiledGameEventScript Compile(GameEventScriptCompilationOptions? options = null) => RegisterVmCompiler.Compile(Build(), options);
 
     private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedModule> modules)
     {

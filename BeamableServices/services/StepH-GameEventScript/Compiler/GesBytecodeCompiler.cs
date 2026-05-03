@@ -3,18 +3,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.Compiler;
 
-internal static class RegisterVmCompiler
+internal static class GesBytecodeCompiler
 {
-    public static CompiledGameEventScript Compile(
-        GameEventScriptModule module,
-        GameEventScriptCompilationOptions? options = null)
+    public static GameEventScriptBytecode Compile(GameEventScriptModule module, GameEventScriptCompilationOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new GameEventScriptCompilationOptions();
@@ -22,9 +20,7 @@ internal static class RegisterVmCompiler
         return builder.Build();
     }
 
-    private sealed class CompilerBuilder(
-        GameEventScriptModule module,
-        GameEventScriptCompilationOptions options)
+    private sealed class CompilerBuilder(GameEventScriptModule module, GameEventScriptCompilationOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
@@ -38,18 +34,14 @@ internal static class RegisterVmCompiler
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
         private readonly List<string> _typeMetadata = [];
-        private readonly List<RegisterProgram> _programs = [];
-        private readonly Dictionary<(string Message, int DeclarationOrder), int> _handlerProgramIndices = new();
-
-        public CompiledGameEventScript Build()
+        private readonly List<GameEventScriptBytecodeProgram> _programs = [];
+        public GameEventScriptBytecode Build()
         {
             CompileMetadata();
             CompileGlobalDefinitions();
             CompileHandlers();
 
-            var handlers = BuildHandlers();
-            var typeDefinitions = BuildTypeDefinitions();
-            var bytecode = new RegisterBytecodeModule(
+            return new GameEventScriptBytecode(
                 options,
                 _stringPool.ToArray(),
                 _constantPool.ToArray(),
@@ -57,9 +49,8 @@ internal static class RegisterVmCompiler
                 _externalReferences.ToArray(),
                 _namedArgumentLayouts.ToArray(),
                 _typeMetadata.ToArray(),
-                _programs.ToArray());
-
-            return new CompiledGameEventScript(options, bytecode, handlers, module.Callables, typeDefinitions);
+                _programs.ToArray(),
+                module);
         }
 
         private void CompileMetadata()
@@ -96,12 +87,12 @@ internal static class RegisterVmCompiler
 
         private void CompileCallable(GameEventScriptCallableDefinition callable)
         {
-            var instructions = new List<RegisterInstruction>
+            var instructions = new List<GameEventScriptInstruction>
             {
-                new(RegisterOpCode.EvaluateExpression, AddString(GetExpressionDebugName(callable.Expression)), AllocateRegister()),
-                new(RegisterOpCode.Return, 0)
+                new(GameEventScriptOpCode.EvaluateExpression, AddString(GetExpressionDebugName(callable.Expression)), AllocateRegister()),
+                new(GameEventScriptOpCode.Return, 0)
             };
-            _programs.Add(new RegisterProgram(
+            _programs.Add(new GameEventScriptBytecodeProgram(
                 $"{callable.Kind}:{callable.Name}",
                 instructions.ToArray(),
                 registerCount: Math.Max(1, instructions.Count),
@@ -115,11 +106,10 @@ internal static class RegisterVmCompiler
                 for (var declarationOrder = 0; declarationOrder < pair.Value.Count; declarationOrder++)
                 {
                     var handler = pair.Value[declarationOrder];
-                    var programIndex = CompileStatements(
+                    CompileStatements(
                         $"handler:{pair.Key}#{declarationOrder}",
                         handler.Statements,
                         createsScope: false);
-                    _handlerProgramIndices[(pair.Key, declarationOrder)] = programIndex;
                     AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
                 }
             }
@@ -127,16 +117,16 @@ internal static class RegisterVmCompiler
 
         private int CompileStatements(string name, IReadOnlyList<StatementNode> statements, bool createsScope)
         {
-            var instructions = new List<RegisterInstruction>();
+            var instructions = new List<GameEventScriptInstruction>();
             var localCount = 0;
             foreach (var statement in statements)
             {
                 CompileStatement(statement, instructions, ref localCount);
             }
 
-            instructions.Add(new RegisterInstruction(RegisterOpCode.Return));
+            instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.Return));
             var programIndex = _programs.Count;
-            _programs.Add(new RegisterProgram(
+            _programs.Add(new GameEventScriptBytecodeProgram(
                 name,
                 instructions.ToArray(),
                 registerCount: Math.Max(1, instructions.Count),
@@ -145,27 +135,27 @@ internal static class RegisterVmCompiler
             return programIndex;
         }
 
-        private void CompileStatement(StatementNode statement, List<RegisterInstruction> instructions, ref int localCount)
+        private void CompileStatement(StatementNode statement, List<GameEventScriptInstruction> instructions, ref int localCount)
         {
             switch (statement)
             {
                 case PublishStatementNode publish:
                     AddNamedArgumentLayout(publish.MessageExpression);
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.EvaluateExpression,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.EvaluateExpression,
                         AddString(GetExpressionDebugName(publish.MessageExpression)),
                         AllocateRegister()));
-                    instructions.Add(new RegisterInstruction(RegisterOpCode.Publish, instructions.Count - 1));
+                    instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.Publish, instructions.Count - 1));
                     break;
 
                 case LetStatementNode let:
                     var localSlot = localCount++;
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.EvaluateExpression,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.EvaluateExpression,
                         AddString(GetExpressionDebugName(let.Expression)),
                         AllocateRegister()));
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.StoreLocal,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.StoreLocal,
                         AddString(let.Identifier),
                         localSlot,
                         string.IsNullOrEmpty(let.DeclaredType) ? -1 : AddTypeMetadata(let.DeclaredType!)));
@@ -176,17 +166,17 @@ internal static class RegisterVmCompiler
                     var elseIndex = ifStatement.ElseBody is null
                         ? -1
                         : CompileStatements("if.else", ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock);
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.EvaluateExpression,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.EvaluateExpression,
                         AddString(GetExpressionDebugName(ifStatement.Condition)),
                         AllocateRegister()));
-                    instructions.Add(new RegisterInstruction(RegisterOpCode.JumpIfFalse, instructions.Count - 1, thenIndex, elseIndex));
+                    instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.JumpIfFalse, instructions.Count - 1, thenIndex, elseIndex));
                     break;
 
                 case ForStatementNode forStatement:
                     var bodyIndex = CompileStatements("for.body", forStatement.Body.Statements, forStatement.Body.IsBlock);
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.ForEach,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.ForEach,
                         AddString(forStatement.Identifier),
                         AddString(GetIterationSourceDebugName(forStatement.Source)),
                         bodyIndex));
@@ -194,47 +184,20 @@ internal static class RegisterVmCompiler
 
                 case SeededRandomStatementNode seededRandom:
                     var randomBodyIndex = CompileStatements("seededRandom.body", seededRandom.Body.Statements, seededRandom.Body.IsBlock);
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.EvaluateExpression,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.EvaluateExpression,
                         AddString(GetExpressionDebugName(seededRandom.SeedExpression)),
                         AllocateRegister()));
-                    instructions.Add(new RegisterInstruction(RegisterOpCode.SeededRandom, instructions.Count - 1, randomBodyIndex));
+                    instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.SeededRandom, instructions.Count - 1, randomBodyIndex));
                     break;
 
                 case ExpressionStatementNode expressionStatement:
-                    instructions.Add(new RegisterInstruction(
-                        RegisterOpCode.EvaluateExpression,
+                    instructions.Add(new GameEventScriptInstruction(
+                        GameEventScriptOpCode.EvaluateExpression,
                         AddString(GetExpressionDebugName(expressionStatement.Expression)),
                         AllocateRegister()));
                     break;
             }
-        }
-
-        private IReadOnlyDictionary<string, IReadOnlyList<CompiledGameEventScriptHandler>> BuildHandlers()
-        {
-            return module.Handlers.ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<CompiledGameEventScriptHandler>)pair.Value
-                    .Select((handler, index) => new CompiledGameEventScriptHandler(
-                        pair.Key,
-                        handler.Parameters,
-                        handler.SignatureLabels,
-                        GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels),
-                        index,
-                        _handlerProgramIndices.TryGetValue((pair.Key, index), out var programIndex) ? programIndex : -1,
-                        options.EnableDiagnostics,
-                        handler.Statements,
-                        RegisterVmProgramCompiler.CompileHandlerPlan(pair.Key, index, handler.Parameters, handler.Statements, module.Callables, module.TypeDefinitions, AddExternalReference)))
-                    .ToArray(),
-                StringComparer.Ordinal);
-        }
-
-        private IReadOnlyDictionary<string, RegisterVmTypeDefinition> BuildTypeDefinitions()
-        {
-            return module.TypeDefinitions.ToDictionary(
-                pair => pair.Key,
-                pair => new RegisterVmTypeDefinition(pair.Value),
-                StringComparer.Ordinal);
         }
 
         private int AllocateRegister() => 0;
@@ -348,27 +311,27 @@ internal static class RegisterVmCompiler
             switch (expression)
             {
                 case BooleanLiteralExpressionNode boolean:
-                    AddConstant(GameEventScriptValueFactory.Boolean(boolean.Value));
+                    AddConstant(GameEventScriptValueFactory.GesBoolean(boolean.Value));
                     return "literal:boolean";
                 case IntegerLiteralExpressionNode integer:
-                    AddConstant(Integer(integer.Value));
+                    AddConstant(GesInteger(integer.Value));
                     return "literal:integer";
                 case DecimalLiteralExpressionNode decimalLiteral:
-                    AddConstant(Decimal(decimalLiteral.Value));
+                    AddConstant(GesDecimal(decimalLiteral.Value));
                     return "literal:decimal";
                 case PercentageLiteralExpressionNode percentage:
-                    AddConstant(Percentage(percentage.PercentValue / 100m));
+                    AddConstant(GesPercentage(percentage.PercentValue / 100m));
                     return "literal:percentage";
                 case UnitDecimalLiteralExpressionNode unitDecimal:
-                    AddConstant(Decimal(
+                    AddConstant(GesDecimal(
                         unitDecimal.Value,
                         GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit) ? unit : null));
                     return "literal:unitDecimal";
                 case TextLiteralExpressionNode text:
-                    AddConstant(Text(text.Value));
+                    AddConstant(GesText(text.Value));
                     return "literal:text";
                 case TagLiteralExpressionNode tag:
-                    AddConstant(Tag(tag.Name));
+                    AddConstant(GesTag(tag.Name));
                     return "literal:tag";
                 case ListLiteralExpressionNode list:
                     foreach (var item in list.Items)

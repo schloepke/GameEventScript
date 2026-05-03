@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
@@ -87,9 +88,9 @@ internal static class GameEventScriptCollectionOperators
             bucket.Add(item);
         }
 
-        return GameEventScriptValueFactory.Dictionary(groups.ToDictionary(
+        return GameEventScriptValueFactory.GseDictionary(groups.ToDictionary(
             pair => pair.Key,
-            pair => GameEventScriptValueFactory.List(pair.Value),
+            pair => GameEventScriptValueFactory.GesList(pair.Value),
             StringComparer.Ordinal));
     }
 
@@ -102,10 +103,10 @@ internal static class GameEventScriptCollectionOperators
     {
         return target.Kind switch
         {
-            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.List => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.Range => GameEventScriptValueFactory.List(items),
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
             _ => GameEventScriptValue.Nothing
         };
     }
@@ -114,10 +115,10 @@ internal static class GameEventScriptCollectionOperators
     {
         return target.Kind switch
         {
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.Set(items),
-            GameEventScriptValueKind.List => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.List(items),
-            GameEventScriptValueKind.Range => GameEventScriptValueFactory.List(items),
+            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GseSet(items),
+            GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
             _ => GameEventScriptValue.Nothing
         };
     }

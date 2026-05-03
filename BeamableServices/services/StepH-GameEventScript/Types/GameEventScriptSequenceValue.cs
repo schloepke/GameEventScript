@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -18,7 +18,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 {
     public static readonly GameEventScriptSequenceValue Empty = new(GameEventScriptSequenceMode.Values, Nothing);
 
-    public static GameEventScriptSequenceValue GameEventScriptSequence(GameEventScriptSequenceMode mode, GameEventScriptValue? source)
+    public static GameEventScriptSequenceValue Create(GameEventScriptSequenceMode mode, GameEventScriptValue? source)
         => mode == GameEventScriptSequenceMode.Values && (source == null || source.IsNothing()) ? Empty : new GameEventScriptSequenceValue(mode, source ?? Nothing);
 
     private GameEventScriptSequenceValue(GameEventScriptSequenceMode mode, GameEventScriptValue source)
@@ -57,7 +57,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
                 yield break;
             }
 
-            foreach (var item in GameEventScriptSequence(Mode, optional.Value).AsEnumerable())
+            foreach (var item in Create(Mode, optional.Value).AsEnumerable())
             {
                 yield return item;
             }
@@ -74,7 +74,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
             foreach (var key in dictionarySource.VisibleView.Keys.OrderBy(key => key, StringComparer.Ordinal))
             {
-                yield return Tag(key);
+                yield return GesTag(key);
             }
 
             yield break;
@@ -89,9 +89,9 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
             foreach (var pair in dictionarySource.VisibleView.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
-                yield return Dictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+                yield return GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
                 {
-                    ["key"] = Tag(pair.Key),
+                    ["key"] = GesTag(pair.Key),
                     ["value"] = pair.Value
                 });
             }
@@ -128,31 +128,31 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = Decimal(AsEnumerable().Count());
+        value = GesDecimal(AsEnumerable().Count());
         return true;
     }
 
     internal override bool TryConvertToInteger(out GameEventScriptValue value)
     {
-        value = Integer(AsEnumerable().LongCount());
+        value = GesInteger(AsEnumerable().LongCount());
         return true;
     }
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List(AsEnumerable());
+        value = GesList(AsEnumerable());
         return true;
     }
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = Set(AsEnumerable());
+        value = GseSet(AsEnumerable());
         return true;
     }
 

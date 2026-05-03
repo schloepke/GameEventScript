@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -40,49 +40,49 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = Decimal(0m);
+        value = GesDecimal(0m);
         return true;
     }
 
     internal override bool TryConvertToInteger(out GameEventScriptValue value)
     {
-        value = Integer(0);
+        value = GesInteger(0);
         return true;
     }
 
     internal override bool TryConvertToBoolean(out GameEventScriptValue value)
     {
-        value = Boolean(false);
+        value = GesBoolean(false);
         return true;
     }
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(string.Empty);
+        value = GesText(string.Empty);
         return true;
     }
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List([]);
+        value = GesList([]);
         return true;
     }
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = Dictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
+        value = GseDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
         return true;
     }
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
     {
-        value = Set([]);
+        value = GseSet([]);
         return true;
     }
 
     internal override bool TryConvertToDice(out GameEventScriptValue value)
     {
-        value = Dice(GameEventScriptDiceValue.Empty);
+        value = GseDice(GameEventScriptDiceValue.Empty);
         return true;
     }
 }

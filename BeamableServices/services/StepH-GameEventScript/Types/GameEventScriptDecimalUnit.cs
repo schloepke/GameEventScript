@@ -11,6 +11,7 @@ public enum GameEventScriptDecimalUnit
     Second
 }
 
+
 public static class GameEventScriptDecimalUnits
 {
     public static bool TryParseTypeName(string? typeName, out GameEventScriptDecimalUnit unit)
@@ -25,7 +26,7 @@ public static class GameEventScriptDecimalUnits
         };
     }
 
-    public static string ToTypeName(GameEventScriptDecimalUnit unit)
+    public static string ToTypeName(this GameEventScriptDecimalUnit unit)
         => unit switch
         {
             GameEventScriptDecimalUnit.Degree => "degree",
@@ -34,7 +35,7 @@ public static class GameEventScriptDecimalUnits
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript decimal unit.")
         };
 
-    public static string ToSuffix(GameEventScriptDecimalUnit unit)
+    public static string ToSuffix(this GameEventScriptDecimalUnit unit)
         => unit switch
         {
             GameEventScriptDecimalUnit.Degree => "\u00B0",

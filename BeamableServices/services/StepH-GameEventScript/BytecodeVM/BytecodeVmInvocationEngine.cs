@@ -1,10 +1,11 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.BytecodeVM;
 
-internal static class RegisterVmInvocationEngine
+internal static class BytecodeVmInvocationEngine
 {
     public static void InvokeMessage(CompiledGameEventScript compiledScript, GameEventScriptContext context, GameEventScriptMessage message)
     {
@@ -13,6 +14,6 @@ internal static class RegisterVmInvocationEngine
 
     public static void InvokeHandler(CompiledGameEventScript compiledScript, GameEventScriptContext context, CompiledGameEventScriptHandler handler, GameEventScriptMessage message)
     {
-        RegisterVmExecutionSession.InvokeHandler(compiledScript, context, handler, message.Arguments);
+        BytecodeVmExecutionSession.InvokeHandler(compiledScript, context, handler, message.Arguments);
     }
 }

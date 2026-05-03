@@ -1,8 +1,8 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.Compiler;
 
-internal enum RegisterOpCode
+public enum GameEventScriptOpCode
 {
     LoadParameter,
     LoadConstant,

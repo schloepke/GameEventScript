@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
@@ -12,7 +12,7 @@ public sealed class GameEventScriptVector3Value : GameEventScriptValue
 {
     public static readonly GameEventScriptVector3Value Zero = new(0m, 0m, 0m, null);
 
-    public static GameEventScriptVector3Value GameEventScriptVector3(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
+    public static GameEventScriptVector3Value Create(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
         => x == 0m && y == 0m && z == 0m && unit is null ? Zero : new GameEventScriptVector3Value(x, y, z, unit);
 
     private GameEventScriptVector3Value(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit)
@@ -21,13 +21,13 @@ public sealed class GameEventScriptVector3Value : GameEventScriptValue
         Y = y;
         Z = z;
         Unit = unit;
-        Components = CreateReadOnlyList(new[] { Decimal(x, unit), Decimal(y, unit), Decimal(z, unit) });
+        Components = CreateReadOnlyList(new[] { GesDecimal(x, unit), GesDecimal(y, unit), GesDecimal(z, unit) });
         Members = new ReadOnlyDictionary<string, GameEventScriptValue>(
             new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
             {
-                ["x"] = Decimal(x, unit),
-                ["y"] = Decimal(y, unit),
-                ["z"] = Decimal(z, unit)
+                ["x"] = GesDecimal(x, unit),
+                ["y"] = GesDecimal(y, unit),
+                ["z"] = GesDecimal(z, unit)
             });
     }
 
@@ -67,25 +67,25 @@ public sealed class GameEventScriptVector3Value : GameEventScriptValue
 
     internal override bool TryConvertToBoolean(out GameEventScriptValue value)
     {
-        value = Boolean(AsBoolean());
+        value = GesBoolean(AsBoolean());
         return true;
     }
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
-        value = List(Components);
+        value = GesList(Components);
         return true;
     }
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = Dictionary(Members);
+        value = GseDictionary(Members);
         return true;
     }
 }

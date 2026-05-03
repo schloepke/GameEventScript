@@ -3,10 +3,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 
-namespace StepH.GameEventScript.RegisterVM;
+namespace StepH.GameEventScript.Api;
 
 public sealed class CompiledGameEventScript : IGameEventScriptMessageHandlerCollection
 {
@@ -18,10 +19,10 @@ public sealed class CompiledGameEventScript : IGameEventScriptMessageHandlerColl
 
     internal CompiledGameEventScript(
         GameEventScriptCompilationOptions options,
-        RegisterBytecodeModule bytecodeModule,
+        GameEventScriptBytecode bytecodeModule,
         IReadOnlyDictionary<string, IReadOnlyList<CompiledGameEventScriptHandler>> handlers,
         IReadOnlyDictionary<string, GameEventScriptCallableDefinition> callables,
-        IReadOnlyDictionary<string, RegisterVmTypeDefinition> typeDefinitions)
+        IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         BytecodeModule = bytecodeModule ?? throw new ArgumentNullException(nameof(bytecodeModule));
@@ -42,11 +43,11 @@ public sealed class CompiledGameEventScript : IGameEventScriptMessageHandlerColl
 
     internal IReadOnlyDictionary<string, IReadOnlyList<CompiledGameEventScriptHandler>> Handlers { get; }
 
-    internal RegisterBytecodeModule BytecodeModule { get; }
+    internal GameEventScriptBytecode BytecodeModule { get; }
 
     internal IReadOnlyDictionary<string, GameEventScriptCallableDefinition> Callables { get; }
 
-    internal IReadOnlyDictionary<string, RegisterVmTypeDefinition> TypeDefinitions { get; }
+    internal IReadOnlyDictionary<string, BytecodeVmTypeDefinition> TypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, IReadOnlyList<CompiledGameEventScriptHandler>> DispatchIndex => _dispatchIndex;
 
@@ -56,10 +57,10 @@ public sealed class CompiledGameEventScript : IGameEventScriptMessageHandlerColl
         => _messageHandlers;
 
     public void Invoke(GameEventScriptMessage message, GameEventScriptContext context)
-        => RegisterVmInvocationEngine.InvokeMessage(this, context, message);
+        => BytecodeVmInvocationEngine.InvokeMessage(this, context, message);
 
     internal void InvokeHandler(CompiledGameEventScriptHandler handler, GameEventScriptMessage message, GameEventScriptContext context)
-        => RegisterVmInvocationEngine.InvokeHandler(this, context, handler, message);
+        => BytecodeVmInvocationEngine.InvokeHandler(this, context, handler, message);
 
     internal void BindExtensions(IGameEventScriptExtensionRegistry registry)
     {
@@ -110,23 +111,23 @@ public sealed class CompiledGameEventScript : IGameEventScriptMessageHandlerColl
     }
 }
 
-internal sealed class RegisterVmTypeDefinition
+internal sealed class BytecodeVmTypeDefinition
 {
-    public RegisterVmTypeDefinition(TypeDefinitionNode syntax)
+    public BytecodeVmTypeDefinition(TypeDefinitionNode syntax)
     {
         _ = syntax ?? throw new ArgumentNullException(nameof(syntax));
         Name = syntax.Name;
-        Fields = syntax.Fields.Select(field => new RegisterVmTypeFieldDefinition(field)).ToArray();
+        Fields = syntax.Fields.Select(field => new BytecodeVmTypeFieldDefinition(field)).ToArray();
     }
 
     public string Name { get; }
 
-    public IReadOnlyList<RegisterVmTypeFieldDefinition> Fields { get; }
+    public IReadOnlyList<BytecodeVmTypeFieldDefinition> Fields { get; }
 }
 
-internal sealed class RegisterVmTypeFieldDefinition
+internal sealed class BytecodeVmTypeFieldDefinition
 {
-    public RegisterVmTypeFieldDefinition(TypeFieldDefinitionNode syntax)
+    public BytecodeVmTypeFieldDefinition(TypeFieldDefinitionNode syntax)
     {
         _ = syntax ?? throw new ArgumentNullException(nameof(syntax));
         Name = syntax.Name;

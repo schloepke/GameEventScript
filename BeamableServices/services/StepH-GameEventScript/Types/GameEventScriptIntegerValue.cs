@@ -1,13 +1,13 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptIntegerValue : GameEventScriptValue
 {
     
-    public static GameEventScriptIntegerValue GameEventScriptInteger(long value) => new(value);
+    public static GameEventScriptIntegerValue Create(long value) => new(value);
 
     private GameEventScriptIntegerValue(long value)
     {
@@ -27,7 +27,7 @@ public sealed class GameEventScriptIntegerValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = Decimal(Value);
+        value = GesDecimal(Value);
         return true;
     }
 
@@ -39,13 +39,13 @@ public sealed class GameEventScriptIntegerValue : GameEventScriptValue
 
     internal override bool TryConvertToBoolean(out GameEventScriptValue value)
     {
-        value = Boolean(Value != 0);
+        value = GesBoolean(Value != 0);
         return true;
     }
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 

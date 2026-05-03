@@ -3,16 +3,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using static StepH.GameEventScript.Types.GameEventScriptValueFactory;
+using StepH.GameEventScript.Api;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptMessageValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptMessageValue Empty = new(GameEventScript.GameEventScriptMessage.EmptyMessage);
+    public static readonly GameEventScriptMessageValue Empty = new(Api.GameEventScriptMessage.Empty);
 
-    public static GameEventScriptMessageValue GameEventScriptMessage(GameEventScriptMessage? message)
-        => message == null || message.SignatureId == GameEventScript.GameEventScriptMessage.EmptyMessage.SignatureId ? Empty : new GameEventScriptMessageValue(message);
+    public static GameEventScriptMessageValue Create(GameEventScriptMessage? message)
+        => message == null || message.SignatureId == Api.GameEventScriptMessage.Empty.SignatureId ? Empty : new GameEventScriptMessageValue(message);
 
     private GameEventScriptMessageValue(GameEventScriptMessage message)
     {
@@ -20,9 +21,9 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
 
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
-            ["name"] = Text(message.Name),
-            ["arguments"] = Dictionary(message.Arguments),
-            ["signatureid"] = Text(message.SignatureId)
+            ["name"] = GesText(message.Name),
+            ["arguments"] = GseDictionary(message.Arguments),
+            ["signatureid"] = GesText(message.SignatureId)
         };
 
         _members = new ReadOnlyDictionary<string, GameEventScriptValue>(map);
@@ -44,13 +45,13 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = Text(ToString());
+        value = GesText(ToString());
         return true;
     }
 
     internal override bool TryConvertToDictionary(out GameEventScriptValue value)
     {
-        value = Dictionary(AsDictionary());
+        value = GseDictionary(AsDictionary());
         return true;
     }
 

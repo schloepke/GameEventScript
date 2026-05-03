@@ -1,4 +1,4 @@
-namespace StepH.GameEventScript.Compiler;
+namespace StepH.GameEventScript.Api;
 
 /// <summary>
 /// Represents a specific location in a source file or module for the GameEventScript compiler.

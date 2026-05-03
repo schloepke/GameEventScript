@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
@@ -102,7 +103,7 @@ internal static class GameEventScriptStandardExtensions
 
         if (input.Unit.HasValue && input.Unit.Value != GameEventScriptDecimalUnit.Degree)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
         }
 
         if (input.Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer)
@@ -110,14 +111,14 @@ internal static class GameEventScriptStandardExtensions
             return GameEventScriptFastValue.FromDecimal(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptDecimalUnit.Degree);
         }
 
-        return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
+        return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
     }
 
     private static GameEventScriptFastValue EvaluateDegreeToRadians(GameEventScriptFastValue input)
     {
         if (!TryReadUnitlessOrDegreeNumeric(input, out var number) || !number.IsFinite)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
         }
 
         try
@@ -126,7 +127,7 @@ internal static class GameEventScriptStandardExtensions
         }
         catch (OverflowException)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
         }
     }
 
@@ -134,7 +135,7 @@ internal static class GameEventScriptStandardExtensions
     {
         if (!TryReadUnitlessNumeric(input, out var number) || !number.IsFinite)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
         }
 
         try
@@ -143,7 +144,7 @@ internal static class GameEventScriptStandardExtensions
         }
         catch (OverflowException)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.DecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
         }
     }
 

@@ -2,7 +2,7 @@
 
 namespace StepH.GameEventScript.RegisterVM;
 
-public sealed class RegisterGseCompilationOptions
+public sealed class RegisterVmCompilationOptions
 {
     public bool EnableDiagnostics { get; init; }
 }

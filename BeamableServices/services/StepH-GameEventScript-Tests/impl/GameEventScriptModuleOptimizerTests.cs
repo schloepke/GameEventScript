@@ -1,26 +1,25 @@
 using StepH.GameEventScript;
-using StepH.GameEventScript.Linker;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 
 namespace StepH_GameEventScript_Tests.impl;
 
 [TestClass]
-public class GameEventScriptLinkOptimizerTests
+public class GameEventScriptModuleOptimizerTests
 {
     [TestMethod]
-    public void LinkBuilderOptimizesRuleExpressionsWithBooleanNormalizationAndConstantCastFolding()
+    public void ModuleBuilderOptimizesRuleExpressionsWithBooleanNormalizationAndConstantCastFolding()
     {
         const string script =
             """
             rule always() means '12.5' as :decimal
             """;
 
-        var linked = new GseLinkBuilder()
-            .AddModule(GameEventScriptManager.ParseModule(script, "optimizer.es"))
-            .Link();
+        var module = GseModuleBuilder.Create()
+            .AddScript(script, "optimizer.es")
+            .Build();
 
-        var rule = linked.Callables["always"];
-        Assert.AreEqual(LinkedCallableKind.Rule, rule.Kind);
+        var rule = module.Callables["always"];
+        Assert.AreEqual(GseCallableKind.Rule, rule.Kind);
         Assert.IsInstanceOfType<TypeCastExpressionNode>(rule.Expression);
 
         var normalized = (TypeCastExpressionNode)rule.Expression;
@@ -31,7 +30,7 @@ public class GameEventScriptLinkOptimizerTests
     }
 
     [TestMethod]
-    public void LinkBuilderOptimizesConstantArithmeticExpressions()
+    public void ModuleBuilderOptimizesConstantArithmeticExpressions()
     {
         const string script =
             """
@@ -42,11 +41,11 @@ public class GameEventScriptLinkOptimizerTests
             }
             """;
 
-        var linked = new GseLinkBuilder()
-            .AddModule(GameEventScriptManager.ParseModule(script, "constant-math.es"))
-            .Link();
+        var module = GseModuleBuilder.Create()
+            .AddScript(script, "constant-math.es")
+            .Build();
 
-        var handler = linked.Handlers.Values.SelectMany(handlers => handlers).Single();
+        var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();
         var let = handler.Statements.OfType<LetStatementNode>().Single();
 
         Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(let.Expression);

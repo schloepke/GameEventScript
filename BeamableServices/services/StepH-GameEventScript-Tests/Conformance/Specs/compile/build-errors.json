@@ -1,23 +1,23 @@
 {
   "version": 1,
-  "name": "CompileLinkageErrors",
+  "name": "CompileBuildErrors",
   "tests": [
     {
       "kind": "compileError",
-      "name": "missing rule call fails linkage",
+      "name": "missing rule call fails module build",
       "script": "on Start(unit) {\n  let x be missingRule(unit)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "MissingRuleOrSelect",
         "symbol": "missingRule"
       }
     },
     {
       "kind": "compileError",
-      "name": "missing select call fails linkage",
+      "name": "missing select call fails module build",
       "script": "on Start(units) {\n  let x be missingSelect(units)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "MissingRuleOrSelect",
         "symbol": "missingSelect"
       }
@@ -27,7 +27,7 @@
       "name": "invalid rule predicate requires unary rule",
       "script": "select wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "InvalidRulePredicate",
         "symbol": "wounded",
         "symbolKind": "Rule"
@@ -35,10 +35,10 @@
     },
     {
       "kind": "compileError",
-      "name": "wrong rule arity fails linkage",
+      "name": "wrong rule arity fails module build",
       "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "WrongRuleArity",
         "symbol": "wounded",
         "symbolKind": "Rule"
@@ -46,10 +46,10 @@
     },
     {
       "kind": "compileError",
-      "name": "wrong select arity fails linkage",
+      "name": "wrong select arity fails module build",
       "script": "select woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]\n\non Start(units) {\n  let x be woundedUnits()\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "WrongSelectArity",
         "symbol": "woundedUnits",
         "symbolKind": "Select"
@@ -57,10 +57,10 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate local variable fails linkage",
+      "name": "duplicate local variable fails module build",
       "script": "module DuplicateVariables\non Start {\n  let x be 10\n  let x be 20\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicateVariable",
         "symbol": "x",
         "symbolKind": "Variable",
@@ -72,7 +72,7 @@
       "name": "handler parameter cannot be redeclared as local variable",
       "script": "module DuplicateParameterVariable\non Start(value) {\n  let value be 10\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicateVariable",
         "symbol": "value",
         "symbolKind": "Variable",
@@ -81,10 +81,10 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate variable inside block fails linkage",
+      "name": "duplicate variable inside block fails module build",
       "script": "module DuplicateBlockVariables\non Start {\n  if true {\n    let x be 10\n    let x be 20\n  }\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicateVariable",
         "symbol": "x",
         "symbolKind": "Variable",
@@ -93,10 +93,10 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate rule parameters fail linkage",
+      "name": "duplicate rule parameters fail module build",
       "script": "module DuplicateRuleParameters\nrule wounded(unit, unit) means unit.hp < unit.maxHp",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicateDefinitionParameter",
         "symbol": "wounded",
         "symbolKind": "Rule",
@@ -105,10 +105,10 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate select parameters fail linkage",
+      "name": "duplicate select parameters fail module build",
       "script": "module DuplicateSelectParameters\nselect wounded(units, units) means units[:filter unit where unit.hp < unit.maxHp]",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicateDefinitionParameter",
         "symbol": "wounded",
         "symbolKind": "Select",
@@ -117,10 +117,10 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate handler bind arguments fail linkage",
+      "name": "duplicate handler bind arguments fail module build",
       "script": "module DuplicateHandlerBindArgs\non Start(unit, target, myHandler) {\n  publish myHandler(unit: unit, unit: target)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicatePublishArgument",
         "symbol": "myHandler",
         "moduleName": "DuplicateHandlerBindArgs"
@@ -128,10 +128,10 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate handler literal parameters fail linkage",
+      "name": "duplicate handler literal parameters fail module build",
       "script": "module DuplicateHandlerLiteralParams\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, unit)\n  publish Done\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "DuplicateHandlerParameter",
         "symbol": "Shoot",
         "symbolKind": "Handler",
@@ -152,7 +152,7 @@
         }
       ],
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "RuleSelectConflict",
         "symbol": "wounded"
       }
@@ -162,7 +162,7 @@
       "name": "vector2 constructor requires positional label order",
       "script": "on Start {\n  let position be :vector2(y: 2, x: 1)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "InvalidTypeConstructor",
         "symbol": "vector2",
         "symbolKind": "Type"
@@ -173,7 +173,7 @@
       "name": "vector2 constructor rejects too many components",
       "script": "on Start {\n  let position be :vector2(1, 2, 3)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "InvalidTypeConstructor",
         "symbol": "vector2",
         "symbolKind": "Type"
@@ -184,7 +184,7 @@
       "name": "vector3 constructor rejects component labels out of order",
       "script": "on Start {\n  let point be :vector3(z: 1, y: 2)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "InvalidTypeConstructor",
         "symbol": "vector3",
         "symbolKind": "Type"
@@ -195,7 +195,7 @@
       "name": "custom type constructor requires labels",
       "script": "record :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\non Start {\n  let hp be :gauge(10, 20)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "InvalidTypeConstructor",
         "symbol": "gauge",
         "symbolKind": "Type"
@@ -206,7 +206,7 @@
       "name": "custom type constructor rejects unknown fields",
       "script": "record :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\non Start {\n  let hp be :gauge(current: 10, unknown: 20)\n}",
       "expectedError": {
-        "phase": "linkage",
+        "phase": "build",
         "kind": "InvalidTypeConstructor",
         "symbol": "gauge",
         "symbolKind": "Type"

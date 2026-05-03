@@ -3,11 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Parser;
 
-namespace StepH.GameEventScript.Linker;
+namespace StepH.GameEventScript.Compiler;
 
-public sealed partial class GseLinkBuilder
+public sealed partial class GseModuleBuilder
 {
     private sealed class ValidationScope
     {
@@ -28,10 +27,10 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateModule(
-        GseModule eventScriptModule,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        GseParsedModule eventScriptModule,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         foreach (var typeDefinition in eventScriptModule.TypeDefinitions)
         {
@@ -95,7 +94,7 @@ public sealed partial class GseLinkBuilder
                     $"Rule '{ruleDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
                     ruleDefinition.Name,
                     GseSymbolKind.Rule,
-                    GseLinkageErrorKind.DuplicateDefinitionParameter));
+                    GseModuleBuildErrorKind.DuplicateDefinitionParameter));
             }
 
             ValidateExpressionReferences(eventScriptModule, ruleDefinition.Expression, callables, typeDefinitions, errors);
@@ -134,7 +133,7 @@ public sealed partial class GseLinkBuilder
                     $"Select '{selectDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
                     selectDefinition.Name,
                     GseSymbolKind.Select,
-                    GseLinkageErrorKind.DuplicateDefinitionParameter));
+                    GseModuleBuildErrorKind.DuplicateDefinitionParameter));
             }
 
             ValidateExpressionReferences(eventScriptModule, selectDefinition.Expression, callables, typeDefinitions, errors);
@@ -173,7 +172,7 @@ public sealed partial class GseLinkBuilder
                     $"Handler '{handler.Message}' declares parameter '{duplicateParameter}' more than once",
                     handler.Message,
                     GseSymbolKind.Handler,
-                    GseLinkageErrorKind.DuplicateHandlerParameter));
+                    GseModuleBuildErrorKind.DuplicateHandlerParameter));
             }
 
             var handlerScope = new ValidationScope(handler.Parameters);
@@ -185,11 +184,11 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateStatementReferences(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         StatementNode statement,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors,
+        List<GseModuleBuildError> errors,
         ValidationScope scope)
     {
         switch (statement)
@@ -214,7 +213,7 @@ public sealed partial class GseLinkBuilder
                         $"Variable '{let.Identifier}' is already declared in the current scope",
                         let.Identifier,
                         GseSymbolKind.Variable,
-                        GseLinkageErrorKind.DuplicateVariable));
+                        GseModuleBuildErrorKind.DuplicateVariable));
                     return;
                 }
 
@@ -262,11 +261,11 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateStatementBodyReferences(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         StatementBodyNode body,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors,
+        List<GseModuleBuildError> errors,
         ValidationScope parentScope)
     {
         var bodyScope = body.IsBlock ? parentScope.CreateChild() : parentScope;
@@ -277,11 +276,11 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateExpressionReferences(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         ExpressionNode expression,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         while (true)
         {
@@ -415,7 +414,7 @@ public sealed partial class GseLinkBuilder
                         $"Rule predicate target '{rulePredicate.RuleName}' must use identifier casing (start lowercase)",
                         errors);
                     if (!callables.TryGetValue(rulePredicate.RuleName, out var callableDefinition) ||
-                        callableDefinition.Kind != LinkedCallableKind.Rule ||
+                        callableDefinition.Kind != GseCallableKind.Rule ||
                         callableDefinition.Parameters.Count != 1)
                     {
                         errors.Add(CreateError(
@@ -423,7 +422,7 @@ public sealed partial class GseLinkBuilder
                             $"Rule '{rulePredicate.RuleName}' must exist and declare exactly one parameter to be used with 'is'",
                             rulePredicate.RuleName,
                             GseSymbolKind.Rule,
-                            GseLinkageErrorKind.InvalidRulePredicate));
+                            GseModuleBuildErrorKind.InvalidRulePredicate));
                     }
 
                     expression = rulePredicate.Value;
@@ -559,11 +558,11 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateIterationSourceReferences(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         IterationSourceNode source,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         switch (source)
         {
@@ -577,11 +576,11 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateCollectionSelectorReferences(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         CollectionSelectorNode selector,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         switch (selector)
         {
@@ -770,11 +769,11 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateCallExpression(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         CallExpressionNode call,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         if (!callables.TryGetValue(call.Name, out var callable))
         {
@@ -785,7 +784,7 @@ public sealed partial class GseLinkBuilder
                     $"No rule or select named '{call.Name}' exists",
                     call.Name,
                     GseSymbolKind.GlobalDefinition,
-                    GseLinkageErrorKind.MissingRuleOrSelect));
+                    GseModuleBuildErrorKind.MissingRuleOrSelect));
             }
 
             return;
@@ -796,12 +795,12 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateCallLabels(
-        GseModule moduleContext,
-        LinkedCallableKind kind,
+        GseParsedModule moduleContext,
+        GseCallableKind kind,
         string name,
         IReadOnlyList<string> expectedLabels,
         IReadOnlyList<ArgumentNode> arguments,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         var count = Math.Min(expectedLabels.Count, arguments.Count);
         for (var index = 0; index < count; index++)
@@ -817,17 +816,17 @@ public sealed partial class GseLinkBuilder
                 moduleContext,
                 $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
                 name,
-                kind == LinkedCallableKind.Rule ? GseSymbolKind.Rule : GseSymbolKind.Select,
-                kind == LinkedCallableKind.Rule ? GseLinkageErrorKind.WrongRuleArity : GseLinkageErrorKind.WrongSelectArity));
+                kind == GseCallableKind.Rule ? GseSymbolKind.Rule : GseSymbolKind.Select,
+                kind == GseCallableKind.Rule ? GseModuleBuildErrorKind.WrongRuleArity : GseModuleBuildErrorKind.WrongSelectArity));
         }
     }
 
     private static void ValidateTypeConstructorExpression(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         ValidateDuplicateNamedArguments(moduleContext, constructor.TypeName, constructor.Arguments, errors);
         foreach (var argument in constructor.Arguments)
@@ -878,9 +877,9 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateBuiltinTypeConstructor(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         switch (constructor.TypeName)
         {
@@ -905,10 +904,10 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateVectorConstructor(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
         IReadOnlyList<string> labels,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
         {
@@ -950,10 +949,10 @@ public sealed partial class GseLinkBuilder
     }
 
     private static void ValidateLabeledVectorConstructor(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         TypeConstructorExpressionNode constructor,
         IReadOnlyList<string> labels,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         var previousIndex = -1;
         for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
@@ -1003,24 +1002,24 @@ public sealed partial class GseLinkBuilder
             "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         string typeName,
         string message,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
         => errors.Add(CreateError(
             moduleContext,
             message,
             typeName,
             GseSymbolKind.Type,
-            GseLinkageErrorKind.InvalidTypeConstructor));
+            GseModuleBuildErrorKind.InvalidTypeConstructor));
 
     private static void ValidateCallArity(
-        GseModule moduleContext,
-        LinkedCallableKind kind,
+        GseParsedModule moduleContext,
+        GseCallableKind kind,
         string name,
         int expectedCount,
         int actualCount,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         if (expectedCount != actualCount)
         {
@@ -1028,16 +1027,16 @@ public sealed partial class GseLinkBuilder
                 moduleContext,
                 $"{kind} '{name}' expects {expectedCount} argument(s) but received {actualCount}",
                 name,
-                kind == LinkedCallableKind.Rule ? GseSymbolKind.Rule : GseSymbolKind.Select,
-                kind == LinkedCallableKind.Rule ? GseLinkageErrorKind.WrongRuleArity : GseLinkageErrorKind.WrongSelectArity));
+                kind == GseCallableKind.Rule ? GseSymbolKind.Rule : GseSymbolKind.Select,
+                kind == GseCallableKind.Rule ? GseModuleBuildErrorKind.WrongRuleArity : GseModuleBuildErrorKind.WrongSelectArity));
         }
     }
 
     private static void ValidateDuplicateNamedArguments(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         string symbolName,
         IReadOnlyList<ArgumentNode> arguments,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         var duplicateArguments = arguments
             .Where(argument => argument.Label is not null)
@@ -1052,14 +1051,14 @@ public sealed partial class GseLinkBuilder
                 $"Named argument '{duplicateArgument}' is declared more than once",
                 symbolName,
                 GseSymbolKind.Handler,
-                GseLinkageErrorKind.DuplicatePublishArgument));
+                GseModuleBuildErrorKind.DuplicatePublishArgument));
         }
     }
 
     private static void ValidateDuplicateHandlerLiteralParameters(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         HandlerLiteralExpressionNode handlerLiteral,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         var duplicateParameters = handlerLiteral.Parameters
             .GroupBy(parameter => parameter, StringComparer.Ordinal)
@@ -1073,17 +1072,17 @@ public sealed partial class GseLinkBuilder
                 $"Handler literal '{handlerLiteral.Message}' declares parameter '{duplicateParameter}' more than once",
                 handlerLiteral.Message,
                 GseSymbolKind.Handler,
-                GseLinkageErrorKind.DuplicateHandlerParameter));
+                GseModuleBuildErrorKind.DuplicateHandlerParameter));
         }
     }
 
     private static void ValidateIdentifierCase(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         string name,
         string symbol,
         GseSymbolKind symbolKind,
         string message,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         if (IsIdentifierCase(name))
         {
@@ -1095,16 +1094,16 @@ public sealed partial class GseLinkBuilder
             message,
             symbol,
             symbolKind,
-            GseLinkageErrorKind.InvalidIdentifierCase));
+            GseModuleBuildErrorKind.InvalidIdentifierCase));
     }
 
     private static void ValidateMessageCase(
-        GseModule moduleContext,
+        GseParsedModule moduleContext,
         string name,
         string symbol,
         GseSymbolKind symbolKind,
         string message,
-        List<GseLinkageError> errors)
+        List<GseModuleBuildError> errors)
     {
         if (IsMessageCase(name))
         {
@@ -1116,7 +1115,7 @@ public sealed partial class GseLinkBuilder
             message,
             symbol,
             symbolKind,
-            GseLinkageErrorKind.InvalidMessageCase));
+            GseModuleBuildErrorKind.InvalidMessageCase));
     }
 
     private static bool IsIdentifierCase(string name)
@@ -1155,7 +1154,7 @@ public sealed partial class GseLinkBuilder
         return true;
     }
 
-    private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<GseModule> modules, List<GseLinkageError> errors)
+    private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<GseParsedModule> modules, List<GseModuleBuildError> errors)
     {
         var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
 
@@ -1176,7 +1175,7 @@ public sealed partial class GseLinkBuilder
         return map;
     }
 
-    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<GseModule> modules, List<GseLinkageError> errors)
+    private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<GseParsedModule> modules, List<GseModuleBuildError> errors)
     {
         var map = new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
@@ -1190,7 +1189,7 @@ public sealed partial class GseLinkBuilder
                         $"Type '{typeDefinition.Name}' is defined more than once",
                         typeDefinition.Name,
                         GseSymbolKind.Type,
-                        GseLinkageErrorKind.DuplicateType));
+                        GseModuleBuildErrorKind.DuplicateType));
                 }
             }
         }
@@ -1198,7 +1197,7 @@ public sealed partial class GseLinkBuilder
         return map;
     }
 
-    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<GseModule> modules, List<GseLinkageError> errors)
+    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<GseParsedModule> modules, List<GseModuleBuildError> errors)
     {
         var map = new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
@@ -1212,7 +1211,7 @@ public sealed partial class GseLinkBuilder
                         $"Rule '{ruleDefinition.Name}' is defined more than once",
                         ruleDefinition.Name,
                         GseSymbolKind.Rule,
-                        GseLinkageErrorKind.DuplicateRule));
+                        GseModuleBuildErrorKind.DuplicateRule));
                 }
             }
         }
@@ -1220,7 +1219,7 @@ public sealed partial class GseLinkBuilder
         return map;
     }
 
-    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<GseModule> modules, List<GseLinkageError> errors)
+    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<GseParsedModule> modules, List<GseModuleBuildError> errors)
     {
         var map = new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
@@ -1234,7 +1233,7 @@ public sealed partial class GseLinkBuilder
                         $"Select '{selectDefinition.Name}' is defined more than once",
                         selectDefinition.Name,
                         GseSymbolKind.Select,
-                        GseLinkageErrorKind.DuplicateSelect));
+                        GseModuleBuildErrorKind.DuplicateSelect));
                 }
             }
         }
@@ -1242,29 +1241,29 @@ public sealed partial class GseLinkBuilder
         return map;
     }
 
-    private static Dictionary<string, LinkedCallableDefinition> BuildCallableDefinitionMap(
+    private static Dictionary<string, GseCallableDefinition> BuildCallableDefinitionMap(
         IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
         IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions)
     {
-        var map = new Dictionary<string, LinkedCallableDefinition>(StringComparer.Ordinal);
+        var map = new Dictionary<string, GseCallableDefinition>(StringComparer.Ordinal);
 
         foreach (var pair in ruleDefinitions)
         {
-            map[pair.Key] = new LinkedCallableDefinition(
+            map[pair.Key] = new GseCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
-                LinkedCallableKind.Rule,
+                GseCallableKind.Rule,
                 pair.Value.SourceRange);
         }
 
         foreach (var pair in selectDefinitions)
         {
-            map[pair.Key] = new LinkedCallableDefinition(
+            map[pair.Key] = new GseCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
-                LinkedCallableKind.Select,
+                GseCallableKind.Select,
                 pair.Value.SourceRange);
         }
 

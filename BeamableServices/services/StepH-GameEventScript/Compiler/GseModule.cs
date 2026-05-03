@@ -3,28 +3,27 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Parser;
 
-namespace StepH.GameEventScript.Linker;
+namespace StepH.GameEventScript.Compiler;
 
-public enum LinkedCallableKind
+public enum GseCallableKind
 {
     Rule,
     Select
 }
 
-public sealed class LinkedCallableDefinition(
+public sealed class GseCallableDefinition(
     string name,
     IReadOnlyList<ParameterNode> parameterList,
     ExpressionNode expression,
-    LinkedCallableKind kind,
+    GseCallableKind kind,
     GseSourceLocation? sourceRange = null)
 {
-    public LinkedCallableDefinition(
+    public GseCallableDefinition(
         string name,
         IReadOnlyList<string> parameters,
         ExpressionNode expression,
-        LinkedCallableKind kind,
+        GseCallableKind kind,
         GseSourceLocation? sourceRange = null)
         : this(name, Array.ConvertAll(parameters is null ? [] : parameters.ToArray(), parameter => new ParameterNode(parameter, parameter)), expression, kind, sourceRange)
     {
@@ -40,16 +39,16 @@ public sealed class LinkedCallableDefinition(
 
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
-    public LinkedCallableKind Kind { get; } = kind;
+    public GseCallableKind Kind { get; } = kind;
 
     public GseSourceLocation? SourceRange { get; } = sourceRange;
 }
 
-public sealed class LinkedGseModule
+public sealed class GseModule
 {
-    public LinkedGseModule(
+    public GseModule(
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        IReadOnlyDictionary<string, LinkedCallableDefinition> callables,
+        IReadOnlyDictionary<string, GseCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
         int sourceCount)
     {
@@ -61,7 +60,7 @@ public sealed class LinkedGseModule
 
     public IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 
-    public IReadOnlyDictionary<string, LinkedCallableDefinition> Callables { get; }
+    public IReadOnlyDictionary<string, GseCallableDefinition> Callables { get; }
 
     public IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> Handlers { get; }
 

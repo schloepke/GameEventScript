@@ -3,29 +3,28 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Linker;
-using StepH.GameEventScript.Parser;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Types.GseValueFactory;
 
 namespace StepH.GameEventScript.RegisterVM;
 
-public static class RegisterGseCompiler
+public static class RegisterVmCompiler
 {
     public static RegisterCompiledGse Compile(
-        LinkedGseModule module,
-        RegisterGseCompilationOptions? options = null)
+        GseModule module,
+        RegisterVmCompilationOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
-        var compileOptions = options ?? new RegisterGseCompilationOptions();
+        var compileOptions = options ?? new RegisterVmCompilationOptions();
         var builder = new CompilerBuilder(module, compileOptions);
         return builder.Build();
     }
 
     private sealed class CompilerBuilder(
-        LinkedGseModule module,
-        RegisterGseCompilationOptions options)
+        GseModule module,
+        RegisterVmCompilationOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
@@ -95,7 +94,7 @@ public static class RegisterGseCompiler
             }
         }
 
-        private void CompileCallable(LinkedCallableDefinition callable)
+        private void CompileCallable(GseCallableDefinition callable)
         {
             var instructions = new List<RegisterInstruction>
             {

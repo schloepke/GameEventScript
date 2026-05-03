@@ -3,17 +3,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Parser;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
-namespace StepH.GameEventScript.Linker;
+namespace StepH.GameEventScript.Compiler;
 
-internal static class GseLinkOptimizer
+internal static class GseModuleOptimizer
 {
     private static readonly ISet<string> EmptyTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-    public static LinkedGseModule Optimize(LinkedGseModule module)
+    public static GseModule Optimize(GseModule module)
     {
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
 
@@ -34,7 +33,7 @@ internal static class GseLinkOptimizer
                 .ToArray(),
             StringComparer.Ordinal);
 
-        return new LinkedGseModule(
+        return new GseModule(
             optimizedTypes,
             optimizedCallables,
             optimizedHandlers,
@@ -52,15 +51,15 @@ internal static class GseLinkOptimizer
             }).ToArray()
         };
 
-    private static LinkedCallableDefinition OptimizeCallableDefinition(LinkedCallableDefinition definition, ISet<string> knownTypeNames)
+    private static GseCallableDefinition OptimizeCallableDefinition(GseCallableDefinition definition, ISet<string> knownTypeNames)
     {
         var optimized = OptimizeExpression(definition.Expression, knownTypeNames);
-        if (definition.Kind == LinkedCallableKind.Rule)
+        if (definition.Kind == GseCallableKind.Rule)
         {
             optimized = EnsureBooleanRuleExpression(optimized);
         }
 
-        return new LinkedCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
+        return new GseCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
     private static EventHandlerNode OptimizeHandler(EventHandlerNode handler, ISet<string> knownTypeNames)

@@ -262,7 +262,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return true;
         }
 
-        var length = GameEventScriptRuntimeLimitUtilities.GetRangeLength(from, to, step);
+        var length = GesRuntimeLimitUtilities.GetRangeLength(from, to, step);
         if (!_context.RuntimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
         {
             return true;
@@ -322,7 +322,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
 
         var sourceValue = sourceVmValue.ToGameEventScriptValue();
-        if (GameEventScriptRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
+        if (GesRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
             !_context.RuntimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
         {
             return true;
@@ -1536,7 +1536,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private GameEventScriptValue EvaluateRangeLength(GameEventScriptValue operand)
     {
-        if (!GameEventScriptRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
+        if (!GesRuntimeLimitUtilities.TryGetRangeLength(operand, out var length))
         {
             return GameEventScriptNothingValue.Instance;
         }
@@ -2021,7 +2021,7 @@ internal sealed class GesBytecodeVmExecutionSession
     }
 
     private bool TryCheckMaterializedValue(GameEventScriptValue value, string detail)
-        => !GameEventScriptRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
+        => !GesRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
            _context.RuntimeBudget.TryCheckRangeLength(length, detail);
 
     private static string GetCastTypeName(BytecodeVmCastKind castKind)

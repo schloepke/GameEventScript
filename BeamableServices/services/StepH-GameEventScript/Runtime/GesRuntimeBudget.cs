@@ -5,7 +5,7 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal sealed class GseRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
+internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;
@@ -156,7 +156,7 @@ internal sealed class GseRuntimeBudget(GameEventScriptContext context, GameEvent
     }
 }
 
-internal static class GameEventScriptRuntimeLimitUtilities
+internal static class GesRuntimeLimitUtilities
 {
     public static long GetRangeLength(long from, long to, long step)
     {

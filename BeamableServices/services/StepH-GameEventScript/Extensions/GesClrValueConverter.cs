@@ -29,7 +29,7 @@ public static class GesClrValueConverter
     /// If the object is null, it returns an optional 'none' value.
     /// For unsupported types, it attempts to parse the object into a dictionary or other suitable types.
     /// </returns>
-    public static GameEventScriptValue ToGseType(this object? value)
+    public static GameEventScriptValue ToGameEventScriptValue(this object? value)
     {
         switch (value)
         {
@@ -70,10 +70,10 @@ public static class GesClrValueConverter
         }
 
         if (TryExtractStringDictionary(value, out var dictionaryEntries))
-            return GameEventScriptValueFactory.GesDictionary(dictionaryEntries.ToDictionary(x => x.Key, x => x.Value.ToGseType(), StringComparer.Ordinal));
+            return GameEventScriptValueFactory.GesDictionary(dictionaryEntries.ToDictionary(x => x.Key, x => x.Value.ToGameEventScriptValue(), StringComparer.Ordinal));
         if (value is ISet<GameEventScriptValue> typedSet) return GameEventScriptValueFactory.GesSet(typedSet);
         if (value is not (IEnumerable enumerable and not string)) return GameEventScriptValueFactory.GesDictionary(ExtractObjectMembers(value));
-        var list = (from object? item in enumerable select item.ToGseType()).ToList();
+        var list = (from object? item in enumerable select item.ToGameEventScriptValue()).ToList();
         return GameEventScriptValueFactory.GesList(list);
     }
 
@@ -134,12 +134,12 @@ public static class GesClrValueConverter
         {
             if (property.GetIndexParameters().Length > 0) continue;
             if (!property.CanRead) continue;
-            map[property.Name] = property.GetValue(value).ToGseType();
+            map[property.Name] = property.GetValue(value).ToGameEventScriptValue();
         }
 
         foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
         {
-            map[field.Name] = field.GetValue(value).ToGseType();
+            map[field.Name] = field.GetValue(value).ToGameEventScriptValue();
         }
 
         return map;

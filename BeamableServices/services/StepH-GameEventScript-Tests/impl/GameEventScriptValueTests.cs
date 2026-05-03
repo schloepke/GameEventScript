@@ -269,7 +269,7 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void ClrDictionariesWithNonTextKeysDoNotThrow()
     {
-        var value = new Dictionary<int, string> { [1] = "a" }.ToGseType();
+        var value = new Dictionary<int, string> { [1] = "a" }.ToGameEventScriptValue();
 
         Assert.AreEqual(GameEventScriptValueKind.Dictionary, value.Kind);
         Assert.HasCount(0, value.AsDictionary());

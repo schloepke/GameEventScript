@@ -62,7 +62,7 @@ public class GameEventScriptDiagnosticTest
             .Build()
             .Load(bytecode);
         
-        host.Publish(input);
+        host.PublishToCompletion(input);
         
         TestContext.WriteLine(collector.ToString());
         

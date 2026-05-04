@@ -111,7 +111,7 @@ public sealed class BytecodeVmPerformanceReportTests
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i < iterations; i++)
         {
-            host.Publish(input);
+            host.PublishToCompletion(input);
         }
 
         stopwatch.Stop();

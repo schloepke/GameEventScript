@@ -98,7 +98,7 @@ internal static class GameEventScriptConformanceRunner
             var diagnosticsStart = collector.Events.Count;
             published.Clear();
 
-            host.Publish(GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(step.Input, "step input", testCase)));
+            host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(step.Input, "step input", testCase)));
 
             AssertPublishedMessages(testCase, stepIndex, step.ExpectedPublished, published);
             AssertDiagnostics(testCase, stepIndex, step, collector.Events.Skip(diagnosticsStart).ToArray());

@@ -433,7 +433,8 @@ internal sealed class GesBytecodeVmExecutionSession
 
         var top = stackBase;
         var instructions = program.Instructions;
-        if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
+        var isStepping = _runtimeBudget.IsStepping;
+        if (!isStepping && !TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
         {
             value = BytecodeVmValue.Nothing;
             return true;
@@ -441,6 +442,12 @@ internal sealed class GesBytecodeVmExecutionSession
 
         for (var instructionIndex = 0; instructionIndex < instructions.Length; instructionIndex++)
         {
+            if (isStepping && !TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+            {
+                value = BytecodeVmValue.Nothing;
+                return true;
+            }
+
             ref readonly var instruction = ref instructions[instructionIndex];
             switch (instruction.OpCode)
             {

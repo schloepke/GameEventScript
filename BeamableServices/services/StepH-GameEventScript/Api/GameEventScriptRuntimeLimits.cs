@@ -21,20 +21,19 @@ public sealed class GameEventScriptRuntimeLimits
     public static GameEventScriptRuntimeLimits Default { get; } = new();
 
     /// <summary>
-    /// Specifies the maximum number of events that can be processed in a single execution run.
-    /// This property ensures that excessive event processing does not lead to prolonged execution times
-    /// or resource exhaustion, providing a safeguard for runtime performance and stability.
+    /// Specifies the maximum number of events that can be processed by an explicit
+    /// run-to-completion execution.
     /// </summary>
     /// <remarks>
     /// The default value is set to 64 but can be customized to suit specific application requirements.
-    /// Adjusting this property allows developers to fine-tune the balance between processing capacity
-    /// and runtime efficiency. Exceeding this limit in a single run will skip additional events until the next cycle.
+    /// Persistent manual and automatic hosts use queue limits and opcode budgets for flow control
+    /// and do not apply this limit to their long-lived queue.
     /// </remarks>
     public int MaxProcessedEventsPerRun { get; init; } = 64;
 
     /// <summary>
-    /// Specifies the maximum number of messages that may be waiting in the active host queue
-    /// during a single publish run.
+    /// Specifies the maximum number of messages that may be waiting in an active
+    /// host or explicit run queue.
     /// </summary>
     /// <remarks>
     /// A value less than or equal to zero disables the queue-length limit. When the limit is

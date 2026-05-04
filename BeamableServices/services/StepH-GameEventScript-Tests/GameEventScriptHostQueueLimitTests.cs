@@ -29,7 +29,7 @@ public sealed class GameEventScriptHostQueueLimitTests
             accepted.Add(context.Publish("C"));
         });
 
-        var inputAccepted = host.Publish(Create("Start"));
+        var inputAccepted = host.PublishToCompletion(Create("Start"));
 
         Assert.IsTrue(inputAccepted);
         CollectionAssert.AreEqual(new[] { true, true, false }, accepted);

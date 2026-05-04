@@ -15,6 +15,8 @@ public sealed class GameEventScriptHostBuilder
     private Action<GameEventScriptMessage>? _publishedMessageObserver;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
+    private GameEventScriptDispatchMode _dispatchMode = GameEventScriptDispatchMode.Manual;
+    private GameEventScriptDispatcher? _dispatcher;
 
     /// <summary>
     /// Configures the <see cref="GameEventScriptHostBuilder"/> to use the specified
@@ -114,6 +116,42 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
+    /// Configures how the host drains its internal message queue after messages are published.
+    /// </summary>
+    /// <param name="dispatchMode">The dispatch mode used by the built host.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptHostBuilder WithDispatchMode(GameEventScriptDispatchMode dispatchMode)
+    {
+        _dispatchMode = dispatchMode;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the host to drain queued messages on a background dispatch pump.
+    /// </summary>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptHostBuilder WithAutomaticDispatch()
+    {
+        _dispatchMode = GameEventScriptDispatchMode.Automatic;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the host to drain queued messages on the provided shared dispatcher.
+    /// </summary>
+    /// <param name="dispatcher">The dispatcher that should pump this host.</param>
+    /// <returns>The current builder instance.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if the <paramref name="dispatcher"/> parameter is null.
+    /// </exception>
+    public GameEventScriptHostBuilder WithAutomaticDispatch(GameEventScriptDispatcher dispatcher)
+    {
+        _dispatchMode = GameEventScriptDispatchMode.Automatic;
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        return this;
+    }
+
+    /// <summary>
     /// Builds an instance of <see cref="GameEventScriptHost"/> using the current configuration of the
     /// <see cref="GameEventScriptHostBuilder"/>.
     /// </summary>
@@ -121,5 +159,5 @@ public sealed class GameEventScriptHostBuilder
     /// A new instance of <see cref="GameEventScriptHost"/> configured with the specified
     /// random generator, diagnostic collector, message observer, extension registry, and runtime limits.
     /// </returns>
-    public GameEventScriptHost Build() => new(_random ?? GameEventScriptRandomGenerator.Create(), _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits);
+    public GameEventScriptHost Build() => new(_random ?? GameEventScriptRandomGenerator.Create(), _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, _dispatchMode, _dispatcher);
 }

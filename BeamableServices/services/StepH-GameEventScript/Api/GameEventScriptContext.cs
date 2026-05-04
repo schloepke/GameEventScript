@@ -24,12 +24,18 @@ public sealed class GameEventScriptContext
     /// </summary>
     public GameEventScriptContext(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> publish, IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
         GameEventScriptRuntimeLimits? runtimeLimits = null, IGameEventScriptExtensionRegistry? extensionRegistry = null)
+        : this(random, publish, diagnosticCollector, runtimeLimits, extensionRegistry, stepController: null)
+    {
+    }
+
+    internal GameEventScriptContext(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> publish, IGameEventScriptDiagnosticCollector? diagnosticCollector,
+        GameEventScriptRuntimeLimits? runtimeLimits, IGameEventScriptExtensionRegistry? extensionRegistry, GameEventScriptStepController? stepController)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _publish = publish ?? throw new ArgumentNullException(nameof(publish));
         DiagnosticCollector = diagnosticCollector;
         RuntimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
-        RuntimeBudget = new GesRuntimeBudget(this, RuntimeLimits);
+        RuntimeBudget = new GesRuntimeBudget(this, RuntimeLimits, stepController);
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 

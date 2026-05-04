@@ -191,6 +191,56 @@ on Step(value) {
 The external input message passed to `host.Publish(...)` is not considered a
 published output. Messages emitted through `publish` are observable outputs.
 
+### Host dispatch modes
+
+`host.Publish(message)` enqueues an external input message and returns without
+draining the queue. This is the default game-oriented contract.
+
+Manual hosts are pumped by the game loop:
+
+```csharp
+host.Publish(GameEventScriptMessage.Create("Start"));
+
+void Update()
+{
+    var step = host.Update(maxOpcodes: 10);
+}
+```
+
+Automatic hosts run the same serial dispatch queue on a background pump:
+
+```csharp
+var host = GameEventScriptHost.CreateBuilder()
+    .WithAutomaticDispatch()
+    .Build();
+
+host.Publish(GameEventScriptMessage.Create("Start"));
+```
+
+Automatic dispatch uses a `GameEventScriptDispatcher`. `WithAutomaticDispatch()`
+uses the shared dispatcher, so multiple hosts do not create one thread each. A
+game can also provide its own dispatcher:
+
+```csharp
+using var dispatcher = GameEventScriptDispatcher.Create(workerCount: 1);
+
+var host = GameEventScriptHost.CreateBuilder()
+    .WithAutomaticDispatch(dispatcher)
+    .Build();
+```
+
+Tools and tests that need the old synchronous behavior can call
+`host.PublishToCompletion(message)`.
+
+`GameEventScriptRunStepResult` reports the run state, the number of consumed
+opcode ticks, processed messages, and accepted published messages for a manual
+update. Script bytecode consumes opcode ticks through the same runtime budget
+used by `MaxExecutionSteps`. External C# subscribers are not bytecode and
+therefore run atomically once dispatch reaches them.
+
+`BeginRun(...)` is still available for an isolated resumable run object, but the
+main host API is `Publish(...)` plus `Update(...)`.
+
 ### Subscriber order
 
 Subscribers are matched by message signature. Matching subscribers run by host
@@ -1865,6 +1915,8 @@ var host = GameEventScriptHost.CreateBuilder()
 host.Publish(GameEventScriptMessage.Create(
     "Start",
     ("value", GameEventScriptValueFactory.GesInteger(3))));
+
+host.Update(maxOpcodes: 100);
 ```
 
 ### Host builder options
@@ -1876,6 +1928,9 @@ host.Publish(GameEventScriptMessage.Create(
 - `WithDiagnosticCollector(...)`
 - `WithPublishedMessageObserver(...)`
 - `WithRuntimeLimits(...)`
+- `WithDispatchMode(...)`
+- `WithAutomaticDispatch()`
+- `WithAutomaticDispatch(dispatcher)`
 
 External subscribers can be registered with `Subscribe`.
 
@@ -1972,13 +2027,15 @@ var limits = new GameEventScriptRuntimeLimits
 };
 ```
 
-`MaxProcessedEventsPerRun` limits how many queued events one `Publish` call may
-process.
+`MaxProcessedEventsPerRun` limits explicit run-to-completion dispatches such as
+`PublishToCompletion(...)` and isolated `BeginRun(...)` executions. Persistent
+manual and automatic hosts use `MaxQueuedMessagesPerRun` plus opcode budgets for
+flow control.
 
-`MaxQueuedMessagesPerRun` limits how many messages may wait in the active host
-queue at once. When the queue is full, the newest published message is dropped
-and `Publish(...)` returns `false`. Values less than or equal to zero disable
-this queue-length limit.
+`MaxQueuedMessagesPerRun` limits how many messages may wait in an active queue
+at once. When the queue is full, the newest published message is dropped and the
+publish operation returns `false`. Values less than or equal to zero disable this
+queue-length limit.
 
 When a runtime budget is reached, execution stops leniently and a
 `RuntimeLimitReached` diagnostic is recorded when diagnostics are available.

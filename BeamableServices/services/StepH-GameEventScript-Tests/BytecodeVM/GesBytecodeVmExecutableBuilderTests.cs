@@ -98,7 +98,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start"));
+        host.PublishToCompletion(Create("Start"));
 
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
@@ -129,7 +129,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(rebuiltBytecode);
 
-        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
@@ -308,7 +308,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start"));
+        host.PublishToCompletion(Create("Start"));
 
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
@@ -342,9 +342,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(true)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
-        host.Publish(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(true))));
-        host.Publish(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
+        host.PublishToCompletion(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(true)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
+        host.PublishToCompletion(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(true))));
+        host.PublishToCompletion(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
 
         Assert.HasCount(3, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(1), published[0].Arguments["value"]);
@@ -374,7 +374,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start", ("flag", GameEventScriptValueFactory.GesBoolean(true))));
+        host.PublishToCompletion(Create("Start", ("flag", GameEventScriptValueFactory.GesBoolean(true))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["inner"]);
@@ -402,7 +402,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create(
+        host.PublishToCompletion(Create(
             "Start",
             ("items", GameEventScriptValueFactory.GesList(
             [
@@ -438,7 +438,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create(
+        host.PublishToCompletion(Create(
             "Start",
             ("items", GameEventScriptValueFactory.GesList(
             [
@@ -477,7 +477,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start"));
+        host.PublishToCompletion(Create("Start"));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(12.2m), published[0].Arguments["numberOk"]);
@@ -525,7 +525,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create(
+        host.PublishToCompletion(Create(
             "Start",
             ("player", GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
             {
@@ -589,7 +589,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start", ("seed", GameEventScriptValueFactory.GesInteger(7))));
+        host.PublishToCompletion(Create("Start", ("seed", GameEventScriptValueFactory.GesInteger(7))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["listFirst"]);
@@ -663,7 +663,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create(
+        host.PublishToCompletion(Create(
             "Start",
             ("custom", GameEventScriptValueFactory.GesCustomType("gauge", new Dictionary<string, GameEventScriptValue>
             {
@@ -720,7 +720,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(21))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(21))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["isMessage"]);
@@ -762,7 +762,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start", ("success", GameEventScriptValueFactory.GesBoolean(true))));
+        host.PublishToCompletion(Create("Start", ("success", GameEventScriptValueFactory.GesBoolean(true))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["handlerIsHandler"]);
@@ -804,7 +804,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 script,
                 new GameEventScriptCompileOptions { EnableDiagnostics = true }));
 
-        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["score"]);
@@ -843,7 +843,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(compiled);
 
-        host.Publish(Create(
+        host.PublishToCompletion(Create(
             "Start",
             ("value", GameEventScriptValueFactory.GesDecimal(10.4m)),
             ("heading", GameEventScriptValueFactory.GesDegree(-10))));
@@ -883,7 +883,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(compiled);
 
-        host.Publish(Create(
+        host.PublishToCompletion(Create(
             "Start",
             ("values", GameEventScriptValueFactory.GesList(
             [
@@ -963,7 +963,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(10.9m))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(10.9m))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(10), published[0].Arguments["floor"]);

@@ -1792,6 +1792,12 @@ internal sealed class GesBytecodeVmExecutionSession
             try
             {
                 RecordRuleCalled(instruction, input);
+                if (!_diagnosticsEnabled &&
+                    TryEvaluateSimpleRulePredicate(instruction.ExpressionProgram, instruction.A, input, out value))
+                {
+                    return true;
+                }
+
                 if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, input, instruction.ExpressionProgram, stackBase, out value))
                 {
                     value = BytecodeVmValue.Nothing;
@@ -1827,6 +1833,60 @@ internal sealed class GesBytecodeVmExecutionSession
             ExitScope();
             _context.RuntimeBudget.ExitCall();
         }
+    }
+
+    private bool TryEvaluateSimpleRulePredicate(
+        GameEventScriptBytecodeExpressionProgram program,
+        int parameterSlot,
+        BytecodeVmValue input,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        var instructions = program.Instructions;
+        if (instructions.Length != 4 ||
+            instructions[0].OpCode != GameEventScriptBytecodeOpCode.LoadSlot ||
+            instructions[0].A != parameterSlot ||
+            instructions[1].OpCode != GameEventScriptBytecodeOpCode.LoadConstant ||
+            instructions[3].OpCode != GameEventScriptBytecodeOpCode.Cast ||
+            instructions[3].CastKind != GameEventScriptBytecodeCastKind.Boolean)
+        {
+            return false;
+        }
+
+        var opCode = instructions[2].OpCode;
+        if (opCode is not (GameEventScriptBytecodeOpCode.Equal or
+                           GameEventScriptBytecodeOpCode.NotEqual or
+                           GameEventScriptBytecodeOpCode.Less or
+                           GameEventScriptBytecodeOpCode.Greater or
+                           GameEventScriptBytecodeOpCode.LessOrEqual or
+                           GameEventScriptBytecodeOpCode.GreaterOrEqual))
+        {
+            return false;
+        }
+
+        if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
+        {
+            return true;
+        }
+
+        var right = LoadConstant(instructions[1].ConstantIndex);
+        if (input.IsNothingLike() || right.IsNothingLike())
+        {
+            value = BytecodeVmValue.Boolean(false);
+            return true;
+        }
+
+        value = opCode switch
+        {
+            GameEventScriptBytecodeOpCode.Equal => BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(input, right)),
+            GameEventScriptBytecodeOpCode.NotEqual => BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(input, right)),
+            GameEventScriptBytecodeOpCode.Less => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison < 0),
+            GameEventScriptBytecodeOpCode.Greater => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison > 0),
+            GameEventScriptBytecodeOpCode.LessOrEqual => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison <= 0),
+            GameEventScriptBytecodeOpCode.GreaterOrEqual => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison >= 0),
+            _ => BytecodeVmValue.Nothing
+        };
+        return true;
     }
 
     private bool TryEvaluateCallable(
@@ -4009,14 +4069,9 @@ internal sealed class GesBytecodeVmExecutionSession
         var previous = _locals[slot];
         _locals[slot] = slotValue;
         _assignedSlots[slot] = true;
-        try
-        {
-            return TryExecuteExpressionProgram(expressionProgram, stackBase, out value);
-        }
-        finally
-        {
-            RestoreSlot(slot, hadValue, previous);
-        }
+        var success = TryExecuteExpressionProgram(expressionProgram, stackBase, out value);
+        RestoreSlot(slot, hadValue, previous);
+        return success;
     }
 
     private void RestoreSlot(int slot, bool hadValue, BytecodeVmValue previous)
@@ -4387,6 +4442,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static bool AreEqual(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
+        {
+            return left.IntegerValue == right.IntegerValue;
+        }
+
         if (left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) &&
             right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
@@ -4418,6 +4478,12 @@ internal readonly record struct BytecodeVmValue(
 
     public static bool TryCompareNumeric(BytecodeVmValue left, BytecodeVmValue right, out int comparison)
     {
+        if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
+        {
+            comparison = left.IntegerValue.CompareTo(right.IntegerValue);
+            return true;
+        }
+
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
         {
@@ -4444,6 +4510,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Add(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "+", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "+", right, out var pointResult))
         {
             return pointResult;
@@ -4501,6 +4572,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Subtract(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "-", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "-", right, out var pointResult))
         {
             return pointResult;
@@ -4550,6 +4626,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Multiply(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "*", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "*", right, out var pointResult))
         {
             return pointResult;
@@ -4598,6 +4679,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Divide(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "/", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "/", right, out var pointResult))
         {
             return pointResult;
@@ -4646,6 +4732,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue IntegerDivide(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "div", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "div", right, out var pointResult))
         {
             return pointResult;
@@ -4692,6 +4783,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Modulo(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "mod", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "mod", right, out var pointResult))
         {
             return pointResult;
@@ -4737,6 +4833,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Remainder(BytecodeVmValue left, BytecodeVmValue right)
     {
+        if (TryEvaluateIntegerBinary(left, "rem", right, out var integerResult))
+        {
+            return integerResult;
+        }
+
         if (TryEvaluatePointBinary(left, "rem", right, out var pointResult))
         {
             return pointResult;
@@ -5041,10 +5142,152 @@ internal readonly record struct BytecodeVmValue(
             ? Percentage(number.Value)
             : FromDecimalNumeric(number);
 
+    private static bool TryEvaluateIntegerBinary(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (left.Kind != BytecodeVmValueKind.Integer || right.Kind != BytecodeVmValueKind.Integer)
+        {
+            value = default;
+            return false;
+        }
+
+        var leftInteger = left.IntegerValue;
+        var rightInteger = right.IntegerValue;
+        switch (operation)
+        {
+            case "+":
+                if (TryAddInteger(leftInteger, rightInteger, out var sum))
+                {
+                    value = Integer(sum);
+                    return true;
+                }
+
+                break;
+
+            case "-":
+                if (TrySubtractInteger(leftInteger, rightInteger, out var difference))
+                {
+                    value = Integer(difference);
+                    return true;
+                }
+
+                break;
+
+            case "*":
+                if (TryMultiplyInteger(leftInteger, rightInteger, out var product))
+                {
+                    value = Integer(product);
+                    return true;
+                }
+
+                break;
+
+            case "/":
+                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    value = Decimal((decimal)leftInteger / rightInteger);
+                    return true;
+                }
+
+                break;
+
+            case "div":
+                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    var quotient = leftInteger / rightInteger;
+                    var remainder = leftInteger % rightInteger;
+                    if (remainder != 0 && (remainder > 0) != (rightInteger > 0))
+                    {
+                        quotient--;
+                    }
+
+                    value = Integer(quotient);
+                    return true;
+                }
+
+                break;
+
+            case "mod":
+                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    var modulo = leftInteger % rightInteger;
+                    if (modulo != 0 &&
+                        (modulo < 0 && rightInteger > 0 || modulo > 0 && rightInteger < 0))
+                    {
+                        modulo += rightInteger;
+                    }
+
+                    value = Integer(modulo);
+                    return true;
+                }
+
+                break;
+
+            case "rem":
+                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    value = Integer(leftInteger % rightInteger);
+                    return true;
+                }
+
+                break;
+        }
+
+        value = default;
+        return false;
+    }
+
     private static bool SetNumber(decimal input, out decimal output)
     {
         output = input;
         return true;
+    }
+
+    private static bool TryAddInteger(long left, long right, out long value)
+    {
+        value = left + right;
+        return ((left ^ value) & (right ^ value)) >= 0;
+    }
+
+    private static bool TrySubtractInteger(long left, long right, out long value)
+    {
+        value = left - right;
+        return ((left ^ right) & (left ^ value)) >= 0;
+    }
+
+    private static bool TryMultiplyInteger(long left, long right, out long value)
+    {
+        if (left == 0 || right == 0)
+        {
+            value = 0;
+            return true;
+        }
+
+        if (left == -1)
+        {
+            if (right == long.MinValue)
+            {
+                value = default;
+                return false;
+            }
+
+            value = -right;
+            return true;
+        }
+
+        if (right == -1)
+        {
+            if (left == long.MinValue)
+            {
+                value = default;
+                return false;
+            }
+
+            value = -left;
+            return true;
+        }
+
+        value = left * right;
+        return value / right == left;
     }
 
     private static bool TryToInteger(decimal value, out long integer)

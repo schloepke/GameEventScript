@@ -100,8 +100,9 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
   property System.Int32 DeclarationOrder { get }
   property System.String Message { get }
   property System.String SignatureId { get }
-struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode, System.Int32 A, System.Int32 B, System.Int32 ConstantIndex, StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind CastKind, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram ExpressionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineProgram PipelineProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionProgram GeneratedCollectionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceProgram GuardedChoiceProgram, System.String DiagnosticName, System.String DiagnosticArgumentName, System.String[] Names, System.Int32[] Slots)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction <Clone>$()
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction other)
   method System.Boolean Equals(System.Object obj)
   method System.Int32 GetHashCode()

@@ -236,7 +236,7 @@ public enum GameEventScriptBytecodeCastKind
     Sequence
 }
 
-public readonly record struct GameEventScriptBytecodeInstruction(
+public sealed record class GameEventScriptBytecodeInstruction(
     GameEventScriptBytecodeOpCode OpCode,
     int A = -1,
     int B = -1,
@@ -252,18 +252,66 @@ public readonly record struct GameEventScriptBytecodeInstruction(
     string[]? Names = null,
     int[]? Slots = null);
 
+internal enum GameEventScriptBytecodeProjectionFastKind
+{
+    None,
+    Operand,
+    RulePredicate,
+    Binary,
+    BinaryCastBoolean,
+    BinaryThenBinary,
+    BinaryThenBinaryThenBinary,
+    Stack
+}
+
 public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBytecodeInstruction[] instructions, int maxStackDepth)
 {
     public GameEventScriptBytecodeInstruction[] Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
 
     public int MaxStackDepth { get; } = maxStackDepth;
 
-    internal bool CanEvaluateProjectionFast { get; } = CanEvaluateProjectionFastCore(instructions, maxStackDepth);
+    internal GameEventScriptBytecodeProjectionFastKind ProjectionFastKind { get; } = GetProjectionFastKind(instructions, maxStackDepth);
 
-    private static bool CanEvaluateProjectionFastCore(GameEventScriptBytecodeInstruction[] instructions, int maxStackDepth)
-        => instructions.Length is > 0 and <= 8 &&
-           maxStackDepth <= 3 &&
-           instructions.All(CanEvaluateProjectionInstructionFast);
+    internal bool CanEvaluateProjectionFast => ProjectionFastKind != GameEventScriptBytecodeProjectionFastKind.None;
+
+    private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeInstruction[] instructions, int maxStackDepth)
+    {
+        if (instructions.Length is 0 or > 8 || maxStackDepth > 3 || !instructions.All(CanEvaluateProjectionInstructionFast))
+        {
+            return GameEventScriptBytecodeProjectionFastKind.None;
+        }
+
+        return instructions.Length switch
+        {
+            1 when IsProjectionOperand(instructions[0]) => GameEventScriptBytecodeProjectionFastKind.Operand,
+            2 when IsProjectionOperand(instructions[0]) &&
+                   instructions[1].OpCode == GameEventScriptBytecodeOpCode.RulePredicate => GameEventScriptBytecodeProjectionFastKind.RulePredicate,
+            3 when IsProjectionOperand(instructions[0]) &&
+                   IsProjectionOperand(instructions[1]) &&
+                   IsProjectionBinaryOp(instructions[2].OpCode) => GameEventScriptBytecodeProjectionFastKind.Binary,
+            4 when IsProjectionOperand(instructions[0]) &&
+                   IsProjectionOperand(instructions[1]) &&
+                   IsProjectionBinaryOp(instructions[2].OpCode) &&
+                   instructions[3].OpCode == GameEventScriptBytecodeOpCode.Cast &&
+                   instructions[3].CastKind == GameEventScriptBytecodeCastKind.Boolean => GameEventScriptBytecodeProjectionFastKind.BinaryCastBoolean,
+            5 when IsProjectionOperand(instructions[0]) &&
+                   IsProjectionOperand(instructions[1]) &&
+                   IsProjectionBinaryOp(instructions[2].OpCode) &&
+                   IsProjectionOperand(instructions[3]) &&
+                   IsProjectionBinaryOp(instructions[4].OpCode) => GameEventScriptBytecodeProjectionFastKind.BinaryThenBinary,
+            7 when IsProjectionOperand(instructions[0]) &&
+                   IsProjectionOperand(instructions[1]) &&
+                   IsProjectionBinaryOp(instructions[2].OpCode) &&
+                   IsProjectionOperand(instructions[3]) &&
+                   IsProjectionBinaryOp(instructions[4].OpCode) &&
+                   IsProjectionOperand(instructions[5]) &&
+                   IsProjectionBinaryOp(instructions[6].OpCode) => GameEventScriptBytecodeProjectionFastKind.BinaryThenBinaryThenBinary,
+            _ => GameEventScriptBytecodeProjectionFastKind.Stack
+        };
+    }
+
+    private static bool IsProjectionOperand(GameEventScriptBytecodeInstruction instruction)
+        => instruction.OpCode is GameEventScriptBytecodeOpCode.LoadConstant or GameEventScriptBytecodeOpCode.LoadSlot;
 
     private static bool CanEvaluateProjectionInstructionFast(GameEventScriptBytecodeInstruction instruction)
         => instruction.OpCode switch
@@ -290,6 +338,24 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.Remainder => true,
             _ => false
         };
+
+    private static bool IsProjectionBinaryOp(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.Or or
+            GameEventScriptBytecodeOpCode.Xor or
+            GameEventScriptBytecodeOpCode.And or
+            GameEventScriptBytecodeOpCode.Equal or
+            GameEventScriptBytecodeOpCode.NotEqual or
+            GameEventScriptBytecodeOpCode.Less or
+            GameEventScriptBytecodeOpCode.Greater or
+            GameEventScriptBytecodeOpCode.LessOrEqual or
+            GameEventScriptBytecodeOpCode.GreaterOrEqual or
+            GameEventScriptBytecodeOpCode.Add or
+            GameEventScriptBytecodeOpCode.Subtract or
+            GameEventScriptBytecodeOpCode.Multiply or
+            GameEventScriptBytecodeOpCode.Divide or
+            GameEventScriptBytecodeOpCode.IntegerDivide or
+            GameEventScriptBytecodeOpCode.Modulo or
+            GameEventScriptBytecodeOpCode.Remainder;
 }
 
 public enum GameEventScriptBytecodeSelectorKind

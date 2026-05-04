@@ -2,6 +2,7 @@
 
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using System.Runtime.CompilerServices;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -16,6 +17,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
 
     public bool IsExhausted => _exhausted;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryConsumeExecutionStep(string detail)
     {
         if (_exhausted)
@@ -34,16 +36,17 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         return true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryConsumeExecutionSteps(int count, string detail)
     {
-        if (count <= 1)
-        {
-            return TryConsumeExecutionStep(detail);
-        }
-
         if (_exhausted)
         {
             return false;
+        }
+
+        if (count <= 1)
+        {
+            count = 1;
         }
 
         var limit = Limits.MaxExecutionSteps;

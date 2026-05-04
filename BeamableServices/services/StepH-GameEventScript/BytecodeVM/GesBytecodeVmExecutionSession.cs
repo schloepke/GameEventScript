@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -15,6 +16,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private readonly GesBytecodeVmExecutable _compiledScript;
     private readonly GameEventScriptContext _context;
+    private readonly GesRuntimeBudget _runtimeBudget;
     private readonly GameEventScriptBytecodeExecutionPlan _plan;
     private readonly BytecodeVmValue[] _locals;
     private readonly bool[] _assignedSlots;
@@ -33,6 +35,7 @@ internal sealed class GesBytecodeVmExecutionSession
     {
         _compiledScript = compiledScript;
         _context = context;
+        _runtimeBudget = context.RuntimeBudget;
         _plan = plan;
         _diagnosticsEnabled = diagnosticsEnabled;
         _locals = new BytecodeVmValue[plan.SlotCount];
@@ -263,7 +266,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
 
         var length = GesRuntimeLimitUtilities.GetRangeLength(from, to, step);
-        if (!_context.RuntimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
+        if (!_runtimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
         {
             return true;
         }
@@ -323,7 +326,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
         var sourceValue = sourceVmValue.ToGameEventScriptValue();
         if (GesRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
-            !_context.RuntimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
+            !_runtimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
         {
             return true;
         }
@@ -349,7 +352,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteLoopIteration(GameEventScriptBytecodeStatement statement, BytecodeVmValue item)
     {
-        if (!_context.RuntimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
+        if (!_runtimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
             _halted = true;
             return true;
@@ -438,7 +441,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
         for (var instructionIndex = 0; instructionIndex < instructions.Length; instructionIndex++)
         {
-            var instruction = instructions[instructionIndex];
+            ref readonly var instruction = ref instructions[instructionIndex];
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.LoadConstant:
@@ -914,7 +917,7 @@ internal sealed class GesBytecodeVmExecutionSession
             _ => GameEventScriptFastValue.Nothing
         };
 
-    private BytecodeVmValue EvaluateProgramBinary(GameEventScriptBytecodeOpCode opCode, BytecodeVmValue left, BytecodeVmValue right)
+    private BytecodeVmValue EvaluateProgramBinary(GameEventScriptBytecodeOpCode opCode, in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (opCode != GameEventScriptBytecodeOpCode.Default &&
             (left.IsNothingLike() || right.IsNothingLike()))
@@ -1040,7 +1043,7 @@ internal sealed class GesBytecodeVmExecutionSession
         var values = new List<GameEventScriptValue>();
         foreach (var item in sourceItems)
         {
-            if (!_context.RuntimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
+            if (!_runtimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
             {
                 break;
             }
@@ -1060,7 +1063,7 @@ internal sealed class GesBytecodeVmExecutionSession
                 }
             }
 
-            if (!_context.RuntimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
+            if (!_runtimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
             {
                 break;
             }
@@ -1231,7 +1234,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Reference(GesDice(GameEventScriptDiceValue.Empty));
         }
 
-        if (!_context.RuntimeBudget.TryCheckDice(diceCount, sideCount))
+        if (!_runtimeBudget.TryCheckDice(diceCount, sideCount))
         {
             return BytecodeVmValue.Reference(GesDice(GameEventScriptDiceValue.Empty));
         }
@@ -1563,7 +1566,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return GameEventScriptNothingValue.Instance;
         }
 
-        return _context.RuntimeBudget.TryCheckRangeLength(length, "Range length exceeds the configured limit.")
+        return _runtimeBudget.TryCheckRangeLength(length, "Range length exceeds the configured limit.")
             ? GesInteger(length)
             : GameEventScriptNothingValue.Instance;
     }
@@ -1573,7 +1576,7 @@ internal sealed class GesBytecodeVmExecutionSession
         long count = 0;
         foreach (var _ in values)
         {
-            if (!_context.RuntimeBudget.TryConsumeLoopIteration(detail))
+            if (!_runtimeBudget.TryConsumeLoopIteration(detail))
             {
                 return GameEventScriptNothingValue.Instance;
             }
@@ -1770,7 +1773,7 @@ internal sealed class GesBytecodeVmExecutionSession
             : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
     private bool TryEvaluateRulePredicate(
-        GameEventScriptBytecodeInstruction instruction,
+        in GameEventScriptBytecodeInstruction instruction,
         BytecodeVmValue input,
         int stackBase,
         out BytecodeVmValue value,
@@ -1782,7 +1785,7 @@ internal sealed class GesBytecodeVmExecutionSession
             return false;
         }
 
-        if (!_context.RuntimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
         {
             return true;
         }
@@ -1809,7 +1812,7 @@ internal sealed class GesBytecodeVmExecutionSession
             }
             finally
             {
-                _context.RuntimeBudget.ExitCall();
+                _runtimeBudget.ExitCall();
             }
         }
 
@@ -1831,7 +1834,7 @@ internal sealed class GesBytecodeVmExecutionSession
         finally
         {
             ExitScope();
-            _context.RuntimeBudget.ExitCall();
+            _runtimeBudget.ExitCall();
         }
     }
 
@@ -1890,7 +1893,7 @@ internal sealed class GesBytecodeVmExecutionSession
     }
 
     private bool TryEvaluateCallable(
-        GameEventScriptBytecodeInstruction instruction,
+        in GameEventScriptBytecodeInstruction instruction,
         BytecodeVmValue[] stack,
         int start,
         int count,
@@ -1907,7 +1910,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
 
         var callableName = instruction.DiagnosticName ?? string.Empty;
-        if (!_context.RuntimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
         {
             return true;
         }
@@ -1940,7 +1943,7 @@ internal sealed class GesBytecodeVmExecutionSession
         finally
         {
             ExitScope();
-            _context.RuntimeBudget.ExitCall();
+            _runtimeBudget.ExitCall();
         }
     }
 
@@ -2134,7 +2137,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryCheckMaterializedValue(GameEventScriptValue value, string detail)
         => !GesRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
-           _context.RuntimeBudget.TryCheckRangeLength(length, detail);
+           _runtimeBudget.TryCheckRangeLength(length, detail);
 
     private static string GetCastTypeName(GameEventScriptBytecodeCastKind castKind)
         => castKind switch
@@ -2728,6 +2731,7 @@ internal sealed class GesBytecodeVmExecutionSession
         var hasValue = false;
         var sum = BytecodeVmValue.Decimal(0m);
         var prefixSelectors = pipeline.PrefixSelectors;
+        var terminalIsIdentity = IsIdentityProjection(terminal.IdentifierSlot, terminal.ExpressionProgram);
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
@@ -2745,7 +2749,18 @@ internal sealed class GesBytecodeVmExecutionSession
                 continue;
             }
 
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projected))
+            BytecodeVmValue projected;
+            if (terminalIsIdentity)
+            {
+                if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return true;
+                }
+
+                projected = item;
+            }
+            else if (!TryEvaluatePipelineTerminalProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out projected))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -2774,6 +2789,7 @@ internal sealed class GesBytecodeVmExecutionSession
         var count = 0L;
         var sum = BytecodeVmValue.Decimal(0m);
         var prefixSelectors = pipeline.PrefixSelectors;
+        var terminalIsIdentity = IsIdentityProjection(terminal.IdentifierSlot, terminal.ExpressionProgram);
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
@@ -2791,7 +2807,18 @@ internal sealed class GesBytecodeVmExecutionSession
                 continue;
             }
 
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var projected))
+            BytecodeVmValue projected;
+            if (terminalIsIdentity)
+            {
+                if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return true;
+                }
+
+                projected = item;
+            }
+            else if (!TryEvaluatePipelineTerminalProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out projected))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -2821,6 +2848,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
         var count = 0L;
         var prefixSelectors = pipeline.PrefixSelectors;
+        var terminalIsTrue = IsConstantTrueProjection(terminal.ExpressionProgram);
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
             if (!TryApplyProgramPipelinePrefix(
@@ -2838,7 +2866,20 @@ internal sealed class GesBytecodeVmExecutionSession
                 continue;
             }
 
-            if (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate))
+            BytecodeVmValue predicate;
+            if (terminalIsTrue)
+            {
+                if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return true;
+                }
+
+                count++;
+                continue;
+            }
+
+            if (!TryEvaluatePipelineTerminalProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out predicate))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -2882,7 +2923,7 @@ internal sealed class GesBytecodeVmExecutionSession
             }
 
             if (terminal.ExpressionProgram is not null &&
-                (!TryEvaluateProgramProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate) || !predicate.AsBoolean()))
+                (!TryEvaluatePipelineTerminalProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate) || !predicate.AsBoolean()))
             {
                 continue;
             }
@@ -4045,6 +4086,53 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
+    private bool TryEvaluatePipelineTerminalProjection(
+        int identifierSlot,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
+    {
+        var instructions = expressionProgram.Instructions;
+        if (instructions.Length == 1 &&
+            (instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadSlot ||
+             instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadConstant))
+        {
+            if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+            {
+                value = BytecodeVmValue.Nothing;
+                return true;
+            }
+
+            ref readonly var instruction = ref instructions[0];
+            if (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadSlot)
+            {
+                value = instruction.A == identifierSlot ? item : ResolveSlot(instruction.A);
+                return true;
+            }
+
+            value = LoadConstant(instruction.ConstantIndex);
+            return true;
+        }
+
+        return TryEvaluateProgramProjection(identifierSlot, expressionProgram, item, out value);
+    }
+
+    private static bool IsIdentityProjection(int identifierSlot, GameEventScriptBytecodeExpressionProgram expressionProgram)
+    {
+        var instructions = expressionProgram.Instructions;
+        return instructions.Length == 1 &&
+               instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadSlot &&
+               instructions[0].A == identifierSlot;
+    }
+
+    private bool IsConstantTrueProjection(GameEventScriptBytecodeExpressionProgram expressionProgram)
+    {
+        var instructions = expressionProgram.Instructions;
+        return instructions.Length == 1 &&
+               instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
+               LoadConstant(instructions[0].ConstantIndex).AsBoolean();
+    }
+
     private bool TryEvaluateProgramProjection(
         int identifierSlot,
         GameEventScriptBytecodeExpressionProgram expressionProgram,
@@ -4082,6 +4170,78 @@ internal sealed class GesBytecodeVmExecutionSession
             return true;
         }
 
+        switch (expressionProgram.ProjectionFastKind)
+        {
+            case GameEventScriptBytecodeProjectionFastKind.Operand:
+                return TryGetProjectionOperand(instructions[0], identifierSlot, item, out value);
+
+            case GameEventScriptBytecodeProjectionFastKind.RulePredicate:
+                return TryGetProjectionOperand(instructions[0], identifierSlot, item, out var predicateInput) &&
+                       TryEvaluateRulePredicate(instructions[1], predicateInput, 0, out value);
+
+            case GameEventScriptBytecodeProjectionFastKind.Binary:
+                return TryEvaluateProjectionBinaryPattern(
+                    instructions[0],
+                    instructions[1],
+                    instructions[2],
+                    identifierSlot,
+                    item,
+                    out value);
+
+            case GameEventScriptBytecodeProjectionFastKind.BinaryCastBoolean:
+                if (!TryEvaluateProjectionBinaryPattern(
+                        instructions[0],
+                        instructions[1],
+                        instructions[2],
+                        identifierSlot,
+                        item,
+                        out var castSource))
+                {
+                    return false;
+                }
+
+                value = BytecodeVmValue.Boolean(castSource.AsBoolean());
+                return true;
+
+            case GameEventScriptBytecodeProjectionFastKind.BinaryThenBinary:
+                if (!TryEvaluateProjectionBinaryPattern(
+                        instructions[0],
+                        instructions[1],
+                        instructions[2],
+                        identifierSlot,
+                        item,
+                        out var firstResult) ||
+                    !TryGetProjectionOperand(instructions[3], identifierSlot, item, out var secondOperand))
+                {
+                    return false;
+                }
+
+                value = EvaluateProgramBinary(instructions[4].OpCode, firstResult, secondOperand);
+                return true;
+
+            case GameEventScriptBytecodeProjectionFastKind.BinaryThenBinaryThenBinary:
+                if (!TryEvaluateProjectionBinaryPattern(
+                        instructions[0],
+                        instructions[1],
+                        instructions[2],
+                        identifierSlot,
+                        item,
+                        out var first) ||
+                    !TryGetProjectionOperand(instructions[3], identifierSlot, item, out var middleOperand))
+                {
+                    return false;
+                }
+
+                var second = EvaluateProgramBinary(instructions[4].OpCode, first, middleOperand);
+                if (!TryGetProjectionOperand(instructions[5], identifierSlot, item, out var finalOperand))
+                {
+                    return false;
+                }
+
+                value = EvaluateProgramBinary(instructions[6].OpCode, second, finalOperand);
+                return true;
+        }
+
         var top = 0;
         var stack0 = BytecodeVmValue.Nothing;
         var stack1 = BytecodeVmValue.Nothing;
@@ -4089,7 +4249,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
         for (var index = 0; index < instructions.Length; index++)
         {
-            var instruction = instructions[index];
+            ref readonly var instruction = ref instructions[index];
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.LoadConstant:
@@ -4218,6 +4378,64 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
+    private bool TryEvaluateProjectionBinaryPattern(
+        in GameEventScriptBytecodeInstruction leftInstruction,
+        in GameEventScriptBytecodeInstruction rightInstruction,
+        in GameEventScriptBytecodeInstruction opInstruction,
+        int identifierSlot,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
+    {
+        if (!TryGetProjectionOperand(leftInstruction, identifierSlot, item, out var left) ||
+            !TryGetProjectionOperand(rightInstruction, identifierSlot, item, out var right) ||
+            !IsProjectionBinaryOp(opInstruction.OpCode))
+        {
+            value = BytecodeVmValue.Nothing;
+            return false;
+        }
+
+        value = EvaluateProgramBinary(opInstruction.OpCode, left, right);
+        return true;
+    }
+
+    private bool TryGetProjectionOperand(
+        in GameEventScriptBytecodeInstruction instruction,
+        int identifierSlot,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
+    {
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.LoadConstant:
+                value = LoadConstant(instruction.ConstantIndex);
+                return true;
+            case GameEventScriptBytecodeOpCode.LoadSlot:
+                value = instruction.A == identifierSlot ? item : ResolveSlot(instruction.A);
+                return true;
+            default:
+                value = BytecodeVmValue.Nothing;
+                return false;
+        }
+    }
+
+    private static bool IsProjectionBinaryOp(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.Or or
+            GameEventScriptBytecodeOpCode.Xor or
+            GameEventScriptBytecodeOpCode.And or
+            GameEventScriptBytecodeOpCode.Equal or
+            GameEventScriptBytecodeOpCode.NotEqual or
+            GameEventScriptBytecodeOpCode.Less or
+            GameEventScriptBytecodeOpCode.Greater or
+            GameEventScriptBytecodeOpCode.LessOrEqual or
+            GameEventScriptBytecodeOpCode.GreaterOrEqual or
+            GameEventScriptBytecodeOpCode.Add or
+            GameEventScriptBytecodeOpCode.Subtract or
+            GameEventScriptBytecodeOpCode.Multiply or
+            GameEventScriptBytecodeOpCode.Divide or
+            GameEventScriptBytecodeOpCode.IntegerDivide or
+            GameEventScriptBytecodeOpCode.Modulo or
+            GameEventScriptBytecodeOpCode.Remainder;
+
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
         BytecodeVmValue slotValue,
@@ -4309,14 +4527,16 @@ internal sealed class GesBytecodeVmExecutionSession
             ? _locals[slot]
             : BytecodeVmValue.Nothing;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private BytecodeVmValue ResolveSlot(int slot)
         => (uint)slot < (uint)_locals.Length && _assignedSlots[slot]
             ? _locals[slot]
             : BytecodeVmValue.Nothing;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryConsumeExecutionStep(string detail)
     {
-        if (_context.RuntimeBudget.TryConsumeExecutionStep(detail))
+        if (_runtimeBudget.TryConsumeExecutionStep(detail))
         {
             return true;
         }
@@ -4325,9 +4545,10 @@ internal sealed class GesBytecodeVmExecutionSession
         return false;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool TryConsumeExecutionSteps(int count, string detail)
     {
-        if (_context.RuntimeBudget.TryConsumeExecutionSteps(count, detail))
+        if (_runtimeBudget.TryConsumeExecutionSteps(count, detail))
         {
             return true;
         }
@@ -4378,7 +4599,7 @@ internal sealed class GesBytecodeVmExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordRuleCalled(GameEventScriptBytecodeInstruction instruction, BytecodeVmValue input)
+    private void RecordRuleCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue input)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4394,7 +4615,7 @@ internal sealed class GesBytecodeVmExecutionSession
             $"rule '{ruleName}' called");
     }
 
-    private void RecordCallableCalled(GameEventScriptBytecodeInstruction instruction, BytecodeVmValue[] stack, int start, int count)
+    private void RecordCallableCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue[] stack, int start, int count)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4606,7 +4827,7 @@ internal readonly record struct BytecodeVmValue(
             _ => GameEventScriptNothingValue.Instance
         };
 
-    public static bool AreEqual(BytecodeVmValue left, BytecodeVmValue right)
+    public static bool AreEqual(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
         {
@@ -4637,12 +4858,12 @@ internal readonly record struct BytecodeVmValue(
         return left.ToGameEventScriptValue().Equals(right.ToGameEventScriptValue());
     }
 
-    public static int CompareNumeric(BytecodeVmValue left, BytecodeVmValue right)
+    public static int CompareNumeric(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         return TryCompareNumeric(left, right, out var comparison) ? comparison : 0;
     }
 
-    public static bool TryCompareNumeric(BytecodeVmValue left, BytecodeVmValue right, out int comparison)
+    public static bool TryCompareNumeric(in BytecodeVmValue left, in BytecodeVmValue right, out int comparison)
     {
         if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
         {
@@ -4674,7 +4895,7 @@ internal readonly record struct BytecodeVmValue(
         return GesValueOperations.TryCompareNumeric(leftNumber, rightNumber, out comparison);
     }
 
-    public static BytecodeVmValue Add(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue Add(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "+", right, out var integerResult))
         {
@@ -4741,7 +4962,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.AddNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static BytecodeVmValue Subtract(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue Subtract(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "-", right, out var integerResult))
         {
@@ -4800,7 +5021,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.SubtractNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static BytecodeVmValue Multiply(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue Multiply(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "*", right, out var integerResult))
         {
@@ -4858,7 +5079,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.MultiplyNumeric(leftNumber, rightNumber), leftUnit ?? rightUnit);
     }
 
-    public static BytecodeVmValue Divide(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue Divide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "/", right, out var integerResult))
         {
@@ -4916,7 +5137,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.DivideNumeric(leftNumber, rightNumber), resultUnit);
     }
 
-    public static BytecodeVmValue IntegerDivide(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue IntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "div", right, out var integerResult))
         {
@@ -4967,7 +5188,7 @@ internal readonly record struct BytecodeVmValue(
             : FromDecimalNumeric(result, resultUnit);
     }
 
-    public static BytecodeVmValue Modulo(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue Modulo(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "mod", right, out var integerResult))
         {
@@ -5017,7 +5238,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.ModuloNumeric(leftNumber, rightNumber), leftUnit);
     }
 
-    public static BytecodeVmValue Remainder(BytecodeVmValue left, BytecodeVmValue right)
+    public static BytecodeVmValue Remainder(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (TryEvaluateIntegerBinary(left, "rem", right, out var integerResult))
         {
@@ -5094,7 +5315,7 @@ internal readonly record struct BytecodeVmValue(
         return false;
     }
 
-    private static bool TryEvaluatePrimitivePercentage(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
+    private static bool TryEvaluatePrimitivePercentage(in BytecodeVmValue left, string operation, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         value = default;
         if (!TryGetPrimitiveNumeric(left, out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
@@ -5197,7 +5418,7 @@ internal readonly record struct BytecodeVmValue(
     }
 
     private static bool TryGetPrimitiveNumeric(
-        BytecodeVmValue input,
+        in BytecodeVmValue input,
         out decimal number,
         out GameEventScriptDecimalUnit? unit,
         out bool isPercentage)
@@ -5232,7 +5453,7 @@ internal readonly record struct BytecodeVmValue(
         }
     }
 
-    private static BytecodeVmValue AddPercentage(BytecodeVmValue left, BytecodeVmValue right)
+    private static BytecodeVmValue AddPercentage(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
@@ -5254,7 +5475,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.AddNumeric(leftNumber, delta), leftUnit);
     }
 
-    private static BytecodeVmValue SubtractPercentage(BytecodeVmValue left, BytecodeVmValue right)
+    private static BytecodeVmValue SubtractPercentage(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out _, out var rightIsPercentage))
@@ -5276,7 +5497,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(GesValueOperations.SubtractNumeric(leftNumber, delta), leftUnit);
     }
 
-    private static BytecodeVmValue MultiplyPercentage(BytecodeVmValue left, BytecodeVmValue right)
+    private static BytecodeVmValue MultiplyPercentage(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
@@ -5300,7 +5521,7 @@ internal readonly record struct BytecodeVmValue(
         return FromDecimalNumeric(result, leftUnit);
     }
 
-    private static BytecodeVmValue DividePercentage(BytecodeVmValue left, BytecodeVmValue right)
+    private static BytecodeVmValue DividePercentage(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out var rightIsPercentage))
@@ -5398,7 +5619,7 @@ internal readonly record struct BytecodeVmValue(
     private bool IsPointLike()
         => ReferenceValue is GameEventScriptPoint2Value or GameEventScriptPoint3Value;
 
-    private static bool TryEvaluatePointBinary(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
+    private static bool TryEvaluatePointBinary(in BytecodeVmValue left, string operation, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (!left.IsPointLike() && !right.IsPointLike())
         {
@@ -5416,7 +5637,7 @@ internal readonly record struct BytecodeVmValue(
         return false;
     }
 
-    private static bool TryEvaluateVectorBinary(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
+    private static bool TryEvaluateVectorBinary(in BytecodeVmValue left, string operation, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (!left.IsVectorLike() && !right.IsVectorLike())
         {
@@ -5466,7 +5687,7 @@ internal readonly record struct BytecodeVmValue(
             ? Percentage(number.Value)
             : FromDecimalNumeric(number);
 
-    private static bool TryEvaluateIntegerBinary(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
+    private static bool TryEvaluateIntegerBinary(in BytecodeVmValue left, string operation, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (left.Kind != BytecodeVmValueKind.Integer || right.Kind != BytecodeVmValueKind.Integer)
         {

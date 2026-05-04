@@ -2,8 +2,163 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Api;
+
+public enum GameEventScriptBytecodeConstantKind
+{
+    Nothing,
+    Boolean,
+    Integer,
+    Decimal,
+    Percentage,
+    Text,
+    Tag,
+    Handler
+}
+
+public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScriptBytecodeConstant>
+{
+    private GameEventScriptBytecodeConstant(
+        GameEventScriptBytecodeConstantKind kind,
+        string? text = null,
+        long integer = 0,
+        decimal number = 0m,
+        bool boolean = false,
+        GameEventScriptDecimalUnit? unit = null,
+        bool isNaN = false,
+        bool isInfinity = false,
+        bool isNegativeInfinity = false,
+        IReadOnlyList<string>? labels = null)
+    {
+        Kind = kind;
+        Text = text;
+        Integer = integer;
+        Number = number;
+        Boolean = boolean;
+        Unit = unit;
+        IsNaN = isNaN;
+        IsInfinity = isInfinity;
+        IsNegativeInfinity = isNegativeInfinity;
+        Labels = labels?.Select(GameEventScriptMessageSignature.NormalizeParameterName).ToArray() ?? [];
+    }
+
+    public GameEventScriptBytecodeConstantKind Kind { get; }
+
+    public string? Text { get; }
+
+    public long Integer { get; }
+
+    public decimal Number { get; }
+
+    public bool Boolean { get; }
+
+    public GameEventScriptDecimalUnit? Unit { get; }
+
+    public bool IsNaN { get; }
+
+    public bool IsInfinity { get; }
+
+    public bool IsNegativeInfinity { get; }
+
+    public IReadOnlyList<string> Labels { get; }
+
+    public static GameEventScriptBytecodeConstant Nothing()
+        => new(GameEventScriptBytecodeConstantKind.Nothing);
+
+    public static GameEventScriptBytecodeConstant FromBoolean(bool value)
+        => new(GameEventScriptBytecodeConstantKind.Boolean, boolean: value);
+
+    public static GameEventScriptBytecodeConstant FromInteger(long value)
+        => new(GameEventScriptBytecodeConstantKind.Integer, integer: value);
+
+    public static GameEventScriptBytecodeConstant FromDecimal(
+        decimal value,
+        GameEventScriptDecimalUnit? unit = null,
+        bool isNaN = false,
+        bool isInfinity = false,
+        bool isNegativeInfinity = false)
+        => new(GameEventScriptBytecodeConstantKind.Decimal, number: value, unit: unit, isNaN: isNaN, isInfinity: isInfinity, isNegativeInfinity: isNegativeInfinity);
+
+    public static GameEventScriptBytecodeConstant FromPercentage(decimal ratio)
+        => new(GameEventScriptBytecodeConstantKind.Percentage, number: ratio);
+
+    public static GameEventScriptBytecodeConstant FromText(string value)
+        => new(GameEventScriptBytecodeConstantKind.Text, text: value ?? string.Empty);
+
+    public static GameEventScriptBytecodeConstant FromTag(string value)
+        => new(GameEventScriptBytecodeConstantKind.Tag, text: value ?? string.Empty);
+
+    public static GameEventScriptBytecodeConstant FromHandler(string messageName, IReadOnlyList<string> labels)
+        => new(GameEventScriptBytecodeConstantKind.Handler, text: GameEventScriptMessageSignature.NormalizeMessageName(messageName), labels: labels);
+
+    public bool Equals(GameEventScriptBytecodeConstant? other)
+    {
+        if (ReferenceEquals(null, other))
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return Kind == other.Kind &&
+               string.Equals(Text, other.Text, StringComparison.Ordinal) &&
+               Integer == other.Integer &&
+               Number == other.Number &&
+               Boolean == other.Boolean &&
+               Unit == other.Unit &&
+               IsNaN == other.IsNaN &&
+               IsInfinity == other.IsInfinity &&
+               IsNegativeInfinity == other.IsNegativeInfinity &&
+               Labels.SequenceEqual(other.Labels, StringComparer.Ordinal);
+    }
+
+    public override bool Equals(object? obj)
+        => obj is GameEventScriptBytecodeConstant other && Equals(other);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Kind);
+        hash.Add(Text, StringComparer.Ordinal);
+        hash.Add(Integer);
+        hash.Add(Number);
+        hash.Add(Boolean);
+        hash.Add(Unit);
+        hash.Add(IsNaN);
+        hash.Add(IsInfinity);
+        hash.Add(IsNegativeInfinity);
+        foreach (var label in Labels)
+        {
+            hash.Add(label, StringComparer.Ordinal);
+        }
+
+        return hash.ToHashCode();
+    }
+
+    public override string ToString()
+        => Kind switch
+        {
+            GameEventScriptBytecodeConstantKind.Nothing => "nothing",
+            GameEventScriptBytecodeConstantKind.Boolean => Boolean ? "True" : "False",
+            GameEventScriptBytecodeConstantKind.Integer => Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            GameEventScriptBytecodeConstantKind.Decimal when IsNaN => "NaN",
+            GameEventScriptBytecodeConstantKind.Decimal when IsInfinity => IsNegativeInfinity ? "-Infinity" : "Infinity",
+            GameEventScriptBytecodeConstantKind.Decimal => Unit is { } unit
+                ? $"{Number.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
+                : Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            GameEventScriptBytecodeConstantKind.Percentage => $"{(Number * 100m).ToString(System.Globalization.CultureInfo.InvariantCulture)}%",
+            GameEventScriptBytecodeConstantKind.Text => Text ?? string.Empty,
+            GameEventScriptBytecodeConstantKind.Tag => $":{Text}",
+            GameEventScriptBytecodeConstantKind.Handler => $"{Text}({string.Join(",", Labels)})",
+            _ => Kind.ToString()
+        };
+}
 
 public enum GameEventScriptBytecodeOpCode
 {

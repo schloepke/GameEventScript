@@ -23,8 +23,8 @@ internal static class GesBytecodeCompiler
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
-        private readonly Dictionary<GameEventScriptValue, int> _constantIndex = new(ConstantPoolValueComparer.Instance);
-        private readonly List<GameEventScriptValue> _constantPool = [];
+        private readonly Dictionary<GameEventScriptBytecodeConstant, int> _constantIndex = new();
+        private readonly List<GameEventScriptBytecodeConstant> _constantPool = [];
         private readonly Dictionary<string, int> _signatureIndex = new(StringComparer.Ordinal);
         private readonly List<string> _signatures = [];
         private readonly Dictionary<string, int> _externalReferenceIndex = new(StringComparer.Ordinal);
@@ -136,14 +136,15 @@ internal static class GesBytecodeCompiler
 
         private int AddConstant(GameEventScriptValue value)
         {
-            if (_constantIndex.TryGetValue(value, out var index))
+            var constant = ToBytecodeConstant(value);
+            if (_constantIndex.TryGetValue(constant, out var index))
             {
                 return index;
             }
 
             index = _constantPool.Count;
-            _constantPool.Add(value);
-            _constantIndex[value] = index;
+            _constantPool.Add(constant);
+            _constantIndex[constant] = index;
             return index;
         }
 
@@ -466,36 +467,29 @@ internal static class GesBytecodeCompiler
             }
         }
 
-        private sealed class ConstantPoolValueComparer : IEqualityComparer<GameEventScriptValue>
+        private static GameEventScriptBytecodeConstant ToBytecodeConstant(GameEventScriptValue value)
         {
-            public static readonly ConstantPoolValueComparer Instance = new();
-
-            private ConstantPoolValueComparer()
+            if (value is null || value.IsNothing())
             {
+                return GameEventScriptBytecodeConstant.Nothing();
             }
 
-            public bool Equals(GameEventScriptValue? x, GameEventScriptValue? y)
+            return value switch
             {
-                if (ReferenceEquals(x, y))
-                {
-                    return true;
-                }
-
-                if (x is null || y is null || x.Kind != y.Kind)
-                {
-                    return false;
-                }
-
-                return x.Equals(y);
-            }
-
-            public int GetHashCode(GameEventScriptValue obj)
-            {
-                var hash = new HashCode();
-                hash.Add(obj.Kind);
-                hash.Add(obj);
-                return hash.ToHashCode();
-            }
+                GameEventScriptBooleanValue boolean => GameEventScriptBytecodeConstant.FromBoolean(boolean.Value),
+                GameEventScriptIntegerValue integer => GameEventScriptBytecodeConstant.FromInteger(integer.Value),
+                GameEventScriptDecimalValue decimalValue => GameEventScriptBytecodeConstant.FromDecimal(
+                    decimalValue.Value,
+                    decimalValue.Unit,
+                    decimalValue.IsNaNValue,
+                    decimalValue.IsInfinityValue,
+                    decimalValue.IsNegativeInfinityValue),
+                GameEventScriptPercentageValue percentage => GameEventScriptBytecodeConstant.FromPercentage(percentage.Ratio),
+                GameEventScriptTextValue text => GameEventScriptBytecodeConstant.FromText(text.Value),
+                GameEventScriptTagValue tag => GameEventScriptBytecodeConstant.FromTag(tag.Value),
+                GameEventScriptHandlerValue handler => GameEventScriptBytecodeConstant.FromHandler(handler.Signature.Name, handler.Signature.Parameters),
+                _ => throw new GameEventScriptCompileException($"GameEventScript bytecode constant pool does not support value kind '{value.Kind}'.")
+            };
         }
     }
 }

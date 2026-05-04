@@ -704,8 +704,26 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private BytecodeVmValue LoadConstant(int index)
         => (uint)index < (uint)_compiledScript.BytecodeModule.ConstantPool.Count
-            ? BytecodeVmValue.FromGameEventScriptValue(_compiledScript.BytecodeModule.ConstantPool[index])
+            ? BytecodeVmValue.FromGameEventScriptValue(ToGameEventScriptValue(_compiledScript.BytecodeModule.ConstantPool[index]))
             : BytecodeVmValue.Nothing;
+
+    private static GameEventScriptValue ToGameEventScriptValue(GameEventScriptBytecodeConstant constant)
+        => constant.Kind switch
+        {
+            GameEventScriptBytecodeConstantKind.Nothing => GesNothing(),
+            GameEventScriptBytecodeConstantKind.Boolean => GesBoolean(constant.Boolean),
+            GameEventScriptBytecodeConstantKind.Integer => GesInteger(constant.Integer),
+            GameEventScriptBytecodeConstantKind.Decimal when constant.IsNaN => GesDecimalNaN(),
+            GameEventScriptBytecodeConstantKind.Decimal when constant.IsInfinity => constant.IsNegativeInfinity
+                ? GesDecimalNegativeInfinity()
+                : GesDecimalInfinity(),
+            GameEventScriptBytecodeConstantKind.Decimal => GesDecimal(constant.Number, constant.Unit),
+            GameEventScriptBytecodeConstantKind.Percentage => GesPercentage(constant.Number),
+            GameEventScriptBytecodeConstantKind.Text => GesText(constant.Text ?? string.Empty),
+            GameEventScriptBytecodeConstantKind.Tag => GesTag(constant.Text ?? string.Empty),
+            GameEventScriptBytecodeConstantKind.Handler => GesHandler(GameEventScriptMessageSignature.Create(constant.Text ?? string.Empty, constant.Labels)),
+            _ => GesNothing()
+        };
 
     private static BytecodeVmValue EvaluateMemberAccess(BytecodeVmValue target, string? member)
     {

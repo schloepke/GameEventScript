@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Api;
 
@@ -12,7 +11,7 @@ public sealed class GameEventScriptCompiled
     internal GameEventScriptCompiled(
         GameEventScriptCompileOptions options,
         IReadOnlyList<string> stringPool,
-        IReadOnlyList<GameEventScriptValue> constantPool,
+        IReadOnlyList<GameEventScriptBytecodeConstant> constantPool,
         IReadOnlyList<string> signatures,
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
@@ -39,7 +38,7 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<string> StringPool { get; }
 
-    public IReadOnlyList<GameEventScriptValue> ConstantPool { get; }
+    public IReadOnlyList<GameEventScriptBytecodeConstant> ConstantPool { get; }
 
     public IReadOnlyList<string> Signatures { get; }
 

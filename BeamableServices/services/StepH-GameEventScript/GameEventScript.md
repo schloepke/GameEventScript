@@ -5,7 +5,7 @@ designed for rules that react to messages, inspect immutable data, publish new
 messages, and delegate specialized calculations to host-provided extensions.
 
 This guide describes the current language as compiled to GameEventScript
-bytecode and executed by the BytecodeVM runtime.
+bytecode and executed by the host's BytecodeVM runtime.
 
 ## Contents
 
@@ -60,8 +60,8 @@ Important design choices:
 - Numeric invalidity is usually represented as decimal `NaN`.
 - Messages, handlers, collections, records, vectors, dice, ranges, and tags are
   first-class values.
-- Runtime behavior is defined by the JSON conformance tests and executed by the
-  BytecodeVM runtime.
+- Runtime behavior is defined by the JSON conformance tests and executed through
+  the host runtime.
 
 ## Program Structure
 
@@ -1726,7 +1726,9 @@ var host = GameEventScriptHost.CreateBuilder()
 ## Host API
 
 Compile GameEventScript source (`.ges`) to GameEventScript bytecode (`.gesb`)
-with `GameEventScriptManager.Compile(...)`.
+with `GameEventScriptManager.Compile(...)`. The current `.gesb` representation is
+an in-memory `GameEventScriptCompiled` object; a binary or JSON serializer can be
+built on top of this bytecode model later.
 
 ```csharp
 var bytecode = GameEventScriptManager.Compile(script);
@@ -1753,6 +1755,34 @@ var bytecode = GameEventScriptBuilder.Create()
     .Compile();
 ```
 
+### Compiled bytecode artifact
+
+`GameEventScriptCompiled` is the portable in-memory bytecode artifact produced by
+the compiler. It does not contain AST nodes, source modules, or BytecodeVM
+execution objects. Loading it into a host builds the VM executable internally.
+
+The artifact exposes neutral bytecode data:
+
+- `StringPool`
+- `ConstantPool`
+- `Signatures`
+- `ExternalReferences`
+- `NamedArgumentLayouts`
+- `TypeMetadata`
+- `Callables`
+- `Handlers`
+- `TypeDefinitions`
+- `MaxStackDepth`
+
+`ConstantPool` stores `GameEventScriptBytecodeConstant` entries instead of boxed
+runtime values. This preserves the exact constant kind in bytecode. For example,
+`:integer -12`, `:decimal -12`, and `:percentage -1200%` can be semantically
+numeric-compatible at runtime but must remain distinct constants in bytecode.
+
+`GameEventScriptBytecodeDumper.DumpBytecode(...)` can be used to inspect this
+structure during development. The dump is deterministic and diagnostic; it is not
+the future `.gesb` wire format.
+
 The host loads bytecode and builds the BytecodeVM executable internally.
 
 ```csharp
@@ -1763,9 +1793,9 @@ var host = GameEventScriptHost.CreateBuilder()
     .Build()
     .Load(bytecode);
 
-host.Publish(GameEventScriptMessage.Message(
+host.Publish(GameEventScriptMessage.Create(
     "Start",
-    ("value", GameEventScriptValueFactory.Integer(3))));
+    ("value", GameEventScriptValueFactory.GesInteger(3))));
 ```
 
 ### Host builder options
@@ -1782,7 +1812,7 @@ External subscribers can be registered with `Subscribe`.
 
 ```csharp
 host.Subscribe(
-    GameEventScriptMessageSignature.MessageSignature("Done", ["value"]),
+    GameEventScriptMessageSignature.Create("Done", ["value"]),
     (message, context) =>
     {
         // host callback

@@ -62,6 +62,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 .Select(field => field.FieldType)
                 .Any(ContainsBytecodeVmType),
             "GameEventScriptCompiled stores BytecodeVM state internally.");
+        Assert.AreEqual(
+            typeof(IReadOnlyList<GameEventScriptBytecodeConstant>),
+            compiledType.GetProperty(nameof(GameEventScriptCompiled.ConstantPool))!.PropertyType,
+            "GameEventScriptCompiled constants should use portable bytecode constants, not runtime values.");
     }
 
     [TestMethod]

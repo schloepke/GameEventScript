@@ -102,14 +102,15 @@
     {
       "kind": "scriptApi",
       "name": "queue limit drops newest published messages",
-      "script": "on Start {\n  publish A\n  publish B\n  publish C\n}",
+      "script": "on Start {\n  publish A\n  publish B\n  publish C\n}\n\non A {}\non B {}\non C {}",
       "runtimeLimits": { "maxQueuedMessagesPerRun": 2 },
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
           "expectedPublished": [
             { "name": "A", "args": {} },
-            { "name": "B", "args": {} }
+            { "name": "B", "args": {} },
+            { "name": "C", "args": {} }
           ],
           "expectedDiagnostics": [
             {

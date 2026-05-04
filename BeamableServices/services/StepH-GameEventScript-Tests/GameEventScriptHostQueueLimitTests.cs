@@ -28,12 +28,15 @@ public sealed class GameEventScriptHostQueueLimitTests
             accepted.Add(context.Publish("B"));
             accepted.Add(context.Publish("C"));
         });
+        host.Subscribe("A", [], (_, _) => { });
+        host.Subscribe("B", [], (_, _) => { });
+        host.Subscribe("C", [], (_, _) => { });
 
         var inputAccepted = host.PublishToCompletion(Create("Start"));
 
         Assert.IsTrue(inputAccepted);
         CollectionAssert.AreEqual(new[] { true, true, false }, accepted);
-        CollectionAssert.AreEqual(new[] { "A", "B" }, published.Select(message => message.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "A", "B", "C" }, published.Select(message => message.Name).ToArray());
         Assert.IsTrue(diagnostics.Events.Any(diagnostic =>
             diagnostic.Kind == GameEventScriptDiagnosticEventKind.RuntimeLimitReached &&
             diagnostic.Name == nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun) &&

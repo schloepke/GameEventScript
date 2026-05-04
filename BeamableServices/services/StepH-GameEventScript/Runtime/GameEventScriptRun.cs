@@ -15,7 +15,6 @@ public enum GameEventScriptRunState
 public sealed record GameEventScriptRunStepResult(
     GameEventScriptRunState State,
     int ExecutedOpcodes,
-    int ProcessedMessages,
     int PublishedMessages);
 
 public sealed class GameEventScriptRun : IDisposable
@@ -51,7 +50,7 @@ public sealed class GameEventScriptRun : IDisposable
 
         if (!_accepted || _canceled)
         {
-            return new GameEventScriptRunStepResult(GameEventScriptRunState.Completed, 0, 0, 0);
+            return new GameEventScriptRunStepResult(GameEventScriptRunState.Completed, 0, 0);
         }
 
         return _drainSlice(_state, maxOpcodes);

@@ -600,18 +600,17 @@ enum StepH.GameEventScript.Runtime.GameEventScriptRunState
   enum-field Completed = 2
   enum-field RuntimeLimitReached = 3
 sealed class StepH.GameEventScript.Runtime.GameEventScriptRunStepResult
-  ctor GameEventScriptRunStepResult(StepH.GameEventScript.Runtime.GameEventScriptRunState State, System.Int32 ExecutedOpcodes, System.Int32 ProcessedMessages, System.Int32 PublishedMessages)
+  ctor GameEventScriptRunStepResult(StepH.GameEventScript.Runtime.GameEventScriptRunState State, System.Int32 ExecutedOpcodes, System.Int32 PublishedMessages)
   method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult <Clone>$()
   method System.Boolean Equals(StepH.GameEventScript.Runtime.GameEventScriptRunStepResult other)
   method System.Boolean Equals(System.Object obj)
   method System.Int32 GetHashCode()
   method System.String ToString()
-  method System.Void Deconstruct(StepH.GameEventScript.Runtime.GameEventScriptRunState& State, System.Int32& ExecutedOpcodes, System.Int32& ProcessedMessages, System.Int32& PublishedMessages)
+  method System.Void Deconstruct(StepH.GameEventScript.Runtime.GameEventScriptRunState& State, System.Int32& ExecutedOpcodes, System.Int32& PublishedMessages)
   method static System.Boolean op_Equality(StepH.GameEventScript.Runtime.GameEventScriptRunStepResult left, StepH.GameEventScript.Runtime.GameEventScriptRunStepResult right)
   method static System.Boolean op_Inequality(StepH.GameEventScript.Runtime.GameEventScriptRunStepResult left, StepH.GameEventScript.Runtime.GameEventScriptRunStepResult right)
   property StepH.GameEventScript.Runtime.GameEventScriptRunState State { get set }
   property System.Int32 ExecutedOpcodes { get set }
-  property System.Int32 ProcessedMessages { get set }
   property System.Int32 PublishedMessages { get set }
 interface StepH.GameEventScript.Runtime.IGameEventScriptDiagnosticCollector
   method System.Void Record(StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind kind, System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments, System.String detail)

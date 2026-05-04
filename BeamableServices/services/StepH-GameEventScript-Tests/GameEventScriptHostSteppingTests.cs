@@ -9,6 +9,48 @@ namespace StepH_GameEventScript_Tests;
 public sealed class GameEventScriptHostSteppingTests
 {
     [TestMethod]
+    public void PublishCapturesSubscriptionSnapshotAtPublishTime()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, _) => calls.Add("first"));
+
+        Assert.IsTrue(host.Publish(Create("Start")));
+        host.Subscribe("Start", [], (_, _) => calls.Add("late"));
+
+        var step = host.Update(100);
+
+        Assert.AreEqual(GameEventScriptRunState.Completed, step.State);
+        CollectionAssert.AreEqual(new[] { "first" }, calls);
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+        CollectionAssert.AreEqual(new[] { "first", "first", "late" }, calls);
+    }
+
+    [TestMethod]
+    public void RuntimePublishWithoutSubscriberIsDroppedBeforeLaterSubscription()
+    {
+        var accepted = new List<bool>();
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, context) =>
+        {
+            accepted.Add(context.Publish("Later"));
+            host.Subscribe("Later", [], (_, _) => calls.Add("later"));
+        });
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+
+        CollectionAssert.AreEqual(new[] { false }, accepted);
+        CollectionAssert.AreEqual(Array.Empty<string>(), calls);
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+
+        CollectionAssert.AreEqual(new[] { false, true }, accepted);
+        CollectionAssert.AreEqual(new[] { "later" }, calls);
+    }
+
+    [TestMethod]
     public void ManualHostStepsScriptPublishStatementsByOpcodeBudget()
     {
         var bytecode = GameEventScriptBuilder.Create()
@@ -36,7 +78,6 @@ public sealed class GameEventScriptHostSteppingTests
         Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
         Assert.AreEqual(GameEventScriptRunState.Completed, steps[^1].State);
         Assert.IsGreaterThan(0, steps.Sum(step => step.ExecutedOpcodes));
-        Assert.IsGreaterThanOrEqualTo(1, steps.Sum(step => step.ProcessedMessages));
         Assert.AreEqual(2, steps.Sum(step => step.PublishedMessages));
         CollectionAssert.AreEqual(new[] { "A", "B" }, published);
     }

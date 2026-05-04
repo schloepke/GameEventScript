@@ -10,7 +10,7 @@ using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.BytecodeVM;
 
-internal sealed class GesBytecodeVmExecutionSession
+internal sealed partial class GesBytecodeVmExecutionSession
 {
     private const string CallableCallDepthExceededDetail = "Callable exceeded the configured call depth.";
 
@@ -50,8 +50,13 @@ internal sealed class GesBytecodeVmExecutionSession
         GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
-        var session = new GesBytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
-        if (!session.TryInvoke(handler, args))
+        var fiber = CreateFiber(compiledScript, context, handler, args);
+        while (!fiber.IsCompleted)
+        {
+            fiber.RunSlice(int.MaxValue);
+        }
+
+        if (fiber.Failed)
         {
             throw new InvalidOperationException(
                 $"BytecodeVM invariant failed: handler '{handler.SignatureId}' #{handler.DeclarationOrder} could not be executed by its compiled execution plan.");

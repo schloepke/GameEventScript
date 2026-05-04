@@ -233,10 +233,10 @@ Tools and tests that need the old synchronous behavior can call
 `host.PublishToCompletion(message)`.
 
 `GameEventScriptRunStepResult` reports the run state, the number of consumed
-opcode ticks, processed messages, and accepted published messages for a manual
-update. Script bytecode consumes opcode ticks through the same runtime budget
-used by `MaxExecutionSteps`. External C# subscribers are not bytecode and
-therefore run atomically once dispatch reaches them.
+internal VM instructions, processed messages, and accepted published messages
+for a manual update. Manual updates run stackless BytecodeVM slices on the
+caller thread. External C# subscribers are not bytecode and therefore run
+atomically once dispatch reaches them.
 
 `BeginRun(...)` is still available for an isolated resumable run object, but the
 main host API is `Publish(...)` plus `Update(...)`.

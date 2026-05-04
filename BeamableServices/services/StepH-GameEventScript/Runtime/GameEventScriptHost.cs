@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Types;
@@ -26,9 +25,6 @@ public sealed class GameEventScriptHost
     private readonly object _dispatchGate = new();
     private readonly object _pumpGate = new();
     private GameEventScriptHostRunState _liveState;
-    private GameEventScriptStepController? _liveStepController;
-    private Thread? _liveWorker;
-    private bool _liveWorkerStarted;
     private bool _automaticDispatchScheduled;
     private long _nextRegistrationOrder;
 
@@ -43,7 +39,7 @@ public sealed class GameEventScriptHost
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
         _dispatchMode = dispatchMode;
         _dispatcher = dispatcher ?? GameEventScriptDispatcher.Shared;
-        (_liveState, _liveStepController) = CreateLiveState(dispatchMode);
+        _liveState = CreateLiveState(dispatchMode);
     }
 
     public static GameEventScriptHostBuilder CreateBuilder() => new();
@@ -62,6 +58,8 @@ public sealed class GameEventScriptHost
         if (handlers is GesBytecodeVmExecutable registerCompiled)
         {
             GesDynamicLinker.Bind(registerCompiled, _extensionRegistry);
+            RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
+            return this;
         }
 
         var handlerEntries = handlers.Handlers.ToArray();
@@ -91,6 +89,13 @@ public sealed class GameEventScriptHost
     public GameEventScriptHost Subscribe(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        if (handlers is GesBytecodeVmExecutable registerCompiled)
+        {
+            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry);
+            RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
+            return this;
+        }
+
         var handlerEntries = handlers.Handlers.ToArray();
         foreach (var (signature, handler) in handlerEntries)
         {
@@ -158,7 +163,7 @@ public sealed class GameEventScriptHost
             return false;
         }
 
-        Drain(state);
+        DrainToCompletion(state);
         return true;
     }
 
@@ -174,88 +179,44 @@ public sealed class GameEventScriptHost
             throw new ArgumentOutOfRangeException(nameof(maxOpcodes), "Update opcode budget must be greater than zero.");
         }
 
-        GameEventScriptHostRunState state;
-        GameEventScriptStepController stepController;
-        Action? start = null;
         lock (_pumpGate)
         {
             ResetManualStateIfCompletedAndIdle();
-            state = _liveState;
-            stepController = _liveStepController ?? throw new InvalidOperationException("GameEventScript manual host is missing its step controller.");
-            if (!_liveWorkerStarted)
-            {
-                _liveWorkerStarted = true;
-                start = () => StartManualWorker(state, stepController);
-            }
         }
 
-        return stepController.Step(maxOpcodes, () => state.Context.RuntimeBudget.IsExhausted, start);
+        return DrainSlice(_liveState, maxOpcodes);
     }
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
-        var stepController = new GameEventScriptStepController();
-        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, stepController);
+        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits);
         var accepted = !string.IsNullOrWhiteSpace(message.Name) && state.Enqueue(message);
-        return new GameEventScriptRun(Drain, state, stepController, accepted);
+        return new GameEventScriptRun(DrainSlice, state, accepted);
     }
 
     #endregion
 
     #region Internals
 
-    private (GameEventScriptHostRunState State, GameEventScriptStepController? StepController) CreateLiveState(GameEventScriptDispatchMode dispatchMode)
-    {
-        if (dispatchMode == GameEventScriptDispatchMode.Automatic)
-        {
-            return (new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false), null);
-        }
-
-        var stepController = new GameEventScriptStepController();
-        return (new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, stepController, enforceProcessedEventsLimit: false), stepController);
-    }
+    private GameEventScriptHostRunState CreateLiveState(GameEventScriptDispatchMode dispatchMode)
+        => new(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false);
 
     private void ResetManualStateIfCompletedAndIdle()
     {
         if (_dispatchMode != GameEventScriptDispatchMode.Manual ||
-            _liveStepController is null ||
-            !_liveStepController.IsCompleted ||
-            _liveState.PendingMessageCount != 0)
+            !_liveState.IsCompletedAndIdle)
         {
             return;
         }
 
-        (_liveState, _liveStepController) = CreateLiveState(GameEventScriptDispatchMode.Manual);
-        _liveWorker = null;
-        _liveWorkerStarted = false;
-    }
-
-    private void StartManualWorker(GameEventScriptHostRunState state, GameEventScriptStepController stepController)
-    {
-        _liveWorker = new Thread(() =>
-        {
-            try
-            {
-                Drain(state);
-                stepController.Complete();
-            }
-            catch (Exception exception)
-            {
-                stepController.Fault(exception);
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "GameEventScript manual update pump"
-        };
-        _liveWorker.Start();
+        _liveState = CreateLiveState(GameEventScriptDispatchMode.Manual);
     }
 
     private void RunAutomaticDispatchSlice()
     {
         try
         {
-            DrainOne(_liveState);
+            DrainOneToCompletion(_liveState);
         }
         finally
         {
@@ -263,7 +224,7 @@ public sealed class GameEventScriptHost
             lock (_pumpGate)
             {
                 shouldRestart = _dispatchMode == GameEventScriptDispatchMode.Automatic &&
-                                _liveState.PendingMessageCount > 0;
+                                !_liveState.IsCompletedAndIdle;
                 if (shouldRestart)
                 {
                     _automaticDispatchScheduled = true;
@@ -273,7 +234,7 @@ public sealed class GameEventScriptHost
                     _automaticDispatchScheduled = false;
                     if (_dispatchMode == GameEventScriptDispatchMode.Automatic)
                     {
-                        (_liveState, _liveStepController) = CreateLiveState(GameEventScriptDispatchMode.Automatic);
+                        _liveState = CreateLiveState(GameEventScriptDispatchMode.Automatic);
                     }
                 }
             }
@@ -321,6 +282,21 @@ public sealed class GameEventScriptHost
         }
     }
 
+    private void RegisterMany(
+        IReadOnlyList<GesBytecodeVmCompiledHandler> handlers,
+        GesBytecodeVmExecutable executable,
+        int priority)
+    {
+        lock (_dispatchGate)
+        {
+            foreach (var handler in handlers)
+            {
+                _ = handler ?? throw new ArgumentException("Handler collection contains a null compiled handler.", nameof(handlers));
+                RegisterLocked(handler.Definition, priority, executable, handler);
+            }
+        }
+    }
+
     private void RegisterLocked(
         GameEventScriptMessageSignature signature,
         int priority,
@@ -330,6 +306,27 @@ public sealed class GameEventScriptHost
             signature,
             priority,
             _nextRegistrationOrder++,
+            handler,
+            null,
+            null);
+
+        _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
+            ? InsertSubscriptionByDispatchOrder(handlers, subscription)
+            : [subscription];
+    }
+
+    private void RegisterLocked(
+        GameEventScriptMessageSignature signature,
+        int priority,
+        GesBytecodeVmExecutable executable,
+        GesBytecodeVmCompiledHandler handler)
+    {
+        var subscription = new MessageSubscription(
+            signature,
+            priority,
+            _nextRegistrationOrder++,
+            null,
+            executable,
             handler);
 
         _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
@@ -337,36 +334,76 @@ public sealed class GameEventScriptHost
             : [subscription];
     }
 
-    private void Drain(GameEventScriptHostRunState state)
+    private void DrainToCompletion(GameEventScriptHostRunState state)
     {
-        while (state.TryDequeue(out var queuedEvent))
+        while (!state.IsCompletedAndIdle && !state.Context.RuntimeBudget.IsExhausted)
         {
-            DrainDequeued(state, queuedEvent);
+            DrainSlice(state, int.MaxValue);
         }
     }
 
-    private void DrainOne(GameEventScriptHostRunState state)
+    private void DrainOneToCompletion(GameEventScriptHostRunState state)
     {
-        if (state.TryDequeue(out var queuedEvent))
+        var startedEventCount = state.StartedEventCount;
+        do
         {
-            DrainDequeued(state, queuedEvent);
+            DrainSlice(state, int.MaxValue, stopAfterStartedEventCount: startedEventCount + 1);
         }
+        while (!state.IsCompletedAndIdle &&
+               !state.Context.RuntimeBudget.IsExhausted &&
+               (state.HasActiveDispatch || state.StartedEventCount <= startedEventCount));
     }
 
-    private void DrainDequeued(GameEventScriptHostRunState state, GameEventScriptMessage? queuedEvent)
+    private GameEventScriptRunStepResult DrainSlice(GameEventScriptHostRunState state, int maxOpcodes)
     {
-        if (!state.TryStartProcessingEvent())
-        {
-            return;
-        }
-
-        if (queuedEvent is not null)
-        {
-            Dispatch(queuedEvent, state);
-        }
+        return DrainSlice(state, maxOpcodes, stopAfterStartedEventCount: null);
     }
 
-    private void Dispatch(GameEventScriptMessage queuedEvent, GameEventScriptHostRunState state)
+    private GameEventScriptRunStepResult DrainSlice(GameEventScriptHostRunState state, int maxOpcodes, int? stopAfterStartedEventCount)
+    {
+        state.BeginStep();
+        var remainingOpcodes = maxOpcodes;
+        while (remainingOpcodes > 0 && !state.Context.RuntimeBudget.IsExhausted)
+        {
+            if (!state.HasActiveDispatch)
+            {
+                if (stopAfterStartedEventCount is { } stopAfter && state.StartedEventCount >= stopAfter)
+                {
+                    break;
+                }
+
+                if (!state.TryDequeue(out var queuedEvent))
+                {
+                    break;
+                }
+
+                if (queuedEvent is null || !state.TryStartProcessingEvent())
+                {
+                    continue;
+                }
+
+                StartDispatch(state, queuedEvent);
+                if (!state.HasActiveDispatch)
+                {
+                    continue;
+                }
+            }
+
+            var before = state.StepExecutedOpcodes;
+            RunActiveDispatch(state, remainingOpcodes);
+            var consumed = state.StepExecutedOpcodes - before;
+            remainingOpcodes -= consumed;
+
+            if (state.HasActiveDispatch && consumed == 0)
+            {
+                break;
+            }
+        }
+
+        return state.CreateStepResult();
+    }
+
+    private void StartDispatch(GameEventScriptHostRunState state, GameEventScriptMessage queuedEvent)
     {
         state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' started");
 
@@ -376,14 +413,59 @@ public sealed class GameEventScriptHost
             return;
         }
 
-        foreach (var subscription in subscriptions)
+        state.StartDispatch(queuedEvent, subscriptions);
+    }
+
+    private void RunActiveDispatch(GameEventScriptHostRunState state, int maxOpcodes)
+    {
+        var remainingOpcodes = maxOpcodes;
+        while (state.ActiveSubscriptionIndex < state.ActiveSubscriptions!.Length)
         {
-            state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberMatched, queuedEvent.Name, queuedEvent.Arguments, $"Subscriber matched: {subscription.Definition.SignatureId}");
+            var subscription = state.ActiveSubscriptions[state.ActiveSubscriptionIndex];
+            if (state.ActiveScriptFiber is not null)
+            {
+                var executed = RunScriptFiberSlice(state, state.ActiveScriptFiber, remainingOpcodes);
+                remainingOpcodes -= executed;
+                if (!state.ActiveScriptFiber.IsCompleted)
+                {
+                    return;
+                }
+
+                if (state.ActiveScriptFiber.Failed)
+                {
+                    state.ClearActiveScriptFiber();
+                }
+                else
+                {
+                    state.ClearActiveScriptFiber();
+                }
+
+                state.ActiveSubscriptionIndex++;
+                continue;
+            }
+
+            state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberMatched, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Subscriber matched: {subscription.Definition.SignatureId}");
 
             try
             {
-                state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberInvoked, queuedEvent.Name, queuedEvent.Arguments, "Subscriber invoked");
-                subscription.Handler(queuedEvent, state.Context);
+                state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberInvoked, state.ActiveMessage.Name, state.ActiveMessage.Arguments, "Subscriber invoked");
+                if (subscription.ScriptExecutable is not null && subscription.ScriptHandler is not null)
+                {
+                    var fiber = GesBytecodeVmExecutionSession.CreateFiber(subscription.ScriptExecutable, state.Context, subscription.ScriptHandler, state.ActiveMessage.Arguments);
+                    state.SetActiveScriptFiber(fiber);
+                    var executed = RunScriptFiberSlice(state, fiber, remainingOpcodes);
+                    remainingOpcodes -= executed;
+                    if (!fiber.IsCompleted)
+                    {
+                        return;
+                    }
+
+                    state.ClearActiveScriptFiber();
+                }
+                else
+                {
+                    subscription.Handler!(state.ActiveMessage, state.Context);
+                }
             }
             catch (GameEventScriptFatalRuntimeException)
             {
@@ -392,10 +474,21 @@ public sealed class GameEventScriptHost
             catch
             {
                 // Runtime dispatch must remain lenient.
+                state.ClearActiveScriptFiber();
             }
+
+            state.ActiveSubscriptionIndex++;
         }
 
-        state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchCompleted, queuedEvent.Name, queuedEvent.Arguments, $"Dispatch '{queuedEvent.Name}' completed");
+        state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchCompleted, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Dispatch '{state.ActiveMessage.Name}' completed");
+        state.CompleteDispatch();
+    }
+
+    private static int RunScriptFiberSlice(GameEventScriptHostRunState state, GesBytecodeVmExecutionSession.Fiber fiber, int maxOpcodes)
+    {
+        var executed = fiber.RunSlice(maxOpcodes);
+        state.RecordExecutedOpcodes(executed);
+        return executed;
     }
 
     private bool TryGetSubscriptions(string signatureId, out MessageSubscription[] subscriptions)
@@ -435,11 +528,13 @@ public sealed class GameEventScriptHost
             : left.RegistrationOrder.CompareTo(right.RegistrationOrder);
     }
 
-    private sealed record MessageSubscription(
+    internal sealed record MessageSubscription(
         GameEventScriptMessageSignature Definition,
         int Priority,
         long RegistrationOrder,
-        Action<GameEventScriptMessage, GameEventScriptContext> Handler);
+        Action<GameEventScriptMessage, GameEventScriptContext>? Handler,
+        GesBytecodeVmExecutable? ScriptExecutable,
+        GesBytecodeVmCompiledHandler? ScriptHandler);
 
     #endregion
 }
@@ -451,8 +546,8 @@ internal sealed class GameEventScriptHostRunState
     private readonly bool _enforceProcessedEventsLimit;
     private readonly int _maxProcessedEventsPerRun;
     private readonly int _maxQueuedMessagesPerRun;
-    private readonly GameEventScriptStepController? _stepController;
     private int _processedEvents;
+    private long _totalExecutedOpcodes;
 
     public GameEventScriptHostRunState(
         GameEventScriptRandomGenerator random,
@@ -460,18 +555,38 @@ internal sealed class GameEventScriptHostRunState
         Action<GameEventScriptMessage>? publishedMessageObserver,
         IGameEventScriptExtensionRegistry extensionRegistry,
         GameEventScriptRuntimeLimits runtimeLimits,
-        GameEventScriptStepController? stepController = null,
         bool enforceProcessedEventsLimit = true)
     {
         _enforceProcessedEventsLimit = enforceProcessedEventsLimit;
         _maxProcessedEventsPerRun = runtimeLimits.MaxProcessedEventsPerRun;
         _maxQueuedMessagesPerRun = runtimeLimits.MaxQueuedMessagesPerRun;
-        _stepController = stepController;
         PublishedMessageObserver = publishedMessageObserver;
-        Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, runtimeLimits, extensionRegistry, stepController);
+        Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, runtimeLimits, extensionRegistry);
     }
 
     public GameEventScriptContext Context { get; }
+
+    public GameEventScriptMessage? ActiveMessage { get; private set; }
+
+    public GameEventScriptHost.MessageSubscription[]? ActiveSubscriptions { get; private set; }
+
+    public int ActiveSubscriptionIndex { get; set; }
+
+    public GesBytecodeVmExecutionSession.Fiber? ActiveScriptFiber { get; private set; }
+
+    public int StartedEventCount { get; private set; }
+
+    public int StepExecutedOpcodes { get; private set; }
+
+    public int StepProcessedMessages { get; private set; }
+
+    public int StepPublishedMessages { get; private set; }
+
+    public long TotalExecutedOpcodes => _totalExecutedOpcodes;
+
+    public bool HasActiveDispatch => ActiveMessage is not null;
+
+    public bool IsCompletedAndIdle => !HasActiveDispatch && PendingMessageCount == 0;
 
     public int PendingMessageCount
     {
@@ -485,6 +600,39 @@ internal sealed class GameEventScriptHostRunState
     }
 
     private Action<GameEventScriptMessage>? PublishedMessageObserver { get; }
+
+    public void BeginStep()
+    {
+        StepExecutedOpcodes = 0;
+        StepProcessedMessages = 0;
+        StepPublishedMessages = 0;
+    }
+
+    public void RecordExecutedOpcodes(int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        StepExecutedOpcodes += count;
+        _totalExecutedOpcodes += count;
+    }
+
+    public GameEventScriptRunStepResult CreateStepResult()
+    {
+        var state = Context.RuntimeBudget.IsExhausted
+            ? GameEventScriptRunState.RuntimeLimitReached
+            : IsCompletedAndIdle
+                ? GameEventScriptRunState.Completed
+                : GameEventScriptRunState.Paused;
+
+        return new GameEventScriptRunStepResult(
+            state,
+            StepExecutedOpcodes,
+            StepProcessedMessages,
+            StepPublishedMessages);
+    }
 
     public bool Enqueue(GameEventScriptMessage message)
     {
@@ -532,9 +680,32 @@ internal sealed class GameEventScriptHostRunState
         }
 
         _processedEvents++;
-        _stepController?.RecordProcessedMessage();
+        StartedEventCount++;
+        StepProcessedMessages++;
         return true;
     }
+
+    public void StartDispatch(GameEventScriptMessage message, GameEventScriptHost.MessageSubscription[] subscriptions)
+    {
+        ActiveMessage = message;
+        ActiveSubscriptions = subscriptions;
+        ActiveSubscriptionIndex = 0;
+        ActiveScriptFiber = null;
+    }
+
+    public void CompleteDispatch()
+    {
+        ActiveMessage = null;
+        ActiveSubscriptions = null;
+        ActiveSubscriptionIndex = 0;
+        ActiveScriptFiber = null;
+    }
+
+    public void SetActiveScriptFiber(GesBytecodeVmExecutionSession.Fiber fiber)
+        => ActiveScriptFiber = fiber;
+
+    public void ClearActiveScriptFiber()
+        => ActiveScriptFiber = null;
 
     public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
         => Context.RecordDiagnostic(kind, name, arguments, detail);
@@ -546,7 +717,7 @@ internal sealed class GameEventScriptHostRunState
             return false;
         }
 
-        _stepController?.RecordPublishedMessage();
+        StepPublishedMessages++;
         PublishedMessageObserver?.Invoke(message);
         RecordDiagnostic(GameEventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"Published '{message.Name}'");
         return true;

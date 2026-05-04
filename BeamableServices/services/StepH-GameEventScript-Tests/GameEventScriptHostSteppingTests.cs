@@ -31,19 +31,13 @@ public sealed class GameEventScriptHostSteppingTests
         Assert.IsTrue(accepted);
         CollectionAssert.AreEqual(Array.Empty<string>(), published);
 
-        var first = host.Update(1);
+        var steps = DrainWithTinyBudget(host);
 
-        Assert.AreEqual(GameEventScriptRunState.Paused, first.State);
-        Assert.AreEqual(1, first.ExecutedOpcodes);
-        Assert.AreEqual(1, first.ProcessedMessages);
-        Assert.AreEqual(1, first.PublishedMessages);
-        CollectionAssert.AreEqual(new[] { "A" }, published);
-
-        var second = host.Update(1);
-
-        Assert.AreEqual(GameEventScriptRunState.Completed, second.State);
-        Assert.AreEqual(1, second.ExecutedOpcodes);
-        Assert.AreEqual(1, second.PublishedMessages);
+        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
+        Assert.AreEqual(GameEventScriptRunState.Completed, steps[^1].State);
+        Assert.IsGreaterThan(0, steps.Sum(step => step.ExecutedOpcodes));
+        Assert.IsGreaterThanOrEqualTo(1, steps.Sum(step => step.ProcessedMessages));
+        Assert.AreEqual(2, steps.Sum(step => step.PublishedMessages));
         CollectionAssert.AreEqual(new[] { "A", "B" }, published);
     }
 
@@ -206,5 +200,134 @@ public sealed class GameEventScriptHostSteppingTests
         while (step.State != GameEventScriptRunState.Completed);
 
         CollectionAssert.AreEqual(new[] { "Middle", "Done" }, published);
+    }
+
+    [TestMethod]
+    public void ManualHostCanResumeInsideLoopBody()
+    {
+        var bytecode = GameEventScriptBuilder.Create()
+            .AddScript(
+                """
+                on Start {
+                  for item from 1 to 4 {
+                    publish Tick(value: item)
+                  }
+                }
+                """)
+            .Compile();
+        var published = new List<long>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(message => published.Add(message.Arguments["value"].AsInteger()))
+            .Build()
+            .Load(bytecode);
+
+        host.Publish(Create("Start"));
+
+        var steps = DrainWithTinyBudget(host);
+
+        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
+        CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4 }, published);
+    }
+
+    [TestMethod]
+    public void ManualHostCanResumeAcrossNestedExpressionWork()
+    {
+        var bytecode = GameEventScriptBuilder.Create()
+            .AddScript(
+                """
+                rule high(value) means value >= 2
+                select boost(_ value) means value + 1
+
+                on Start(values, seed) {
+                  let total be values[:filter value where value is high][:select value -> boost(value)][:sum value -> value]
+                  let seeded be :random with seed :list[:select item from 1 to 3 -> :random from 1 to 6]
+                  let label be 'high' when total > 6, otherwise 'low'
+                  publish Done(total: total, first: seeded[1], label: label)
+                }
+                """)
+            .Compile();
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(bytecode);
+
+        host.Publish(Create(
+            "Start",
+            ("values", GameEventScriptValueFactory.GesList(Enumerable.Range(1, 3).Select(value => GameEventScriptValueFactory.GesInteger(value)))),
+            ("seed", GameEventScriptValueFactory.GesInteger(7))));
+
+        var steps = DrainWithTinyBudget(host);
+
+        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["total"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesText("high"), published[0].Arguments["label"]);
+    }
+
+    [TestMethod]
+    public void ManualHostKeepsExternalSubscriberAtomicDuringStepping()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .Build();
+        host.Subscribe("Start", [], (_, context) =>
+        {
+            calls.Add("external");
+            context.Publish("Done");
+        });
+        host.Subscribe("Done", [], (_, _) => calls.Add("done"));
+
+        host.Publish(Create("Start"));
+
+        var step = host.Update(1);
+
+        Assert.AreEqual(GameEventScriptRunState.Completed, step.State);
+        CollectionAssert.AreEqual(new[] { "external", "done" }, calls);
+    }
+
+    [TestMethod]
+    public void BeginRunStepsWithoutBackgroundWorker()
+    {
+        var bytecode = GameEventScriptBuilder.Create()
+            .AddScript(
+                """
+                on Start {
+                  publish A
+                  publish B
+                }
+                """)
+            .Compile();
+        var published = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(message => published.Add(message.Name))
+            .Build()
+            .Load(bytecode);
+
+        using var run = host.BeginRun(Create("Start"));
+        var steps = new List<GameEventScriptRunStepResult>();
+        while (!run.IsCompleted)
+        {
+            steps.Add(run.Step(1));
+        }
+
+        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
+        Assert.AreEqual(GameEventScriptRunState.Completed, steps[^1].State);
+        CollectionAssert.AreEqual(new[] { "A", "B" }, published);
+    }
+
+    private static List<GameEventScriptRunStepResult> DrainWithTinyBudget(GameEventScriptHost host)
+    {
+        var steps = new List<GameEventScriptRunStepResult>();
+        GameEventScriptRunStepResult step;
+        do
+        {
+            step = host.Update(1);
+            steps.Add(step);
+        }
+        while (step.State != GameEventScriptRunState.Completed &&
+               step.State != GameEventScriptRunState.RuntimeLimitReached);
+
+        return steps;
     }
 }

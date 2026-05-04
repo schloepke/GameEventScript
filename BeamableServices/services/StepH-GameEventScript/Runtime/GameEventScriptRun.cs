@@ -1,7 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
-using System.Threading;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -21,35 +20,27 @@ public sealed record GameEventScriptRunStepResult(
 
 public sealed class GameEventScriptRun : IDisposable
 {
-    private readonly Action<GameEventScriptHostRunState> _drain;
+    private readonly Func<GameEventScriptHostRunState, int, GameEventScriptRunStepResult> _drainSlice;
     private readonly GameEventScriptHostRunState _state;
-    private readonly GameEventScriptStepController _stepController;
     private readonly bool _accepted;
-    private Thread? _worker;
-    private int _started;
+    private bool _canceled;
     private bool _disposed;
 
     internal GameEventScriptRun(
-        Action<GameEventScriptHostRunState> drain,
+        Func<GameEventScriptHostRunState, int, GameEventScriptRunStepResult> drainSlice,
         GameEventScriptHostRunState state,
-        GameEventScriptStepController stepController,
         bool accepted)
     {
-        _drain = drain ?? throw new ArgumentNullException(nameof(drain));
+        _drainSlice = drainSlice ?? throw new ArgumentNullException(nameof(drainSlice));
         _state = state ?? throw new ArgumentNullException(nameof(state));
-        _stepController = stepController ?? throw new ArgumentNullException(nameof(stepController));
         _accepted = accepted;
-        if (!accepted)
-        {
-            _stepController.Complete();
-        }
     }
 
-    public bool IsCompleted => _stepController.IsCompleted;
+    public bool IsCompleted => _canceled || !_accepted || _state.IsCompletedAndIdle || _state.Context.RuntimeBudget.IsExhausted;
 
     public int PendingMessageCount => _state.PendingMessageCount;
 
-    public long ExecutedOpcodes => _stepController.TotalExecutedOpcodes;
+    public long ExecutedOpcodes => _state.TotalExecutedOpcodes;
 
     public GameEventScriptRunStepResult Step(int maxOpcodes)
     {
@@ -58,18 +49,15 @@ public sealed class GameEventScriptRun : IDisposable
             throw new ObjectDisposedException(nameof(GameEventScriptRun));
         }
 
-        if (!_accepted)
+        if (!_accepted || _canceled)
         {
             return new GameEventScriptRunStepResult(GameEventScriptRunState.Completed, 0, 0, 0);
         }
 
-        var start = Interlocked.CompareExchange(ref _started, 1, 0) == 0
-            ? StartWorker
-            : (Action?)null;
-        return _stepController.Step(maxOpcodes, () => _state.Context.RuntimeBudget.IsExhausted, start);
+        return _drainSlice(_state, maxOpcodes);
     }
 
-    public void Cancel() => _stepController.Cancel();
+    public void Cancel() => _canceled = true;
 
     public void Dispose()
     {
@@ -80,28 +68,5 @@ public sealed class GameEventScriptRun : IDisposable
 
         _disposed = true;
         Cancel();
-    }
-
-    private void StartWorker()
-    {
-        _worker = new Thread(Run)
-        {
-            IsBackground = true,
-            Name = "GameEventScript stepped run"
-        };
-        _worker.Start();
-    }
-
-    private void Run()
-    {
-        try
-        {
-            _drain(_state);
-            _stepController.Complete();
-        }
-        catch (Exception exception)
-        {
-            _stepController.Fault(exception);
-        }
     }
 }

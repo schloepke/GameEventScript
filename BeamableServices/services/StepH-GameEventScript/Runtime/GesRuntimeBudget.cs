@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits, GameEventScriptStepController? stepController = null)
+internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;
@@ -17,7 +17,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
 
     public bool IsExhausted => _exhausted;
 
-    public bool IsStepping => stepController is not null;
+    public bool IsStepping => false;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryConsumeExecutionStep(string detail)
@@ -31,11 +31,6 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         if (limit > 0 && _executionSteps >= limit)
         {
             MarkExhausted("MaxExecutionSteps", detail, limit);
-            return false;
-        }
-
-        if (stepController is not null && !stepController.TryConsumeOpcode())
-        {
             return false;
         }
 
@@ -60,11 +55,6 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         if (limit > 0 && _executionSteps > limit - count)
         {
             MarkExhausted("MaxExecutionSteps", detail, limit);
-            return false;
-        }
-
-        if (stepController is not null && !stepController.TryConsumeOpcodes(count))
-        {
             return false;
         }
 

@@ -72,9 +72,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                RecordParameterBound(parameter, value);
+                var parameterValue = BytecodeVmValue.FromGameEventScriptValue(value);
+                var hasParameterType = HasParameterType(handler.ParameterTypes, parameterIndex);
+                if (!TryConvertParameterType(handler.ParameterTypes, parameterIndex, parameterValue, out parameterValue))
+                {
+                    return false;
+                }
 
-                if (!Define(parameter, BytecodeVmValue.FromGameEventScriptValue(value)))
+                if (_diagnosticsEnabled)
+                {
+                    RecordParameterBound(parameter, hasParameterType ? parameterValue.ToGameEventScriptValue() : value);
+                }
+
+                if (!Define(parameter, parameterValue))
                 {
                     return false;
                 }
@@ -1852,14 +1862,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             try
             {
-                RecordRuleCalled(instruction, input);
+                if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var ruleInput))
+                {
+                    return false;
+                }
+
+                RecordRuleCalled(instruction, ruleInput);
                 if (!_diagnosticsEnabled &&
-                    TryEvaluateSimpleRulePredicate(instruction.ExpressionProgram, instruction.A, input, out value))
+                    TryEvaluateSimpleRulePredicate(instruction.ExpressionProgram, instruction.A, ruleInput, out value))
                 {
                     return true;
                 }
 
-                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, input, instruction.ExpressionProgram, stackBase, out value))
+                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, ruleInput, instruction.ExpressionProgram, stackBase, out value))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -1877,8 +1892,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         EnterScope();
         try
         {
-            RecordRuleCalled(instruction, input);
-            var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, input);
+            if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var ruleInput))
+            {
+                return false;
+            }
+
+            RecordRuleCalled(instruction, ruleInput);
+            var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, ruleInput);
             if (!parameterDefined ||
                 !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
             {
@@ -1979,7 +1999,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
             RecordCallableCalled(instruction, stack, start, count);
             for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
             {
-                if (!DefineSlot(instruction.Slots[argumentIndex], stack[start + argumentIndex]))
+                var argumentValue = stack[start + argumentIndex];
+                if (!TryConvertParameterType(instruction.DeclaredTypes, argumentIndex, argumentValue, out argumentValue))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                if (!DefineSlot(instruction.Slots[argumentIndex], argumentValue))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -2190,6 +2217,35 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 : input
         };
 
+        return true;
+    }
+
+    private bool TryConvertParameterType(IReadOnlyList<string?>? declaredTypes, int index, BytecodeVmValue input, out BytecodeVmValue value)
+    {
+        value = input;
+        if (!TryGetParameterType(declaredTypes, index, out var declaredType))
+        {
+            return true;
+        }
+
+        return TryConvertDeclaredType(declaredType, input, out value);
+    }
+
+    private static bool HasParameterType(IReadOnlyList<string?>? declaredTypes, int index)
+        => TryGetParameterType(declaredTypes, index, out _);
+
+    private static bool TryGetParameterType(IReadOnlyList<string?>? declaredTypes, int index, out string declaredType)
+    {
+        declaredType = string.Empty;
+        if (declaredTypes is null ||
+            index < 0 ||
+            index >= declaredTypes.Count ||
+            string.IsNullOrEmpty(declaredTypes[index]))
+        {
+            return false;
+        }
+
+        declaredType = declaredTypes[index]!;
         return true;
     }
 

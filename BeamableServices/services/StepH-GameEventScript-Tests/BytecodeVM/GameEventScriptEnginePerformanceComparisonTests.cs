@@ -17,7 +17,7 @@ public sealed class BytecodeVmPerformanceReportTests
         """
         module EnginePerformance
 
-        rule high(value) means value >= 10
+        rule high(value as :integer) means value >= 10
 
         on Start(values) {
           let total be values[:filter value where value is high][:select value -> value + 5%][:sum value -> value]

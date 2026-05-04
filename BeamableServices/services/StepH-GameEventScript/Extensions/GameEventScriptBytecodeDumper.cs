@@ -76,7 +76,7 @@ public static class GameEventScriptBytecodeDumper
             builder.Append("  callable #").Append(i.ToString(CultureInfo.InvariantCulture))
                 .Append(' ').Append(callable.Kind)
                 .Append(' ').Append(callable.SignatureId)
-                .Append(" params=[").Append(string.Join(", ", callable.Parameters)).AppendLine("]");
+                .Append(" params=[").Append(FormatParameters(callable.Parameters, callable.ParameterTypes)).AppendLine("]");
             AppendExpressionProgram(builder, module, callable.ExpressionProgram, 4, "expression");
         }
     }
@@ -115,6 +115,7 @@ public static class GameEventScriptBytecodeDumper
             builder.Append("  handler #").Append(i.ToString(CultureInfo.InvariantCulture))
                 .Append(' ').Append(handler.SignatureId)
                 .Append(" declarationOrder=").Append(handler.DeclarationOrder.ToString(CultureInfo.InvariantCulture))
+                .Append(" params=[").Append(FormatParameters(handler.Parameters, handler.ParameterTypes)).Append(']')
                 .Append(" slots=").AppendLine(handler.ExecutionPlan.SlotCount.ToString(CultureInfo.InvariantCulture));
             if (handler.ExecutionPlan.Slots.Count > 0)
             {
@@ -124,6 +125,21 @@ public static class GameEventScriptBytecodeDumper
 
             AppendStatementProgram(builder, module, handler.ExecutionPlan.StatementProgram, 4, "statements");
         }
+    }
+
+    private static string FormatParameters(IReadOnlyList<string> parameters, IReadOnlyList<string?> parameterTypes)
+    {
+        var formatted = new string[parameters.Count];
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            var parameter = parameters[index];
+            var parameterType = index < parameterTypes.Count ? parameterTypes[index] : null;
+            formatted[index] = string.IsNullOrEmpty(parameterType)
+                ? parameter
+                : $"{parameter} as :{parameterType}";
+        }
+
+        return string.Join(", ", formatted);
     }
 
     private static void AppendStatementProgram(

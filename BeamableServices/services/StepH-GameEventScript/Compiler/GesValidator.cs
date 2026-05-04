@@ -72,6 +72,8 @@ internal static class GesValidator
                     errors);
             }
 
+            ValidateParameterTypeHints(parsedScript, "Rule", ruleDefinition.Name, ruleDefinition.ParameterList, typeDefinitions, errors);
+
             var duplicateParameters = ruleDefinition.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
@@ -113,6 +115,8 @@ internal static class GesValidator
                     errors);
             }
 
+            ValidateParameterTypeHints(parsedScript, "Select", selectDefinition.Name, selectDefinition.ParameterList, typeDefinitions, errors);
+
             var duplicateParameters = selectDefinition.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
@@ -153,6 +157,8 @@ internal static class GesValidator
                     $"Handler '{handler.Message}' declares an invalid parameter name '{parameter}'",
                     errors);
             }
+
+            ValidateParameterTypeHints(parsedScript, "Handler", handler.Message, handler.ParameterList, typeDefinitions, errors);
 
             var duplicateParameters = handler.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
@@ -254,6 +260,33 @@ internal static class GesValidator
             case ExpressionStatementNode expressionStatement:
                 ValidateExpressionReferences(parsedScriptContext, expressionStatement.Expression, callables, typeDefinitions, errors);
                 return;
+        }
+    }
+
+    private static void ValidateParameterTypeHints(
+        ParsedScript parsedScriptContext,
+        string declarationKind,
+        string declarationName,
+        IReadOnlyList<ParameterNode> parameters,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        GesValidationErrors errors)
+    {
+        foreach (var parameter in parameters)
+        {
+            if (string.IsNullOrEmpty(parameter.DeclaredType) ||
+                IsBuiltinConstructorType(parameter.DeclaredType!) ||
+                typeDefinitions.ContainsKey(parameter.DeclaredType!))
+            {
+                continue;
+            }
+
+            errors.Add(
+                parsedScriptContext,
+                $"{declarationKind} '{declarationName}' parameter '{parameter.LocalName}' uses unknown type ':{parameter.DeclaredType}'",
+                parameter.DeclaredType!,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                parameter);
         }
     }
 

@@ -29,7 +29,7 @@ internal sealed record ParsedScript(string ModuleName, string SourceName, IReadO
 
 // Type/Rule/Select/Handler nodes
 
-internal sealed record ParameterNode(string? ExternalLabel, string LocalName) : ScriptNode
+internal sealed record ParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : ScriptNode
 {
     public string SignatureLabel => ExternalLabel ?? GameEventScriptMessageSignature.UnlabeledParameterName;
 }

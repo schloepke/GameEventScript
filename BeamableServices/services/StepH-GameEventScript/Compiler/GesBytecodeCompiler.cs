@@ -91,7 +91,8 @@ internal static class GesBytecodeCompiler
                                 module.Callables,
                                 module.TypeDefinitions,
                                 AddExternalReference,
-                                AddConstant));
+                                AddConstant),
+                            handler.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
                     })
                     .ToArray(),
                 StringComparer.Ordinal);
@@ -239,6 +240,14 @@ internal static class GesBytecodeCompiler
                     AddString(label);
                 }
 
+                foreach (var parameter in callable.ParameterList)
+                {
+                    if (!string.IsNullOrEmpty(parameter.DeclaredType))
+                    {
+                        AddTypeMetadata(parameter.DeclaredType!);
+                    }
+                }
+
                 AddSignature(GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
             }
 
@@ -255,6 +264,14 @@ internal static class GesBytecodeCompiler
                     foreach (var label in handler.SignatureLabels)
                     {
                         AddString(label);
+                    }
+
+                    foreach (var parameter in handler.ParameterList)
+                    {
+                        if (!string.IsNullOrEmpty(parameter.DeclaredType))
+                        {
+                            AddTypeMetadata(parameter.DeclaredType!);
+                        }
                     }
 
                     AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));

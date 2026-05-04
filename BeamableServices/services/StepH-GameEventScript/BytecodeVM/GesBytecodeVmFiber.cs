@@ -194,8 +194,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             return FrameSignal.Completed;
                         }
 
-                        session.RecordParameterBound(parameter, value);
-                        if (!session.Define(parameter, BytecodeVmValue.FromGameEventScriptValue(value)))
+                        var parameterValue = BytecodeVmValue.FromGameEventScriptValue(value);
+                        var hasParameterType = HasParameterType(handler.ParameterTypes, parameterIndex);
+                        if (!session.TryConvertParameterType(handler.ParameterTypes, parameterIndex, parameterValue, out parameterValue))
+                        {
+                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                            return FrameSignal.Completed;
+                        }
+
+                        if (session._diagnosticsEnabled)
+                        {
+                            session.RecordParameterBound(parameter, hasParameterType ? parameterValue.ToGameEventScriptValue() : value);
+                        }
+
+                        if (!session.Define(parameter, parameterValue))
                         {
                             fiber.Complete(BytecodeVmValue.Nothing, success: false);
                             return FrameSignal.Completed;

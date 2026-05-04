@@ -7,9 +7,10 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptCompiled Compile(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
-  ctor GameEventScriptBytecodeCallable(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind kind, System.Collections.Generic.IReadOnlyList<System.String> parameters, System.Collections.Generic.IReadOnlyList<System.String> signatureLabels, System.String signatureId, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram expressionProgram)
+  ctor GameEventScriptBytecodeCallable(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind kind, System.Collections.Generic.IReadOnlyList<System.String> parameters, System.Collections.Generic.IReadOnlyList<System.String> signatureLabels, System.String signatureId, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram expressionProgram, System.Collections.Generic.IReadOnlyList<System.String> parameterTypes)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind Kind { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram ExpressionProgram { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> ParameterTypes { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.String Name { get }
@@ -92,22 +93,23 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceProgr
   property StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram[] ConditionPrograms { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram[] ValuePrograms { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
-  ctor GameEventScriptBytecodeHandler(System.String message, System.Collections.Generic.IReadOnlyList<System.String> parameters, System.Collections.Generic.IReadOnlyList<System.String> signatureLabels, System.String signatureId, System.Int32 declarationOrder, StepH.GameEventScript.Api.GameEventScriptBytecodeExecutionPlan executionPlan)
+  ctor GameEventScriptBytecodeHandler(System.String message, System.Collections.Generic.IReadOnlyList<System.String> parameters, System.Collections.Generic.IReadOnlyList<System.String> signatureLabels, System.String signatureId, System.Int32 declarationOrder, StepH.GameEventScript.Api.GameEventScriptBytecodeExecutionPlan executionPlan, System.Collections.Generic.IReadOnlyList<System.String> parameterTypes)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeExecutionPlan ExecutionPlan { get }
   property StepH.GameEventScript.Api.GameEventScriptMessageSignature Definition { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> ParameterTypes { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.Int32 DeclarationOrder { get }
   property System.String Message { get }
   property System.String SignatureId { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
-  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode, System.Int32 A, System.Int32 B, System.Int32 ConstantIndex, StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind CastKind, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram ExpressionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineProgram PipelineProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionProgram GeneratedCollectionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceProgram GuardedChoiceProgram, System.String DiagnosticName, System.String DiagnosticArgumentName, System.String[] Names, System.Int32[] Slots)
+  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode, System.Int32 A, System.Int32 B, System.Int32 ConstantIndex, StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind CastKind, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram ExpressionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineProgram PipelineProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionProgram GeneratedCollectionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceProgram GuardedChoiceProgram, System.String DiagnosticName, System.String DiagnosticArgumentName, System.String[] Names, System.Int32[] Slots, System.String[] DeclaredTypes)
   method StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction <Clone>$()
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction other)
   method System.Boolean Equals(System.Object obj)
   method System.Int32 GetHashCode()
   method System.String ToString()
-  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode& OpCode, System.Int32& A, System.Int32& B, System.Int32& ConstantIndex, StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind& CastKind, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind& CallableKind, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram& ExpressionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineProgram& PipelineProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionProgram& GeneratedCollectionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceProgram& GuardedChoiceProgram, System.String& DiagnosticName, System.String& DiagnosticArgumentName, System.String[]& Names, System.Int32[]& Slots)
+  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode& OpCode, System.Int32& A, System.Int32& B, System.Int32& ConstantIndex, StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind& CastKind, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind& CallableKind, StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram& ExpressionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineProgram& PipelineProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionProgram& GeneratedCollectionProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceProgram& GuardedChoiceProgram, System.String& DiagnosticName, System.String& DiagnosticArgumentName, System.String[]& Names, System.Int32[]& Slots, System.String[]& DeclaredTypes)
   method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction left, StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction right)
   method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction left, StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction right)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get set }
@@ -123,6 +125,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   property System.Int32[] Slots { get set }
   property System.String DiagnosticArgumentName { get set }
   property System.String DiagnosticName { get set }
+  property System.String[] DeclaredTypes { get set }
   property System.String[] Names { get set }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceKind
   enum-field Collection = 0

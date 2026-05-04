@@ -321,17 +321,32 @@ internal sealed class GesParser
         return parameters;
     }
 
-    private ParameterNode ParseParameter()
+    private ParameterNode ParseParameter(bool allowDeclaredType = true)
     {
         var startToken = Current;
         if (Match(Underscore))
         {
             SkipNewLines();
-            return WithRange(new ParameterNode(null, ExpectIdentifier()), startToken);
+            var localName = ExpectIdentifier();
+            var declaredType = allowDeclaredType ? ParseOptionalParameterDeclaredType() : null;
+            return WithRange(new ParameterNode(null, localName, declaredType), startToken);
         }
 
         var name = ExpectIdentifier();
-        return WithRange(new ParameterNode(name, name), startToken);
+        var typeName = allowDeclaredType ? ParseOptionalParameterDeclaredType() : null;
+        return WithRange(new ParameterNode(name, name, typeName), startToken);
+    }
+
+    private string? ParseOptionalParameterDeclaredType()
+    {
+        SkipNewLines();
+        if (!Match(As))
+        {
+            return null;
+        }
+
+        SkipNewLines();
+        return ParseTypeName();
     }
 
     private EventHandlerNode ParseEventHandler()
@@ -1673,11 +1688,11 @@ internal sealed class GesParser
 
         if (isMessageCallee)
         {
-            var parameters = new List<ParameterNode> { ParseParameter() };
+            var parameters = new List<ParameterNode> { ParseParameter(allowDeclaredType: false) };
             while (Match(Comma))
             {
                 SkipNewLines();
-                parameters.Add(ParseParameter());
+                parameters.Add(ParseParameter(allowDeclaredType: false));
             }
 
             SkipNewLines();

@@ -104,7 +104,8 @@ internal static class GesBytecodeLowerer
                 callable.Parameters,
                 callable.SignatureLabels,
                 GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels),
-                expressionProgram);
+                expressionProgram,
+                callable.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
         }
 
         return result;
@@ -1957,7 +1958,8 @@ internal static class GesBytecodeLowerer
                             parameterSlot,
                             ExpressionProgram: rulePredicateProgram,
                             DiagnosticName: callable.Name,
-                            DiagnosticArgumentName: callable.Parameters[0]));
+                            DiagnosticArgumentName: callable.Parameters[0],
+                            DeclaredTypes: new string?[] { callable.ParameterList[0].DeclaredType }));
                         return;
 
                     case ExtensionPredicateExpressionNode extensionPredicate:
@@ -2026,7 +2028,8 @@ internal static class GesBytecodeLowerer
                             ExpressionProgram: callableProgram,
                             DiagnosticName: called.Name,
                             Names: called.Parameters.ToArray(),
-                            Slots: parameterSlots));
+                            Slots: parameterSlots,
+                            DeclaredTypes: called.ParameterList.Select(parameter => parameter.DeclaredType).ToArray()));
                         CollapseValuesToSingle(call.Arguments.Count);
                         return;
 

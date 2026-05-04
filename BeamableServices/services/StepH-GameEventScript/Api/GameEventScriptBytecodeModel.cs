@@ -263,7 +263,8 @@ public sealed record class GameEventScriptBytecodeInstruction(
     string? DiagnosticName = null,
     string? DiagnosticArgumentName = null,
     string[]? Names = null,
-    int[]? Slots = null);
+    int[]? Slots = null,
+    string?[]? DeclaredTypes = null);
 
 internal enum GameEventScriptBytecodeProjectionFastKind
 {
@@ -695,13 +696,16 @@ public sealed class GameEventScriptBytecodeHandler(
     IReadOnlyList<string> signatureLabels,
     string signatureId,
     int declarationOrder,
-    GameEventScriptBytecodeExecutionPlan executionPlan)
+    GameEventScriptBytecodeExecutionPlan executionPlan,
+    IReadOnlyList<string?>? parameterTypes = null)
 {
     public string Message { get; } = message ?? throw new ArgumentNullException(nameof(message));
 
     public IReadOnlyList<string> Parameters { get; } = parameters ?? throw new ArgumentNullException(nameof(parameters));
 
     public IReadOnlyList<string> SignatureLabels { get; } = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
+
+    public IReadOnlyList<string?> ParameterTypes { get; } = NormalizeParameterTypes(parameterTypes, parameters);
 
     public string SignatureId { get; } = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
 
@@ -710,6 +714,22 @@ public sealed class GameEventScriptBytecodeHandler(
     public GameEventScriptBytecodeExecutionPlan ExecutionPlan { get; } = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
 
     public GameEventScriptMessageSignature Definition { get; } = GameEventScriptMessageSignature.Create(message, signatureLabels);
+
+    private static IReadOnlyList<string?> NormalizeParameterTypes(IReadOnlyList<string?>? parameterTypes, IReadOnlyList<string> parameters)
+    {
+        _ = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        if (parameterTypes is null)
+        {
+            return new string?[parameters.Count];
+        }
+
+        if (parameterTypes.Count != parameters.Count)
+        {
+            throw new ArgumentException("Parameter type hint count must match parameter count.", nameof(parameterTypes));
+        }
+
+        return parameterTypes.Select(type => string.IsNullOrWhiteSpace(type) ? null : type).ToArray();
+    }
 }
 
 public sealed class GameEventScriptBytecodeCallable(
@@ -718,7 +738,8 @@ public sealed class GameEventScriptBytecodeCallable(
     IReadOnlyList<string> parameters,
     IReadOnlyList<string> signatureLabels,
     string signatureId,
-    GameEventScriptBytecodeExpressionProgram expressionProgram)
+    GameEventScriptBytecodeExpressionProgram expressionProgram,
+    IReadOnlyList<string?>? parameterTypes = null)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
@@ -728,7 +749,25 @@ public sealed class GameEventScriptBytecodeCallable(
 
     public IReadOnlyList<string> SignatureLabels { get; } = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
 
+    public IReadOnlyList<string?> ParameterTypes { get; } = NormalizeParameterTypes(parameterTypes, parameters);
+
     public string SignatureId { get; } = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
 
     public GameEventScriptBytecodeExpressionProgram ExpressionProgram { get; } = expressionProgram ?? throw new ArgumentNullException(nameof(expressionProgram));
+
+    private static IReadOnlyList<string?> NormalizeParameterTypes(IReadOnlyList<string?>? parameterTypes, IReadOnlyList<string> parameters)
+    {
+        _ = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        if (parameterTypes is null)
+        {
+            return new string?[parameters.Count];
+        }
+
+        if (parameterTypes.Count != parameters.Count)
+        {
+            throw new ArgumentException("Parameter type hint count must match parameter count.", nameof(parameterTypes));
+        }
+
+        return parameterTypes.Select(type => string.IsNullOrWhiteSpace(type) ? null : type).ToArray();
+    }
 }

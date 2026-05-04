@@ -106,6 +106,118 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmPreservesParameterTypeHintsWithoutChangingSignatures()
+    {
+        const string script =
+            """
+            module Runtime
+
+            select boosted(_ value as :integer) means value + 1
+
+            on Start(value as :integer) {
+              publish Done(value: boosted(value))
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var handler = compiled.Handlers["Start"][0];
+        var callable = compiled.Callables["boosted"];
+        var dump = compiled.DumpBytecode();
+
+        Assert.AreEqual("Start(value)", handler.SignatureId);
+        Assert.AreEqual("boosted(_)", callable.SignatureId);
+        Assert.AreEqual("integer", handler.ParameterTypes[0]);
+        Assert.AreEqual("integer", callable.ParameterTypes[0]);
+        StringAssert.Contains(dump, "handler #0 Start(value)");
+        StringAssert.Contains(dump, "params=[value as :integer]");
+        StringAssert.Contains(dump, "callable #0 Select boosted(_) params=[value as :integer]");
+    }
+
+    [TestMethod]
+    public void BytecodeVmCoercesTypedHandlerParameters()
+    {
+        const string script =
+            """
+            module Runtime
+
+            on Start(value as :integer) {
+              publish Done(value: value + 1)
+            }
+            """;
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(GameEventScriptManager.Compile(script));
+
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(2m))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["value"]);
+    }
+
+    [TestMethod]
+    public void BytecodeVmCoercesTypedCallableParameters()
+    {
+        const string script =
+            """
+            module Runtime
+
+            rule high(value as :integer) means value > 2
+            select boosted(_ value as :integer) means value + 1
+
+            on Start(value) {
+              publish Done(ok: value is high, boosted: boosted(value))
+            }
+            """;
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(GameEventScriptManager.Compile(script));
+
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(2m))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(false), published[0].Arguments["ok"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["boosted"]);
+    }
+
+    [TestMethod]
+    public void BytecodeVmCoercesTypedCustomRecordParameters()
+    {
+        const string script =
+            """
+            module Runtime
+
+            record :gauge as {
+              current: :integer
+            }
+
+            on Start(hp as :gauge) {
+              publish Done(current: hp.current)
+            }
+            """;
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(GameEventScriptManager.Compile(script));
+        var hp = GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+        {
+            ["current"] = GameEventScriptValueFactory.GesDecimal(4m)
+        });
+
+        host.PublishToCompletion(Create("Start", ("hp", hp)));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(4), published[0].Arguments["current"]);
+    }
+
+    [TestMethod]
     public void BytecodeVmCanRunFromCompiledArtifactRebuiltFromPublicBytecodeData()
     {
         const string script =

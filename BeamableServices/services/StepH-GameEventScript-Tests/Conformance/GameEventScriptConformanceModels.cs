@@ -119,6 +119,8 @@ public sealed class GameEventScriptRuntimeLimitsSpec
 {
     public int? MaxProcessedEventsPerRun { get; set; }
 
+    public int? MaxQueuedMessagesPerRun { get; set; }
+
     public int? MaxExecutionSteps { get; set; }
 
     public int? MaxLoopIterations { get; set; }

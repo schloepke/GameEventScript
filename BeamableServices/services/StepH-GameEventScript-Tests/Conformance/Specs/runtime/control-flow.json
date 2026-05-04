@@ -101,6 +101,28 @@
     },
     {
       "kind": "scriptApi",
+      "name": "queue limit drops newest published messages",
+      "script": "on Start {\n  publish A\n  publish B\n  publish C\n}",
+      "runtimeLimits": { "maxQueuedMessagesPerRun": 2 },
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "A", "args": {} },
+            { "name": "B", "args": {} }
+          ],
+          "expectedDiagnostics": [
+            {
+              "kind": "RuntimeLimitReached",
+              "name": "MaxQueuedMessagesPerRun",
+              "detailContains": "Dropped 'C'"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "if and for single statements run without blocks",
       "script": "on Start(first, second, items) {\n  if first publish One\n  else if second publish Two\n  else publish Three\n\n  for item in items publish Item(value: item)\n}",
       "steps": [

@@ -505,6 +505,7 @@ internal static class GameEventScriptConformanceRunner
         return new GameEventScriptRuntimeLimits
         {
             MaxProcessedEventsPerRun = spec.MaxProcessedEventsPerRun ?? defaults.MaxProcessedEventsPerRun,
+            MaxQueuedMessagesPerRun = spec.MaxQueuedMessagesPerRun ?? defaults.MaxQueuedMessagesPerRun,
             MaxExecutionSteps = spec.MaxExecutionSteps ?? defaults.MaxExecutionSteps,
             MaxLoopIterations = spec.MaxLoopIterations ?? defaults.MaxLoopIterations,
             MaxCallDepth = spec.MaxCallDepth ?? defaults.MaxCallDepth,

@@ -352,11 +352,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyList<System.String> TypeMetadata { get }
   property System.Int32 MaxStackDepth { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptContext
-  ctor GameEventScriptContext(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage> publish, StepH.GameEventScript.Runtime.IGameEventScriptDiagnosticCollector diagnosticCollector, StepH.GameEventScript.Api.GameEventScriptRuntimeLimits runtimeLimits, StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry)
-  method System.Void Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  method System.Void Publish(System.String message)
-  method System.Void Publish(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> args)
-  method System.Void Publish(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Types.GameEventScriptValue>[] args)
+  ctor GameEventScriptContext(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random, System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, System.Boolean> publish, StepH.GameEventScript.Runtime.IGameEventScriptDiagnosticCollector diagnosticCollector, StepH.GameEventScript.Api.GameEventScriptRuntimeLimits runtimeLimits, StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry)
+  method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Boolean Publish(System.String message)
+  method System.Boolean Publish(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> args)
+  method System.Boolean Publish(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Types.GameEventScriptValue>[] args)
   method System.Void RecordDiagnostic(StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind kind, System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments, System.String detail)
   property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
   property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
@@ -423,6 +423,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
   property System.Int32 MaxGeneratedCollectionItems { get set }
   property System.Int32 MaxLoopIterations { get set }
   property System.Int32 MaxProcessedEventsPerRun { get set }
+  property System.Int32 MaxQueuedMessagesPerRun { get set }
   property System.Int32 MaxRangeItems { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptSourceLocation
   ctor GameEventScriptSourceLocation(System.String SourceName, System.Int32? Line, System.Int32? Column, System.Int32? EndLine, System.Int32? EndColumn, System.String ModuleName)
@@ -568,7 +569,7 @@ sealed class StepH.GameEventScript.Runtime.GameEventScriptHost
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection handlers, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
-  method System.Void Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateBuilder()
 interface StepH.GameEventScript.Runtime.IGameEventScriptDiagnosticCollector
   method System.Void Record(StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind kind, System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments, System.String detail)

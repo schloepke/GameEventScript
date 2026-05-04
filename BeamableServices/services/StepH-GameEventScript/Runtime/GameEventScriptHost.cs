@@ -83,16 +83,21 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public void Publish(GameEventScriptMessage message)
+    public bool Publish(GameEventScriptMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.Name))
         {
-            return;
+            return false;
         }
 
         var state = new GameEventScriptRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits);
-        state.Enqueue(message);
+        if (!state.Enqueue(message))
+        {
+            return false;
+        }
+
         Drain(state);
+        return true;
     }
 
     #endregion
@@ -182,6 +187,7 @@ public sealed class GameEventScriptHost
     {
         private readonly Queue<GameEventScriptMessage> _queue = new();
         private readonly int _maxProcessedEventsPerRun;
+        private readonly int _maxQueuedMessagesPerRun;
         private int _processedEvents;
 
         public GameEventScriptRunState(
@@ -192,6 +198,7 @@ public sealed class GameEventScriptHost
             GameEventScriptRuntimeLimits runtimeLimits)
         {
             _maxProcessedEventsPerRun = runtimeLimits.MaxProcessedEventsPerRun;
+            _maxQueuedMessagesPerRun = runtimeLimits.MaxQueuedMessagesPerRun;
             PublishedMessageObserver = publishedMessageObserver;
             Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, runtimeLimits: runtimeLimits, extensionRegistry: extensionRegistry);
         }
@@ -200,14 +207,24 @@ public sealed class GameEventScriptHost
 
         private Action<GameEventScriptMessage>? PublishedMessageObserver { get; }
 
-        public void Enqueue(GameEventScriptMessage message)
+        public bool Enqueue(GameEventScriptMessage message)
         {
             if (string.IsNullOrWhiteSpace(message.Name))
             {
-                return;
+                return false;
+            }
+
+            if (_maxQueuedMessagesPerRun > 0 && _queue.Count >= _maxQueuedMessagesPerRun)
+            {
+                Context.RuntimeBudget.ReportLimit(
+                    nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun),
+                    $"Message queue limit reached. Dropped '{message.Name}'.",
+                    _maxQueuedMessagesPerRun);
+                return false;
             }
 
             _queue.Enqueue(message);
+            return true;
         }
 
         public bool TryDequeue(out GameEventScriptMessage? message)
@@ -236,11 +253,16 @@ public sealed class GameEventScriptHost
         public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
             => Context.RecordDiagnostic(kind, name, arguments, detail);
 
-        private void PublishInternal(GameEventScriptMessage message)
+        private bool PublishInternal(GameEventScriptMessage message)
         {
-            Enqueue(message);
+            if (!Enqueue(message))
+            {
+                return false;
+            }
+
             PublishedMessageObserver?.Invoke(message);
             RecordDiagnostic(GameEventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"Published '{message.Name}'");
+            return true;
         }
     }
 

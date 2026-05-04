@@ -33,6 +33,17 @@ public sealed class GameEventScriptRuntimeLimits
     public int MaxProcessedEventsPerRun { get; init; } = 64;
 
     /// <summary>
+    /// Specifies the maximum number of messages that may be waiting in the active host queue
+    /// during a single publish run.
+    /// </summary>
+    /// <remarks>
+    /// A value less than or equal to zero disables the queue-length limit. When the limit is
+    /// reached, the newest message is discarded, the publish call returns false, and a
+    /// runtime-limit diagnostic is recorded when diagnostics are available.
+    /// </remarks>
+    public int MaxQueuedMessagesPerRun { get; init; }
+
+    /// <summary>
     /// Specifies the maximum number of execution steps allowed during the evaluation of a game event script.
     /// This limit is used to control the computational workload of scripts and to prevent scripts
     /// from consuming excessive runtime resources or entering infinite execution loops.
@@ -124,4 +135,3 @@ public sealed class GameEventScriptRuntimeLimits
     /// </remarks>
     public int MaxDiceSides { get; init; } = 1_000_000;
 }
-

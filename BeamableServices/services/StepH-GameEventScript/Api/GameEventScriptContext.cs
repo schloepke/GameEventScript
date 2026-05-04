@@ -16,13 +16,13 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptContext
 {
-    private readonly Action<GameEventScriptMessage> _publish;
+    private readonly Func<GameEventScriptMessage, bool> _publish;
 
     /// <summary>
     /// Provides the execution context for running game event scripts, managing runtime constraints,
     /// diagnostics, random generation, and extension mechanisms.
     /// </summary>
-    public GameEventScriptContext(GameEventScriptRandomGenerator random, Action<GameEventScriptMessage> publish, IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
+    public GameEventScriptContext(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> publish, IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
         GameEventScriptRuntimeLimits? runtimeLimits = null, IGameEventScriptExtensionRegistry? extensionRegistry = null)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
@@ -66,10 +66,9 @@ public sealed class GameEventScriptContext
     /// The message must have a valid non-empty name to be published.
     /// </summary>
     /// <param name="message">The game event script message to be published. Must not be null, and its name must not be empty or whitespace.</param>
-    public void Publish(GameEventScriptMessage message)
+    public bool Publish(GameEventScriptMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.Name)) return;
-        _publish(message);
+        return !string.IsNullOrWhiteSpace(message.Name) && _publish(message);
     }
 
     /// <summary>
@@ -77,14 +76,14 @@ public sealed class GameEventScriptContext
     /// The specified message is forwarded to the configured publishing mechanism.
     /// </summary>
     /// <param name="message">The string identifier of the game event script message to be published. Must not be null, empty, or consist solely of whitespace.</param>
-    public void Publish(string message) => Publish(GameEventScriptMessage.Create(message));
+    public bool Publish(string message) => Publish(GameEventScriptMessage.Create(message));
 
     /// <summary>
     /// Publishes a game event script message with the specified name and arguments to the runtime environment.
     /// </summary>
     /// <param name="message">The name of the message to be published.</param>
     /// <param name="args">A dictionary containing the arguments for the message, where keys are parameter names and values are their corresponding script values.</param>
-    public void Publish(string message, IReadOnlyDictionary<string, GameEventScriptValue> args) => Publish(GameEventScriptMessage.Create(message, args));
+    public bool Publish(string message, IReadOnlyDictionary<string, GameEventScriptValue> args) => Publish(GameEventScriptMessage.Create(message, args));
 
     /// <summary>
     /// Publishes a message within the game event script execution context, allowing for the
@@ -93,7 +92,7 @@ public sealed class GameEventScriptContext
     /// <param name="message">The name or identifier of the message to be published.</param>
     /// <param name="args">A collection of arguments associated with the message, each represented
     /// by a name and a corresponding <see cref="GameEventScriptValue"/>.</param>
-    public void Publish(string message, params (string name, GameEventScriptValue value)[] args) => Publish(GameEventScriptMessage.Create(message, args));
+    public bool Publish(string message, params (string name, GameEventScriptValue value)[] args) => Publish(GameEventScriptMessage.Create(message, args));
 
     /// <summary>
     /// Records a diagnostic event within the game event script runtime, capturing details

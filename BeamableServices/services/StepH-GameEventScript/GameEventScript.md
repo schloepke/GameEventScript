@@ -165,10 +165,15 @@ The host runtime is a FIFO pub/sub queue.
 
 When a message is published:
 
-1. The message is appended to the current run queue.
+1. The message is appended to the current run queue if the queue limit allows it.
 2. The queue is drained in order.
 3. For each message, subscribers with the exact same signature are invoked.
 4. Follow-up messages published by subscribers are appended to the same queue.
+
+Host and context `Publish(...)` calls return `true` when the message was
+accepted into the queue and `false` when it was rejected, for example because
+`MaxQueuedMessagesPerRun` was reached. A rejected message is not observed by the
+published-message observer and is not dispatched.
 
 Publish chains are not recursive direct calls.
 
@@ -1956,6 +1961,7 @@ Runtime limits prevent runaway scripts.
 var limits = new GameEventScriptRuntimeLimits
 {
     MaxProcessedEventsPerRun = 64,
+    MaxQueuedMessagesPerRun = 20,
     MaxExecutionSteps = 100_000,
     MaxLoopIterations = 100_000,
     MaxCallDepth = 64,
@@ -1968,6 +1974,11 @@ var limits = new GameEventScriptRuntimeLimits
 
 `MaxProcessedEventsPerRun` limits how many queued events one `Publish` call may
 process.
+
+`MaxQueuedMessagesPerRun` limits how many messages may wait in the active host
+queue at once. When the queue is full, the newest published message is dropped
+and `Publish(...)` returns `false`. Values less than or equal to zero disable
+this queue-length limit.
 
 When a runtime budget is reached, execution stops leniently and a
 `RuntimeLimitReached` diagnostic is recorded when diagnostics are available.

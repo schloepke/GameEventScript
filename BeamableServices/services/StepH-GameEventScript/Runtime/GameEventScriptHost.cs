@@ -338,7 +338,7 @@ public sealed class GameEventScriptHost
     {
         while (!state.IsCompletedAndIdle && !state.Context.RuntimeBudget.IsExhausted)
         {
-            DrainSlice(state, int.MaxValue);
+            DrainSlice(state, int.MaxValue, stopAfterStartedEventCount: null, allowSynchronousScriptFastPath: true);
         }
     }
 
@@ -347,7 +347,7 @@ public sealed class GameEventScriptHost
         var startedEventCount = state.StartedEventCount;
         do
         {
-            DrainSlice(state, int.MaxValue, stopAfterStartedEventCount: startedEventCount + 1);
+            DrainSlice(state, int.MaxValue, stopAfterStartedEventCount: startedEventCount + 1, allowSynchronousScriptFastPath: true);
         }
         while (!state.IsCompletedAndIdle &&
                !state.Context.RuntimeBudget.IsExhausted &&
@@ -356,10 +356,14 @@ public sealed class GameEventScriptHost
 
     private GameEventScriptRunStepResult DrainSlice(GameEventScriptHostRunState state, int maxOpcodes)
     {
-        return DrainSlice(state, maxOpcodes, stopAfterStartedEventCount: null);
+        return DrainSlice(state, maxOpcodes, stopAfterStartedEventCount: null, allowSynchronousScriptFastPath: false);
     }
 
-    private GameEventScriptRunStepResult DrainSlice(GameEventScriptHostRunState state, int maxOpcodes, int? stopAfterStartedEventCount)
+    private GameEventScriptRunStepResult DrainSlice(
+        GameEventScriptHostRunState state,
+        int maxOpcodes,
+        int? stopAfterStartedEventCount,
+        bool allowSynchronousScriptFastPath)
     {
         state.BeginStep();
         var remainingOpcodes = maxOpcodes;
@@ -390,7 +394,7 @@ public sealed class GameEventScriptHost
             }
 
             var before = state.StepExecutedOpcodes;
-            RunActiveDispatch(state, remainingOpcodes);
+            RunActiveDispatch(state, remainingOpcodes, allowSynchronousScriptFastPath);
             var consumed = state.StepExecutedOpcodes - before;
             remainingOpcodes -= consumed;
 
@@ -416,7 +420,7 @@ public sealed class GameEventScriptHost
         state.StartDispatch(queuedEvent, subscriptions);
     }
 
-    private void RunActiveDispatch(GameEventScriptHostRunState state, int maxOpcodes)
+    private void RunActiveDispatch(GameEventScriptHostRunState state, int maxOpcodes, bool allowSynchronousScriptFastPath)
     {
         var remainingOpcodes = maxOpcodes;
         while (state.ActiveSubscriptionIndex < state.ActiveSubscriptions!.Length)
@@ -451,6 +455,13 @@ public sealed class GameEventScriptHost
                 state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberInvoked, state.ActiveMessage.Name, state.ActiveMessage.Arguments, "Subscriber invoked");
                 if (subscription.ScriptExecutable is not null && subscription.ScriptHandler is not null)
                 {
+                    if (allowSynchronousScriptFastPath)
+                    {
+                        subscription.ScriptExecutable.InvokeHandler(subscription.ScriptHandler, state.ActiveMessage, state.Context);
+                        state.ActiveSubscriptionIndex++;
+                        continue;
+                    }
+
                     var fiber = GesBytecodeVmExecutionSession.CreateFiber(subscription.ScriptExecutable, state.Context, subscription.ScriptHandler, state.ActiveMessage.Arguments);
                     state.SetActiveScriptFiber(fiber);
                     var executed = RunScriptFiberSlice(state, fiber, remainingOpcodes);

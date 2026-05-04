@@ -50,13 +50,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
-        var fiber = CreateFiber(compiledScript, context, handler, args);
-        while (!fiber.IsCompleted)
-        {
-            fiber.RunSlice(int.MaxValue);
-        }
-
-        if (fiber.Failed)
+        var session = new GesBytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
+        if (!session.TryInvoke(handler, args))
         {
             throw new InvalidOperationException(
                 $"BytecodeVM invariant failed: handler '{handler.SignatureId}' #{handler.DeclarationOrder} could not be executed by its compiled execution plan.");

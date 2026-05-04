@@ -18,7 +18,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         GameEventScriptCompileOptions options,
         GameEventScriptCompiled bytecodeModule,
         IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers,
-        IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions)
+        IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         BytecodeModule = bytecodeModule ?? throw new ArgumentNullException(nameof(bytecodeModule));
@@ -40,7 +40,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
 
     internal GameEventScriptCompiled BytecodeModule { get; }
 
-    internal IReadOnlyDictionary<string, BytecodeVmTypeDefinition> TypeDefinitions { get; }
+    internal IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> DispatchIndex => _dispatchIndex;
 

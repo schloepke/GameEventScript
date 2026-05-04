@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
@@ -18,9 +17,9 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
         IReadOnlyList<string> typeMetadata,
-        IReadOnlyList<GameEventScriptBytecodeProgram> programs,
-        IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers,
-        IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions,
+        IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
+        IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
+        IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
         int maxStackDepth)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -30,7 +29,7 @@ public sealed class GameEventScriptCompiled
         ExternalReferences = externalReferences ?? throw new ArgumentNullException(nameof(externalReferences));
         NamedArgumentLayouts = namedArgumentLayouts ?? throw new ArgumentNullException(nameof(namedArgumentLayouts));
         TypeMetadata = typeMetadata ?? throw new ArgumentNullException(nameof(typeMetadata));
-        Programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         MaxStackDepth = Math.Max(1, maxStackDepth);
@@ -50,11 +49,11 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<string> TypeMetadata { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeProgram> Programs { get; }
+    public IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> Callables { get; }
 
-    internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> Handlers { get; }
+    public IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> Handlers { get; }
 
-    internal IReadOnlyDictionary<string, BytecodeVmTypeDefinition> TypeDefinitions { get; }
+    public IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get; }
 
-    internal int MaxStackDepth { get; }
+    public int MaxStackDepth { get; }
 }

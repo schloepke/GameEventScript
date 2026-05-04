@@ -7,18 +7,17 @@ namespace StepH.GameEventScript.BytecodeVM;
 
 internal sealed class GesBytecodeVmCompiledHandler
 {
-    internal GesBytecodeVmCompiledHandler(string message, IReadOnlyList<string> parameters, IReadOnlyList<string> signatureLabels, string signatureId, int declarationOrder, int programIndex,
-        bool diagnosticsEnabled, BytecodeVmExecutionPlan executionPlan)
+    internal GesBytecodeVmCompiledHandler(GameEventScriptBytecodeHandler handler, bool diagnosticsEnabled)
     {
-        Message = message ?? throw new ArgumentNullException(nameof(message));
-        Parameters = parameters?.ToArray() ?? throw new ArgumentNullException(nameof(parameters));
-        SignatureLabels = signatureLabels?.ToArray() ?? throw new ArgumentNullException(nameof(signatureLabels));
-        SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
-        DeclarationOrder = declarationOrder;
-        ProgramIndex = programIndex;
+        _ = handler ?? throw new ArgumentNullException(nameof(handler));
+        Message = handler.Message;
+        Parameters = handler.Parameters.ToArray();
+        SignatureLabels = handler.SignatureLabels.ToArray();
+        SignatureId = handler.SignatureId;
+        DeclarationOrder = handler.DeclarationOrder;
         DiagnosticsEnabled = diagnosticsEnabled;
-        ExecutionPlan = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
-        Definition = GameEventScriptMessageSignature.Create(message, SignatureLabels);
+        ExecutionPlan = handler.ExecutionPlan;
+        Definition = handler.Definition;
     }
 
     public string Message { get; }
@@ -33,9 +32,7 @@ internal sealed class GesBytecodeVmCompiledHandler
 
     public GameEventScriptMessageSignature Definition { get; }
 
-    internal int ProgramIndex { get; }
-
     internal bool DiagnosticsEnabled { get; }
 
-    internal BytecodeVmExecutionPlan ExecutionPlan { get; }
+    internal GameEventScriptBytecodeExecutionPlan ExecutionPlan { get; }
 }

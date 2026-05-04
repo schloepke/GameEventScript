@@ -4,27 +4,27 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Compiler;
 
-internal static class GesBytecodeVmExecutionPlanBuilder
+internal static class GesBytecodeLowerer
 {
-    public static BytecodeVmExecutionPlan CompileHandlerPlan(
+    public static GameEventScriptBytecodeExecutionPlan CompileHandlerPlan(
         string messageName,
         int declarationOrder,
         IReadOnlyList<string> parameters,
         IReadOnlyList<StatementNode> statements,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode>? typeDefinitions = null,
-        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null,
+        Func<GameEventScriptValue, int>? constantResolver = null)
     {
         if (!TryValidateStatements(statements, callables, out var failureReason))
         {
             throw new GameEventScriptCompileException(
-                $"BytecodeVM execution planner does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
+                $"GameEventScript bytecode lowerer does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
         }
 
         var slotCollector = new SlotCollector(callables, typeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal));
@@ -40,31 +40,32 @@ internal static class GesBytecodeVmExecutionPlanBuilder
             slotCollector.CollectStatement(statement);
         }
 
-        var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver);
+        var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver, constantResolver);
         var statementProgram = programCompiler.CompileStatementProgram(statements, createsScope: false);
 
-        return BytecodeVmExecutionPlan.Create(
+        return GameEventScriptBytecodeExecutionPlan.Create(
             slotCollector.Slots,
             statementProgram,
             programCompiler.MaxStackDepth);
     }
 
-    public static IReadOnlyDictionary<string, BytecodeVmTypeDefinition> CompileTypeDefinitions(
+    public static IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> CompileTypeDefinitions(
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null)
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null,
+        Func<GameEventScriptValue, int>? constantResolver = null)
     {
-        var result = new Dictionary<string, BytecodeVmTypeDefinition>(StringComparer.Ordinal);
+        var result = new Dictionary<string, GameEventScriptBytecodeTypeDefinition>(StringComparer.Ordinal);
         foreach (var typeDefinition in typeDefinitions.Values)
         {
             var slotCollector = new SlotCollector(callables, typeDefinitions);
             slotCollector.CollectTypeDefinitions();
-            var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver);
-            var fields = new BytecodeVmTypeFieldDefinition[typeDefinition.Fields.Count];
+            var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver, constantResolver);
+            var fields = new GameEventScriptBytecodeTypeFieldDefinition[typeDefinition.Fields.Count];
             for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
                 var field = typeDefinition.Fields[fieldIndex];
-                fields[fieldIndex] = new BytecodeVmTypeFieldDefinition(
+                fields[fieldIndex] = new GameEventScriptBytecodeTypeFieldDefinition(
                     field.Name,
                     field.TypeName,
                     field.MinimumExpression is null ? null : programCompiler.CompileExpression(field.MinimumExpression),
@@ -72,7 +73,38 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                     field.ComputedExpression is null ? null : programCompiler.CompileExpression(field.ComputedExpression));
             }
 
-            result[typeDefinition.Name] = new BytecodeVmTypeDefinition(typeDefinition.Name, fields);
+            result[typeDefinition.Name] = new GameEventScriptBytecodeTypeDefinition(typeDefinition.Name, fields);
+        }
+
+        return result;
+    }
+
+    public static IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> CompileCallableDefinitions(
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver = null,
+        Func<GameEventScriptValue, int>? constantResolver = null)
+    {
+        var result = new Dictionary<string, GameEventScriptBytecodeCallable>(StringComparer.Ordinal);
+        foreach (var callable in callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
+        {
+            var slotCollector = new SlotCollector(callables, typeDefinitions);
+            foreach (var parameter in callable.Parameters)
+            {
+                slotCollector.AddSlot(parameter);
+            }
+
+            slotCollector.CollectTypeDefinitions();
+            slotCollector.CollectExpression(callable.Expression);
+            var programCompiler = new ProgramCompiler(slotCollector.Slots, callables, externalReferenceResolver, constantResolver);
+            var expressionProgram = programCompiler.CompileExpression(callable.Expression);
+            result[callable.Name] = new GameEventScriptBytecodeCallable(
+                callable.Name,
+                callable.Kind == GameEventScriptCallableKind.Rule ? GameEventScriptBytecodeCallableKind.Rule : GameEventScriptBytecodeCallableKind.Select,
+                callable.Parameters,
+                callable.SignatureLabels,
+                GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels),
+                expressionProgram);
         }
 
         return result;
@@ -1003,7 +1035,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                 return true;
 
             default:
-                failureReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} BytecodeVM selector.";
+                failureReason = $"Selector '{selector.GetType().Name}' is not supported as a {(isTerminal ? "terminal" : "prefix")} GameEventScript bytecode selector.";
                 return false;
         }
     }
@@ -1173,7 +1205,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
             }
         }
 
-        private void CollectExpression(ExpressionNode expression)
+        public void CollectExpression(ExpressionNode expression)
         {
             switch (expression)
             {
@@ -1528,92 +1560,94 @@ internal static class GesBytecodeVmExecutionPlanBuilder
     private sealed class ProgramCompiler(
         IReadOnlyDictionary<string, int> slots,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver)
+        Func<GameEventScriptExtensionReference, int>? externalReferenceResolver,
+        Func<GameEventScriptValue, int>? constantResolver)
     {
         private readonly IReadOnlyDictionary<string, GesCallableDefinition> _callables = callables;
         private readonly Func<GameEventScriptExtensionReference, int>? _externalReferenceResolver = externalReferenceResolver;
-        private readonly Dictionary<ExpressionNode, BytecodeVmExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
+        private readonly Func<GameEventScriptValue, int>? _constantResolver = constantResolver;
+        private readonly Dictionary<ExpressionNode, GameEventScriptBytecodeExpressionProgram> _expressionPrograms = new(ReferenceEqualityComparer<ExpressionNode>.Instance);
 
         public int MaxStackDepth { get; private set; } = 1;
 
-        public BytecodeVmStatementProgram CompileStatementProgram(IReadOnlyList<StatementNode> statements, bool createsScope)
+        public GameEventScriptBytecodeStatementProgram CompileStatementProgram(IReadOnlyList<StatementNode> statements, bool createsScope)
             => new(statements.Select(CompileStatement).ToArray(), createsScope);
 
-        private BytecodeVmStatement CompileStatement(StatementNode statement)
+        private GameEventScriptBytecodeStatement CompileStatement(StatementNode statement)
             => statement switch
             {
-                LetStatementNode let => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.Let,
+                LetStatementNode let => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.Let,
                     name: let.Identifier,
                     declaredType: let.DeclaredType,
                     expressionProgram: CompileExpression(let.Expression)),
 
-                PublishStatementNode { MessageExpression: MessageLiteralExpressionNode } publish => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.Publish,
+                PublishStatementNode { MessageExpression: MessageLiteralExpressionNode } publish => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.Publish,
                     publishLayout: CompilePublishLayout(publish)),
 
-                PublishStatementNode publish => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.Publish,
+                PublishStatementNode publish => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.Publish,
                     expressionProgram: CompileExpression(publish.MessageExpression)),
 
-                IfStatementNode ifStatement => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.If,
+                IfStatementNode ifStatement => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.If,
                     expressionProgram: CompileExpression(ifStatement.Condition),
                     thenProgram: CompileStatementProgram(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock),
                     elseProgram: ifStatement.ElseBody is null
                         ? null
                         : CompileStatementProgram(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock)),
 
-                ForStatementNode { Source: RangeIterationSourceNode range } forStatement => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.ForRange,
+                ForStatementNode { Source: RangeIterationSourceNode range } forStatement => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.ForRange,
                     name: forStatement.Identifier,
                     iterationSource: CompileIterationSource(range),
                     bodyProgram: CompileStatementProgram(forStatement.Body.Statements, forStatement.Body.IsBlock)),
 
-                ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.ForCollection,
+                ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.ForCollection,
                     name: forStatement.Identifier,
                     iterationSource: CompileIterationSource(collection),
                     bodyProgram: CompileStatementProgram(forStatement.Body.Statements, forStatement.Body.IsBlock)),
 
-                ExpressionStatementNode expressionStatement => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.Expression,
+                ExpressionStatementNode expressionStatement => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.Expression,
                     expressionProgram: CompileExpression(expressionStatement.Expression),
                     diagnosticName: expressionStatement.Expression.GetType().Name),
 
-                SeededRandomStatementNode seededRandom => new BytecodeVmStatement(
-                    BytecodeVmStatementKind.SeededRandom,
+                SeededRandomStatementNode seededRandom => new GameEventScriptBytecodeStatement(
+                    GameEventScriptBytecodeStatementKind.SeededRandom,
                     expressionProgram: CompileExpression(seededRandom.SeedExpression),
                     bodyProgram: CompileStatementProgram(seededRandom.Body.Statements, seededRandom.Body.IsBlock)),
 
-                _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support statement '{statement.GetType().Name}'.")
+                _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support statement '{statement.GetType().Name}'.")
             };
 
-        public BytecodeVmExpressionProgram CompileExpression(ExpressionNode expression)
+        public GameEventScriptBytecodeExpressionProgram CompileExpression(ExpressionNode expression)
         {
             if (_expressionPrograms.TryGetValue(expression, out var program))
             {
                 return program;
             }
 
-            var instructions = new List<BytecodeVmProgramInstruction>();
+            var instructions = new List<GameEventScriptBytecodeInstruction>();
             var builder = new ExpressionBuilder(this, instructions);
             builder.EmitExpression(expression);
-            program = new BytecodeVmExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
+            program = new GameEventScriptBytecodeExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
             _expressionPrograms[expression] = program;
             MaxStackDepth = Math.Max(MaxStackDepth, program.MaxStackDepth + 8);
             return program;
         }
 
-        private BytecodeVmPublishLayout CompilePublishLayout(PublishStatementNode publish)
+        private GameEventScriptBytecodePublishLayout CompilePublishLayout(PublishStatementNode publish)
         {
             if (publish.MessageExpression is not MessageLiteralExpressionNode message)
             {
-                throw new GameEventScriptCompileException("BytecodeVM execution planner does not support this publish expression.");
+                throw new GameEventScriptCompileException("GameEventScript bytecode lowerer does not support this publish expression.");
             }
 
             var argumentNames = new string[message.Arguments.Count];
-            var argumentPrograms = new BytecodeVmExpressionProgram[message.Arguments.Count];
+            var argumentPrograms = new GameEventScriptBytecodeExpressionProgram[message.Arguments.Count];
             for (var argumentIndex = 0; argumentIndex < message.Arguments.Count; argumentIndex++)
             {
                 var argument = message.Arguments[argumentIndex];
@@ -1621,56 +1655,56 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                 argumentPrograms[argumentIndex] = CompileExpression(argument.Expression);
             }
 
-            return new BytecodeVmPublishLayout(
+            return new GameEventScriptBytecodePublishLayout(
                 GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
                 GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
                 argumentNames,
                 argumentPrograms);
         }
 
-        private BytecodeVmIterationSourceProgram CompileIterationSource(IterationSourceNode source)
+        private GameEventScriptBytecodeIterationSourceProgram CompileIterationSource(IterationSourceNode source)
             => source switch
             {
-                CollectionIterationSourceNode collection => new BytecodeVmIterationSourceProgram(
-                    BytecodeVmIterationSourceKind.Collection,
+                CollectionIterationSourceNode collection => new GameEventScriptBytecodeIterationSourceProgram(
+                    GameEventScriptBytecodeIterationSourceKind.Collection,
                     CompileExpression(collection.Expression),
                     null,
                     null,
                     null),
 
-                RangeIterationSourceNode range => new BytecodeVmIterationSourceProgram(
-                    BytecodeVmIterationSourceKind.Range,
+                RangeIterationSourceNode range => new GameEventScriptBytecodeIterationSourceProgram(
+                    GameEventScriptBytecodeIterationSourceKind.Range,
                     null,
                     CompileExpression(range.RangeExpression.FromExpression),
                     CompileExpression(range.RangeExpression.ToExpression),
                     range.RangeExpression.StepExpression is null ? null : CompileExpression(range.RangeExpression.StepExpression)),
 
-                _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support iteration source '{source.GetType().Name}'.")
+                _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support iteration source '{source.GetType().Name}'.")
             };
 
         private bool TryGetSlot(string name, out int slot)
             => slots.TryGetValue(name, out slot);
 
-        private bool TryGetCastKind(string typeName, out BytecodeVmCastKind kind)
+        private bool TryGetCastKind(string typeName, out GameEventScriptBytecodeCastKind kind)
         {
             kind = typeName switch
             {
-                "boolean" => BytecodeVmCastKind.Boolean,
-                "integer" => BytecodeVmCastKind.Integer,
-                "decimal" => BytecodeVmCastKind.Decimal,
-                "number" => BytecodeVmCastKind.Number,
-                "percentage" => BytecodeVmCastKind.Percentage,
-                "degree" => BytecodeVmCastKind.Degree,
-                "meter" => BytecodeVmCastKind.Meter,
-                "second" => BytecodeVmCastKind.Second,
-                "sequence" => BytecodeVmCastKind.Sequence,
+                "boolean" => GameEventScriptBytecodeCastKind.Boolean,
+                "integer" => GameEventScriptBytecodeCastKind.Integer,
+                "decimal" => GameEventScriptBytecodeCastKind.Decimal,
+                "number" => GameEventScriptBytecodeCastKind.Number,
+                "percentage" => GameEventScriptBytecodeCastKind.Percentage,
+                "degree" => GameEventScriptBytecodeCastKind.Degree,
+                "meter" => GameEventScriptBytecodeCastKind.Meter,
+                "second" => GameEventScriptBytecodeCastKind.Second,
+                "sequence" => GameEventScriptBytecodeCastKind.Sequence,
                 _ => default
             };
 
             return IsKnownTypeCast(typeName);
         }
 
-        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<BytecodeVmProgramInstruction> instructions)
+        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<GameEventScriptBytecodeInstruction> instructions)
         {
             private int _stackDepth;
 
@@ -1681,39 +1715,39 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                 switch (expression)
                 {
                     case BooleanLiteralExpressionNode boolean:
-                        EmitLoadConstant(BytecodeVmValue.Boolean(boolean.Value));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesBoolean(boolean.Value));
                         return;
 
                     case IntegerLiteralExpressionNode integer:
-                        EmitLoadConstant(BytecodeVmValue.Integer(integer.Value));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesInteger(integer.Value));
                         return;
 
                     case DecimalLiteralExpressionNode decimalLiteral:
-                        EmitLoadConstant(BytecodeVmValue.Decimal(decimalLiteral.Value));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesDecimal(decimalLiteral.Value));
                         return;
 
                     case PercentageLiteralExpressionNode percentage:
-                        EmitLoadConstant(BytecodeVmValue.Percentage(percentage.PercentValue / 100m));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesPercentage(percentage.PercentValue / 100m));
                         return;
 
                     case UnitDecimalLiteralExpressionNode unitDecimal:
                         EmitLoadConstant(GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                            ? BytecodeVmValue.Decimal(unitDecimal.Value, unit)
-                            : BytecodeVmValue.NaN());
+                            ? GameEventScriptValueFactory.GesDecimal(unitDecimal.Value, unit)
+                            : GameEventScriptValueFactory.GesDecimalNaN());
                         return;
 
                     case TextLiteralExpressionNode text:
-                        EmitLoadConstant(BytecodeVmValue.Reference(GameEventScriptValueFactory.GesText(text.Value)));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesText(text.Value));
                         return;
 
                     case TagLiteralExpressionNode tag:
-                        EmitLoadConstant(BytecodeVmValue.Reference(GameEventScriptValueFactory.GesTag(tag.Name)));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesTag(tag.Name));
                         return;
 
                     case HandlerLiteralExpressionNode handler:
                     {
                         var parameterNames = handler.SignatureLabels.ToArray();
-                        EmitLoadConstant(BytecodeVmValue.Reference(GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create(handler.Message, parameterNames))));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create(handler.Message, parameterNames)));
                         return;
                     }
 
@@ -1726,8 +1760,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.BuildMessage,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.BuildMessage,
                             A: message.Arguments.Count,
                             DiagnosticName: GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
                             DiagnosticArgumentName: GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
@@ -1748,8 +1782,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             extensionCall.ExtensionName,
                             extensionCall.FunctionName,
                             extensionArgumentNames);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.CallExtension,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.CallExtension,
                             A: extensionCall.Arguments.Count,
                             B: extensionReferenceIndex,
                             DiagnosticName: extensionCall.ExtensionName,
@@ -1764,7 +1798,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.BuildList, A: list.Items.Count));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BuildList, A: list.Items.Count));
                         CollapseValuesToSingle(list.Items.Count);
                         return;
 
@@ -1774,7 +1808,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.BuildSequence, A: sequence.Items.Count));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BuildSequence, A: sequence.Items.Count));
                         CollapseValuesToSingle(sequence.Items.Count);
                         return;
 
@@ -1784,7 +1818,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.BuildSet, A: set.Items.Count));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BuildSet, A: set.Items.Count));
                         CollapseValuesToSingle(set.Items.Count);
                         return;
 
@@ -1797,8 +1831,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(entry.Value);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.BuildDictionary,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.BuildDictionary,
                             A: dictionary.Entries.Count,
                             Names: names));
                         CollapseValuesToSingle(dictionary.Entries.Count);
@@ -1807,17 +1841,17 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                     case IdentifierExpressionNode identifier:
                         if (!compiler.TryGetSlot(identifier.Name, out var slot))
                         {
-                            throw new InvalidOperationException($"Missing BytecodeVM local slot '{identifier.Name}'.");
+                            throw new InvalidOperationException($"Missing GameEventScript bytecode local slot '{identifier.Name}'.");
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadSlot, slot));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.LoadSlot, slot));
                         Push();
                         return;
 
                     case UnaryExpressionNode unary:
                         EmitExpression(unary.Operand);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.Unary,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.Unary,
                             DiagnosticName: unary.Operator));
                         return;
 
@@ -1827,8 +1861,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(argument);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.Variadic,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.Variadic,
                             A: variadic.Arguments.Count,
                             DiagnosticName: variadic.Operator));
                         CollapseValuesToSingle(variadic.Arguments.Count);
@@ -1838,14 +1872,14 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                         EmitExpression(clamp.Value);
                         EmitExpression(clamp.Minimum);
                         EmitExpression(clamp.Maximum);
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Clamp));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Clamp));
                         CollapseValuesToSingle(3);
                         return;
 
                     case RandomExpressionNode random:
                         EmitExpression(random.FromExpression);
                         EmitExpression(random.ToExpression);
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Random));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Random));
                         Pop();
                         return;
 
@@ -1859,13 +1893,13 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             rangeValueCount = 3;
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Range, A: rangeValueCount));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Range, A: rangeValueCount));
                         CollapseValuesToSingle(rangeValueCount);
                         return;
 
                     case DiceExpressionNode dice:
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.Dice,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.Dice,
                             A: dice.DiceCount,
                             B: dice.SideCount));
                         Push();
@@ -1875,21 +1909,21 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                         EmitExpression(seededRandom.SeedExpression);
                         var seededBodyProgram = compiler.CompileExpression(seededRandom.BodyExpression);
                         AccountNestedProgram(argumentCount: 1, seededBodyProgram);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.SeededRandom,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.SeededRandom,
                             ExpressionProgram: seededBodyProgram));
                         return;
 
                     case GeneratedCollectionExpressionNode generatedCollection:
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.GeneratedCollection,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.GeneratedCollection,
                             GeneratedCollectionProgram: CompileGeneratedCollection(generatedCollection)));
                         Push();
                         return;
 
                     case GuardedChoiceExpressionNode guardedChoice:
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.GuardedChoice,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.GuardedChoice,
                             GuardedChoiceProgram: CompileGuardedChoice(guardedChoice)));
                         Push();
                         return;
@@ -1897,7 +1931,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                     case BinaryExpressionNode binary:
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
-                        instructions.Add(new BytecodeVmProgramInstruction(ToBinaryOpCode(binary.Operator)));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(ToBinaryOpCode(binary.Operator)));
                         Pop();
                         return;
 
@@ -1905,19 +1939,19 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                         if (!compiler._callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
                             callable.Parameters.Count != 1)
                         {
-                            throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         if (!compiler.TryGetSlot(callable.Parameters[0], out var parameterSlot))
                         {
-                            throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support rule predicate '{rulePredicate.RuleName}'.");
                         }
 
                         EmitExpression(rulePredicate.Value);
                         var rulePredicateProgram = compiler.CompileExpression(callable.Expression);
                         AccountNestedProgram(argumentCount: 1, rulePredicateProgram);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.RulePredicate,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.RulePredicate,
                             parameterSlot,
                             ExpressionProgram: rulePredicateProgram,
                             DiagnosticName: callable.Name,
@@ -1930,8 +1964,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             extensionPredicate.ExtensionName,
                             extensionPredicate.FunctionName,
                             [GameEventScriptMessageSignature.UnlabeledParameterName]);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.CallExtension,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
                             DiagnosticName: extensionPredicate.ExtensionName,
@@ -1944,11 +1978,11 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                         {
                             if (!compiler.TryGetSlot(call.Name, out var handlerSlot))
                             {
-                                throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support callable '{call.Name}'.");
+                                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support callable '{call.Name}'.");
                             }
 
                             var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
-                            instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadSlot, A: handlerSlot));
+                            instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.LoadSlot, A: handlerSlot));
                             Push();
                             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
                             {
@@ -1957,8 +1991,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                                 EmitExpression(argument.Expression);
                             }
 
-                            instructions.Add(new BytecodeVmProgramInstruction(
-                                BytecodeVmProgramOpCode.BindHandler,
+                            instructions.Add(new GameEventScriptBytecodeInstruction(
+                                GameEventScriptBytecodeOpCode.BindHandler,
                                 A: call.ArgumentList.Count,
                                 Names: dynamicBindArgumentNames));
                             CollapseValuesToSingle(call.ArgumentList.Count + 1);
@@ -1970,7 +2004,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                         {
                             if (!compiler.TryGetSlot(called.Parameters[parameterIndex], out parameterSlots[parameterIndex]))
                             {
-                                throw new InvalidOperationException($"Missing BytecodeVM callable parameter slot '{called.Parameters[parameterIndex]}'.");
+                                throw new InvalidOperationException($"Missing GameEventScript bytecode callable parameter slot '{called.Parameters[parameterIndex]}'.");
                             }
                         }
 
@@ -1981,12 +2015,12 @@ internal static class GesBytecodeVmExecutionPlanBuilder
 
                         var callableProgram = compiler.CompileExpression(called.Expression);
                         AccountNestedProgram(call.Arguments.Count, callableProgram);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.Call,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.Call,
                             A: call.Arguments.Count,
                             CallableKind: called.Kind == GameEventScriptCallableKind.Rule
-                                ? BytecodeVmCallableKind.Rule
-                                : BytecodeVmCallableKind.Select,
+                                ? GameEventScriptBytecodeCallableKind.Rule
+                                : GameEventScriptBytecodeCallableKind.Select,
                             ExpressionProgram: callableProgram,
                             DiagnosticName: called.Name,
                             Names: called.Parameters.ToArray(),
@@ -1997,11 +2031,11 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                     case TypeCastExpressionNode typeCast:
                         if (!compiler.TryGetCastKind(typeCast.TypeName, out var castKind))
                         {
-                            throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support type cast '{typeCast.TypeName}'.");
+                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support type cast '{typeCast.TypeName}'.");
                         }
 
                         EmitExpression(typeCast.Value);
-                        instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Cast, CastKind: castKind));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Cast, CastKind: castKind));
                         return;
 
                     case TypeConstructorExpressionNode typeConstructor:
@@ -2010,7 +2044,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             compiler.TryGetCastKind(typeConstructor.TypeName, out var constructorCastKind))
                         {
                             EmitExpression(typeConstructor.Arguments[0].Expression);
-                            instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.Cast, CastKind: constructorCastKind));
+                            instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Cast, CastKind: constructorCastKind));
                             return;
                         }
 
@@ -2022,8 +2056,8 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.TypeConstructor,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.TypeConstructor,
                             A: typeConstructor.Arguments.Count,
                             DiagnosticName: typeConstructor.TypeName,
                             Names: constructorArgumentNames));
@@ -2032,15 +2066,15 @@ internal static class GesBytecodeVmExecutionPlanBuilder
 
                     case TypeCheckExpressionNode typeCheck:
                         EmitExpression(typeCheck.Value);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.TypeCheck,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.TypeCheck,
                             DiagnosticName: typeCheck.TypeName));
                         return;
 
                     case MemberAccessExpressionNode memberAccess:
                         EmitExpression(memberAccess.Target);
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.MemberAccess,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.MemberAccess,
                             DiagnosticName: memberAccess.Member));
                         return;
 
@@ -2049,23 +2083,23 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                         {
                             EmitExpression(collectionAccess.Target);
                             EmitExpression(selector.Expression);
-                            instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.IndexedAccess));
+                            instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.IndexedAccess));
                             Pop();
                             return;
                         }
 
-                        instructions.Add(new BytecodeVmProgramInstruction(
-                            BytecodeVmProgramOpCode.Pipeline,
+                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.Pipeline,
                             PipelineProgram: CompilePipeline(collectionAccess)));
                         Push();
                         return;
 
                     default:
-                        throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support expression node '{expression.GetType().Name}'.");
+                        throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support expression node '{expression.GetType().Name}'.");
                 }
             }
 
-            private BytecodeVmGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
+            private GameEventScriptBytecodeGeneratedCollectionProgram CompileGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection)
             {
                 var predicateProgram = generatedCollection.Predicate is null
                     ? null
@@ -2077,7 +2111,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                 }
 
                 AccountNestedProgram(0, projectionProgram);
-                return new BytecodeVmGeneratedCollectionProgram(
+                return new GameEventScriptBytecodeGeneratedCollectionProgram(
                     generatedCollection.CollectionType,
                     RequireSlot(generatedCollection.Identifier),
                     compiler.CompileIterationSource(generatedCollection.Source),
@@ -2085,10 +2119,10 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                     projectionProgram);
             }
 
-            private BytecodeVmGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
+            private GameEventScriptBytecodeGuardedChoiceProgram CompileGuardedChoice(GuardedChoiceExpressionNode guardedChoice)
             {
-                var valuePrograms = new BytecodeVmExpressionProgram[guardedChoice.Branches.Count];
-                var conditionPrograms = new BytecodeVmExpressionProgram[guardedChoice.Branches.Count];
+                var valuePrograms = new GameEventScriptBytecodeExpressionProgram[guardedChoice.Branches.Count];
+                var conditionPrograms = new GameEventScriptBytecodeExpressionProgram[guardedChoice.Branches.Count];
                 for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
                 {
                     var branch = guardedChoice.Branches[branchIndex];
@@ -2100,10 +2134,10 @@ internal static class GesBytecodeVmExecutionPlanBuilder
 
                 var otherwiseProgram = compiler.CompileExpression(guardedChoice.OtherwiseExpression);
                 AccountNestedProgram(0, otherwiseProgram);
-                return new BytecodeVmGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
+                return new GameEventScriptBytecodeGuardedChoiceProgram(valuePrograms, conditionPrograms, otherwiseProgram);
             }
 
-            private BytecodeVmPipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
+            private GameEventScriptBytecodePipelineProgram CompilePipeline(CollectionAccessExpressionNode expression)
             {
                 var selectors = new List<CollectionSelectorNode>();
                 ExpressionNode source = expression;
@@ -2114,102 +2148,102 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                 }
 
                 selectors.Reverse();
-                var prefixSelectors = new List<BytecodeVmSelectorProgram>(Math.Max(0, selectors.Count - 1));
+                var prefixSelectors = new List<GameEventScriptBytecodeSelectorProgram>(Math.Max(0, selectors.Count - 1));
                 for (var i = 0; i < selectors.Count - 1; i++)
                 {
                     prefixSelectors.Add(CompileSelector(selectors[i], isTerminal: false));
                 }
 
-                return new BytecodeVmPipelineProgram(
+                return new GameEventScriptBytecodePipelineProgram(
                     compiler.CompileExpression(source),
                     prefixSelectors.ToArray(),
                     CompileSelector(selectors[^1], isTerminal: true));
             }
 
-            private BytecodeVmSelectorProgram CompileSelector(CollectionSelectorNode selector, bool isTerminal)
+            private GameEventScriptBytecodeSelectorProgram CompileSelector(CollectionSelectorNode selector, bool isTerminal)
             {
                 switch (selector)
                 {
                     case FilterSelectorNode filter:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Filter,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Filter,
                             RequireSlot(filter.Identifier),
                             compiler.CompileExpression(filter.Predicate));
 
                     case SelectSelectorNode select:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Select,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Select,
                             RequireSlot(select.Identifier),
                             compiler.CompileExpression(select.Projection));
 
                     case PredicateSelectorNode predicate when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Predicate,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Predicate,
                             RequireSlot(predicate.Identifier),
                             compiler.CompileExpression(predicate.Predicate),
                             predicate.Operator);
 
                     case SumSelectorNode sum when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Sum,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Sum,
                             RequireSlot(sum.Identifier),
                             compiler.CompileExpression(sum.Projection));
 
                     case AverageSelectorNode average when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Average,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Average,
                             RequireSlot(average.Identifier),
                             compiler.CompileExpression(average.Projection));
 
                     case CountSelectorNode count when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Count,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Count,
                             RequireSlot(count.Identifier),
                             compiler.CompileExpression(count.Predicate));
 
                     case EdgeSelectorNode edge when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Edge,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Edge,
                             string.IsNullOrEmpty(edge.Identifier) ? -1 : RequireSlot(edge.Identifier!),
                             edge.Predicate is null ? null : compiler.CompileExpression(edge.Predicate),
                             edge.Mode);
 
                     case PatternSelectorNode pattern when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Pattern,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Pattern,
                             -1,
                             null,
                             dicePattern: CompileDicePattern(pattern.Pattern));
 
                     case ObjectMatchSelectorNode objectMatch when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.ObjectMatch,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.ObjectMatch,
                             -1,
                             null,
                             objectPattern: CompileObjectMatchPattern(objectMatch.Pattern));
 
                     case TakePatternSelectorNode takePattern when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.TakePattern,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.TakePattern,
                             -1,
                             null,
                             dicePattern: CompileDicePattern(takePattern.Pattern));
 
                     case MinSelectorNode min when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Min,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Min,
                             RequireSlot(min.Identifier),
                             compiler.CompileExpression(min.Projection));
 
                     case MaxSelectorNode max when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Max,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Max,
                             RequireSlot(max.Identifier),
                             compiler.CompileExpression(max.Projection));
 
                     case DictionarySelectorNode dictionary when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Dictionary,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Dictionary,
                             RequireSlot(dictionary.Identifier),
                             compiler.CompileExpression(dictionary.KeyProjection),
                             secondaryExpressionProgram: dictionary.ValueProjection is null
@@ -2217,15 +2251,15 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                                 : compiler.CompileExpression(dictionary.ValueProjection));
 
                     case ContainsSelectorNode contains when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Contains,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Contains,
                             -1,
                             compiler.CompileExpression(contains.ValueExpression),
                             contains.Mode);
 
                     case ChooseSelectorNode choose when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Choose,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Choose,
                             string.IsNullOrEmpty(choose.Identifier) ? -1 : RequireSlot(choose.Identifier!),
                             choose.Predicate is null ? null : compiler.CompileExpression(choose.Predicate),
                             count: choose.Count,
@@ -2236,53 +2270,53 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             flag: choose.AtRandom);
 
                     case DrawSelectorNode draw when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Draw,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Draw,
                             -1,
                             null,
                             count: draw.Count);
 
                     case ShuffleSelectorNode when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Shuffle,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Shuffle,
                             -1,
                             null);
 
                     case SortSelectorNode sort when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Sort,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Sort,
                             -1,
                             null,
                             sort.Direction);
 
                     case DistinctSelectorNode distinct when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Distinct,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Distinct,
                             string.IsNullOrEmpty(distinct.Identifier) ? -1 : RequireSlot(distinct.Identifier!),
                             distinct.Projection is null ? null : compiler.CompileExpression(distinct.Projection));
 
                     case GroupBySelectorNode groupBy when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.GroupBy,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.GroupBy,
                             RequireSlot(groupBy.Identifier),
                             compiler.CompileExpression(groupBy.Projection));
 
                     case OrderBySelectorNode orderBy when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.OrderBy,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.OrderBy,
                             RequireSlot(orderBy.Identifier),
                             compiler.CompileExpression(orderBy.Projection),
                             orderBy.Direction);
 
                     case ReverseSelectorNode when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.Reverse,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.Reverse,
                             -1,
                             null);
 
                     case SequenceSliceSelectorNode slice when isTerminal:
-                        return new BytecodeVmSelectorProgram(
-                            BytecodeVmSelectorKind.SequenceSlice,
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.SequenceSlice,
                             -1,
                             null,
                             slice.Operation,
@@ -2290,7 +2324,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                             count: slice.Count);
 
                     default:
-                        throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support selector node '{selector.GetType().Name}'.");
+                        throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support selector node '{selector.GetType().Name}'.");
                 }
             }
 
@@ -2298,46 +2332,47 @@ internal static class GesBytecodeVmExecutionPlanBuilder
             {
                 if (!compiler.TryGetSlot(name, out var slot))
                 {
-                    throw new InvalidOperationException($"Missing BytecodeVM local slot '{name}'.");
+                    throw new InvalidOperationException($"Missing GameEventScript bytecode local slot '{name}'.");
                 }
 
                 return slot;
             }
 
-            private BytecodeVmDicePattern CompileDicePattern(DicePatternNode pattern)
+            private GameEventScriptBytecodeDicePattern CompileDicePattern(DicePatternNode pattern)
                 => pattern switch
                 {
-                    DiceFullHousePatternNode => new BytecodeVmFullHousePattern(),
-                    DiceStraightPatternNode => new BytecodeVmStraightPattern(),
-                    DiceCountPatternNode count => new BytecodeVmDiceCountPattern(
+                    DiceFullHousePatternNode => new GameEventScriptBytecodeFullHousePattern(),
+                    DiceStraightPatternNode => new GameEventScriptBytecodeStraightPattern(),
+                    DiceCountPatternNode count => new GameEventScriptBytecodeDiceCountPattern(
                         count.Count,
                         count.Face is null ? null : compiler.CompileExpression(count.Face)),
-                    _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support dice pattern '{pattern.GetType().Name}'.")
+                    _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support dice pattern '{pattern.GetType().Name}'.")
                 };
 
-            private BytecodeVmObjectMatchPattern CompileObjectMatchPattern(ObjectMatchPatternNode pattern)
+            private GameEventScriptBytecodeObjectMatchPattern CompileObjectMatchPattern(ObjectMatchPatternNode pattern)
             {
-                var entries = new BytecodeVmObjectMatchEntry[pattern.Entries.Count];
+                var entries = new GameEventScriptBytecodeObjectMatchEntry[pattern.Entries.Count];
                 for (var index = 0; index < pattern.Entries.Count; index++)
                 {
                     var entry = pattern.Entries[index];
-                    entries[index] = new BytecodeVmObjectMatchEntry(entry.Key, CompileObjectMatchValue(entry.Value));
+                    entries[index] = new GameEventScriptBytecodeObjectMatchEntry(entry.Key, CompileObjectMatchValue(entry.Value));
                 }
 
-                return new BytecodeVmObjectMatchPattern(entries);
+                return new GameEventScriptBytecodeObjectMatchPattern(entries);
             }
 
-            private BytecodeVmObjectMatchValue CompileObjectMatchValue(ObjectMatchValueNode value)
+            private GameEventScriptBytecodeObjectMatchValue CompileObjectMatchValue(ObjectMatchValueNode value)
                 => value switch
                 {
-                    ObjectMatchExpressionValueNode expression => new BytecodeVmObjectMatchExpressionValue(compiler.CompileExpression(expression.Expression)),
-                    ObjectMatchNestedValueNode nested => new BytecodeVmObjectMatchNestedValue(CompileObjectMatchPattern(nested.Pattern)),
-                    _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support object match value '{value.GetType().Name}'.")
+                    ObjectMatchExpressionValueNode expression => new GameEventScriptBytecodeObjectMatchExpressionValue(compiler.CompileExpression(expression.Expression)),
+                    ObjectMatchNestedValueNode nested => new GameEventScriptBytecodeObjectMatchNestedValue(CompileObjectMatchPattern(nested.Pattern)),
+                    _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support object match value '{value.GetType().Name}'.")
                 };
 
-            private void EmitLoadConstant(BytecodeVmValue value)
+            private void EmitLoadConstant(GameEventScriptValue value)
             {
-                instructions.Add(new BytecodeVmProgramInstruction(BytecodeVmProgramOpCode.LoadConstant, Constant: value));
+                var constantIndex = compiler._constantResolver?.Invoke(value) ?? -1;
+                instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.LoadConstant, ConstantIndex: constantIndex));
                 Push();
             }
 
@@ -2349,7 +2384,7 @@ internal static class GesBytecodeVmExecutionPlanBuilder
 
             private void Pop() => _stackDepth = Math.Max(0, _stackDepth - 1);
 
-            private void AccountNestedProgram(int argumentCount, BytecodeVmExpressionProgram program)
+            private void AccountNestedProgram(int argumentCount, GameEventScriptBytecodeExpressionProgram program)
             {
                 var nestedStackBaseDepth = Math.Max(0, _stackDepth - argumentCount);
                 MaxStackDepth = Math.Max(MaxStackDepth, nestedStackBaseDepth + program.MaxStackDepth);
@@ -2369,35 +2404,35 @@ internal static class GesBytecodeVmExecutionPlanBuilder
                 _stackDepth = Math.Max(1, _stackDepth - valueCount + 1);
             }
 
-            private static BytecodeVmProgramOpCode ToBinaryOpCode(string operation)
+            private static GameEventScriptBytecodeOpCode ToBinaryOpCode(string operation)
                 => operation switch
                 {
-                    "|" => BytecodeVmProgramOpCode.Or,
-                    "^" => BytecodeVmProgramOpCode.Xor,
-                    "&" => BytecodeVmProgramOpCode.And,
-                    "=" or "==" => BytecodeVmProgramOpCode.Equal,
-                    "<>" => BytecodeVmProgramOpCode.NotEqual,
-                    "<" => BytecodeVmProgramOpCode.Less,
-                    ">" => BytecodeVmProgramOpCode.Greater,
-                    "<=" => BytecodeVmProgramOpCode.LessOrEqual,
-                    ">=" => BytecodeVmProgramOpCode.GreaterOrEqual,
-                    "+" => BytecodeVmProgramOpCode.Add,
-                    "-" => BytecodeVmProgramOpCode.Subtract,
-                    "*" => BytecodeVmProgramOpCode.Multiply,
-                    "/" => BytecodeVmProgramOpCode.Divide,
-                    "div" => BytecodeVmProgramOpCode.IntegerDivide,
-                    "mod" => BytecodeVmProgramOpCode.Modulo,
-                    "rem" => BytecodeVmProgramOpCode.Remainder,
-                    "default" => BytecodeVmProgramOpCode.Default,
-                    "in" => BytecodeVmProgramOpCode.Contains,
-                    "value in" => BytecodeVmProgramOpCode.ContainsValue,
-                    "starts with" => BytecodeVmProgramOpCode.StartsWith,
-                    "ends with" => BytecodeVmProgramOpCode.EndsWith,
-                    "intersect" => BytecodeVmProgramOpCode.Intersect,
-                    "combine" or "merge" => BytecodeVmProgramOpCode.Combine,
-                    "except" => BytecodeVmProgramOpCode.Except,
-                    "zip" => BytecodeVmProgramOpCode.Zip,
-                    _ => throw new GameEventScriptCompileException($"BytecodeVM execution planner does not support binary operator '{operation}'.")
+                    "|" => GameEventScriptBytecodeOpCode.Or,
+                    "^" => GameEventScriptBytecodeOpCode.Xor,
+                    "&" => GameEventScriptBytecodeOpCode.And,
+                    "=" or "==" => GameEventScriptBytecodeOpCode.Equal,
+                    "<>" => GameEventScriptBytecodeOpCode.NotEqual,
+                    "<" => GameEventScriptBytecodeOpCode.Less,
+                    ">" => GameEventScriptBytecodeOpCode.Greater,
+                    "<=" => GameEventScriptBytecodeOpCode.LessOrEqual,
+                    ">=" => GameEventScriptBytecodeOpCode.GreaterOrEqual,
+                    "+" => GameEventScriptBytecodeOpCode.Add,
+                    "-" => GameEventScriptBytecodeOpCode.Subtract,
+                    "*" => GameEventScriptBytecodeOpCode.Multiply,
+                    "/" => GameEventScriptBytecodeOpCode.Divide,
+                    "div" => GameEventScriptBytecodeOpCode.IntegerDivide,
+                    "mod" => GameEventScriptBytecodeOpCode.Modulo,
+                    "rem" => GameEventScriptBytecodeOpCode.Remainder,
+                    "default" => GameEventScriptBytecodeOpCode.Default,
+                    "in" => GameEventScriptBytecodeOpCode.Contains,
+                    "value in" => GameEventScriptBytecodeOpCode.ContainsValue,
+                    "starts with" => GameEventScriptBytecodeOpCode.StartsWith,
+                    "ends with" => GameEventScriptBytecodeOpCode.EndsWith,
+                    "intersect" => GameEventScriptBytecodeOpCode.Intersect,
+                    "combine" or "merge" => GameEventScriptBytecodeOpCode.Combine,
+                    "except" => GameEventScriptBytecodeOpCode.Except,
+                    "zip" => GameEventScriptBytecodeOpCode.Zip,
+                    _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support binary operator '{operation}'.")
                 };
         }
     }

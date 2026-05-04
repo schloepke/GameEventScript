@@ -4,10 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -25,28 +23,38 @@ internal static class GesBytecodeCompiler
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
-        private readonly Dictionary<GameEventScriptValue, int> _constantIndex = new();
+        private readonly Dictionary<GameEventScriptValue, int> _constantIndex = new(ConstantPoolValueComparer.Instance);
         private readonly List<GameEventScriptValue> _constantPool = [];
         private readonly Dictionary<string, int> _signatureIndex = new(StringComparer.Ordinal);
         private readonly List<string> _signatures = [];
-        private readonly Dictionary<string, GameEventScriptExtensionReference> _externalReferenceIndex = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _externalReferenceIndex = new(StringComparer.Ordinal);
         private readonly List<GameEventScriptExtensionReference> _externalReferences = [];
         private readonly Dictionary<string, int> _namedArgumentLayoutIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
         private readonly List<string> _typeMetadata = [];
-        private readonly List<GameEventScriptBytecodeProgram> _programs = [];
+
         public GameEventScriptCompiled Build()
         {
-            CompileMetadata();
-            CompileGlobalDefinitions();
-            CompileHandlers();
-            var typeDefinitions = GesBytecodeVmExecutionPlanBuilder.CompileTypeDefinitions(
+            CollectSourceMetadata();
+
+            var typeDefinitions = GesBytecodeLowerer.CompileTypeDefinitions(
                 module.Callables,
                 module.TypeDefinitions,
-                ResolveExternalReference);
+                AddExternalReference,
+                AddConstant);
+
+            var callables = GesBytecodeLowerer.CompileCallableDefinitions(
+                module.Callables,
+                module.TypeDefinitions,
+                AddExternalReference,
+                AddConstant);
+
             var handlers = BuildHandlers();
-            var maxStackDepth = Math.Max(GetMaxStackDepth(handlers), GetMaxStackDepth(typeDefinitions));
+            CollectBytecodeMetadata(callables, handlers, typeDefinitions);
+            var maxStackDepth = Math.Max(
+                GetMaxStackDepth(handlers),
+                Math.Max(GetMaxStackDepth(callables), GetMaxStackDepth(typeDefinitions)));
 
             return new GameEventScriptCompiled(
                 options,
@@ -56,231 +64,62 @@ internal static class GesBytecodeCompiler
                 _externalReferences.ToArray(),
                 _namedArgumentLayouts.ToArray(),
                 _typeMetadata.ToArray(),
-                _programs.ToArray(),
+                callables,
                 handlers,
                 typeDefinitions,
                 maxStackDepth);
         }
 
-        private IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> BuildHandlers()
-        {
-            return module.Handlers.ToDictionary(
+        private IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> BuildHandlers()
+            => module.Handlers.ToDictionary(
                 pair => pair.Key,
-                pair => (IReadOnlyList<GesBytecodeVmCompiledHandler>)pair.Value
-                    .Select((handler, index) => new GesBytecodeVmCompiledHandler(
-                        pair.Key,
-                        handler.Parameters,
-                        handler.SignatureLabels,
-                        GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels),
-                        index,
-                        FindProgramIndex($"handler:{pair.Key}#{index}"),
-                        options.EnableDiagnostics,
-                        GesBytecodeVmExecutionPlanBuilder.CompileHandlerPlan(
+                pair => (IReadOnlyList<GameEventScriptBytecodeHandler>)pair.Value
+                    .Select((handler, index) =>
+                    {
+                        var signatureId = GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels);
+                        return new GameEventScriptBytecodeHandler(
                             pair.Key,
-                            index,
                             handler.Parameters,
-                            handler.Statements,
-                            module.Callables,
-                            module.TypeDefinitions,
-                            ResolveExternalReference)))
+                            handler.SignatureLabels,
+                            signatureId,
+                            index,
+                            GesBytecodeLowerer.CompileHandlerPlan(
+                                pair.Key,
+                                index,
+                                handler.Parameters,
+                                handler.Statements,
+                                module.Callables,
+                                module.TypeDefinitions,
+                                AddExternalReference,
+                                AddConstant));
+                    })
                     .ToArray(),
                 StringComparer.Ordinal);
-        }
 
-        private int FindProgramIndex(string programName)
-        {
-            for (var index = 0; index < _programs.Count; index++)
-            {
-                if (string.Equals(_programs[index].Name, programName, StringComparison.Ordinal))
-                {
-                    return index;
-                }
-            }
-
-            return -1;
-        }
-
-        private int ResolveExternalReference(GameEventScriptExtensionReference reference)
+        private int AddExternalReference(GameEventScriptExtensionReference reference)
         {
             if (GesStandardExtensions.IsStandardReference(reference))
             {
                 return -1;
             }
 
-            for (var index = 0; index < _externalReferences.Count; index++)
+            if (_externalReferenceIndex.TryGetValue(reference.SignatureId, out var existing))
             {
-                if (string.Equals(_externalReferences[index].SignatureId, reference.SignatureId, StringComparison.Ordinal))
-                {
-                    return index;
-                }
+                return existing;
             }
 
-            throw new InvalidOperationException($"BytecodeVM invariant failed: external reference '{reference.SignatureId}' was not emitted into bytecode.");
+            var index = _externalReferences.Count;
+            _externalReferences.Add(reference);
+            _externalReferenceIndex[reference.SignatureId] = index;
+            AddString(reference.ExtensionName);
+            AddString(reference.FunctionName);
+            foreach (var label in reference.ArgumentLabels)
+            {
+                AddString(label);
+            }
+
+            return index;
         }
-
-        private static int GetMaxStackDepth(IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> handlers)
-            => handlers.Count == 0
-                ? 1
-                : handlers.Values.SelectMany(group => group).Select(handler => handler.ExecutionPlan.MaxStackDepth).DefaultIfEmpty(1).Max();
-
-        private static int GetMaxStackDepth(IReadOnlyDictionary<string, BytecodeVmTypeDefinition> typeDefinitions)
-            => typeDefinitions.Count == 0
-                ? 1
-                : typeDefinitions.Values.SelectMany(type => type.Fields).SelectMany(field => new[]
-                {
-                    field.MinimumProgram,
-                    field.MaximumProgram,
-                    field.ComputedProgram
-                }).Where(program => program is not null).Select(program => program!.MaxStackDepth).DefaultIfEmpty(1).Max();
-
-        private void CompileMetadata()
-        {
-            foreach (var typeName in module.TypeDefinitions.Keys.OrderBy(name => name, StringComparer.Ordinal))
-            {
-                AddTypeMetadata(typeName);
-            }
-
-            foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
-            {
-                AddString(callable.Name);
-                AddSignature(GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
-            }
-
-            foreach (var type in module.TypeDefinitions.Values)
-            {
-                foreach (var field in type.Fields)
-                {
-                    CollectExternalReferences(field.MinimumExpression);
-                    CollectExternalReferences(field.MaximumExpression);
-                    CollectExternalReferences(field.ComputedExpression);
-                }
-            }
-        }
-
-        private void CompileGlobalDefinitions()
-        {
-            foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
-            {
-                CompileCallable(callable);
-            }
-        }
-
-        private void CompileCallable(GesCallableDefinition callable)
-        {
-            var instructions = new List<GameEventScriptInstruction>
-            {
-                new(GameEventScriptOpCode.EvaluateExpression, AddString(GetExpressionDebugName(callable.Expression)), AllocateRegister()),
-                new(GameEventScriptOpCode.Return, 0)
-            };
-            _programs.Add(new GameEventScriptBytecodeProgram(
-                $"{callable.Kind}:{callable.Name}",
-                instructions.ToArray(),
-                registerCount: Math.Max(1, instructions.Count),
-                localCount: callable.Parameters.Count));
-        }
-
-        private void CompileHandlers()
-        {
-            foreach (var pair in module.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-            {
-                for (var declarationOrder = 0; declarationOrder < pair.Value.Count; declarationOrder++)
-                {
-                    var handler = pair.Value[declarationOrder];
-                    CompileStatements(
-                        $"handler:{pair.Key}#{declarationOrder}",
-                        handler.Statements,
-                        createsScope: false);
-                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
-                }
-            }
-        }
-
-        private int CompileStatements(string name, IReadOnlyList<StatementNode> statements, bool createsScope)
-        {
-            var instructions = new List<GameEventScriptInstruction>();
-            var localCount = 0;
-            foreach (var statement in statements)
-            {
-                CompileStatement(statement, instructions, ref localCount);
-            }
-
-            instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.Return));
-            var programIndex = _programs.Count;
-            _programs.Add(new GameEventScriptBytecodeProgram(
-                name,
-                instructions.ToArray(),
-                registerCount: Math.Max(1, instructions.Count),
-                localCount,
-                createsScope));
-            return programIndex;
-        }
-
-        private void CompileStatement(StatementNode statement, List<GameEventScriptInstruction> instructions, ref int localCount)
-        {
-            switch (statement)
-            {
-                case PublishStatementNode publish:
-                    AddNamedArgumentLayout(publish.MessageExpression);
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.EvaluateExpression,
-                        AddString(GetExpressionDebugName(publish.MessageExpression)),
-                        AllocateRegister()));
-                    instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.Publish, instructions.Count - 1));
-                    break;
-
-                case LetStatementNode let:
-                    var localSlot = localCount++;
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.EvaluateExpression,
-                        AddString(GetExpressionDebugName(let.Expression)),
-                        AllocateRegister()));
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.StoreLocal,
-                        AddString(let.Identifier),
-                        localSlot,
-                        string.IsNullOrEmpty(let.DeclaredType) ? -1 : AddTypeMetadata(let.DeclaredType!)));
-                    break;
-
-                case IfStatementNode ifStatement:
-                    var thenIndex = CompileStatements("if.then", ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock);
-                    var elseIndex = ifStatement.ElseBody is null
-                        ? -1
-                        : CompileStatements("if.else", ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock);
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.EvaluateExpression,
-                        AddString(GetExpressionDebugName(ifStatement.Condition)),
-                        AllocateRegister()));
-                    instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.JumpIfFalse, instructions.Count - 1, thenIndex, elseIndex));
-                    break;
-
-                case ForStatementNode forStatement:
-                    var bodyIndex = CompileStatements("for.body", forStatement.Body.Statements, forStatement.Body.IsBlock);
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.ForEach,
-                        AddString(forStatement.Identifier),
-                        AddString(GetIterationSourceDebugName(forStatement.Source)),
-                        bodyIndex));
-                    break;
-
-                case SeededRandomStatementNode seededRandom:
-                    var randomBodyIndex = CompileStatements("seededRandom.body", seededRandom.Body.Statements, seededRandom.Body.IsBlock);
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.EvaluateExpression,
-                        AddString(GetExpressionDebugName(seededRandom.SeedExpression)),
-                        AllocateRegister()));
-                    instructions.Add(new GameEventScriptInstruction(GameEventScriptOpCode.SeededRandom, instructions.Count - 1, randomBodyIndex));
-                    break;
-
-                case ExpressionStatementNode expressionStatement:
-                    instructions.Add(new GameEventScriptInstruction(
-                        GameEventScriptOpCode.EvaluateExpression,
-                        AddString(GetExpressionDebugName(expressionStatement.Expression)),
-                        AllocateRegister()));
-                    break;
-            }
-        }
-
-        private int AllocateRegister() => 0;
 
         private int AddString(string value)
         {
@@ -321,31 +160,6 @@ internal static class GesBytecodeCompiler
             return index;
         }
 
-        private int AddExternalReference(GameEventScriptExtensionReference reference)
-        {
-            if (GesStandardExtensions.IsStandardReference(reference))
-            {
-                return -1;
-            }
-
-            if (_externalReferenceIndex.TryGetValue(reference.SignatureId, out var existing))
-            {
-                return _externalReferences.IndexOf(existing);
-            }
-
-            var index = _externalReferences.Count;
-            _externalReferences.Add(reference);
-            _externalReferenceIndex[reference.SignatureId] = reference;
-            AddString(reference.ExtensionName);
-            AddString(reference.FunctionName);
-            foreach (var label in reference.ArgumentLabels)
-            {
-                AddString(label);
-            }
-
-            return index;
-        }
-
         private int AddTypeMetadata(string value)
         {
             if (_typeMetadataIndex.TryGetValue(value, out var index))
@@ -360,14 +174,8 @@ internal static class GesBytecodeCompiler
             return index;
         }
 
-        private int AddNamedArgumentLayout(ExpressionNode expression)
+        private int AddNamedArgumentLayout(IReadOnlyList<string> orderedNames)
         {
-            if (expression is not MessageLiteralExpressionNode message)
-            {
-                return -1;
-            }
-
-            var orderedNames = message.Arguments.Select(argument => argument.Name).ToArray();
             var key = string.Join("\u001f", orderedNames);
             if (_namedArgumentLayoutIndex.TryGetValue(key, out var index))
             {
@@ -375,7 +183,7 @@ internal static class GesBytecodeCompiler
             }
 
             index = _namedArgumentLayouts.Count;
-            _namedArgumentLayouts.Add(orderedNames);
+            _namedArgumentLayouts.Add(orderedNames.ToArray());
             _namedArgumentLayoutIndex[key] = index;
             foreach (var name in orderedNames)
             {
@@ -385,366 +193,309 @@ internal static class GesBytecodeCompiler
             return index;
         }
 
-        private string GetExpressionDebugName(ExpressionNode expression)
+        private static int GetMaxStackDepth(IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers)
+            => handlers.Count == 0
+                ? 1
+                : handlers.Values.SelectMany(group => group).Select(handler => handler.ExecutionPlan.MaxStackDepth).DefaultIfEmpty(1).Max();
+
+        private static int GetMaxStackDepth(IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables)
+            => callables.Count == 0
+                ? 1
+                : callables.Values.Select(callable => callable.ExpressionProgram.MaxStackDepth).DefaultIfEmpty(1).Max();
+
+        private static int GetMaxStackDepth(IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions)
+            => typeDefinitions.Count == 0
+                ? 1
+                : typeDefinitions.Values.SelectMany(type => type.Fields).SelectMany(field => new[]
+                {
+                    field.MinimumProgram,
+                    field.MaximumProgram,
+                    field.ComputedProgram
+                }).Where(program => program is not null).Select(program => program!.MaxStackDepth).DefaultIfEmpty(1).Max();
+
+        private void CollectSourceMetadata()
         {
-            CollectExternalReferences(expression);
-            switch (expression)
+            foreach (var type in module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
             {
-                case BooleanLiteralExpressionNode boolean:
-                    AddConstant(GameEventScriptValueFactory.GesBoolean(boolean.Value));
-                    return "literal:boolean";
-                case IntegerLiteralExpressionNode integer:
-                    AddConstant(GesInteger(integer.Value));
-                    return "literal:integer";
-                case DecimalLiteralExpressionNode decimalLiteral:
-                    AddConstant(GesDecimal(decimalLiteral.Value));
-                    return "literal:decimal";
-                case PercentageLiteralExpressionNode percentage:
-                    AddConstant(GesPercentage(percentage.PercentValue / 100m));
-                    return "literal:percentage";
-                case UnitDecimalLiteralExpressionNode unitDecimal:
-                    AddConstant(GesDecimal(
-                        unitDecimal.Value,
-                        GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit) ? unit : null));
-                    return "literal:unitDecimal";
-                case TextLiteralExpressionNode text:
-                    AddConstant(GesText(text.Value));
-                    return "literal:text";
-                case TagLiteralExpressionNode tag:
-                    AddConstant(GesTag(tag.Name));
-                    return "literal:tag";
-                case ListLiteralExpressionNode list:
-                    foreach (var item in list.Items)
-                    {
-                        GetExpressionDebugName(item);
-                    }
+                AddTypeMetadata(type.Name);
+                foreach (var field in type.Fields)
+                {
+                    AddString(field.Name);
+                    AddTypeMetadata(field.TypeName);
+                }
+            }
 
-                    return "literal:list";
-                case SequenceLiteralExpressionNode sequence:
-                    foreach (var item in sequence.Items)
-                    {
-                        GetExpressionDebugName(item);
-                    }
+            foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
+            {
+                AddString(callable.Name);
+                foreach (var parameter in callable.Parameters)
+                {
+                    AddString(parameter);
+                }
 
-                    return "literal:sequence";
-                case SetLiteralExpressionNode set:
-                    foreach (var item in set.Items)
-                    {
-                        GetExpressionDebugName(item);
-                    }
+                foreach (var label in callable.SignatureLabels)
+                {
+                    AddString(label);
+                }
 
-                    return "literal:set";
-                case DictionaryLiteralExpressionNode dictionary:
-                    foreach (var entry in dictionary.Entries)
-                    {
-                        AddString(entry.Key);
-                        GetExpressionDebugName(entry.Value);
-                    }
+                AddSignature(GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
+            }
 
-                    return "literal:dictionary";
-                case IdentifierExpressionNode identifier:
-                    AddString(identifier.Name);
-                    return "identifier";
-                case MessageLiteralExpressionNode message:
-                    AddString(message.Message);
-                    AddNamedArgumentLayout(message);
-                    return "message";
-                case HandlerLiteralExpressionNode handler:
-                    AddString(handler.Message);
+            foreach (var pair in module.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                AddString(pair.Key);
+                foreach (var handler in pair.Value)
+                {
                     foreach (var parameter in handler.Parameters)
                     {
                         AddString(parameter);
                     }
 
-                    return "handler";
-                case CallExpressionNode call:
-                    AddString(call.Name);
-                    foreach (var argument in call.ArgumentList.Arguments)
+                    foreach (var label in handler.SignatureLabels)
                     {
-                        GetExpressionDebugName(argument.Expression);
+                        AddString(label);
                     }
 
-                    return "call";
-                case ExtensionCallExpressionNode extensionCall:
-                    foreach (var argument in extensionCall.Arguments)
-                    {
-                        GetExpressionDebugName(argument.Expression);
-                    }
-
-                    return "extensionCall";
-                case TypeConstructorExpressionNode typeConstructor:
-                    AddTypeMetadata(typeConstructor.TypeName);
-                    foreach (var argument in typeConstructor.Arguments)
-                    {
-                        AddString(argument.Name);
-                        GetExpressionDebugName(argument.Expression);
-                    }
-
-                    return "typeConstructor";
-                case BinaryExpressionNode binary:
-                    AddString(binary.Operator);
-                    return "binary";
-                case CollectionAccessExpressionNode:
-                    return "collectionAccess";
-                case MemberAccessExpressionNode member:
-                    AddString(member.Member);
-                    return "memberAccess";
-                case TypeCastExpressionNode typeCast:
-                    AddTypeMetadata(typeCast.TypeName);
-                    return "cast";
-                case TypeCheckExpressionNode typeCheck:
-                    AddTypeMetadata(typeCheck.TypeName);
-                    return "typeCheck";
-                case RulePredicateExpressionNode rulePredicate:
-                    AddString(rulePredicate.RuleName);
-                    return "rulePredicate";
-                case ExtensionPredicateExpressionNode extensionPredicate:
-                    return "extensionPredicate";
-                case RangeExpressionNode:
-                    return "range";
-                case DiceExpressionNode dice:
-                    return $"dice:{dice.DiceCount}d{dice.SideCount}";
-                default:
-                    return expression.GetType().Name;
+                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
+                }
             }
         }
 
-        private void CollectExternalReferences(ExpressionNode? expression)
+        private void CollectBytecodeMetadata(
+            IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
+            IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
+            IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions)
         {
-            if (expression is null)
+            foreach (var callable in callables.Values)
+            {
+                AddString(callable.Name);
+                AddSignature(callable.SignatureId);
+                CollectExpressionMetadata(callable.ExpressionProgram);
+            }
+
+            foreach (var handler in handlers.Values.SelectMany(group => group))
+            {
+                AddString(handler.Message);
+                AddSignature(handler.SignatureId);
+                CollectStatementMetadata(handler.ExecutionPlan.StatementProgram);
+            }
+
+            foreach (var type in typeDefinitions.Values)
+            {
+                AddTypeMetadata(type.Name);
+                foreach (var field in type.Fields)
+                {
+                    AddString(field.Name);
+                    AddTypeMetadata(field.TypeName);
+                    CollectExpressionMetadata(field.MinimumProgram);
+                    CollectExpressionMetadata(field.MaximumProgram);
+                    CollectExpressionMetadata(field.ComputedProgram);
+                }
+            }
+        }
+
+        private void CollectStatementMetadata(GameEventScriptBytecodeStatementProgram? program)
+        {
+            if (program is null)
             {
                 return;
             }
 
-            switch (expression)
+            foreach (var statement in program.Statements)
             {
-                case ExtensionCallExpressionNode extensionCall:
-                    AddExternalReference(new GameEventScriptExtensionReference(
-                        extensionCall.ExtensionName,
-                        extensionCall.FunctionName,
-                        extensionCall.Arguments.Select(argument => argument.Name).ToArray()));
-                    foreach (var argument in extensionCall.Arguments)
+                AddStringIfPresent(statement.Name);
+                AddTypeIfPresent(statement.DeclaredType);
+                AddStringIfPresent(statement.DiagnosticName);
+                if (statement.PublishLayout is { } publishLayout)
+                {
+                    AddString(publishLayout.MessageName);
+                    AddSignature(publishLayout.SignatureId);
+                    AddNamedArgumentLayout(publishLayout.ArgumentNames);
+                    foreach (var argumentProgram in publishLayout.ArgumentPrograms)
                     {
-                        CollectExternalReferences(argument.Expression);
+                        CollectExpressionMetadata(argumentProgram);
                     }
+                }
 
-                    return;
-                case ExtensionPredicateExpressionNode extensionPredicate:
-                    AddExternalReference(new GameEventScriptExtensionReference(
-                        extensionPredicate.ExtensionName,
-                        extensionPredicate.FunctionName,
-                        [GameEventScriptMessageSignature.UnlabeledParameterName]));
-                    CollectExternalReferences(extensionPredicate.Value);
-                    return;
-                case UnaryExpressionNode unary:
-                    CollectExternalReferences(unary.Operand);
-                    return;
-                case VariadicTaggedExpressionNode variadic:
-                    foreach (var argument in variadic.Arguments)
-                    {
-                        CollectExternalReferences(argument);
-                    }
-
-                    return;
-                case ClampExpressionNode clamp:
-                    CollectExternalReferences(clamp.Value);
-                    CollectExternalReferences(clamp.Minimum);
-                    CollectExternalReferences(clamp.Maximum);
-                    return;
-                case BinaryExpressionNode binary:
-                    CollectExternalReferences(binary.Left);
-                    CollectExternalReferences(binary.Right);
-                    return;
-                case GuardedChoiceExpressionNode guarded:
-                    foreach (var branch in guarded.Branches)
-                    {
-                        CollectExternalReferences(branch.ValueExpression);
-                        CollectExternalReferences(branch.ConditionExpression);
-                    }
-
-                    CollectExternalReferences(guarded.OtherwiseExpression);
-                    return;
-                case CallExpressionNode call:
-                    foreach (var argument in call.ArgumentList.Arguments)
-                    {
-                        CollectExternalReferences(argument.Expression);
-                    }
-
-                    return;
-                case MessageLiteralExpressionNode message:
-                    foreach (var argument in message.Arguments)
-                    {
-                        CollectExternalReferences(argument.Expression);
-                    }
-
-                    return;
-                case TypeConstructorExpressionNode typeConstructor:
-                    foreach (var argument in typeConstructor.Arguments)
-                    {
-                        CollectExternalReferences(argument.Expression);
-                    }
-
-                    return;
-                case ListLiteralExpressionNode list:
-                    foreach (var item in list.Items) CollectExternalReferences(item);
-                    return;
-                case SequenceLiteralExpressionNode sequence:
-                    foreach (var item in sequence.Items) CollectExternalReferences(item);
-                    return;
-                case SetLiteralExpressionNode set:
-                    foreach (var item in set.Items) CollectExternalReferences(item);
-                    return;
-                case DictionaryLiteralExpressionNode dictionary:
-                    foreach (var entry in dictionary.Entries) CollectExternalReferences(entry.Value);
-                    return;
-                case TypeCastExpressionNode cast:
-                    CollectExternalReferences(cast.Value);
-                    return;
-                case TypeCheckExpressionNode check:
-                    CollectExternalReferences(check.Value);
-                    return;
-                case MemberAccessExpressionNode member:
-                    CollectExternalReferences(member.Target);
-                    return;
-                case CollectionAccessExpressionNode access:
-                    CollectExternalReferences(access.Target);
-                    CollectExternalReferences(access.Selector);
-                    return;
-                case RangeExpressionNode range:
-                    CollectExternalReferences(range.FromExpression);
-                    CollectExternalReferences(range.ToExpression);
-                    CollectExternalReferences(range.StepExpression);
-                    return;
-                case RandomExpressionNode random:
-                    CollectExternalReferences(random.FromExpression);
-                    CollectExternalReferences(random.ToExpression);
-                    return;
-                case SeededRandomExpressionNode seededRandom:
-                    CollectExternalReferences(seededRandom.SeedExpression);
-                    CollectExternalReferences(seededRandom.BodyExpression);
-                    return;
-                case GeneratedCollectionExpressionNode generated:
-                    CollectExternalReferences(generated.Source);
-                    CollectExternalReferences(generated.Predicate);
-                    CollectExternalReferences(generated.Projection);
-                    return;
+                CollectExpressionMetadata(statement.ExpressionProgram);
+                CollectStatementMetadata(statement.ThenProgram);
+                CollectStatementMetadata(statement.ElseProgram);
+                CollectStatementMetadata(statement.BodyProgram);
+                CollectIterationSourceMetadata(statement.IterationSource);
             }
         }
 
-        private void CollectExternalReferences(IterationSourceNode source)
+        private void CollectExpressionMetadata(GameEventScriptBytecodeExpressionProgram? program)
         {
-            switch (source)
+            if (program is null)
             {
-                case CollectionIterationSourceNode collection:
-                    CollectExternalReferences(collection.Expression);
-                    return;
-                case RangeIterationSourceNode range:
-                    CollectExternalReferences(range.RangeExpression);
-                    return;
+                return;
+            }
+
+            foreach (var instruction in program.Instructions)
+            {
+                AddStringIfPresent(instruction.DiagnosticName);
+                AddStringIfPresent(instruction.DiagnosticArgumentName);
+                if (instruction.Names is { } names)
+                {
+                    AddNamedArgumentLayout(names);
+                }
+
+                CollectExpressionMetadata(instruction.ExpressionProgram);
+                CollectPipelineMetadata(instruction.PipelineProgram);
+                CollectGeneratedCollectionMetadata(instruction.GeneratedCollectionProgram);
+                CollectGuardedChoiceMetadata(instruction.GuardedChoiceProgram);
             }
         }
 
-        private void CollectExternalReferences(CollectionSelectorNode selector)
+        private void CollectPipelineMetadata(GameEventScriptBytecodePipelineProgram? program)
         {
-            switch (selector)
+            if (program is null)
             {
-                case ExpressionSelectorNode expression:
-                    CollectExternalReferences(expression.Expression);
-                    return;
-                case PatternSelectorNode pattern:
-                    CollectExternalReferences(pattern.Pattern);
-                    return;
-                case ObjectMatchSelectorNode objectMatch:
-                    CollectExternalReferences(objectMatch.Pattern);
-                    return;
-                case TakePatternSelectorNode takePattern:
-                    CollectExternalReferences(takePattern.Pattern);
-                    return;
-                case PredicateSelectorNode predicate:
-                    CollectExternalReferences(predicate.Predicate);
-                    return;
-                case CountSelectorNode count:
-                    CollectExternalReferences(count.Predicate);
-                    return;
-                case ChooseSelectorNode choose:
-                    CollectExternalReferences(choose.Predicate);
-                    CollectExternalReferences(choose.WeightExpression);
-                    return;
-                case EdgeSelectorNode edge:
-                    CollectExternalReferences(edge.Predicate);
-                    return;
-                case FilterSelectorNode filter:
-                    CollectExternalReferences(filter.Predicate);
-                    return;
-                case SumSelectorNode sum:
-                    CollectExternalReferences(sum.Projection);
-                    return;
-                case AverageSelectorNode average:
-                    CollectExternalReferences(average.Projection);
-                    return;
-                case SelectSelectorNode select:
-                    CollectExternalReferences(select.Projection);
-                    return;
-                case DictionarySelectorNode dictionary:
-                    CollectExternalReferences(dictionary.KeyProjection);
-                    CollectExternalReferences(dictionary.ValueProjection);
-                    return;
-                case MinSelectorNode min:
-                    CollectExternalReferences(min.Projection);
-                    return;
-                case MaxSelectorNode max:
-                    CollectExternalReferences(max.Projection);
-                    return;
-                case ContainsSelectorNode contains:
-                    CollectExternalReferences(contains.ValueExpression);
-                    return;
-                case DistinctSelectorNode distinct:
-                    CollectExternalReferences(distinct.Projection);
-                    return;
-                case GroupBySelectorNode group:
-                    CollectExternalReferences(group.Projection);
-                    return;
-                case OrderBySelectorNode order:
-                    CollectExternalReferences(order.Projection);
-                    return;
+                return;
+            }
+
+            CollectExpressionMetadata(program.SourceProgram);
+            foreach (var selector in program.PrefixSelectors)
+            {
+                CollectSelectorMetadata(selector);
+            }
+
+            CollectSelectorMetadata(program.TerminalSelector);
+        }
+
+        private void CollectSelectorMetadata(GameEventScriptBytecodeSelectorProgram selector)
+        {
+            AddStringIfPresent(selector.EdgeMode);
+            AddStringIfPresent(selector.SecondaryMode);
+            CollectExpressionMetadata(selector.ExpressionProgram);
+            CollectExpressionMetadata(selector.SecondaryExpressionProgram);
+            CollectDicePatternMetadata(selector.DicePattern);
+            CollectObjectMatchPatternMetadata(selector.ObjectPattern);
+        }
+
+        private void CollectGeneratedCollectionMetadata(GameEventScriptBytecodeGeneratedCollectionProgram? program)
+        {
+            if (program is null)
+            {
+                return;
+            }
+
+            AddString(program.CollectionType);
+            CollectIterationSourceMetadata(program.Source);
+            CollectExpressionMetadata(program.PredicateProgram);
+            CollectExpressionMetadata(program.ProjectionProgram);
+        }
+
+        private void CollectGuardedChoiceMetadata(GameEventScriptBytecodeGuardedChoiceProgram? program)
+        {
+            if (program is null)
+            {
+                return;
+            }
+
+            foreach (var valueProgram in program.ValuePrograms)
+            {
+                CollectExpressionMetadata(valueProgram);
+            }
+
+            foreach (var conditionProgram in program.ConditionPrograms)
+            {
+                CollectExpressionMetadata(conditionProgram);
+            }
+
+            CollectExpressionMetadata(program.OtherwiseProgram);
+        }
+
+        private void CollectIterationSourceMetadata(GameEventScriptBytecodeIterationSourceProgram? source)
+        {
+            if (source is null)
+            {
+                return;
+            }
+
+            CollectExpressionMetadata(source.CollectionProgram);
+            CollectExpressionMetadata(source.RangeFromProgram);
+            CollectExpressionMetadata(source.RangeToProgram);
+            CollectExpressionMetadata(source.RangeStepProgram);
+        }
+
+        private void CollectDicePatternMetadata(GameEventScriptBytecodeDicePattern? pattern)
+        {
+            if (pattern is GameEventScriptBytecodeDiceCountPattern count)
+            {
+                CollectExpressionMetadata(count.FaceProgram);
             }
         }
 
-        private void CollectExternalReferences(DicePatternNode pattern)
+        private void CollectObjectMatchPatternMetadata(GameEventScriptBytecodeObjectMatchPattern? pattern)
         {
-            if (pattern is DiceCountPatternNode diceCount)
+            if (pattern is null)
             {
-                CollectExternalReferences(diceCount.Face);
+                return;
             }
-        }
 
-        private void CollectExternalReferences(ObjectMatchPatternNode pattern)
-        {
             foreach (var entry in pattern.Entries)
             {
-                CollectExternalReferences(entry.Value);
+                AddString(entry.Key);
+                switch (entry.Value)
+                {
+                    case GameEventScriptBytecodeObjectMatchExpressionValue expression:
+                        CollectExpressionMetadata(expression.ExpressionProgram);
+                        break;
+                    case GameEventScriptBytecodeObjectMatchNestedValue nested:
+                        CollectObjectMatchPatternMetadata(nested.Pattern);
+                        break;
+                }
             }
         }
 
-        private void CollectExternalReferences(ObjectMatchValueNode value)
+        private void AddStringIfPresent(string? value)
         {
-            switch (value)
+            if (!string.IsNullOrEmpty(value))
             {
-                case ObjectMatchExpressionValueNode expression:
-                    CollectExternalReferences(expression.Expression);
-                    return;
-                case ObjectMatchNestedValueNode nested:
-                    CollectExternalReferences(nested.Pattern);
-                    return;
+                AddString(value);
             }
         }
 
-        private string GetIterationSourceDebugName(IterationSourceNode source)
-            => source switch
+        private void AddTypeIfPresent(string? value)
+        {
+            if (!string.IsNullOrEmpty(value))
             {
-                CollectionIterationSourceNode collection => $"collection:{GetExpressionDebugName(collection.Expression)}",
-                RangeIterationSourceNode range => $"range:{GetExpressionDebugName(range.RangeExpression)}",
-                _ => source.GetType().Name
-            };
+                AddTypeMetadata(value);
+            }
+        }
+
+        private sealed class ConstantPoolValueComparer : IEqualityComparer<GameEventScriptValue>
+        {
+            public static readonly ConstantPoolValueComparer Instance = new();
+
+            private ConstantPoolValueComparer()
+            {
+            }
+
+            public bool Equals(GameEventScriptValue? x, GameEventScriptValue? y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return true;
+                }
+
+                if (x is null || y is null || x.Kind != y.Kind)
+                {
+                    return false;
+                }
+
+                return x.Equals(y);
+            }
+
+            public int GetHashCode(GameEventScriptValue obj)
+            {
+                var hash = new HashCode();
+                hash.Add(obj.Kind);
+                hash.Add(obj);
+                return hash.ToHashCode();
+            }
+        }
     }
 }

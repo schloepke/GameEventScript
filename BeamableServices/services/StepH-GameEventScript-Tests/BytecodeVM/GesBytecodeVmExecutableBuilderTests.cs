@@ -22,6 +22,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start(value) {
               let total be value + 1
               if total > 1 {
+                let done be Done(total: total)
                 publish Done(total: total)
               }
             }
@@ -32,9 +33,35 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.AreEqual(first, second);
         StringAssert.Contains(first, "gameeventscript bytecode v1");
-        StringAssert.Contains(first, "program");
-        StringAssert.Contains(first, "EvaluateExpression");
+        StringAssert.Contains(first, "handlers[1]");
+        StringAssert.Contains(first, "LoadConstant");
+        StringAssert.Contains(first, "LoadSlot");
+        StringAssert.Contains(first, "BuildMessage");
         StringAssert.Contains(first, "Publish");
+        Assert.IsFalse(first.Contains("EvaluateExpression", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void CompiledArtifactDoesNotExposeBytecodeVmState()
+    {
+        var compiledType = typeof(GameEventScriptCompiled);
+        var publicMembers = compiledType
+            .GetProperties()
+            .Select(property => property.PropertyType)
+            .Concat(compiledType.GetFields().Select(field => field.FieldType));
+
+        foreach (var type in publicMembers)
+        {
+            Assert.IsFalse(
+                ContainsBytecodeVmType(type),
+                $"GameEventScriptCompiled exposes BytecodeVM type '{type.FullName}'.");
+        }
+
+        Assert.IsFalse(
+            compiledType.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .Select(field => field.FieldType)
+                .Any(ContainsBytecodeVmType),
+            "GameEventScriptCompiled stores BytecodeVM state internally.");
     }
 
     [TestMethod]
@@ -80,8 +107,23 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             });
 
         var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() => GesBytecodeCompiler.Compile(module));
-        StringAssert.Contains(exception.Message, "BytecodeVM execution planner does not support handler 'Start' #0");
+        StringAssert.Contains(exception.Message, "GameEventScript bytecode lowerer does not support handler 'Start' #0");
         StringAssert.Contains(exception.Message, nameof(UnknownStatementNode));
+    }
+
+    private static bool ContainsBytecodeVmType(Type type)
+    {
+        if ((type.Namespace ?? string.Empty).Contains("StepH.GameEventScript.BytecodeVM", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (type.IsGenericType && type.GetGenericArguments().Any(ContainsBytecodeVmType))
+        {
+            return true;
+        }
+
+        return type.IsArray && type.GetElementType() is { } elementType && ContainsBytecodeVmType(elementType);
     }
 
     [TestMethod]

@@ -15,7 +15,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private readonly GesBytecodeVmExecutable _compiledScript;
     private readonly GameEventScriptContext _context;
-    private readonly BytecodeVmExecutionPlan _plan;
+    private readonly GameEventScriptBytecodeExecutionPlan _plan;
     private readonly BytecodeVmValue[] _locals;
     private readonly bool[] _assignedSlots;
     private readonly BytecodeVmValue[] _evaluationStack;
@@ -28,7 +28,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private GesBytecodeVmExecutionSession(
         GesBytecodeVmExecutable compiledScript,
         GameEventScriptContext context,
-        BytecodeVmExecutionPlan plan,
+        GameEventScriptBytecodeExecutionPlan plan,
         bool diagnosticsEnabled)
     {
         _compiledScript = compiledScript;
@@ -98,7 +98,7 @@ internal sealed class GesBytecodeVmExecutionSession
         return args.TryGetValue(parameter, out value!);
     }
 
-    private bool TryExecuteStatementProgram(BytecodeVmStatementProgram program)
+    private bool TryExecuteStatementProgram(GameEventScriptBytecodeStatementProgram program)
     {
         if (!program.CreatesScope)
         {
@@ -116,7 +116,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteStatements(IReadOnlyList<BytecodeVmStatement> statements)
+    private bool TryExecuteStatements(IReadOnlyList<GameEventScriptBytecodeStatement> statements)
     {
         for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
         {
@@ -141,11 +141,11 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteStatement(BytecodeVmStatement statement)
+    private bool TryExecuteStatement(GameEventScriptBytecodeStatement statement)
     {
         switch (statement.Kind)
         {
-            case BytecodeVmStatementKind.Let:
+            case GameEventScriptBytecodeStatementKind.Let:
                 if (statement.ExpressionProgram is null ||
                     string.IsNullOrEmpty(statement.Name) ||
                     !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var letValue))
@@ -163,21 +163,21 @@ internal sealed class GesBytecodeVmExecutionSession
                 RecordLetExpressionEvaluatedToNothing(statement.Name!, letValue);
                 return Define(statement.Name!, letValue);
 
-            case BytecodeVmStatementKind.Publish:
+            case GameEventScriptBytecodeStatementKind.Publish:
                 return statement.PublishLayout is not null
                     ? TryPublish(statement.PublishLayout)
                     : statement.ExpressionProgram is not null && TryPublish(statement.ExpressionProgram);
 
-            case BytecodeVmStatementKind.If:
+            case GameEventScriptBytecodeStatementKind.If:
                 return TryExecuteIf(statement);
 
-            case BytecodeVmStatementKind.ForRange:
+            case GameEventScriptBytecodeStatementKind.ForRange:
                 return TryExecuteRangeFor(statement);
 
-            case BytecodeVmStatementKind.ForCollection:
+            case GameEventScriptBytecodeStatementKind.ForCollection:
                 return TryExecuteCollectionFor(statement);
 
-            case BytecodeVmStatementKind.Expression:
+            case GameEventScriptBytecodeStatementKind.Expression:
                 if (statement.ExpressionProgram is null ||
                     !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var expressionValue))
                 {
@@ -187,7 +187,7 @@ internal sealed class GesBytecodeVmExecutionSession
                 RecordExpressionStatementEvaluatedToNothing(statement.DiagnosticName, expressionValue);
                 return true;
 
-            case BytecodeVmStatementKind.SeededRandom:
+            case GameEventScriptBytecodeStatementKind.SeededRandom:
                 return TryExecuteSeededRandomStatement(statement);
 
             default:
@@ -195,7 +195,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteSeededRandomStatement(BytecodeVmStatement statement)
+    private bool TryExecuteSeededRandomStatement(GameEventScriptBytecodeStatement statement)
     {
         if (statement.ExpressionProgram is null ||
             statement.BodyProgram is null ||
@@ -215,7 +215,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteIf(BytecodeVmStatement statement)
+    private bool TryExecuteIf(GameEventScriptBytecodeStatement statement)
     {
         if (statement.ExpressionProgram is null ||
             statement.ThenProgram is null ||
@@ -233,7 +233,7 @@ internal sealed class GesBytecodeVmExecutionSession
                TryExecuteStatementProgram(statement.ElseProgram);
     }
 
-    private bool TryExecuteRangeFor(BytecodeVmStatement statement)
+    private bool TryExecuteRangeFor(GameEventScriptBytecodeStatement statement)
     {
         var source = statement.IterationSource;
         if (source is null ||
@@ -312,7 +312,7 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteCollectionFor(BytecodeVmStatement statement)
+    private bool TryExecuteCollectionFor(GameEventScriptBytecodeStatement statement)
     {
         var source = statement.IterationSource;
         if (source?.CollectionProgram is null ||
@@ -344,10 +344,10 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteLoopIteration(BytecodeVmStatement statement, long item)
+    private bool TryExecuteLoopIteration(GameEventScriptBytecodeStatement statement, long item)
         => TryExecuteLoopIteration(statement, BytecodeVmValue.Integer(item));
 
-    private bool TryExecuteLoopIteration(BytecodeVmStatement statement, BytecodeVmValue item)
+    private bool TryExecuteLoopIteration(GameEventScriptBytecodeStatement statement, BytecodeVmValue item)
     {
         if (!_context.RuntimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
@@ -369,7 +369,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryPublish(BytecodeVmPublishLayout layout)
+    private bool TryPublish(GameEventScriptBytecodePublishLayout layout)
     {
         var argumentNames = layout.ArgumentNames;
         var argumentPrograms = layout.ArgumentPrograms;
@@ -404,7 +404,7 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryPublish(BytecodeVmExpressionProgram messageExpression)
+    private bool TryPublish(GameEventScriptBytecodeExpressionProgram messageExpression)
     {
         if (!TryExecuteExpressionProgram(messageExpression, 0, out var publishValue))
         {
@@ -420,7 +420,7 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteExpressionProgram(BytecodeVmExpressionProgram program, int stackBase, out BytecodeVmValue value)
+    private bool TryExecuteExpressionProgram(GameEventScriptBytecodeExpressionProgram program, int stackBase, out BytecodeVmValue value)
     {
         if (stackBase + program.MaxStackDepth > _evaluationStack.Length)
         {
@@ -441,45 +441,45 @@ internal sealed class GesBytecodeVmExecutionSession
             var instruction = instructions[instructionIndex];
             switch (instruction.OpCode)
             {
-                case BytecodeVmProgramOpCode.LoadConstant:
-                    _evaluationStack[top++] = instruction.Constant;
+                case GameEventScriptBytecodeOpCode.LoadConstant:
+                    _evaluationStack[top++] = LoadConstant(instruction.ConstantIndex);
                     break;
 
-                case BytecodeVmProgramOpCode.LoadSlot:
+                case GameEventScriptBytecodeOpCode.LoadSlot:
                     _evaluationStack[top++] = ResolveSlot(instruction.A);
                     break;
 
-                case BytecodeVmProgramOpCode.Or:
-                case BytecodeVmProgramOpCode.Xor:
-                case BytecodeVmProgramOpCode.And:
-                case BytecodeVmProgramOpCode.Equal:
-                case BytecodeVmProgramOpCode.NotEqual:
-                case BytecodeVmProgramOpCode.Less:
-                case BytecodeVmProgramOpCode.Greater:
-                case BytecodeVmProgramOpCode.LessOrEqual:
-                case BytecodeVmProgramOpCode.GreaterOrEqual:
-                case BytecodeVmProgramOpCode.Add:
-                case BytecodeVmProgramOpCode.Subtract:
-                case BytecodeVmProgramOpCode.Multiply:
-                case BytecodeVmProgramOpCode.Divide:
-                case BytecodeVmProgramOpCode.IntegerDivide:
-                case BytecodeVmProgramOpCode.Modulo:
-                case BytecodeVmProgramOpCode.Remainder:
-                case BytecodeVmProgramOpCode.Default:
-                case BytecodeVmProgramOpCode.Contains:
-                case BytecodeVmProgramOpCode.ContainsValue:
-                case BytecodeVmProgramOpCode.StartsWith:
-                case BytecodeVmProgramOpCode.EndsWith:
-                case BytecodeVmProgramOpCode.Intersect:
-                case BytecodeVmProgramOpCode.Combine:
-                case BytecodeVmProgramOpCode.Except:
-                case BytecodeVmProgramOpCode.Zip:
+                case GameEventScriptBytecodeOpCode.Or:
+                case GameEventScriptBytecodeOpCode.Xor:
+                case GameEventScriptBytecodeOpCode.And:
+                case GameEventScriptBytecodeOpCode.Equal:
+                case GameEventScriptBytecodeOpCode.NotEqual:
+                case GameEventScriptBytecodeOpCode.Less:
+                case GameEventScriptBytecodeOpCode.Greater:
+                case GameEventScriptBytecodeOpCode.LessOrEqual:
+                case GameEventScriptBytecodeOpCode.GreaterOrEqual:
+                case GameEventScriptBytecodeOpCode.Add:
+                case GameEventScriptBytecodeOpCode.Subtract:
+                case GameEventScriptBytecodeOpCode.Multiply:
+                case GameEventScriptBytecodeOpCode.Divide:
+                case GameEventScriptBytecodeOpCode.IntegerDivide:
+                case GameEventScriptBytecodeOpCode.Modulo:
+                case GameEventScriptBytecodeOpCode.Remainder:
+                case GameEventScriptBytecodeOpCode.Default:
+                case GameEventScriptBytecodeOpCode.Contains:
+                case GameEventScriptBytecodeOpCode.ContainsValue:
+                case GameEventScriptBytecodeOpCode.StartsWith:
+                case GameEventScriptBytecodeOpCode.EndsWith:
+                case GameEventScriptBytecodeOpCode.Intersect:
+                case GameEventScriptBytecodeOpCode.Combine:
+                case GameEventScriptBytecodeOpCode.Except:
+                case GameEventScriptBytecodeOpCode.Zip:
                     var right = _evaluationStack[--top];
                     var left = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateProgramBinary(instruction.OpCode, left, right);
                     break;
 
-                case BytecodeVmProgramOpCode.Unary:
+                case GameEventScriptBytecodeOpCode.Unary:
                     if (!TryEvaluateUnaryOperation(instruction.DiagnosticName, _evaluationStack[top - 1], out var unaryValue))
                     {
                         value = BytecodeVmValue.Nothing;
@@ -489,7 +489,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top - 1] = unaryValue;
                     break;
 
-                case BytecodeVmProgramOpCode.Variadic:
+                case GameEventScriptBytecodeOpCode.Variadic:
                     top -= instruction.A;
                     if (!TryEvaluateVariadicOperation(instruction.DiagnosticName, _evaluationStack, top, instruction.A, out var variadicValue))
                     {
@@ -500,7 +500,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = variadicValue;
                     break;
 
-                case BytecodeVmProgramOpCode.Clamp:
+                case GameEventScriptBytecodeOpCode.Clamp:
                     top -= 3;
                     _evaluationStack[top] = EvaluateClamp(
                         _evaluationStack[top],
@@ -509,13 +509,13 @@ internal sealed class GesBytecodeVmExecutionSession
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.Random:
+                case GameEventScriptBytecodeOpCode.Random:
                     var to = _evaluationStack[--top];
                     var from = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateRandomExpression(from, to);
                     break;
 
-                case BytecodeVmProgramOpCode.Range:
+                case GameEventScriptBytecodeOpCode.Range:
                     top -= instruction.A;
                     _evaluationStack[top] = EvaluateRangeExpression(
                         _evaluationStack[top],
@@ -524,11 +524,11 @@ internal sealed class GesBytecodeVmExecutionSession
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.Dice:
+                case GameEventScriptBytecodeOpCode.Dice:
                     _evaluationStack[top++] = EvaluateDiceExpression(instruction.A, instruction.B);
                     break;
 
-                case BytecodeVmProgramOpCode.SeededRandom:
+                case GameEventScriptBytecodeOpCode.SeededRandom:
                     var seed = _evaluationStack[--top];
                     if (instruction.ExpressionProgram is null ||
                         !TryEvaluateSeededRandomExpression(seed, instruction.ExpressionProgram, top, out var seededValue))
@@ -540,11 +540,11 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = seededValue;
                     break;
 
-                case BytecodeVmProgramOpCode.Cast:
+                case GameEventScriptBytecodeOpCode.Cast:
                     _evaluationStack[top - 1] = EvaluateProgramCast(instruction.CastKind, _evaluationStack[top - 1]);
                     break;
 
-                case BytecodeVmProgramOpCode.TypeConstructor:
+                case GameEventScriptBytecodeOpCode.TypeConstructor:
                     top -= instruction.A;
                     _evaluationStack[top] = EvaluateTypeConstructor(
                         instruction.DiagnosticName,
@@ -555,13 +555,13 @@ internal sealed class GesBytecodeVmExecutionSession
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.TypeCheck:
+                case GameEventScriptBytecodeOpCode.TypeCheck:
                     _evaluationStack[top - 1] = BytecodeVmValue.Boolean(IsValueOfType(
                         _evaluationStack[top - 1],
                         instruction.DiagnosticName));
                     break;
 
-                case BytecodeVmProgramOpCode.RulePredicate:
+                case GameEventScriptBytecodeOpCode.RulePredicate:
                     var input = _evaluationStack[--top];
                     if (!TryEvaluateRulePredicate(instruction, input, top, out var predicateValue))
                     {
@@ -572,7 +572,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = predicateValue;
                     break;
 
-                case BytecodeVmProgramOpCode.Call:
+                case GameEventScriptBytecodeOpCode.Call:
                     top -= instruction.A;
                     if (!TryEvaluateCallable(instruction, _evaluationStack, top, instruction.A, out var callValue))
                     {
@@ -583,41 +583,41 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = callValue;
                     break;
 
-                case BytecodeVmProgramOpCode.MemberAccess:
+                case GameEventScriptBytecodeOpCode.MemberAccess:
                     _evaluationStack[top - 1] = EvaluateMemberAccess(_evaluationStack[top - 1], instruction.DiagnosticName);
                     break;
 
-                case BytecodeVmProgramOpCode.IndexedAccess:
+                case GameEventScriptBytecodeOpCode.IndexedAccess:
                     var selector = _evaluationStack[--top];
                     var target = _evaluationStack[--top];
                     _evaluationStack[top++] = EvaluateIndexedAccess(target, selector);
                     break;
 
-                case BytecodeVmProgramOpCode.BuildList:
+                case GameEventScriptBytecodeOpCode.BuildList:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildListValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.BuildSequence:
+                case GameEventScriptBytecodeOpCode.BuildSequence:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSequenceValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.BuildSet:
+                case GameEventScriptBytecodeOpCode.BuildSet:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildSetValue(_evaluationStack, top, instruction.A);
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.BuildDictionary:
+                case GameEventScriptBytecodeOpCode.BuildDictionary:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildDictionaryValue(_evaluationStack, top, instruction.A, instruction.Names);
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.BuildMessage:
+                case GameEventScriptBytecodeOpCode.BuildMessage:
                     top -= instruction.A;
                     _evaluationStack[top] = BuildMessageValue(
                         _evaluationStack,
@@ -629,7 +629,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.BindHandler:
+                case GameEventScriptBytecodeOpCode.BindHandler:
                     top -= instruction.A + 1;
                     _evaluationStack[top] = BindHandlerValue(
                         _evaluationStack[top],
@@ -640,7 +640,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     top++;
                     break;
 
-                case BytecodeVmProgramOpCode.CallExtension:
+                case GameEventScriptBytecodeOpCode.CallExtension:
                     top -= instruction.A;
                     if (!TryCallExtension(
                             instruction.DiagnosticName,
@@ -659,7 +659,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = extensionValue;
                     break;
 
-                case BytecodeVmProgramOpCode.Pipeline:
+                case GameEventScriptBytecodeOpCode.Pipeline:
                     if (instruction.PipelineProgram is null ||
                         !TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
                     {
@@ -670,7 +670,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = pipelineValue;
                     break;
 
-                case BytecodeVmProgramOpCode.GeneratedCollection:
+                case GameEventScriptBytecodeOpCode.GeneratedCollection:
                     if (instruction.GeneratedCollectionProgram is null ||
                         !TryExecuteGeneratedCollectionProgram(instruction.GeneratedCollectionProgram, out var generatedValue))
                     {
@@ -681,7 +681,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = generatedValue;
                     break;
 
-                case BytecodeVmProgramOpCode.GuardedChoice:
+                case GameEventScriptBytecodeOpCode.GuardedChoice:
                     if (instruction.GuardedChoiceProgram is null ||
                         !TryExecuteGuardedChoiceProgram(instruction.GuardedChoiceProgram, out var guardedValue))
                     {
@@ -701,6 +701,11 @@ internal sealed class GesBytecodeVmExecutionSession
         value = top > stackBase ? _evaluationStack[top - 1] : BytecodeVmValue.Nothing;
         return true;
     }
+
+    private BytecodeVmValue LoadConstant(int index)
+        => (uint)index < (uint)_compiledScript.BytecodeModule.ConstantPool.Count
+            ? BytecodeVmValue.FromGameEventScriptValue(_compiledScript.BytecodeModule.ConstantPool[index])
+            : BytecodeVmValue.Nothing;
 
     private static BytecodeVmValue EvaluateMemberAccess(BytecodeVmValue target, string? member)
     {
@@ -909,9 +914,9 @@ internal sealed class GesBytecodeVmExecutionSession
             _ => GameEventScriptFastValue.Nothing
         };
 
-    private BytecodeVmValue EvaluateProgramBinary(BytecodeVmProgramOpCode opCode, BytecodeVmValue left, BytecodeVmValue right)
+    private BytecodeVmValue EvaluateProgramBinary(GameEventScriptBytecodeOpCode opCode, BytecodeVmValue left, BytecodeVmValue right)
     {
-        if (opCode != BytecodeVmProgramOpCode.Default &&
+        if (opCode != GameEventScriptBytecodeOpCode.Default &&
             (left.IsNothingLike() || right.IsNothingLike()))
         {
             return BytecodeVmValue.Nothing;
@@ -919,37 +924,37 @@ internal sealed class GesBytecodeVmExecutionSession
 
         switch (opCode)
         {
-            case BytecodeVmProgramOpCode.Or:
+            case GameEventScriptBytecodeOpCode.Or:
                 return BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean());
-            case BytecodeVmProgramOpCode.Xor:
+            case GameEventScriptBytecodeOpCode.Xor:
                 return BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
-            case BytecodeVmProgramOpCode.And:
+            case GameEventScriptBytecodeOpCode.And:
                 return BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean());
-            case BytecodeVmProgramOpCode.Equal:
+            case GameEventScriptBytecodeOpCode.Equal:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
-            case BytecodeVmProgramOpCode.NotEqual:
+            case GameEventScriptBytecodeOpCode.NotEqual:
                 return BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(left, right));
-            case BytecodeVmProgramOpCode.Less:
+            case GameEventScriptBytecodeOpCode.Less:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
-            case BytecodeVmProgramOpCode.Greater:
+            case GameEventScriptBytecodeOpCode.Greater:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var greaterComparison) && greaterComparison > 0);
-            case BytecodeVmProgramOpCode.LessOrEqual:
+            case GameEventScriptBytecodeOpCode.LessOrEqual:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var lessOrEqualComparison) && lessOrEqualComparison <= 0);
-            case BytecodeVmProgramOpCode.GreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.GreaterOrEqual:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var greaterOrEqualComparison) && greaterOrEqualComparison >= 0);
-            case BytecodeVmProgramOpCode.Add:
+            case GameEventScriptBytecodeOpCode.Add:
                 return BytecodeVmValue.Add(left, right);
-            case BytecodeVmProgramOpCode.Subtract:
+            case GameEventScriptBytecodeOpCode.Subtract:
                 return BytecodeVmValue.Subtract(left, right);
-            case BytecodeVmProgramOpCode.Multiply:
+            case GameEventScriptBytecodeOpCode.Multiply:
                 return BytecodeVmValue.Multiply(left, right);
-            case BytecodeVmProgramOpCode.Divide:
+            case GameEventScriptBytecodeOpCode.Divide:
                 return BytecodeVmValue.Divide(left, right);
-            case BytecodeVmProgramOpCode.IntegerDivide:
+            case GameEventScriptBytecodeOpCode.IntegerDivide:
                 return BytecodeVmValue.IntegerDivide(left, right);
-            case BytecodeVmProgramOpCode.Modulo:
+            case GameEventScriptBytecodeOpCode.Modulo:
                 return BytecodeVmValue.Modulo(left, right);
-            case BytecodeVmProgramOpCode.Remainder:
+            case GameEventScriptBytecodeOpCode.Remainder:
                 return BytecodeVmValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
@@ -958,7 +963,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private BytecodeVmValue EvaluateProgramCast(BytecodeVmCastKind castKind, BytecodeVmValue input)
+    private BytecodeVmValue EvaluateProgramCast(GameEventScriptBytecodeCastKind castKind, BytecodeVmValue input)
         => TryConvertDeclaredType(GetCastTypeName(castKind), input, out var value)
             ? value
             : throw new InvalidOperationException($"BytecodeVM invariant failed: cast '{castKind}' could not be evaluated.");
@@ -1007,7 +1012,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryEvaluateSeededRandomExpression(
         BytecodeVmValue seed,
-        BytecodeVmExpressionProgram bodyProgram,
+        GameEventScriptBytecodeExpressionProgram bodyProgram,
         int stackBase,
         out BytecodeVmValue value)
     {
@@ -1022,7 +1027,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteGeneratedCollectionProgram(BytecodeVmGeneratedCollectionProgram program, out BytecodeVmValue value)
+    private bool TryExecuteGeneratedCollectionProgram(GameEventScriptBytecodeGeneratedCollectionProgram program, out BytecodeVmValue value)
     {
         if (!TryMaterializeIterationSource(program.Source, out var sourceItems))
         {
@@ -1073,11 +1078,11 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryMaterializeIterationSource(BytecodeVmIterationSourceProgram source, out GameEventScriptValue[] items)
+    private bool TryMaterializeIterationSource(GameEventScriptBytecodeIterationSourceProgram source, out GameEventScriptValue[] items)
     {
         switch (source.Kind)
         {
-            case BytecodeVmIterationSourceKind.Collection:
+            case GameEventScriptBytecodeIterationSourceKind.Collection:
                 if (source.CollectionProgram is null ||
                     !TryExecuteExpressionProgram(source.CollectionProgram, 0, out var collectionValue))
                 {
@@ -1095,7 +1100,7 @@ internal sealed class GesBytecodeVmExecutionSession
                 items = boxedCollection.AsEnumerable().ToArray();
                 return true;
 
-            case BytecodeVmIterationSourceKind.Range:
+            case GameEventScriptBytecodeIterationSourceKind.Range:
                 if (source.RangeFromProgram is null ||
                     source.RangeToProgram is null ||
                     !TryExecuteExpressionProgram(source.RangeFromProgram, 0, out var from) ||
@@ -1130,7 +1135,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteGuardedChoiceProgram(BytecodeVmGuardedChoiceProgram program, out BytecodeVmValue value)
+    private bool TryExecuteGuardedChoiceProgram(GameEventScriptBytecodeGuardedChoiceProgram program, out BytecodeVmValue value)
     {
         var conditions = program.ConditionPrograms;
         var values = program.ValuePrograms;
@@ -1349,34 +1354,34 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private static string GetBinaryOperator(BytecodeVmProgramOpCode opCode)
+    private static string GetBinaryOperator(GameEventScriptBytecodeOpCode opCode)
         => opCode switch
         {
-            BytecodeVmProgramOpCode.Or => "|",
-            BytecodeVmProgramOpCode.Xor => "^",
-            BytecodeVmProgramOpCode.And => "&",
-            BytecodeVmProgramOpCode.Equal => "=",
-            BytecodeVmProgramOpCode.NotEqual => "<>",
-            BytecodeVmProgramOpCode.Less => "<",
-            BytecodeVmProgramOpCode.Greater => ">",
-            BytecodeVmProgramOpCode.LessOrEqual => "<=",
-            BytecodeVmProgramOpCode.GreaterOrEqual => ">=",
-            BytecodeVmProgramOpCode.Add => "+",
-            BytecodeVmProgramOpCode.Subtract => "-",
-            BytecodeVmProgramOpCode.Multiply => "*",
-            BytecodeVmProgramOpCode.Divide => "/",
-            BytecodeVmProgramOpCode.IntegerDivide => "div",
-            BytecodeVmProgramOpCode.Modulo => "mod",
-            BytecodeVmProgramOpCode.Remainder => "rem",
-            BytecodeVmProgramOpCode.Default => "default",
-            BytecodeVmProgramOpCode.Contains => "in",
-            BytecodeVmProgramOpCode.ContainsValue => "value in",
-            BytecodeVmProgramOpCode.StartsWith => "starts with",
-            BytecodeVmProgramOpCode.EndsWith => "ends with",
-            BytecodeVmProgramOpCode.Intersect => "intersect",
-            BytecodeVmProgramOpCode.Combine => "combine",
-            BytecodeVmProgramOpCode.Except => "except",
-            BytecodeVmProgramOpCode.Zip => "zip",
+            GameEventScriptBytecodeOpCode.Or => "|",
+            GameEventScriptBytecodeOpCode.Xor => "^",
+            GameEventScriptBytecodeOpCode.And => "&",
+            GameEventScriptBytecodeOpCode.Equal => "=",
+            GameEventScriptBytecodeOpCode.NotEqual => "<>",
+            GameEventScriptBytecodeOpCode.Less => "<",
+            GameEventScriptBytecodeOpCode.Greater => ">",
+            GameEventScriptBytecodeOpCode.LessOrEqual => "<=",
+            GameEventScriptBytecodeOpCode.GreaterOrEqual => ">=",
+            GameEventScriptBytecodeOpCode.Add => "+",
+            GameEventScriptBytecodeOpCode.Subtract => "-",
+            GameEventScriptBytecodeOpCode.Multiply => "*",
+            GameEventScriptBytecodeOpCode.Divide => "/",
+            GameEventScriptBytecodeOpCode.IntegerDivide => "div",
+            GameEventScriptBytecodeOpCode.Modulo => "mod",
+            GameEventScriptBytecodeOpCode.Remainder => "rem",
+            GameEventScriptBytecodeOpCode.Default => "default",
+            GameEventScriptBytecodeOpCode.Contains => "in",
+            GameEventScriptBytecodeOpCode.ContainsValue => "value in",
+            GameEventScriptBytecodeOpCode.StartsWith => "starts with",
+            GameEventScriptBytecodeOpCode.EndsWith => "ends with",
+            GameEventScriptBytecodeOpCode.Intersect => "intersect",
+            GameEventScriptBytecodeOpCode.Combine => "combine",
+            GameEventScriptBytecodeOpCode.Except => "except",
+            GameEventScriptBytecodeOpCode.Zip => "zip",
             _ => string.Empty
         };
 
@@ -1743,7 +1748,7 @@ internal sealed class GesBytecodeVmExecutionSession
             : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
     private bool TryEvaluateRulePredicate(
-        BytecodeVmProgramInstruction instruction,
+        GameEventScriptBytecodeInstruction instruction,
         BytecodeVmValue input,
         int stackBase,
         out BytecodeVmValue value,
@@ -1803,7 +1808,7 @@ internal sealed class GesBytecodeVmExecutionSession
     }
 
     private bool TryEvaluateCallable(
-        BytecodeVmProgramInstruction instruction,
+        GameEventScriptBytecodeInstruction instruction,
         BytecodeVmValue[] stack,
         int start,
         int count,
@@ -1843,7 +1848,7 @@ internal sealed class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            if (instruction.CallableKind == BytecodeVmCallableKind.Rule)
+            if (instruction.CallableKind == GameEventScriptBytecodeCallableKind.Rule)
             {
                 value = BytecodeVmValue.Boolean(value.AsBoolean());
             }
@@ -2024,18 +2029,18 @@ internal sealed class GesBytecodeVmExecutionSession
         => !GesRuntimeLimitUtilities.TryGetRangeLength(value, out var length) ||
            _context.RuntimeBudget.TryCheckRangeLength(length, detail);
 
-    private static string GetCastTypeName(BytecodeVmCastKind castKind)
+    private static string GetCastTypeName(GameEventScriptBytecodeCastKind castKind)
         => castKind switch
         {
-            BytecodeVmCastKind.Boolean => "boolean",
-            BytecodeVmCastKind.Integer => "integer",
-            BytecodeVmCastKind.Decimal => "decimal",
-            BytecodeVmCastKind.Number => "number",
-            BytecodeVmCastKind.Percentage => "percentage",
-            BytecodeVmCastKind.Degree => "degree",
-            BytecodeVmCastKind.Meter => "meter",
-            BytecodeVmCastKind.Second => "second",
-            BytecodeVmCastKind.Sequence => "sequence",
+            GameEventScriptBytecodeCastKind.Boolean => "boolean",
+            GameEventScriptBytecodeCastKind.Integer => "integer",
+            GameEventScriptBytecodeCastKind.Decimal => "decimal",
+            GameEventScriptBytecodeCastKind.Number => "number",
+            GameEventScriptBytecodeCastKind.Percentage => "percentage",
+            GameEventScriptBytecodeCastKind.Degree => "degree",
+            GameEventScriptBytecodeCastKind.Meter => "meter",
+            GameEventScriptBytecodeCastKind.Second => "second",
+            GameEventScriptBytecodeCastKind.Sequence => "sequence",
             _ => string.Empty
         };
 
@@ -2197,7 +2202,7 @@ internal sealed class GesBytecodeVmExecutionSession
         return GameEventScriptNothingValue.Instance;
     }
 
-    private GameEventScriptValue ConvertToCustomType(GameEventScriptValue value, BytecodeVmTypeDefinition typeDefinition)
+    private GameEventScriptValue ConvertToCustomType(GameEventScriptValue value, GameEventScriptBytecodeTypeDefinition typeDefinition)
     {
         if (value.TryGetCustomTypeName(out var existingTypeName) &&
             string.Equals(existingTypeName, typeDefinition.Name, StringComparison.Ordinal))
@@ -2234,8 +2239,8 @@ internal sealed class GesBytecodeVmExecutionSession
             : GameEventScriptNothingValue.Instance;
 
     private GameEventScriptValue ApplyFieldClamp(
-        BytecodeVmTypeDefinition typeDefinition,
-        BytecodeVmTypeFieldDefinition field,
+        GameEventScriptBytecodeTypeDefinition typeDefinition,
+        GameEventScriptBytecodeTypeFieldDefinition field,
         GameEventScriptValue fieldValue,
         IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
@@ -2279,7 +2284,7 @@ internal sealed class GesBytecodeVmExecutionSession
     }
 
     private GameEventScriptValue EvaluateCustomTypeExpression(
-        BytecodeVmExpressionProgram expressionProgram,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
         IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
     {
@@ -2312,7 +2317,7 @@ internal sealed class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineProgram(BytecodeVmPipelineProgram pipeline, out BytecodeVmValue value)
+    private bool TryExecutePipelineProgram(GameEventScriptBytecodePipelineProgram pipeline, out BytecodeVmValue value)
     {
         if (!TryExecuteExpressionProgram(pipeline.SourceProgram, 0, out var sourceValue))
         {
@@ -2333,45 +2338,45 @@ internal sealed class GesBytecodeVmExecutionSession
             : GameEventScriptListValue.Empty;
         return pipeline.TerminalSelector.Kind switch
         {
-            BytecodeVmSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
+            GameEventScriptBytecodeSelectorKind.Filter => TryExecuteProgramFilter(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Select => TryExecuteProgramSelect(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Predicate => TryExecuteProgramPredicate(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Sum => TryExecuteProgramSum(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Average => TryExecuteProgramAverage(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Count => TryExecuteProgramCount(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Edge => TryExecuteProgramEdge(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Pattern => TryMaterializePipelineItems(sourceItems, pipeline, out var patternItems, out value)
                 ? TryExecuteProgramPattern(terminalTarget, patternItems, pipeline.TerminalSelector, out value)
                 : false,
-            BytecodeVmSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
+            GameEventScriptBytecodeSelectorKind.ObjectMatch => TryMaterializePipelineItems(sourceItems, pipeline, out var objectItems, out value)
                 ? TryExecuteProgramObjectMatch(terminalTarget, objectItems, pipeline.TerminalSelector, out value)
                 : false,
-            BytecodeVmSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
+            GameEventScriptBytecodeSelectorKind.TakePattern => TryMaterializePipelineItems(sourceItems, pipeline, out var takePatternItems, out value)
                 ? TryExecuteProgramTakePattern(terminalTarget, takePatternItems, pipeline.TerminalSelector, out value)
                 : false,
-            BytecodeVmSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
-            BytecodeVmSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
-            BytecodeVmSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
-            BytecodeVmSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
+            GameEventScriptBytecodeSelectorKind.Min => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: false, out value),
+            GameEventScriptBytecodeSelectorKind.Max => TryExecuteProgramExtrema(sourceItems, pipeline, isMax: true, out value),
+            GameEventScriptBytecodeSelectorKind.Dictionary => TryExecuteProgramDictionary(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Contains => TryExecuteProgramContains(sourceItems, terminalTarget, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Choose => TryMaterializePipelineItems(sourceItems, pipeline, out var chooseItems, out value)
                 ? TryExecuteProgramChoose(chooseItems, pipeline.TerminalSelector, out value)
                 : false,
-            BytecodeVmSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
+            GameEventScriptBytecodeSelectorKind.Draw => TryMaterializePipelineItems(sourceItems, pipeline, out var drawItems, out value)
                 ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateDrawSelector(terminalTarget, drawItems, pipeline.TerminalSelector.Count)), out value)
                 : false,
-            BytecodeVmSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
+            GameEventScriptBytecodeSelectorKind.Shuffle => TryMaterializePipelineItems(sourceItems, pipeline, out var shuffleItems, out value)
                 ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(terminalTarget, shuffleItems)), out value)
                 : false,
-            BytecodeVmSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
+            GameEventScriptBytecodeSelectorKind.Sort => TryMaterializePipelineItems(sourceItems, pipeline, out var sortItems, out value)
                 ? SetValue(BytecodeVmValue.FromGameEventScriptValue(GesCollectionOperations.Sort(terminalTarget, sortItems, pipeline.TerminalSelector.EdgeMode ?? "ascending")), out value)
                 : false,
-            BytecodeVmSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
-            BytecodeVmSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
-            BytecodeVmSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
-            BytecodeVmSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
+            GameEventScriptBytecodeSelectorKind.Distinct => TryExecuteProgramDistinct(sourceItems, terminalTarget, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.GroupBy => TryExecuteProgramGroupBy(sourceItems, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.OrderBy => TryExecuteProgramOrderBy(sourceItems, terminalTarget, pipeline, out value),
+            GameEventScriptBytecodeSelectorKind.Reverse => TryMaterializePipelineItems(sourceItems, pipeline, out var reverseItems, out value)
                 ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateReverseSelector(terminalTarget, reverseItems)), out value)
                 : false,
-            BytecodeVmSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
+            GameEventScriptBytecodeSelectorKind.SequenceSlice => TryMaterializePipelineItems(sourceItems, pipeline, out var sliceItems, out value)
                 ? SetValue(BytecodeVmValue.FromGameEventScriptValue(EvaluateSequenceSliceSelector(terminalTarget, sliceItems, pipeline.TerminalSelector)), out value)
                 : false,
             _ => Fail(out value)
@@ -2380,7 +2385,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramFilter(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2416,7 +2421,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramSelect(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2448,7 +2453,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramPredicate(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2498,7 +2503,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramSum(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2544,7 +2549,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramAverage(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2592,7 +2597,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramCount(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2639,7 +2644,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramEdge(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2687,7 +2692,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramExtrema(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         bool isMax,
         out BytecodeVmValue value)
     {
@@ -2748,7 +2753,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramDictionary(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2798,7 +2803,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteProgramContains(
         IReadOnlyList<GameEventScriptValue> sourceItems,
         GameEventScriptValue terminalTarget,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2838,7 +2843,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteProgramDistinct(
         IReadOnlyList<GameEventScriptValue> sourceItems,
         GameEventScriptValue terminalTarget,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2876,7 +2881,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramGroupBy(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2919,7 +2924,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteProgramOrderBy(
         IReadOnlyList<GameEventScriptValue> sourceItems,
         GameEventScriptValue terminalTarget,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out BytecodeVmValue value)
     {
         var terminal = pipeline.TerminalSelector;
@@ -2958,7 +2963,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteProgramPattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmSelectorProgram selector,
+        GameEventScriptBytecodeSelectorProgram selector,
         out BytecodeVmValue value)
     {
         if (selector.DicePattern is null)
@@ -2980,7 +2985,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteProgramObjectMatch(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmSelectorProgram selector,
+        GameEventScriptBytecodeSelectorProgram selector,
         out BytecodeVmValue value)
     {
         if (selector.ObjectPattern is null)
@@ -3002,7 +3007,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteProgramTakePattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmSelectorProgram selector,
+        GameEventScriptBytecodeSelectorProgram selector,
         out BytecodeVmValue value)
     {
         if (selector.DicePattern is null)
@@ -3023,7 +3028,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryExecuteProgramChoose(
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmSelectorProgram selector,
+        GameEventScriptBytecodeSelectorProgram selector,
         out BytecodeVmValue value)
     {
         if (!TryFilterChooseCandidates(items, selector, out var candidates))
@@ -3064,7 +3069,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryFilterChooseCandidates(
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmSelectorProgram selector,
+        GameEventScriptBytecodeSelectorProgram selector,
         out IReadOnlyList<GameEventScriptValue> candidates)
     {
         if (selector.ExpressionProgram is null || selector.IdentifierSlot < 0)
@@ -3096,7 +3101,7 @@ internal sealed class GesBytecodeVmExecutionSession
         IReadOnlyList<GameEventScriptValue> candidates,
         int count,
         int identifierSlot,
-        BytecodeVmExpressionProgram weightProgram,
+        GameEventScriptBytecodeExpressionProgram weightProgram,
         out IReadOnlyList<GameEventScriptValue> chosen)
     {
         var remaining = candidates.ToList();
@@ -3180,7 +3185,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryForEachIncludedPipelineItem(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmSelectorProgram[] prefixSelectors,
+        GameEventScriptBytecodeSelectorProgram[] prefixSelectors,
         Func<BytecodeVmValue, bool> action,
         Func<bool>? stopWhen = null)
     {
@@ -3216,14 +3221,14 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryMaterializePipelineItems(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmPipelineProgram pipeline,
+        GameEventScriptBytecodePipelineProgram pipeline,
         out GameEventScriptValue[] items,
         out BytecodeVmValue value)
         => TryMaterializePipelineItems(sourceItems, pipeline.PrefixSelectors, out items, out value);
 
     private bool TryMaterializePipelineItems(
         IReadOnlyList<GameEventScriptValue> sourceItems,
-        BytecodeVmSelectorProgram[] prefixSelectors,
+        GameEventScriptBytecodeSelectorProgram[] prefixSelectors,
         out GameEventScriptValue[] items,
         out BytecodeVmValue value)
     {
@@ -3330,7 +3335,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryEvaluateTakePattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmDicePattern pattern,
+        GameEventScriptBytecodeDicePattern pattern,
         out GameEventScriptValue value)
     {
         if (!IsPatternSequence(target))
@@ -3354,7 +3359,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryEvaluateSequencePattern(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmDicePattern? pattern,
+        GameEventScriptBytecodeDicePattern? pattern,
         out bool matches)
     {
         if (pattern is null || !IsPatternSequence(target))
@@ -3369,14 +3374,14 @@ internal sealed class GesBytecodeVmExecutionSession
 
         switch (pattern)
         {
-            case BytecodeVmDiceCountPattern countPattern:
+            case GameEventScriptBytecodeDiceCountPattern countPattern:
                 return TryMatchDiceCountPattern(counts, countPattern, out matches);
 
-            case BytecodeVmFullHousePattern:
+            case GameEventScriptBytecodeFullHousePattern:
                 matches = counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 });
                 return true;
 
-            case BytecodeVmStraightPattern:
+            case GameEventScriptBytecodeStraightPattern:
                 matches = MatchStraight(items);
                 return true;
 
@@ -3388,7 +3393,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryMatchDiceCountPattern(
         IReadOnlyDictionary<GameEventScriptValue, int> counts,
-        BytecodeVmDiceCountPattern pattern,
+        GameEventScriptBytecodeDiceCountPattern pattern,
         out bool matches)
     {
         if (pattern.FaceProgram is not null)
@@ -3435,7 +3440,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryTakeSequencePattern(
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmDicePattern pattern,
+        GameEventScriptBytecodeDicePattern pattern,
         out IReadOnlyList<GameEventScriptValue> takenItems)
     {
         var counts = items
@@ -3444,13 +3449,13 @@ internal sealed class GesBytecodeVmExecutionSession
 
         switch (pattern)
         {
-            case BytecodeVmDiceCountPattern countPattern:
+            case GameEventScriptBytecodeDiceCountPattern countPattern:
                 return TryTakeCountPattern(items, counts, countPattern, out takenItems);
 
-            case BytecodeVmFullHousePattern:
+            case GameEventScriptBytecodeFullHousePattern:
                 return TryTakeFullHouse(items, counts, out takenItems);
 
-            case BytecodeVmStraightPattern:
+            case GameEventScriptBytecodeStraightPattern:
                 return TryTakeStraight(items, out takenItems);
 
             default:
@@ -3462,7 +3467,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryTakeCountPattern(
         IReadOnlyList<GameEventScriptValue> items,
         IReadOnlyDictionary<GameEventScriptValue, int> counts,
-        BytecodeVmDiceCountPattern pattern,
+        GameEventScriptBytecodeDiceCountPattern pattern,
         out IReadOnlyList<GameEventScriptValue> takenItems)
     {
         if (pattern.FaceProgram is not null)
@@ -3604,7 +3609,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryEvaluateObjectMatchSelector(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmObjectMatchPattern? pattern,
+        GameEventScriptBytecodeObjectMatchPattern? pattern,
         out bool matches)
     {
         if (pattern is null || target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Set or GameEventScriptValueKind.Dice))
@@ -3632,7 +3637,7 @@ internal sealed class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryMatchesObjectPattern(GameEventScriptValue value, BytecodeVmObjectMatchPattern pattern, out bool matches)
+    private bool TryMatchesObjectPattern(GameEventScriptValue value, GameEventScriptBytecodeObjectMatchPattern pattern, out bool matches)
     {
         if (value.Kind != GameEventScriptValueKind.Dictionary)
         {
@@ -3651,7 +3656,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
             switch (entry.Value)
             {
-                case BytecodeVmObjectMatchExpressionValue expressionValue:
+                case GameEventScriptBytecodeObjectMatchExpressionValue expressionValue:
                     if (!TryExecuteExpressionProgram(expressionValue.ExpressionProgram, 0, out var expected))
                     {
                         matches = false;
@@ -3666,7 +3671,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
                     break;
 
-                case BytecodeVmObjectMatchNestedValue nestedValue:
+                case GameEventScriptBytecodeObjectMatchNestedValue nestedValue:
                     if (!TryMatchesObjectPattern(actual, nestedValue.Pattern, out var nestedMatches))
                     {
                         matches = false;
@@ -3690,7 +3695,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private static GameEventScriptValue EvaluateSequenceSliceSelector(
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
-        BytecodeVmSelectorProgram selector)
+        GameEventScriptBytecodeSelectorProgram selector)
     {
         if (selector.Count <= 0)
         {
@@ -3780,7 +3785,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryApplyProgramPipelinePrefix(
         BytecodeVmValue item,
-        BytecodeVmSelectorProgram[] prefixSelectors,
+        GameEventScriptBytecodeSelectorProgram[] prefixSelectors,
         out BytecodeVmValue value,
         out bool include)
     {
@@ -3797,7 +3802,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
             switch (selector.Kind)
             {
-                case BytecodeVmSelectorKind.Filter:
+                case GameEventScriptBytecodeSelectorKind.Filter:
                     if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, value, out var predicate))
                     {
                         return false;
@@ -3811,7 +3816,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
                     break;
 
-                case BytecodeVmSelectorKind.Select:
+                case GameEventScriptBytecodeSelectorKind.Select:
                     if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, value, out var selected))
                     {
                         return false;
@@ -3830,7 +3835,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
     private bool TryEvaluateProgramProjection(
         int identifierSlot,
-        BytecodeVmExpressionProgram expressionProgram,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
         BytecodeVmValue item,
         out BytecodeVmValue value)
         => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
@@ -3838,7 +3843,7 @@ internal sealed class GesBytecodeVmExecutionSession
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
         BytecodeVmValue slotValue,
-        BytecodeVmExpressionProgram expressionProgram,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
         int stackBase,
         out BytecodeVmValue value)
     {
@@ -4000,7 +4005,7 @@ internal sealed class GesBytecodeVmExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordRuleCalled(BytecodeVmProgramInstruction instruction, BytecodeVmValue input)
+    private void RecordRuleCalled(GameEventScriptBytecodeInstruction instruction, BytecodeVmValue input)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4016,7 +4021,7 @@ internal sealed class GesBytecodeVmExecutionSession
             $"rule '{ruleName}' called");
     }
 
-    private void RecordCallableCalled(BytecodeVmProgramInstruction instruction, BytecodeVmValue[] stack, int start, int count)
+    private void RecordCallableCalled(GameEventScriptBytecodeInstruction instruction, BytecodeVmValue[] stack, int start, int count)
     {
         if (!_diagnosticsEnabled)
         {
@@ -4033,10 +4038,10 @@ internal sealed class GesBytecodeVmExecutionSession
                 stack[start + argumentIndex].ToGameEventScriptValue());
         }
 
-        var kind = instruction.CallableKind == BytecodeVmCallableKind.Rule
+        var kind = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Rule
             ? GameEventScriptDiagnosticEventKind.RuleCalled
             : GameEventScriptDiagnosticEventKind.SelectCalled;
-        var kindText = instruction.CallableKind == BytecodeVmCallableKind.Rule ? "rule" : "select";
+        var kindText = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Rule ? "rule" : "select";
         RecordDiagnostic(
             kind,
             callableName,

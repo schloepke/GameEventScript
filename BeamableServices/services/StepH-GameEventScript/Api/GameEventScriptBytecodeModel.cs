@@ -180,6 +180,19 @@ public enum GameEventScriptBytecodeOpCode
     IntegerDivide,
     Modulo,
     Remainder,
+    PrimitiveIntegerEqual,
+    PrimitiveIntegerNotEqual,
+    PrimitiveIntegerLess,
+    PrimitiveIntegerGreater,
+    PrimitiveIntegerLessOrEqual,
+    PrimitiveIntegerGreaterOrEqual,
+    PrimitiveIntegerAdd,
+    PrimitiveIntegerSubtract,
+    PrimitiveIntegerMultiply,
+    PrimitiveIntegerDivide,
+    PrimitiveIntegerFloorDivide,
+    PrimitiveIntegerModulo,
+    PrimitiveIntegerRemainder,
     Default,
     Contains,
     ContainsValue,
@@ -336,6 +349,19 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.IntegerDivide => true,
             GameEventScriptBytecodeOpCode.Modulo => true,
             GameEventScriptBytecodeOpCode.Remainder => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo => true,
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder => true,
             _ => false
         };
 
@@ -355,7 +381,20 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.Divide or
             GameEventScriptBytecodeOpCode.IntegerDivide or
             GameEventScriptBytecodeOpCode.Modulo or
-            GameEventScriptBytecodeOpCode.Remainder;
+            GameEventScriptBytecodeOpCode.Remainder or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder;
 }
 
 public enum GameEventScriptBytecodeSelectorKind

@@ -1933,7 +1933,7 @@ internal static class GesBytecodeLowerer
                     case BinaryExpressionNode binary:
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(ToBinaryOpCode(binary.Operator)));
+                        instructions.Add(new GameEventScriptBytecodeInstruction(ToBinaryOpCode(binary)));
                         Pop();
                         return;
 
@@ -2405,6 +2405,65 @@ internal static class GesBytecodeLowerer
 
                 _stackDepth = Math.Max(1, _stackDepth - valueCount + 1);
             }
+
+            private static GameEventScriptBytecodeOpCode ToBinaryOpCode(BinaryExpressionNode expression)
+                => ShouldPreferPrimitiveIntegerOp(expression)
+                    ? ToPrimitiveIntegerOpCode(expression.Operator)
+                    : ToBinaryOpCode(expression.Operator);
+
+            private static bool ShouldPreferPrimitiveIntegerOp(BinaryExpressionNode expression)
+                => expression.Operator switch
+                {
+                    "div" or "mod" or "rem" => IsIntegerCandidate(expression.Left) || IsIntegerCandidate(expression.Right),
+                    "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" => IsIntegerCandidate(expression.Left) && IsIntegerCandidate(expression.Right),
+                    "+" or "-" or "*" or "/" => IsIntegerCandidate(expression.Left) &&
+                                                  IsIntegerCandidate(expression.Right) &&
+                                                  !HasExplicitNonIntegerNumeric(expression.Left) &&
+                                                  !HasExplicitNonIntegerNumeric(expression.Right),
+                    _ => false
+                };
+
+            private static bool IsIntegerCandidate(ExpressionNode expression)
+                => expression switch
+                {
+                    IntegerLiteralExpressionNode => true,
+                    IdentifierExpressionNode => true,
+                    BinaryExpressionNode binary => ShouldPreferPrimitiveIntegerOp(binary),
+                    TypeCastExpressionNode { TypeName: "integer" } => true,
+                    TypeConstructorExpressionNode { TypeName: "integer" } => true,
+                    _ => false
+                };
+
+            private static bool HasExplicitNonIntegerNumeric(ExpressionNode expression)
+                => expression switch
+                {
+                    DecimalLiteralExpressionNode => true,
+                    PercentageLiteralExpressionNode => true,
+                    UnitDecimalLiteralExpressionNode => true,
+                    BinaryExpressionNode binary => HasExplicitNonIntegerNumeric(binary.Left) || HasExplicitNonIntegerNumeric(binary.Right),
+                    TypeCastExpressionNode { TypeName: "decimal" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
+                    TypeConstructorExpressionNode { TypeName: "decimal" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
+                    _ => false
+                };
+
+            private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(string operation)
+                => operation switch
+                {
+                    "=" or "==" => GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual,
+                    "<>" => GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual,
+                    "<" => GameEventScriptBytecodeOpCode.PrimitiveIntegerLess,
+                    ">" => GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater,
+                    "<=" => GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual,
+                    ">=" => GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual,
+                    "+" => GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd,
+                    "-" => GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract,
+                    "*" => GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply,
+                    "/" => GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide,
+                    "div" => GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide,
+                    "mod" => GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo,
+                    "rem" => GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder,
+                    _ => ToBinaryOpCode(operation)
+                };
 
             private static GameEventScriptBytecodeOpCode ToBinaryOpCode(string operation)
                 => operation switch

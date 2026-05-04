@@ -468,6 +468,19 @@ internal sealed class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.IntegerDivide:
                 case GameEventScriptBytecodeOpCode.Modulo:
                 case GameEventScriptBytecodeOpCode.Remainder:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+                case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
                 case GameEventScriptBytecodeOpCode.Default:
                 case GameEventScriptBytecodeOpCode.Contains:
                 case GameEventScriptBytecodeOpCode.ContainsValue:
@@ -959,6 +972,44 @@ internal sealed class GesBytecodeVmExecutionSession
                 return BytecodeVmValue.Modulo(left, right);
             case GameEventScriptBytecodeOpCode.Remainder:
                 return BytecodeVmValue.Remainder(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var equalComparison)
+                    ? BytecodeVmValue.Boolean(equalComparison == 0)
+                    : BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var notEqualComparison)
+                    ? BytecodeVmValue.Boolean(notEqualComparison != 0)
+                    : BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(left, right));
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerLessComparison)
+                    ? BytecodeVmValue.Boolean(integerLessComparison < 0)
+                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveLessComparison) && primitiveLessComparison < 0);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerGreaterComparison)
+                    ? BytecodeVmValue.Boolean(integerGreaterComparison > 0)
+                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveGreaterComparison) && primitiveGreaterComparison > 0);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerLessOrEqualComparison)
+                    ? BytecodeVmValue.Boolean(integerLessOrEqualComparison <= 0)
+                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveLessOrEqualComparison) && primitiveLessOrEqualComparison <= 0);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerGreaterOrEqualComparison)
+                    ? BytecodeVmValue.Boolean(integerGreaterOrEqualComparison >= 0)
+                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveGreaterOrEqualComparison) && primitiveGreaterOrEqualComparison >= 0);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+                return BytecodeVmValue.TryPrimitiveIntegerAdd(left, right, out var integerAdd) ? integerAdd : BytecodeVmValue.Add(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+                return BytecodeVmValue.TryPrimitiveIntegerSubtract(left, right, out var integerSubtract) ? integerSubtract : BytecodeVmValue.Subtract(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+                return BytecodeVmValue.TryPrimitiveIntegerMultiply(left, right, out var integerMultiply) ? integerMultiply : BytecodeVmValue.Multiply(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+                return BytecodeVmValue.TryPrimitiveIntegerDivide(left, right, out var integerDivide) ? integerDivide : BytecodeVmValue.Divide(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+                return BytecodeVmValue.TryPrimitiveIntegerFloorDivide(left, right, out var integerFloorDivide) ? integerFloorDivide : BytecodeVmValue.IntegerDivide(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+                return BytecodeVmValue.TryPrimitiveIntegerModulo(left, right, out var integerModulo) ? integerModulo : BytecodeVmValue.Modulo(left, right);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+                return BytecodeVmValue.TryPrimitiveIntegerRemainder(left, right, out var integerRemainder) ? integerRemainder : BytecodeVmValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
                     ? value
@@ -2734,12 +2785,45 @@ internal sealed class GesBytecodeVmExecutionSession
         var terminalIsIdentity = IsIdentityProjection(terminal.IdentifierSlot, terminal.ExpressionProgram);
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
-            if (!TryApplyProgramPipelinePrefix(
-                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
-                    prefixSelectors,
-                    out var item,
-                    out var include))
+            var item = BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]);
+            var include = true;
+            for (var selectorIndex = 0; selectorIndex < prefixSelectors.Length; selectorIndex++)
             {
+                var selector = prefixSelectors[selectorIndex];
+                if (selector.ExpressionProgram is null)
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Filter)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out var prefixPredicate))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    if (!prefixPredicate.AsBoolean())
+                    {
+                        include = false;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Select)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out item))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    continue;
+                }
+
                 value = BytecodeVmValue.Nothing;
                 return false;
             }
@@ -2792,12 +2876,45 @@ internal sealed class GesBytecodeVmExecutionSession
         var terminalIsIdentity = IsIdentityProjection(terminal.IdentifierSlot, terminal.ExpressionProgram);
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
-            if (!TryApplyProgramPipelinePrefix(
-                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
-                    prefixSelectors,
-                    out var item,
-                    out var include))
+            var item = BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]);
+            var include = true;
+            for (var selectorIndex = 0; selectorIndex < prefixSelectors.Length; selectorIndex++)
             {
+                var selector = prefixSelectors[selectorIndex];
+                if (selector.ExpressionProgram is null)
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Filter)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out var prefixPredicate))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    if (!prefixPredicate.AsBoolean())
+                    {
+                        include = false;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Select)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out item))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    continue;
+                }
+
                 value = BytecodeVmValue.Nothing;
                 return false;
             }
@@ -2851,12 +2968,45 @@ internal sealed class GesBytecodeVmExecutionSession
         var terminalIsTrue = IsConstantTrueProjection(terminal.ExpressionProgram);
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
-            if (!TryApplyProgramPipelinePrefix(
-                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
-                    prefixSelectors,
-                    out var item,
-                    out var include))
+            var item = BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]);
+            var include = true;
+            for (var selectorIndex = 0; selectorIndex < prefixSelectors.Length; selectorIndex++)
             {
+                var selector = prefixSelectors[selectorIndex];
+                if (selector.ExpressionProgram is null)
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Filter)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out var prefixPredicate))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    if (!prefixPredicate.AsBoolean())
+                    {
+                        include = false;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Select)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out item))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    continue;
+                }
+
                 value = BytecodeVmValue.Nothing;
                 return false;
             }
@@ -2907,12 +3057,45 @@ internal sealed class GesBytecodeVmExecutionSession
         var prefixSelectors = pipeline.PrefixSelectors;
         for (var itemIndex = 0; itemIndex < sourceItems.Count; itemIndex++)
         {
-            if (!TryApplyProgramPipelinePrefix(
-                    BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]),
-                    prefixSelectors,
-                    out var item,
-                    out var include))
+            var item = BytecodeVmValue.FromGameEventScriptValue(sourceItems[itemIndex]);
+            var include = true;
+            for (var selectorIndex = 0; selectorIndex < prefixSelectors.Length; selectorIndex++)
             {
+                var selector = prefixSelectors[selectorIndex];
+                if (selector.ExpressionProgram is null)
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Filter)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out var prefixPredicate))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    if (!prefixPredicate.AsBoolean())
+                    {
+                        include = false;
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (selector.Kind == GameEventScriptBytecodeSelectorKind.Select)
+                {
+                    if (!TryEvaluateProgramProjection(selector.IdentifierSlot, selector.ExpressionProgram, item, out item))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    continue;
+                }
+
                 value = BytecodeVmValue.Nothing;
                 return false;
             }
@@ -4216,7 +4399,7 @@ internal sealed class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                value = EvaluateProgramBinary(instructions[4].OpCode, firstResult, secondOperand);
+                value = EvaluateProjectionBinary(instructions[4].OpCode, firstResult, secondOperand);
                 return true;
 
             case GameEventScriptBytecodeProjectionFastKind.BinaryThenBinaryThenBinary:
@@ -4232,13 +4415,13 @@ internal sealed class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                var second = EvaluateProgramBinary(instructions[4].OpCode, first, middleOperand);
+                var second = EvaluateProjectionBinary(instructions[4].OpCode, first, middleOperand);
                 if (!TryGetProjectionOperand(instructions[5], identifierSlot, item, out var finalOperand))
                 {
                     return false;
                 }
 
-                value = EvaluateProgramBinary(instructions[6].OpCode, second, finalOperand);
+                value = EvaluateProjectionBinary(instructions[6].OpCode, second, finalOperand);
                 return true;
         }
 
@@ -4304,7 +4487,7 @@ internal sealed class GesBytecodeVmExecutionSession
 
                     var right = Pop();
                     var left = Pop();
-                    if (!Push(EvaluateProgramBinary(instruction.OpCode, left, right)))
+                    if (!Push(EvaluateProjectionBinary(instruction.OpCode, left, right)))
                     {
                         return false;
                     }
@@ -4394,8 +4577,98 @@ internal sealed class GesBytecodeVmExecutionSession
             return false;
         }
 
-        value = EvaluateProgramBinary(opInstruction.OpCode, left, right);
+        value = EvaluateProjectionBinary(opInstruction.OpCode, left, right);
         return true;
+    }
+
+    private BytecodeVmValue EvaluateProjectionBinary(
+        GameEventScriptBytecodeOpCode opCode,
+        in BytecodeVmValue left,
+        in BytecodeVmValue right)
+        => TryEvaluatePrimitiveIntegerProjectionBinary(opCode, left, right, out var value)
+            ? value
+            : EvaluateProgramBinary(opCode, left, right);
+
+    private static bool TryEvaluatePrimitiveIntegerProjectionBinary(
+        GameEventScriptBytecodeOpCode opCode,
+        in BytecodeVmValue left,
+        in BytecodeVmValue right,
+        out BytecodeVmValue value)
+    {
+        switch (opCode)
+        {
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+                if (BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var equalComparison))
+                {
+                    value = BytecodeVmValue.Boolean(equalComparison == 0);
+                    return true;
+                }
+
+                break;
+
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+                if (BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var notEqualComparison))
+                {
+                    value = BytecodeVmValue.Boolean(notEqualComparison != 0);
+                    return true;
+                }
+
+                break;
+
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+                if (BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var lessComparison))
+                {
+                    value = BytecodeVmValue.Boolean(lessComparison < 0);
+                    return true;
+                }
+
+                break;
+
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+                if (BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var greaterComparison))
+                {
+                    value = BytecodeVmValue.Boolean(greaterComparison > 0);
+                    return true;
+                }
+
+                break;
+
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+                if (BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var lessOrEqualComparison))
+                {
+                    value = BytecodeVmValue.Boolean(lessOrEqualComparison <= 0);
+                    return true;
+                }
+
+                break;
+
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+                if (BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var greaterOrEqualComparison))
+                {
+                    value = BytecodeVmValue.Boolean(greaterOrEqualComparison >= 0);
+                    return true;
+                }
+
+                break;
+
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+                return BytecodeVmValue.TryPrimitiveIntegerAdd(left, right, out value);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+                return BytecodeVmValue.TryPrimitiveIntegerSubtract(left, right, out value);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+                return BytecodeVmValue.TryPrimitiveIntegerMultiply(left, right, out value);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+                return BytecodeVmValue.TryPrimitiveIntegerDivide(left, right, out value);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+                return BytecodeVmValue.TryPrimitiveIntegerFloorDivide(left, right, out value);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+                return BytecodeVmValue.TryPrimitiveIntegerModulo(left, right, out value);
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+                return BytecodeVmValue.TryPrimitiveIntegerRemainder(left, right, out value);
+        }
+
+        value = BytecodeVmValue.Nothing;
+        return false;
     }
 
     private bool TryGetProjectionOperand(
@@ -4434,7 +4707,20 @@ internal sealed class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Divide or
             GameEventScriptBytecodeOpCode.IntegerDivide or
             GameEventScriptBytecodeOpCode.Modulo or
-            GameEventScriptBytecodeOpCode.Remainder;
+            GameEventScriptBytecodeOpCode.Remainder or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder;
 
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
@@ -4893,6 +5179,150 @@ internal readonly record struct BytecodeVmValue(
         }
 
         return GesValueOperations.TryCompareNumeric(leftNumber, rightNumber, out comparison);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryComparePrimitiveIntegers(in BytecodeVmValue left, in BytecodeVmValue right, out int comparison)
+    {
+        if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
+        {
+            comparison = left.IntegerValue.CompareTo(right.IntegerValue);
+            return true;
+        }
+
+        comparison = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerAdd(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            TryAddInteger(leftInteger, rightInteger, out var result))
+        {
+            value = Integer(result);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerSubtract(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            TrySubtractInteger(leftInteger, rightInteger, out var result))
+        {
+            value = Integer(result);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerMultiply(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            TryMultiplyInteger(leftInteger, rightInteger, out var result))
+        {
+            value = Integer(result);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            rightInteger != 0 &&
+            !(leftInteger == long.MinValue && rightInteger == -1))
+        {
+            value = Decimal((decimal)leftInteger / rightInteger);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerFloorDivide(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            rightInteger != 0 &&
+            !(leftInteger == long.MinValue && rightInteger == -1))
+        {
+            var quotient = leftInteger / rightInteger;
+            var remainder = leftInteger % rightInteger;
+            if (remainder != 0 && (remainder > 0) != (rightInteger > 0))
+            {
+                quotient--;
+            }
+
+            value = Integer(quotient);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerModulo(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            rightInteger != 0 &&
+            !(leftInteger == long.MinValue && rightInteger == -1))
+        {
+            var modulo = leftInteger % rightInteger;
+            if (modulo != 0 &&
+                (modulo < 0 && rightInteger > 0 || modulo > 0 && rightInteger < 0))
+            {
+                modulo += rightInteger;
+            }
+
+            value = Integer(modulo);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool TryPrimitiveIntegerRemainder(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            rightInteger != 0 &&
+            !(leftInteger == long.MinValue && rightInteger == -1))
+        {
+            value = Integer(leftInteger % rightInteger);
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryGetPrimitiveIntegerOperands(in BytecodeVmValue left, in BytecodeVmValue right, out long leftInteger, out long rightInteger)
+    {
+        if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
+        {
+            leftInteger = left.IntegerValue;
+            rightInteger = right.IntegerValue;
+            return true;
+        }
+
+        leftInteger = default;
+        rightInteger = default;
+        return false;
     }
 
     public static BytecodeVmValue Add(in BytecodeVmValue left, in BytecodeVmValue right)

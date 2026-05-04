@@ -24,6 +24,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         BytecodeModule = bytecodeModule ?? throw new ArgumentNullException(nameof(bytecodeModule));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
+        Constants = BytecodeModule.ConstantPool.Select(BytecodeVmValue.FromBytecodeConstant).ToArray();
 
         var handlerList = Handlers.Values.SelectMany(handlerGroup => handlerGroup).ToArray();
         _dispatchIndex = GesInvocationKernel.BuildDispatchIndex(handlerList, handler => handler.SignatureId, handler => handler.DeclarationOrder);
@@ -39,6 +40,8 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> Handlers { get; }
 
     internal GameEventScriptCompiled BytecodeModule { get; }
+
+    internal IReadOnlyList<BytecodeVmValue> Constants { get; }
 
     internal IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get; }
 

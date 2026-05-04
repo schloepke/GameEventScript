@@ -703,27 +703,9 @@ internal sealed class GesBytecodeVmExecutionSession
     }
 
     private BytecodeVmValue LoadConstant(int index)
-        => (uint)index < (uint)_compiledScript.BytecodeModule.ConstantPool.Count
-            ? BytecodeVmValue.FromGameEventScriptValue(ToGameEventScriptValue(_compiledScript.BytecodeModule.ConstantPool[index]))
+        => (uint)index < (uint)_compiledScript.Constants.Count
+            ? _compiledScript.Constants[index]
             : BytecodeVmValue.Nothing;
-
-    private static GameEventScriptValue ToGameEventScriptValue(GameEventScriptBytecodeConstant constant)
-        => constant.Kind switch
-        {
-            GameEventScriptBytecodeConstantKind.Nothing => GesNothing(),
-            GameEventScriptBytecodeConstantKind.Boolean => GesBoolean(constant.Boolean),
-            GameEventScriptBytecodeConstantKind.Integer => GesInteger(constant.Integer),
-            GameEventScriptBytecodeConstantKind.Decimal when constant.IsNaN => GesDecimalNaN(),
-            GameEventScriptBytecodeConstantKind.Decimal when constant.IsInfinity => constant.IsNegativeInfinity
-                ? GesDecimalNegativeInfinity()
-                : GesDecimalInfinity(),
-            GameEventScriptBytecodeConstantKind.Decimal => GesDecimal(constant.Number, constant.Unit),
-            GameEventScriptBytecodeConstantKind.Percentage => GesPercentage(constant.Number),
-            GameEventScriptBytecodeConstantKind.Text => GesText(constant.Text ?? string.Empty),
-            GameEventScriptBytecodeConstantKind.Tag => GesTag(constant.Text ?? string.Empty),
-            GameEventScriptBytecodeConstantKind.Handler => GesHandler(GameEventScriptMessageSignature.Create(constant.Text ?? string.Empty, constant.Labels)),
-            _ => GesNothing()
-        };
 
     private static BytecodeVmValue EvaluateMemberAccess(BytecodeVmValue target, string? member)
     {
@@ -4348,6 +4330,24 @@ internal readonly record struct BytecodeVmValue(
             GameEventScriptValueKind.Decimal when !value.IsReferenceBacked => Decimal(value.Number, value.Unit),
             GameEventScriptValueKind.Percentage when !value.IsReferenceBacked => Percentage(value.Number),
             _ => FromGameEventScriptValue(value.ToGameEventScriptValue())
+        };
+
+    public static BytecodeVmValue FromBytecodeConstant(GameEventScriptBytecodeConstant constant)
+        => constant.Kind switch
+        {
+            GameEventScriptBytecodeConstantKind.Nothing => Nothing,
+            GameEventScriptBytecodeConstantKind.Boolean => Boolean(constant.Boolean),
+            GameEventScriptBytecodeConstantKind.Integer => Integer(constant.Integer),
+            GameEventScriptBytecodeConstantKind.Decimal when constant.IsNaN => Reference(GesDecimalNaN()),
+            GameEventScriptBytecodeConstantKind.Decimal when constant.IsInfinity => Reference(constant.IsNegativeInfinity
+                ? GesDecimalNegativeInfinity()
+                : GesDecimalInfinity()),
+            GameEventScriptBytecodeConstantKind.Decimal => Decimal(constant.Number, constant.Unit),
+            GameEventScriptBytecodeConstantKind.Percentage => Percentage(constant.Number),
+            GameEventScriptBytecodeConstantKind.Text => Reference(GesText(constant.Text ?? string.Empty)),
+            GameEventScriptBytecodeConstantKind.Tag => Reference(GesTag(constant.Text ?? string.Empty)),
+            GameEventScriptBytecodeConstantKind.Handler => Reference(GesHandler(GameEventScriptMessageSignature.Create(constant.Text ?? string.Empty, constant.Labels))),
+            _ => Nothing
         };
 
     public bool AsBoolean()

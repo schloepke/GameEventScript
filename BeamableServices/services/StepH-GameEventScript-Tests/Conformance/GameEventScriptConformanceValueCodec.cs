@@ -80,6 +80,17 @@ internal static class GameEventScriptConformanceValueCodec
                     RequireDecimal(element, "y", "vector3 y component"),
                     RequireDecimal(element, "z", "vector3 z component"),
                     DecodeOptionalDecimalUnit(element));
+            case ":point2":
+                return GameEventScriptValueFactory.GesPoint2(
+                    RequireDecimal(element, "x", "point2 x component"),
+                    RequireDecimal(element, "y", "point2 y component"),
+                    DecodeOptionalDecimalUnit(element));
+            case ":point3":
+                return GameEventScriptValueFactory.GesPoint3(
+                    RequireDecimal(element, "x", "point3 x component"),
+                    RequireDecimal(element, "y", "point3 y component"),
+                    RequireDecimal(element, "z", "point3 z component"),
+                    DecodeOptionalDecimalUnit(element));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
@@ -159,6 +170,8 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
             GameEventScriptValueKind.Vector2 => ToVector2Json((GameEventScriptVector2Value)value),
             GameEventScriptValueKind.Vector3 => ToVector3Json((GameEventScriptVector3Value)value),
+            GameEventScriptValueKind.Point2 => ToPoint2Json((GameEventScriptPoint2Value)value),
+            GameEventScriptValueKind.Point3 => ToPoint3Json((GameEventScriptPoint3Value)value),
             GameEventScriptValueKind.Optional => ToOptionalJson(value),
             GameEventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
             GameEventScriptValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
@@ -343,6 +356,41 @@ internal static class GameEventScriptConformanceValueCodec
         var node = new JsonObject
         {
             ["type"] = ":vector3",
+            ["x"] = FormatDecimal(value.X),
+            ["y"] = FormatDecimal(value.Y),
+            ["z"] = FormatDecimal(value.Z)
+        };
+
+        if (value.Unit.HasValue)
+        {
+            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+        }
+
+        return node;
+    }
+
+    private static JsonObject ToPoint2Json(GameEventScriptPoint2Value value)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = ":point2",
+            ["x"] = FormatDecimal(value.X),
+            ["y"] = FormatDecimal(value.Y)
+        };
+
+        if (value.Unit.HasValue)
+        {
+            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+        }
+
+        return node;
+    }
+
+    private static JsonObject ToPoint3Json(GameEventScriptPoint3Value value)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = ":point3",
             ["x"] = FormatDecimal(value.X),
             ["y"] = FormatDecimal(value.Y),
             ["z"] = FormatDecimal(value.Z)

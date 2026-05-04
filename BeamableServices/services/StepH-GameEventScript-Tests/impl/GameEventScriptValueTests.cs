@@ -163,6 +163,35 @@ public class GameEventScriptValueScenarios
     }
 
     [TestMethod]
+    public void PointValuesExposeStableComponents()
+    {
+        var point2 = GesPoint2(10.5m, -2m);
+        var point2Equal = GesPoint2(10.5m, -2m);
+        var point3 = GesPoint3(10.5m, -2m, 3m);
+
+        Assert.AreEqual(GameEventScriptValueKind.Point2, point2.Kind);
+        Assert.AreEqual(point2, point2Equal);
+        Assert.AreEqual(point2.GetHashCode(), point2Equal.GetHashCode());
+        Assert.AreEqual(10.5m, point2.AsDictionary()["x"].AsNumber());
+        Assert.AreEqual(-2m, point2.AsList()[1].AsNumber());
+        Assert.AreEqual(3m, point3.AsDictionary()["z"].AsNumber());
+        Assert.AreSame(GameEventScriptPoint2Value.Zero, GesPoint2(0m, 0m));
+        Assert.AreSame(GameEventScriptPoint3Value.Zero, GesPoint3(0m, 0m, 0m));
+        Assert.AreEqual("point2[x: 10.5, y: -2]", point2.ToString());
+
+        var unitPoint = GesPoint2(0m, 0m, GameEventScriptDecimalUnit.Meter);
+        var sameComponentsDifferentUnit = GesPoint2(0m, 0m, GameEventScriptDecimalUnit.Second);
+        Assert.AreNotSame(GameEventScriptPoint2Value.Zero, unitPoint);
+        Assert.AreNotEqual(GesPoint2(0m, 0m), unitPoint);
+        Assert.AreNotEqual(unitPoint, sameComponentsDifferentUnit);
+        Assert.AreNotEqual(unitPoint.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptPoint2Value)unitPoint).Unit);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptDecimalValue)unitPoint.AsDictionary()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptDecimalValue)unitPoint.AsList()[1]).Unit);
+        Assert.AreEqual("point2[x: 0m, y: 0m]", unitPoint.ToString());
+    }
+
+    [TestMethod]
     public void PercentagesCompareAsNumericRatios()
     {
         var percentage = GesPercentage(0.25m);

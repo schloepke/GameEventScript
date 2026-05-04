@@ -58,7 +58,7 @@ Important design choices:
 - Values are immutable.
 - Missing data is usually represented as `nothing`, not as an exception.
 - Numeric invalidity is usually represented as decimal `NaN`.
-- Messages, handlers, collections, records, vectors, dice, ranges, and tags are
+- Messages, handlers, collections, records, vectors, points, dice, ranges, and tags are
   first-class values.
 - Runtime behavior is defined by the JSON conformance tests and executed through
   the host runtime.
@@ -794,6 +794,8 @@ Types are written as tags. Built-in public type tags are:
 - `:second`
 - `:vector2`
 - `:vector3`
+- `:point2`
+- `:point3`
 - `:optional`
 - `:sequence`
 - `:range`
@@ -829,7 +831,8 @@ Type constructors use the same syntax, but may accept more than one argument for
 types that define construction shapes.
 
 ```eventscript
-let position be :vector2(10m, 20m)
+let offset be :vector2(10m, 20m)
+let position be :point2(10m, 20m)
 let hp be :gauge(current: 10, maximum: 20)
 ```
 
@@ -1110,6 +1113,67 @@ Vector addition and subtraction require the same dimension and same unit.
 `vector * vector`, `scalar / vector`, vector `div`, vector `mod`, vector `rem`,
 mixed dimensions, division by zero, and incompatible units evaluate to `NaN`.
 
+### `:point2` and `:point3`
+
+Points store absolute positions. They have the same component shape as vectors,
+but a different meaning: a vector is a relative delta, while a point is a place
+in a coordinate system.
+
+```eventscript
+let position be :point2(10m, 20m)
+let elevated be :point3(10m, 20m, 5m)
+```
+
+Points use the same shared-unit rule as vectors. All components must be unitless
+or all components must use the same unit.
+
+```eventscript
+:point2(10m, 20m) // ok
+:point2(10m, 20s) // NaN
+:point2(10, 20m)  // NaN
+```
+
+Component members are:
+
+- `x`, `y` for `:point2`
+- `x`, `y`, `z` for `:point3`
+
+Constructors support positional and labeled component forms, including partial
+labeled construction where missing earlier components default to zero.
+
+```eventscript
+:point2(10, 20)
+:point2(x: 10, y: 20)
+:point2(y: 20m) // x defaults to 0m
+
+:point3(1, 2, 3)
+:point3(x: 1, y: 2, z: 3)
+:point3(z: 5m) // x and y default to 0m
+```
+
+Point conversion between dimensions is supported for points only. Converting a
+vector to a point, or a point to a vector, is not implicit because that would
+erase the distinction between absolute positions and relative deltas.
+
+```eventscript
+let p2 be :point2(10m, 20m)
+let p3 be :point3(p2)       // z defaults to 0m
+let p3b be :point3(p2, 5m)  // explicit z
+let flat be :point2(p3b)    // drops z
+```
+
+Point arithmetic is affine:
+
+```eventscript
+:point2(10m, 20m) + :vector2(3m, -5m) // point2[x: 13m, y: 15m]
+:point2(13m, 15m) - :vector2(3m, -5m) // point2[x: 10m, y: 20m]
+:point2(13m, 15m) - :point2(10m, 20m) // vector2[x: 3m, y: -5m]
+```
+
+`point + point`, `vector + point`, point scalar arithmetic, point `div`, point
+`mod`, point `rem`, unary minus on points, `:abs point`, mixed dimensions, and
+incompatible units evaluate to `NaN`.
+
 ### `:optional`
 
 Optional values represent either `some(value)` or `none`. Script code usually
@@ -1262,7 +1326,7 @@ unit['hp']
 unit.hp
 ```
 
-For vectors, lookup and member access expose components.
+For vectors and points, lookup and member access expose components.
 
 ```eventscript
 position.x
@@ -1970,7 +2034,7 @@ on RollAttack {
 }
 ```
 
-### Navigation with units and vectors
+### Navigation with points, units, and vectors
 
 ```eventscript
 on Move(position, offset) {

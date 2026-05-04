@@ -26,7 +26,9 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind
   enum-field Degree = 5
   enum-field Meter = 6
   enum-field Second = 7
-  enum-field Sequence = 8
+  enum-field Point2 = 8
+  enum-field Point3 = 9
+  enum-field Sequence = 10
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeConstant
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeConstant other)
   method System.Boolean Equals(System.Object obj)
@@ -455,6 +457,8 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesOptionalNone()
   method static StepH.GameEventScript.Types.GameEventScriptValue GesOptionalSome(StepH.GameEventScript.Types.GameEventScriptValue value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesPercentage(System.Decimal ratio)
+  method static StepH.GameEventScript.Types.GameEventScriptValue GesPoint2(System.Decimal x, System.Decimal y, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
+  method static StepH.GameEventScript.Types.GameEventScriptValue GesPoint3(System.Decimal x, System.Decimal y, System.Decimal z, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSeconds(System.Decimal seconds)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSequence(StepH.GameEventScript.Types.GameEventScriptSequenceMode mode, StepH.GameEventScript.Types.GameEventScriptValue source)
@@ -528,6 +532,8 @@ struct StepH.GameEventScript.Runtime.GameEventScriptFastValue
   method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromGameEventScriptValue(StepH.GameEventScript.Types.GameEventScriptValue value)
   method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromInteger(System.Int64 value)
   method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromPercentage(System.Decimal ratio)
+  method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromPoint2(System.Decimal x, System.Decimal y, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
+  method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromPoint3(System.Decimal x, System.Decimal y, System.Decimal z, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
   method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromText(System.String value)
   method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromVector2(System.Decimal x, System.Decimal y, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
   method static StepH.GameEventScript.Runtime.GameEventScriptFastValue FromVector3(System.Decimal x, System.Decimal y, System.Decimal z, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
@@ -700,6 +706,37 @@ sealed class StepH.GameEventScript.Types.GameEventScriptPercentageValue
   method static StepH.GameEventScript.Types.GameEventScriptPercentageValue Create(System.Decimal ratio)
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Decimal Ratio { get }
+sealed class StepH.GameEventScript.Types.GameEventScriptPoint2Value
+  field static StepH.GameEventScript.Types.GameEventScriptPoint2Value Zero
+  method System.Boolean AsBoolean()
+  method System.Boolean Contains(StepH.GameEventScript.Types.GameEventScriptValue needle)
+  method System.Boolean ContainsValue(StepH.GameEventScript.Types.GameEventScriptValue needle)
+  method System.Boolean TryGetDictionaryMember(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
+  method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
+  method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsDictionary()
+  method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
+  method System.String AsText()
+  method static StepH.GameEventScript.Types.GameEventScriptPoint2Value Create(System.Decimal x, System.Decimal y, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
+  property StepH.GameEventScript.Types.GameEventScriptDecimalUnit? Unit { get }
+  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
+  property System.Decimal X { get }
+  property System.Decimal Y { get }
+sealed class StepH.GameEventScript.Types.GameEventScriptPoint3Value
+  field static StepH.GameEventScript.Types.GameEventScriptPoint3Value Zero
+  method System.Boolean AsBoolean()
+  method System.Boolean Contains(StepH.GameEventScript.Types.GameEventScriptValue needle)
+  method System.Boolean ContainsValue(StepH.GameEventScript.Types.GameEventScriptValue needle)
+  method System.Boolean TryGetDictionaryMember(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
+  method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
+  method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsDictionary()
+  method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
+  method System.String AsText()
+  method static StepH.GameEventScript.Types.GameEventScriptPoint3Value Create(System.Decimal x, System.Decimal y, System.Decimal z, StepH.GameEventScript.Types.GameEventScriptDecimalUnit? unit)
+  property StepH.GameEventScript.Types.GameEventScriptDecimalUnit? Unit { get }
+  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
+  property System.Decimal X { get }
+  property System.Decimal Y { get }
+  property System.Decimal Z { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptRangeValue
   method System.Boolean Contains(StepH.GameEventScript.Types.GameEventScriptValue needle)
   method System.Boolean HasSemanticValue()
@@ -795,6 +832,8 @@ abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method System.Boolean IsNumber()
   method System.Boolean IsOptional()
   method System.Boolean IsPercentage()
+  method System.Boolean IsPoint2()
+  method System.Boolean IsPoint3()
   method System.Boolean IsRange()
   method System.Boolean IsSemanticallyEmpty()
   method System.Boolean IsSequence()
@@ -835,18 +874,20 @@ enum StepH.GameEventScript.Types.GameEventScriptValueKind
   enum-field Percentage = 3
   enum-field Vector2 = 4
   enum-field Vector3 = 5
-  enum-field Decimal = 6
-  enum-field Integer = 7
-  enum-field Boolean = 8
-  enum-field Optional = 9
-  enum-field Sequence = 10
-  enum-field Range = 11
-  enum-field Message = 12
-  enum-field Handler = 13
-  enum-field List = 14
-  enum-field Dictionary = 15
-  enum-field Set = 16
-  enum-field Dice = 17
+  enum-field Point2 = 6
+  enum-field Point3 = 7
+  enum-field Decimal = 8
+  enum-field Integer = 9
+  enum-field Boolean = 10
+  enum-field Optional = 11
+  enum-field Sequence = 12
+  enum-field Range = 13
+  enum-field Message = 14
+  enum-field Handler = 15
+  enum-field List = 16
+  enum-field Dictionary = 17
+  enum-field Set = 18
+  enum-field Dice = 19
 sealed class StepH.GameEventScript.Types.GameEventScriptVector2Value
   field static StepH.GameEventScript.Types.GameEventScriptVector2Value Zero
   method System.Boolean AsBoolean()

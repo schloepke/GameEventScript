@@ -868,6 +868,12 @@ internal static class GesValidator
             case "vector3":
                 ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
                 return;
+            case "point2":
+                ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y"], errors);
+                return;
+            case "point3":
+                ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
+                return;
             default:
                 if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
                 {
@@ -893,7 +899,7 @@ internal static class GesValidator
             return;
         }
 
-        if (constructor.TypeName == "vector3" &&
+        if (constructor.TypeName is "vector3" or "point3" &&
             constructor.Arguments.Count == 2 &&
             constructor.Arguments.All(argument => argument.Label is null))
         {
@@ -977,7 +983,7 @@ internal static class GesValidator
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
-            "vector2" or "vector3" or "boolean" or "integer" or "decimal" or "number" or "sequence" or
+            "vector2" or "vector3" or "point2" or "point3" or "boolean" or "integer" or "decimal" or "number" or "sequence" or
             "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(

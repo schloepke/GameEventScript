@@ -52,6 +52,27 @@ public sealed class GameEventScriptFastValueTests
     }
 
     [TestMethod]
+    public void PointsAreStoredWithoutReferenceBackingAndRoundTripWithUnits()
+    {
+        var point2 = GameEventScriptFastValue.FromPoint2(3m, 4m, GameEventScriptDecimalUnit.Meter);
+        var point3 = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesPoint3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
+
+        Assert.IsFalse(point2.IsReferenceBacked);
+        Assert.IsFalse(point3.IsReferenceBacked);
+        Assert.AreEqual(GameEventScriptValueKind.Point2, point2.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Point3, point3.Kind);
+        Assert.AreEqual(3m, point2.X);
+        Assert.AreEqual(4m, point2.Y);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, point2.Unit);
+        Assert.AreEqual(1m, point3.X);
+        Assert.AreEqual(2m, point3.Y);
+        Assert.AreEqual(3m, point3.Z);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Second, point3.Unit);
+        Assert.AreEqual(GameEventScriptValueFactory.GesPoint2(3m, 4m, GameEventScriptDecimalUnit.Meter), point2.ToGameEventScriptValue());
+        Assert.AreEqual(GameEventScriptValueFactory.GesPoint3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), point3.ToGameEventScriptValue());
+    }
+
+    [TestMethod]
     public void ReferenceValuesRemainReferenceBacked()
     {
         var text = GameEventScriptFastValue.FromText("hello");

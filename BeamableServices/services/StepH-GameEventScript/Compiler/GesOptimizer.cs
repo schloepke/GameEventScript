@@ -552,9 +552,9 @@ internal static class GesOptimizer
     private static bool TryEvaluateConstantTypeConstructor(TypeConstructorExpressionNode constructor, ISet<string> knownTypeNames, out GameEventScriptValue value)
     {
         value = GameEventScriptNothingValue.Instance;
-        if (constructor.TypeName is "vector2" or "vector3")
+        if (constructor.TypeName is "vector2" or "vector3" or "point2" or "point3")
         {
-            return TryEvaluateConstantVectorConstructor(constructor, out value);
+            return TryEvaluateConstantSpatialConstructor(constructor, out value);
         }
 
         if (knownTypeNames.Contains(constructor.TypeName))
@@ -572,24 +572,31 @@ internal static class GesOptimizer
         return TryConvertConstantType(source, constructor.TypeName, knownTypeNames, out value);
     }
 
-    private static bool TryEvaluateConstantVectorConstructor(TypeConstructorExpressionNode constructor, out GameEventScriptValue value)
+    private static bool TryEvaluateConstantSpatialConstructor(TypeConstructorExpressionNode constructor, out GameEventScriptValue value)
     {
         value = GameEventScriptNothingValue.Instance;
         if (constructor.Arguments.Count == 1 &&
             constructor.Arguments[0].Label is null &&
             TryEvaluateConstant(constructor.Arguments[0].Expression, out var source))
         {
-            value = constructor.TypeName == "vector2" ? ConvertToVector2(source) : ConvertToVector3(source);
+            value = constructor.TypeName switch
+            {
+                "vector2" => ConvertToVector2(source),
+                "vector3" => ConvertToVector3(source),
+                "point2" => ConvertToPoint2(source),
+                "point3" => ConvertToPoint3(source),
+                _ => GameEventScriptNothingValue.Instance
+            };
             return !value.IsNothing();
         }
 
-        if (constructor.TypeName == "vector3" &&
+        if (constructor.TypeName is "vector3" or "point3" &&
             constructor.Arguments.Count == 2 &&
             constructor.Arguments.All(argument => argument.Label is null) &&
             TryEvaluateConstant(constructor.Arguments[0].Expression, out var xy) &&
             TryEvaluateConstant(constructor.Arguments[1].Expression, out var z))
         {
-            return GesValueOperations.TryCreateVector3(xy, z, out value) && !value.IsNothing();
+            return TryCreateSpatial3(constructor.TypeName, xy, z, out value) && !value.IsNothing();
         }
 
         if (constructor.Arguments.Count == 0 || constructor.Arguments.All(argument => argument.Label is not null))
@@ -605,11 +612,11 @@ internal static class GesOptimizer
                 labeledComponents[argument.Label!] = component;
             }
 
-            return GesValueOperations.TryCreateVectorFromLabeledComponents(constructor.TypeName, labeledComponents, out value) &&
+            return TryCreateSpatialFromLabeledComponents(constructor.TypeName, labeledComponents, out value) &&
                    !value.IsNothing();
         }
 
-        var expectedCount = constructor.TypeName == "vector2" ? 2 : 3;
+        var expectedCount = constructor.TypeName is "vector2" or "point2" ? 2 : 3;
         if (constructor.Arguments.Count != expectedCount)
         {
             return false;
@@ -625,9 +632,29 @@ internal static class GesOptimizer
         }
 
         return expectedCount == 2
-            ? GesValueOperations.TryCreateVector2(components[0], components[1], out value)
-            : GesValueOperations.TryCreateVector3(components[0], components[1], components[2], out value);
+            ? TryCreateSpatial2(constructor.TypeName, components[0], components[1], out value)
+            : TryCreateSpatial3(constructor.TypeName, components[0], components[1], components[2], out value);
     }
+
+    private static bool TryCreateSpatial2(string typeName, GameEventScriptValue x, GameEventScriptValue y, out GameEventScriptValue value)
+        => typeName == "point2"
+            ? GesValueOperations.TryCreatePoint2(x, y, out value)
+            : GesValueOperations.TryCreateVector2(x, y, out value);
+
+    private static bool TryCreateSpatial3(string typeName, GameEventScriptValue x, GameEventScriptValue y, GameEventScriptValue z, out GameEventScriptValue value)
+        => typeName == "point3"
+            ? GesValueOperations.TryCreatePoint3(x, y, z, out value)
+            : GesValueOperations.TryCreateVector3(x, y, z, out value);
+
+    private static bool TryCreateSpatial3(string typeName, GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
+        => typeName == "point3"
+            ? GesValueOperations.TryCreatePoint3(xy, z, out value)
+            : GesValueOperations.TryCreateVector3(xy, z, out value);
+
+    private static bool TryCreateSpatialFromLabeledComponents(string typeName, IReadOnlyDictionary<string, GameEventScriptValue> components, out GameEventScriptValue value)
+        => typeName is "point2" or "point3"
+            ? GesValueOperations.TryCreatePointFromLabeledComponents(typeName, components, out value)
+            : GesValueOperations.TryCreateVectorFromLabeledComponents(typeName, components, out value);
 
     private static bool TryEvaluateConstantUnary(UnaryExpressionNode unary, out GameEventScriptValue value)
     {
@@ -655,6 +682,11 @@ internal static class GesOptimizer
                 if (unwrapped.IsPercentage())
                 {
                     value = GameEventScriptValueFactory.GesPercentage(-unwrapped.AsNumber());
+                    return true;
+                }
+
+                if (GesValueOperations.TryEvaluatePointUnary(unwrapped, "-", out value))
+                {
                     return true;
                 }
 
@@ -699,6 +731,11 @@ internal static class GesOptimizer
                 value = GameEventScriptValueFactory.GesBoolean(operand.IsSemanticallyEmpty());
                 return true;
             case "abs":
+                if (GesValueOperations.TryEvaluatePointUnary(operand, "abs", out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorUnary(operand, "abs", out value))
                 {
                     return true;
@@ -781,6 +818,11 @@ internal static class GesOptimizer
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
             case "+":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "+", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "+", right, out value))
                 {
                     return true;
@@ -806,6 +848,11 @@ internal static class GesOptimizer
                 value = ToGameEventScriptNumericResult(left, "+", right, AddNumeric(leftNumeric, rightNumeric));
                 return true;
             case "-":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "-", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "-", right, out value))
                 {
                     return true;
@@ -831,6 +878,11 @@ internal static class GesOptimizer
                 value = ToGameEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 return true;
             case "*":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "*", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "*", right, out value))
                 {
                     return true;
@@ -856,6 +908,11 @@ internal static class GesOptimizer
                 value = ToGameEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
             case "/":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "/", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "/", right, out value))
                 {
                     return true;
@@ -881,6 +938,11 @@ internal static class GesOptimizer
                 value = ToGameEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case "mod":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "mod", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "mod", right, out value))
                 {
                     return true;
@@ -901,6 +963,11 @@ internal static class GesOptimizer
                 value = ToGameEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
                 return true;
             case "div":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "div", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "div", right, out value))
                 {
                     return true;
@@ -921,6 +988,11 @@ internal static class GesOptimizer
                 value = ToGameEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
                 return true;
             case "rem":
+                if (GesValueOperations.TryEvaluatePointBinary(left, "rem", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "rem", right, out value))
                 {
                     return true;
@@ -986,6 +1058,12 @@ internal static class GesOptimizer
                 return true;
             case "vector3":
                 converted = ConvertToVector3(value);
+                return true;
+            case "point2":
+                converted = ConvertToPoint2(value);
+                return true;
+            case "point3":
+                converted = ConvertToPoint3(value);
                 return true;
             case "boolean":
                 converted = GameEventScriptValueFactory.GesBoolean(value.AsBoolean());
@@ -1140,6 +1218,11 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesVector2(vector3.X, vector3.Y, vector3.Unit);
         }
 
+        if (unwrapped is GameEventScriptPoint2Value or GameEventScriptPoint3Value)
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
             unwrapped.TryGetDictionaryMember("y", out var y) &&
             GesValueOperations.TryCreateVector2(x, y, out var vectorFromMembers))
@@ -1174,6 +1257,11 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesVector3(vector2.X, vector2.Y, 0m, vector2.Unit);
         }
 
+        if (unwrapped is GameEventScriptPoint2Value or GameEventScriptPoint3Value)
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
         if (unwrapped.TryGetDictionaryMember("x", out var x) &&
             unwrapped.TryGetDictionaryMember("y", out var y))
         {
@@ -1201,6 +1289,99 @@ internal static class GesOptimizer
             xyVectorFromItems is GameEventScriptVector2Value xyFromItems)
         {
             return GameEventScriptValueFactory.GesVector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
+        }
+
+        return GameEventScriptNothingValue.Instance;
+    }
+
+    private static GameEventScriptValue ConvertToPoint2(GameEventScriptValue value)
+    {
+        if (!TryUnwrapOptional(value, out var unwrapped))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped is GameEventScriptPoint2Value point2)
+        {
+            return point2;
+        }
+
+        if (unwrapped is GameEventScriptPoint3Value point3)
+        {
+            return GameEventScriptValueFactory.GesPoint2(point3.X, point3.Y, point3.Unit);
+        }
+
+        if (unwrapped is GameEventScriptVector2Value or GameEventScriptVector3Value)
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+            unwrapped.TryGetDictionaryMember("y", out var y) &&
+            GesValueOperations.TryCreatePoint2(x, y, out var pointFromMembers))
+        {
+            return pointFromMembers;
+        }
+
+        var items = unwrapped.AsList();
+        if (items.Count >= 2 &&
+            GesValueOperations.TryCreatePoint2(items[0], items[1], out var pointFromItems))
+        {
+            return pointFromItems;
+        }
+
+        return GameEventScriptNothingValue.Instance;
+    }
+
+    private static GameEventScriptValue ConvertToPoint3(GameEventScriptValue value)
+    {
+        if (!TryUnwrapOptional(value, out var unwrapped))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped is GameEventScriptPoint3Value point3)
+        {
+            return point3;
+        }
+
+        if (unwrapped is GameEventScriptPoint2Value point2)
+        {
+            return GameEventScriptValueFactory.GesPoint3(point2.X, point2.Y, 0m, point2.Unit);
+        }
+
+        if (unwrapped is GameEventScriptVector2Value or GameEventScriptVector3Value)
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
+            unwrapped.TryGetDictionaryMember("y", out var y))
+        {
+            if (unwrapped.TryGetDictionaryMember("z", out var z))
+            {
+                return GesValueOperations.TryCreatePoint3(x, y, z, out var pointFromMembers)
+                    ? pointFromMembers
+                    : GameEventScriptNothingValue.Instance;
+            }
+
+            return GesValueOperations.TryCreatePoint2(x, y, out var xyPoint) && xyPoint is GameEventScriptPoint2Value xy
+                ? GameEventScriptValueFactory.GesPoint3(xy.X, xy.Y, 0m, xy.Unit)
+                : xyPoint;
+        }
+
+        var items = unwrapped.AsList();
+        if (items.Count >= 3 &&
+            GesValueOperations.TryCreatePoint3(items[0], items[1], items[2], out var pointFromItems))
+        {
+            return pointFromItems;
+        }
+
+        if (items.Count >= 2 &&
+            GesValueOperations.TryCreatePoint2(items[0], items[1], out var xyPointFromItems) &&
+            xyPointFromItems is GameEventScriptPoint2Value xyFromItems)
+        {
+            return GameEventScriptValueFactory.GesPoint3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
         }
 
         return GameEventScriptNothingValue.Instance;
@@ -1722,6 +1903,29 @@ internal static class GesOptimizer
                         new ArgumentNode(null, CreateDecimalLiteral(vector.X, vector.Unit)),
                         new ArgumentNode(null, CreateDecimalLiteral(vector.Y, vector.Unit)),
                         new ArgumentNode(null, CreateDecimalLiteral(vector.Z, vector.Unit))
+                    ]));
+                return true;
+            }
+            case GameEventScriptValueKind.Point2:
+            {
+                var point = (GameEventScriptPoint2Value)value;
+                expression = new TypeConstructorExpressionNode(
+                    "point2",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, CreateDecimalLiteral(point.X, point.Unit)),
+                        new ArgumentNode(null, CreateDecimalLiteral(point.Y, point.Unit))
+                    ]));
+                return true;
+            }
+            case GameEventScriptValueKind.Point3:
+            {
+                var point = (GameEventScriptPoint3Value)value;
+                expression = new TypeConstructorExpressionNode(
+                    "point3",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, CreateDecimalLiteral(point.X, point.Unit)),
+                        new ArgumentNode(null, CreateDecimalLiteral(point.Y, point.Unit)),
+                        new ArgumentNode(null, CreateDecimalLiteral(point.Z, point.Unit))
                     ]));
                 return true;
             }

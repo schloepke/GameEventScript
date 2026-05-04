@@ -196,6 +196,38 @@
     },
     {
       "kind": "scriptApi",
+      "name": "point constructors and affine arithmetic",
+      "script": "on Start {\n  let origin be :point2(10m, 20m)\n  let delta be :vector2(3m, -5m)\n  let moved be origin + delta\n  let back be moved - delta\n  let between be moved - origin\n  let labeled be :point2(x: 3, y: 4)\n  let yOnly be :point2(y: 10m)\n  let zero2 be :point2()\n  let p3 be :point3(origin, 7m)\n  let flat be :point2(p3)\n  let badAdd be origin + moved\n  let badScale be origin * 2\n  let badAbs be :abs origin\n  publish Done(origin: origin, moved: moved, back: back, between: between, labeled: labeled, yOnly: yOnly, zero2: zero2, p3: p3, flat: flat, x: moved.x, z: p3.z, isPoint: moved is :point2, badAdd: badAdd, badScale: badScale, badAbs: badAbs)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "origin": { "type": ":point2", "x": "10", "y": "20", "unit": ":meter" },
+                "moved": { "type": ":point2", "x": "13", "y": "15", "unit": ":meter" },
+                "back": { "type": ":point2", "x": "10", "y": "20", "unit": ":meter" },
+                "between": { "type": ":vector2", "x": "3", "y": "-5", "unit": ":meter" },
+                "labeled": { "type": ":point2", "x": "3", "y": "4" },
+                "yOnly": { "type": ":point2", "x": "0", "y": "10", "unit": ":meter" },
+                "zero2": { "type": ":point2", "x": "0", "y": "0" },
+                "p3": { "type": ":point3", "x": "10", "y": "20", "z": "7", "unit": ":meter" },
+                "flat": { "type": ":point2", "x": "10", "y": "20", "unit": ":meter" },
+                "x": { "type": ":decimal", "value": "13", "unit": ":meter" },
+                "z": { "type": ":decimal", "value": "7", "unit": ":meter" },
+                "isPoint": { "type": ":boolean", "value": true },
+                "badAdd": { "type": ":decimal", "value": "NaN" },
+                "badScale": { "type": ":decimal", "value": "NaN" },
+                "badAbs": { "type": ":decimal", "value": "NaN" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "integer arithmetic preserves integer results",
       "script": "on Start {\n  publish Done(add: 1 + 2, subtract: 5 - 3, multiply: 6 * 7, modulo: 7 mod 4, divide: 7 / 2, mixed: 7 * 0.5)\n}",
       "steps": [

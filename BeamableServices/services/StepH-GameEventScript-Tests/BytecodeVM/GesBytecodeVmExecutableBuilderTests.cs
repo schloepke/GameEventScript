@@ -66,6 +66,18 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             typeof(IReadOnlyList<GameEventScriptBytecodeConstant>),
             compiledType.GetProperty(nameof(GameEventScriptCompiled.ConstantPool))!.PropertyType,
             "GameEventScriptCompiled constants should use portable bytecode constants, not runtime values.");
+
+        var disallowedPortableTypes = CollectPublicBytecodeBoundaryTypes(compiledType)
+            .Where(IsDisallowedPortableBytecodeType)
+            .Select(type => type.FullName)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.HasCount(
+            0,
+            disallowedPortableTypes,
+            "GameEventScriptCompiled portable bytecode graph exposes compiler, AST, BytecodeVM, or runtime value types:\n" +
+            string.Join("\n", disallowedPortableTypes));
     }
 
     [TestMethod]
@@ -91,6 +103,37 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(1, published);
         Assert.AreEqual("Done", published[0].Name);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["value"]);
+    }
+
+    [TestMethod]
+    public void BytecodeVmCanRunFromCompiledArtifactRebuiltFromPublicBytecodeData()
+    {
+        const string script =
+            """
+            module Runtime
+
+            select boosted(_ value) means value + 2
+
+            on Start(value) {
+              let total be boosted(value)
+              publish Done(value: total)
+            }
+            """;
+
+        var bytecode = GameEventScriptManager.Compile(script);
+        var rebuiltBytecode = RebuildCompiledArtifactFromPublicData(bytecode);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(rebuiltBytecode);
+
+        host.Publish(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual("Done", published[0].Name);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["value"]);
     }
 
     [TestMethod]
@@ -129,6 +172,122 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         return type.IsArray && type.GetElementType() is { } elementType && ContainsBytecodeVmType(elementType);
     }
+
+    private static IReadOnlySet<Type> CollectPublicBytecodeBoundaryTypes(Type rootType)
+    {
+        var visited = new HashSet<Type>();
+        var stack = new Stack<Type>();
+        stack.Push(rootType);
+
+        while (stack.Count > 0)
+        {
+            var type = stack.Pop();
+            if (!visited.Add(type))
+            {
+                continue;
+            }
+
+            foreach (var nestedType in ExpandType(type))
+            {
+                stack.Push(nestedType);
+            }
+
+            if (!IsGameEventScriptPublicModelType(type))
+            {
+                continue;
+            }
+
+            foreach (var property in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
+            {
+                stack.Push(property.PropertyType);
+            }
+
+            foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
+            {
+                stack.Push(field.FieldType);
+            }
+
+            foreach (var constructor in type.GetConstructors())
+            {
+                foreach (var parameter in constructor.GetParameters())
+                {
+                    stack.Push(parameter.ParameterType);
+                }
+            }
+        }
+
+        return visited;
+    }
+
+    private static IEnumerable<Type> ExpandType(Type type)
+    {
+        if (type.IsArray && type.GetElementType() is { } elementType)
+        {
+            yield return elementType;
+        }
+
+        if (type.IsGenericType)
+        {
+            foreach (var argument in type.GetGenericArguments())
+            {
+                yield return argument;
+            }
+        }
+    }
+
+    private static bool IsGameEventScriptPublicModelType(Type type)
+        => type.IsPublic &&
+           type.Namespace is { } typeNamespace &&
+           (string.Equals(typeNamespace, "StepH.GameEventScript.Api", StringComparison.Ordinal) ||
+            string.Equals(typeNamespace, "StepH.GameEventScript.Runtime", StringComparison.Ordinal));
+
+    private static bool IsDisallowedPortableBytecodeType(Type type)
+    {
+        var typeNamespace = type.Namespace ?? string.Empty;
+        return typeNamespace.StartsWith("StepH.GameEventScript.Compiler", StringComparison.Ordinal) ||
+               typeNamespace.StartsWith("StepH.GameEventScript.BytecodeVM", StringComparison.Ordinal) ||
+               type == typeof(GameEventScriptValue) ||
+               type.IsSubclassOf(typeof(GameEventScriptValue));
+    }
+
+    private static GameEventScriptCompiled RebuildCompiledArtifactFromPublicData(GameEventScriptCompiled original)
+        => new(
+            new GameEventScriptCompileOptions
+            {
+                EnableDiagnostics = original.Options.EnableDiagnostics,
+                Optimize = original.Options.Optimize
+            },
+            original.StringPool.ToArray(),
+            original.ConstantPool.Select(CloneConstant).ToArray(),
+            original.Signatures.ToArray(),
+            original.ExternalReferences
+                .Select(reference => new GameEventScriptExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels.ToArray()))
+                .ToArray(),
+            original.NamedArgumentLayouts.Select(layout => (IReadOnlyList<string>)layout.ToArray()).ToArray(),
+            original.TypeMetadata.ToArray(),
+            original.Callables.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
+            original.Handlers.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<GameEventScriptBytecodeHandler>)pair.Value.ToArray(), StringComparer.Ordinal),
+            original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
+            original.MaxStackDepth);
+
+    private static GameEventScriptBytecodeConstant CloneConstant(GameEventScriptBytecodeConstant constant)
+        => constant.Kind switch
+        {
+            GameEventScriptBytecodeConstantKind.Nothing => GameEventScriptBytecodeConstant.Nothing(),
+            GameEventScriptBytecodeConstantKind.Boolean => GameEventScriptBytecodeConstant.FromBoolean(constant.Boolean),
+            GameEventScriptBytecodeConstantKind.Integer => GameEventScriptBytecodeConstant.FromInteger(constant.Integer),
+            GameEventScriptBytecodeConstantKind.Decimal => GameEventScriptBytecodeConstant.FromDecimal(
+                constant.Number,
+                constant.Unit,
+                constant.IsNaN,
+                constant.IsInfinity,
+                constant.IsNegativeInfinity),
+            GameEventScriptBytecodeConstantKind.Percentage => GameEventScriptBytecodeConstant.FromPercentage(constant.Number),
+            GameEventScriptBytecodeConstantKind.Text => GameEventScriptBytecodeConstant.FromText(constant.Text ?? string.Empty),
+            GameEventScriptBytecodeConstantKind.Tag => GameEventScriptBytecodeConstant.FromTag(constant.Text ?? string.Empty),
+            GameEventScriptBytecodeConstantKind.Handler => GameEventScriptBytecodeConstant.FromHandler(constant.Text ?? string.Empty, constant.Labels.ToArray()),
+            _ => throw new ArgumentOutOfRangeException(nameof(constant), constant.Kind, "Unknown bytecode constant kind.")
+        };
 
     [TestMethod]
     public void BytecodeVmRunsGeneratedCollectionsByDefault()

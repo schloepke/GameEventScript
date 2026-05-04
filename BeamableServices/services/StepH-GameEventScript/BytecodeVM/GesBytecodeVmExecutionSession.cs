@@ -4050,7 +4050,173 @@ internal sealed class GesBytecodeVmExecutionSession
         GameEventScriptBytecodeExpressionProgram expressionProgram,
         BytecodeVmValue item,
         out BytecodeVmValue value)
-        => TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
+    {
+        if (TryEvaluateProjectionFast(identifierSlot, expressionProgram, item, out value, out var handled))
+        {
+            return true;
+        }
+
+        return handled
+            ? false
+            : TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
+    }
+
+    private bool TryEvaluateProjectionFast(
+        int identifierSlot,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        BytecodeVmValue item,
+        out BytecodeVmValue value,
+        out bool handled)
+    {
+        value = BytecodeVmValue.Nothing;
+        handled = false;
+        var instructions = expressionProgram.Instructions;
+        if (!expressionProgram.CanEvaluateProjectionFast)
+        {
+            return false;
+        }
+
+        handled = true;
+        if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
+        {
+            return true;
+        }
+
+        var top = 0;
+        var stack0 = BytecodeVmValue.Nothing;
+        var stack1 = BytecodeVmValue.Nothing;
+        var stack2 = BytecodeVmValue.Nothing;
+
+        for (var index = 0; index < instructions.Length; index++)
+        {
+            var instruction = instructions[index];
+            switch (instruction.OpCode)
+            {
+                case GameEventScriptBytecodeOpCode.LoadConstant:
+                    if (!Push(LoadConstant(instruction.ConstantIndex)))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.LoadSlot:
+                    if (!Push(instruction.A == identifierSlot ? item : ResolveSlot(instruction.A)))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Cast:
+                    if (top < 1)
+                    {
+                        return false;
+                    }
+
+                    SetAt(top - 1, BytecodeVmValue.Boolean(GetAt(top - 1).AsBoolean()));
+                    break;
+
+                case GameEventScriptBytecodeOpCode.RulePredicate:
+                    if (top < 1)
+                    {
+                        return false;
+                    }
+
+                    var predicateInput = Pop();
+                    if (!TryEvaluateRulePredicate(instruction, predicateInput, 0, out var predicateValue))
+                    {
+                        return false;
+                    }
+
+                    if (!Push(predicateValue))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                default:
+                    if (top < 2)
+                    {
+                        return false;
+                    }
+
+                    var right = Pop();
+                    var left = Pop();
+                    if (!Push(EvaluateProgramBinary(instruction.OpCode, left, right)))
+                    {
+                        return false;
+                    }
+
+                    break;
+            }
+        }
+
+        if (top <= 0)
+        {
+            return false;
+        }
+
+        value = GetAt(top - 1);
+        return true;
+
+        bool Push(BytecodeVmValue input)
+        {
+            switch (top)
+            {
+                case 0:
+                    stack0 = input;
+                    top++;
+                    return true;
+                case 1:
+                    stack1 = input;
+                    top++;
+                    return true;
+                case 2:
+                    stack2 = input;
+                    top++;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        BytecodeVmValue Pop()
+        {
+            top--;
+            return top switch
+            {
+                0 => stack0,
+                1 => stack1,
+                _ => stack2
+            };
+        }
+
+        BytecodeVmValue GetAt(int index)
+            => index switch
+            {
+                0 => stack0,
+                1 => stack1,
+                _ => stack2
+            };
+
+        void SetAt(int index, BytecodeVmValue input)
+        {
+            switch (index)
+            {
+                case 0:
+                    stack0 = input;
+                    break;
+                case 1:
+                    stack1 = input;
+                    break;
+                default:
+                    stack2 = input;
+                    break;
+            }
+        }
+    }
 
     private bool TryExecuteExpressionProgramWithTemporarySlot(
         int slot,
@@ -4525,6 +4691,11 @@ internal readonly record struct BytecodeVmValue(
             return vectorResult;
         }
 
+        if (TryEvaluatePrimitivePercentage(left, "+", right, out var primitivePercentageResult))
+        {
+            return primitivePercentageResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return AddPercentage(left, right);
@@ -4587,6 +4758,11 @@ internal readonly record struct BytecodeVmValue(
             return vectorResult;
         }
 
+        if (TryEvaluatePrimitivePercentage(left, "-", right, out var primitivePercentageResult))
+        {
+            return primitivePercentageResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return SubtractPercentage(left, right);
@@ -4641,6 +4817,11 @@ internal readonly record struct BytecodeVmValue(
             return vectorResult;
         }
 
+        if (TryEvaluatePrimitivePercentage(left, "*", right, out var primitivePercentageResult))
+        {
+            return primitivePercentageResult;
+        }
+
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return MultiplyPercentage(left, right);
@@ -4692,6 +4873,11 @@ internal readonly record struct BytecodeVmValue(
         if (TryEvaluateVectorBinary(left, "/", right, out var vectorResult))
         {
             return vectorResult;
+        }
+
+        if (TryEvaluatePrimitivePercentage(left, "/", right, out var primitivePercentageResult))
+        {
+            return primitivePercentageResult;
         }
 
         if (left.IsPercentageLike() || right.IsPercentageLike())
@@ -4906,6 +5092,144 @@ internal readonly record struct BytecodeVmValue(
 
         resultUnit = null;
         return false;
+    }
+
+    private static bool TryEvaluatePrimitivePercentage(BytecodeVmValue left, string operation, BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        value = default;
+        if (!TryGetPrimitiveNumeric(left, out var leftNumber, out var leftUnit, out var leftIsPercentage) ||
+            !TryGetPrimitiveNumeric(right, out var rightNumber, out var rightUnit, out var rightIsPercentage) ||
+            !leftIsPercentage && !rightIsPercentage)
+        {
+            return false;
+        }
+
+        switch (operation)
+        {
+            case "+":
+                if (leftIsPercentage && rightIsPercentage)
+                {
+                    value = GesValueOperations.TryAddFinite(leftNumber, rightNumber, out var percentageSum)
+                        ? Percentage(percentageSum)
+                        : AddPercentage(left, right);
+                    return true;
+                }
+
+                if (leftIsPercentage)
+                {
+                    value = NaN();
+                    return true;
+                }
+
+                if (GesValueOperations.TryMultiplyFinite(leftNumber, rightNumber, out var addDelta) &&
+                    GesValueOperations.TryAddFinite(leftNumber, addDelta, out var addResult))
+                {
+                    value = Decimal(addResult, leftUnit);
+                    return true;
+                }
+
+                value = AddPercentage(left, right);
+                return true;
+
+            case "-":
+                if (leftIsPercentage && rightIsPercentage)
+                {
+                    value = GesValueOperations.TryNegateFinite(rightNumber, out var negatedRight) &&
+                            GesValueOperations.TryAddFinite(leftNumber, negatedRight, out var percentageDifference)
+                        ? Percentage(percentageDifference)
+                        : SubtractPercentage(left, right);
+                    return true;
+                }
+
+                if (leftIsPercentage)
+                {
+                    value = NaN();
+                    return true;
+                }
+
+                if (GesValueOperations.TryMultiplyFinite(leftNumber, rightNumber, out var subtractDelta) &&
+                    GesValueOperations.TryNegateFinite(subtractDelta, out var negatedDelta) &&
+                    GesValueOperations.TryAddFinite(leftNumber, negatedDelta, out var subtractResult))
+                {
+                    value = Decimal(subtractResult, leftUnit);
+                    return true;
+                }
+
+                value = SubtractPercentage(left, right);
+                return true;
+
+            case "*":
+                if (GesValueOperations.TryMultiplyFinite(leftNumber, rightNumber, out var product))
+                {
+                    value = leftIsPercentage && rightIsPercentage || leftIsPercentage && rightUnit is null
+                        ? Percentage(product)
+                        : Decimal(product, leftIsPercentage ? rightUnit : leftUnit);
+                    return true;
+                }
+
+                value = MultiplyPercentage(left, right);
+                return true;
+
+            case "/":
+                if (leftIsPercentage && rightUnit.HasValue)
+                {
+                    value = NaN();
+                    return true;
+                }
+
+                if (rightNumber != 0m &&
+                    GesValueOperations.TryDivideFinite(leftNumber, rightNumber, out var quotient))
+                {
+                    value = leftIsPercentage && rightIsPercentage
+                        ? Decimal(quotient)
+                        : leftIsPercentage
+                            ? Percentage(quotient)
+                            : Decimal(quotient, leftUnit);
+                    return true;
+                }
+
+                value = DividePercentage(left, right);
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private static bool TryGetPrimitiveNumeric(
+        BytecodeVmValue input,
+        out decimal number,
+        out GameEventScriptDecimalUnit? unit,
+        out bool isPercentage)
+    {
+        switch (input.Kind)
+        {
+            case BytecodeVmValueKind.Boolean:
+                number = input.BooleanValue ? 1m : 0m;
+                unit = null;
+                isPercentage = false;
+                return true;
+            case BytecodeVmValueKind.Integer:
+                number = input.IntegerValue;
+                unit = null;
+                isPercentage = false;
+                return true;
+            case BytecodeVmValueKind.Decimal:
+                number = input.Number;
+                unit = input.Unit;
+                isPercentage = false;
+                return true;
+            case BytecodeVmValueKind.Percentage:
+                number = input.Number;
+                unit = null;
+                isPercentage = true;
+                return true;
+            default:
+                number = default;
+                unit = null;
+                isPercentage = false;
+                return false;
+        }
     }
 
     private static BytecodeVmValue AddPercentage(BytecodeVmValue left, BytecodeVmValue right)

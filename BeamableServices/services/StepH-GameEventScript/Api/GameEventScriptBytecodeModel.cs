@@ -257,6 +257,39 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
     public GameEventScriptBytecodeInstruction[] Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
 
     public int MaxStackDepth { get; } = maxStackDepth;
+
+    internal bool CanEvaluateProjectionFast { get; } = CanEvaluateProjectionFastCore(instructions, maxStackDepth);
+
+    private static bool CanEvaluateProjectionFastCore(GameEventScriptBytecodeInstruction[] instructions, int maxStackDepth)
+        => instructions.Length is > 0 and <= 8 &&
+           maxStackDepth <= 3 &&
+           instructions.All(CanEvaluateProjectionInstructionFast);
+
+    private static bool CanEvaluateProjectionInstructionFast(GameEventScriptBytecodeInstruction instruction)
+        => instruction.OpCode switch
+        {
+            GameEventScriptBytecodeOpCode.LoadConstant => true,
+            GameEventScriptBytecodeOpCode.LoadSlot => true,
+            GameEventScriptBytecodeOpCode.Cast => instruction.CastKind == GameEventScriptBytecodeCastKind.Boolean,
+            GameEventScriptBytecodeOpCode.RulePredicate => instruction.ExpressionProgram is not null,
+            GameEventScriptBytecodeOpCode.Or => true,
+            GameEventScriptBytecodeOpCode.Xor => true,
+            GameEventScriptBytecodeOpCode.And => true,
+            GameEventScriptBytecodeOpCode.Equal => true,
+            GameEventScriptBytecodeOpCode.NotEqual => true,
+            GameEventScriptBytecodeOpCode.Less => true,
+            GameEventScriptBytecodeOpCode.Greater => true,
+            GameEventScriptBytecodeOpCode.LessOrEqual => true,
+            GameEventScriptBytecodeOpCode.GreaterOrEqual => true,
+            GameEventScriptBytecodeOpCode.Add => true,
+            GameEventScriptBytecodeOpCode.Subtract => true,
+            GameEventScriptBytecodeOpCode.Multiply => true,
+            GameEventScriptBytecodeOpCode.Divide => true,
+            GameEventScriptBytecodeOpCode.IntegerDivide => true,
+            GameEventScriptBytecodeOpCode.Modulo => true,
+            GameEventScriptBytecodeOpCode.Remainder => true,
+            _ => false
+        };
 }
 
 public enum GameEventScriptBytecodeSelectorKind

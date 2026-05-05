@@ -606,7 +606,6 @@ not a
 a and b
 a & b
 a xor b
-a ^ b
 a or b
 a | b
 ```
@@ -627,14 +626,15 @@ a + b
 a - b
 a * b
 a / b
+a ^ b
 a div b
 a mod b
 a rem b
 ```
 
-`/` is numeric division. `div` is floor division. `mod` is mathematical modulo.
-`rem` is truncating remainder. The `%` token is reserved for percentage literals
-such as `10%`; it is not the modulo operator.
+`/` is numeric division. `^` is exponentiation. `div` is floor division. `mod`
+is mathematical modulo. `rem` is truncating remainder. The `%` token is reserved
+for percentage literals such as `10%`; it is not the modulo operator.
 
 Integer `+`, `-`, `*`, `div`, `mod`, and `rem` preserve integer results when
 both operands are integers and the result fits the integer operation. Integer
@@ -642,6 +642,7 @@ both operands are integers and the result fits the integer operation. Integer
 
 ```eventscript
 6 * 7      // 42 as :integer
+3 ^ 2      // 9 as :integer
 7 / 2      // 3.5 as :decimal
 7 div 2    // 3 as :integer
 7 mod 3    // 1 as :integer

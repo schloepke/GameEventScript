@@ -712,9 +712,9 @@ internal static class GesBytecodeLowerer
     }
 
     private static bool IsKnownBinaryOperator(string operation)
-        => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or
+        => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or "^" or
             "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" or
-            "&" or "|" or "^" or "default" or "in" or "value in" or
+            "&" or "|" or "xor" or "default" or "in" or "value in" or
             "starts with" or "ends with" or
             "intersect" or "combine" or "merge" or "except" or "zip";
 
@@ -2498,7 +2498,7 @@ internal static class GesBytecodeLowerer
                 => operation switch
                 {
                     "|" => GameEventScriptBytecodeOpCode.Or,
-                    "^" => GameEventScriptBytecodeOpCode.Xor,
+                    "xor" => GameEventScriptBytecodeOpCode.Xor,
                     "&" => GameEventScriptBytecodeOpCode.And,
                     "=" or "==" => GameEventScriptBytecodeOpCode.Equal,
                     "<>" => GameEventScriptBytecodeOpCode.NotEqual,
@@ -2513,6 +2513,7 @@ internal static class GesBytecodeLowerer
                     "div" => GameEventScriptBytecodeOpCode.IntegerDivide,
                     "mod" => GameEventScriptBytecodeOpCode.Modulo,
                     "rem" => GameEventScriptBytecodeOpCode.Remainder,
+                    "^" => GameEventScriptBytecodeOpCode.Power,
                     "default" => GameEventScriptBytecodeOpCode.Default,
                     "in" => GameEventScriptBytecodeOpCode.Contains,
                     "value in" => GameEventScriptBytecodeOpCode.ContainsValue,

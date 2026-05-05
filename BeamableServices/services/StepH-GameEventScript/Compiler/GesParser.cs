@@ -802,7 +802,7 @@ internal sealed class GesParser
 
         while (Match(Xor))
         {
-            var op = "^";
+            var op = "xor";
             SkipNewLines();
             var right = ParseAndExpression();
             expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
@@ -1126,6 +1126,20 @@ internal sealed class GesParser
         return expression;
     }
 
+    private ExpressionNode ParsePowerExpression()
+    {
+        var expression = ParsePowerBaseExpression();
+
+        if (Match(Power))
+        {
+            SkipNewLines();
+            var right = ParseUnaryExpression();
+            expression = WithRange(new BinaryExpressionNode(expression, "^", right), expression, right);
+        }
+
+        return expression;
+    }
+
     private ExpressionNode ParseUnaryExpression()
     {
         SkipNewLines();
@@ -1159,27 +1173,7 @@ internal sealed class GesParser
         {
             if (!TryParseTaggedUnaryOperator(out var taggedOperator))
             {
-                if (IsExtensionCallStart())
-                {
-                    return ParseExtensionCallExpression();
-                }
-
-                if (MatchTag(":clamp"))
-                {
-                    return ParseClampExpression();
-                }
-
-                if (MatchTag(":min"))
-                {
-                    return ParseVariadicTaggedExpression("min");
-                }
-
-                if (MatchTag(":max"))
-                {
-                    return ParseVariadicTaggedExpression("max");
-                }
-
-                return ParsePostfixExpression();
+                return ParsePowerExpression();
             }
 
             SkipNewLines();
@@ -1198,6 +1192,31 @@ internal sealed class GesParser
         SkipNewLines();
         var operand = ParseUnaryExpression();
         return WithRange(new UnaryExpressionNode(op, operand), startToken, Previous);
+    }
+
+    private ExpressionNode ParsePowerBaseExpression()
+    {
+        if (IsExtensionCallStart())
+        {
+            return ParseExtensionCallExpression();
+        }
+
+        if (MatchTag(":clamp"))
+        {
+            return ParseClampExpression();
+        }
+
+        if (MatchTag(":min"))
+        {
+            return ParseVariadicTaggedExpression("min");
+        }
+
+        if (MatchTag(":max"))
+        {
+            return ParseVariadicTaggedExpression("max");
+        }
+
+        return ParsePostfixExpression();
     }
 
     private bool TryParseTaggedUnaryOperator(out string op)

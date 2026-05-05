@@ -355,7 +355,7 @@ internal static class GesValueOperations
         }
 
         if (unit is null &&
-            operation is "+" or "-" or "*" or "mod" or "rem" &&
+            operation is "+" or "-" or "*" or "mod" or "rem" or "^" &&
             left.Kind == GameEventScriptValueKind.Integer &&
             right.Kind == GameEventScriptValueKind.Integer &&
             TryToInteger(number, out var integer))
@@ -452,7 +452,7 @@ internal static class GesValueOperations
     {
         var leftHasUnit = GameEventScriptValue.TryGetDecimalUnit(left, out var leftUnit);
         var rightHasUnit = GameEventScriptValue.TryGetDecimalUnit(right, out var rightUnit);
-        if (operation is not ("+" or "-" or "*" or "/" or "div" or "mod" or "rem") || (!leftHasUnit && !rightHasUnit))
+        if (operation is not ("+" or "-" or "*" or "/" or "div" or "mod" or "rem" or "^") || (!leftHasUnit && !rightHasUnit))
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
@@ -492,6 +492,7 @@ internal static class GesValueOperations
             "div" => IntegerDivideNumeric(leftNumber, rightNumber),
             "mod" => ModuloNumeric(leftNumber, rightNumber),
             "rem" => RemainderNumeric(leftNumber, rightNumber),
+            "^" => PowerNumeric(leftNumber, rightNumber),
             _ => NumericValue.NaN()
         };
 
@@ -1377,6 +1378,86 @@ internal static class GesValueOperations
         }
 
         return NumericValue.NaN();
+    }
+
+    public static NumericValue PowerNumeric(NumericValue left, NumericValue right)
+    {
+        if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
+
+        if (left.IsFinite &&
+            right.IsFinite &&
+            TryGetIntegerExponent(right.Value, out var exponent) &&
+            exponent != long.MinValue)
+        {
+            return exponent < 0
+                ? DivideNumeric(NumericValue.Finite(1m), PowerFiniteNonNegativeIntegerExponent(left.Value, -exponent))
+                : PowerFiniteNonNegativeIntegerExponent(left.Value, exponent);
+        }
+
+        return FromDoublePower(ToDouble(left), ToDouble(right));
+    }
+
+    private static NumericValue PowerFiniteNonNegativeIntegerExponent(decimal value, long exponent)
+    {
+        var result = NumericValue.Finite(1m);
+        var factor = NumericValue.Finite(value);
+        while (exponent > 0)
+        {
+            if ((exponent & 1L) != 0)
+            {
+                result = MultiplyNumeric(result, factor);
+            }
+
+            exponent >>= 1;
+            if (exponent > 0)
+            {
+                factor = MultiplyNumeric(factor, factor);
+            }
+        }
+
+        return result;
+    }
+
+    private static bool TryGetIntegerExponent(decimal value, out long exponent)
+    {
+        if (value != decimal.Truncate(value) ||
+            value > long.MaxValue ||
+            value < long.MinValue)
+        {
+            exponent = default;
+            return false;
+        }
+
+        exponent = (long)value;
+        return true;
+    }
+
+    private static double ToDouble(NumericValue value)
+        => value.Kind switch
+        {
+            NumericKind.Finite => (double)value.Value,
+            NumericKind.PositiveInfinity => double.PositiveInfinity,
+            NumericKind.NegativeInfinity => double.NegativeInfinity,
+            _ => double.NaN
+        };
+
+    private static NumericValue FromDoublePower(double left, double right)
+    {
+        var result = Math.Pow(left, right);
+        if (double.IsNaN(result)) return NumericValue.NaN();
+        if (double.IsPositiveInfinity(result)) return NumericValue.PositiveInfinity();
+        if (double.IsNegativeInfinity(result)) return NumericValue.NegativeInfinity();
+
+        try
+        {
+            return NumericValue.Finite((decimal)result);
+        }
+        catch (OverflowException)
+        {
+            return result < 0d
+                ? NumericValue.NegativeInfinity()
+                : NumericValue.PositiveInfinity();
+        }
     }
 
     public static NumericValue NegateNumeric(NumericValue value)

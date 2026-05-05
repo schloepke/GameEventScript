@@ -263,7 +263,7 @@ instead of relying on C# `try/finally`.
 Keep the existing optimized numeric and boolean operations where useful:
 
 - `Add`, `Subtract`, `Multiply`, `Divide`
-- `IntegerDivide`, `Modulo`, `Remainder`
+- `Power`, `IntegerDivide`, `Modulo`, `Remainder`
 - primitive integer variants
 - `Equal`, `NotEqual`, comparisons
 - `And`, `Or`, `Xor`, `Unary`, `Variadic`

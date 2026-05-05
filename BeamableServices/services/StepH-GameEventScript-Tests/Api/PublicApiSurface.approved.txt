@@ -218,6 +218,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Pipeline = 61
   enum-field GeneratedCollection = 62
   enum-field GuardedChoice = 63
+  enum-field Power = 64
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineProgram
   ctor GameEventScriptBytecodePipelineProgram(StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram sourceProgram, StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorProgram[] prefixSelectors, StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorProgram terminalSelector)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeExpressionProgram SourceProgram { get }

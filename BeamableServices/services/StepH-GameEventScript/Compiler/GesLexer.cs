@@ -91,6 +91,7 @@ internal enum GesTokenKind
     IntegerDivide,
     Modulo,
     Remainder,
+    Power,
     Not
 }
 
@@ -452,7 +453,7 @@ internal sealed class GesLexer
                     '<' => CreateToken(GesTokenKind.Less, "<", line, column),
                     '>' => CreateToken(GesTokenKind.Greater, ">", line, column),
                     '|' => CreateToken(GesTokenKind.Or, "|", line, column),
-                    '^' => CreateToken(GesTokenKind.Xor, "^", line, column),
+                    '^' => CreateToken(GesTokenKind.Power, "^", line, column),
                     '&' => CreateToken(GesTokenKind.And, "&", line, column),
                     '+' => CreateToken(GesTokenKind.Plus, "+", line, column),
                     '-' => CreateToken(GesTokenKind.Minus, "-", line, column),

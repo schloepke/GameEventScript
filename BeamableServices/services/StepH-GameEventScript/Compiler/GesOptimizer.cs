@@ -794,7 +794,7 @@ internal static class GesOptimizer
             case "|":
                 value = GameEventScriptValueFactory.GesBoolean(left.AsBoolean() || right.AsBoolean());
                 return true;
-            case "^":
+            case "xor":
                 value = GameEventScriptValueFactory.GesBoolean(left.AsBoolean() ^ right.AsBoolean());
                 return true;
             case "&":
@@ -1012,6 +1012,21 @@ internal static class GesOptimizer
                 }
 
                 value = ToGameEventScriptNumericResult(left, "rem", right, RemainderNumeric(leftRemainder, rightRemainder));
+                return true;
+            case "^":
+                if (GesValueOperations.TryEvaluateUnitBinary(left, "^", right, out value))
+                {
+                    return true;
+                }
+
+                if (!GesValueOperations.TryCoerceNumericForOperation(left, out var leftPower) ||
+                    !GesValueOperations.TryCoerceNumericForOperation(right, out var rightPower))
+                {
+                    value = GameEventScriptNothingValue.Instance;
+                    return false;
+                }
+
+                value = GesValueOperations.ToGameEventScriptNumericResult(left, "^", right, GesValueOperations.PowerNumeric(leftPower, rightPower));
                 return true;
             default:
                 value = GameEventScriptNothingValue.Instance;

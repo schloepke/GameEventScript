@@ -65,7 +65,7 @@ CollectionCombineOperator ::= ":intersect"
                             | ":zip"
 
 OrExpression ::= XorExpression { ( "|" | "or" ) XorExpression }
-XorExpression ::= AndExpression { ( "^" | "xor" ) AndExpression }
+XorExpression ::= AndExpression { "xor" AndExpression }
 AndExpression ::= EqualityExpression { ( "&" | "and" ) EqualityExpression }
 EqualityExpression ::= MembershipExpression { ( "=" | "<>" ) MembershipExpression }
 MembershipExpression ::= TypeCheckExpression { MembershipOperator TypeCheckExpression }
@@ -95,11 +95,13 @@ UnaryExpression ::= "-" UnaryExpression
                   | "not" UnaryExpression
                   | "has" "value" UnaryExpression
                   | "empty" UnaryExpression
-                  | ExtensionCallExpression
-                  | ClampExpression
-                  | VariadicTaggedExpression
                   | UnaryTag UnaryExpression
-                  | PostfixExpression
+                  | PowerExpression
+PowerExpression ::= PowerBaseExpression [ "^" UnaryExpression ]
+PowerBaseExpression ::= ExtensionCallExpression
+                      | ClampExpression
+                      | VariadicTaggedExpression
+                      | PostfixExpression
 UnaryTag ::= ":len"
            | ":chance"
            | ":keys"

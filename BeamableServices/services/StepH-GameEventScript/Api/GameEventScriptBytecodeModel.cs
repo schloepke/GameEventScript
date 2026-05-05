@@ -225,7 +225,8 @@ public enum GameEventScriptBytecodeOpCode
     TypeCheck,
     Pipeline,
     GeneratedCollection,
-    GuardedChoice
+    GuardedChoice,
+    Power
 }
 
 public enum GameEventScriptBytecodeCallableKind
@@ -337,6 +338,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.Or => true,
             GameEventScriptBytecodeOpCode.Xor => true,
             GameEventScriptBytecodeOpCode.And => true,
+            GameEventScriptBytecodeOpCode.Power => true,
             GameEventScriptBytecodeOpCode.Equal => true,
             GameEventScriptBytecodeOpCode.NotEqual => true,
             GameEventScriptBytecodeOpCode.Less => true,
@@ -370,6 +372,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
         => opCode is GameEventScriptBytecodeOpCode.Or or
             GameEventScriptBytecodeOpCode.Xor or
             GameEventScriptBytecodeOpCode.And or
+            GameEventScriptBytecodeOpCode.Power or
             GameEventScriptBytecodeOpCode.Equal or
             GameEventScriptBytecodeOpCode.NotEqual or
             GameEventScriptBytecodeOpCode.Less or

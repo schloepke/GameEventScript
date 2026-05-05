@@ -988,6 +988,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     case GameEventScriptBytecodeOpCode.Or:
                     case GameEventScriptBytecodeOpCode.Xor:
                     case GameEventScriptBytecodeOpCode.And:
+                    case GameEventScriptBytecodeOpCode.Power:
                     case GameEventScriptBytecodeOpCode.Equal:
                     case GameEventScriptBytecodeOpCode.NotEqual:
                     case GameEventScriptBytecodeOpCode.Less:

@@ -1002,8 +1002,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "xor supports word and symbol forms",
-      "script": "on Start {\n  emit Done(wordTrue: true xor false, wordFalse: true xor true, symbolTrue: true ^ false, symbolFalse: false ^ false)\n}",
+      "name": "xor word operator and power symbol operator",
+      "script": "on Start {\n  emit Done(wordTrue: true xor false, wordFalse: true xor true, square: 3 ^ 2, rightAssoc: 2 ^ 3 ^ 2, fractional: 9 ^ 0.5, negativeExponent: 2 ^ -2, negatedSquare: -3 ^ 2, negativeBaseSquare: (0 - 3) ^ 2, precedence: 2 + 3 ^ 2 * 4, unitPower: 2m ^ 2)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -1013,8 +1013,14 @@
               "args": {
                 "wordTrue": { "type": ":boolean", "value": true },
                 "wordFalse": { "type": ":boolean", "value": false },
-                "symbolTrue": { "type": ":boolean", "value": true },
-                "symbolFalse": { "type": ":boolean", "value": false }
+                "square": { "type": ":integer", "value": "9" },
+                "rightAssoc": { "type": ":integer", "value": "512" },
+                "fractional": { "type": ":decimal", "value": "3" },
+                "negativeExponent": { "type": ":decimal", "value": "0.25" },
+                "negatedSquare": { "type": ":decimal", "value": "-9" },
+                "negativeBaseSquare": { "type": ":integer", "value": "9" },
+                "precedence": { "type": ":integer", "value": "38" },
+                "unitPower": { "type": ":decimal", "value": "NaN" }
               }
             }
           ]

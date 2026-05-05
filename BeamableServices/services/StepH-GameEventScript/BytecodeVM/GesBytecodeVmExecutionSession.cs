@@ -563,6 +563,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.Or:
                 case GameEventScriptBytecodeOpCode.Xor:
                 case GameEventScriptBytecodeOpCode.And:
+                case GameEventScriptBytecodeOpCode.Power:
                 case GameEventScriptBytecodeOpCode.Equal:
                 case GameEventScriptBytecodeOpCode.NotEqual:
                 case GameEventScriptBytecodeOpCode.Less:
@@ -1054,6 +1055,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
             case GameEventScriptBytecodeOpCode.And:
                 return BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean());
+            case GameEventScriptBytecodeOpCode.Power:
+                return BytecodeVmValue.Power(left, right);
             case GameEventScriptBytecodeOpCode.Equal:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
             case GameEventScriptBytecodeOpCode.NotEqual:
@@ -1489,7 +1492,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = operation switch
         {
             "|" => BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean()),
-            "^" => BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
+            "xor" => BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
             "&" => BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean()),
             "=" or "==" => BytecodeVmValue.Boolean(GesValueOperations.AreEqual(left, right)),
             "<>" => BytecodeVmValue.Boolean(!GesValueOperations.AreEqual(left, right)),
@@ -1508,6 +1511,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "div" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "div", right)),
             "mod" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
             "rem" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
+            "^" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "^", right)),
             "intersect" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionIntersect(left, right)),
             "combine" or "merge" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionCombine(left, right)),
             "except" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionExcept(left, right)),
@@ -1522,8 +1526,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
         => opCode switch
         {
             GameEventScriptBytecodeOpCode.Or => "|",
-            GameEventScriptBytecodeOpCode.Xor => "^",
+            GameEventScriptBytecodeOpCode.Xor => "xor",
             GameEventScriptBytecodeOpCode.And => "&",
+            GameEventScriptBytecodeOpCode.Power => "^",
             GameEventScriptBytecodeOpCode.Equal => "=",
             GameEventScriptBytecodeOpCode.NotEqual => "<>",
             GameEventScriptBytecodeOpCode.Less => "<",
@@ -1643,6 +1648,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "div" => GesValueOperations.IntegerDivideNumeric(leftNumeric, rightNumeric),
             "mod" => GesValueOperations.ModuloNumeric(leftNumeric, rightNumeric),
             "rem" => GesValueOperations.RemainderNumeric(leftNumeric, rightNumeric),
+            "^" => GesValueOperations.PowerNumeric(leftNumeric, rightNumeric),
             _ => GesValueOperations.NumericValue.NaN()
         };
         return GesValueOperations.ToGameEventScriptNumericResult(left, operation, right, result);
@@ -4953,6 +4959,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         => opCode is GameEventScriptBytecodeOpCode.Or or
             GameEventScriptBytecodeOpCode.Xor or
             GameEventScriptBytecodeOpCode.And or
+            GameEventScriptBytecodeOpCode.Power or
             GameEventScriptBytecodeOpCode.Equal or
             GameEventScriptBytecodeOpCode.NotEqual or
             GameEventScriptBytecodeOpCode.Less or
@@ -5996,6 +6003,33 @@ internal readonly record struct BytecodeVmValue(
         }
 
         return FromDecimalNumeric(GesValueOperations.RemainderNumeric(leftNumber, rightNumber), leftUnit);
+    }
+
+    public static BytecodeVmValue Power(in BytecodeVmValue left, in BytecodeVmValue right)
+    {
+        if (GesValueOperations.TryEvaluateUnitBinary(left.ToGameEventScriptValue(), "^", right.ToGameEventScriptValue(), out var unitResult))
+        {
+            return FromGameEventScriptValue(unitResult);
+        }
+
+        if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
+            !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
+        {
+            return NaN();
+        }
+
+        if (leftUnit.HasValue || rightUnit.HasValue)
+        {
+            return NaN();
+        }
+
+        var result = GesValueOperations.PowerNumeric(leftNumber, rightNumber);
+        return result.IsFinite &&
+               left.Kind == BytecodeVmValueKind.Integer &&
+               right.Kind == BytecodeVmValueKind.Integer &&
+               TryToInteger(result.Value, out var integer)
+            ? Integer(integer)
+            : FromDecimalNumeric(result);
     }
 
     private static bool TryGetDivideResultUnit(

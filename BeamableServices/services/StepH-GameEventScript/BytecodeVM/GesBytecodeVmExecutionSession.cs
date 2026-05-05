@@ -2170,10 +2170,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryConvertDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
     {
+        if (TryConvertPrimitiveDeclaredType(declaredType, input, out value))
+        {
+            return true;
+        }
+
         var boxed = input.ToGameEventScriptValue();
         value = declaredType switch
         {
-            "nothing" => BytecodeVmValue.Nothing,
             "tag" => BytecodeVmValue.Reference(GesTag(boxed.AsText())),
             "text" => BytecodeVmValue.Reference(GesText(GesValueOperations.ToText(boxed))),
             "percentage" => BytecodeVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
@@ -2184,7 +2188,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "vector3" => BytecodeVmValue.Reference(ConvertToVector3(boxed)),
             "point2" => BytecodeVmValue.Reference(ConvertToPoint2(boxed)),
             "point3" => BytecodeVmValue.Reference(ConvertToPoint3(boxed)),
-            "boolean" => BytecodeVmValue.Boolean(boxed.AsBoolean()),
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
             "decimal" or "number" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimal(boxed)),
             "sequence" => BytecodeVmValue.Reference(boxed.IsSequence() ? boxed : GameEventScriptValueFactory.GesSequence(boxed.AsEnumerable())),
@@ -2218,6 +2221,107 @@ internal sealed partial class GesBytecodeVmExecutionSession
         };
 
         return true;
+    }
+
+    private static bool TryConvertPrimitiveDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
+    {
+        switch (declaredType)
+        {
+            case "nothing":
+                value = BytecodeVmValue.Nothing;
+                return true;
+            case "boolean":
+                value = BytecodeVmValue.Boolean(input.AsBoolean());
+                return true;
+            case "integer" when input.Kind == BytecodeVmValueKind.Integer:
+                value = input;
+                return true;
+            case "integer" when input.Kind == BytecodeVmValueKind.Boolean:
+                value = BytecodeVmValue.Integer(input.BooleanValue ? 1 : 0);
+                return true;
+            case "integer" when input.Kind == BytecodeVmValueKind.Decimal:
+                value = BytecodeVmValue.Integer(ToLongSaturated(input.Number));
+                return true;
+            case "integer" when input.Kind == BytecodeVmValueKind.Percentage:
+                value = BytecodeVmValue.Integer(GameEventScriptValue.ToIntegerPercentage(input.Number));
+                return true;
+            case "decimal":
+            case "number":
+                return TryConvertPrimitiveToDecimal(input, out value);
+            case "percentage":
+                return TryConvertPrimitiveToPercentage(input, out value);
+            case "degree":
+                return TryConvertPrimitiveToDecimalUnit(input, GameEventScriptDecimalUnit.Degree, out value);
+            case "meter":
+                return TryConvertPrimitiveToDecimalUnit(input, GameEventScriptDecimalUnit.Meter, out value);
+            case "second":
+                return TryConvertPrimitiveToDecimalUnit(input, GameEventScriptDecimalUnit.Second, out value);
+            default:
+                value = input;
+                return false;
+        }
+    }
+
+    private static bool TryConvertPrimitiveToDecimal(BytecodeVmValue input, out BytecodeVmValue value)
+    {
+        value = input.Kind switch
+        {
+            BytecodeVmValueKind.Integer => BytecodeVmValue.Decimal(input.IntegerValue),
+            BytecodeVmValueKind.Boolean => BytecodeVmValue.Decimal(input.BooleanValue ? 1m : 0m),
+            BytecodeVmValueKind.Decimal => input.Unit.HasValue ? BytecodeVmValue.Decimal(input.Number) : input,
+            BytecodeVmValueKind.Percentage => BytecodeVmValue.Decimal(input.Number),
+            _ => input
+        };
+
+        return input.Kind is BytecodeVmValueKind.Integer
+            or BytecodeVmValueKind.Boolean
+            or BytecodeVmValueKind.Decimal
+            or BytecodeVmValueKind.Percentage;
+    }
+
+    private static bool TryConvertPrimitiveToPercentage(BytecodeVmValue input, out BytecodeVmValue value)
+    {
+        switch (input.Kind)
+        {
+            case BytecodeVmValueKind.Percentage:
+                value = input;
+                return true;
+            case BytecodeVmValueKind.Integer:
+                value = BytecodeVmValue.Percentage(input.IntegerValue / 100m);
+                return true;
+            case BytecodeVmValueKind.Boolean:
+                value = BytecodeVmValue.Percentage(input.BooleanValue ? 1m : 0m);
+                return true;
+            case BytecodeVmValueKind.Decimal when input.Unit.HasValue:
+                value = BytecodeVmValue.NaN();
+                return true;
+            case BytecodeVmValueKind.Decimal:
+                var number = input.Number;
+                value = BytecodeVmValue.Percentage(number > 1m || number < -1m ? number / 100m : number);
+                return true;
+            default:
+                value = input;
+                return false;
+        }
+    }
+
+    private static bool TryConvertPrimitiveToDecimalUnit(BytecodeVmValue input, GameEventScriptDecimalUnit unit, out BytecodeVmValue value)
+    {
+        switch (input.Kind)
+        {
+            case BytecodeVmValueKind.Integer:
+                value = BytecodeVmValue.Decimal(input.IntegerValue, unit);
+                return true;
+            case BytecodeVmValueKind.Decimal when input.Unit.HasValue && input.Unit != unit:
+                value = BytecodeVmValue.NaN();
+                return true;
+            case BytecodeVmValueKind.Decimal:
+                value = BytecodeVmValue.Decimal(input.Number, unit);
+                return true;
+            default:
+                value = input;
+                return false;
+        }
     }
 
     private bool TryConvertParameterType(IReadOnlyList<string?>? declaredTypes, int index, BytecodeVmValue input, out BytecodeVmValue value)

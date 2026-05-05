@@ -5,7 +5,7 @@
     {
       "kind": "compileError",
       "name": "missing expression in let statement fails syntax analysis",
-      "script": "on Broken {\n  let x be\n  publish Done\n}",
+      "script": "on Broken {\n  let x be\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -13,7 +13,7 @@
     {
       "kind": "compileError",
       "name": "malformed rule parameter fails syntax analysis",
-      "script": "module BrokenCombat\nrule unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  publish Done\n}",
+      "script": "module BrokenCombat\nrule unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -94,7 +94,7 @@
     {
       "kind": "compileError",
       "name": "direct range is rejected after in for loops",
-      "script": "on Start {\n  for item in from 1 to 10 publish Seen(value: item)\n}",
+      "script": "on Start {\n  for item in from 1 to 10 emit Seen(value: item)\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -110,7 +110,7 @@
     {
       "kind": "compileError",
       "name": "seeded random blocks cannot be value expressions",
-      "script": "on Start(seed) {\n  let values be :random with seed {\n    publish Done\n  }\n}",
+      "script": "on Start(seed) {\n  let values be :random with seed {\n    emit Done\n  }\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -134,15 +134,15 @@
     {
       "kind": "compileError",
       "name": "handler headers reject handler tag prefix",
-      "script": "on :handler Shoot(unit, target) {\n  publish Done\n}",
+      "script": "on :handler Shoot(unit, target) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }
     },
     {
       "kind": "compileError",
-      "name": "publish rejects incomplete labeled message arguments",
-      "script": "on Start(unit, target) {\n  publish Shoot(unit:)\n}",
+      "name": "emit rejects incomplete labeled message arguments",
+      "script": "on Start(unit, target) {\n  emit Shoot(unit:)\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -150,7 +150,7 @@
     {
       "kind": "compileError",
       "name": "prefix message and handler literals are rejected",
-      "script": "on Start(unit, target) {\n  let h as :handler be :handler Shoot(unit, target)\n  let m as :message be :message Shoot(unit: unit, target: target)\n  publish :message Shoot(unit: unit, target: target)\n}",
+      "script": "on Start(unit, target) {\n  let h as :handler be :handler Shoot(unit, target)\n  let m as :message be :message Shoot(unit: unit, target: target)\n  emit :message Shoot(unit: unit, target: target)\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -166,7 +166,7 @@
     {
       "kind": "compileError",
       "name": "rule select and handler identifiers enforce casing",
-      "script": "rule Wounded(unit) means unit.hp < unit.maxHp\nselect filter(Units) means Units\non Start(Target) {\n  publish Done\n}",
+      "script": "rule Wounded(unit) means unit.hp < unit.maxHp\nselect filter(Units) means Units\non Start(Target) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }

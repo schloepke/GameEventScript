@@ -37,7 +37,7 @@ public sealed class BytecodeVmPerformanceReportTests
             let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value -> (value + item) * 2][:sum value -> value]
           }
           let workTotal be values[:filter value where value >= 10][:select value -> value + 5%][:select value -> value * 2][:sum value -> value]
-          publish Done(total: total, average: average, oddCount: oddCount, directOddScaled: directOddScaled, first: firstBoosted, scaled: scaled, folded: folded, workTotal: workTotal)
+          emit Done(total: total, average: average, oddCount: oddCount, directOddScaled: directOddScaled, first: firstBoosted, scaled: scaled, folded: folded, workTotal: workTotal)
         }
         """;
 
@@ -121,7 +121,7 @@ public sealed class BytecodeVmPerformanceReportTests
     private void WriteReport<T>(string engine, Measured<T> compile, EngineRunMetrics run)
     {
         TestContext.WriteLine(
-            "{0}: compile {1:0.###} ms, compile allocated {2}, run {3:0.###} ms for {4} publishes, run allocated total {5}, run allocated per publish {6}",
+            "{0}: compile {1:0.###} ms, compile allocated {2}, run {3:0.###} ms for {4} emits, run allocated total {5}, run allocated per emit {6}",
             engine,
             compile.Elapsed.TotalMilliseconds,
             FormatBytes(compile.AllocatedBytes),

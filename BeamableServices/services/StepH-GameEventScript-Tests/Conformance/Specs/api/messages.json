@@ -65,7 +65,7 @@
     {
       "kind": "compileMetadata",
       "name": "compiled scripts expose message definitions",
-      "script": "module MessageDefinitions\non Start(playerId) {\n  publish Done(playerId: playerId)\n}",
+      "script": "module MessageDefinitions\non Start(playerId) {\n  emit Done(playerId: playerId)\n}",
       "expectedMessageDefinitions": [
         {
           "name": "Start",

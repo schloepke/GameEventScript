@@ -371,12 +371,54 @@ internal sealed class GesParser
             Expect(RightParen);
         }
 
+        var requiredTags = new List<string>();
+        var excludedTags = new List<string>();
+        ParseOptionalHandlerTagFilters(requiredTags, excludedTags);
+
         SkipNewLines();
         Expect(LeftBrace);
         var statements = ParseStatementsUntil(RightBrace);
         Expect(RightBrace);
 
-        return WithRange(new EventHandlerNode(message, parameters, statements), startToken);
+        return WithRange(new EventHandlerNode(message, parameters, statements, requiredTags, excludedTags), startToken);
+    }
+
+    private void ParseOptionalHandlerTagFilters(List<string> requiredTags, List<string> excludedTags)
+    {
+        while (true)
+        {
+            SkipNewLines();
+            if (Match(Matching))
+            {
+                ParseHandlerTagList(requiredTags);
+                continue;
+            }
+
+            if (Match(Without))
+            {
+                ParseHandlerTagList(excludedTags);
+                continue;
+            }
+
+            return;
+        }
+    }
+
+    private void ParseHandlerTagList(List<string> tags)
+    {
+        do
+        {
+            SkipNewLines();
+            var tag = Expect(Tag).Text[1..];
+            var normalized = GameEventScriptMessage.NormalizeTagName(tag);
+            if (normalized.Length > 0 && !tags.Contains(normalized, StringComparer.Ordinal))
+            {
+                tags.Add(normalized);
+            }
+
+            SkipNewLines();
+        }
+        while (Match(Comma));
     }
 
     private IReadOnlyList<StatementNode> ParseStatementsUntil(GesTokenKind closingKind)
@@ -418,9 +460,14 @@ internal sealed class GesParser
             return ParseSeededRandomStatement();
         }
 
+        if (Match(Emit))
+        {
+            return ParsePublishStatement(PublishStatementKind.Emit);
+        }
+
         if (Match(Publish))
         {
-            return ParsePublishStatement();
+            return ParsePublishStatement(PublishStatementKind.Publish);
         }
 
         if (Match(Let))
@@ -442,12 +489,13 @@ internal sealed class GesParser
         return WithRange(new ExpressionStatementNode(expression), expression);
     }
 
-    private PublishStatementNode ParsePublishStatement()
+    private PublishStatementNode ParsePublishStatement(PublishStatementKind kind)
     {
         var startToken = Previous;
         SkipNewLines();
         var messageExpression = ParsePublishMessageExpression();
-        return WithRange(new PublishStatementNode(messageExpression), startToken);
+        var tagExpressions = ParseOptionalTagExpressions();
+        return WithRange(new PublishStatementNode(kind, messageExpression, tagExpressions), startToken);
     }
 
     private ExpressionNode ParsePublishMessageExpression()
@@ -458,6 +506,24 @@ internal sealed class GesParser
         }
 
         return ParseExpression();
+    }
+
+    private IReadOnlyList<ExpressionNode> ParseOptionalTagExpressions()
+    {
+        if (!Match(With))
+        {
+            return [];
+        }
+
+        var tags = new List<ExpressionNode>();
+        do
+        {
+            SkipNewLines();
+            tags.Add(ParseExpression());
+        }
+        while (Match(Comma));
+
+        return tags;
     }
 
     private ArgumentNode ParseArgument()

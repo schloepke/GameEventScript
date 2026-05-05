@@ -17,6 +17,7 @@ public sealed class GameEventScriptHostBuilder
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
     private GameEventScriptDispatchMode _dispatchMode = GameEventScriptDispatchMode.Manual;
     private GameEventScriptDispatcher? _dispatcher;
+    private Func<GameEventScriptMessage, bool>? _publishHook;
 
     /// <summary>
     /// Configures the <see cref="GameEventScriptHostBuilder"/> to use the specified
@@ -73,6 +74,18 @@ public sealed class GameEventScriptHostBuilder
     public GameEventScriptHostBuilder WithPublishedMessageObserver(Action<GameEventScriptMessage> publishedMessageObserver)
     {
         _publishedMessageObserver = publishedMessageObserver ?? throw new ArgumentNullException(nameof(publishedMessageObserver));
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the hook used when scripts or C# handlers call <see cref="GameEventScriptContext.Publish(GameEventScriptMessage)"/>.
+    /// When no hook is configured, publish falls back to local emit behavior.
+    /// </summary>
+    /// <param name="publishHook">The publish hook to invoke for outbound published messages.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptHostBuilder WithPublishHook(Func<GameEventScriptMessage, bool> publishHook)
+    {
+        _publishHook = publishHook ?? throw new ArgumentNullException(nameof(publishHook));
         return this;
     }
 
@@ -159,5 +172,5 @@ public sealed class GameEventScriptHostBuilder
     /// A new instance of <see cref="GameEventScriptHost"/> configured with the specified
     /// random generator, diagnostic collector, message observer, extension registry, and runtime limits.
     /// </returns>
-    public GameEventScriptHost Build() => new(_random ?? GameEventScriptRandomGenerator.Create(), _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, _dispatchMode, _dispatcher);
+    public GameEventScriptHost Build() => new(_random ?? GameEventScriptRandomGenerator.Create(), _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, _dispatchMode, _dispatcher, _publishHook);
 }

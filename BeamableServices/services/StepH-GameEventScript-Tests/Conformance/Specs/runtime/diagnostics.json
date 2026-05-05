@@ -6,7 +6,7 @@
       "kind": "scriptApi",
       "name": "compile diagnostics record handler bindings and published events",
       "compileOptions": { "enableDiagnostics": true },
-      "script": "on Start(value) {\n  let score be value + 2\n  publish Done(result: score)\n}",
+      "script": "on Start(value) {\n  let score be value + 2\n  emit Done(result: score)\n}",
       "steps": [
         {
           "input": {
@@ -35,7 +35,7 @@
       "kind": "scriptApi",
       "name": "compile diagnostics record rule and select calls",
       "compileOptions": { "enableDiagnostics": true },
-      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  publish Done(byRule: byRule, count: :len bySelect)\n}",
+      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  emit Done(byRule: byRule, count: :len bySelect)\n}",
       "steps": [
         {
           "input": {
@@ -81,9 +81,9 @@
     },
     {
       "kind": "scriptApi",
-      "name": "compile diagnostics can be disabled while host publish diagnostics remain visible",
+      "name": "compile diagnostics can be disabled while host runtime diagnostics remain visible",
       "compileOptions": { "enableDiagnostics": false },
-      "script": "on Start(value) {\n  publish Done(value: value)\n}",
+      "script": "on Start(value) {\n  emit Done(value: value)\n}",
       "steps": [
         {
           "input": {

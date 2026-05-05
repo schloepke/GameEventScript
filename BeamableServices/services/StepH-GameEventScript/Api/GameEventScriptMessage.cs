@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Types;
@@ -27,6 +28,16 @@ public sealed class GameEventScriptMessage
     /// This parameter can be null if no arguments are provided.</param>
     /// <returns>Returns a <see cref="GameEventScriptMessage"/> object encapsulating the specified name and arguments.</returns>
     public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments) => new(name, GameEventScriptNamedArguments.Create(arguments));
+
+    /// <summary>
+    /// Creates a new message with the provided arguments and envelope tags. Tags are metadata and are not part of the message signature.
+    /// </summary>
+    /// <param name="name">The message name.</param>
+    /// <param name="arguments">The named message arguments.</param>
+    /// <param name="tags">Envelope tags associated with the message.</param>
+    /// <returns>A new message instance.</returns>
+    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags)
+        => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
 
     /// <summary>
     /// Constructs a <see cref="GameEventScriptMessage"/> instance with a specified name and associated arguments.
@@ -73,6 +84,11 @@ public sealed class GameEventScriptMessage
     public GameEventScriptNamedArguments Arguments { get; }
 
     /// <summary>
+    /// Gets the normalized envelope tags associated with this message. Tags do not affect the message signature.
+    /// </summary>
+    public IReadOnlyList<string> Tags { get; }
+
+    /// <summary>
     /// Represents a unique identifier for the signature of a <see cref="GameEventScriptMessage"/>.
     /// The value is derived from the normalized name of the message and its associated arguments,
     /// allowing for precise matching and routing within the game event script system.
@@ -84,21 +100,96 @@ public sealed class GameEventScriptMessage
     /// This representation includes the message name and, if present, its associated arguments.
     /// </summary>
     /// <returns>A string that represents the current GameEventScriptMessage instance.</returns>
-    public override string ToString() => Arguments.Count == 0 ? Name : $"{Name}({Arguments})";
+    public override string ToString()
+    {
+        var message = Arguments.Count == 0 ? Name : $"{Name}({Arguments})";
+        return Tags.Count == 0
+            ? message
+            : $"{message} with {string.Join(", ", Tags.Select(tag => $":{tag}"))}";
+    }
 
-    private GameEventScriptMessage(string name, GameEventScriptNamedArguments? arguments = null)
+    /// <summary>
+    /// Determines whether the message has the specified normalized envelope tag.
+    /// </summary>
+    /// <param name="tag">The tag to check. A leading colon is accepted.</param>
+    /// <returns><c>true</c> when the tag is present; otherwise <c>false</c>.</returns>
+    public bool HasTag(string tag)
+    {
+        var normalized = NormalizeTagName(tag);
+        return !string.IsNullOrEmpty(normalized) && Tags.Contains(normalized, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Creates a copy of this message with the provided envelope tags merged into the existing tag set.
+    /// </summary>
+    /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
+    /// <returns>A message copy with the merged tags.</returns>
+    public GameEventScriptMessage WithTags(IEnumerable<string>? tags)
+    {
+        var normalizedTags = NormalizeTags(Tags.Concat(tags ?? []));
+        return new GameEventScriptMessage(Name, Arguments, SignatureId, normalizedTags);
+    }
+
+    /// <summary>
+    /// Creates a copy of this message with the provided envelope tags merged into the existing tag set.
+    /// </summary>
+    /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
+    /// <returns>A message copy with the merged tags.</returns>
+    public GameEventScriptMessage WithTags(params string[] tags)
+        => WithTags((IEnumerable<string>?)tags);
+
+    private GameEventScriptMessage(string name, GameEventScriptNamedArguments? arguments = null, IEnumerable<string>? tags = null)
     {
         Name = GameEventScriptMessageSignature.NormalizeMessageName(name);
         Arguments = arguments ?? GameEventScriptNamedArguments.Empty;
         SignatureId = GameEventScriptMessageSignature.CreateSignatureId(Name, Arguments.SignatureLabels);
+        Tags = NormalizeTags(tags);
     }
 
-    private GameEventScriptMessage(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId)
+    private GameEventScriptMessage(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId, IReadOnlyList<string>? tags = null)
     {
         Name = normalizedName;
         Arguments = arguments;
         SignatureId = signatureId;
+        Tags = tags ?? [];
     }
 
-    internal static GameEventScriptMessage CreatePrecomputed(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId) => new(normalizedName, arguments, signatureId);
+    internal static GameEventScriptMessage CreatePrecomputed(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId, IEnumerable<string>? tags = null)
+        => new(normalizedName, arguments, signatureId, NormalizeTags(tags));
+
+    internal static string NormalizeTagName(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return string.Empty;
+        }
+
+        var normalized = tag.Trim();
+        return normalized.Length > 0 && normalized[0] == ':'
+            ? normalized[1..]
+            : normalized;
+    }
+
+    internal static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
+    {
+        if (tags is null)
+        {
+            return [];
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var normalizedTags = new List<string>();
+        foreach (var tag in tags)
+        {
+            var normalized = NormalizeTagName(tag);
+            if (normalized.Length == 0 || !seen.Add(normalized))
+            {
+                continue;
+            }
+
+            normalizedTags.Add(normalized);
+        }
+
+        return normalizedTags.Count == 0 ? [] : normalizedTags.ToArray();
+    }
 }

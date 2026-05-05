@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "handler binding creates message values and publishable calls",
-      "script": "module MessageBinding\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  let isHandler be shoot is :handler\n  let isMessage be msg is :message\n  publish msg\n  publish shoot(unit: unit, target: target)\n  publish Shoot(unit: unit, target: target)\n  publish Done(isHandler: isHandler, isMessage: isMessage)\n}",
+      "script": "module MessageBinding\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  let isHandler be shoot is :handler\n  let isMessage be msg is :message\n  emit msg\n  emit shoot(unit: unit, target: target)\n  emit Shoot(unit: unit, target: target)\n  emit Done(isHandler: isHandler, isMessage: isMessage)\n}",
       "steps": [
         {
           "input": {
@@ -51,7 +51,7 @@
     {
       "kind": "scriptApi",
       "name": "direct message literal creates first class message value",
-      "script": "module DirectMessageLiteral\non Start(value) {\n  let scaled be value * 2\n  let myMessageDirect be Success(message: 'world', value: scaled)\n  publish Done(isMessage: myMessageDirect is :message, name: myMessageDirect.name, signature: myMessageDirect.signatureid, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)\n}",
+      "script": "module DirectMessageLiteral\non Start(value) {\n  let scaled be value * 2\n  let myMessageDirect be Success(message: 'world', value: scaled)\n  emit Done(isMessage: myMessageDirect is :message, name: myMessageDirect.name, signature: myMessageDirect.signatureid, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)\n}",
       "steps": [
         {
           "input": {
@@ -78,7 +78,7 @@
     {
       "kind": "scriptApi",
       "name": "empty uppercase invocation creates handler value",
-      "script": "on Start {\n  let handler as :handler be Shoot()\n  publish Done(name: handler.name, parameterCount: :len handler[:parameters])\n}",
+      "script": "on Start {\n  let handler as :handler be Shoot()\n  emit Done(name: handler.name, parameterCount: :len handler[:parameters])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -97,7 +97,7 @@
     {
       "kind": "scriptApi",
       "name": "untyped handler literal and bind create first class values",
-      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  publish Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signatureid, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signatureid, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is :nothing)\n}",
+      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  emit Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signatureid, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signatureid, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is :nothing)\n}",
       "steps": [
         {
           "input": {
@@ -128,8 +128,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "invalid handler binding and non message publish are lenient no ops",
-      "script": "module MessageBindingNoOp\non Start(unit, hp) {\n  let shoot as :handler be Shoot(unit, target)\n  let invalid as :message be shoot(unit: unit, hp: hp)\n  publish invalid\n  publish unit\n  publish Done(isMessage: invalid is :message, isNothing: invalid is :nothing)\n}",
+      "name": "invalid handler binding and non message emit are lenient no ops",
+      "script": "module MessageBindingNoOp\non Start(unit, hp) {\n  let shoot as :handler be Shoot(unit, target)\n  let invalid as :message be shoot(unit: unit, hp: hp)\n  emit invalid\n  emit unit\n  emit Done(isMessage: invalid is :message, isNothing: invalid is :nothing)\n}",
       "steps": [
         {
           "input": {
@@ -154,7 +154,7 @@
     {
       "kind": "scriptApi",
       "name": "message and handler values expose members without becoming dictionaries",
-      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  publish Done(msgIsMessage: msg is :message, msgIsDictionary: msg is :dictionary, handlerIsHandler: shoot is :handler, handlerIsDictionary: shoot is :dictionary, msgName: msg.name, msgSignature: msg[:signatureid], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
+      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsDictionary: msg is :dictionary, handlerIsHandler: shoot is :handler, handlerIsDictionary: shoot is :dictionary, msgName: msg.name, msgSignature: msg[:signatureid], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
       "steps": [
         {
           "input": {
@@ -186,7 +186,7 @@
     {
       "kind": "scriptApi",
       "name": "message values can be transported as published arguments",
-      "script": "on Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  publish Done(messageValue: msg)\n}",
+      "script": "on Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(messageValue: msg)\n}",
       "steps": [
         {
           "input": {

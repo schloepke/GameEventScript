@@ -590,6 +590,12 @@ public enum GameEventScriptBytecodeStatementKind
     SeededRandom
 }
 
+public enum GameEventScriptBytecodePublishKind
+{
+    Emit,
+    Publish
+}
+
 public sealed class GameEventScriptBytecodeStatementProgram(GameEventScriptBytecodeStatement[] statements, bool createsScope)
 {
     public GameEventScriptBytecodeStatement[] Statements { get; } = statements ?? throw new ArgumentNullException(nameof(statements));
@@ -607,7 +613,9 @@ public sealed class GameEventScriptBytecodeStatement(
     GameEventScriptBytecodeStatementProgram? elseProgram = null,
     GameEventScriptBytecodeStatementProgram? bodyProgram = null,
     GameEventScriptBytecodeIterationSourceProgram? iterationSource = null,
-    string? diagnosticName = null)
+    string? diagnosticName = null,
+    GameEventScriptBytecodePublishKind publishKind = GameEventScriptBytecodePublishKind.Emit,
+    GameEventScriptBytecodeExpressionProgram[]? tagPrograms = null)
 {
     public GameEventScriptBytecodeStatementKind Kind { get; } = kind;
 
@@ -628,6 +636,10 @@ public sealed class GameEventScriptBytecodeStatement(
     public GameEventScriptBytecodeIterationSourceProgram? IterationSource { get; } = iterationSource;
 
     public string? DiagnosticName { get; } = diagnosticName;
+
+    public GameEventScriptBytecodePublishKind PublishKind { get; } = publishKind;
+
+    public GameEventScriptBytecodeExpressionProgram[] TagPrograms { get; } = tagPrograms ?? [];
 }
 
 public sealed class GameEventScriptBytecodeTypeDefinition(
@@ -697,7 +709,9 @@ public sealed class GameEventScriptBytecodeHandler(
     string signatureId,
     int declarationOrder,
     GameEventScriptBytecodeExecutionPlan executionPlan,
-    IReadOnlyList<string?>? parameterTypes = null)
+    IReadOnlyList<string?>? parameterTypes = null,
+    IReadOnlyList<string>? requiredTags = null,
+    IReadOnlyList<string>? excludedTags = null)
 {
     public string Message { get; } = message ?? throw new ArgumentNullException(nameof(message));
 
@@ -706,6 +720,10 @@ public sealed class GameEventScriptBytecodeHandler(
     public IReadOnlyList<string> SignatureLabels { get; } = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
 
     public IReadOnlyList<string?> ParameterTypes { get; } = NormalizeParameterTypes(parameterTypes, parameters);
+
+    public IReadOnlyList<string> RequiredTags { get; } = NormalizeTags(requiredTags);
+
+    public IReadOnlyList<string> ExcludedTags { get; } = NormalizeTags(excludedTags);
 
     public string SignatureId { get; } = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
 
@@ -730,6 +748,9 @@ public sealed class GameEventScriptBytecodeHandler(
 
         return parameterTypes.Select(type => string.IsNullOrWhiteSpace(type) ? null : type).ToArray();
     }
+
+    private static IReadOnlyList<string> NormalizeTags(IReadOnlyList<string>? tags)
+        => GameEventScriptMessage.NormalizeTags(tags);
 }
 
 public sealed class GameEventScriptBytecodeCallable(

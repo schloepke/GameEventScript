@@ -8,7 +8,7 @@ namespace StepH_GameEventScript_Tests;
 public sealed class GameEventScriptHostQueueLimitTests
 {
     [TestMethod]
-    public void PublishReportsWhetherMessageWasQueued()
+    public void EmitReportsWhetherMessageWasQueued()
     {
         var accepted = new List<bool>();
         var published = new List<GameEventScriptMessage>();
@@ -24,9 +24,9 @@ public sealed class GameEventScriptHostQueueLimitTests
 
         host.Subscribe("Start", [], (_, context) =>
         {
-            accepted.Add(context.Publish("A"));
-            accepted.Add(context.Publish("B"));
-            accepted.Add(context.Publish("C"));
+            accepted.Add(context.Emit("A"));
+            accepted.Add(context.Emit("B"));
+            accepted.Add(context.Emit("C"));
         });
         host.Subscribe("A", [], (_, _) => { });
         host.Subscribe("B", [], (_, _) => { });

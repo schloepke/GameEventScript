@@ -28,14 +28,14 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
-    public void RuntimePublishWithoutSubscriberIsDroppedBeforeLaterSubscription()
+    public void RuntimeEmitWithoutSubscriberIsDroppedBeforeLaterSubscription()
     {
         var accepted = new List<bool>();
         var calls = new List<string>();
         var host = GameEventScriptHost.CreateBuilder().Build();
         host.Subscribe("Start", [], (_, context) =>
         {
-            accepted.Add(context.Publish("Later"));
+            accepted.Add(context.Emit("Later"));
             host.Subscribe("Later", [], (_, _) => calls.Add("later"));
         });
 
@@ -51,14 +51,140 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
-    public void ManualHostStepsScriptPublishStatementsByOpcodeBudget()
+    public void EmitAndPublishWithTagsUseHandlerMatchingFilters()
     {
         var bytecode = GameEventScriptBuilder.Create()
             .AddScript(
                 """
                 on Start {
-                  publish A
-                  publish B
+                  let dynamicTags be [:radio, :command, :radio]
+                  emit Local(value: 1) with :local
+                  emit Local(value: 2) with :local, :blocked
+                  emit Local(value: 3) with :other
+                  emit Remote(value: 4) with dynamicTags
+                }
+
+                on Local(value) matching :local without :blocked {
+                  emit Seen(value: value)
+                }
+
+                on Local(value) without :local {
+                  emit Seen(value: value + 100)
+                }
+
+                on Remote(value) matching :radio, :command {
+                  emit Seen(value: value + 10)
+                }
+
+                on Remote(value) matching :missing {
+                  emit Seen(value: 999)
+                }
+                """)
+            .Compile();
+        var seen = new List<long>();
+        var messages = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(messages.Add)
+            .Build()
+            .Load(bytecode);
+        host.Subscribe("Seen", ["value"], (message, _) => seen.Add(message.Arguments["value"].AsInteger()));
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+
+        CollectionAssert.AreEqual(new long[] { 1, 103, 14 }, seen);
+        var remote = messages.Single(message => message.Name == "Remote");
+        CollectionAssert.AreEqual(new[] { "radio", "command" }, remote.Tags.ToArray());
+    }
+
+    [TestMethod]
+    public void ContextPublishUsesHookWhileEmitStaysLocal()
+    {
+        var outbound = new List<GameEventScriptMessage>();
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishHook(message =>
+            {
+                outbound.Add(message);
+                return true;
+            })
+            .Build();
+
+        host.Subscribe("Start", [], (_, context) =>
+        {
+            Assert.IsTrue(context.Emit("Local"));
+            Assert.IsTrue(context.Publish(Create("Remote").WithTags(":radio")));
+        });
+        host.Subscribe("Local", [], (_, _) => calls.Add("local"));
+        host.Subscribe("Remote", [], (_, _) => calls.Add("remote"));
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+
+        CollectionAssert.AreEqual(new[] { "local" }, calls);
+        Assert.HasCount(1, outbound);
+        Assert.AreEqual("Remote", outbound[0].Name);
+        CollectionAssert.AreEqual(new[] { "radio" }, outbound[0].Tags.ToArray());
+    }
+
+    [TestMethod]
+    public void CSharpSubscribersCanFilterByMessageTags()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        var signal = GameEventScriptMessageSignature.Create("Signal", []);
+        host.Subscribe(signal, (_, _) => calls.Add("radio"), matchingTags: ["radio"]);
+        host.Subscribe(signal, (_, _) => calls.Add("clear"), matchingTags: null, withoutTags: ["blocked"]);
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Signal").WithTags(":radio")));
+        Assert.IsFalse(host.PublishToCompletion(Create("Signal").WithTags(":blocked")));
+
+        CollectionAssert.AreEqual(new[] { "radio", "clear" }, calls);
+    }
+
+    [TestMethod]
+    public void ScriptPublishUsesHookAndDoesNotDeliverLocallyWhenHookRedirects()
+    {
+        var bytecode = GameEventScriptBuilder.Create()
+            .AddScript(
+                """
+                on Start {
+                  emit Local
+                  publish Remote with :radio
+                }
+
+                on Remote {
+                  emit ShouldNotRun
+                }
+                """)
+            .Compile();
+        var outbound = new List<GameEventScriptMessage>();
+        var observed = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(message => observed.Add(message.Name))
+            .WithPublishHook(message =>
+            {
+                outbound.Add(message);
+                return true;
+            })
+            .Build()
+            .Load(bytecode);
+
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+
+        CollectionAssert.AreEqual(new[] { "Local", "Remote" }, observed);
+        Assert.HasCount(1, outbound);
+        Assert.AreEqual("Remote", outbound[0].Name);
+        CollectionAssert.AreEqual(new[] { "radio" }, outbound[0].Tags.ToArray());
+    }
+
+    [TestMethod]
+    public void ManualHostStepsScriptEmitStatementsByOpcodeBudget()
+    {
+        var bytecode = GameEventScriptBuilder.Create()
+            .AddScript(
+                """
+                on Start {
+                  emit A
+                  emit B
                 }
                 """)
             .Compile();
@@ -89,11 +215,11 @@ public sealed class GameEventScriptHostSteppingTests
             .AddScript(
                 """
                 on Start {
-                  publish Middle
+                  emit Middle
                 }
 
                 on Middle {
-                  publish Done
+                  emit Done
                 }
                 """)
             .Compile();
@@ -122,7 +248,7 @@ public sealed class GameEventScriptHostSteppingTests
             .AddScript(
                 """
                 on Start {
-                  publish Done
+                  emit Done
                 }
                 """)
             .Compile();
@@ -152,7 +278,7 @@ public sealed class GameEventScriptHostSteppingTests
             .AddScript(
                 """
                 on Start {
-                  publish Done
+                  emit Done
                 }
                 """)
             .Compile();
@@ -216,11 +342,11 @@ public sealed class GameEventScriptHostSteppingTests
             .AddScript(
                 """
                 on Start {
-                  publish Middle
+                  emit Middle
                 }
 
                 on Middle {
-                  publish Done
+                  emit Done
                 }
                 """)
             .Compile();
@@ -251,7 +377,7 @@ public sealed class GameEventScriptHostSteppingTests
                 """
                 on Start {
                   for item from 1 to 4 {
-                    publish Tick(value: item)
+                    emit Tick(value: item)
                   }
                 }
                 """)
@@ -283,7 +409,7 @@ public sealed class GameEventScriptHostSteppingTests
                   let total be values[:filter value where value is high][:select value -> boost(value)][:sum value -> value]
                   let seeded be :random with seed :list[:select item from 1 to 3 -> :random from 1 to 6]
                   let label be 'high' when total > 6, otherwise 'low'
-                  publish Done(total: total, first: seeded[1], label: label)
+                  emit Done(total: total, first: seeded[1], label: label)
                 }
                 """)
             .Compile();
@@ -315,7 +441,7 @@ public sealed class GameEventScriptHostSteppingTests
         host.Subscribe("Start", [], (_, context) =>
         {
             calls.Add("external");
-            context.Publish("Done");
+            context.Emit("Done");
         });
         host.Subscribe("Done", [], (_, _) => calls.Add("done"));
 
@@ -334,8 +460,8 @@ public sealed class GameEventScriptHostSteppingTests
             .AddScript(
                 """
                 on Start {
-                  publish A
-                  publish B
+                  emit A
+                  emit B
                 }
                 """)
             .Compile();

@@ -21,6 +21,7 @@ public sealed class GameEventScriptHost
     private readonly GameEventScriptRuntimeLimits _runtimeLimits;
     private readonly GameEventScriptDispatchMode _dispatchMode;
     private readonly GameEventScriptDispatcher _dispatcher;
+    private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly Dictionary<string, MessageSubscription[]> _dispatchIndex = new(StringComparer.Ordinal);
     private readonly object _dispatchGate = new();
     private readonly object _pumpGate = new();
@@ -30,7 +31,8 @@ public sealed class GameEventScriptHost
 
     internal GameEventScriptHost(GameEventScriptRandomGenerator random, IGameEventScriptDiagnosticCollector? diagnosticCollector, Action<GameEventScriptMessage>? publishedMessageObserver,
         IGameEventScriptExtensionRegistry? extensionRegistry, GameEventScriptRuntimeLimits? runtimeLimits, GameEventScriptDispatchMode dispatchMode = GameEventScriptDispatchMode.Manual,
-        GameEventScriptDispatcher? dispatcher = null)
+        GameEventScriptDispatcher? dispatcher = null,
+        Func<GameEventScriptMessage, bool>? publishHook = null)
     {
         _random = random;
         _diagnosticCollector = diagnosticCollector;
@@ -39,6 +41,7 @@ public sealed class GameEventScriptHost
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
         _dispatchMode = dispatchMode;
         _dispatcher = dispatcher ?? GameEventScriptDispatcher.Shared;
+        _publishHook = publishHook;
         _liveState = CreateLiveState(dispatchMode);
     }
 
@@ -83,6 +86,22 @@ public sealed class GameEventScriptHost
             signature ?? throw new ArgumentNullException(nameof(signature)),
             priority,
             handler ?? throw new ArgumentNullException(nameof(handler)));
+        return this;
+    }
+
+    public GameEventScriptHost Subscribe(
+        GameEventScriptMessageSignature signature,
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IReadOnlyCollection<string>? matchingTags,
+        IReadOnlyCollection<string>? withoutTags = null,
+        int priority = NormalPriority)
+    {
+        Register(
+            signature ?? throw new ArgumentNullException(nameof(signature)),
+            priority,
+            handler ?? throw new ArgumentNullException(nameof(handler)),
+            matchingTags,
+            withoutTags);
         return this;
     }
 
@@ -157,7 +176,7 @@ public sealed class GameEventScriptHost
             return false;
         }
 
-        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations);
+        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         if (!TryEnqueueInvocations(state, message))
         {
             return false;
@@ -189,7 +208,7 @@ public sealed class GameEventScriptHost
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
-        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations);
+        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         var accepted = TryEnqueueInvocations(state, message);
         return new GameEventScriptRun(DrainSlice, state, accepted);
     }
@@ -199,7 +218,7 @@ public sealed class GameEventScriptHost
     #region Internals
 
     private GameEventScriptHostRunState CreateLiveState(GameEventScriptDispatchMode dispatchMode)
-        => new(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations);
+        => new(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
 
     private void ResetManualStateIfCompletedAndIdle()
     {
@@ -262,10 +281,18 @@ public sealed class GameEventScriptHost
         GameEventScriptMessageSignature signature,
         int priority,
         Action<GameEventScriptMessage, GameEventScriptContext> handler)
+        => Register(signature, priority, handler, [], []);
+
+    private void Register(
+        GameEventScriptMessageSignature signature,
+        int priority,
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IReadOnlyCollection<string>? matchingTags,
+        IReadOnlyCollection<string>? withoutTags)
     {
         lock (_dispatchGate)
         {
-            RegisterLocked(signature, priority, handler);
+            RegisterLocked(signature, priority, handler, matchingTags, withoutTags);
         }
     }
 
@@ -300,7 +327,9 @@ public sealed class GameEventScriptHost
     private void RegisterLocked(
         GameEventScriptMessageSignature signature,
         int priority,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler)
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IReadOnlyCollection<string>? matchingTags = null,
+        IReadOnlyCollection<string>? withoutTags = null)
     {
         var subscription = new MessageSubscription(
             signature,
@@ -308,7 +337,9 @@ public sealed class GameEventScriptHost
             _nextRegistrationOrder++,
             handler,
             null,
-            null);
+            null,
+            GameEventScriptMessage.NormalizeTags(matchingTags),
+            GameEventScriptMessage.NormalizeTags(withoutTags));
 
         _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
             ? InsertSubscriptionByDispatchOrder(handlers, subscription)
@@ -327,7 +358,9 @@ public sealed class GameEventScriptHost
             _nextRegistrationOrder++,
             null,
             executable,
-            handler);
+            handler,
+            handler.RequiredTags,
+            handler.ExcludedTags);
 
         _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
             ? InsertSubscriptionByDispatchOrder(handlers, subscription)
@@ -502,6 +535,11 @@ public sealed class GameEventScriptHost
         var accepted = false;
         foreach (var subscription in subscriptions)
         {
+            if (!subscription.MatchesTags(message))
+            {
+                continue;
+            }
+
             accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
         }
 
@@ -543,7 +581,31 @@ public sealed class GameEventScriptHost
         long RegistrationOrder,
         Action<GameEventScriptMessage, GameEventScriptContext>? Handler,
         GesBytecodeVmExecutable? ScriptExecutable,
-        GesBytecodeVmCompiledHandler? ScriptHandler);
+        GesBytecodeVmCompiledHandler? ScriptHandler,
+        IReadOnlyList<string> RequiredTags,
+        IReadOnlyList<string> ExcludedTags)
+    {
+        public bool MatchesTags(GameEventScriptMessage message)
+        {
+            foreach (var tag in RequiredTags)
+            {
+                if (!message.HasTag(tag))
+                {
+                    return false;
+                }
+            }
+
+            foreach (var tag in ExcludedTags)
+            {
+                if (message.HasTag(tag))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
 
     internal sealed record QueuedInvocation(GameEventScriptMessage Message, MessageSubscription Subscription);
 
@@ -555,6 +617,7 @@ internal sealed class GameEventScriptHostRunState
     private readonly Queue<GameEventScriptHost.QueuedInvocation> _queue = new();
     private readonly object _queueGate = new();
     private readonly Func<GameEventScriptHostRunState, GameEventScriptMessage, bool> _queuePublisher;
+    private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly bool _enforceProcessedEventsLimit;
     private readonly int _maxProcessedEventsPerRun;
     private readonly int _maxQueuedMessagesPerRun;
@@ -568,14 +631,16 @@ internal sealed class GameEventScriptHostRunState
         IGameEventScriptExtensionRegistry extensionRegistry,
         GameEventScriptRuntimeLimits runtimeLimits,
         bool enforceProcessedEventsLimit = true,
-        Func<GameEventScriptHostRunState, GameEventScriptMessage, bool>? queuePublisher = null)
+        Func<GameEventScriptHostRunState, GameEventScriptMessage, bool>? queuePublisher = null,
+        Func<GameEventScriptMessage, bool>? publishHook = null)
     {
         _enforceProcessedEventsLimit = enforceProcessedEventsLimit;
         _maxProcessedEventsPerRun = runtimeLimits.MaxProcessedEventsPerRun;
         _maxQueuedMessagesPerRun = runtimeLimits.MaxQueuedMessagesPerRun;
         _queuePublisher = queuePublisher ?? ((_, _) => false);
+        _publishHook = publishHook;
         PublishedMessageObserver = publishedMessageObserver;
-        Context = new GameEventScriptContext(random, PublishInternal, diagnosticCollector, runtimeLimits, extensionRegistry);
+        Context = new GameEventScriptContext(random, EmitInternal, diagnosticCollector, runtimeLimits, extensionRegistry, PublishInternal);
     }
 
     public GameEventScriptContext Context { get; }
@@ -716,7 +781,7 @@ internal sealed class GameEventScriptHostRunState
     public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
         => Context.RecordDiagnostic(kind, name, arguments, detail);
 
-    private bool PublishInternal(GameEventScriptMessage message)
+    private bool EmitInternal(GameEventScriptMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.Name))
         {
@@ -724,9 +789,28 @@ internal sealed class GameEventScriptHostRunState
         }
 
         var queued = _queuePublisher(this, message);
+        RecordScriptMessageOutput(message, "Emitted");
+        return queued;
+    }
+
+    private bool PublishInternal(GameEventScriptMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(message.Name))
+        {
+            return false;
+        }
+
+        var queued = _publishHook is null
+            ? _queuePublisher(this, message)
+            : _publishHook(message);
+        RecordScriptMessageOutput(message, "Published");
+        return queued;
+    }
+
+    private void RecordScriptMessageOutput(GameEventScriptMessage message, string verb)
+    {
         StepPublishedMessages++;
         PublishedMessageObserver?.Invoke(message);
-        RecordDiagnostic(GameEventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"Published '{message.Name}'");
-        return queued;
+        RecordDiagnostic(GameEventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"{verb} '{message.Name}'");
     }
 }

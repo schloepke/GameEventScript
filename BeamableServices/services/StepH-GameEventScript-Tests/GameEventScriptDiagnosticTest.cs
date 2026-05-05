@@ -21,23 +21,23 @@ public class GameEventScriptDiagnosticTest
           let x be startPosition[:x]
           let y be startPosition[:y]
           let bearing be 120°
-          publish ScanArea(bearing: bearing, range: 100m)
+          emit ScanArea(bearing: bearing, range: 100m)
         }
         
         on ScanArea(bearing, range) {
           let x be :decimal(range) * bearing
           let y be (range as :decimal) * bearing 
-          publish AreaScanned(x, y)
+          emit AreaScanned(x, y)
         }
         
         on AreaScanned(_ x, _ y) {
             let move2d be :vector2(x: x, y: y)
             let move3d be :meter(:vector3(:decimal(move2d))) + :vector3(z: 10m)
-            publish Done(move3d, x: x, y: y)
+            emit Done(move3d, x: x, y: y)
         }
         
         on Done(_ move3d, x, y) {
-            publish Finished
+            emit Finished
         }
         """;
 

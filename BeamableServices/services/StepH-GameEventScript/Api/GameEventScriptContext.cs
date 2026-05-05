@@ -16,17 +16,24 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptContext
 {
+    private readonly Func<GameEventScriptMessage, bool> _emit;
     private readonly Func<GameEventScriptMessage, bool> _publish;
 
     /// <summary>
     /// Provides the execution context for running game event scripts, managing runtime constraints,
     /// diagnostics, random generation, and extension mechanisms.
     /// </summary>
-    public GameEventScriptContext(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> publish, IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
-        GameEventScriptRuntimeLimits? runtimeLimits = null, IGameEventScriptExtensionRegistry? extensionRegistry = null)
+    public GameEventScriptContext(
+        GameEventScriptRandomGenerator random,
+        Func<GameEventScriptMessage, bool> emit,
+        IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
+        GameEventScriptRuntimeLimits? runtimeLimits = null,
+        IGameEventScriptExtensionRegistry? extensionRegistry = null,
+        Func<GameEventScriptMessage, bool>? publish = null)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
-        _publish = publish ?? throw new ArgumentNullException(nameof(publish));
+        _emit = emit ?? throw new ArgumentNullException(nameof(emit));
+        _publish = publish ?? _emit;
         DiagnosticCollector = diagnosticCollector;
         RuntimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
         RuntimeBudget = new GesRuntimeBudget(this, RuntimeLimits);
@@ -62,8 +69,40 @@ public sealed class GameEventScriptContext
     public IGameEventScriptExtensionRegistry ExtensionRegistry { get; }
 
     /// <summary>
-    /// Publishes a specified game event script message, forwarding it to the configured publishing mechanism.
-    /// The message must have a valid non-empty name to be published.
+    /// Emits a specified game event script message into the current local event space.
+    /// The message must have a valid non-empty name to be emitted.
+    /// </summary>
+    /// <param name="message">The game event script message to be emitted. Must not be null, and its name must not be empty or whitespace.</param>
+    public bool Emit(GameEventScriptMessage message)
+    {
+        return !string.IsNullOrWhiteSpace(message.Name) && _emit(message);
+    }
+
+    /// <summary>
+    /// Emits a game event script message using a string identifier.
+    /// The specified message is forwarded to the configured local event space.
+    /// </summary>
+    /// <param name="message">The string identifier of the game event script message to be emitted. Must not be null, empty, or consist solely of whitespace.</param>
+    public bool Emit(string message) => Emit(GameEventScriptMessage.Create(message));
+
+    /// <summary>
+    /// Emits a game event script message with the specified name and arguments to the current local event space.
+    /// </summary>
+    /// <param name="message">The name of the message to be emitted.</param>
+    /// <param name="args">A dictionary containing the arguments for the message, where keys are parameter names and values are their corresponding script values.</param>
+    public bool Emit(string message, IReadOnlyDictionary<string, GameEventScriptValue> args) => Emit(GameEventScriptMessage.Create(message, args));
+
+    /// <summary>
+    /// Emits a message within the current local event space.
+    /// </summary>
+    /// <param name="message">The name or identifier of the message to be emitted.</param>
+    /// <param name="args">A collection of arguments associated with the message, each represented
+    /// by a name and a corresponding <see cref="GameEventScriptValue"/>.</param>
+    public bool Emit(string message, params (string name, GameEventScriptValue value)[] args) => Emit(GameEventScriptMessage.Create(message, args));
+
+    /// <summary>
+    /// Publishes a specified game event script message to the configured publish hook.
+    /// If no hook is configured, publishing falls back to <see cref="Emit(GameEventScriptMessage)"/>.
     /// </summary>
     /// <param name="message">The game event script message to be published. Must not be null, and its name must not be empty or whitespace.</param>
     public bool Publish(GameEventScriptMessage message)
@@ -73,21 +112,19 @@ public sealed class GameEventScriptContext
 
     /// <summary>
     /// Publishes a game event script message using a string identifier.
-    /// The specified message is forwarded to the configured publishing mechanism.
     /// </summary>
     /// <param name="message">The string identifier of the game event script message to be published. Must not be null, empty, or consist solely of whitespace.</param>
     public bool Publish(string message) => Publish(GameEventScriptMessage.Create(message));
 
     /// <summary>
-    /// Publishes a game event script message with the specified name and arguments to the runtime environment.
+    /// Publishes a game event script message with the specified name and arguments.
     /// </summary>
     /// <param name="message">The name of the message to be published.</param>
     /// <param name="args">A dictionary containing the arguments for the message, where keys are parameter names and values are their corresponding script values.</param>
     public bool Publish(string message, IReadOnlyDictionary<string, GameEventScriptValue> args) => Publish(GameEventScriptMessage.Create(message, args));
 
     /// <summary>
-    /// Publishes a message within the game event script execution context, allowing for the
-    /// delivery of events to other systems or subsystems.
+    /// Publishes a message within the game event script execution context.
     /// </summary>
     /// <param name="message">The name or identifier of the message to be published.</param>
     /// <param name="args">A collection of arguments associated with the message, each represented

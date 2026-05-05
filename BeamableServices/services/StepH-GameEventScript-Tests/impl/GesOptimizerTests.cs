@@ -38,7 +38,7 @@ public class GesOptimizerTests
             module ConstantMath
             on Start {
                 let value be 12 + 3 * 10
-                publish Done(result: value)
+                emit Done(result: value)
             }
             """;
 

@@ -92,7 +92,9 @@ internal static class GesBytecodeCompiler
                                 module.TypeDefinitions,
                                 AddExternalReference,
                                 AddConstant),
-                            handler.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
+                            handler.ParameterList.Select(parameter => parameter.DeclaredType).ToArray(),
+                            handler.MatchingTags,
+                            handler.WithoutTags);
                     })
                     .ToArray(),
                 StringComparer.Ordinal);
@@ -274,6 +276,16 @@ internal static class GesBytecodeCompiler
                         }
                     }
 
+                    foreach (var tag in handler.MatchingTags)
+                    {
+                        AddString(tag);
+                    }
+
+                    foreach (var tag in handler.WithoutTags)
+                    {
+                        AddString(tag);
+                    }
+
                     AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
                 }
             }
@@ -295,6 +307,16 @@ internal static class GesBytecodeCompiler
             {
                 AddString(handler.Message);
                 AddSignature(handler.SignatureId);
+                foreach (var tag in handler.RequiredTags)
+                {
+                    AddString(tag);
+                }
+
+                foreach (var tag in handler.ExcludedTags)
+                {
+                    AddString(tag);
+                }
+
                 CollectStatementMetadata(handler.ExecutionPlan.StatementProgram);
             }
 
@@ -336,6 +358,11 @@ internal static class GesBytecodeCompiler
                 }
 
                 CollectExpressionMetadata(statement.ExpressionProgram);
+                foreach (var tagProgram in statement.TagPrograms)
+                {
+                    CollectExpressionMetadata(tagProgram);
+                }
+
                 CollectStatementMetadata(statement.ThenProgram);
                 CollectStatementMetadata(statement.ElseProgram);
                 CollectStatementMetadata(statement.BodyProgram);

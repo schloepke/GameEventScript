@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "random and dice outcomes are deterministic with sequence",
-      "script": "on Roll {\n  let a be :random 1 to 6\n  let b be :dice 4d6[:take highest 2]\n  publish Result(randomValue: a, diceValue: b)\n}",
+      "script": "on Roll {\n  let a be :random 1 to 6\n  let b be :dice 4d6[:take highest 2]\n  emit Result(randomValue: a, diceValue: b)\n}",
       "randomSequence": ["4", "1", "6", "3", "5"],
       "steps": [
         {
@@ -25,7 +25,7 @@
     {
       "kind": "scriptApi",
       "name": "sequential steps share random sequence",
-      "script": "on Roll {\n  let value be :dice 2d6\n  publish Rolled(value: value)\n}",
+      "script": "on Roll {\n  let value be :dice 2d6\n  emit Rolled(value: value)\n}",
       "randomSequence": ["1", "6", "3", "2"],
       "steps": [
         {
@@ -55,7 +55,7 @@
     {
       "kind": "scriptApi",
       "name": "chance and weighted choices are deterministic",
-      "script": "on Start(units) {\n  let alwaysHit be :chance 100%\n  let neverHit be :chance 0%\n  let quarterHit be :chance 25%\n  let weightedTarget be units[:choose 1 weighted by unit -> unit.weight]\n  let weightedPair be units[:choose 2 weighted by unit -> unit.weight]\n  publish Done(alwaysHit: alwaysHit, neverHit: neverHit, quarterHit: quarterHit, weightedTarget: weightedTarget.name, weighted1: weightedPair[1].name, weighted2: weightedPair[2].name)\n}",
+      "script": "on Start(units) {\n  let alwaysHit be :chance 100%\n  let neverHit be :chance 0%\n  let quarterHit be :chance 25%\n  let weightedTarget be units[:choose 1 weighted by unit -> unit.weight]\n  let weightedPair be units[:choose 2 weighted by unit -> unit.weight]\n  emit Done(alwaysHit: alwaysHit, neverHit: neverHit, quarterHit: quarterHit, weightedTarget: weightedTarget.name, weighted1: weightedPair[1].name, weighted2: weightedPair[2].name)\n}",
       "randomSequence": ["0.249999", "9", "0", "8.99999"],
       "steps": [
         {
@@ -109,7 +109,7 @@
     {
       "kind": "scriptApi",
       "name": "shuffle draw choose and seeded random scopes are deterministic",
-      "script": "on Start(enemies, seed) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  publish Done(hand1: hand[1], hand2: hand[2], hand3: hand[3], rest1: restCards[1], rest2: restCards[2], target: target.name, random1: randomTargets[1].name, random2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
+      "script": "on Start(enemies, seed) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  emit Done(hand1: hand[1], hand2: hand[2], hand3: hand[3], rest1: restCards[1], rest2: restCards[2], target: target.name, random1: randomTargets[1].name, random2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
       "randomSequence": ["1", "0", "1", "1", "0", "1"],
       "steps": [
         {
@@ -174,7 +174,7 @@
     {
       "kind": "scriptApi",
       "name": "reversed random bounds and unordered collection draws stay lenient",
-      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let tags be :set['alpha', 'beta', 'gamma']\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  publish Done(valuePresent: value has value, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
+      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let tags be :set['alpha', 'beta', 'gamma']\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
       "steps": [
         {
           "input": {
@@ -200,7 +200,7 @@
     {
       "kind": "scriptApi",
       "name": "random can produce integer decimal and mixed values",
-      "script": "on Roll {\n  let integerValue be :random from 1 to 6\n  let decimalValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  publish Done(integerValue: integerValue, decimalValue: decimalValue, mixedValue: mixedValue)\n}",
+      "script": "on Roll {\n  let integerValue be :random from 1 to 6\n  let decimalValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, decimalValue: decimalValue, mixedValue: mixedValue)\n}",
       "randomSequence": ["4", "0.25", "1.5"],
       "steps": [
         {
@@ -221,7 +221,7 @@
     {
       "kind": "scriptApi",
       "name": "random upper bound keeps arithmetic together",
-      "script": "on Mixed(max) {\n  if :random 1 to max * 2 > 3 {\n    publish Passed\n  }\n}",
+      "script": "on Mixed(max) {\n  if :random 1 to max * 2 > 3 {\n    emit Passed\n  }\n}",
       "randomSequence": ["5"],
       "steps": [
         {
@@ -240,7 +240,7 @@
     {
       "kind": "scriptApi",
       "name": "ranges iterate and generated collections materialize",
-      "script": "on Start(values) {\n  let fullRange as :range be from 1 to 3\n  let odds as :range be from 1 to 5 step 2\n  let descending be from 5 to 1 step (0 - 2)\n  let zeroStep be from 1 to 5 step 0\n  let squares be :list[:select item from 1 to 5 -> item * item]\n  let filteredSquares be :list[:select item from 1 to 6 where item mod 2 = 0 -> item * item]\n  let tags be :set[:select item from 1 to 4 where item >= 2 -> item mod 2]\n  let doubled be :list[:select item in values -> item * 2]\n  let filtered be :set[:select item in values where item > 3 -> item mod 2]\n  for item in fullRange publish Full(value: item)\n  for item from 1 to 5 step 2 publish Direct(value: item)\n  for item in odds publish Indirect(value: item)\n  for item in zeroStep publish Zero(value: item)\n  publish Done(isRange: odds is :range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: :len zeroStep, square1: squares[1], square5: squares[5], filtered1: filteredSquares[1], filtered3: filteredSquares[3], tagCount: :len tags, tagsHasZero: 0 in tags, tagsHasOne: 1 in tags, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: :len filtered, hasZero: 0 in filtered, hasOne: 1 in filtered)\n}",
+      "script": "on Start(values) {\n  let fullRange as :range be from 1 to 3\n  let odds as :range be from 1 to 5 step 2\n  let descending be from 5 to 1 step (0 - 2)\n  let zeroStep be from 1 to 5 step 0\n  let squares be :list[:select item from 1 to 5 -> item * item]\n  let filteredSquares be :list[:select item from 1 to 6 where item mod 2 = 0 -> item * item]\n  let tags be :set[:select item from 1 to 4 where item >= 2 -> item mod 2]\n  let doubled be :list[:select item in values -> item * 2]\n  let filtered be :set[:select item in values where item > 3 -> item mod 2]\n  for item in fullRange emit Full(value: item)\n  for item from 1 to 5 step 2 emit Direct(value: item)\n  for item in odds emit Indirect(value: item)\n  for item in zeroStep emit Zero(value: item)\n  emit Done(isRange: odds is :range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: :len zeroStep, square1: squares[1], square5: squares[5], filtered1: filteredSquares[1], filtered3: filteredSquares[3], tagCount: :len tags, tagsHasZero: 0 in tags, tagsHasOne: 1 in tags, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: :len filtered, hasZero: 0 in filtered, hasOne: 1 in filtered)\n}",
       "steps": [
         {
           "input": {
@@ -295,7 +295,7 @@
     {
       "kind": "scriptApi",
       "name": "range direct lookup is not capped by materialization limit",
-      "script": "on Start {\n  let values as :range be from 1 to 1000000\n  publish Done(value: values[1000000], contains: 999999 in values, fractional: 1.5 in values)\n}",
+      "script": "on Start {\n  let values as :range be from 1 to 1000000\n  emit Done(value: values[1000000], contains: 999999 in values, fractional: 1.5 in values)\n}",
       "runtimeLimits": { "maxRangeItems": 5 },
       "steps": [
         {
@@ -319,7 +319,7 @@
     {
       "kind": "scriptApi",
       "name": "range limit diagnostics",
-      "script": "on Start {\n  for item from 1 to 10 publish Tick(value: item)\n  let values as :list be from 1 to 10\n  publish Done(count: :len values)\n}",
+      "script": "on Start {\n  for item from 1 to 10 emit Tick(value: item)\n  let values as :list be from 1 to 10\n  emit Done(count: :len values)\n}",
       "runtimeLimits": { "maxRangeItems": 5 },
       "steps": [
         {
@@ -341,7 +341,7 @@
     {
       "kind": "scriptApi",
       "name": "loop budget stops run after published iterations",
-      "script": "on Start {\n  for item from 1 to 10 publish Tick(value: item)\n  publish Done\n}",
+      "script": "on Start {\n  for item from 1 to 10 emit Tick(value: item)\n  emit Done\n}",
       "runtimeLimits": { "maxLoopIterations": 3 },
       "steps": [
         {
@@ -360,7 +360,7 @@
     {
       "kind": "scriptApi",
       "name": "dice limit diagnostics",
-      "script": "on Start {\n  let roll be :dice 6d6\n  publish Done(count: :len roll)\n}",
+      "script": "on Start {\n  let roll be :dice 6d6\n  emit Done(count: :len roll)\n}",
       "runtimeLimits": { "maxDiceCount": 4 },
       "steps": [
         {
@@ -382,7 +382,7 @@
     {
       "kind": "scriptApi",
       "name": "dice slicing and sorting semantics",
-      "script": "on Roll {\n  let baseDice be :dice 4d6\n  let kept be :dice 4d6[:take highest 2]\n  let dropped be :dice 4d6[:drop lowest 1]\n  let resorted be baseDice[:sort ascending]\n  let emptyDrop be :dice 2d6[:drop lowest 3]\n  let takeTooMany be :dice 4d6[:take highest 5]\n  let diceTotal be :dice 2d6 + 1\n  publish Done(baseDice: baseDice, baseLen: :len baseDice, base1: baseDice[1], base2: baseDice[2], base3: baseDice[3], base4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: :len emptyDrop, takeTooManyLen: :len takeTooMany, diceTotal: diceTotal)\n}",
+      "script": "on Roll {\n  let baseDice be :dice 4d6\n  let kept be :dice 4d6[:take highest 2]\n  let dropped be :dice 4d6[:drop lowest 1]\n  let resorted be baseDice[:sort ascending]\n  let emptyDrop be :dice 2d6[:drop lowest 3]\n  let takeTooMany be :dice 4d6[:take highest 5]\n  let diceTotal be :dice 2d6 + 1\n  emit Done(baseDice: baseDice, baseLen: :len baseDice, base1: baseDice[1], base2: baseDice[2], base3: baseDice[3], base4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: :len emptyDrop, takeTooManyLen: :len takeTooMany, diceTotal: diceTotal)\n}",
       "randomSequence": ["2", "6", "3", "5", "1", "4", "6", "2", "3", "2", "6", "1", "1", "2", "4", "6", "5", "3", "1", "4", "2"],
       "steps": [
         {
@@ -420,7 +420,7 @@
     {
       "kind": "scriptApi",
       "name": "dice and list pattern checks",
-      "script": "on Start(pairRoll, tripleRoll, fullHouseRoll, straightRoll, sixRoll, sevenRoll, cards, orderedCards, plainText) {\n  let pairTaken be fullHouseRoll[:take pair]\n  let fullHouseTaken be fullHouseRoll[:take full house]\n  let straightCards be orderedCards[:take straight]\n  let missingPair be orderedCards[:take pair] :default ['fallback']\n  publish Done(hasPair: pairRoll[:has pair], hasPairOfSix: pairRoll[:has pair of 6], pairHasThree: pairRoll[:has three of a kind], tripleHasThree: tripleRoll[:has three of a kind], tripleHasThreeSix: tripleRoll[:has three of 6], hasSixKind: sixRoll[:has six of a kind], hasSevenSix: sevenRoll[:has seven of 6], hasFullHouse: fullHouseRoll[:has full house], hasStraight: straightRoll[:has straight], listPair: cards[:has pair], listKingTriple: cards[:has three of 'King'], listFullHouse: cards[:has full house], orderedStraight: orderedCards[:has straight], textPair: plainText[:has pair], pairTakeLen: :len pairTaken, fullHouseFirst: fullHouseTaken[1], straightFirst: straightCards[1], missingPairFirst: missingPair[1])\n}",
+      "script": "on Start(pairRoll, tripleRoll, fullHouseRoll, straightRoll, sixRoll, sevenRoll, cards, orderedCards, plainText) {\n  let pairTaken be fullHouseRoll[:take pair]\n  let fullHouseTaken be fullHouseRoll[:take full house]\n  let straightCards be orderedCards[:take straight]\n  let missingPair be orderedCards[:take pair] :default ['fallback']\n  emit Done(hasPair: pairRoll[:has pair], hasPairOfSix: pairRoll[:has pair of 6], pairHasThree: pairRoll[:has three of a kind], tripleHasThree: tripleRoll[:has three of a kind], tripleHasThreeSix: tripleRoll[:has three of 6], hasSixKind: sixRoll[:has six of a kind], hasSevenSix: sevenRoll[:has seven of 6], hasFullHouse: fullHouseRoll[:has full house], hasStraight: straightRoll[:has straight], listPair: cards[:has pair], listKingTriple: cards[:has three of 'King'], listFullHouse: cards[:has full house], orderedStraight: orderedCards[:has straight], textPair: plainText[:has pair], pairTakeLen: :len pairTaken, fullHouseFirst: fullHouseTaken[1], straightFirst: straightCards[1], missingPairFirst: missingPair[1])\n}",
       "steps": [
         {
           "input": {

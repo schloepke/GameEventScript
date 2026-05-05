@@ -78,12 +78,18 @@ internal static class GameEventScriptConformanceRunner
         var compiled = (compileScripts ?? CompileScripts)(test);
         var collector = new GameEventScriptDiagnosticTraceCollector();
         var published = new List<GameEventScriptMessage>();
+        var outboundPublished = new List<GameEventScriptMessage>();
         var builder = GameEventScriptHost.CreateBuilder()
             .WithRandom(CreateRandom(test.RandomSequence))
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
             .WithRuntimeLimits(CreateRuntimeLimits(test.RuntimeLimits))
             .WithDiagnosticCollector(collector)
-            .WithPublishedMessageObserver(published.Add);
+            .WithPublishedMessageObserver(published.Add)
+            .WithPublishHook(message =>
+            {
+                outboundPublished.Add(message);
+                return true;
+            });
 
         var host = builder.Build().Load(compiled);
         RegisterExternalSubscribers(testCase, host);
@@ -97,10 +103,12 @@ internal static class GameEventScriptConformanceRunner
             var step = test.Steps[stepIndex];
             var diagnosticsStart = collector.Events.Count;
             published.Clear();
+            outboundPublished.Clear();
 
             host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(step.Input, "step input", testCase)));
 
-            AssertPublishedMessages(testCase, stepIndex, step.ExpectedPublished, published);
+            AssertPublishedMessages(testCase, stepIndex, "published messages", step.ExpectedPublished, published);
+            AssertPublishedMessages(testCase, stepIndex, "outbound published messages", step.ExpectedOutboundPublished, outboundPublished);
             AssertDiagnostics(testCase, stepIndex, step, collector.Events.Skip(diagnosticsStart).ToArray());
         }
     }
@@ -236,16 +244,16 @@ internal static class GameEventScriptConformanceRunner
                         throw new InvalidOperationException("Configured conformance subscriber failure.");
                     }
 
-                    foreach (var publish in subscriber.Publish ?? [])
+                    foreach (var emit in subscriber.Emit ?? [])
                     {
-                        ValidateRequired(publish.Name, "external subscriber publish name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-                        var args = publish.ForwardArguments
+                        ValidateRequired(emit.Name, "external subscriber emit name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+                        var args = emit.ForwardArguments
                             ? message.Arguments.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
-                            : publish.Args.ValueKind == JsonValueKind.Undefined
+                            : emit.Args.ValueKind == JsonValueKind.Undefined
                                 ? new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
-                                : GameEventScriptConformanceValueCodec.DecodeArguments(publish.Args);
+                                : GameEventScriptConformanceValueCodec.DecodeArguments(emit.Args);
 
-                        context.Publish(GameEventScriptMessage.Create(publish.Name!, args));
+                        context.Emit(GameEventScriptMessage.Create(emit.Name!, args));
                     }
                 },
                 subscriber.Priority ?? 0);
@@ -255,6 +263,7 @@ internal static class GameEventScriptConformanceRunner
     private static void AssertPublishedMessages(
         GameEventScriptConformanceCase testCase,
         int stepIndex,
+        string label,
         IReadOnlyList<JsonElement>? expectedPublished,
         IReadOnlyList<GameEventScriptMessage> actual)
     {
@@ -267,7 +276,7 @@ internal static class GameEventScriptConformanceRunner
         }
 
         Assert.Fail(
-            $"{testCase} step {stepIndex + 1}: published messages differ.{Environment.NewLine}" +
+            $"{testCase} step {stepIndex + 1}: {label} differ.{Environment.NewLine}" +
             $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
             $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}");
     }

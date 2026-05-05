@@ -69,7 +69,8 @@ internal static class GesOptimizer
         {
             PublishStatementNode publish => publish with
             {
-                MessageExpression = OptimizeExpression(publish.MessageExpression, knownTypeNames)
+                MessageExpression = OptimizeExpression(publish.MessageExpression, knownTypeNames),
+                TagExpressions = publish.TagExpressions.Select(expression => OptimizeExpression(expression, knownTypeNames)).ToArray()
             },
             LetStatementNode let => let with
             {

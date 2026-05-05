@@ -23,7 +23,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let total be value + 1
               if total > 1 {
                 let done be Done(total: total)
-                publish Done(total: total)
+                emit Done(total: total)
               }
             }
             """;
@@ -88,7 +88,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module Runtime
 
             on Start {
-              publish Done(value: 3)
+              emit Done(value: 3)
             }
             """;
 
@@ -115,7 +115,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             select boosted(_ value as :integer) means value + 1
 
             on Start(value as :integer) {
-              publish Done(value: boosted(value))
+              emit Done(value: boosted(value))
             }
             """;
 
@@ -141,7 +141,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module Runtime
 
             on Start(value as :integer) {
-              publish Done(value: value + 1)
+              emit Done(value: value + 1)
             }
             """;
 
@@ -168,7 +168,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             select boosted(_ value as :integer) means value + 1
 
             on Start(value) {
-              publish Done(ok: value is high, boosted: boosted(value))
+              emit Done(ok: value is high, boosted: boosted(value))
             }
             """;
 
@@ -197,7 +197,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             }
 
             on Start(hp as :gauge) {
-              publish Done(current: hp.current)
+              emit Done(current: hp.current)
             }
             """;
 
@@ -228,7 +228,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start(value) {
               let total be boosted(value)
-              publish Done(value: total)
+              emit Done(value: total)
             }
             """;
 
@@ -410,7 +410,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start {
               let values be :list[:select item from 1 to 3 -> item]
-              publish Done(count: :len values)
+              emit Done(count: :len values)
             }
             """;
 
@@ -437,13 +437,13 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start(first, second) {
               if first {
                 let branch be 1
-                publish Branch(value: branch)
+                emit Branch(value: branch)
               } else if second {
                 let branch be 2
-                publish Branch(value: branch)
+                emit Branch(value: branch)
               } else {
                 let branch be 3
-                publish Branch(value: branch)
+                emit Branch(value: branch)
               }
             }
             """;
@@ -476,7 +476,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 let inner be 7
               }
 
-              publish Done(inner: inner)
+              emit Done(inner: inner)
             }
             """;
 
@@ -502,7 +502,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start(items) {
               for item in items {
                 if item > 1 {
-                  publish Item(value: item * 2)
+                  emit Item(value: item * 2)
                 }
               }
             }
@@ -540,7 +540,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 let inner be item
               }
 
-              publish Done(item: item, inner: inner)
+              emit Done(item: item, inner: inner)
             }
             """;
 
@@ -579,7 +579,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let unitErased as :decimal be 43.9°
               let listOk as :list be 'ab'
               let optionalNone as :optional be missing
-              publish Done(numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, percentageOk: percentageOk, degreeOk: degreeOk, textOk: textOk, unitErased: unitErased, listOk: listOk, optionalNone: optionalNone)
+              emit Done(numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, percentageOk: percentageOk, degreeOk: degreeOk, textOk: textOk, unitErased: unitErased, listOk: listOk, optionalNone: optionalNone)
             }
             """;
 
@@ -611,7 +611,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module Access
 
             on Start(player, key, items, index, units) {
-              publish Done(
+              emit Done(
                 hpByMember: player.hp,
                 hpByTagKey: player[:hp],
                 hpByVariableKey: player[key],
@@ -679,7 +679,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let emptySet be :set[]
               let emptyDict be [:]
 
-              publish Done(
+              emit Done(
                 list: list,
                 listFirst: list[1],
                 listSecond: list[2],
@@ -746,7 +746,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let dictValue be [name: 'Ada']
               let setValue be :set[1, 1, 2]
 
-              publish Done(
+              emit Done(
                 intIsInteger: integerValue is :integer,
                 intIsDecimal: integerValue is :decimal,
                 percentIsDecimal: percentValue is :decimal,
@@ -817,7 +817,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let scaled be value * 2
               let myMessageDirect be Success(message: 'world', value: scaled)
 
-              publish Done(
+              emit Done(
                 isMessage: myMessageDirect is :message,
                 name: myMessageDirect.name,
                 signature: myMessageDirect.signatureid,
@@ -854,7 +854,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let myMessage be myHandler(message: 'hello', value: success)
               let invalidMessage be myHandler(message: 'hello', other: success)
 
-              publish Done(
+              emit Done(
                 handlerIsHandler: myHandler is :handler,
                 handlerName: myHandler.name,
                 handlerSignature: myHandler.signatureid,
@@ -902,7 +902,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let score be value + 2
               let missingValue be missing
               let isHigh be score is high
-              publish Done(score: score, missingValue: missingValue, isHigh: isHigh)
+              emit Done(score: score, missingValue: missingValue, isHigh: isHigh)
             }
             """;
 
@@ -938,7 +938,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module StandardExtensions
 
             on Start(value, heading) {
-              publish Done(floor: :integer.floor value, wrapped: :degree.wrap heading)
+              emit Done(floor: :integer.floor value, wrapped: :degree.wrap heading)
             }
             """;
 
@@ -974,7 +974,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start(values) {
               let floored be values[:select item -> :math.floor item]
-              publish Done(first: floored[1])
+              emit Done(first: floored[1])
             }
             """;
 
@@ -1016,7 +1016,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start {
               let value be :missing.floor 10.4
-              publish Done(value: value)
+              emit Done(value: value)
             }
             """;
 
@@ -1040,7 +1040,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start(heading, target) {
               let turn be :nav.shortestTurn to: target from: heading
-              publish Done(turn: turn)
+              emit Done(turn: turn)
             }
             """;
 
@@ -1064,7 +1064,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module StandardOverride
 
             on Start(value) {
-              publish Done(floor: :integer.floor value)
+              emit Done(floor: :integer.floor value)
             }
             """;
 

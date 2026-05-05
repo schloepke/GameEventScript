@@ -195,6 +195,8 @@ HandlerEntry
   SignatureId
   Parameters: ParameterEntry[]
   SignatureLabels
+  RequiredTags[]
+  ExcludedTags[]
   EntryAddress
   LocalSlotCount
   DeclarationOrder
@@ -349,9 +351,45 @@ compiler-assigned loop temporary slot.
 
 These remain high-level because they map directly to public value semantics.
 
-### Publish
+### Emit, Publish, and Tags
 
-`publish` should be a high-level instruction with a side-table layout:
+The language distinguishes local/current-space emission from outward/shared-space
+publishing:
+
+```eventscript
+emit LocalEvent(value) with :internal
+publish BusEvent(value) with :radio, dynamicTags
+
+on BusEvent(value) matching :radio without :blocked {
+}
+```
+
+`emit` and `publish` should use the same high-level instruction family. The
+instruction records intent with a small kind field:
+
+```text
+PublishKind
+  Emit
+  Publish
+```
+
+`Emit` targets the current event space. `Publish` targets the configured publish
+hook; when no hook exists, it falls back to `Emit`. This keeps the language
+host-independent while allowing the runtime to redirect published messages to a
+bus, broadcaster, or parent dispatcher later.
+
+`with` attaches envelope tags to the message. Tags are not part of
+`SignatureId`, not part of handler parameter binding, and are normalized to a
+set while preserving first-seen order. A tag expression may evaluate to a single
+tag or to a list/set/sequence of tags.
+
+Handlers may declare static tag filters:
+
+- `matching :a, :b`: all required tags must be present.
+- `without :x, :y`: none of the excluded tags may be present.
+- no filter: any tag set matches as long as the message signature matches.
+
+The instruction should use a side-table layout:
 
 ```text
 PublishLayout
@@ -359,19 +397,22 @@ PublishLayout
   SignatureId
   ArgumentLabelsLayoutIndex
   ArgumentCount
+  TagExpressionCount
 ```
 
 Arguments are evaluated by preceding code and consumed from the operand stack in
-layout order:
+layout order; tag expressions are evaluated after message arguments and merged
+into the message envelope:
 
 ```text
 @0400 LoadSlot sDamage
 @0401 LoadSlot sTarget
-@0402 Publish layout=ApplyDamage(damage,target)
+@0402 LoadConstant :radio
+@0403 Publish kind=Publish layout=ApplyDamage(damage,target) tags=1
 ```
 
-Publishing a first-class message value can use a separate `PublishMessageValue`
-instruction.
+Publishing or emitting a first-class message value can use a separate
+`PublishMessageValue` instruction with the same `PublishKind` and tag payload.
 
 ### Extensions and Intrinsics
 

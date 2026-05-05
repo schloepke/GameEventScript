@@ -79,6 +79,8 @@ public sealed class GameEventScriptApiStepSpec
 
     public List<JsonElement>? ExpectedPublished { get; set; }
 
+    public List<JsonElement>? ExpectedOutboundPublished { get; set; }
+
     public string? ExpectedDiagnosticsMode { get; set; }
 
     public List<GameEventScriptDiagnosticExpectationSpec>? ExpectedDiagnostics { get; set; }
@@ -103,10 +105,10 @@ public sealed class GameEventScriptExternalSubscriberSpec
 
     public bool Throw { get; set; }
 
-    public List<GameEventScriptExternalPublishSpec>? Publish { get; set; }
+    public List<GameEventScriptExternalEmitSpec>? Emit { get; set; }
 }
 
-public sealed class GameEventScriptExternalPublishSpec
+public sealed class GameEventScriptExternalEmitSpec
 {
     public string? Name { get; set; }
 

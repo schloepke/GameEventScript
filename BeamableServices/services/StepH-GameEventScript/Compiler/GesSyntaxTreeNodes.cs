@@ -48,11 +48,20 @@ internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) :
     public IReadOnlyList<ExpressionNode> Expressions => Arguments.Select(argument => argument.Expression).ToArray();
 }
 
-internal sealed record EventHandlerNode(string Message, IReadOnlyList<ParameterNode> ParameterList, IReadOnlyList<StatementNode> Statements) : ScriptNode
+internal sealed record EventHandlerNode(
+    string Message,
+    IReadOnlyList<ParameterNode> ParameterList,
+    IReadOnlyList<StatementNode> Statements,
+    IReadOnlyList<string>? RequiredTags = null,
+    IReadOnlyList<string>? ExcludedTags = null) : ScriptNode
 {
     public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
 
     public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+
+    public IReadOnlyList<string> MatchingTags { get; } = RequiredTags ?? [];
+
+    public IReadOnlyList<string> WithoutTags { get; } = ExcludedTags ?? [];
 }
 
 internal sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : ScriptNode;
@@ -69,7 +78,13 @@ internal sealed record SelectDefinitionNode(string Name, IReadOnlyList<Parameter
 
 // Statement nodes
 
-internal sealed record PublishStatementNode(ExpressionNode MessageExpression) : StatementNode;
+internal enum PublishStatementKind
+{
+    Emit,
+    Publish
+}
+
+internal sealed record PublishStatementNode(PublishStatementKind Kind, ExpressionNode MessageExpression, IReadOnlyList<ExpressionNode> TagExpressions) : StatementNode;
 internal sealed record LetStatementNode(string Identifier, string? DeclaredType, ExpressionNode Expression) : StatementNode;
 internal sealed record StatementBodyNode(bool IsBlock, IReadOnlyList<StatementNode> Statements) : ScriptNode;
 internal sealed record IfStatementNode(ExpressionNode Condition, StatementBodyNode ThenBody, StatementBodyNode? ElseBody) : StatementNode;

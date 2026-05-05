@@ -118,7 +118,7 @@
     {
       "kind": "compileError",
       "name": "duplicate handler bind arguments fail module build",
-      "script": "module DuplicateHandlerBindArgs\non Start(unit, target, myHandler) {\n  publish myHandler(unit: unit, unit: target)\n}",
+      "script": "module DuplicateHandlerBindArgs\non Start(unit, target, myHandler) {\n  emit myHandler(unit: unit, unit: target)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "DuplicatePublishArgument",
@@ -129,7 +129,7 @@
     {
       "kind": "compileError",
       "name": "duplicate handler literal parameters fail module build",
-      "script": "module DuplicateHandlerLiteralParams\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, unit)\n  publish Done\n}",
+      "script": "module DuplicateHandlerLiteralParams\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, unit)\n  emit Done\n}",
       "expectedError": {
         "phase": "build",
         "kind": "DuplicateHandlerParameter",

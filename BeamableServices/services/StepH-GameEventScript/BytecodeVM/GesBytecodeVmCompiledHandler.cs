@@ -14,6 +14,8 @@ internal sealed class GesBytecodeVmCompiledHandler
         Parameters = handler.Parameters.ToArray();
         SignatureLabels = handler.SignatureLabels.ToArray();
         ParameterTypes = handler.ParameterTypes.ToArray();
+        RequiredTags = handler.RequiredTags.ToArray();
+        ExcludedTags = handler.ExcludedTags.ToArray();
         SignatureId = handler.SignatureId;
         DeclarationOrder = handler.DeclarationOrder;
         DiagnosticsEnabled = diagnosticsEnabled;
@@ -28,6 +30,10 @@ internal sealed class GesBytecodeVmCompiledHandler
     public IReadOnlyList<string> SignatureLabels { get; }
 
     public IReadOnlyList<string?> ParameterTypes { get; }
+
+    public IReadOnlyList<string> RequiredTags { get; }
+
+    public IReadOnlyList<string> ExcludedTags { get; }
 
     public string SignatureId { get; }
 

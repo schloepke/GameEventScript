@@ -177,9 +177,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return Define(statement.Name!, letValue);
 
             case GameEventScriptBytecodeStatementKind.Publish:
-                return statement.PublishLayout is not null
-                    ? TryPublish(statement.PublishLayout)
-                    : statement.ExpressionProgram is not null && TryPublish(statement.ExpressionProgram);
+                return TryPublish(statement);
 
             case GameEventScriptBytecodeStatementKind.If:
                 return TryExecuteIf(statement);
@@ -382,16 +380,52 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryPublish(GameEventScriptBytecodePublishLayout layout)
+    private bool TryPublish(GameEventScriptBytecodeStatement statement)
+    {
+        GameEventScriptMessage? message;
+        if (statement.PublishLayout is not null)
+        {
+            if (!TryCreateMessage(statement.PublishLayout, out message))
+            {
+                return false;
+            }
+        }
+        else if (statement.ExpressionProgram is not null)
+        {
+            if (!TryCreateMessage(statement.ExpressionProgram, out message))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+        if (message is null)
+        {
+            return true;
+        }
+
+        if (!TryEvaluateTags(statement.TagPrograms, out var tags))
+        {
+            return false;
+        }
+
+        PublishMessage(statement.PublishKind, tags.Count == 0 ? message : message.WithTags(tags));
+        return true;
+    }
+
+    private bool TryCreateMessage(GameEventScriptBytecodePublishLayout layout, out GameEventScriptMessage message)
     {
         var argumentNames = layout.ArgumentNames;
         var argumentPrograms = layout.ArgumentPrograms;
         if (argumentNames.Length == 0)
         {
-            _context.Publish(GameEventScriptMessage.CreatePrecomputed(
+            message = GameEventScriptMessage.CreatePrecomputed(
                 layout.MessageName,
                 GameEventScriptNamedArguments.Empty,
-                layout.SignatureId));
+                layout.SignatureId);
             return true;
         }
 
@@ -400,6 +434,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             if (!TryExecuteExpressionProgram(argumentPrograms[argumentIndex], 0, out var value))
             {
+                message = GameEventScriptMessage.Empty;
                 return false;
             }
 
@@ -410,27 +445,83 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 value.ToGameEventScriptValue());
         }
 
-        _context.Publish(GameEventScriptMessage.CreatePrecomputed(
+        message = GameEventScriptMessage.CreatePrecomputed(
             layout.MessageName,
             GameEventScriptNamedArguments.CreateOrdered(pairs),
-            layout.SignatureId));
+            layout.SignatureId);
         return true;
     }
 
-    private bool TryPublish(GameEventScriptBytecodeExpressionProgram messageExpression)
+    private bool TryCreateMessage(GameEventScriptBytecodeExpressionProgram messageExpression, out GameEventScriptMessage? message)
     {
         if (!TryExecuteExpressionProgram(messageExpression, 0, out var publishValue))
         {
+            message = null;
             return false;
         }
 
         var boxed = publishValue.ToGameEventScriptValue();
-        if (GesMessageValueCodec.TryReadMessageValue(boxed, out var message))
+        message = GesMessageValueCodec.TryReadMessageValue(boxed, out var boxedMessage)
+            ? boxedMessage
+            : null;
+
+        return true;
+    }
+
+    private bool TryEvaluateTags(IReadOnlyList<GameEventScriptBytecodeExpressionProgram> tagPrograms, out IReadOnlyList<string> tags)
+    {
+        if (tagPrograms.Count == 0)
+        {
+            tags = [];
+            return true;
+        }
+
+        var builder = new MessageTagBuilder();
+        foreach (var tagProgram in tagPrograms)
+        {
+            if (!TryExecuteExpressionProgram(tagProgram, 0, out var tagValue))
+            {
+                tags = [];
+                return false;
+            }
+
+            AddTags(builder, tagValue.ToGameEventScriptValue());
+        }
+
+        tags = builder.ToArray();
+        return true;
+    }
+
+    internal void PublishMessage(GameEventScriptBytecodePublishKind publishKind, GameEventScriptMessage message)
+    {
+        if (publishKind == GameEventScriptBytecodePublishKind.Publish)
         {
             _context.Publish(message);
         }
+        else
+        {
+            _context.Emit(message);
+        }
+    }
 
-        return true;
+    internal static void AddTags(MessageTagBuilder builder, GameEventScriptValue value)
+    {
+        if (value.IsNothing())
+        {
+            return;
+        }
+
+        if (value.IsList() || value.IsSet() || value.IsSequence())
+        {
+            foreach (var item in value.AsEnumerable())
+            {
+                AddTags(builder, item);
+            }
+
+            return;
+        }
+
+        builder.Add(value.AsText());
     }
 
     private bool TryExecuteExpressionProgram(GameEventScriptBytecodeExpressionProgram program, int stackBase, out BytecodeVmValue value)
@@ -5163,6 +5254,28 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (value > long.MaxValue) return long.MaxValue;
         if (value < long.MinValue) return long.MinValue;
         return (long)value;
+    }
+
+    internal sealed class MessageTagBuilder
+    {
+        private readonly List<string> _tags = [];
+        private readonly HashSet<string> _seen = new(StringComparer.Ordinal);
+
+        public int Count => _tags.Count;
+
+        public void Add(string? tag)
+        {
+            var normalized = GameEventScriptMessage.NormalizeTagName(tag);
+            if (normalized.Length == 0 || !_seen.Add(normalized))
+            {
+                return;
+            }
+
+            _tags.Add(normalized);
+        }
+
+        public IReadOnlyList<string> ToArray()
+            => _tags.Count == 0 ? [] : _tags.ToArray();
     }
 
     private readonly record struct LocalChange(int Slot, bool HadValue, BytecodeVmValue PreviousValue);

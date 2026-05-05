@@ -162,6 +162,15 @@ internal static class GesBytecodeLowerer
                     return false;
                 }
 
+                foreach (var tagExpression in publish.TagExpressions)
+                {
+                    if (!TryValidateExpression(tagExpression, callables, out failureReason))
+                    {
+                        failureReason = $"Publish tag expression: {failureReason}";
+                        return false;
+                    }
+                }
+
                 failureReason = string.Empty;
                 return true;
 
@@ -1159,6 +1168,11 @@ internal static class GesBytecodeLowerer
 
                 case PublishStatementNode publish:
                     CollectExpression(publish.MessageExpression);
+                    foreach (var tagExpression in publish.TagExpressions)
+                    {
+                        CollectExpression(tagExpression);
+                    }
+
                     break;
 
                 case ForStatementNode { Source: RangeIterationSourceNode range } forStatement:
@@ -1585,11 +1599,15 @@ internal static class GesBytecodeLowerer
 
                 PublishStatementNode { MessageExpression: MessageLiteralExpressionNode } publish => new GameEventScriptBytecodeStatement(
                     GameEventScriptBytecodeStatementKind.Publish,
-                    publishLayout: CompilePublishLayout(publish)),
+                    publishLayout: CompilePublishLayout(publish),
+                    publishKind: GetPublishKind(publish.Kind),
+                    tagPrograms: CompileTagPrograms(publish)),
 
                 PublishStatementNode publish => new GameEventScriptBytecodeStatement(
                     GameEventScriptBytecodeStatementKind.Publish,
-                    expressionProgram: CompileExpression(publish.MessageExpression)),
+                    expressionProgram: CompileExpression(publish.MessageExpression),
+                    publishKind: GetPublishKind(publish.Kind),
+                    tagPrograms: CompileTagPrograms(publish)),
 
                 IfStatementNode ifStatement => new GameEventScriptBytecodeStatement(
                     GameEventScriptBytecodeStatementKind.If,
@@ -1623,6 +1641,14 @@ internal static class GesBytecodeLowerer
 
                 _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support statement '{statement.GetType().Name}'.")
             };
+
+        private static GameEventScriptBytecodePublishKind GetPublishKind(PublishStatementKind kind)
+            => kind == PublishStatementKind.Publish
+                ? GameEventScriptBytecodePublishKind.Publish
+                : GameEventScriptBytecodePublishKind.Emit;
+
+        private GameEventScriptBytecodeExpressionProgram[] CompileTagPrograms(PublishStatementNode publish)
+            => publish.TagExpressions.Select(CompileExpression).ToArray();
 
         public GameEventScriptBytecodeExpressionProgram CompileExpression(ExpressionNode expression)
         {

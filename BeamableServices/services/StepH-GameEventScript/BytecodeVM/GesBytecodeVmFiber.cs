@@ -302,6 +302,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             private GameEventScriptValue[]? _collectionItems;
             private int _collectionIndex;
             private KeyValuePair<string, GameEventScriptValue>[]? _publishPairs;
+            private GameEventScriptMessage? _publishMessage;
+            private GesBytecodeVmExecutionSession.MessageTagBuilder? _publishTags;
 
             public override FrameSignal Run(Fiber fiber)
             {
@@ -370,12 +372,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         var layout = statement.PublishLayout;
                         if (layout.ArgumentNames.Length == 0)
                         {
-                            session._context.Publish(GameEventScriptMessage.CreatePrecomputed(
+                            _publishMessage = GameEventScriptMessage.CreatePrecomputed(
                                 layout.MessageName,
                                 GameEventScriptNamedArguments.Empty,
-                                layout.SignatureId));
-                            fiber.Complete(BytecodeVmValue.Nothing);
-                            return FrameSignal.Completed;
+                                layout.SignatureId);
+                            return StartPublishTagsOrDispatch(fiber);
                         }
 
                         _publishPairs = new KeyValuePair<string, GameEventScriptValue>[layout.ArgumentNames.Length];
@@ -404,11 +405,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     var boxed = publishValue.ToGameEventScriptValue();
                     if (GesMessageValueCodec.TryReadMessageValue(boxed, out var message))
                     {
-                        session._context.Publish(message);
+                        _publishMessage = message;
+                        return StartPublishTagsOrDispatch(fiber);
                     }
 
                     fiber.Complete(BytecodeVmValue.Nothing);
                     return FrameSignal.Completed;
+                }
+
+                if (_stage >= 2000)
+                {
+                    return ContinuePublishTags(fiber);
                 }
 
                 var publishLayout = statement.PublishLayout!;
@@ -430,10 +437,55 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return FrameSignal.Running;
                 }
 
-                session._context.Publish(GameEventScriptMessage.CreatePrecomputed(
+                _publishMessage = GameEventScriptMessage.CreatePrecomputed(
                     publishLayout.MessageName,
                     GameEventScriptNamedArguments.CreateOrdered(_publishPairs),
-                    publishLayout.SignatureId));
+                    publishLayout.SignatureId);
+                return StartPublishTagsOrDispatch(fiber);
+            }
+
+            private FrameSignal StartPublishTagsOrDispatch(Fiber fiber)
+            {
+                if (statement.TagPrograms.Length == 0)
+                {
+                    return DispatchPublishedMessage(fiber);
+                }
+
+                _publishTags = new GesBytecodeVmExecutionSession.MessageTagBuilder();
+                _stage = 2000;
+                fiber.Push(new ExpressionFrame(statement.TagPrograms[0], 0));
+                return FrameSignal.Running;
+            }
+
+            private FrameSignal ContinuePublishTags(Fiber fiber)
+            {
+                if (!fiber.TryTakeResult(out var tagValue, out var tagSuccess) || !tagSuccess)
+                {
+                    return CompleteFailure(fiber);
+                }
+
+                GesBytecodeVmExecutionSession.AddTags(_publishTags!, tagValue.ToGameEventScriptValue());
+                var tagIndex = _stage - 2000 + 1;
+                if (tagIndex < statement.TagPrograms.Length)
+                {
+                    _stage = 2000 + tagIndex;
+                    fiber.Push(new ExpressionFrame(statement.TagPrograms[tagIndex], 0));
+                    return FrameSignal.Running;
+                }
+
+                return DispatchPublishedMessage(fiber);
+            }
+
+            private FrameSignal DispatchPublishedMessage(Fiber fiber)
+            {
+                var session = fiber._session;
+                var message = _publishMessage;
+                if (message is not null)
+                {
+                    var tags = _publishTags?.ToArray() ?? [];
+                    session.PublishMessage(statement.PublishKind, tags.Count == 0 ? message : message.WithTags(tags));
+                }
+
                 fiber.Complete(BytecodeVmValue.Nothing);
                 return FrameSignal.Completed;
             }

@@ -34,7 +34,11 @@ internal static class GameEventScriptConformanceValueCodec
             args = DecodeArguments(argsElement);
         }
 
-        return GameEventScriptMessage.Create(name, args);
+        var tags = TryGetProperty(element, "tags", out var tagsElement)
+            ? DecodeMessageTags(tagsElement)
+            : [];
+
+        return GameEventScriptMessage.Create(name, args, tags);
     }
 
     public static Dictionary<string, GameEventScriptValue> DecodeArguments(JsonElement element)
@@ -138,6 +142,17 @@ internal static class GameEventScriptConformanceValueCodec
             ["name"] = message.Name
         };
 
+        if (message.Tags.Count > 0)
+        {
+            var tags = new JsonArray();
+            foreach (var tag in message.Tags)
+            {
+                tags.Add(tag);
+            }
+
+            node["tags"] = tags;
+        }
+
         var args = new JsonObject();
         foreach (var pair in message.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
@@ -234,6 +249,27 @@ internal static class GameEventScriptConformanceValueCodec
         }
 
         return GameEventScriptValueFactory.GesOptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
+    }
+
+    private static IReadOnlyList<string> DecodeMessageTags(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("Invalid message tags; expected JSON array.");
+        }
+
+        var tags = new List<string>();
+        foreach (var tag in element.EnumerateArray())
+        {
+            if (tag.ValueKind != JsonValueKind.String)
+            {
+                throw new InvalidOperationException("Invalid message tag; expected string.");
+            }
+
+            tags.Add(tag.GetString()!);
+        }
+
+        return tags;
     }
 
     private static IReadOnlyDictionary<string, GameEventScriptValue> DecodeEntries(JsonElement element)

@@ -197,6 +197,11 @@ internal static class GesValidator
         {
             case PublishStatementNode publish:
                 ValidateExpressionReferences(parsedScriptContext, publish.MessageExpression, callables, typeDefinitions, errors);
+                foreach (var tagExpression in publish.TagExpressions)
+                {
+                    ValidateExpressionReferences(parsedScriptContext, tagExpression, callables, typeDefinitions, errors);
+                }
+
                 return;
 
             case LetStatementNode let:

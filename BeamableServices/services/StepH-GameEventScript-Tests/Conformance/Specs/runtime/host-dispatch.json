@@ -5,12 +5,12 @@
     {
       "kind": "scriptApi",
       "name": "published messages route to external subscribers",
-      "script": "on Start(playerId) {\n  publish Notify(playerId: playerId, count: 3)\n}",
+      "script": "on Start(playerId) {\n  emit Notify(playerId: playerId, count: 3)\n}",
       "externalSubscribers": [
         {
           "message": "Notify",
           "parameters": ["playerId", "count"],
-          "publish": [
+          "emit": [
             { "name": "ExternalSeen", "forwardArguments": true }
           ]
         }
@@ -45,12 +45,12 @@
     {
       "kind": "scriptApi",
       "name": "equal priority preserves script then external registration order",
-      "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Notify(value) {\n  publish SeenByScript(value: value + 1)\n}",
+      "script": "on Start(value) {\n  emit Notify(value: value)\n}\n\non Notify(value) {\n  emit SeenByScript(value: value + 1)\n}",
       "externalSubscribers": [
         {
           "message": "Notify",
           "parameters": ["value"],
-          "publish": [
+          "emit": [
             {
               "name": "SeenByExternal",
               "args": {
@@ -94,12 +94,12 @@
     {
       "kind": "scriptApi",
       "name": "external subscribers keep registration order",
-      "script": "on Start(value) {\n  publish Notify(value: value)\n}",
+      "script": "on Start(value) {\n  emit Notify(value: value)\n}",
       "externalSubscribers": [
         {
           "message": "Notify",
           "parameters": ["value"],
-          "publish": [
+          "emit": [
             {
               "name": "ExternalFirst",
               "args": {
@@ -111,7 +111,7 @@
         {
           "message": "Notify",
           "parameters": ["value"],
-          "publish": [
+          "emit": [
             {
               "name": "ExternalSecond",
               "args": {
@@ -155,13 +155,13 @@
     {
       "kind": "scriptApi",
       "name": "higher priority subscribers run first",
-      "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Notify(value) {\n  publish SeenByScript(value: value + 1)\n}",
+      "script": "on Start(value) {\n  emit Notify(value: value)\n}\n\non Notify(value) {\n  emit SeenByScript(value: value + 1)\n}",
       "externalSubscribers": [
         {
           "message": "Notify",
           "parameters": ["value"],
           "priority": 10,
-          "publish": [
+          "emit": [
             {
               "name": "SeenByExternal",
               "args": {
@@ -205,7 +205,7 @@
     {
       "kind": "scriptApi",
       "name": "failing external subscribers are ignored and later subscribers continue",
-      "script": "on Start(value) {\n  publish Notify(value: value)\n}",
+      "script": "on Start(value) {\n  emit Notify(value: value)\n}",
       "externalSubscribers": [
         {
           "message": "Notify",
@@ -215,7 +215,7 @@
         {
           "message": "Notify",
           "parameters": ["value"],
-          "publish": [
+          "emit": [
             { "name": "ExternalOk", "forwardArguments": true }
           ]
         }
@@ -247,13 +247,13 @@
     },
     {
       "kind": "scriptApi",
-      "name": "external subscribers publish follow up messages through same run",
-      "script": "on Start(value) {\n  publish Notify(value: value)\n}\n\non Done(value) {\n  publish Final(value: value)\n}",
+      "name": "external subscribers emit follow up messages through same run",
+      "script": "on Start(value) {\n  emit Notify(value: value)\n}\n\non Done(value) {\n  emit Final(value: value)\n}",
       "externalSubscribers": [
         {
           "message": "Notify",
           "parameters": ["value"],
-          "publish": [
+          "emit": [
             { "name": "Done", "forwardArguments": true }
           ]
         }

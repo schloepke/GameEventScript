@@ -116,6 +116,8 @@ public static class GameEventScriptBytecodeDumper
                 .Append(' ').Append(handler.SignatureId)
                 .Append(" declarationOrder=").Append(handler.DeclarationOrder.ToString(CultureInfo.InvariantCulture))
                 .Append(" params=[").Append(FormatParameters(handler.Parameters, handler.ParameterTypes)).Append(']')
+                .Append(" matching=[").Append(FormatTags(handler.RequiredTags)).Append(']')
+                .Append(" without=[").Append(FormatTags(handler.ExcludedTags)).Append(']')
                 .Append(" slots=").AppendLine(handler.ExecutionPlan.SlotCount.ToString(CultureInfo.InvariantCulture));
             if (handler.ExecutionPlan.Slots.Count > 0)
             {
@@ -171,6 +173,11 @@ public static class GameEventScriptBytecodeDumper
             builder.AppendLine();
 
             AppendExpressionProgram(builder, module, statement.ExpressionProgram, indent + 4, "expression");
+            for (var tagIndex = 0; tagIndex < statement.TagPrograms.Length; tagIndex++)
+            {
+                AppendExpressionProgram(builder, module, statement.TagPrograms[tagIndex], indent + 4, $"tag:{tagIndex.ToString(CultureInfo.InvariantCulture)}");
+            }
+
             AppendPublishLayout(builder, module, statement.PublishLayout, indent + 4);
             AppendIterationSource(builder, module, statement.IterationSource, indent + 4);
             AppendStatementProgram(builder, module, statement.ThenProgram, indent + 4, "then");
@@ -184,6 +191,14 @@ public static class GameEventScriptBytecodeDumper
         AppendValue(builder, "name", statement.Name);
         AppendValue(builder, "type", statement.DeclaredType);
         AppendValue(builder, "diagnostic", statement.DiagnosticName);
+        if (statement.Kind == GameEventScriptBytecodeStatementKind.Publish)
+        {
+            AppendValue(builder, "mode", statement.PublishKind.ToString());
+            if (statement.TagPrograms.Length > 0)
+            {
+                AppendValue(builder, "tags", statement.TagPrograms.Length.ToString(CultureInfo.InvariantCulture));
+            }
+        }
     }
 
     private static void AppendPublishLayout(
@@ -208,6 +223,9 @@ public static class GameEventScriptBytecodeDumper
             AppendExpressionProgram(builder, module, layout.ArgumentPrograms[index], indent + 2, $"arg:{layout.ArgumentNames[index]}");
         }
     }
+
+    private static string FormatTags(IReadOnlyList<string> tags)
+        => string.Join(", ", tags.Select(tag => $":{tag}"));
 
     private static void AppendIterationSource(
         StringBuilder builder,

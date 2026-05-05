@@ -94,10 +94,7 @@ public readonly struct GameEventScriptFastValue
         GameEventScriptValueKind.Boolean => BooleanValue,
         GameEventScriptValueKind.Integer => IntegerValue != 0,
         GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsBoolean() : NumberValue != 0m,
-        GameEventScriptValueKind.Vector2 => X != 0m || Y != 0m,
-        GameEventScriptValueKind.Vector3 => X != 0m || Y != 0m || Z != 0m,
-        GameEventScriptValueKind.Point2 => X != 0m || Y != 0m,
-        GameEventScriptValueKind.Point3 => X != 0m || Y != 0m || Z != 0m,
+        GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point => X != 0m || Y != 0m || Z != 0m,
         _ => ToGameEventScriptValue().AsBoolean()
     };
 
@@ -129,10 +126,8 @@ public readonly struct GameEventScriptFastValue
         GameEventScriptIntegerValue integer => FromInteger(integer.Value),
         GameEventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => FromDecimal(decimalValue.Value, decimalValue.Unit),
         GameEventScriptPercentageValue percentage => FromPercentage(percentage.Ratio),
-        GameEventScriptVector2Value vector2 => FromVector2(vector2.X, vector2.Y, vector2.Unit),
-        GameEventScriptVector3Value vector3 => FromVector3(vector3.X, vector3.Y, vector3.Z, vector3.Unit),
-        GameEventScriptPoint2Value point2 => FromPoint2(point2.X, point2.Y, point2.Unit),
-        GameEventScriptPoint3Value point3 => FromPoint3(point3.X, point3.Y, point3.Z, point3.Unit),
+        GameEventScriptVectorValue vector => FromVector(vector.X, vector.Y, vector.Z, vector.Unit),
+        GameEventScriptPointValue point => FromPoint(point.X, point.Y, point.Z, point.Unit),
         _ => new GameEventScriptFastValue(value.Kind, 0, 0m, 0m, 0m, 0m, value.AsBoolean(), null, value)
     };
 
@@ -148,17 +143,11 @@ public readonly struct GameEventScriptFastValue
     public static GameEventScriptFastValue FromPercentage(decimal ratio)
         => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0m, 0m, 0m, ratio != 0m, null, null);
 
-    public static GameEventScriptFastValue FromVector2(decimal x, decimal y, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Vector2, 0, 0m, x, y, 0m, x != 0m || y != 0m, unit, null);
+    public static GameEventScriptFastValue FromVector(decimal x, decimal y = 0m, decimal z = 0m, GameEventScriptDecimalUnit? unit = null)
+        => new(GameEventScriptValueKind.Vector, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
 
-    public static GameEventScriptFastValue FromVector3(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Vector3, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
-
-    public static GameEventScriptFastValue FromPoint2(decimal x, decimal y, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Point2, 0, 0m, x, y, 0m, x != 0m || y != 0m, unit, null);
-
-    public static GameEventScriptFastValue FromPoint3(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Point3, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
+    public static GameEventScriptFastValue FromPoint(decimal x, decimal y = 0m, decimal z = 0m, GameEventScriptDecimalUnit? unit = null)
+        => new(GameEventScriptValueKind.Point, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
 
     public static GameEventScriptFastValue FromText(string value)
         => FromGameEventScriptValue(GesText(value));
@@ -176,10 +165,8 @@ public readonly struct GameEventScriptFastValue
             GameEventScriptValueKind.Integer => GesInteger(IntegerValue),
             GameEventScriptValueKind.Decimal => GesDecimal(NumberValue, Unit),
             GameEventScriptValueKind.Percentage => GesPercentage(NumberValue),
-            GameEventScriptValueKind.Vector2 => GesVector2(X, Y, Unit),
-            GameEventScriptValueKind.Vector3 => GesVector3(X, Y, Z, Unit),
-            GameEventScriptValueKind.Point2 => GesPoint2(X, Y, Unit),
-            GameEventScriptValueKind.Point3 => GesPoint3(X, Y, Z, Unit),
+            GameEventScriptValueKind.Vector => GesVector(X, Y, Z, Unit),
+            GameEventScriptValueKind.Point => GesPoint(X, Y, Z, Unit),
             _ => GesNothing()
         };
     }

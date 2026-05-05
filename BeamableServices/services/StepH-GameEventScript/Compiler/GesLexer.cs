@@ -296,7 +296,28 @@ internal sealed class GesLexer
     private GesToken ReadWordLikeToken(int line, int column)
     {
         var start = _index;
-        var word = ReadWhile(char.IsLetterOrDigit);
+        var first = Current;
+        var word = ReadWhile(char.IsLetter);
+        if (char.IsLower(first) && !IsAtEnd && Current == '_')
+        {
+            Advance();
+            if (!ReadValidIdentifierSuffix())
+            {
+                while (!IsAtEnd && !char.IsWhiteSpace(Current))
+                {
+                    Advance();
+                }
+
+                return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+            }
+
+            word = _input[start.._index];
+        }
+        else if (string.Equals(word, "d", StringComparison.Ordinal) && !IsAtEnd && char.IsDigit(Current))
+        {
+            return CreateWordToken(word, line, column, _line, _column);
+        }
+
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(word, line, column, _line, _column);
         while (!IsAtEnd && !char.IsWhiteSpace(Current))
         {
@@ -306,11 +327,28 @@ internal sealed class GesLexer
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 
+    private bool ReadValidIdentifierSuffix()
+    {
+        if (IsAtEnd || !char.IsDigit(Current))
+        {
+            return false;
+        }
+
+        if (Current == '0')
+        {
+            Advance();
+            return IsAtEnd || !char.IsDigit(Current);
+        }
+
+        ReadWhile(char.IsDigit);
+        return true;
+    }
+
     private GesToken ReadSelectorToken(int line, int column)
     {
         var start = _index;
         Advance();
-        var selector = ReadWhile(char.IsLetterOrDigit);
+        var selector = ReadWhile(char.IsLetter);
 
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return selector switch

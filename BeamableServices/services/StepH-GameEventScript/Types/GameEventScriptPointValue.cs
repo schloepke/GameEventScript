@@ -1,6 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -8,14 +7,14 @@ using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
-public sealed class GameEventScriptPoint3Value : GameEventScriptValue
+public sealed class GameEventScriptPointValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptPoint3Value Zero = new(0m, 0m, 0m, null);
+    public static readonly GameEventScriptPointValue Zero = new(0m, 0m, 0m, null);
 
-    public static GameEventScriptPoint3Value Create(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
-        => x == 0m && y == 0m && z == 0m && unit is null ? Zero : new GameEventScriptPoint3Value(x, y, z, unit);
+    public static GameEventScriptPointValue Create(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
+        => x == 0m && y == 0m && z == 0m && unit is null ? Zero : new GameEventScriptPointValue(x, y, z, unit);
 
-    private GameEventScriptPoint3Value(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit)
+    private GameEventScriptPointValue(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit)
     {
         X = x;
         Y = y;
@@ -23,7 +22,7 @@ public sealed class GameEventScriptPoint3Value : GameEventScriptValue
         Unit = unit;
         Components = CreateReadOnlyList(new[] { GesDecimal(x, unit), GesDecimal(y, unit), GesDecimal(z, unit) });
         Members = new ReadOnlyDictionary<string, GameEventScriptValue>(
-            new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+            new Dictionary<string, GameEventScriptValue>(System.StringComparer.Ordinal)
             {
                 ["x"] = GesDecimal(x, unit),
                 ["y"] = GesDecimal(y, unit),
@@ -32,17 +31,12 @@ public sealed class GameEventScriptPoint3Value : GameEventScriptValue
     }
 
     public decimal X { get; }
-
     public decimal Y { get; }
-
     public decimal Z { get; }
-
     public GameEventScriptDecimalUnit? Unit { get; }
-
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Point3;
+    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Point;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }
-
     private IReadOnlyDictionary<string, GameEventScriptValue> Members { get; }
 
     public override string AsText() => ToString();

@@ -11,37 +11,67 @@
           "input": {
             "name": "Start",
             "args": {
-              "unit": { "type": ":text", "value": "u1" },
-              "target": { "type": ":text", "value": "t1" }
+              "unit": {
+                "type": ":text",
+                "value": "u_1"
+              },
+              "target": {
+                "type": ":text",
+                "value": "t_1"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Shoot",
               "args": {
-                "target": { "type": ":text", "value": "t1" },
-                "unit": { "type": ":text", "value": "u1" }
+                "target": {
+                  "type": ":text",
+                  "value": "t_1"
+                },
+                "unit": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
               }
             },
             {
               "name": "Shoot",
               "args": {
-                "target": { "type": ":text", "value": "t1" },
-                "unit": { "type": ":text", "value": "u1" }
+                "target": {
+                  "type": ":text",
+                  "value": "t_1"
+                },
+                "unit": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
               }
             },
             {
               "name": "Shoot",
               "args": {
-                "target": { "type": ":text", "value": "t1" },
-                "unit": { "type": ":text", "value": "u1" }
+                "target": {
+                  "type": ":text",
+                  "value": "t_1"
+                },
+                "unit": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
               }
             },
             {
               "name": "Done",
               "args": {
-                "isHandler": { "type": ":boolean", "value": true },
-                "isMessage": { "type": ":boolean", "value": true }
+                "isHandler": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "isMessage": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -57,18 +87,36 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":integer", "value": "21" }
+              "value": {
+                "type": ":integer",
+                "value": "21"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "isMessage": { "type": ":boolean", "value": true },
-                "name": { "type": ":text", "value": "Success" },
-                "signature": { "type": ":text", "value": "Success(message,value)" },
-                "text": { "type": ":text", "value": "world" },
-                "value": { "type": ":integer", "value": "42" }
+                "isMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "name": {
+                  "type": ":text",
+                  "value": "Success"
+                },
+                "signature": {
+                  "type": ":text",
+                  "value": "Success(message,value)"
+                },
+                "text": {
+                  "type": ":text",
+                  "value": "world"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "42"
+                }
               }
             }
           ]
@@ -81,13 +129,22 @@
       "script": "on Start {\n  let handler as :handler be Shoot()\n  emit Done(name: handler.name, parameterCount: :len handler[:parameters])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "name": { "type": ":text", "value": "Shoot" },
-                "parameterCount": { "type": ":integer", "value": "0" }
+                "name": {
+                  "type": ":text",
+                  "value": "Shoot"
+                },
+                "parameterCount": {
+                  "type": ":integer",
+                  "value": "0"
+                }
               }
             }
           ]
@@ -103,23 +160,56 @@
           "input": {
             "name": "Start",
             "args": {
-              "success": { "type": ":boolean", "value": true }
+              "success": {
+                "type": ":boolean",
+                "value": true
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "handlerIsHandler": { "type": ":boolean", "value": true },
-                "handlerName": { "type": ":text", "value": "Success" },
-                "handlerSignature": { "type": ":text", "value": "Success(message,value)" },
-                "secondParameter": { "type": ":text", "value": "value" },
-                "messageIsMessage": { "type": ":boolean", "value": true },
-                "messageName": { "type": ":text", "value": "Success" },
-                "messageSignature": { "type": ":text", "value": "Success(message,value)" },
-                "text": { "type": ":text", "value": "hello" },
-                "value": { "type": ":boolean", "value": true },
-                "invalidIsNothing": { "type": ":boolean", "value": true }
+                "handlerIsHandler": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "handlerName": {
+                  "type": ":text",
+                  "value": "Success"
+                },
+                "handlerSignature": {
+                  "type": ":text",
+                  "value": "Success(message,value)"
+                },
+                "secondParameter": {
+                  "type": ":text",
+                  "value": "value"
+                },
+                "messageIsMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "messageName": {
+                  "type": ":text",
+                  "value": "Success"
+                },
+                "messageSignature": {
+                  "type": ":text",
+                  "value": "Success(message,value)"
+                },
+                "text": {
+                  "type": ":text",
+                  "value": "hello"
+                },
+                "value": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "invalidIsNothing": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -135,16 +225,28 @@
           "input": {
             "name": "Start",
             "args": {
-              "unit": { "type": ":text", "value": "u1" },
-              "hp": { "type": ":integer", "value": "10" }
+              "unit": {
+                "type": ":text",
+                "value": "u_1"
+              },
+              "hp": {
+                "type": ":integer",
+                "value": "10"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "isMessage": { "type": ":boolean", "value": false },
-                "isNothing": { "type": ":boolean", "value": true }
+                "isMessage": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "isNothing": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -160,23 +262,56 @@
           "input": {
             "name": "Start",
             "args": {
-              "unit": { "type": ":text", "value": "u1" },
-              "target": { "type": ":text", "value": "t1" }
+              "unit": {
+                "type": ":text",
+                "value": "u_1"
+              },
+              "target": {
+                "type": ":text",
+                "value": "t_1"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "msgIsMessage": { "type": ":boolean", "value": true },
-                "msgIsDictionary": { "type": ":boolean", "value": false },
-                "handlerIsHandler": { "type": ":boolean", "value": true },
-                "handlerIsDictionary": { "type": ":boolean", "value": false },
-                "msgName": { "type": ":text", "value": "Shoot" },
-                "msgSignature": { "type": ":text", "value": "Shoot(unit,target)" },
-                "handlerName": { "type": ":text", "value": "Shoot" },
-                "handlerParameterCount": { "type": ":integer", "value": "2" },
-                "messageArgumentCount": { "type": ":integer", "value": "2" }
+                "msgIsMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "msgIsDictionary": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "handlerIsHandler": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "handlerIsDictionary": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "msgName": {
+                  "type": ":text",
+                  "value": "Shoot"
+                },
+                "msgSignature": {
+                  "type": ":text",
+                  "value": "Shoot(unit,target)"
+                },
+                "handlerName": {
+                  "type": ":text",
+                  "value": "Shoot"
+                },
+                "handlerParameterCount": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "messageArgumentCount": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -192,8 +327,14 @@
           "input": {
             "name": "Start",
             "args": {
-              "unit": { "type": ":text", "value": "u1" },
-              "target": { "type": ":text", "value": "t1" }
+              "unit": {
+                "type": ":text",
+                "value": "u_1"
+              },
+              "target": {
+                "type": ":text",
+                "value": "t_1"
+              }
             }
           },
           "expectedPublished": [
@@ -205,8 +346,14 @@
                   "message": {
                     "name": "Shoot",
                     "args": {
-                      "target": { "type": ":text", "value": "t1" },
-                      "unit": { "type": ":text", "value": "u1" }
+                      "target": {
+                        "type": ":text",
+                        "value": "t_1"
+                      },
+                      "unit": {
+                        "type": ":text",
+                        "value": "u_1"
+                      }
                     }
                   }
                 }

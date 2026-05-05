@@ -31,12 +31,12 @@ public class GameEventScriptDiagnosticTest
         }
         
         on AreaScanned(_ x, _ y) {
-            let move2d be :vector2(x: x, y: y)
-            let move3d be :meter(:vector3(:decimal(move2d))) + :vector3(z: 10m)
-            emit Done(move3d, x: x, y: y)
+            let move be :vector(x: x, y: y)
+            let moved be :meter(:vector(:decimal(move))) + :vector(z: 10m)
+            emit Done(moved, x: x, y: y)
         }
         
-        on Done(_ move3d, x, y) {
+        on Done(_ moved, x, y) {
             emit Finished
         }
         """;
@@ -50,7 +50,7 @@ public class GameEventScriptDiagnosticTest
             .AddScript(script)
             .Compile(new GameEventScriptCompileOptions { EnableDiagnostics = true });
         
-        var input = Create("Start", ("startPosition", GameEventScriptValueFactory.GesVector2(20, 15)));
+        var input = Create("Start", ("startPosition", GameEventScriptValueFactory.GesVector(20, 15)));
         
         var collector = new GameEventScriptDiagnosticTraceCollector();
         var host = GameEventScriptHost.CreateBuilder()

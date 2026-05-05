@@ -15,10 +15,8 @@ public enum GameEventScriptValueKind
     Tag,
     Text,
     Percentage,
-    Vector2,
-    Vector3,
-    Point2,
-    Point3,
+    Vector,
+    Point,
     Decimal,
     Integer,
     Boolean,
@@ -53,10 +51,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsPercentage() => Kind == GameEventScriptValueKind.Percentage;
     public bool IsDecimalUnit(GameEventScriptDecimalUnit unit) => this is GameEventScriptDecimalValue decimalValue && decimalValue.Unit == unit;
     public bool HasDecimalUnit() => this is GameEventScriptDecimalValue { Unit: not null };
-    public bool IsVector2() => Kind == GameEventScriptValueKind.Vector2;
-    public bool IsVector3() => Kind == GameEventScriptValueKind.Vector3;
-    public bool IsPoint2() => Kind == GameEventScriptValueKind.Point2;
-    public bool IsPoint3() => Kind == GameEventScriptValueKind.Point3;
+    public bool IsVector() => Kind == GameEventScriptValueKind.Vector;
+    public bool IsPoint() => Kind == GameEventScriptValueKind.Point;
     public bool IsSequence() => Kind == GameEventScriptValueKind.Sequence;
     public bool IsList() => Kind == GameEventScriptValueKind.List;
     public bool IsDictionary() => Kind == GameEventScriptValueKind.Dictionary;
@@ -178,10 +174,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Tag => ":Tag",
             GameEventScriptValueKind.Text => ":Text",
             GameEventScriptValueKind.Percentage => ":Percentage",
-            GameEventScriptValueKind.Vector2 => ":Vector2",
-            GameEventScriptValueKind.Vector3 => ":Vector3",
-            GameEventScriptValueKind.Point2 => ":Point2",
-            GameEventScriptValueKind.Point3 => ":Point3",
+            GameEventScriptValueKind.Vector => ":Vector",
+            GameEventScriptValueKind.Point => ":Point",
             GameEventScriptValueKind.Decimal => ":Decimal",
             GameEventScriptValueKind.Integer => ":Integer",
             GameEventScriptValueKind.Boolean => ":Boolean",
@@ -206,10 +200,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Tag => $":{AsText()}",
             GameEventScriptValueKind.Text => AsText(),
             GameEventScriptValueKind.Percentage => FormatPercentage(((GameEventScriptPercentageValue)this).Ratio),
-            GameEventScriptValueKind.Vector2 => FormatVector2((GameEventScriptVector2Value)this),
-            GameEventScriptValueKind.Vector3 => FormatVector3((GameEventScriptVector3Value)this),
-            GameEventScriptValueKind.Point2 => FormatPoint2((GameEventScriptPoint2Value)this),
-            GameEventScriptValueKind.Point3 => FormatPoint3((GameEventScriptPoint3Value)this),
+            GameEventScriptValueKind.Vector => FormatVector((GameEventScriptVectorValue)this),
+            GameEventScriptValueKind.Point => FormatPoint((GameEventScriptPointValue)this),
             GameEventScriptValueKind.Decimal => FormatDecimalValue((GameEventScriptDecimalValue)this),
             GameEventScriptValueKind.Integer => AsInteger().ToString(CultureInfo.InvariantCulture),
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
@@ -257,20 +249,14 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Tag => AsText() == other.AsText(),
             GameEventScriptValueKind.Text => AsText() == other.AsText(),
             GameEventScriptValueKind.Percentage => ((GameEventScriptPercentageValue)this).Ratio == ((GameEventScriptPercentageValue)other).Ratio,
-            GameEventScriptValueKind.Vector2 => ((GameEventScriptVector2Value)this).X == ((GameEventScriptVector2Value)other).X &&
-                                            ((GameEventScriptVector2Value)this).Y == ((GameEventScriptVector2Value)other).Y &&
-                                            ((GameEventScriptVector2Value)this).Unit == ((GameEventScriptVector2Value)other).Unit,
-            GameEventScriptValueKind.Vector3 => ((GameEventScriptVector3Value)this).X == ((GameEventScriptVector3Value)other).X &&
-                                            ((GameEventScriptVector3Value)this).Y == ((GameEventScriptVector3Value)other).Y &&
-                                            ((GameEventScriptVector3Value)this).Z == ((GameEventScriptVector3Value)other).Z &&
-                                            ((GameEventScriptVector3Value)this).Unit == ((GameEventScriptVector3Value)other).Unit,
-            GameEventScriptValueKind.Point2 => ((GameEventScriptPoint2Value)this).X == ((GameEventScriptPoint2Value)other).X &&
-                                            ((GameEventScriptPoint2Value)this).Y == ((GameEventScriptPoint2Value)other).Y &&
-                                            ((GameEventScriptPoint2Value)this).Unit == ((GameEventScriptPoint2Value)other).Unit,
-            GameEventScriptValueKind.Point3 => ((GameEventScriptPoint3Value)this).X == ((GameEventScriptPoint3Value)other).X &&
-                                            ((GameEventScriptPoint3Value)this).Y == ((GameEventScriptPoint3Value)other).Y &&
-                                            ((GameEventScriptPoint3Value)this).Z == ((GameEventScriptPoint3Value)other).Z &&
-                                            ((GameEventScriptPoint3Value)this).Unit == ((GameEventScriptPoint3Value)other).Unit,
+            GameEventScriptValueKind.Vector => ((GameEventScriptVectorValue)this).X == ((GameEventScriptVectorValue)other).X &&
+                                            ((GameEventScriptVectorValue)this).Y == ((GameEventScriptVectorValue)other).Y &&
+                                            ((GameEventScriptVectorValue)this).Z == ((GameEventScriptVectorValue)other).Z &&
+                                            ((GameEventScriptVectorValue)this).Unit == ((GameEventScriptVectorValue)other).Unit,
+            GameEventScriptValueKind.Point => ((GameEventScriptPointValue)this).X == ((GameEventScriptPointValue)other).X &&
+                                            ((GameEventScriptPointValue)this).Y == ((GameEventScriptPointValue)other).Y &&
+                                            ((GameEventScriptPointValue)this).Z == ((GameEventScriptPointValue)other).Z &&
+                                            ((GameEventScriptPointValue)this).Unit == ((GameEventScriptPointValue)other).Unit,
             GameEventScriptValueKind.Decimal => AsNumber() == other.AsNumber(),
             GameEventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
             GameEventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
@@ -327,27 +313,17 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             case GameEventScriptValueKind.Percentage:
                 hash.Add(((GameEventScriptPercentageValue)this).Ratio);
                 break;
-            case GameEventScriptValueKind.Vector2:
-                hash.Add(((GameEventScriptVector2Value)this).X);
-                hash.Add(((GameEventScriptVector2Value)this).Y);
-                hash.Add(((GameEventScriptVector2Value)this).Unit);
+            case GameEventScriptValueKind.Vector:
+                hash.Add(((GameEventScriptVectorValue)this).X);
+                hash.Add(((GameEventScriptVectorValue)this).Y);
+                hash.Add(((GameEventScriptVectorValue)this).Z);
+                hash.Add(((GameEventScriptVectorValue)this).Unit);
                 break;
-            case GameEventScriptValueKind.Vector3:
-                hash.Add(((GameEventScriptVector3Value)this).X);
-                hash.Add(((GameEventScriptVector3Value)this).Y);
-                hash.Add(((GameEventScriptVector3Value)this).Z);
-                hash.Add(((GameEventScriptVector3Value)this).Unit);
-                break;
-            case GameEventScriptValueKind.Point2:
-                hash.Add(((GameEventScriptPoint2Value)this).X);
-                hash.Add(((GameEventScriptPoint2Value)this).Y);
-                hash.Add(((GameEventScriptPoint2Value)this).Unit);
-                break;
-            case GameEventScriptValueKind.Point3:
-                hash.Add(((GameEventScriptPoint3Value)this).X);
-                hash.Add(((GameEventScriptPoint3Value)this).Y);
-                hash.Add(((GameEventScriptPoint3Value)this).Z);
-                hash.Add(((GameEventScriptPoint3Value)this).Unit);
+            case GameEventScriptValueKind.Point:
+                hash.Add(((GameEventScriptPointValue)this).X);
+                hash.Add(((GameEventScriptPointValue)this).Y);
+                hash.Add(((GameEventScriptPointValue)this).Z);
+                hash.Add(((GameEventScriptPointValue)this).Unit);
                 break;
             case GameEventScriptValueKind.Optional:
             {
@@ -423,20 +399,18 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Tag => 1,
             GameEventScriptValueKind.Text => 2,
             GameEventScriptValueKind.Percentage => 3,
-            GameEventScriptValueKind.Vector2 => 4,
-            GameEventScriptValueKind.Vector3 => 5,
-            GameEventScriptValueKind.Point2 => 6,
-            GameEventScriptValueKind.Point3 => 7,
-            GameEventScriptValueKind.Boolean => 8,
-            GameEventScriptValueKind.Optional => 9,
-            GameEventScriptValueKind.Sequence => 10,
-            GameEventScriptValueKind.Range => 11,
-            GameEventScriptValueKind.Message => 12,
-            GameEventScriptValueKind.Handler => 13,
-            GameEventScriptValueKind.List => 14,
-            GameEventScriptValueKind.Dictionary => 15,
-            GameEventScriptValueKind.Set => 16,
-            GameEventScriptValueKind.Dice => 17,
+            GameEventScriptValueKind.Vector => 4,
+            GameEventScriptValueKind.Point => 5,
+            GameEventScriptValueKind.Boolean => 6,
+            GameEventScriptValueKind.Optional => 7,
+            GameEventScriptValueKind.Sequence => 8,
+            GameEventScriptValueKind.Range => 9,
+            GameEventScriptValueKind.Message => 10,
+            GameEventScriptValueKind.Handler => 11,
+            GameEventScriptValueKind.List => 12,
+            GameEventScriptValueKind.Dictionary => 13,
+            GameEventScriptValueKind.Set => 14,
+            GameEventScriptValueKind.Dice => 15,
             _ => 8
         };
     }
@@ -620,10 +594,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Tag => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 GameEventScriptValueKind.Text => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 GameEventScriptValueKind.Percentage => ((GameEventScriptPercentageValue)left).Ratio.CompareTo(((GameEventScriptPercentageValue)right).Ratio),
-                GameEventScriptValueKind.Vector2 => CompareSequence(left.AsList(), right.AsList()),
-                GameEventScriptValueKind.Vector3 => CompareSequence(left.AsList(), right.AsList()),
-                GameEventScriptValueKind.Point2 => CompareSequence(left.AsList(), right.AsList()),
-                GameEventScriptValueKind.Point3 => CompareSequence(left.AsList(), right.AsList()),
+                GameEventScriptValueKind.Vector => CompareSequence(left.AsList(), right.AsList()),
+                GameEventScriptValueKind.Point => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
                 GameEventScriptValueKind.Optional => CompareOptional(left.AsOptional(), right.AsOptional()),
                 GameEventScriptValueKind.Sequence => CompareSequence(left.AsEnumerable().ToArray(), right.AsEnumerable().ToArray()),
@@ -872,17 +844,11 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 }
             });
 
-    internal static string FormatVector2(GameEventScriptVector2Value value)
-        => $"vector2[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}]";
+    internal static string FormatVector(GameEventScriptVectorValue value)
+        => $"vector[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
 
-    internal static string FormatVector3(GameEventScriptVector3Value value)
-        => $"vector3[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
-
-    internal static string FormatPoint2(GameEventScriptPoint2Value value)
-        => $"point2[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}]";
-
-    internal static string FormatPoint3(GameEventScriptPoint3Value value)
-        => $"point3[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
+    internal static string FormatPoint(GameEventScriptPointValue value)
+        => $"point[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
 
     internal static string FormatDecimalComponent(decimal value, GameEventScriptDecimalUnit? unit = null)
     {

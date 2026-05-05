@@ -136,59 +136,59 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void VectorValuesExposeStableComponents()
     {
-        var vector2 = GesVector2(10.5m, -2m);
-        var vector2Equal = GesVector2(10.5m, -2m);
-        var vector3 = GesVector3(10.5m, -2m, 3m);
+        var vector = GesVector(10.5m, -2m);
+        var vectorEqual = GesVector(10.5m, -2m);
+        var vectorWithZ = GesVector(10.5m, -2m, 3m);
 
-        Assert.AreEqual(GameEventScriptValueKind.Vector2, vector2.Kind);
-        Assert.AreEqual(vector2, vector2Equal);
-        Assert.AreEqual(vector2.GetHashCode(), vector2Equal.GetHashCode());
-        Assert.AreEqual(10.5m, vector2.AsDictionary()["x"].AsNumber());
-        Assert.AreEqual(-2m, vector2.AsList()[1].AsNumber());
-        Assert.AreEqual(3m, vector3.AsDictionary()["z"].AsNumber());
-        Assert.AreSame(GameEventScriptVector2Value.Zero, GesVector2(0m, 0m));
-        Assert.AreSame(GameEventScriptVector3Value.Zero, GesVector3(0m, 0m, 0m));
-        Assert.AreEqual("vector2[x: 10.5, y: -2]", vector2.ToString());
+        Assert.AreEqual(GameEventScriptValueKind.Vector, vector.Kind);
+        Assert.AreEqual(vector, vectorEqual);
+        Assert.AreEqual(vector.GetHashCode(), vectorEqual.GetHashCode());
+        Assert.AreEqual(10.5m, vector.AsDictionary()["x"].AsNumber());
+        Assert.AreEqual(-2m, vector.AsList()[1].AsNumber());
+        Assert.AreEqual(0m, vector.AsDictionary()["z"].AsNumber());
+        Assert.AreEqual(3m, vectorWithZ.AsDictionary()["z"].AsNumber());
+        Assert.AreSame(GameEventScriptVectorValue.Zero, GesVector(0m, 0m, 0m));
+        Assert.AreEqual("vector[x: 10.5, y: -2, z: 0]", vector.ToString());
 
-        var unitVector = GesVector2(0m, 0m, GameEventScriptDecimalUnit.Meter);
-        var sameComponentsDifferentUnit = GesVector2(0m, 0m, GameEventScriptDecimalUnit.Second);
-        Assert.AreNotSame(GameEventScriptVector2Value.Zero, unitVector);
-        Assert.AreNotEqual(GesVector2(0m, 0m), unitVector);
+        var unitVector = GesVector(0m, 0m, 0m, GameEventScriptDecimalUnit.Meter);
+        var sameComponentsDifferentUnit = GesVector(0m, 0m, 0m, GameEventScriptDecimalUnit.Second);
+        Assert.AreNotSame(GameEventScriptVectorValue.Zero, unitVector);
+        Assert.AreNotEqual(GesVector(0m, 0m, 0m), unitVector);
         Assert.AreNotEqual(unitVector, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitVector.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
-        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptVector2Value)unitVector).Unit);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptVectorValue)unitVector).Unit);
         Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptDecimalValue)unitVector.AsDictionary()["x"]).Unit);
         Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptDecimalValue)unitVector.AsList()[1]).Unit);
-        Assert.AreEqual("vector2[x: 0m, y: 0m]", unitVector.ToString());
+        Assert.AreEqual("vector[x: 0m, y: 0m, z: 0m]", unitVector.ToString());
     }
 
     [TestMethod]
     public void PointValuesExposeStableComponents()
     {
-        var point2 = GesPoint2(10.5m, -2m);
-        var point2Equal = GesPoint2(10.5m, -2m);
-        var point3 = GesPoint3(10.5m, -2m, 3m);
+        var point = GesPoint(10.5m, -2m);
+        var pointEqual = GesPoint(10.5m, -2m);
+        var pointWithZ = GesPoint(10.5m, -2m, 3m);
 
-        Assert.AreEqual(GameEventScriptValueKind.Point2, point2.Kind);
-        Assert.AreEqual(point2, point2Equal);
-        Assert.AreEqual(point2.GetHashCode(), point2Equal.GetHashCode());
-        Assert.AreEqual(10.5m, point2.AsDictionary()["x"].AsNumber());
-        Assert.AreEqual(-2m, point2.AsList()[1].AsNumber());
-        Assert.AreEqual(3m, point3.AsDictionary()["z"].AsNumber());
-        Assert.AreSame(GameEventScriptPoint2Value.Zero, GesPoint2(0m, 0m));
-        Assert.AreSame(GameEventScriptPoint3Value.Zero, GesPoint3(0m, 0m, 0m));
-        Assert.AreEqual("point2[x: 10.5, y: -2]", point2.ToString());
+        Assert.AreEqual(GameEventScriptValueKind.Point, point.Kind);
+        Assert.AreEqual(point, pointEqual);
+        Assert.AreEqual(point.GetHashCode(), pointEqual.GetHashCode());
+        Assert.AreEqual(10.5m, point.AsDictionary()["x"].AsNumber());
+        Assert.AreEqual(-2m, point.AsList()[1].AsNumber());
+        Assert.AreEqual(0m, point.AsDictionary()["z"].AsNumber());
+        Assert.AreEqual(3m, pointWithZ.AsDictionary()["z"].AsNumber());
+        Assert.AreSame(GameEventScriptPointValue.Zero, GesPoint(0m, 0m, 0m));
+        Assert.AreEqual("point[x: 10.5, y: -2, z: 0]", point.ToString());
 
-        var unitPoint = GesPoint2(0m, 0m, GameEventScriptDecimalUnit.Meter);
-        var sameComponentsDifferentUnit = GesPoint2(0m, 0m, GameEventScriptDecimalUnit.Second);
-        Assert.AreNotSame(GameEventScriptPoint2Value.Zero, unitPoint);
-        Assert.AreNotEqual(GesPoint2(0m, 0m), unitPoint);
+        var unitPoint = GesPoint(0m, 0m, 0m, GameEventScriptDecimalUnit.Meter);
+        var sameComponentsDifferentUnit = GesPoint(0m, 0m, 0m, GameEventScriptDecimalUnit.Second);
+        Assert.AreNotSame(GameEventScriptPointValue.Zero, unitPoint);
+        Assert.AreNotEqual(GesPoint(0m, 0m, 0m), unitPoint);
         Assert.AreNotEqual(unitPoint, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitPoint.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
-        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptPoint2Value)unitPoint).Unit);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptPointValue)unitPoint).Unit);
         Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptDecimalValue)unitPoint.AsDictionary()["x"]).Unit);
         Assert.AreEqual(GameEventScriptDecimalUnit.Meter, ((GameEventScriptDecimalValue)unitPoint.AsList()[1]).Unit);
-        Assert.AreEqual("point2[x: 0m, y: 0m]", unitPoint.ToString());
+        Assert.AreEqual("point[x: 0m, y: 0m, z: 0m]", unitPoint.ToString());
     }
 
     [TestMethod]

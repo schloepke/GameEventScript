@@ -1152,10 +1152,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                        (value.ReferenceValue?.IsDecimalUnit(GameEventScriptDecimalUnit.Meter) ?? false),
             "second" => value.Kind == BytecodeVmValueKind.Decimal && value.Unit == GameEventScriptDecimalUnit.Second ||
                         (value.ReferenceValue?.IsDecimalUnit(GameEventScriptDecimalUnit.Second) ?? false),
-            "vector2" => value.ReferenceValue?.IsVector2() ?? false,
-            "vector3" => value.ReferenceValue?.IsVector3() ?? false,
-            "point2" => value.ReferenceValue?.IsPoint2() ?? false,
-            "point3" => value.ReferenceValue?.IsPoint3() ?? false,
+            "vector" => value.ReferenceValue?.IsVector() ?? false,
+            "point" => value.ReferenceValue?.IsPoint() ?? false,
             "decimal" => value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Decimal or BytecodeVmValueKind.Percentage ||
                          (value.ReferenceValue?.IsNumber() ?? false),
             "integer" => value.Kind == BytecodeVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
@@ -1898,8 +1896,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptValueKind.Tag => $"tag:{value.AsText()}",
             GameEventScriptValueKind.Text => $"text:{value.AsText()}",
             GameEventScriptValueKind.Percentage => $"percentage:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
-            GameEventScriptValueKind.Vector2 => BuildVector2StableSeedText((GameEventScriptVector2Value)value),
-            GameEventScriptValueKind.Vector3 => BuildVector3StableSeedText((GameEventScriptVector3Value)value),
+            GameEventScriptValueKind.Vector => BuildVectorStableSeedText((GameEventScriptVectorValue)value),
+            GameEventScriptValueKind.Point => BuildPointStableSeedText((GameEventScriptPointValue)value),
             GameEventScriptValueKind.Decimal => value.IsNaN()
                 ? "decimal:nan"
                 : value.IsNegativeInfinity()
@@ -1927,15 +1925,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
             _ => value.ToString()
         };
 
-    private static string BuildVector2StableSeedText(GameEventScriptVector2Value value)
+    private static string BuildVectorStableSeedText(GameEventScriptVectorValue value)
         => value.Unit.HasValue
-            ? $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
-            : $"vector2:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}";
+            ? $"vector:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
+            : $"vector:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
-    private static string BuildVector3StableSeedText(GameEventScriptVector3Value value)
+    private static string BuildPointStableSeedText(GameEventScriptPointValue value)
         => value.Unit.HasValue
-            ? $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
-            : $"vector3:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
+            ? $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
+            : $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
     private bool TryEvaluateRulePredicate(
         in GameEventScriptBytecodeInstruction instruction,
@@ -2141,7 +2139,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Nothing;
         }
 
-        if (typeName is "vector2" or "vector3" or "point2" or "point3")
+        if (typeName is "vector" or "point")
         {
             return EvaluateSpatialConstructor(typeName, labels, stack, start, count);
         }
@@ -2191,19 +2189,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 : BytecodeVmValue.Nothing;
         }
 
-        if (typeName is "vector3" or "point3" &&
-            count == 2 &&
+        if (count == 2 &&
             labels is { Length: >= 2 } &&
             string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
-            string.Equals(labels[1], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-        {
-            return TryCreateSpatial3(
+            string.Equals(labels[1], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
+            TryCreateSpatialLift(
                 typeName,
                 stack[start].ToGameEventScriptValue(),
                 stack[start + 1].ToGameEventScriptValue(),
-                out var lifted)
-                ? BytecodeVmValue.FromGameEventScriptValue(lifted)
-                : BytecodeVmValue.Nothing;
+                out var lifted))
+        {
+            return BytecodeVmValue.FromGameEventScriptValue(lifted);
         }
 
         if (count == 0 || labels is { Length: var labelCount } &&
@@ -2221,47 +2217,34 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 : BytecodeVmValue.Nothing;
         }
 
-        var expectedCount = typeName is "vector2" or "point2" ? 2 : 3;
-        if (count != expectedCount)
+        if (count is < 1 or > 3)
         {
             return BytecodeVmValue.Nothing;
         }
 
-        return expectedCount == 2
-            ? TryCreateSpatial2(
-                typeName,
-                stack[start].ToGameEventScriptValue(),
-                stack[start + 1].ToGameEventScriptValue(),
-                out var spatial2)
-                ? BytecodeVmValue.FromGameEventScriptValue(spatial2)
-                : BytecodeVmValue.Nothing
-            : TryCreateSpatial3(
-                typeName,
-                stack[start].ToGameEventScriptValue(),
-                stack[start + 1].ToGameEventScriptValue(),
-                stack[start + 2].ToGameEventScriptValue(),
-                out var spatial3)
-                ? BytecodeVmValue.FromGameEventScriptValue(spatial3)
-                : BytecodeVmValue.Nothing;
+        var components = new GameEventScriptValue[count];
+        for (var index = 0; index < components.Length; index++)
+        {
+            components[index] = stack[start + index].ToGameEventScriptValue();
+        }
+
+        return TryCreateSpatialFromComponents(typeName, components, out var spatial)
+            ? BytecodeVmValue.FromGameEventScriptValue(spatial)
+            : BytecodeVmValue.Nothing;
     }
 
-    private static bool TryCreateSpatial2(string typeName, GameEventScriptValue x, GameEventScriptValue y, out GameEventScriptValue value)
-        => typeName == "point2"
-            ? GesValueOperations.TryCreatePoint2(x, y, out value)
-            : GesValueOperations.TryCreateVector2(x, y, out value);
+    private static bool TryCreateSpatialFromComponents(string typeName, IReadOnlyList<GameEventScriptValue> components, out GameEventScriptValue value)
+        => typeName == "point"
+            ? GesValueOperations.TryCreatePointFromComponents(components, out value)
+            : GesValueOperations.TryCreateVectorFromComponents(components, out value);
 
-    private static bool TryCreateSpatial3(string typeName, GameEventScriptValue x, GameEventScriptValue y, GameEventScriptValue z, out GameEventScriptValue value)
-        => typeName == "point3"
-            ? GesValueOperations.TryCreatePoint3(x, y, z, out value)
-            : GesValueOperations.TryCreateVector3(x, y, z, out value);
-
-    private static bool TryCreateSpatial3(string typeName, GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
-        => typeName == "point3"
-            ? GesValueOperations.TryCreatePoint3(xy, z, out value)
-            : GesValueOperations.TryCreateVector3(xy, z, out value);
+    private static bool TryCreateSpatialLift(string typeName, GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
+        => typeName == "point"
+            ? GesValueOperations.TryCreatePoint(xy, z, out value)
+            : GesValueOperations.TryCreateVector(xy, z, out value);
 
     private static bool TryCreateSpatialFromLabeledComponents(string typeName, IReadOnlyDictionary<string, GameEventScriptValue> components, out GameEventScriptValue value)
-        => typeName is "point2" or "point3"
+        => typeName == "point"
             ? GesValueOperations.TryCreatePointFromLabeledComponents(typeName, components, out value)
             : GesValueOperations.TryCreateVectorFromLabeledComponents(typeName, components, out value);
 
@@ -2281,10 +2264,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Degree)),
             "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Meter)),
             "second" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimalUnit(boxed, GameEventScriptDecimalUnit.Second)),
-            "vector2" => BytecodeVmValue.Reference(ConvertToVector2(boxed)),
-            "vector3" => BytecodeVmValue.Reference(ConvertToVector3(boxed)),
-            "point2" => BytecodeVmValue.Reference(ConvertToPoint2(boxed)),
-            "point3" => BytecodeVmValue.Reference(ConvertToPoint3(boxed)),
+            "vector" => BytecodeVmValue.Reference(ConvertToVector(boxed)),
+            "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
             "decimal" or "number" => BytecodeVmValue.FromGameEventScriptValue(ConvertToDecimal(boxed)),
             "sequence" => BytecodeVmValue.Reference(boxed.IsSequence() ? boxed : GameEventScriptValueFactory.GesSequence(boxed.AsEnumerable())),
@@ -2465,8 +2446,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeCastKind.Degree => "degree",
             GameEventScriptBytecodeCastKind.Meter => "meter",
             GameEventScriptBytecodeCastKind.Second => "second",
-            GameEventScriptBytecodeCastKind.Point2 => "point2",
-            GameEventScriptBytecodeCastKind.Point3 => "point3",
+            GameEventScriptBytecodeCastKind.Vector => "vector",
+            GameEventScriptBytecodeCastKind.Point => "point",
             GameEventScriptBytecodeCastKind.Sequence => "sequence",
             _ => string.Empty
         };
@@ -2551,190 +2532,91 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesDecimalNaN();
     }
 
-    private static GameEventScriptValue ConvertToVector2(GameEventScriptValue value)
+    private static GameEventScriptValue ConvertToVector(GameEventScriptValue value)
     {
         if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (unwrapped is GameEventScriptVector2Value vector2)
+        if (unwrapped is GameEventScriptVectorValue vector)
         {
-            return vector2;
+            return vector;
         }
 
-        if (unwrapped is GameEventScriptVector3Value vector3)
-        {
-            return GesVector2(vector3.X, vector3.Y, vector3.Unit);
-        }
-
-        if (unwrapped is GameEventScriptPoint2Value or GameEventScriptPoint3Value)
+        if (unwrapped is GameEventScriptPointValue)
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
-            unwrapped.TryGetDictionaryMember("y", out var y) &&
-            GesValueOperations.TryCreateVector2(x, y, out var vectorFromMembers))
+        if (TryCreateSpatialFromMembers("vector", unwrapped, out var vectorFromMembers))
         {
             return vectorFromMembers;
         }
 
         var items = unwrapped.AsList();
-        if (items.Count >= 2 &&
-            GesValueOperations.TryCreateVector2(items[0], items[1], out var vectorFromItems))
+        if (items.Count is >= 1 and <= 3 &&
+            TryCreateSpatialFromComponents("vector", items, out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
-        return GameEventScriptNothingValue.Instance;
+        return TryCreateSpatialFromComponents("vector", [unwrapped], out var vectorFromScalar)
+            ? vectorFromScalar
+            : GameEventScriptNothingValue.Instance;
     }
 
-    private static GameEventScriptValue ConvertToVector3(GameEventScriptValue value)
+    private static GameEventScriptValue ConvertToPoint(GameEventScriptValue value)
     {
         if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (unwrapped is GameEventScriptVector3Value vector3)
+        if (unwrapped is GameEventScriptPointValue point)
         {
-            return vector3;
+            return point;
         }
 
-        if (unwrapped is GameEventScriptVector2Value vector2)
-        {
-            return GesVector3(vector2.X, vector2.Y, 0m, vector2.Unit);
-        }
-
-        if (unwrapped is GameEventScriptPoint2Value or GameEventScriptPoint3Value)
+        if (unwrapped is GameEventScriptVectorValue)
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
-            unwrapped.TryGetDictionaryMember("y", out var y))
-        {
-            if (unwrapped.TryGetDictionaryMember("z", out var z))
-            {
-                return GesValueOperations.TryCreateVector3(x, y, z, out var vectorFromMembers)
-                    ? vectorFromMembers
-                    : GameEventScriptNothingValue.Instance;
-            }
-
-            return GesValueOperations.TryCreateVector2(x, y, out var xyVector) && xyVector is GameEventScriptVector2Value xy
-                ? GesVector3(xy.X, xy.Y, 0m, xy.Unit)
-                : xyVector;
-        }
-
-        var items = unwrapped.AsList();
-        if (items.Count >= 3 &&
-            GesValueOperations.TryCreateVector3(items[0], items[1], items[2], out var vectorFromItems))
-        {
-            return vectorFromItems;
-        }
-
-        if (items.Count >= 2 &&
-            GesValueOperations.TryCreateVector2(items[0], items[1], out var xyVectorFromItems) &&
-            xyVectorFromItems is GameEventScriptVector2Value xyFromItems)
-        {
-            return GesVector3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
-        }
-
-        return GameEventScriptNothingValue.Instance;
-    }
-
-    private static GameEventScriptValue ConvertToPoint2(GameEventScriptValue value)
-    {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (unwrapped is GameEventScriptPoint2Value point2)
-        {
-            return point2;
-        }
-
-        if (unwrapped is GameEventScriptPoint3Value point3)
-        {
-            return GesPoint2(point3.X, point3.Y, point3.Unit);
-        }
-
-        if (unwrapped is GameEventScriptVector2Value or GameEventScriptVector3Value)
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
-            unwrapped.TryGetDictionaryMember("y", out var y) &&
-            GesValueOperations.TryCreatePoint2(x, y, out var pointFromMembers))
+        if (TryCreateSpatialFromMembers("point", unwrapped, out var pointFromMembers))
         {
             return pointFromMembers;
         }
 
         var items = unwrapped.AsList();
-        if (items.Count >= 2 &&
-            GesValueOperations.TryCreatePoint2(items[0], items[1], out var pointFromItems))
+        if (items.Count is >= 1 and <= 3 &&
+            TryCreateSpatialFromComponents("point", items, out var pointFromItems))
         {
             return pointFromItems;
         }
 
-        return GameEventScriptNothingValue.Instance;
+        return TryCreateSpatialFromComponents("point", [unwrapped], out var pointFromScalar)
+            ? pointFromScalar
+            : GameEventScriptNothingValue.Instance;
     }
 
-    private static GameEventScriptValue ConvertToPoint3(GameEventScriptValue value)
+    private static bool TryCreateSpatialFromMembers(string typeName, GameEventScriptValue value, out GameEventScriptValue spatial)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        var hasX = value.TryGetDictionaryMember("x", out var x);
+        var hasY = value.TryGetDictionaryMember("y", out var y);
+        var hasZ = value.TryGetDictionaryMember("z", out var z);
+
+        if (!hasX && !hasY && !hasZ)
         {
-            return GameEventScriptNothingValue.Instance;
+            spatial = GameEventScriptNothingValue.Instance;
+            return false;
         }
 
-        if (unwrapped is GameEventScriptPoint3Value point3)
-        {
-            return point3;
-        }
-
-        if (unwrapped is GameEventScriptPoint2Value point2)
-        {
-            return GesPoint3(point2.X, point2.Y, 0m, point2.Unit);
-        }
-
-        if (unwrapped is GameEventScriptVector2Value or GameEventScriptVector3Value)
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (unwrapped.TryGetDictionaryMember("x", out var x) &&
-            unwrapped.TryGetDictionaryMember("y", out var y))
-        {
-            if (unwrapped.TryGetDictionaryMember("z", out var z))
-            {
-                return GesValueOperations.TryCreatePoint3(x, y, z, out var pointFromMembers)
-                    ? pointFromMembers
-                    : GameEventScriptNothingValue.Instance;
-            }
-
-            return GesValueOperations.TryCreatePoint2(x, y, out var xyPoint) && xyPoint is GameEventScriptPoint2Value xy
-                ? GesPoint3(xy.X, xy.Y, 0m, xy.Unit)
-                : xyPoint;
-        }
-
-        var items = unwrapped.AsList();
-        if (items.Count >= 3 &&
-            GesValueOperations.TryCreatePoint3(items[0], items[1], items[2], out var pointFromItems))
-        {
-            return pointFromItems;
-        }
-
-        if (items.Count >= 2 &&
-            GesValueOperations.TryCreatePoint2(items[0], items[1], out var xyPointFromItems) &&
-            xyPointFromItems is GameEventScriptPoint2Value xyFromItems)
-        {
-            return GesPoint3(xyFromItems.X, xyFromItems.Y, 0m, xyFromItems.Unit);
-        }
-
-        return GameEventScriptNothingValue.Instance;
+        var components = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
+        if (hasX) components["x"] = x;
+        if (hasY) components["y"] = y;
+        if (hasZ) components["z"] = z;
+        return TryCreateSpatialFromLabeledComponents(typeName, components, out spatial);
     }
 
     private GameEventScriptValue ConvertToCustomType(GameEventScriptValue value, GameEventScriptBytecodeTypeDefinition typeDefinition)
@@ -6363,10 +6245,10 @@ internal readonly record struct BytecodeVmValue(
            ReferenceValue is { } reference && reference.IsPercentage();
 
     private bool IsVectorLike()
-        => ReferenceValue is GameEventScriptVector2Value or GameEventScriptVector3Value;
+        => ReferenceValue is GameEventScriptVectorValue;
 
     private bool IsPointLike()
-        => ReferenceValue is GameEventScriptPoint2Value or GameEventScriptPoint3Value;
+        => ReferenceValue is GameEventScriptPointValue;
 
     private static bool TryEvaluatePointBinary(in BytecodeVmValue left, string operation, in BytecodeVmValue right, out BytecodeVmValue value)
     {

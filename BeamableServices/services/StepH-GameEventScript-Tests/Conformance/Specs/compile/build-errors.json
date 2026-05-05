@@ -159,46 +159,136 @@
     },
     {
       "kind": "compileError",
-      "name": "vector2 constructor requires positional label order",
-      "script": "on Start {\n  let position be :vector2(y: 2, x: 1)\n}",
+      "name": "vector constructor requires positional label order",
+      "script": "on Start {\n  let position be :vector(y: 2, x: 1)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
-        "symbol": "vector2",
+        "symbol": "vector",
         "symbolKind": "Type"
       }
     },
     {
       "kind": "compileError",
-      "name": "vector2 constructor rejects too many components",
-      "script": "on Start {\n  let position be :vector2(1, 2, 3)\n}",
+      "name": "vector constructor rejects too many components",
+      "script": "on Start {\n  let position be :vector(1, 2, 3, 4)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
-        "symbol": "vector2",
+        "symbol": "vector",
         "symbolKind": "Type"
       }
     },
     {
       "kind": "compileError",
-      "name": "vector3 constructor rejects component labels out of order",
-      "script": "on Start {\n  let point be :vector3(z: 1, y: 2)\n}",
+      "name": "vector constructor rejects component labels out of order",
+      "script": "on Start {\n  let point be :vector(z: 1, y: 2)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
-        "symbol": "vector3",
+        "symbol": "vector",
         "symbolKind": "Type"
       }
     },
     {
       "kind": "compileError",
-      "name": "point2 constructor requires positional label order",
-      "script": "on Start {\n  let position be :point2(y: 2, x: 1)\n}",
+      "name": "point constructor requires positional label order",
+      "script": "on Start {\n  let position be :point(y: 2, x: 1)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
-        "symbol": "point2",
+        "symbol": "point",
         "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "identifier rejects attached numeric suffix",
+      "script": "on Start(x) {\n  let result be x2\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'x2'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "identifier rejects embedded number",
+      "script": "on Start(x, y) {\n  let result be x2y\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'x2y'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "identifier rejects numeric text without suffix marker",
+      "script": "on Start {\n  let player22 be 1\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'player22'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "identifier suffix requires digits",
+      "script": "on Start {\n  let player_ be 1\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'player_'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "identifier suffix rejects leading zero",
+      "script": "on Start {\n  let player_01 be 1\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'player_01'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "identifier suffix must end after digits",
+      "script": "on Start {\n  let player_1a be 1\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'player_1a'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "message rejects numeric suffix",
+      "script": "on Fire_1 {\n  emit Done\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'Fire_1'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "tag rejects numeric suffix",
+      "script": "on Start {\n  emit Done with :tag_1\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token ':tag_1'"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "vector dimension tag is not valid syntax",
+      "script": "on Start {\n  let value be :vector2(1, 2)\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token ':vector2"
       }
     },
     {

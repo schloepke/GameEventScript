@@ -33,43 +33,45 @@ public sealed class GameEventScriptFastValueTests
     [TestMethod]
     public void VectorsAreStoredWithoutReferenceBackingAndRoundTripWithUnits()
     {
-        var vector2 = GameEventScriptFastValue.FromVector2(3m, 4m, GameEventScriptDecimalUnit.Meter);
-        var vector3 = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesVector3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
+        var vector = GameEventScriptFastValue.FromVector(3m, 4m, 0m, GameEventScriptDecimalUnit.Meter);
+        var vectorWithZ = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesVector(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
 
-        Assert.IsFalse(vector2.IsReferenceBacked);
-        Assert.IsFalse(vector3.IsReferenceBacked);
-        Assert.AreEqual(GameEventScriptValueKind.Vector2, vector2.Kind);
-        Assert.AreEqual(GameEventScriptValueKind.Vector3, vector3.Kind);
-        Assert.AreEqual(3m, vector2.X);
-        Assert.AreEqual(4m, vector2.Y);
-        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, vector2.Unit);
-        Assert.AreEqual(1m, vector3.X);
-        Assert.AreEqual(2m, vector3.Y);
-        Assert.AreEqual(3m, vector3.Z);
-        Assert.AreEqual(GameEventScriptDecimalUnit.Second, vector3.Unit);
-        Assert.AreEqual(GameEventScriptValueFactory.GesVector2(3m, 4m, GameEventScriptDecimalUnit.Meter), vector2.ToGameEventScriptValue());
-        Assert.AreEqual(GameEventScriptValueFactory.GesVector3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), vector3.ToGameEventScriptValue());
+        Assert.IsFalse(vector.IsReferenceBacked);
+        Assert.IsFalse(vectorWithZ.IsReferenceBacked);
+        Assert.AreEqual(GameEventScriptValueKind.Vector, vector.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Vector, vectorWithZ.Kind);
+        Assert.AreEqual(3m, vector.X);
+        Assert.AreEqual(4m, vector.Y);
+        Assert.AreEqual(0m, vector.Z);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, vector.Unit);
+        Assert.AreEqual(1m, vectorWithZ.X);
+        Assert.AreEqual(2m, vectorWithZ.Y);
+        Assert.AreEqual(3m, vectorWithZ.Z);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Second, vectorWithZ.Unit);
+        Assert.AreEqual(GameEventScriptValueFactory.GesVector(3m, 4m, 0m, GameEventScriptDecimalUnit.Meter), vector.ToGameEventScriptValue());
+        Assert.AreEqual(GameEventScriptValueFactory.GesVector(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), vectorWithZ.ToGameEventScriptValue());
     }
 
     [TestMethod]
     public void PointsAreStoredWithoutReferenceBackingAndRoundTripWithUnits()
     {
-        var point2 = GameEventScriptFastValue.FromPoint2(3m, 4m, GameEventScriptDecimalUnit.Meter);
-        var point3 = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesPoint3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
+        var point = GameEventScriptFastValue.FromPoint(3m, 4m, 0m, GameEventScriptDecimalUnit.Meter);
+        var pointWithZ = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesPoint(1m, 2m, 3m, GameEventScriptDecimalUnit.Second));
 
-        Assert.IsFalse(point2.IsReferenceBacked);
-        Assert.IsFalse(point3.IsReferenceBacked);
-        Assert.AreEqual(GameEventScriptValueKind.Point2, point2.Kind);
-        Assert.AreEqual(GameEventScriptValueKind.Point3, point3.Kind);
-        Assert.AreEqual(3m, point2.X);
-        Assert.AreEqual(4m, point2.Y);
-        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, point2.Unit);
-        Assert.AreEqual(1m, point3.X);
-        Assert.AreEqual(2m, point3.Y);
-        Assert.AreEqual(3m, point3.Z);
-        Assert.AreEqual(GameEventScriptDecimalUnit.Second, point3.Unit);
-        Assert.AreEqual(GameEventScriptValueFactory.GesPoint2(3m, 4m, GameEventScriptDecimalUnit.Meter), point2.ToGameEventScriptValue());
-        Assert.AreEqual(GameEventScriptValueFactory.GesPoint3(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), point3.ToGameEventScriptValue());
+        Assert.IsFalse(point.IsReferenceBacked);
+        Assert.IsFalse(pointWithZ.IsReferenceBacked);
+        Assert.AreEqual(GameEventScriptValueKind.Point, point.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Point, pointWithZ.Kind);
+        Assert.AreEqual(3m, point.X);
+        Assert.AreEqual(4m, point.Y);
+        Assert.AreEqual(0m, point.Z);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Meter, point.Unit);
+        Assert.AreEqual(1m, pointWithZ.X);
+        Assert.AreEqual(2m, pointWithZ.Y);
+        Assert.AreEqual(3m, pointWithZ.Z);
+        Assert.AreEqual(GameEventScriptDecimalUnit.Second, pointWithZ.Unit);
+        Assert.AreEqual(GameEventScriptValueFactory.GesPoint(3m, 4m, 0m, GameEventScriptDecimalUnit.Meter), point.ToGameEventScriptValue());
+        Assert.AreEqual(GameEventScriptValueFactory.GesPoint(1m, 2m, 3m, GameEventScriptDecimalUnit.Second), pointWithZ.ToGameEventScriptValue());
     }
 
     [TestMethod]

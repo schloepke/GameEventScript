@@ -80,46 +80,26 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesSeconds(decimal seconds) => GameEventScriptDecimalValue.Create(seconds, GameEventScriptDecimalUnit.Second);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a two-dimensional vector.
+    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a vector.
     /// </summary>
-    /// <param name="x">The X-coordinate of the vector.</param>
-    /// <param name="y">The Y-coordinate of the vector.</param>
+    /// <param name="x">The X component of the vector.</param>
+    /// <param name="y">The Y component of the vector.</param>
+    /// <param name="z">The Z component of the vector.</param>
     /// <param name="unit">The unit of measurement for the vector values. Can be null if no unit is specified.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the two-dimensional vector.</returns>
+    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the vector.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesVector2(decimal x, decimal y, GameEventScriptDecimalUnit? unit = null) => GameEventScriptVector2Value.Create(x, y, unit);
+    public static GameEventScriptValue GesVector(decimal x, decimal y = 0m, decimal z = 0m, GameEventScriptDecimalUnit? unit = null) => GameEventScriptVectorValue.Create(x, y, z, unit);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a 3D vector value.
-    /// </summary>
-    /// <param name="x">The X-coordinate of the vector.</param>
-    /// <param name="y">The Y-coordinate of the vector.</param>
-    /// <param name="z">The Z-coordinate of the vector.</param>
-    /// <param name="unit">The unit associated with the vector (e.g., Degree, Meter, or Second). Can be null.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the 3D vector value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesVector3(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null) => GameEventScriptVector3Value.Create(x, y, z, unit);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a two-dimensional point.
-    /// </summary>
-    /// <param name="x">The X-coordinate of the point.</param>
-    /// <param name="y">The Y-coordinate of the point.</param>
-    /// <param name="unit">The unit of measurement for the point coordinates. Can be null if no unit is specified.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the two-dimensional point.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesPoint2(decimal x, decimal y, GameEventScriptDecimalUnit? unit = null) => GameEventScriptPoint2Value.Create(x, y, unit);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a three-dimensional point.
+    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a point.
     /// </summary>
     /// <param name="x">The X-coordinate of the point.</param>
     /// <param name="y">The Y-coordinate of the point.</param>
     /// <param name="z">The Z-coordinate of the point.</param>
     /// <param name="unit">The unit of measurement for the point coordinates. Can be null if no unit is specified.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the three-dimensional point.</returns>
+    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the point.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesPoint3(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null) => GameEventScriptPoint3Value.Create(x, y, z, unit);
+    public static GameEventScriptValue GesPoint(decimal x, decimal y = 0m, decimal z = 0m, GameEventScriptDecimalUnit? unit = null) => GameEventScriptPointValue.Create(x, y, z, unit);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptDecimalValue"/> representing a "Not-a-Number" (NaN) decimal value.

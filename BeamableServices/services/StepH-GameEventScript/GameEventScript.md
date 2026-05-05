@@ -115,11 +115,16 @@ on Start {
 GameEventScript uses casing to keep the grammar readable.
 
 - Keywords are lowercase: `module`, `record`, `rule`, `select`, `on`, `let`.
-- Local names are lowercase identifiers: `unit`, `targetId`, `currentHp`.
+- Local names are lowercase identifiers with letters only: `unit`, `target`,
+  `currentHp`.
 - Rule and select names are lowercase identifiers: `wounded`, `bestTarget`.
-- Message and handler names start uppercase: `Start`, `DamageTaken`, `Done`.
-- Type names are tags: `:decimal`, `:vector2`, `:gauge`.
-- Tags are also values: `:boss`, `:ready`, `:fire`.
+- Identifiers may use one explicit numeric suffix at the end: `player_0`,
+  `player_1`, `player_22`. Forms like `player22`, `player_01`, and
+  `player_1a` are invalid.
+- Message and handler names start uppercase and use letters only: `Start`,
+  `DamageTaken`, `Done`.
+- Type names are tags: `:decimal`, `:vector`, `:gauge`.
+- Tags are also values and use letters only: `:boss`, `:ready`, `:fire`.
 
 This casing matters. `Start` and `start` are different tokens with different
 roles.
@@ -724,7 +729,7 @@ let count be :len units
 let hit be :chance 25%
 let keys be :keys stats
 let entries be :entries stats
-let distance be :abs :vector2(3m, 4m)
+let distance be :abs :vector(3m, 4m)
 let bounded be :clamp hp between 0 and maxHp
 let best be :max of 4 and 9 and 2
 ```
@@ -882,10 +887,8 @@ Types are written as tags. Built-in public type tags are:
 - `:degree`
 - `:meter`
 - `:second`
-- `:vector2`
-- `:vector3`
-- `:point2`
-- `:point3`
+- `:vector`
+- `:point`
 - `:optional`
 - `:sequence`
 - `:range`
@@ -921,8 +924,8 @@ Type constructors use the same syntax, but may accept more than one argument for
 types that define construction shapes.
 
 ```eventscript
-let offset be :vector2(10m, 20m)
-let position be :point2(10m, 20m)
+let offset be :vector(10m, 20m)
+let position be :point(10m, 20m)
 let hp be :gauge(current: 10, maximum: 20)
 ```
 
@@ -1120,24 +1123,21 @@ Left-hand percentage addition and subtraction against a base are invalid.
 `:percentage(value)` treats integers as percent notation, so
 `:percentage(25)` is `25%`. Unit values cannot be converted to percentages.
 
-### `:vector2` and `:vector3`
+### `:vector`
 
-Vectors store two or three decimal components. They may also have one shared
-unit for all components.
+Vectors store three decimal components. Two-dimensional values are represented
+with `z = 0`. They may also have one shared unit for all components.
 
 ```eventscript
-let a be :vector2(10, 20)
-let b be :vector2(10m, 20m)
-let c be :vector3(1, 2, 3)
+let a be :vector(10, 20)
+let b be :vector(10m, 20m)
+let c be :vector(1, 2, 3)
 ```
 
-Component members are:
-
-- `x`, `y` for `:vector2`
-- `x`, `y`, `z` for `:vector3`
+Component members are always `x`, `y`, and `z`.
 
 ```eventscript
-let offset be :vector2(3m, 4m)
+let offset be :vector(3m, 4m)
 offset.x // 3m
 offset.y // 4m
 ```
@@ -1145,128 +1145,128 @@ offset.y // 4m
 Constructors support positional and labeled component forms.
 
 ```eventscript
-:vector2(10, 20)
-:vector2(x: 10, y: 20)
-:vector2(y: 20m) // x defaults to 0m
-
-:vector3(1, 2, 3)
-:vector3(x: 1, y: 2, z: 3)
-:vector3(z: 5m) // x and y default to 0m
+:vector()
+:vector(10)
+:vector(10, 20)
+:vector(x: 10, y: 20)
+:vector(1, 2, 3)
+:vector(x: 1, y: 2, z: 3)
+:vector(y: 20m) // x and z default to 0m
+:vector(z: 5m) // x and y default to 0m
 ```
 
 Labeled component order must be `x`, then `y`, then `z`. Labels may be omitted,
-but they cannot be reordered.
+but they cannot be reordered. Missing zero components inherit the detected
+component unit.
 
-Vector conversion between dimensions is supported.
+Constructing from an existing vector keeps `x` and `y`; the two-argument form
+sets `z` explicitly.
 
 ```eventscript
-let p2 be :vector2(10m, 20m)
-let p3 be :vector3(p2)       // z defaults to 0m
-let p3b be :vector3(p2, 5m)  // explicit z
-let flat be :vector2(p3b)    // drops z
+let flat be :vector(10m, 20m)
+let lifted be :vector(flat)       // keeps z as 0m
+let elevated be :vector(flat, 5m) // explicit z
 ```
 
 Vectors can also be converted from lists or dictionaries with matching
 components.
 
 ```eventscript
-let fromList as :vector3 be [1, 2, 3]
-let fromDict as :vector2 be [x: 10, y: 20]
+let fromList as :vector be [1, 2, 3]
+let fromDict as :vector be [x: 10, y: 20]
 ```
 
 `:decimal(vector)` erases a vector's unit. `:meter(vector)` and other unit
 conversions apply a unit to a unitless vector or keep a matching vector unit.
 
 ```eventscript
-let v be :vector2(3m, 4m)
-let raw be :decimal(v) // vector2[x: 3, y: 4]
+let v be :vector(3m, 4m)
+let raw be :decimal(v) // vector[x: 3, y: 4, z: 0]
 let remetered be :meter(raw)
 ```
 
 Mixed component units evaluate to `NaN`.
 
 ```eventscript
-:vector2(3m, 4s) // NaN
-:vector2(3, 4m)  // NaN
+:vector(3m, 4s) // NaN
+:vector(3, 4m)  // NaN
 ```
 
 Vector arithmetic:
 
 ```eventscript
-:vector2(1m, 2m) + :vector2(3m, 4m) // vector2[x: 4m, y: 6m]
-:vector2(1m, 2m) - :vector2(3m, 4m) // vector2[x: -2m, y: -2m]
--:vector2(1m, 2m)                   // vector2[x: -1m, y: -2m]
-:vector2(1m, 2m) * 2                // vector2[x: 2m, y: 4m]
-2 * :vector2(1m, 2m)                // vector2[x: 2m, y: 4m]
-:vector2(3m, 4m) / 2                // vector2[x: 1.5m, y: 2m]
-:abs :vector2(3m, 4m)               // 5m
-:abs :vector3(1, 2, 2)              // 3
+:vector(1m, 2m) + :vector(3m, 4m) // vector[x: 4m, y: 6m, z: 0m]
+:vector(1m, 2m) - :vector(3m, 4m) // vector[x: -2m, y: -2m, z: 0m]
+-:vector(1m, 2m)                   // vector[x: -1m, y: -2m, z: 0m]
+:vector(1m, 2m) * 2                // vector[x: 2m, y: 4m, z: 0m]
+2 * :vector(1m, 2m)                // vector[x: 2m, y: 4m, z: 0m]
+:vector(3m, 4m) / 2                // vector[x: 1.5m, y: 2m, z: 0m]
+:abs :vector(3m, 4m)               // 5m
+:abs :vector(1, 2, 2)              // 3
 ```
 
-Vector addition and subtraction require the same dimension and same unit.
+Vector addition and subtraction require the same unit.
 `vector * vector`, `scalar / vector`, vector `div`, vector `mod`, vector `rem`,
-mixed dimensions, division by zero, and incompatible units evaluate to `NaN`.
+division by zero, and incompatible units evaluate to `NaN`.
 
-### `:point2` and `:point3`
+### `:point`
 
-Points store absolute positions. They have the same component shape as vectors,
-but a different meaning: a vector is a relative delta, while a point is a place
-in a coordinate system.
+Points store absolute positions. They are also always three-dimensional, with
+`z = 0` for two-dimensional values. A vector is a relative delta, while a point
+is a place in a coordinate system.
 
 ```eventscript
-let position be :point2(10m, 20m)
-let elevated be :point3(10m, 20m, 5m)
+let position be :point(10m, 20m)
+let elevated be :point(10m, 20m, 5m)
 ```
 
 Points use the same shared-unit rule as vectors. All components must be unitless
 or all components must use the same unit.
 
 ```eventscript
-:point2(10m, 20m) // ok
-:point2(10m, 20s) // NaN
-:point2(10, 20m)  // NaN
+:point(10m, 20m) // ok
+:point(10m, 20s) // NaN
+:point(10, 20m)  // NaN
 ```
 
-Component members are:
-
-- `x`, `y` for `:point2`
-- `x`, `y`, `z` for `:point3`
+Component members are always `x`, `y`, and `z`.
 
 Constructors support positional and labeled component forms, including partial
 labeled construction where missing earlier components default to zero.
 
 ```eventscript
-:point2(10, 20)
-:point2(x: 10, y: 20)
-:point2(y: 20m) // x defaults to 0m
-
-:point3(1, 2, 3)
-:point3(x: 1, y: 2, z: 3)
-:point3(z: 5m) // x and y default to 0m
+:point()
+:point(10)
+:point(10, 20)
+:point(x: 10, y: 20)
+:point(1, 2, 3)
+:point(x: 1, y: 2, z: 3)
+:point(y: 20m) // x and z default to 0m
+:point(z: 5m) // x and y default to 0m
 ```
 
-Point conversion between dimensions is supported for points only. Converting a
-vector to a point, or a point to a vector, is not implicit because that would
-erase the distinction between absolute positions and relative deltas.
+Constructing from an existing point keeps `x` and `y`; the two-argument form
+sets `z` explicitly. Converting a vector to a point, or a point to a vector, is
+not implicit because that would erase the distinction between absolute positions
+and relative deltas.
 
 ```eventscript
-let p2 be :point2(10m, 20m)
-let p3 be :point3(p2)       // z defaults to 0m
-let p3b be :point3(p2, 5m)  // explicit z
-let flat be :point2(p3b)    // drops z
+let ground be :point(10m, 20m)
+let copied be :point(ground)
+let elevated be :point(ground, 5m)
 ```
 
 Point arithmetic is affine:
 
 ```eventscript
-:point2(10m, 20m) + :vector2(3m, -5m) // point2[x: 13m, y: 15m]
-:point2(13m, 15m) - :vector2(3m, -5m) // point2[x: 10m, y: 20m]
-:point2(13m, 15m) - :point2(10m, 20m) // vector2[x: 3m, y: -5m]
+:point(10m, 20m) + :vector(3m, -5m) // point[x: 13m, y: 15m, z: 0m]
+:point(13m, 15m) - :vector(3m, -5m) // point[x: 10m, y: 20m, z: 0m]
+:point(13m, 15m) - :point(10m, 20m) // vector[x: 3m, y: -5m, z: 0m]
 ```
 
 `point + point`, `vector + point`, point scalar arithmetic, point `div`, point
-`mod`, point `rem`, unary minus on points, `:abs point`, mixed dimensions, and
-incompatible units evaluate to `NaN`.
+`mod`, point `rem`, unary minus on points, `:abs point`, and incompatible units
+evaluate to `NaN`.
 
 ### `:optional`
 

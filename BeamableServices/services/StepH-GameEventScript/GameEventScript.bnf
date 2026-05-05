@@ -137,15 +137,17 @@ TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
 SequenceLiteral ::= OfArgumentList
 
 Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
-TagLiteral ::= ":" Identifier | "∞"
+TagLiteral ::= ":" TagName | "∞"
 
-Message ::= UpperLetter { LowerLetter | UpperLetter | Digit }
+Message ::= UpperLetter { NameLetter }
 ModuleName ::= Identifier | Message
 
-Identifier ::= LowerLetter { LowerLetter | UpperLetter | Digit }
+Identifier ::= LowerLetter { NameLetter } [ "_" NumericSuffix ]
 IdentifierWithoutWhitespace ::= Identifier
+TagName ::= LowerLetter { NameLetter }
 Number ::= DigitGroup [ "." DigitGroup ]
 DigitGroup ::= Digit { [ "_" ] Digit }
+NumericSuffix ::= "0" | NonZeroDigit { Digit }
 Percentage ::= Number "%"
 UnitDecimal ::= Number ( "°" | "m" | "s" )
 TextLiteral ::= "'" { TextChar } "'"
@@ -155,8 +157,10 @@ AnyCharExceptLineBreak ::= "[^\r\n]"
 
 LowerLetter ::= "[a-z]"
 UpperLetter ::= "[A-Z]"
+NameLetter ::= LowerLetter | UpperLetter
 
 Digit ::= "[0-9]"
+NonZeroDigit ::= "[1-9]"
 
 AnyCharButSingleQuote ::= "[^']"
 
@@ -166,10 +170,8 @@ TypeTag ::= ":text"
           | ":degree"
           | ":meter"
           | ":second"
-          | ":vector2"
-          | ":vector3"
-          | ":point2"
-          | ":point3"
+          | ":vector"
+          | ":point"
           | ":decimal"
           | ":integer"
           | ":boolean"
@@ -183,7 +185,7 @@ TypeTag ::= ":text"
           | ":set"
           | ":dice"
           | ":nothing"
-          | ":" Identifier
+          | ":" TagName
 
 CollectionSelector ::= LookupSelector
                      | StructuredCollectionSelector

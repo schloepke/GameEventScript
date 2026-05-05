@@ -6,16 +6,34 @@
       "kind": "scriptApi",
       "name": "random and dice outcomes are deterministic with sequence",
       "script": "on Roll {\n  let a be :random 1 to 6\n  let b be :dice 4d6[:take highest 2]\n  emit Result(randomValue: a, diceValue: b)\n}",
-      "randomSequence": ["4", "1", "6", "3", "5"],
+      "randomSequence": [
+        "4",
+        "1",
+        "6",
+        "3",
+        "5"
+      ],
       "steps": [
         {
-          "input": { "name": "Roll", "args": {} },
+          "input": {
+            "name": "Roll",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Result",
               "args": {
-                "randomValue": { "type": ":integer", "value": "4" },
-                "diceValue": { "type": ":dice", "rolls": [6, 5] }
+                "randomValue": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "diceValue": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    5
+                  ]
+                }
               }
             }
           ]
@@ -26,26 +44,49 @@
       "kind": "scriptApi",
       "name": "sequential steps share random sequence",
       "script": "on Roll {\n  let value be :dice 2d6\n  emit Rolled(value: value)\n}",
-      "randomSequence": ["1", "6", "3", "2"],
+      "randomSequence": [
+        "1",
+        "6",
+        "3",
+        "2"
+      ],
       "steps": [
         {
-          "input": { "name": "Roll", "args": {} },
+          "input": {
+            "name": "Roll",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Rolled",
               "args": {
-                "value": { "type": ":dice", "rolls": [6, 1] }
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    1
+                  ]
+                }
               }
             }
           ]
         },
         {
-          "input": { "name": "Roll", "args": {} },
+          "input": {
+            "name": "Roll",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Rolled",
               "args": {
-                "value": { "type": ":dice", "rolls": [3, 2] }
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    2
+                  ]
+                }
               }
             }
           ]
@@ -55,8 +96,13 @@
     {
       "kind": "scriptApi",
       "name": "chance and weighted choices are deterministic",
-      "script": "on Start(units) {\n  let alwaysHit be :chance 100%\n  let neverHit be :chance 0%\n  let quarterHit be :chance 25%\n  let weightedTarget be units[:choose 1 weighted by unit -> unit.weight]\n  let weightedPair be units[:choose 2 weighted by unit -> unit.weight]\n  emit Done(alwaysHit: alwaysHit, neverHit: neverHit, quarterHit: quarterHit, weightedTarget: weightedTarget.name, weighted1: weightedPair[1].name, weighted2: weightedPair[2].name)\n}",
-      "randomSequence": ["0.249999", "9", "0", "8.99999"],
+      "script": "on Start(units) {\n  let alwaysHit be :chance 100%\n  let neverHit be :chance 0%\n  let quarterHit be :chance 25%\n  let weightedTarget be units[:choose 1 weighted by unit -> unit.weight]\n  let weightedPair be units[:choose 2 weighted by unit -> unit.weight]\n  emit Done(alwaysHit: alwaysHit, neverHit: neverHit, quarterHit: quarterHit, weightedTarget: weightedTarget.name, weighted_1: weightedPair[1].name, weighted_2: weightedPair[2].name)\n}",
+      "randomSequence": [
+        "0.249999",
+        "9",
+        "0",
+        "8.99999"
+      ],
       "steps": [
         {
           "input": {
@@ -68,22 +114,40 @@
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "A" },
-                      "weight": { "type": ":integer", "value": "1" }
+                      "name": {
+                        "type": ":text",
+                        "value": "A"
+                      },
+                      "weight": {
+                        "type": ":integer",
+                        "value": "1"
+                      }
                     }
                   },
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "B" },
-                      "weight": { "type": ":integer", "value": "3" }
+                      "name": {
+                        "type": ":text",
+                        "value": "B"
+                      },
+                      "weight": {
+                        "type": ":integer",
+                        "value": "3"
+                      }
                     }
                   },
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "C" },
-                      "weight": { "type": ":integer", "value": "6" }
+                      "name": {
+                        "type": ":text",
+                        "value": "C"
+                      },
+                      "weight": {
+                        "type": ":integer",
+                        "value": "6"
+                      }
                     }
                   }
                 ]
@@ -94,12 +158,30 @@
             {
               "name": "Done",
               "args": {
-                "alwaysHit": { "type": ":boolean", "value": true },
-                "neverHit": { "type": ":boolean", "value": false },
-                "quarterHit": { "type": ":boolean", "value": true },
-                "weightedTarget": { "type": ":text", "value": "C" },
-                "weighted1": { "type": ":text", "value": "A" },
-                "weighted2": { "type": ":text", "value": "C" }
+                "alwaysHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "neverHit": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "quarterHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "weightedTarget": {
+                  "type": ":text",
+                  "value": "C"
+                },
+                "weighted_1": {
+                  "type": ":text",
+                  "value": "A"
+                },
+                "weighted_2": {
+                  "type": ":text",
+                  "value": "C"
+                }
               }
             }
           ]
@@ -109,8 +191,15 @@
     {
       "kind": "scriptApi",
       "name": "shuffle draw choose and seeded random scopes are deterministic",
-      "script": "on Start(enemies, seed) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  emit Done(hand1: hand[1], hand2: hand[2], hand3: hand[3], rest1: restCards[1], rest2: restCards[2], target: target.name, random1: randomTargets[1].name, random2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
-      "randomSequence": ["1", "0", "1", "1", "0", "1"],
+      "script": "on Start(enemies, seed) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 -> :random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
+      "randomSequence": [
+        "1",
+        "0",
+        "1",
+        "1",
+        "0",
+        "1"
+      ],
       "steps": [
         {
           "input": {
@@ -122,49 +211,103 @@
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "Rook" },
-                      "alive": { "type": ":boolean", "value": false }
+                      "name": {
+                        "type": ":text",
+                        "value": "Rook"
+                      },
+                      "alive": {
+                        "type": ":boolean",
+                        "value": false
+                      }
                     }
                   },
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "Orc" },
-                      "alive": { "type": ":boolean", "value": true }
+                      "name": {
+                        "type": ":text",
+                        "value": "Orc"
+                      },
+                      "alive": {
+                        "type": ":boolean",
+                        "value": true
+                      }
                     }
                   },
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "Mage" },
-                      "alive": { "type": ":boolean", "value": true }
+                      "name": {
+                        "type": ":text",
+                        "value": "Mage"
+                      },
+                      "alive": {
+                        "type": ":boolean",
+                        "value": true
+                      }
                     }
                   },
                   {
                     "type": ":dictionary",
                     "entries": {
-                      "name": { "type": ":text", "value": "Knight" },
-                      "alive": { "type": ":boolean", "value": true }
+                      "name": {
+                        "type": ":text",
+                        "value": "Knight"
+                      },
+                      "alive": {
+                        "type": ":boolean",
+                        "value": true
+                      }
                     }
                   }
                 ]
               },
-              "seed": { "type": ":integer", "value": "42" }
+              "seed": {
+                "type": ":integer",
+                "value": "42"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "hand1": { "type": ":integer", "value": "4" },
-                "hand2": { "type": ":integer", "value": "3" },
-                "hand3": { "type": ":integer", "value": "5" },
-                "rest1": { "type": ":integer", "value": "1" },
-                "rest2": { "type": ":integer", "value": "2" },
-                "target": { "type": ":text", "value": "Orc" },
-                "random1": { "type": ":text", "value": "Orc" },
-                "random2": { "type": ":text", "value": "Knight" },
-                "seededSame": { "type": ":boolean", "value": true }
+                "target": {
+                  "type": ":text",
+                  "value": "Orc"
+                },
+                "seededSame": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hand_1": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "hand_2": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "hand_3": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "rest_1": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "rest_2": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "random_1": {
+                  "type": ":text",
+                  "value": "Orc"
+                },
+                "random_2": {
+                  "type": ":text",
+                  "value": "Knight"
+                }
               }
             }
           ]
@@ -180,17 +323,30 @@
           "input": {
             "name": "Roll",
             "args": {
-              "min": { "type": ":integer", "value": "9" },
-              "max": { "type": ":integer", "value": "2" }
+              "min": {
+                "type": ":integer",
+                "value": "9"
+              },
+              "max": {
+                "type": ":integer",
+                "value": "2"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "valuePresent": { "type": ":boolean", "value": true },
-                "shuffledTags": { "type": ":nothing" },
-                "drawnTag": { "type": ":nothing" }
+                "valuePresent": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "shuffledTags": {
+                  "type": ":nothing"
+                },
+                "drawnTag": {
+                  "type": ":nothing"
+                }
               }
             }
           ]
@@ -201,17 +357,33 @@
       "kind": "scriptApi",
       "name": "random can produce integer decimal and mixed values",
       "script": "on Roll {\n  let integerValue be :random from 1 to 6\n  let decimalValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, decimalValue: decimalValue, mixedValue: mixedValue)\n}",
-      "randomSequence": ["4", "0.25", "1.5"],
+      "randomSequence": [
+        "4",
+        "0.25",
+        "1.5"
+      ],
       "steps": [
         {
-          "input": { "name": "Roll", "args": {} },
+          "input": {
+            "name": "Roll",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "integerValue": { "type": ":integer", "value": "4" },
-                "decimalValue": { "type": ":decimal", "value": "0.25" },
-                "mixedValue": { "type": ":decimal", "value": "1.5" }
+                "integerValue": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "decimalValue": {
+                  "type": ":decimal",
+                  "value": "0.25"
+                },
+                "mixedValue": {
+                  "type": ":decimal",
+                  "value": "1.5"
+                }
               }
             }
           ]
@@ -222,17 +394,25 @@
       "kind": "scriptApi",
       "name": "random upper bound keeps arithmetic together",
       "script": "on Mixed(max) {\n  if :random 1 to max * 2 > 3 {\n    emit Passed\n  }\n}",
-      "randomSequence": ["5"],
+      "randomSequence": [
+        "5"
+      ],
       "steps": [
         {
           "input": {
             "name": "Mixed",
             "args": {
-              "max": { "type": ":integer", "value": "3" }
+              "max": {
+                "type": ":integer",
+                "value": "3"
+              }
             }
           },
           "expectedPublished": [
-            { "name": "Passed", "args": {} }
+            {
+              "name": "Passed",
+              "args": {}
+            }
           ]
         }
       ]
@@ -240,7 +420,7 @@
     {
       "kind": "scriptApi",
       "name": "ranges iterate and generated collections materialize",
-      "script": "on Start(values) {\n  let fullRange as :range be from 1 to 3\n  let odds as :range be from 1 to 5 step 2\n  let descending be from 5 to 1 step (0 - 2)\n  let zeroStep be from 1 to 5 step 0\n  let squares be :list[:select item from 1 to 5 -> item * item]\n  let filteredSquares be :list[:select item from 1 to 6 where item mod 2 = 0 -> item * item]\n  let tags be :set[:select item from 1 to 4 where item >= 2 -> item mod 2]\n  let doubled be :list[:select item in values -> item * 2]\n  let filtered be :set[:select item in values where item > 3 -> item mod 2]\n  for item in fullRange emit Full(value: item)\n  for item from 1 to 5 step 2 emit Direct(value: item)\n  for item in odds emit Indirect(value: item)\n  for item in zeroStep emit Zero(value: item)\n  emit Done(isRange: odds is :range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: :len zeroStep, square1: squares[1], square5: squares[5], filtered1: filteredSquares[1], filtered3: filteredSquares[3], tagCount: :len tags, tagsHasZero: 0 in tags, tagsHasOne: 1 in tags, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: :len filtered, hasZero: 0 in filtered, hasOne: 1 in filtered)\n}",
+      "script": "on Start(values) {\n  let fullRange as :range be from 1 to 3\n  let odds as :range be from 1 to 5 step 2\n  let descending be from 5 to 1 step (0 - 2)\n  let zeroStep be from 1 to 5 step 0\n  let squares be :list[:select item from 1 to 5 -> item * item]\n  let filteredSquares be :list[:select item from 1 to 6 where item mod 2 = 0 -> item * item]\n  let tags be :set[:select item from 1 to 4 where item >= 2 -> item mod 2]\n  let doubled be :list[:select item in values -> item * 2]\n  let filtered be :set[:select item in values where item > 3 -> item mod 2]\n  for item in fullRange emit Full(value: item)\n  for item from 1 to 5 step 2 emit Direct(value: item)\n  for item in odds emit Indirect(value: item)\n  for item in zeroStep emit Zero(value: item)\n  emit Done(isRange: odds is :range, descendingFirst: descending[1], descendingSecond: descending[2], descendingThird: descending[3], zeroLen: :len zeroStep, square_1: squares[1], square_5: squares[5], filtered_1: filteredSquares[1], filtered_3: filteredSquares[3], tagCount: :len tags, tagsHasZero: 0 in tags, tagsHasOne: 1 in tags, doubledFirst: doubled[1], doubledSecond: doubled[2], filteredLen: :len filtered, hasZero: 0 in filtered, hasOne: 1 in filtered)\n}",
       "steps": [
         {
           "input": {
@@ -249,43 +429,175 @@
               "values": {
                 "type": ":list",
                 "items": [
-                  { "type": ":integer", "value": "2" },
-                  { "type": ":integer", "value": "4" },
-                  { "type": ":integer", "value": "5" }
+                  {
+                    "type": ":integer",
+                    "value": "2"
+                  },
+                  {
+                    "type": ":integer",
+                    "value": "4"
+                  },
+                  {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 ]
               }
             }
           },
           "expectedPublished": [
-            { "name": "Full", "args": { "value": { "type": ":integer", "value": "1" } } },
-            { "name": "Full", "args": { "value": { "type": ":integer", "value": "2" } } },
-            { "name": "Full", "args": { "value": { "type": ":integer", "value": "3" } } },
-            { "name": "Direct", "args": { "value": { "type": ":integer", "value": "1" } } },
-            { "name": "Direct", "args": { "value": { "type": ":integer", "value": "3" } } },
-            { "name": "Direct", "args": { "value": { "type": ":integer", "value": "5" } } },
-            { "name": "Indirect", "args": { "value": { "type": ":integer", "value": "1" } } },
-            { "name": "Indirect", "args": { "value": { "type": ":integer", "value": "3" } } },
-            { "name": "Indirect", "args": { "value": { "type": ":integer", "value": "5" } } },
+            {
+              "name": "Full",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
+              }
+            },
+            {
+              "name": "Full",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
+              }
+            },
+            {
+              "name": "Full",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            },
+            {
+              "name": "Direct",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
+              }
+            },
+            {
+              "name": "Direct",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            },
+            {
+              "name": "Direct",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "5"
+                }
+              }
+            },
+            {
+              "name": "Indirect",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
+              }
+            },
+            {
+              "name": "Indirect",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            },
+            {
+              "name": "Indirect",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "5"
+                }
+              }
+            },
             {
               "name": "Done",
               "args": {
-                "isRange": { "type": ":boolean", "value": true },
-                "descendingFirst": { "type": ":integer", "value": "5" },
-                "descendingSecond": { "type": ":integer", "value": "3" },
-                "descendingThird": { "type": ":integer", "value": "1" },
-                "zeroLen": { "type": ":integer", "value": "0" },
-                "square1": { "type": ":integer", "value": "1" },
-                "square5": { "type": ":integer", "value": "25" },
-                "filtered1": { "type": ":integer", "value": "4" },
-                "filtered3": { "type": ":integer", "value": "36" },
-                "tagCount": { "type": ":integer", "value": "2" },
-                "tagsHasZero": { "type": ":boolean", "value": true },
-                "tagsHasOne": { "type": ":boolean", "value": true },
-                "doubledFirst": { "type": ":integer", "value": "4" },
-                "doubledSecond": { "type": ":integer", "value": "8" },
-                "filteredLen": { "type": ":integer", "value": "2" },
-                "hasZero": { "type": ":boolean", "value": true },
-                "hasOne": { "type": ":boolean", "value": true }
+                "isRange": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "descendingFirst": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "descendingSecond": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "descendingThird": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "zeroLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "tagCount": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "tagsHasZero": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagsHasOne": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "doubledFirst": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "doubledSecond": {
+                  "type": ":integer",
+                  "value": "8"
+                },
+                "filteredLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "hasZero": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hasOne": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "square_1": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "square_5": {
+                  "type": ":integer",
+                  "value": "25"
+                },
+                "filtered_1": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "filtered_3": {
+                  "type": ":integer",
+                  "value": "36"
+                }
               }
             }
           ]
@@ -296,22 +608,38 @@
       "kind": "scriptApi",
       "name": "range direct lookup is not capped by materialization limit",
       "script": "on Start {\n  let values as :range be from 1 to 1000000\n  emit Done(value: values[1000000], contains: 999999 in values, fractional: 1.5 in values)\n}",
-      "runtimeLimits": { "maxRangeItems": 5 },
+      "runtimeLimits": {
+        "maxRangeItems": 5
+      },
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "value": { "type": ":integer", "value": "1000000" },
-                "contains": { "type": ":boolean", "value": true },
-                "fractional": { "type": ":boolean", "value": false }
+                "value": {
+                  "type": ":integer",
+                  "value": "1000000"
+                },
+                "contains": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "fractional": {
+                  "type": ":boolean",
+                  "value": false
+                }
               }
             }
           ],
           "unexpectedDiagnostics": [
-            { "kind": "RuntimeLimitReached" }
+            {
+              "kind": "RuntimeLimitReached"
+            }
           ]
         }
       ]
@@ -320,20 +648,31 @@
       "kind": "scriptApi",
       "name": "range limit diagnostics",
       "script": "on Start {\n  for item from 1 to 10 emit Tick(value: item)\n  let values as :list be from 1 to 10\n  emit Done(count: :len values)\n}",
-      "runtimeLimits": { "maxRangeItems": 5 },
+      "runtimeLimits": {
+        "maxRangeItems": 5
+      },
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "count": { "type": ":integer", "value": "0" }
+                "count": {
+                  "type": ":integer",
+                  "value": "0"
+                }
               }
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "RuntimeLimitReached", "name": "MaxRangeItems" }
+            {
+              "kind": "RuntimeLimitReached",
+              "name": "MaxRangeItems"
+            }
           ]
         }
       ]
@@ -342,17 +681,49 @@
       "kind": "scriptApi",
       "name": "loop budget stops run after published iterations",
       "script": "on Start {\n  for item from 1 to 10 emit Tick(value: item)\n  emit Done\n}",
-      "runtimeLimits": { "maxLoopIterations": 3 },
+      "runtimeLimits": {
+        "maxLoopIterations": 3
+      },
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
-            { "name": "Tick", "args": { "value": { "type": ":integer", "value": "1" } } },
-            { "name": "Tick", "args": { "value": { "type": ":integer", "value": "2" } } },
-            { "name": "Tick", "args": { "value": { "type": ":integer", "value": "3" } } }
+            {
+              "name": "Tick",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
+              }
+            },
+            {
+              "name": "Tick",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
+              }
+            },
+            {
+              "name": "Tick",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            }
           ],
           "expectedDiagnostics": [
-            { "kind": "RuntimeLimitReached", "name": "MaxLoopIterations" }
+            {
+              "kind": "RuntimeLimitReached",
+              "name": "MaxLoopIterations"
+            }
           ]
         }
       ]
@@ -361,20 +732,31 @@
       "kind": "scriptApi",
       "name": "dice limit diagnostics",
       "script": "on Start {\n  let roll be :dice 6d6\n  emit Done(count: :len roll)\n}",
-      "runtimeLimits": { "maxDiceCount": 4 },
+      "runtimeLimits": {
+        "maxDiceCount": 4
+      },
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "count": { "type": ":integer", "value": "0" }
+                "count": {
+                  "type": ":integer",
+                  "value": "0"
+                }
               }
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "RuntimeLimitReached", "name": "MaxDiceCount" }
+            {
+              "kind": "RuntimeLimitReached",
+              "name": "MaxDiceCount"
+            }
           ]
         }
       ]
@@ -382,35 +764,117 @@
     {
       "kind": "scriptApi",
       "name": "dice slicing and sorting semantics",
-      "script": "on Roll {\n  let baseDice be :dice 4d6\n  let kept be :dice 4d6[:take highest 2]\n  let dropped be :dice 4d6[:drop lowest 1]\n  let resorted be baseDice[:sort ascending]\n  let emptyDrop be :dice 2d6[:drop lowest 3]\n  let takeTooMany be :dice 4d6[:take highest 5]\n  let diceTotal be :dice 2d6 + 1\n  emit Done(baseDice: baseDice, baseLen: :len baseDice, base1: baseDice[1], base2: baseDice[2], base3: baseDice[3], base4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: :len emptyDrop, takeTooManyLen: :len takeTooMany, diceTotal: diceTotal)\n}",
-      "randomSequence": ["2", "6", "3", "5", "1", "4", "6", "2", "3", "2", "6", "1", "1", "2", "4", "6", "5", "3", "1", "4", "2"],
+      "script": "on Roll {\n  let baseDice be :dice 4d6\n  let kept be :dice 4d6[:take highest 2]\n  let dropped be :dice 4d6[:drop lowest 1]\n  let resorted be baseDice[:sort ascending]\n  let emptyDrop be :dice 2d6[:drop lowest 3]\n  let takeTooMany be :dice 4d6[:take highest 5]\n  let diceTotal be :dice 2d6 + 1\n  emit Done(baseDice: baseDice, baseLen: :len baseDice, base_1: baseDice[1], base_2: baseDice[2], base_3: baseDice[3], base_4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: :len emptyDrop, takeTooManyLen: :len takeTooMany, diceTotal: diceTotal)\n}",
+      "randomSequence": [
+        "2",
+        "6",
+        "3",
+        "5",
+        "1",
+        "4",
+        "6",
+        "2",
+        "3",
+        "2",
+        "6",
+        "1",
+        "1",
+        "2",
+        "4",
+        "6",
+        "5",
+        "3",
+        "1",
+        "4",
+        "2"
+      ],
       "steps": [
         {
-          "input": { "name": "Roll", "args": {} },
+          "input": {
+            "name": "Roll",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "baseDice": { "type": ":dice", "rolls": [6, 5, 3, 2] },
-                "baseLen": { "type": ":integer", "value": "4" },
-                "base1": { "type": ":integer", "value": "6" },
-                "base2": { "type": ":integer", "value": "5" },
-                "base3": { "type": ":integer", "value": "3" },
-                "base4": { "type": ":integer", "value": "2" },
-                "kept": { "type": ":dice", "rolls": [6, 4] },
-                "dropped": { "type": ":dice", "rolls": [6, 3, 2] },
+                "baseDice": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    5,
+                    3,
+                    2
+                  ]
+                },
+                "baseLen": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "kept": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4
+                  ]
+                },
+                "dropped": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    3,
+                    2
+                  ]
+                },
                 "resorted": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "5" },
-                    { "type": ":integer", "value": "6" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "6"
+                    }
                   ]
                 },
-                "emptyDropLen": { "type": ":integer", "value": "0" },
-                "takeTooManyLen": { "type": ":integer", "value": "4" },
-                "diceTotal": { "type": ":decimal", "value": "6" }
+                "emptyDropLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "takeTooManyLen": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "diceTotal": {
+                  "type": ":decimal",
+                  "value": "6"
+                },
+                "base_1": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "base_2": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "base_3": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "base_4": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -426,57 +890,202 @@
           "input": {
             "name": "Start",
             "args": {
-              "pairRoll": { "type": ":dice", "rolls": [6, 6, 4, 3, 2] },
-              "tripleRoll": { "type": ":dice", "rolls": [6, 6, 6, 4, 3] },
-              "fullHouseRoll": { "type": ":dice", "rolls": [5, 5, 5, 2, 2] },
-              "straightRoll": { "type": ":dice", "rolls": [6, 6, 5, 4, 3, 2] },
-              "sixRoll": { "type": ":dice", "rolls": [4, 4, 4, 4, 4, 4] },
-              "sevenRoll": { "type": ":dice", "rolls": [6, 6, 6, 6, 6, 6, 6] },
+              "pairRoll": {
+                "type": ":dice",
+                "rolls": [
+                  6,
+                  6,
+                  4,
+                  3,
+                  2
+                ]
+              },
+              "tripleRoll": {
+                "type": ":dice",
+                "rolls": [
+                  6,
+                  6,
+                  6,
+                  4,
+                  3
+                ]
+              },
+              "fullHouseRoll": {
+                "type": ":dice",
+                "rolls": [
+                  5,
+                  5,
+                  5,
+                  2,
+                  2
+                ]
+              },
+              "straightRoll": {
+                "type": ":dice",
+                "rolls": [
+                  6,
+                  6,
+                  5,
+                  4,
+                  3,
+                  2
+                ]
+              },
+              "sixRoll": {
+                "type": ":dice",
+                "rolls": [
+                  4,
+                  4,
+                  4,
+                  4,
+                  4,
+                  4
+                ]
+              },
+              "sevenRoll": {
+                "type": ":dice",
+                "rolls": [
+                  6,
+                  6,
+                  6,
+                  6,
+                  6,
+                  6,
+                  6
+                ]
+              },
               "cards": {
                 "type": ":list",
                 "items": [
-                  { "type": ":text", "value": "King" },
-                  { "type": ":text", "value": "King" },
-                  { "type": ":text", "value": "King" },
-                  { "type": ":text", "value": "Queen" },
-                  { "type": ":text", "value": "Queen" }
+                  {
+                    "type": ":text",
+                    "value": "King"
+                  },
+                  {
+                    "type": ":text",
+                    "value": "King"
+                  },
+                  {
+                    "type": ":text",
+                    "value": "King"
+                  },
+                  {
+                    "type": ":text",
+                    "value": "Queen"
+                  },
+                  {
+                    "type": ":text",
+                    "value": "Queen"
+                  }
                 ]
               },
               "orderedCards": {
                 "type": ":list",
                 "items": [
-                  { "type": ":integer", "value": "1" },
-                  { "type": ":integer", "value": "2" },
-                  { "type": ":integer", "value": "3" },
-                  { "type": ":integer", "value": "4" },
-                  { "type": ":integer", "value": "5" }
+                  {
+                    "type": ":integer",
+                    "value": "1"
+                  },
+                  {
+                    "type": ":integer",
+                    "value": "2"
+                  },
+                  {
+                    "type": ":integer",
+                    "value": "3"
+                  },
+                  {
+                    "type": ":integer",
+                    "value": "4"
+                  },
+                  {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 ]
               },
-              "plainText": { "type": ":text", "value": "Hello" }
+              "plainText": {
+                "type": ":text",
+                "value": "Hello"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "hasPair": { "type": ":boolean", "value": true },
-                "hasPairOfSix": { "type": ":boolean", "value": true },
-                "pairHasThree": { "type": ":boolean", "value": false },
-                "tripleHasThree": { "type": ":boolean", "value": true },
-                "tripleHasThreeSix": { "type": ":boolean", "value": true },
-                "hasSixKind": { "type": ":boolean", "value": true },
-                "hasSevenSix": { "type": ":boolean", "value": true },
-                "hasFullHouse": { "type": ":boolean", "value": true },
-                "hasStraight": { "type": ":boolean", "value": true },
-                "listPair": { "type": ":boolean", "value": true },
-                "listKingTriple": { "type": ":boolean", "value": true },
-                "listFullHouse": { "type": ":boolean", "value": true },
-                "orderedStraight": { "type": ":boolean", "value": true },
-                "textPair": { "type": ":boolean", "value": false },
-                "pairTakeLen": { "type": ":integer", "value": "2" },
-                "fullHouseFirst": { "type": ":integer", "value": "5" },
-                "straightFirst": { "type": ":integer", "value": "1" },
-                "missingPairFirst": { "type": ":text", "value": "fallback" }
+                "hasPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hasPairOfSix": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "pairHasThree": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "tripleHasThree": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tripleHasThreeSix": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hasSixKind": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hasSevenSix": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hasFullHouse": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "hasStraight": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listKingTriple": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listFullHouse": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "orderedStraight": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textPair": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "pairTakeLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "fullHouseFirst": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "straightFirst": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "missingPairFirst": {
+                  "type": ":text",
+                  "value": "fallback"
+                }
               }
             }
           ]

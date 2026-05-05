@@ -9,9 +9,15 @@
       "externalSubscribers": [
         {
           "message": "Notify",
-          "parameters": ["playerId", "count"],
+          "parameters": [
+            "playerId",
+            "count"
+          ],
           "emit": [
-            { "name": "ExternalSeen", "forwardArguments": true }
+            {
+              "name": "ExternalSeen",
+              "forwardArguments": true
+            }
           ]
         }
       ],
@@ -20,22 +26,37 @@
           "input": {
             "name": "Start",
             "args": {
-              "playerId": { "type": ":text", "value": "p1" }
+              "playerId": {
+                "type": ":text",
+                "value": "p_1"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Notify",
               "args": {
-                "playerId": { "type": ":text", "value": "p1" },
-                "count": { "type": ":integer", "value": "3" }
+                "playerId": {
+                  "type": ":text",
+                  "value": "p_1"
+                },
+                "count": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             },
             {
               "name": "ExternalSeen",
               "args": {
-                "playerId": { "type": ":text", "value": "p1" },
-                "count": { "type": ":integer", "value": "3" }
+                "playerId": {
+                  "type": ":text",
+                  "value": "p_1"
+                },
+                "count": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             }
           ]
@@ -49,12 +70,17 @@
       "externalSubscribers": [
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "emit": [
             {
               "name": "SeenByExternal",
               "args": {
-                "marker": { "type": ":text", "value": "external" }
+                "marker": {
+                  "type": ":text",
+                  "value": "external"
+                }
               }
             }
           ]
@@ -65,26 +91,38 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "4" }
+              "value": {
+                "type": ":decimal",
+                "value": "4"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Notify",
               "args": {
-                "value": { "type": ":decimal", "value": "4" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "4"
+                }
               }
             },
             {
               "name": "SeenByScript",
               "args": {
-                "value": { "type": ":decimal", "value": "5" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "5"
+                }
               }
             },
             {
               "name": "SeenByExternal",
               "args": {
-                "marker": { "type": ":text", "value": "external" }
+                "marker": {
+                  "type": ":text",
+                  "value": "external"
+                }
               }
             }
           ]
@@ -98,24 +136,34 @@
       "externalSubscribers": [
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "emit": [
             {
               "name": "ExternalFirst",
               "args": {
-                "order": { "type": ":integer", "value": "1" }
+                "order": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             }
           ]
         },
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "emit": [
             {
               "name": "ExternalSecond",
               "args": {
-                "order": { "type": ":integer", "value": "2" }
+                "order": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -126,26 +174,38 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "4" }
+              "value": {
+                "type": ":decimal",
+                "value": "4"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Notify",
               "args": {
-                "value": { "type": ":decimal", "value": "4" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "4"
+                }
               }
             },
             {
               "name": "ExternalFirst",
               "args": {
-                "order": { "type": ":integer", "value": "1" }
+                "order": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
             {
               "name": "ExternalSecond",
               "args": {
-                "order": { "type": ":integer", "value": "2" }
+                "order": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -159,13 +219,18 @@
       "externalSubscribers": [
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "priority": 10,
           "emit": [
             {
               "name": "SeenByExternal",
               "args": {
-                "marker": { "type": ":text", "value": "external" }
+                "marker": {
+                  "type": ":text",
+                  "value": "external"
+                }
               }
             }
           ]
@@ -176,26 +241,38 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "4" }
+              "value": {
+                "type": ":decimal",
+                "value": "4"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Notify",
               "args": {
-                "value": { "type": ":decimal", "value": "4" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "4"
+                }
               }
             },
             {
               "name": "SeenByExternal",
               "args": {
-                "marker": { "type": ":text", "value": "external" }
+                "marker": {
+                  "type": ":text",
+                  "value": "external"
+                }
               }
             },
             {
               "name": "SeenByScript",
               "args": {
-                "value": { "type": ":decimal", "value": "5" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "5"
+                }
               }
             }
           ]
@@ -209,14 +286,21 @@
       "externalSubscribers": [
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "throw": true
         },
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "emit": [
-            { "name": "ExternalOk", "forwardArguments": true }
+            {
+              "name": "ExternalOk",
+              "forwardArguments": true
+            }
           ]
         }
       ],
@@ -225,20 +309,29 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "4" }
+              "value": {
+                "type": ":decimal",
+                "value": "4"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Notify",
               "args": {
-                "value": { "type": ":decimal", "value": "4" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "4"
+                }
               }
             },
             {
               "name": "ExternalOk",
               "args": {
-                "value": { "type": ":decimal", "value": "4" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "4"
+                }
               }
             }
           ]
@@ -252,9 +345,14 @@
       "externalSubscribers": [
         {
           "message": "Notify",
-          "parameters": ["value"],
+          "parameters": [
+            "value"
+          ],
           "emit": [
-            { "name": "Done", "forwardArguments": true }
+            {
+              "name": "Done",
+              "forwardArguments": true
+            }
           ]
         }
       ],
@@ -263,26 +361,38 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "2" }
+              "value": {
+                "type": ":decimal",
+                "value": "2"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Notify",
               "args": {
-                "value": { "type": ":decimal", "value": "2" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "2"
+                }
               }
             },
             {
               "name": "Done",
               "args": {
-                "value": { "type": ":decimal", "value": "2" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "2"
+                }
               }
             },
             {
               "name": "Final",
               "args": {
-                "value": { "type": ":decimal", "value": "2" }
+                "value": {
+                  "type": ":decimal",
+                  "value": "2"
+                }
               }
             }
           ]

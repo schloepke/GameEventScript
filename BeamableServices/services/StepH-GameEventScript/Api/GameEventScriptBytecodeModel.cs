@@ -245,8 +245,8 @@ public enum GameEventScriptBytecodeCastKind
     Degree,
     Meter,
     Second,
-    Point2,
-    Point3,
+    Vector,
+    Point,
     Sequence
 }
 

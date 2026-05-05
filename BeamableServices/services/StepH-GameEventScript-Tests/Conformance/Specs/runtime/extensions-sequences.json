@@ -5,32 +5,79 @@
     {
       "kind": "scriptApi",
       "name": "extensions support unary variadic labeled and predicate calls",
-      "script": "on Start(value, heading, target) {\n  let floored be :math.floor value\n  let flooredCall be :math.floor(value)\n  let maxed be :math.max of 2 and 8 and 5\n  let turnA be :nav.shortestTurn from: heading to: target\n  let turnB be :nav.shortestTurn(from: heading, to: target)\n  let northA be heading is :nav.isNorth\n  let northB be :nav.isNorth heading\n  let vectorTotal be :test.vectorSum :vector3(1m, 2m, 3m)\n  let seq be of 10 and 20 and 30\n  let asList as :list be of 10 and 20 and 30\n  emit Done(floored: floored, flooredCall: flooredCall, maxed: maxed, turnA: turnA, turnB: turnB, northA: northA, northB: northB, vectorTotal: vectorTotal, seqIsSequence: seq is :sequence, seqLen: :len seq, list2: asList[2])\n}",
+      "script": "on Start(value, heading, target) {\n  let floored be :math.floor value\n  let flooredCall be :math.floor(value)\n  let maxed be :math.max of 2 and 8 and 5\n  let turnA be :nav.shortestTurn from: heading to: target\n  let turnB be :nav.shortestTurn(from: heading, to: target)\n  let northA be heading is :nav.isNorth\n  let northB be :nav.isNorth heading\n  let vectorTotal be :test.vectorSum :vector(1m, 2m, 3m)\n  let seq be of 10 and 20 and 30\n  let asList as :list be of 10 and 20 and 30\n  emit Done(floored: floored, flooredCall: flooredCall, maxed: maxed, turnA: turnA, turnB: turnB, northA: northA, northB: northB, vectorTotal: vectorTotal, seqIsSequence: seq is :sequence, seqLen: :len seq, list_2: asList[2])\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "10.75" },
-              "heading": { "type": ":decimal", "value": "350", "unit": ":degree" },
-              "target": { "type": ":decimal", "value": "10", "unit": ":degree" }
+              "value": {
+                "type": ":decimal",
+                "value": "10.75"
+              },
+              "heading": {
+                "type": ":decimal",
+                "value": "350",
+                "unit": ":degree"
+              },
+              "target": {
+                "type": ":decimal",
+                "value": "10",
+                "unit": ":degree"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "floored": { "type": ":decimal", "value": "10" },
-                "flooredCall": { "type": ":decimal", "value": "10" },
-                "maxed": { "type": ":decimal", "value": "8" },
-                "turnA": { "type": ":decimal", "value": "20", "unit": ":degree" },
-                "turnB": { "type": ":decimal", "value": "20", "unit": ":degree" },
-                "northA": { "type": ":boolean", "value": true },
-                "northB": { "type": ":boolean", "value": true },
-                "vectorTotal": { "type": ":decimal", "value": "6", "unit": ":meter" },
-                "seqIsSequence": { "type": ":boolean", "value": true },
-                "seqLen": { "type": ":integer", "value": "3" },
-                "list2": { "type": ":integer", "value": "20" }
+                "floored": {
+                  "type": ":decimal",
+                  "value": "10"
+                },
+                "flooredCall": {
+                  "type": ":decimal",
+                  "value": "10"
+                },
+                "maxed": {
+                  "type": ":decimal",
+                  "value": "8"
+                },
+                "turnA": {
+                  "type": ":decimal",
+                  "value": "20",
+                  "unit": ":degree"
+                },
+                "turnB": {
+                  "type": ":decimal",
+                  "value": "20",
+                  "unit": ":degree"
+                },
+                "northA": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "northB": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "vectorTotal": {
+                  "type": ":decimal",
+                  "value": "6",
+                  "unit": ":meter"
+                },
+                "seqIsSequence": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "seqLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "list_2": {
+                  "type": ":integer",
+                  "value": "20"
+                }
               }
             }
           ]

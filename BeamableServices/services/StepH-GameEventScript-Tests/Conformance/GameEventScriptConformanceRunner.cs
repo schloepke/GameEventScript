@@ -653,8 +653,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
 
         return args[0].Kind switch
         {
-            GameEventScriptValueKind.Vector2 => GameEventScriptFastValue.FromDecimal(args[0].X + args[0].Y, args[0].Unit),
-            GameEventScriptValueKind.Vector3 => GameEventScriptFastValue.FromDecimal(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
+            GameEventScriptValueKind.Vector => GameEventScriptFastValue.FromDecimal(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
             _ => GameEventScriptFastValue.Nothing
         };
     });

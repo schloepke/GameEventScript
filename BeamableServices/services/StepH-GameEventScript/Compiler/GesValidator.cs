@@ -31,7 +31,7 @@ internal static class GesValidator
                     field.Name,
                     field.Name,
                     GameEventScriptSymbolKind.Variable,
-                    "Field names must use identifier casing (start lowercase and contain only letters or digits)",
+                    "Field names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
 
                 if (field.MinimumExpression is not null)
@@ -54,12 +54,12 @@ internal static class GesValidator
         foreach (var ruleDefinition in parsedScript.RuleDefinitions)
         {
             ValidateIdentifierCase(
-                parsedScript,
-                ruleDefinition.Name,
-                ruleDefinition.Name,
-                GameEventScriptSymbolKind.Rule,
-                "Rule names must use identifier casing (start lowercase and contain only letters or digits)",
-                errors);
+                    parsedScript,
+                    ruleDefinition.Name,
+                    ruleDefinition.Name,
+                    GameEventScriptSymbolKind.Rule,
+                    "Rule names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    errors);
 
             foreach (var parameter in ruleDefinition.Parameters)
             {
@@ -97,12 +97,12 @@ internal static class GesValidator
         foreach (var selectDefinition in parsedScript.SelectDefinitions)
         {
             ValidateIdentifierCase(
-                parsedScript,
-                selectDefinition.Name,
-                selectDefinition.Name,
-                GameEventScriptSymbolKind.Select,
-                "Select names must use identifier casing (start lowercase and contain only letters or digits)",
-                errors);
+                    parsedScript,
+                    selectDefinition.Name,
+                    selectDefinition.Name,
+                    GameEventScriptSymbolKind.Select,
+                    "Select names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    errors);
 
             foreach (var parameter in selectDefinition.Parameters)
             {
@@ -140,12 +140,12 @@ internal static class GesValidator
         foreach (var handler in parsedScript.Handlers)
         {
             ValidateMessageCase(
-                parsedScript,
-                handler.Message,
-                handler.Message,
-                GameEventScriptSymbolKind.Handler,
-                "Handler message names must use message casing (start uppercase and contain only letters or digits)",
-                errors);
+                    parsedScript,
+                    handler.Message,
+                    handler.Message,
+                    GameEventScriptSymbolKind.Handler,
+                    "Handler message names must use message casing (start uppercase and contain only letters)",
+                    errors);
 
             foreach (var parameter in handler.Parameters)
             {
@@ -211,7 +211,7 @@ internal static class GesValidator
                     let.Identifier,
                     let.Identifier,
                     GameEventScriptSymbolKind.Variable,
-                    $"Variable '{let.Identifier}' must use identifier casing (start lowercase and contain only letters or digits)",
+                    $"Variable '{let.Identifier}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
                 if (scope.ContainsInCurrentScope(let.Identifier))
                 {
@@ -248,7 +248,7 @@ internal static class GesValidator
                     forStatement.Identifier,
                     forStatement.Identifier,
                     GameEventScriptSymbolKind.Variable,
-                    $"Loop variable '{forStatement.Identifier}' must use identifier casing (start lowercase and contain only letters or digits)",
+                    $"Loop variable '{forStatement.Identifier}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
                 var loopScope = ValidationScope.CreateChild();
                 loopScope.Declare(forStatement.Identifier);
@@ -327,7 +327,7 @@ internal static class GesValidator
                         identifierExpression.Name,
                         identifierExpression.Name,
                         GameEventScriptSymbolKind.Variable,
-                        $"Identifier '{identifierExpression.Name}' must use identifier casing (start lowercase and contain only letters or digits)",
+                        $"Identifier '{identifierExpression.Name}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                         errors);
                     return;
 
@@ -365,7 +365,7 @@ internal static class GesValidator
                         handlerLiteral.Message,
                         handlerLiteral.Message,
                         GameEventScriptSymbolKind.Handler,
-                        $"Handler literal '{handlerLiteral.Message}' must use message casing (start uppercase and contain only letters or digits)",
+                        $"Handler literal '{handlerLiteral.Message}' must use message casing (start uppercase and contain only letters)",
                         errors);
                     foreach (var parameter in handlerLiteral.Parameters)
                     {
@@ -387,7 +387,7 @@ internal static class GesValidator
                         messageLiteral.Message,
                         messageLiteral.Message,
                         GameEventScriptSymbolKind.Message,
-                        $"Message literal '{messageLiteral.Message}' must use message casing (start uppercase and contain only letters or digits)",
+                        $"Message literal '{messageLiteral.Message}' must use message casing (start uppercase and contain only letters)",
                         errors);
                     ValidateDuplicateNamedArguments(parsedScriptContext, messageLiteral.Message, messageLiteral.Arguments, errors);
                     foreach (var argument in messageLiteral.Arguments)
@@ -900,16 +900,8 @@ internal static class GesValidator
     {
         switch (constructor.TypeName)
         {
-            case "vector2":
-                ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y"], errors);
-                return;
-            case "vector3":
-                ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
-                return;
-            case "point2":
-                ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y"], errors);
-                return;
-            case "point3":
+            case "vector":
+            case "point":
                 ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
                 return;
             default:
@@ -937,8 +929,7 @@ internal static class GesValidator
             return;
         }
 
-        if (constructor.TypeName is "vector3" or "point3" &&
-            constructor.Arguments.Count == 2 &&
+        if (constructor.Arguments.Count is 2 &&
             constructor.Arguments.All(argument => argument.Label is null))
         {
             return;
@@ -961,12 +952,12 @@ internal static class GesValidator
             return;
         }
 
-        if (constructor.Arguments.Count != labels.Count)
+        if (constructor.Arguments.Count is < 1 or > 3)
         {
             AddTypeConstructorError(
                 parsedScriptContext,
                 constructor.TypeName,
-                $"Type constructor ':{constructor.TypeName}' expects {labels.Count} component arguments",
+                $"Type constructor ':{constructor.TypeName}' expects up to {labels.Count} component arguments",
                 errors);
         }
     }
@@ -1021,7 +1012,7 @@ internal static class GesValidator
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
-            "vector2" or "vector3" or "point2" or "point3" or "boolean" or "integer" or "decimal" or "number" or "sequence" or
+            "vector" or "point" or "boolean" or "integer" or "decimal" or "number" or "sequence" or
             "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(
@@ -1152,15 +1143,23 @@ internal static class GesValidator
             return false;
         }
 
-        for (var i = 1; i < name.Length; i++)
+        var suffixStart = name.LastIndexOf('_');
+        var letterEndExclusive = suffixStart < 0 ? name.Length : suffixStart;
+        for (var i = 1; i < letterEndExclusive; i++)
         {
-            if (!char.IsLetterOrDigit(name[i]))
+            if (!char.IsLetter(name[i]))
             {
                 return false;
             }
         }
 
-        return true;
+        if (suffixStart < 0)
+        {
+            return true;
+        }
+
+        return suffixStart > 0 &&
+               TryValidateNumericSuffix(name.AsSpan(suffixStart + 1));
     }
 
     private static bool IsMessageCase(string name)
@@ -1172,7 +1171,35 @@ internal static class GesValidator
 
         for (var i = 1; i < name.Length; i++)
         {
-            if (!char.IsLetterOrDigit(name[i]))
+            if (!char.IsLetter(name[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryValidateNumericSuffix(ReadOnlySpan<char> suffix)
+    {
+        if (suffix.Length == 0)
+        {
+            return false;
+        }
+
+        if (suffix[0] == '0')
+        {
+            return suffix.Length == 1;
+        }
+
+        if (suffix[0] is < '1' or > '9')
+        {
+            return false;
+        }
+
+        for (var index = 1; index < suffix.Length; index++)
+        {
+            if (!char.IsDigit(suffix[index]))
             {
                 return false;
             }

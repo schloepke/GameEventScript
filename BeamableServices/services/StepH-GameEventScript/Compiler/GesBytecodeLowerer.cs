@@ -727,12 +727,12 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second" or "point2" or "point3" or "sequence";
+        => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence";
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
-            "vector2" or "vector3" or "point2" or "point3" or
+            "vector" or "point" or
             "boolean" or "integer" or "decimal" or "number" or
             "sequence" or "list" or "range" or "message" or "handler" or
             "dictionary" or "set" or "dice" or "optional" ||
@@ -1724,8 +1724,8 @@ internal static class GesBytecodeLowerer
                 "degree" => GameEventScriptBytecodeCastKind.Degree,
                 "meter" => GameEventScriptBytecodeCastKind.Meter,
                 "second" => GameEventScriptBytecodeCastKind.Second,
-                "point2" => GameEventScriptBytecodeCastKind.Point2,
-                "point3" => GameEventScriptBytecodeCastKind.Point3,
+                "vector" => GameEventScriptBytecodeCastKind.Vector,
+                "point" => GameEventScriptBytecodeCastKind.Point,
                 "sequence" => GameEventScriptBytecodeCastKind.Sequence,
                 _ => default
             };

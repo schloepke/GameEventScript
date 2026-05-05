@@ -531,16 +531,13 @@ internal static class GesValueOperations
                 return operation != "+";
             }
 
-            if (
-                leftVector.Dimension != rightVector.Dimension ||
-                leftVector.Unit != rightVector.Unit)
+            if (leftVector.Unit != rightVector.Unit)
             {
                 value = GameEventScriptValueFactory.GesDecimalNaN();
                 return true;
             }
 
             value = CreateVector(
-                leftVector.Dimension,
                 operation == "+"
                     ? AddNumeric(NumericValue.Finite(leftVector.X), NumericValue.Finite(rightVector.X))
                     : SubtractNumeric(NumericValue.Finite(leftVector.X), NumericValue.Finite(rightVector.X)),
@@ -593,11 +590,9 @@ internal static class GesValueOperations
         if (operation == "+" &&
             leftIsPoint &&
             TryReadVector(right, out var rightVector) &&
-            leftPoint.Dimension == rightVector.Dimension &&
             leftPoint.Unit == rightVector.Unit)
         {
             value = CreatePoint(
-                leftPoint.Dimension,
                 AddNumeric(NumericValue.Finite(leftPoint.X), NumericValue.Finite(rightVector.X)),
                 AddNumeric(NumericValue.Finite(leftPoint.Y), NumericValue.Finite(rightVector.Y)),
                 AddNumeric(NumericValue.Finite(leftPoint.Z), NumericValue.Finite(rightVector.Z)),
@@ -608,11 +603,9 @@ internal static class GesValueOperations
         if (operation == "-" && leftIsPoint)
         {
             if (TryReadVector(right, out var subtractedVector) &&
-                leftPoint.Dimension == subtractedVector.Dimension &&
                 leftPoint.Unit == subtractedVector.Unit)
             {
                 value = CreatePoint(
-                    leftPoint.Dimension,
                     SubtractNumeric(NumericValue.Finite(leftPoint.X), NumericValue.Finite(subtractedVector.X)),
                     SubtractNumeric(NumericValue.Finite(leftPoint.Y), NumericValue.Finite(subtractedVector.Y)),
                     SubtractNumeric(NumericValue.Finite(leftPoint.Z), NumericValue.Finite(subtractedVector.Z)),
@@ -621,11 +614,9 @@ internal static class GesValueOperations
             }
 
             if (rightIsPoint &&
-                leftPoint.Dimension == rightPoint.Dimension &&
                 leftPoint.Unit == rightPoint.Unit)
             {
                 value = CreateVector(
-                    leftPoint.Dimension,
                     SubtractNumeric(NumericValue.Finite(leftPoint.X), NumericValue.Finite(rightPoint.X)),
                     SubtractNumeric(NumericValue.Finite(leftPoint.Y), NumericValue.Finite(rightPoint.Y)),
                     SubtractNumeric(NumericValue.Finite(leftPoint.Z), NumericValue.Finite(rightPoint.Z)),
@@ -660,7 +651,6 @@ internal static class GesValueOperations
 
         value = operation == "-"
             ? CreateVector(
-                vector.Dimension,
                 NegateNumeric(NumericValue.Finite(vector.X)),
                 NegateNumeric(NumericValue.Finite(vector.Y)),
                 NegateNumeric(NumericValue.Finite(vector.Z)),
@@ -669,37 +659,25 @@ internal static class GesValueOperations
         return true;
     }
 
-    public static bool TryCreateVector2(GameEventScriptValue x, GameEventScriptValue y, out GameEventScriptValue value)
-        => TryCreateVectorFromComponents([x, y], 2, out value);
+    public static bool TryCreateVector(GameEventScriptValue x, GameEventScriptValue y, GameEventScriptValue z, out GameEventScriptValue value)
+        => TryCreateVectorFromComponents([x, y, z], out value);
 
-    public static bool TryCreateVector3(GameEventScriptValue x, GameEventScriptValue y, GameEventScriptValue z, out GameEventScriptValue value)
-        => TryCreateVectorFromComponents([x, y, z], 3, out value);
-
-    public static bool TryCreatePoint2(GameEventScriptValue x, GameEventScriptValue y, out GameEventScriptValue value)
-        => TryCreatePointFromComponents([x, y], 2, out value);
-
-    public static bool TryCreatePoint3(GameEventScriptValue x, GameEventScriptValue y, GameEventScriptValue z, out GameEventScriptValue value)
-        => TryCreatePointFromComponents([x, y, z], 3, out value);
+    public static bool TryCreatePoint(GameEventScriptValue x, GameEventScriptValue y, GameEventScriptValue z, out GameEventScriptValue value)
+        => TryCreatePointFromComponents([x, y, z], out value);
 
     public static bool TryCreateVectorFromLabeledComponents(
         string typeName,
         IReadOnlyDictionary<string, GameEventScriptValue> components,
         out GameEventScriptValue value)
     {
-        var labels = typeName switch
-        {
-            "vector2" => new[] { "x", "y" },
-            "vector3" => new[] { "x", "y", "z" },
-            _ => []
-        };
-
-        if (labels.Length == 0)
+        if (typeName != "vector")
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
-        var values = new decimal[labels.Length];
+        var labels = new[] { "x", "y", "z" };
+        var values = new decimal[3];
         var unit = default(GameEventScriptDecimalUnit?);
         var initialized = false;
 
@@ -732,9 +710,7 @@ internal static class GesValueOperations
             }
         }
 
-        value = labels.Length == 2
-            ? GameEventScriptValueFactory.GesVector2(values[0], values[1], unit)
-            : GameEventScriptValueFactory.GesVector3(values[0], values[1], values[2], unit);
+        value = GameEventScriptValueFactory.GesVector(values[0], values[1], values[2], unit);
         return true;
     }
 
@@ -743,20 +719,14 @@ internal static class GesValueOperations
         IReadOnlyDictionary<string, GameEventScriptValue> components,
         out GameEventScriptValue value)
     {
-        var labels = typeName switch
-        {
-            "point2" => new[] { "x", "y" },
-            "point3" => new[] { "x", "y", "z" },
-            _ => []
-        };
-
-        if (labels.Length == 0)
+        if (typeName != "point")
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
-        var values = new decimal[labels.Length];
+        var labels = new[] { "x", "y", "z" };
+        var values = new decimal[3];
         var unit = default(GameEventScriptDecimalUnit?);
         var initialized = false;
 
@@ -789,40 +759,38 @@ internal static class GesValueOperations
             }
         }
 
-        value = labels.Length == 2
-            ? GameEventScriptValueFactory.GesPoint2(values[0], values[1], unit)
-            : GameEventScriptValueFactory.GesPoint3(values[0], values[1], values[2], unit);
+        value = GameEventScriptValueFactory.GesPoint(values[0], values[1], values[2], unit);
         return true;
     }
 
-    public static bool TryCreateVector3(GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
+    public static bool TryCreateVector(GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
     {
         if (!TryUnwrapOptionalForOperation(xy, out var unwrapped) ||
-            unwrapped is not GameEventScriptVector2Value vector2)
+            unwrapped is not GameEventScriptVectorValue vector)
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
-        return TryCreateVector3(
-            GameEventScriptValueFactory.GesDecimal(vector2.X, vector2.Unit),
-            GameEventScriptValueFactory.GesDecimal(vector2.Y, vector2.Unit),
+        return TryCreateVector(
+            GameEventScriptValueFactory.GesDecimal(vector.X, vector.Unit),
+            GameEventScriptValueFactory.GesDecimal(vector.Y, vector.Unit),
             z,
             out value);
     }
 
-    public static bool TryCreatePoint3(GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
+    public static bool TryCreatePoint(GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
     {
         if (!TryUnwrapOptionalForOperation(xy, out var unwrapped) ||
-            unwrapped is not GameEventScriptPoint2Value point2)
+            unwrapped is not GameEventScriptPointValue point)
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
-        return TryCreatePoint3(
-            GameEventScriptValueFactory.GesDecimal(point2.X, point2.Unit),
-            GameEventScriptValueFactory.GesDecimal(point2.Y, point2.Unit),
+        return TryCreatePoint(
+            GameEventScriptValueFactory.GesDecimal(point.X, point.Unit),
+            GameEventScriptValueFactory.GesDecimal(point.Y, point.Unit),
             z,
             out value);
     }
@@ -831,17 +799,11 @@ internal static class GesValueOperations
     {
         switch (value)
         {
-            case GameEventScriptVector2Value vector2:
-                converted = GameEventScriptValueFactory.GesVector2(vector2.X, vector2.Y);
+            case GameEventScriptVectorValue vector:
+                converted = GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z);
                 return true;
-            case GameEventScriptVector3Value vector3:
-                converted = GameEventScriptValueFactory.GesVector3(vector3.X, vector3.Y, vector3.Z);
-                return true;
-            case GameEventScriptPoint2Value point2:
-                converted = GameEventScriptValueFactory.GesPoint2(point2.X, point2.Y);
-                return true;
-            case GameEventScriptPoint3Value point3:
-                converted = GameEventScriptValueFactory.GesPoint3(point3.X, point3.Y, point3.Z);
+            case GameEventScriptPointValue point:
+                converted = GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z);
                 return true;
             default:
                 converted = GameEventScriptNothingValue.Instance;
@@ -853,25 +815,15 @@ internal static class GesValueOperations
     {
         switch (value)
         {
-            case GameEventScriptVector2Value vector2:
-                converted = vector2.Unit.HasValue && vector2.Unit.Value != unit
+            case GameEventScriptVectorValue vector:
+                converted = vector.Unit.HasValue && vector.Unit.Value != unit
                     ? GameEventScriptValueFactory.GesDecimalNaN()
-                    : GameEventScriptValueFactory.GesVector2(vector2.X, vector2.Y, unit);
+                    : GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, unit);
                 return true;
-            case GameEventScriptVector3Value vector3:
-                converted = vector3.Unit.HasValue && vector3.Unit.Value != unit
+            case GameEventScriptPointValue point:
+                converted = point.Unit.HasValue && point.Unit.Value != unit
                     ? GameEventScriptValueFactory.GesDecimalNaN()
-                    : GameEventScriptValueFactory.GesVector3(vector3.X, vector3.Y, vector3.Z, unit);
-                return true;
-            case GameEventScriptPoint2Value point2:
-                converted = point2.Unit.HasValue && point2.Unit.Value != unit
-                    ? GameEventScriptValueFactory.GesDecimalNaN()
-                    : GameEventScriptValueFactory.GesPoint2(point2.X, point2.Y, unit);
-                return true;
-            case GameEventScriptPoint3Value point3:
-                converted = point3.Unit.HasValue && point3.Unit.Value != unit
-                    ? GameEventScriptValueFactory.GesDecimalNaN()
-                    : GameEventScriptValueFactory.GesPoint3(point3.X, point3.Y, point3.Z, unit);
+                    : GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, unit);
                 return true;
             default:
                 converted = GameEventScriptNothingValue.Instance;
@@ -960,19 +912,16 @@ internal static class GesValueOperations
         return true;
     }
 
-    private readonly record struct VectorComponents(int Dimension, decimal X, decimal Y, decimal Z, GameEventScriptDecimalUnit? Unit);
+    private readonly record struct VectorComponents(decimal X, decimal Y, decimal Z, GameEventScriptDecimalUnit? Unit);
 
-    private readonly record struct PointComponents(int Dimension, decimal X, decimal Y, decimal Z, GameEventScriptDecimalUnit? Unit);
+    private readonly record struct PointComponents(decimal X, decimal Y, decimal Z, GameEventScriptDecimalUnit? Unit);
 
     private static bool TryReadVector(GameEventScriptValue value, out VectorComponents vector)
     {
         switch (value)
         {
-            case GameEventScriptVector2Value vector2:
-                vector = new VectorComponents(2, vector2.X, vector2.Y, 0m, vector2.Unit);
-                return true;
-            case GameEventScriptVector3Value vector3:
-                vector = new VectorComponents(3, vector3.X, vector3.Y, vector3.Z, vector3.Unit);
+            case GameEventScriptVectorValue vectorValue:
+                vector = new VectorComponents(vectorValue.X, vectorValue.Y, vectorValue.Z, vectorValue.Unit);
                 return true;
             default:
                 vector = default;
@@ -984,11 +933,8 @@ internal static class GesValueOperations
     {
         switch (value)
         {
-            case GameEventScriptPoint2Value point2:
-                point = new PointComponents(2, point2.X, point2.Y, 0m, point2.Unit);
-                return true;
-            case GameEventScriptPoint3Value point3:
-                point = new PointComponents(3, point3.X, point3.Y, point3.Z, point3.Unit);
+            case GameEventScriptPointValue pointValue:
+                point = new PointComponents(pointValue.X, pointValue.Y, pointValue.Z, pointValue.Unit);
                 return true;
             default:
                 point = default;
@@ -996,13 +942,19 @@ internal static class GesValueOperations
         }
     }
 
-    private static bool TryCreateVectorFromComponents(IReadOnlyList<GameEventScriptValue> components, int dimension, out GameEventScriptValue value)
+    public static bool TryCreateVectorFromComponents(IReadOnlyList<GameEventScriptValue> components, out GameEventScriptValue value)
     {
-        var values = new decimal[dimension];
+        if (components.Count > 3)
+        {
+            value = GameEventScriptNothingValue.Instance;
+            return false;
+        }
+
+        var values = new decimal[3];
         var unit = default(GameEventScriptDecimalUnit?);
         var initialized = false;
 
-        for (var index = 0; index < dimension; index++)
+        for (var index = 0; index < components.Count; index++)
         {
             if (!TryReadVectorComponent(components[index], out values[index], out var componentUnit, out var invalid))
             {
@@ -1024,19 +976,23 @@ internal static class GesValueOperations
             }
         }
 
-        value = dimension == 2
-            ? GameEventScriptValueFactory.GesVector2(values[0], values[1], unit)
-            : GameEventScriptValueFactory.GesVector3(values[0], values[1], values[2], unit);
+        value = GameEventScriptValueFactory.GesVector(values[0], values[1], values[2], unit);
         return true;
     }
 
-    private static bool TryCreatePointFromComponents(IReadOnlyList<GameEventScriptValue> components, int dimension, out GameEventScriptValue value)
+    public static bool TryCreatePointFromComponents(IReadOnlyList<GameEventScriptValue> components, out GameEventScriptValue value)
     {
-        var values = new decimal[dimension];
+        if (components.Count > 3)
+        {
+            value = GameEventScriptNothingValue.Instance;
+            return false;
+        }
+
+        var values = new decimal[3];
         var unit = default(GameEventScriptDecimalUnit?);
         var initialized = false;
 
-        for (var index = 0; index < dimension; index++)
+        for (var index = 0; index < components.Count; index++)
         {
             if (!TryReadVectorComponent(components[index], out values[index], out var componentUnit, out var invalid))
             {
@@ -1058,9 +1014,7 @@ internal static class GesValueOperations
             }
         }
 
-        value = dimension == 2
-            ? GameEventScriptValueFactory.GesPoint2(values[0], values[1], unit)
-            : GameEventScriptValueFactory.GesPoint3(values[0], values[1], values[2], unit);
+        value = GameEventScriptValueFactory.GesPoint(values[0], values[1], values[2], unit);
         return true;
     }
 
@@ -1119,7 +1073,7 @@ internal static class GesValueOperations
             ? MultiplyNumeric(NumericValue.Finite(vector.Z), scalarNumber)
             : DivideNumeric(NumericValue.Finite(vector.Z), scalarNumber);
 
-        return CreateVector(vector.Dimension, x, y, z, resultUnit);
+        return CreateVector(x, y, z, resultUnit);
     }
 
     private static bool TryGetVectorScalarResultUnit(
@@ -1163,7 +1117,6 @@ internal static class GesValueOperations
     }
 
     private static GameEventScriptValue CreateVector(
-        int dimension,
         NumericValue x,
         NumericValue y,
         NumericValue z,
@@ -1174,13 +1127,10 @@ internal static class GesValueOperations
             return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
-        return dimension == 2
-            ? GameEventScriptValueFactory.GesVector2(x.Value, y.Value, unit)
-            : GameEventScriptValueFactory.GesVector3(x.Value, y.Value, z.Value, unit);
+        return GameEventScriptValueFactory.GesVector(x.Value, y.Value, z.Value, unit);
     }
 
     private static GameEventScriptValue CreatePoint(
-        int dimension,
         NumericValue x,
         NumericValue y,
         NumericValue z,
@@ -1191,16 +1141,14 @@ internal static class GesValueOperations
             return GameEventScriptValueFactory.GesDecimalNaN();
         }
 
-        return dimension == 2
-            ? GameEventScriptValueFactory.GesPoint2(x.Value, y.Value, unit)
-            : GameEventScriptValueFactory.GesPoint3(x.Value, y.Value, z.Value, unit);
+        return GameEventScriptValueFactory.GesPoint(x.Value, y.Value, z.Value, unit);
     }
 
     private static GameEventScriptValue EvaluateVectorLength(VectorComponents vector)
     {
         try
         {
-            var squared = (double)(vector.X * vector.X + vector.Y * vector.Y + (vector.Dimension == 3 ? vector.Z * vector.Z : 0m));
+            var squared = (double)(vector.X * vector.X + vector.Y * vector.Y + vector.Z * vector.Z);
             var length = Math.Sqrt(squared);
             if (double.IsNaN(length) || double.IsInfinity(length))
             {

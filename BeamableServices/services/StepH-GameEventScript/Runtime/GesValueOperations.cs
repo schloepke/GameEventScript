@@ -268,6 +268,11 @@ internal static class GesValueOperations
             return false;
         }
 
+        if (value is GameEventScriptTagValue && value.TryConvertToNumber(out var convertedTag))
+        {
+            return TryCoerceNumericForOperation(convertedTag, out number);
+        }
+
         if (value.Kind == GameEventScriptValueKind.Decimal)
         {
             if (value.IsNaN())

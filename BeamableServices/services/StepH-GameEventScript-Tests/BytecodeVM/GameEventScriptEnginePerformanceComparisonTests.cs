@@ -29,6 +29,7 @@ public sealed class BytecodeVmPerformanceReportTests
           let directOddScaled be values[:filter value where value mod 2 = 1][:select value -> value * 2][:count value where value > 10]
           if scaled > 100m {
             let success be scaled + folded
+            let divis be scaled ÷ folded
             let myHandler be Success(message, value)
             let myMessage be myHandler(message: 'hello', value: success)
             let myMessageDirect be Success(message: 'world', value: scaled)

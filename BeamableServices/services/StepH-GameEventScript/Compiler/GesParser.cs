@@ -864,6 +864,15 @@ internal sealed class GesParser
                 continue;
             }
 
+            if (Match(NotIn))
+            {
+                SkipNewLines();
+                var right = ParseTypeOperationExpression();
+                var membership = WithRange(new BinaryExpressionNode(expression, "in", right), expression, right);
+                expression = WithRange(new UnaryExpressionNode("!", membership), membership);
+                continue;
+            }
+
             if (IsValueInOperator())
             {
                 Advance();
@@ -1115,12 +1124,27 @@ internal sealed class GesParser
     {
         var expression = ParseUnaryExpression();
 
-        while (Match(Multiply, Divide, IntegerDivide, Modulo, Remainder))
+        while (true)
         {
-            var op = Previous.Text;
-            SkipNewLines();
-            var right = ParseUnaryExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+            if (Match(Multiply, Divide, IntegerDivide, Modulo, Remainder))
+            {
+                var op = Previous.Text;
+                SkipNewLines();
+                var right = ParseUnaryExpression();
+                expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+                continue;
+            }
+
+            if (IsImplicitMultiplicationLeftExpression(expression) &&
+                IsImplicitMultiplicationRightStart() &&
+                AreAdjacent(Previous, Current))
+            {
+                var right = ParseUnaryExpression();
+                expression = WithRange(new BinaryExpressionNode(expression, "*", right), expression, right);
+                continue;
+            }
+
+            break;
         }
 
         return expression;
@@ -1136,9 +1160,26 @@ internal sealed class GesParser
             var right = ParseUnaryExpression();
             expression = WithRange(new BinaryExpressionNode(expression, "^", right), expression, right);
         }
+        else if (Match(SuperscriptInteger))
+        {
+            var exponentToken = Previous;
+            var exponent = long.Parse(exponentToken.Text, CultureInfo.InvariantCulture);
+            var right = WithRange(new IntegerLiteralExpressionNode(exponent), exponentToken);
+            expression = WithRange(new BinaryExpressionNode(expression, "^", right), expression, right);
+        }
 
         return expression;
     }
+
+    private static bool IsImplicitMultiplicationLeftExpression(ExpressionNode expression)
+        => expression is IntegerLiteralExpressionNode or DecimalLiteralExpressionNode;
+
+    private bool IsImplicitMultiplicationRightStart()
+        => Current.Kind == Identifier;
+
+    private static bool AreAdjacent(GesToken left, GesToken right)
+        => left.EndLine == right.Line &&
+           left.EndColumn == right.Column;
 
     private ExpressionNode ParseUnaryExpression()
     {
@@ -2263,7 +2304,7 @@ internal sealed class GesParser
 
     private int ParsePositiveInteger(GesToken numberToken, string name)
     {
-        if (!decimal.TryParse(numberToken.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ||
+        if (!decimal.TryParse(numberToken.NormalizedNumericText, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ||
             value <= 0 ||
             value != decimal.Truncate(value))
         {

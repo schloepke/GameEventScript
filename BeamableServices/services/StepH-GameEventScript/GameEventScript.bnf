@@ -64,12 +64,14 @@ CollectionCombineOperator ::= ":intersect"
                             | ":except"
                             | ":zip"
 
-OrExpression ::= XorExpression { ( "|" | "or" ) XorExpression }
-XorExpression ::= AndExpression { "xor" AndExpression }
-AndExpression ::= EqualityExpression { ( "&" | "and" ) EqualityExpression }
-EqualityExpression ::= MembershipExpression { ( "=" | "<>" ) MembershipExpression }
+OrExpression ::= XorExpression { ( "|" | "∨" | "or" ) XorExpression }
+XorExpression ::= AndExpression { ( "xor" | "⊕" ) AndExpression }
+AndExpression ::= EqualityExpression { ( "&" | "∧" | "and" ) EqualityExpression }
+EqualityExpression ::= MembershipExpression { ( "=" | "<>" | "≠" ) MembershipExpression }
 MembershipExpression ::= TypeCheckExpression { MembershipOperator TypeCheckExpression }
 MembershipOperator ::= "in"
+                     | "∈"
+                     | "∉"
                      | "has" "value"
                      | "value" "in"
                      | "starts" "with"
@@ -86,22 +88,26 @@ IsOperation ::= "is" TypeTag
               | "is" Identifier
               | "is" AdditiveExpression
 AsOperation ::= "as" TypeTag
-RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" ) AdditiveExpression }
-AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" ) MultiplicativeExpression }
-MultiplicativeExpression ::= UnaryExpression { ( "*" | "/" | "div" | "mod" | "rem" ) UnaryExpression }
-UnaryExpression ::= "-" UnaryExpression
+RelationalExpression ::= AdditiveExpression { ( "<" | ">" | "<=" | ">=" | "≤" | "≥" ) AdditiveExpression }
+AdditiveExpression ::= MultiplicativeExpression { ( "+" | "-" | "−" ) MultiplicativeExpression }
+MultiplicativeExpression ::= UnaryExpression { MultiplicativeOperator UnaryExpression | ImplicitNumberIdentifierMultiply }
+MultiplicativeOperator ::= "*" | "×" | "·" | "⋅" | "/" | "÷" | "div" | "mod" | "rem"
+UnaryExpression ::= ( "-" | "−" ) UnaryExpression
                   | "!" UnaryExpression
                   | "~" UnaryExpression
+                  | "¬" UnaryExpression
                   | "not" UnaryExpression
                   | "has" "value" UnaryExpression
                   | "empty" UnaryExpression
                   | UnaryTag UnaryExpression
                   | PowerExpression
-PowerExpression ::= PowerBaseExpression [ "^" UnaryExpression ]
+PowerExpression ::= PowerBaseExpression [ ( "^" UnaryExpression ) | SuperscriptPower ]
 PowerBaseExpression ::= ExtensionCallExpression
                       | ClampExpression
                       | VariadicTaggedExpression
                       | PostfixExpression
+ImplicitNumberIdentifierMultiply ::= Number IdentifierWithoutWhitespace
+SuperscriptPower ::= "²" | "³"
 UnaryTag ::= ":len"
            | ":chance"
            | ":keys"
@@ -131,13 +137,15 @@ TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
 SequenceLiteral ::= OfArgumentList
 
 Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
-TagLiteral ::= ":" Identifier
+TagLiteral ::= ":" Identifier | "∞"
 
 Message ::= UpperLetter { LowerLetter | UpperLetter | Digit }
 ModuleName ::= Identifier | Message
 
 Identifier ::= LowerLetter { LowerLetter | UpperLetter | Digit }
-Number ::= Digit { Digit } [ "." Digit { Digit } ]
+IdentifierWithoutWhitespace ::= Identifier
+Number ::= DigitGroup [ "." DigitGroup ]
+DigitGroup ::= Digit { [ "_" ] Digit }
 Percentage ::= Number "%"
 UnitDecimal ::= Number ( "°" | "m" | "s" )
 TextLiteral ::= "'" { TextChar } "'"

@@ -2483,6 +2483,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return vectorWithoutUnit;
         }
 
+        if (unwrappedNumber is GameEventScriptTagValue && unwrappedNumber.TryConvertToNumber(out var convertedTag))
+        {
+            return ConvertToDecimal(convertedTag);
+        }
+
         return GesValueOperations.TryCoerceNumericForOperation(unwrappedNumber, out var number)
             ? GesValueOperations.ToGameEventScriptDecimal(number)
             : GesDecimalNaN();

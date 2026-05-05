@@ -603,11 +603,15 @@ Logical operators:
 not a
 !a
 ~a
+¬a
 a and b
 a & b
+a ∧ b
 a xor b
+a ⊕ b
 a or b
 a | b
+a ∨ b
 ```
 
 Relational operators:
@@ -615,8 +619,12 @@ Relational operators:
 ```eventscript
 x < y
 x <= y
+x ≤ y
 x > y
 x >= y
+x ≥ y
+x <> y
+x ≠ y
 ```
 
 Arithmetic operators:
@@ -624,17 +632,43 @@ Arithmetic operators:
 ```eventscript
 a + b
 a - b
+a − b
 a * b
+a × b
+a · b
+a ⋅ b
 a / b
+a ÷ b
 a ^ b
+x²
+x³
 a div b
 a mod b
 a rem b
 ```
 
-`/` is numeric division. `^` is exponentiation. `div` is floor division. `mod`
-is mathematical modulo. `rem` is truncating remainder. The `%` token is reserved
-for percentage literals such as `10%`; it is not the modulo operator.
+`×`, `·`, `⋅`, `÷`, `−`, `≤`, `≥`, `¬`, `≠`, `∧`, `∨`, and `⊕` are aliases
+for their ASCII forms. `/` is numeric division. `^` is exponentiation.
+Superscript `²` and `³` are aliases for `^ 2` and `^ 3`. `div` is floor
+division. `mod` is mathematical modulo. `rem` is truncating remainder. The `%`
+token is reserved for percentage literals such as `10%`; it is not the modulo
+operator.
+
+Numeric literals may use `_` as a digit separator. It is ignored by the parser
+and must appear between two digits, for example `100_000`, `100_000.25`, or
+`1_000m`.
+
+Numbers can be written directly before an identifier as multiplication. Unit,
+percentage, degree, and dice literals keep priority.
+
+```eventscript
+100_000  // 100000
+2x       // 2 * x
+2.5speed // 2.5 * speed
+2m       // meter literal, not 2 * m
+2 * m    // explicit multiplication by identifier m
+2d6      // dice notation in :dice expressions
+```
 
 Integer `+`, `-`, `*`, `div`, `mod`, and `rem` preserve integer results when
 both operands are integers and the result fits the integer operation. Integer
@@ -917,10 +951,11 @@ Tags are symbolic values written with a leading colon.
 
 Tags are not text, but they convert to text using their name. Special tags
 `:infinity`, `:negativeinfinity`, and `:nan` convert to decimal non-finite
-values.
+values. `∞` is an alias for `:infinity`.
 
 ```eventscript
 let limit as :decimal be :infinity
+let shortLimit as :decimal be ∞
 ```
 
 ### `:text`
@@ -960,9 +995,12 @@ Numbers are written without a suffix.
 12
 12.5
 0.75
+100_000.25
 ```
 
 Whole-number literals become `:integer`. Decimal literals become `:decimal`.
+Use `_` between digits as a readability separator; the decimal separator is
+always `.`.
 
 `:integer(value)` truncates toward zero. Use the standard integer extensions for
 other rounding modes.
@@ -1492,6 +1530,8 @@ Membership and boundary checks can be written as infix expressions.
 
 ```eventscript
 :boss in unitTags
+:boss ∈ unitTags
+:ghost ∉ unitTags
 'name' in unit
 'Ada' value in unit
 'tt' in 'battle'
@@ -1500,6 +1540,7 @@ Membership and boundary checks can be written as infix expressions.
 ```
 
 For dictionaries, `x in dict` checks keys and `x value in dict` checks values.
+`∈` is an alias for `in`; `∉` is the negated membership operator.
 
 ### Sequence operations
 

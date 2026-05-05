@@ -1140,6 +1140,11 @@ internal static class GesOptimizer
             return vectorWithoutUnit;
         }
 
+        if (unwrapped is GameEventScriptTagValue && unwrapped.TryConvertToNumber(out var convertedTag))
+        {
+            return ConvertToDecimal(convertedTag);
+        }
+
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite))
         {
             return GameEventScriptValueFactory.GesDecimalNaN();
@@ -1501,6 +1506,11 @@ internal static class GesOptimizer
         {
             number = default;
             return false;
+        }
+
+        if (value is GameEventScriptTagValue && value.TryConvertToNumber(out var convertedTag))
+        {
+            return TryCoerceNumericForOperation(convertedTag, out number);
         }
 
         if (value.Kind == GameEventScriptValueKind.Decimal)

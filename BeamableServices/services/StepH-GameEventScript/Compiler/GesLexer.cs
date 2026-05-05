@@ -41,6 +41,7 @@ internal enum GesTokenKind
     Else,
     For,
     In,
+    NotIn,
     Starts,
     Ends,
     With,
@@ -92,19 +93,31 @@ internal enum GesTokenKind
     Modulo,
     Remainder,
     Power,
+    SuperscriptInteger,
     Not
 }
 
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "")
 {
-    public decimal DecimalValue => decimal.Parse(Text, CultureInfo.InvariantCulture);
+    public decimal DecimalValue => decimal.Parse(NormalizedNumericText, CultureInfo.InvariantCulture);
 
     public bool TryGetIntegerValue(out long value)
     {
-        if (Kind == GesTokenKind.Decimal && Text.IndexOf('.') < 0 && long.TryParse(Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value)) return true;
+        if (Kind == GesTokenKind.Decimal &&
+            Text.IndexOf('.') < 0 &&
+            long.TryParse(NormalizeNumericText(Text), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+        {
+            return true;
+        }
+
         value = 0;
         return false;
     }
+
+    public string NormalizedNumericText => NormalizeNumericText(Text);
+
+    private static string NormalizeNumericText(string text)
+        => text.IndexOf('_') < 0 ? text : text.Replace("_", string.Empty, StringComparison.Ordinal);
 
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";
 }
@@ -331,11 +344,11 @@ internal sealed class GesLexer
     private GesToken ReadNumberLikeToken(int line, int column)
     {
         var start = _index;
-        ReadWhile(char.IsDigit);
+        ReadNumberDigits();
         if (!IsAtEnd && Current == '.' && char.IsDigit(Peek()))
         {
             Advance();
-            ReadWhile(char.IsDigit);
+            ReadNumberDigits();
         }
 
         var text = _input[start.._index];
@@ -365,19 +378,17 @@ internal sealed class GesLexer
             return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
         }
 
-        if (!IsAtEnd && Current is 'm' or 's')
+        if (!IsAtEnd &&
+            Current is 'm' or 's' &&
+            IsValidUnitBoundary(Peek()))
         {
             var unitName = Current == 'm' ? "meter" : "second";
             Advance();
             text = _input[start..(_index - 1)];
-            if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitDecimalToken(text, unitName, line, column);
-            while (!IsAtEnd && !char.IsWhiteSpace(Current))
-            {
-                Advance();
-            }
-
-            return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+            return CreateUnitDecimalToken(text, unitName, line, column);
         }
+
+        if (!IsAtEnd && char.IsLetter(Current)) return CreateToken(GesTokenKind.Decimal, text, line, column);
 
         if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Decimal, text, line, column);
         while (!IsAtEnd && !char.IsWhiteSpace(Current))
@@ -386,6 +397,26 @@ internal sealed class GesLexer
         }
 
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    private void ReadNumberDigits()
+    {
+        while (!IsAtEnd)
+        {
+            if (char.IsDigit(Current))
+            {
+                Advance();
+                continue;
+            }
+
+            if (Current == '_' && char.IsDigit(Peek()))
+            {
+                Advance();
+                continue;
+            }
+
+            break;
+        }
     }
 
     private GesToken ReadTextToken(int line, int column)
@@ -459,6 +490,23 @@ internal sealed class GesLexer
                     '-' => CreateToken(GesTokenKind.Minus, "-", line, column),
                     '*' => CreateToken(GesTokenKind.Multiply, "*", line, column),
                     '/' => CreateToken(GesTokenKind.Divide, "/", line, column),
+                    '\u00B7' => CreateToken(GesTokenKind.Multiply, "*", line, column),
+                    '\u00D7' => CreateToken(GesTokenKind.Multiply, "*", line, column),
+                    '\u00F7' => CreateToken(GesTokenKind.Divide, "/", line, column),
+                    '\u2212' => CreateToken(GesTokenKind.Minus, "-", line, column),
+                    '\u221E' => CreateToken(GesTokenKind.Tag, ":infinity", line, column),
+                    '\u2227' => CreateToken(GesTokenKind.And, "&", line, column),
+                    '\u2228' => CreateToken(GesTokenKind.Or, "|", line, column),
+                    '\u2208' => CreateToken(GesTokenKind.In, "in", line, column),
+                    '\u2209' => CreateToken(GesTokenKind.NotIn, "not in", line, column),
+                    '\u2295' => CreateToken(GesTokenKind.Xor, "xor", line, column),
+                    '\u22C5' => CreateToken(GesTokenKind.Multiply, "*", line, column),
+                    '\u2264' => CreateToken(GesTokenKind.LessOrEqual, "<=", line, column),
+                    '\u2265' => CreateToken(GesTokenKind.GreaterOrEqual, ">=", line, column),
+                    '\u00AC' => CreateToken(GesTokenKind.Not, "!", line, column),
+                    '\u2260' => CreateToken(GesTokenKind.NotEqual, "<>", line, column),
+                    '\u00B2' => CreateToken(GesTokenKind.SuperscriptInteger, "2", line, column),
+                    '\u00B3' => CreateToken(GesTokenKind.SuperscriptInteger, "3", line, column),
                     '%' => CreateToken(GesTokenKind.Illegal, "%", line, column),
                     '!' => CreateToken(GesTokenKind.Not, "!", line, column),
                     '~' => CreateToken(GesTokenKind.Not, "~", line, column),
@@ -497,8 +545,12 @@ internal sealed class GesLexer
 
     private bool IsValidNumberBoundary(char ch) => char.IsWhiteSpace(ch) || IsStructuralBoundary(ch) || (ch == 'd' && char.IsDigit(Peek()));
 
+    private static bool IsValidUnitBoundary(char ch) => ch == '\0' || char.IsWhiteSpace(ch) || IsStructuralBoundary(ch);
+
     private static bool IsStructuralBoundary(char ch)
-        => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>';
+        => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
+            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
+            '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u00B2' or '\u00B3';
 
     private bool StartsAttachedIllegalOperatorSequence()
     {

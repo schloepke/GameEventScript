@@ -1172,6 +1172,12 @@ internal static class GesOptimizer
 
     private static bool TryConvertConstantType(GameEventScriptValue value, string declaredType, ISet<string> knownTypeNames, out GameEventScriptValue converted)
     {
+        if (value.IsUuid() && declaredType is not "uuid" and not "text" and not "optional")
+        {
+            converted = GameEventScriptNothingValue.Instance;
+            return true;
+        }
+
         switch (declaredType)
         {
             case "nothing":
@@ -1203,6 +1209,9 @@ internal static class GesOptimizer
                 return true;
             case "boolean":
                 converted = GameEventScriptValueFactory.GesBoolean(value.AsBoolean());
+                return true;
+            case "uuid":
+                converted = ConvertToUuid(value);
                 return true;
             case "integer":
                 converted = GameEventScriptValueFactory.GesInteger(value.AsInteger());
@@ -1286,6 +1295,23 @@ internal static class GesOptimizer
         return unwrapped.IsNegativeInfinity()
             ? GameEventScriptValueFactory.GesFloatNegativeInfinity()
             : GameEventScriptValueFactory.GesFloatInfinity();
+    }
+
+    private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)
+    {
+        if (!TryUnwrapOptional(value, out var unwrapped))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped.IsUuid())
+        {
+            return unwrapped;
+        }
+
+        return GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(unwrapped), out var uuid)
+            ? uuid
+            : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
@@ -1941,6 +1967,13 @@ internal static class GesOptimizer
                 return true;
             case GameEventScriptValueKind.Tag:
                 expression = new TagLiteralExpressionNode(value.AsText());
+                return true;
+            case GameEventScriptValueKind.Uuid:
+                expression = new TypeConstructorExpressionNode(
+                    "uuid",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, new TextLiteralExpressionNode(value.AsText()))
+                    ]));
                 return true;
             case GameEventScriptValueKind.Vector:
             {

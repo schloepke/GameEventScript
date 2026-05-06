@@ -13,17 +13,21 @@ public sealed class GameEventScriptRefValue : GameEventScriptValue
     private readonly IReadOnlyDictionary<string, GameEventScriptValue> _dictionary;
 
     public static GameEventScriptRefValue Create(string typeName, string id)
-        => new(NormalizeTypeName(typeName), NormalizeId(id));
+        => Create(typeName, GesText(NormalizeId(id)));
 
-    private GameEventScriptRefValue(string typeName, string id)
+    public static GameEventScriptRefValue Create(string typeName, GameEventScriptValue id)
+        => new(NormalizeTypeName(typeName), NormalizeIdValue(id));
+
+    private GameEventScriptRefValue(string typeName, GameEventScriptValue id)
     {
         TypeName = typeName;
-        Id = id;
+        IdValue = id;
+        Id = id.AsText();
         _dictionary = new ReadOnlyDictionary<string, GameEventScriptValue>(
             new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
             {
                 ["type"] = GesTag(typeName),
-                ["id"] = GesText(id)
+                ["id"] = id
             });
     }
 
@@ -32,6 +36,8 @@ public sealed class GameEventScriptRefValue : GameEventScriptValue
     public string TypeName { get; }
 
     public string Id { get; }
+
+    public GameEventScriptValue IdValue { get; }
 
     public override string AsText() => $"ref(:{TypeName}, {Id})";
 
@@ -87,5 +93,32 @@ public sealed class GameEventScriptRefValue : GameEventScriptValue
         }
 
         return id.Trim();
+    }
+
+    private static GameEventScriptValue NormalizeIdValue(GameEventScriptValue id)
+    {
+        id ??= GameEventScriptNothingValue.Instance;
+        if (!id.TryUnwrapOptional(out var unwrapped))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped.IsNothing())
+        {
+            throw new ArgumentException("Ref id must not be nothing.", nameof(id));
+        }
+
+        if (unwrapped.IsUuid())
+        {
+            return unwrapped;
+        }
+
+        var text = unwrapped.AsText().Trim();
+        if (text.Length == 0)
+        {
+            throw new ArgumentException("Ref id must not be empty.", nameof(id));
+        }
+
+        return GesText(text);
     }
 }

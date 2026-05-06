@@ -195,6 +195,7 @@ internal sealed class GesLexer
             switch (ch)
             {
                 case '\'':
+                case '"':
                     yield return ReadTextToken(startLine, startColumn);
                     continue;
                 case ':' when char.IsLower(Peek()):
@@ -462,15 +463,16 @@ internal sealed class GesLexer
     private GesToken ReadTextToken(int line, int column)
     {
         var start = _index;
+        var quote = Current;
         Advance();
         var builder = new StringBuilder();
         while (!IsAtEnd)
         {
-            if (Current == '\'')
+            if (Current == quote)
             {
-                if (Peek() == '\'')
+                if (Peek() == quote)
                 {
-                    builder.Append('\'');
+                    builder.Append(quote);
                     Advance();
                     Advance();
                     continue;

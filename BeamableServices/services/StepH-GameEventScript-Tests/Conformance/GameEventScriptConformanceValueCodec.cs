@@ -67,6 +67,8 @@ internal static class GameEventScriptConformanceValueCodec
                 return GameEventScriptValueFactory.GesTag(RequireString(element, "value", "tag value"));
             case ":boolean":
                 return GameEventScriptValueFactory.GesBoolean(RequireBoolean(element, "value", "boolean value"));
+            case ":uuid":
+                return GameEventScriptValueFactory.GesUuid(RequireString(element, "value", "uuid value"));
             case ":integer":
                 return GameEventScriptValueFactory.GesInteger(
                     RequireInt64(element, "value", "integer value"),
@@ -176,6 +178,7 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
             GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
             GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
+            GameEventScriptValueKind.Uuid => new JsonObject { ["type"] = ":uuid", ["value"] = value.AsText() },
             GameEventScriptValueKind.Integer => ToIntegerJson((GameEventScriptIntegerValue)value),
             GameEventScriptValueKind.Float => ToFloatJson((GameEventScriptFloatValue)value),
             GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },

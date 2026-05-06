@@ -929,6 +929,7 @@ Types are written as tags. Built-in public type tags are:
 - `:tag`
 - `:text`
 - `:boolean`
+- `:uuid`
 - `:integer`
 - `:float`
 - `:percentage`
@@ -1019,11 +1020,13 @@ let golden as :float be φ
 
 ### `:text`
 
-Text uses single quotes. Escape a single quote by doubling it.
+Text can use single quotes or double quotes. Escape the active quote character by
+doubling it.
 
 ```eventscript
 'hello'
 'Ada''s turn'
+"didn't say ""stop"""
 ```
 
 Text converts to numbers and booleans when it can be parsed. Text converts to a
@@ -1341,6 +1344,21 @@ on Start(maybeTarget) {
 Converting `nothing` to `:optional` creates an empty optional. Converting any
 other value creates an optional containing that value.
 
+### `:uuid`
+
+A UUID is a 128-bit RFC-formatted id value stored in canonical byte order.
+Construct one from the canonical 8-4-4-4-12 hexadecimal text form:
+
+```eventscript
+let id be :uuid('550e8400-e29b-41d4-a716-446655440000')
+let ref be :ref(:unit, id: id)
+```
+
+UUID equality compares the 128-bit value. Text conversion returns lowercase
+canonical form. UUIDs can be used as dictionary lookup keys through that
+canonical form, for example `items[id]` when the dictionary was keyed by UUID
+values. Arithmetic and other numeric operations on UUIDs evaluate to `nothing`.
+
 ### `:sequence`
 
 A sequence is a repeatable iterable value.
@@ -1371,7 +1389,9 @@ let withoutFirstFive be fib[:drop first 5]
 Built-in series helpers are `:series.natural()`, `:series.fibonacci()`, and
 `:series.factorial()`. `:term` is zero-based. `:take first n` materializes a
 list of the first `n` terms, while `:drop first n` returns another series. A
-series used as a scalar value reads as its first term.
+series used as a scalar value reads as its first term. Unsupported selectors,
+lookups, non-integer term indexes, and finite-length requests evaluate to
+`nothing`.
 
 ### `:range`
 

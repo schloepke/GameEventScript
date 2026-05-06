@@ -1289,6 +1289,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                          (value.ReferenceValue?.IsNumber() ?? false),
             "integer" => value.Kind == BytecodeVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
             "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
+            "uuid" => value.ReferenceValue?.IsUuid() ?? false,
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "sequence" => value.ReferenceValue?.IsSequence() ?? false,
             "series" => value.ReferenceValue?.IsSeries() ?? false,
@@ -1721,6 +1722,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateAddBinary(GameEventScriptValue left, GameEventScriptValue right)
     {
+        if (left.IsUuid() || right.IsUuid())
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
         if (GesValueOperations.TryEvaluatePointBinary(left, "+", right, out var point))
         {
             return point;
@@ -1759,6 +1765,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateNumericBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)
     {
+        if (left.IsUuid() || right.IsUuid())
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
         if (GesValueOperations.TryEvaluatePointBinary(left, operation, right, out var point))
         {
             return point;
@@ -2129,6 +2140,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             : $"float:{value.AsNumber().ToString(CultureInfo.InvariantCulture)}",
             GameEventScriptValueKind.Integer => $"integer:{value.AsInteger().ToString(CultureInfo.InvariantCulture)}",
             GameEventScriptValueKind.Boolean => $"boolean:{(value.AsBoolean() ? "true" : "false")}",
+            GameEventScriptValueKind.Uuid => $"uuid:{value.AsText()}",
             GameEventScriptValueKind.Optional => value.AsOptional().HasValue
                 ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                 : "optional:none",
@@ -2431,10 +2443,28 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Nothing;
         }
 
-        var id = GesValueOperations.ToText(stack[start + idIndex].ToGameEventScriptValue()).Trim();
-        return id.Length == 0
+        var idValue = NormalizeRefIdValue(stack[start + idIndex].ToGameEventScriptValue());
+        return idValue.IsNothing()
             ? BytecodeVmValue.Nothing
-            : BytecodeVmValue.Reference(GesRef(targetTypeName, id));
+            : BytecodeVmValue.Reference(GesRef(targetTypeName, idValue));
+    }
+
+    private static GameEventScriptValue NormalizeRefIdValue(GameEventScriptValue id)
+    {
+        if (!id.TryUnwrapOptional(out var unwrapped) || unwrapped.IsNothing())
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped.IsUuid())
+        {
+            return unwrapped;
+        }
+
+        var text = GesValueOperations.ToText(unwrapped).Trim();
+        return text.Length == 0
+            ? GameEventScriptNothingValue.Instance
+            : GesText(text);
     }
 
     private bool IsReferenceTargetType(string typeName)
@@ -2665,6 +2695,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryConvertDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
     {
+        if (input.ReferenceValue?.IsUuid() == true &&
+            declaredType is not "uuid" and not "text" and not "optional")
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
         if (TryConvertPrimitiveDeclaredType(declaredType, input, out value))
         {
             return true;
@@ -2683,6 +2720,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
             "float" or "number" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloat(boxed)),
+            "uuid" => BytecodeVmValue.FromGameEventScriptValue(ConvertToUuid(boxed)),
             "sequence" => BytecodeVmValue.Reference(boxed.IsSequence() ? boxed : GameEventScriptValueFactory.GesSequence(boxed.AsEnumerable())),
             "series" => boxed.IsSeries()
                 ? input
@@ -2880,6 +2918,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeCastKind.Second => "second",
             GameEventScriptBytecodeCastKind.Vector => "vector",
             GameEventScriptBytecodeCastKind.Point => "point",
+            GameEventScriptBytecodeCastKind.Uuid => "uuid",
             GameEventScriptBytecodeCastKind.Sequence => "sequence",
             GameEventScriptBytecodeCastKind.Series => "series",
             GameEventScriptBytecodeCastKind.Ref => "ref",
@@ -2906,6 +2945,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesValueOperations.TryCoerceNumericForOperation(unwrappedNumber, out var number)
             ? GesValueOperations.ToGameEventScriptFloat(number)
             : GesFloatNaN();
+    }
+
+    private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)
+    {
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (unwrapped.IsUuid())
+        {
+            return unwrapped;
+        }
+
+        return GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(unwrapped), out var uuid)
+            ? uuid
+            : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
@@ -3272,7 +3328,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                value = BytecodeVmValue.FromGameEventScriptValue(series.GetTerm(termIndex.ToGameEventScriptValue().AsInteger()));
+                if (!termIndex.ToGameEventScriptValue().TryConvertToInteger(out var integerTermIndex))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return true;
+                }
+
+                value = BytecodeVmValue.FromGameEventScriptValue(series.GetTerm(integerTermIndex.AsInteger()));
                 return true;
 
             case GameEventScriptBytecodeSelectorKind.SequenceSlice:
@@ -6091,6 +6153,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Add(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "+", right, out var integerResult))
         {
             return integerResult;
@@ -6158,6 +6225,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Subtract(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "-", right, out var integerResult))
         {
             return integerResult;
@@ -6217,6 +6289,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Multiply(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "*", right, out var integerResult))
         {
             return integerResult;
@@ -6275,6 +6352,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Divide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "/", right, out var integerResult))
         {
             return integerResult;
@@ -6333,6 +6415,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue IntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "div", right, out var integerResult))
         {
             return integerResult;
@@ -6384,6 +6471,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Modulo(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "mod", right, out var integerResult))
         {
             return integerResult;
@@ -6434,6 +6526,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Remainder(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (TryEvaluateIntegerBinary(left, "rem", right, out var integerResult))
         {
             return integerResult;
@@ -6484,6 +6581,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Power(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (HasUuidOperand(left, right))
+        {
+            return Nothing;
+        }
+
         if (GesValueOperations.TryEvaluateUnitBinary(left.ToGameEventScriptValue(), "^", right.ToGameEventScriptValue(), out var unitResult))
         {
             return FromGameEventScriptValue(unitResult);
@@ -6833,6 +6935,9 @@ internal readonly record struct BytecodeVmValue(
     private bool IsPercentageLike()
         => Kind == BytecodeVmValueKind.Percentage ||
            ReferenceValue is { } reference && reference.IsPercentage();
+
+    private static bool HasUuidOperand(in BytecodeVmValue left, in BytecodeVmValue right)
+        => left.ReferenceValue?.IsUuid() == true || right.ReferenceValue?.IsUuid() == true;
 
     private bool IsVectorLike()
         => ReferenceValue is GameEventScriptVectorValue;

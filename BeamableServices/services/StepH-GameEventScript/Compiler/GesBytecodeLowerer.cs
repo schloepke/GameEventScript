@@ -728,14 +728,14 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence" or "series" or "ref";
+        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "sequence" or "series" or "ref";
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or
             "boolean" or "integer" or "float" or "number" or
-            "sequence" or "series" or "list" or "range" or "message" or "handler" or
+            "uuid" or "sequence" or "series" or "list" or "range" or "message" or "handler" or
             "dictionary" or "set" or "dice" or "optional" ||
             !string.IsNullOrWhiteSpace(typeName);
 
@@ -1737,6 +1737,7 @@ internal static class GesBytecodeLowerer
                 "second" => GameEventScriptBytecodeCastKind.Second,
                 "vector" => GameEventScriptBytecodeCastKind.Vector,
                 "point" => GameEventScriptBytecodeCastKind.Point,
+                "uuid" => GameEventScriptBytecodeCastKind.Uuid,
                 "sequence" => GameEventScriptBytecodeCastKind.Sequence,
                 "series" => GameEventScriptBytecodeCastKind.Series,
                 "ref" => GameEventScriptBytecodeCastKind.Ref,

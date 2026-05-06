@@ -31,9 +31,10 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind
   enum-field Second = 7
   enum-field Vector = 8
   enum-field Point = 9
-  enum-field Sequence = 10
-  enum-field Series = 11
-  enum-field Ref = 12
+  enum-field Uuid = 10
+  enum-field Sequence = 11
+  enum-field Series = 12
+  enum-field Ref = 13
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeConstant
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeConstant other)
   method System.Boolean Equals(System.Object obj)
@@ -510,6 +511,7 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesPercentage(System.Double ratio)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesPoint(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
+  method static StepH.GameEventScript.Types.GameEventScriptValue GesRef(System.String typeName, StepH.GameEventScript.Types.GameEventScriptValue id)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesRef(System.String typeName, System.String id)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSeconds(System.Double seconds)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSequence(StepH.GameEventScript.Types.GameEventScriptSequenceMode mode, StepH.GameEventScript.Types.GameEventScriptValue source)
@@ -519,6 +521,8 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSet(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> values)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesTag(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesText(System.String value)
+  method static StepH.GameEventScript.Types.GameEventScriptValue GesUuid(System.Int64 high, System.Int64 low)
+  method static StepH.GameEventScript.Types.GameEventScriptValue GesUuid(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesValues(StepH.GameEventScript.Types.GameEventScriptValue source)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
 interface StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection
@@ -917,7 +921,9 @@ sealed class StepH.GameEventScript.Types.GameEventScriptRefValue
   method System.Boolean TryGetDictionaryMember(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
   method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsDictionary()
   method System.String AsText()
+  method static StepH.GameEventScript.Types.GameEventScriptRefValue Create(System.String typeName, StepH.GameEventScript.Types.GameEventScriptValue id)
   method static StepH.GameEventScript.Types.GameEventScriptRefValue Create(System.String typeName, System.String id)
+  property StepH.GameEventScript.Types.GameEventScriptValue IdValue { get }
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.String Id { get }
   property System.String TypeName { get }
@@ -1001,6 +1007,17 @@ sealed class StepH.GameEventScript.Types.GameEventScriptTextValue
   method static StepH.GameEventScript.Types.GameEventScriptTextValue Create(System.String value)
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.String Value { get }
+sealed class StepH.GameEventScript.Types.GameEventScriptUuidValue
+  method System.Boolean AsBoolean()
+  method System.Boolean HasSemanticValue()
+  method System.Boolean IsSemanticallyEmpty()
+  method System.String AsText()
+  method static StepH.GameEventScript.Types.GameEventScriptUuidValue Create(System.Int64 high, System.Int64 low)
+  method static StepH.GameEventScript.Types.GameEventScriptUuidValue Parse(System.String text)
+  method static System.Boolean TryParse(System.String text, StepH.GameEventScript.Types.GameEventScriptUuidValue& value)
+  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
+  property System.Int64 High { get }
+  property System.Int64 Low { get }
 abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method StepH.GameEventScript.Types.GameEventScriptDiceValue AsDice()
   method StepH.GameEventScript.Types.GameEventScriptOptionalValue AsOptional()
@@ -1036,6 +1053,7 @@ abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method System.Boolean IsSet()
   method System.Boolean IsTag()
   method System.Boolean IsText()
+  method System.Boolean IsUuid()
   method System.Boolean IsVector()
   method System.Boolean StartsWith(StepH.GameEventScript.Types.GameEventScriptValue prefix)
   method System.Boolean TryGetCustomTypeName(System.String& typeName)
@@ -1072,17 +1090,18 @@ enum StepH.GameEventScript.Types.GameEventScriptValueKind
   enum-field Float = 6
   enum-field Integer = 7
   enum-field Boolean = 8
-  enum-field Optional = 9
-  enum-field Sequence = 10
-  enum-field Series = 11
-  enum-field Range = 12
-  enum-field Message = 13
-  enum-field Handler = 14
-  enum-field Ref = 15
-  enum-field List = 16
-  enum-field Dictionary = 17
-  enum-field Set = 18
-  enum-field Dice = 19
+  enum-field Uuid = 9
+  enum-field Optional = 10
+  enum-field Sequence = 11
+  enum-field Series = 12
+  enum-field Range = 13
+  enum-field Message = 14
+  enum-field Handler = 15
+  enum-field Ref = 16
+  enum-field List = 17
+  enum-field Dictionary = 18
+  enum-field Set = 19
+  enum-field Dice = 20
 sealed class StepH.GameEventScript.Types.GameEventScriptVectorValue
   field static StepH.GameEventScript.Types.GameEventScriptVectorValue Zero
   method System.Boolean AsBoolean()

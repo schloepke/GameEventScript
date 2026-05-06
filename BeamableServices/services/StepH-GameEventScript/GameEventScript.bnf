@@ -157,9 +157,13 @@ DigitGroup ::= Digit { [ "_" ] Digit }
 NumericSuffix ::= "0" | NonZeroDigit { Digit }
 Percentage ::= Number "%"
 UnitNumber ::= Number ( "°" | "m" | "s" )
-TextLiteral ::= "'" { TextChar } "'"
-TextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
+TextLiteral ::= SingleQuotedTextLiteral | DoubleQuotedTextLiteral
+SingleQuotedTextLiteral ::= "'" { SingleQuotedTextChar } "'"
+DoubleQuotedTextLiteral ::= "\"" { DoubleQuotedTextChar } "\""
+SingleQuotedTextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
+DoubleQuotedTextChar ::= EscapedDoubleQuote | AnyCharButDoubleQuote
 EscapedSingleQuote ::= "''"
+EscapedDoubleQuote ::= "\"\""
 AnyCharExceptLineBreak ::= "[^\r\n]"
 
 LowerLetter ::= "[a-z]"
@@ -170,6 +174,7 @@ Digit ::= "[0-9]"
 NonZeroDigit ::= "[1-9]"
 
 AnyCharButSingleQuote ::= "[^']"
+AnyCharButDoubleQuote ::= "[^\"]"
 
 TypeTag ::= ":text"
           | ":tag"
@@ -182,6 +187,7 @@ TypeTag ::= ":text"
           | ":float"
           | ":integer"
           | ":boolean"
+          | ":uuid"
           | ":optional"
           | ":range"
           | ":message"

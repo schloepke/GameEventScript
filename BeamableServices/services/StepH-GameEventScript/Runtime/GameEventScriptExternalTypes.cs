@@ -571,6 +571,7 @@ internal static class GameEventScriptExternalTypeNames
             GameEventScriptValueKind.Float => unit?.ToTypeName() ?? "float",
             GameEventScriptValueKind.Integer => unit?.ToTypeName() ?? "integer",
             GameEventScriptValueKind.Boolean => "boolean",
+            GameEventScriptValueKind.Uuid => "uuid",
             GameEventScriptValueKind.Optional => "optional",
             GameEventScriptValueKind.Sequence => "sequence",
             GameEventScriptValueKind.Series => "series",
@@ -604,6 +605,7 @@ internal static class GameEventScriptExternalTypeNames
             "float" or "number" => (GameEventScriptValueKind.Float, null),
             "integer" => (GameEventScriptValueKind.Integer, null),
             "boolean" => (GameEventScriptValueKind.Boolean, null),
+            "uuid" => (GameEventScriptValueKind.Uuid, null),
             "optional" => (GameEventScriptValueKind.Optional, null),
             "sequence" => (GameEventScriptValueKind.Sequence, null),
             "series" => (GameEventScriptValueKind.Series, null),
@@ -740,7 +742,13 @@ internal static class GameEventScriptExternalTypeValueConverter
     }
 
     private static GameEventScriptValue CoerceToDeclaredTypeCore(GameEventScriptValue value, string typeName)
-        => typeName switch
+    {
+        if (value.IsUuid() && typeName is not "uuid" and not "text")
+        {
+            return GesNothing();
+        }
+
+        return typeName switch
         {
             "nothing" => GesNothing(),
             "tag" => GesTag(value.AsText()),
@@ -752,12 +760,18 @@ internal static class GameEventScriptExternalTypeValueConverter
             "integer" => GesInteger(value.AsInteger()),
             "float" or "number" => GesFloat(value.AsNumber()),
             "boolean" => GesBoolean(value.AsBoolean()),
+            "uuid" => value.IsUuid()
+                ? value
+                : GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(value), out var uuid)
+                    ? uuid
+                    : GesNothing(),
             "ref" => value.IsRef() ? value : GesNothing(),
             "dictionary" => GesDictionary(value.AsDictionary()),
             "list" => GesList(value.AsList()),
             "set" => GesSet(value.AsSet()),
             _ => value
         };
+    }
 
     public static object? ToClrValue(GameEventScriptValue value, Type targetType)
     {

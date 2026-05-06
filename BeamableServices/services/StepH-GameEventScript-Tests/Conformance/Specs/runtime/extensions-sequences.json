@@ -90,7 +90,7 @@
     {
       "kind": "scriptApi",
       "name": "standard series support term take drop and first term coercion",
-      "script": "on Start() {\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  let dropped be fib[:drop first 5]\n  emit Done(fibIsSeries: fib is :series, droppedIsSeries: dropped is :series, noLookup: fib[1], seriesLen: :len fib, bareFirst: fib as :integer, naturalZero: naturals[:term 0], naturalThree: naturals[:term 3], oddFourth: odd[:term 4], fibZero: fib[:term 0], fibOne: fib[:term 1], fibSeven: fib[:term 7], droppedZero: dropped[:term 0], factZero: fact[:term 0], factFive: fact[:term 5], firstNaturals: naturals[:take first 4], firstOdd: odd[:take first 3])\n}",
+      "script": "on Start() {\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  let dropped be fib[:drop first 5]\n  emit Done(fibIsSeries: fib is :series, droppedIsSeries: dropped is :series, noLookup: fib[1], seriesLen: :len fib, badTerm: fib[:term 'x'], takeLast: fib[:take last 2], dropLast: fib[:drop last 1], filterNothing: fib[:filter item where true], bareFirst: fib as :integer, naturalZero: naturals[:term 0], naturalThree: naturals[:term 3], oddFourth: odd[:term 4], fibZero: fib[:term 0], fibOne: fib[:term 1], fibSeven: fib[:term 7], droppedZero: dropped[:term 0], factZero: fact[:term 0], factFive: fact[:term 5], firstNaturals: naturals[:take first 4], firstOdd: odd[:take first 3])\n}",
       "steps": [
         {
           "input": {
@@ -112,6 +112,18 @@
                   "type": ":nothing"
                 },
                 "seriesLen": {
+                  "type": ":nothing"
+                },
+                "badTerm": {
+                  "type": ":nothing"
+                },
+                "takeLast": {
+                  "type": ":nothing"
+                },
+                "dropLast": {
+                  "type": ":nothing"
+                },
+                "filterNothing": {
                   "type": ":nothing"
                 },
                 "bareFirst": {

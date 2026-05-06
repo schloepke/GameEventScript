@@ -253,6 +253,7 @@ public enum GameEventScriptBytecodeCastKind
     Second,
     Vector,
     Point,
+    Uuid,
     Sequence,
     Series,
     Ref

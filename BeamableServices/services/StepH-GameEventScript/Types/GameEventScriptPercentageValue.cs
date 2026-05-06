@@ -6,27 +6,27 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptPercentageValue : GameEventScriptValue
 {
-    public static GameEventScriptPercentageValue Create(decimal ratio) => new(ratio);
+    public static GameEventScriptPercentageValue Create(double ratio) => new(ratio);
 
-    private GameEventScriptPercentageValue(decimal ratio)
+    private GameEventScriptPercentageValue(double ratio)
     {
         Ratio = ratio;
     }
 
-    public decimal Ratio { get; }
+    public double Ratio { get; }
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Percentage;
 
     public override string AsText() => FormatPercentage(Ratio);
 
-    public override bool AsBoolean() => Ratio != 0m;
+    public override bool AsBoolean() => Ratio != 0d;
 
     public override long AsInteger() => ToIntegerPercentage(Ratio);
 
-    public override decimal AsNumber() => Ratio;
+    public override double AsNumber() => Ratio;
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = GesDecimal(Ratio);
+        value = GesFloat(Ratio);
         return true;
     }
 
@@ -38,7 +38,7 @@ public sealed class GameEventScriptPercentageValue : GameEventScriptValue
 
     internal override bool TryConvertToBoolean(out GameEventScriptValue value)
     {
-        value = GesBoolean(Ratio != 0m);
+        value = GesBoolean(Ratio != 0d);
         return true;
     }
 

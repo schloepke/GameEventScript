@@ -14,9 +14,9 @@ internal enum GesTokenKind
     Message,
     Identifier,
     Tag,
-    Decimal,
+    Float,
     Percentage,
-    UnitDecimal,
+    UnitFloat,
     Text,
     True,
     False,
@@ -81,6 +81,7 @@ internal enum GesTokenKind
     And,
     Equal,
     NotEqual,
+    ApproxEqual,
     Less,
     Greater,
     LessOrEqual,
@@ -99,11 +100,11 @@ internal enum GesTokenKind
 
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "")
 {
-    public decimal DecimalValue => decimal.Parse(NormalizedNumericText, CultureInfo.InvariantCulture);
+    public double FloatValue => double.Parse(NormalizedNumericText, CultureInfo.InvariantCulture);
 
     public bool TryGetIntegerValue(out long value)
     {
-        if (Kind == GesTokenKind.Decimal &&
+        if (Kind == GesTokenKind.Float &&
             Text.IndexOf('.') < 0 &&
             long.TryParse(NormalizeNumericText(Text), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
         {
@@ -246,8 +247,8 @@ internal sealed class GesLexer
     private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn)
         => new(kind, text, startLine, startColumn, _line, _column);
 
-    private GesToken CreateUnitDecimalToken(string text, string unitName, int startLine, int startColumn)
-        => new(GesTokenKind.UnitDecimal, text, startLine, startColumn, _line, _column, unitName);
+    private GesToken CreateUnitFloatToken(string text, string unitName, int startLine, int startColumn)
+        => new(GesTokenKind.UnitFloat, text, startLine, startColumn, _line, _column, unitName);
 
     private static GesToken CreateWordToken(string text, int line, int column, int endLine, int endColumn)
     {
@@ -407,7 +408,7 @@ internal sealed class GesLexer
         {
             Advance();
             text = _input[start..(_index - 1)];
-            if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitDecimalToken(text, "degree", line, column);
+            if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitFloatToken(text, "degree", line, column);
             while (!IsAtEnd && !char.IsWhiteSpace(Current))
             {
                 Advance();
@@ -423,12 +424,12 @@ internal sealed class GesLexer
             var unitName = Current == 'm' ? "meter" : "second";
             Advance();
             text = _input[start..(_index - 1)];
-            return CreateUnitDecimalToken(text, unitName, line, column);
+            return CreateUnitFloatToken(text, unitName, line, column);
         }
 
-        if (!IsAtEnd && char.IsLetter(Current)) return CreateToken(GesTokenKind.Decimal, text, line, column);
+        if (!IsAtEnd && char.IsLetter(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
 
-        if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Decimal, text, line, column);
+        if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
         while (!IsAtEnd && !char.IsWhiteSpace(Current))
         {
             Advance();
@@ -495,6 +496,9 @@ internal sealed class GesLexer
             case '<' when next == '>':
                 Advance();
                 return CreateToken(GesTokenKind.NotEqual, "<>", line, column);
+            case '=' when next == '~':
+                Advance();
+                return CreateToken(GesTokenKind.ApproxEqual, "=~", line, column);
             case '<' when next == '=':
                 Advance();
                 return CreateToken(GesTokenKind.LessOrEqual, "<=", line, column);
@@ -549,6 +553,8 @@ internal sealed class GesLexer
                     '\u2265' => CreateToken(GesTokenKind.GreaterOrEqual, ">=", line, column),
                     '\u00AC' => CreateToken(GesTokenKind.Not, "!", line, column),
                     '\u2260' => CreateToken(GesTokenKind.NotEqual, "<>", line, column),
+                    '\u2248' => CreateToken(GesTokenKind.ApproxEqual, "=~", line, column),
+                    '\u2245' => CreateToken(GesTokenKind.ApproxEqual, "=~", line, column),
                     '\u00B2' => CreateToken(GesTokenKind.SuperscriptInteger, "2", line, column),
                     '\u00B3' => CreateToken(GesTokenKind.SuperscriptInteger, "3", line, column),
                     '%' => CreateToken(GesTokenKind.Illegal, "%", line, column),

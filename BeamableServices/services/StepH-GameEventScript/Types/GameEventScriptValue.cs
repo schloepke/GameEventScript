@@ -17,7 +17,7 @@ public enum GameEventScriptValueKind
     Percentage,
     Vector,
     Point,
-    Decimal,
+    Float,
     Integer,
     Boolean,
     Optional,
@@ -40,17 +40,17 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     }
 
     public abstract GameEventScriptValueKind Kind { get; }
-    
+
     public static IComparer<GameEventScriptValue> StableComparer { get; } = new StableGameEventScriptValueComparer();
 
-    public bool IsNumber() => Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer or GameEventScriptValueKind.Percentage;
+    public bool IsNumber() => Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer or GameEventScriptValueKind.Percentage;
     public bool IsNothing() => Kind == GameEventScriptValueKind.Nothing;
     public bool IsTag() => Kind == GameEventScriptValueKind.Tag;
     public bool IsInteger() => Kind == GameEventScriptValueKind.Integer;
     public bool IsText() => Kind == GameEventScriptValueKind.Text;
     public bool IsPercentage() => Kind == GameEventScriptValueKind.Percentage;
-    public bool IsDecimalUnit(GameEventScriptDecimalUnit unit) => this is GameEventScriptDecimalValue decimalValue && decimalValue.Unit == unit;
-    public bool HasDecimalUnit() => this is GameEventScriptDecimalValue { Unit: not null };
+    public bool IsFloatUnit(GameEventScriptFloatUnit unit) => this is GameEventScriptFloatValue floatValue && floatValue.Unit == unit;
+    public bool HasFloatUnit() => this is GameEventScriptFloatValue { Unit: not null };
     public bool IsVector() => Kind == GameEventScriptValueKind.Vector;
     public bool IsPoint() => Kind == GameEventScriptValueKind.Point;
     public bool IsSequence() => Kind == GameEventScriptValueKind.Sequence;
@@ -69,11 +69,11 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual long AsInteger() => 0;
 
-    public virtual decimal AsNumber() => 0m;
+    public virtual double AsNumber() => 0d;
 
-    public bool IsNaN() => this is GameEventScriptDecimalValue { IsNaNValue: true };
-    public bool IsInfinity() => this is GameEventScriptDecimalValue { IsInfinityValue: true };
-    public bool IsNegativeInfinity() => this is GameEventScriptDecimalValue { IsNegativeInfinityValue: true };
+    public bool IsNaN() => this is GameEventScriptFloatValue { IsNaNValue: true };
+    public bool IsInfinity() => this is GameEventScriptFloatValue { IsInfinityValue: true };
+    public bool IsNegativeInfinity() => this is GameEventScriptFloatValue { IsNegativeInfinityValue: true };
 
     public int CompareTo(GameEventScriptValue? other) => other is null ? 1 : StableComparer.Compare(this, other);
 
@@ -196,7 +196,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public string DescribeType()
     {
-        if (this is GameEventScriptDecimalValue { Unit: { } unit })
+        if (this is GameEventScriptFloatValue { Unit: { } unit })
         {
             return $":{ToDisplayTypeName(unit.ToTypeName())}";
         }
@@ -209,7 +209,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Percentage => ":Percentage",
             GameEventScriptValueKind.Vector => ":Vector",
             GameEventScriptValueKind.Point => ":Point",
-            GameEventScriptValueKind.Decimal => ":Decimal",
+            GameEventScriptValueKind.Float => ":Float",
             GameEventScriptValueKind.Integer => ":Integer",
             GameEventScriptValueKind.Boolean => ":Boolean",
             GameEventScriptValueKind.Optional => ":Optional",
@@ -235,7 +235,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Percentage => FormatPercentage(((GameEventScriptPercentageValue)this).Ratio),
             GameEventScriptValueKind.Vector => FormatVector((GameEventScriptVectorValue)this),
             GameEventScriptValueKind.Point => FormatPoint((GameEventScriptPointValue)this),
-            GameEventScriptValueKind.Decimal => FormatDecimalValue((GameEventScriptDecimalValue)this),
+            GameEventScriptValueKind.Float => FormatFloatValue((GameEventScriptFloatValue)this),
             GameEventScriptValueKind.Integer => AsInteger().ToString(CultureInfo.InvariantCulture),
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
             GameEventScriptValueKind.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
@@ -254,7 +254,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool Equals(GameEventScriptValue? other)
     {
         if (ReferenceEquals(null, other)) return false;
-        if (ReferenceEquals(this, other)) return true;
         if (IsNumber() && other.IsNumber())
         {
             if (!HaveCompatibleNumericUnits(this, other))
@@ -262,10 +261,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 return false;
             }
 
-            if (IsNaN() || other.IsNaN())
-            {
-                return IsNaN() && other.IsNaN();
-            }
+            if (IsNaN() || other.IsNaN()) return false;
 
             if (IsInfinity() || other.IsInfinity())
             {
@@ -275,6 +271,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             return AsNumber() == other.AsNumber();
         }
 
+        if (ReferenceEquals(this, other)) return true;
         if (Kind != other.Kind) return false;
         return Kind switch
         {
@@ -283,23 +280,23 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Text => AsText() == other.AsText(),
             GameEventScriptValueKind.Percentage => ((GameEventScriptPercentageValue)this).Ratio == ((GameEventScriptPercentageValue)other).Ratio,
             GameEventScriptValueKind.Vector => ((GameEventScriptVectorValue)this).X == ((GameEventScriptVectorValue)other).X &&
-                                            ((GameEventScriptVectorValue)this).Y == ((GameEventScriptVectorValue)other).Y &&
-                                            ((GameEventScriptVectorValue)this).Z == ((GameEventScriptVectorValue)other).Z &&
-                                            ((GameEventScriptVectorValue)this).Unit == ((GameEventScriptVectorValue)other).Unit,
+                                               ((GameEventScriptVectorValue)this).Y == ((GameEventScriptVectorValue)other).Y &&
+                                               ((GameEventScriptVectorValue)this).Z == ((GameEventScriptVectorValue)other).Z &&
+                                               ((GameEventScriptVectorValue)this).Unit == ((GameEventScriptVectorValue)other).Unit,
             GameEventScriptValueKind.Point => ((GameEventScriptPointValue)this).X == ((GameEventScriptPointValue)other).X &&
-                                            ((GameEventScriptPointValue)this).Y == ((GameEventScriptPointValue)other).Y &&
-                                            ((GameEventScriptPointValue)this).Z == ((GameEventScriptPointValue)other).Z &&
-                                            ((GameEventScriptPointValue)this).Unit == ((GameEventScriptPointValue)other).Unit,
-            GameEventScriptValueKind.Decimal => AsNumber() == other.AsNumber(),
+                                              ((GameEventScriptPointValue)this).Y == ((GameEventScriptPointValue)other).Y &&
+                                              ((GameEventScriptPointValue)this).Z == ((GameEventScriptPointValue)other).Z &&
+                                              ((GameEventScriptPointValue)this).Unit == ((GameEventScriptPointValue)other).Unit,
+            GameEventScriptValueKind.Float => AsNumber() == other.AsNumber(),
             GameEventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
             GameEventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
             GameEventScriptValueKind.Optional => EqualsOptional(AsOptional(), other.AsOptional()),
             GameEventScriptValueKind.Sequence => AsEnumerable().SequenceEqual(other.AsEnumerable()),
             GameEventScriptValueKind.Range => ((GameEventScriptRangeValue)this).From == ((GameEventScriptRangeValue)other).From &&
-                                          ((GameEventScriptRangeValue)this).To == ((GameEventScriptRangeValue)other).To &&
-                                          ((GameEventScriptRangeValue)this).Step == ((GameEventScriptRangeValue)other).Step,
+                                              ((GameEventScriptRangeValue)this).To == ((GameEventScriptRangeValue)other).To &&
+                                              ((GameEventScriptRangeValue)this).Step == ((GameEventScriptRangeValue)other).Step,
             GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.SignatureId == ((GameEventScriptMessageValue)other).Value.SignatureId &&
-                                            EqualsDictionary(((GameEventScriptMessageValue)this).Value.Arguments, ((GameEventScriptMessageValue)other).Value.Arguments),
+                                                EqualsDictionary(((GameEventScriptMessageValue)this).Value.Arguments, ((GameEventScriptMessageValue)other).Value.Arguments),
             GameEventScriptValueKind.Handler => ((GameEventScriptHandlerValue)this).Signature.SignatureId == ((GameEventScriptHandlerValue)other).Signature.SignatureId,
             GameEventScriptValueKind.List => AsList().SequenceEqual(other.AsList()),
             GameEventScriptValueKind.Dictionary => EqualsDictionary(AsDictionary(), other.AsDictionary()),
@@ -317,7 +314,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         {
             if (IsNaN()) return int.MinValue;
             if (IsInfinity()) return IsNegativeInfinity() ? int.MinValue + 1 : int.MaxValue;
-            if (TryGetDecimalUnit(this, out var unit))
+            if (TryGetFloatUnit(this, out var unit))
             {
                 var numberHash = new HashCode();
                 numberHash.Add(AsNumber());
@@ -416,9 +413,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public static implicit operator GameEventScriptValue(bool value) => GameEventScriptValueFactory.GesBoolean(value);
     public static implicit operator GameEventScriptValue(int value) => GameEventScriptValueFactory.GesInteger(value);
     public static implicit operator GameEventScriptValue(long value) => GameEventScriptValueFactory.GesInteger(value);
-    public static implicit operator GameEventScriptValue(decimal value) => GameEventScriptValueFactory.GesDecimal(value);
-    public static implicit operator GameEventScriptValue(float value) => GameEventScriptDecimalValue.Create(value);
-    public static implicit operator GameEventScriptValue(double value) => GameEventScriptDecimalValue.Create(value);
+    public static implicit operator GameEventScriptValue(double value) => GameEventScriptValueFactory.GesFloat(value);
 
     private static GameEventScriptValue RequireNotNull(GameEventScriptValue? value) => value ?? GameEventScriptNothingValue.Instance;
 
@@ -579,7 +574,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         return value.Kind switch
         {
             GameEventScriptValueKind.Text => value.AsText(),
-            GameEventScriptValueKind.Decimal => value.ToString(),
+            GameEventScriptValueKind.Float => value.ToString(),
             GameEventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
             GameEventScriptValueKind.Boolean => value.AsBoolean().ToString(),
             _ => value.ToString()
@@ -637,9 +632,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Handler => CompareHandler((GameEventScriptHandlerValue)left, (GameEventScriptHandlerValue)right),
                 GameEventScriptValueKind.List => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Dictionary => CompareDictionary(left.AsDictionary(), right.AsDictionary()),
-                GameEventScriptValueKind.Set => CompareSequence(
-                    left.AsSet().OrderBy(x => x, StableComparer).ToArray(),
-                    right.AsSet().OrderBy(x => x, StableComparer).ToArray()),
+                GameEventScriptValueKind.Set => CompareSequence(left.AsSet().OrderBy(x => x, StableComparer).ToArray(), right.AsSet().OrderBy(x => x, StableComparer).ToArray()),
                 GameEventScriptValueKind.Dice => CompareDice(left.AsDice(), right.AsDice()),
                 _ => left.Kind.CompareTo(right.Kind)
             };
@@ -683,7 +676,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             return bySignature != 0 ? bySignature : CompareDictionary(left.Value.Arguments, right.Value.Arguments);
         }
 
-        private static int CompareHandler(GameEventScriptHandlerValue left, GameEventScriptHandlerValue right) => StringComparer.Ordinal.Compare(left.Signature.SignatureId, right.Signature.SignatureId);
+        private static int CompareHandler(GameEventScriptHandlerValue left, GameEventScriptHandlerValue right) =>
+            StringComparer.Ordinal.Compare(left.Signature.SignatureId, right.Signature.SignatureId);
     }
 
     internal virtual bool TryConvertToNumber(out GameEventScriptValue value)
@@ -791,9 +785,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         return true;
     }
 
-    internal static long ToIntegerSaturated(decimal number)
+    internal static long ToIntegerSaturated(double number)
     {
-        number = decimal.Truncate(number);
+        number = Math.Truncate(number);
         if (number < long.MinValue) return long.MinValue;
         if (number > long.MaxValue) return long.MaxValue;
         return (long)number;
@@ -801,9 +795,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     internal static bool IsHiddenKey(string key) => key != null && key.StartsWith("__", StringComparison.Ordinal);
 
-    internal static string FormatPercentage(decimal ratio) => $"{(ratio * 100m).ToString("0.############################", CultureInfo.InvariantCulture)}%";
+    internal static string FormatPercentage(double ratio) => $"{(ratio * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%";
 
-    internal static string FormatDecimalValue(GameEventScriptDecimalValue value)
+    internal static string FormatFloatValue(GameEventScriptFloatValue value)
     {
         if (value.IsNaNValue)
         {
@@ -821,22 +815,22 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             : formatted;
     }
 
-    public static decimal WrapDegrees(decimal degrees)
+    public static double WrapDegrees(double degrees)
     {
-        var wrapped = degrees % 360m;
-        if (wrapped < 0m)
+        var wrapped = degrees % 360d;
+        if (wrapped < 0d)
         {
-            wrapped += 360m;
+            wrapped += 360d;
         }
 
-        return wrapped == 360m ? 0m : wrapped;
+        return wrapped == 360d ? 0d : wrapped;
     }
 
-    internal static bool TryGetDecimalUnit(GameEventScriptValue value, out GameEventScriptDecimalUnit unit)
+    internal static bool TryGetFloatUnit(GameEventScriptValue value, out GameEventScriptFloatUnit unit)
     {
-        if (value is GameEventScriptDecimalValue { Unit: { } decimalUnit })
+        if (value is GameEventScriptFloatValue { Unit: { } floatUnit })
         {
-            unit = decimalUnit;
+            unit = floatUnit;
             return true;
         }
 
@@ -845,13 +839,13 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     }
 
     private static bool HaveCompatibleNumericUnits(GameEventScriptValue left, GameEventScriptValue right)
-        => TryGetDecimalUnit(left, out var leftUnit) == TryGetDecimalUnit(right, out var rightUnit) &&
-           (!TryGetDecimalUnit(left, out _) || leftUnit == rightUnit);
+        => TryGetFloatUnit(left, out var leftUnit) == TryGetFloatUnit(right, out var rightUnit) &&
+           (!TryGetFloatUnit(left, out _) || leftUnit == rightUnit);
 
     private static int CompareNumericUnits(GameEventScriptValue left, GameEventScriptValue right)
     {
-        var leftHasUnit = TryGetDecimalUnit(left, out var leftUnit);
-        var rightHasUnit = TryGetDecimalUnit(right, out var rightUnit);
+        var leftHasUnit = TryGetFloatUnit(left, out var leftUnit);
+        var rightHasUnit = TryGetFloatUnit(right, out var rightUnit);
         if (!leftHasUnit && !rightHasUnit)
         {
             return 0;
@@ -878,20 +872,20 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             });
 
     internal static string FormatVector(GameEventScriptVectorValue value)
-        => $"vector[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
+        => $"vector[x: {FormatFloatComponent(value.X, value.Unit)}, y: {FormatFloatComponent(value.Y, value.Unit)}, z: {FormatFloatComponent(value.Z, value.Unit)}]";
 
     internal static string FormatPoint(GameEventScriptPointValue value)
-        => $"point[x: {FormatDecimalComponent(value.X, value.Unit)}, y: {FormatDecimalComponent(value.Y, value.Unit)}, z: {FormatDecimalComponent(value.Z, value.Unit)}]";
+        => $"point[x: {FormatFloatComponent(value.X, value.Unit)}, y: {FormatFloatComponent(value.Y, value.Unit)}, z: {FormatFloatComponent(value.Z, value.Unit)}]";
 
-    internal static string FormatDecimalComponent(decimal value, GameEventScriptDecimalUnit? unit = null)
+    internal static string FormatFloatComponent(double value, GameEventScriptFloatUnit? unit = null)
     {
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
         return unit.HasValue ? $"{formatted}{unit.Value.ToSuffix()}" : formatted;
     }
 
-    internal static long ToIntegerPercentage(decimal ratio)
+    internal static long ToIntegerPercentage(double ratio)
     {
-        var percent = decimal.Truncate(ratio * 100m);
+        var percent = Math.Truncate(ratio * 100d);
         if (percent < long.MinValue) return long.MinValue;
         if (percent > long.MaxValue) return long.MaxValue;
         return (long)percent;

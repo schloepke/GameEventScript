@@ -67,7 +67,7 @@ CollectionCombineOperator ::= ":intersect"
 OrExpression ::= XorExpression { ( "|" | "∨" | "or" ) XorExpression }
 XorExpression ::= AndExpression { ( "xor" | "⊕" ) AndExpression }
 AndExpression ::= EqualityExpression { ( "&" | "∧" | "and" ) EqualityExpression }
-EqualityExpression ::= MembershipExpression { ( "=" | "<>" | "≠" ) MembershipExpression }
+EqualityExpression ::= MembershipExpression { ( "=" | "<>" | "≠" | "=~" | "≈" | "≅" ) MembershipExpression }
 MembershipExpression ::= TypeCheckExpression { MembershipOperator TypeCheckExpression }
 MembershipOperator ::= "in"
                      | "∈"
@@ -141,7 +141,7 @@ ExtensionReference ::= ":" Identifier "." Identifier
 TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
 SequenceLiteral ::= OfArgumentList
 
-Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
+Literal ::= Number | Percentage | UnitFloat | TextLiteral | "true" | "false"
 TagLiteral ::= ":" TagName | "∞" | "∏" | "ℇ" | "τ" | "φ"
 
 Message ::= UpperLetter { NameLetter }
@@ -154,7 +154,7 @@ Number ::= DigitGroup [ "." DigitGroup ]
 DigitGroup ::= Digit { [ "_" ] Digit }
 NumericSuffix ::= "0" | NonZeroDigit { Digit }
 Percentage ::= Number "%"
-UnitDecimal ::= Number ( "°" | "m" | "s" )
+UnitFloat ::= Number ( "°" | "m" | "s" )
 TextLiteral ::= "'" { TextChar } "'"
 TextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
 EscapedSingleQuote ::= "''"
@@ -177,7 +177,7 @@ TypeTag ::= ":text"
           | ":second"
           | ":vector"
           | ":point"
-          | ":decimal"
+          | ":float"
           | ":integer"
           | ":boolean"
           | ":optional"

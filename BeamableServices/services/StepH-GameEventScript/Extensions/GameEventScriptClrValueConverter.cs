@@ -60,13 +60,11 @@ public static class GameEventScriptClrValueConverter
             case ulong number and <= long.MaxValue:
                 return GameEventScriptValueFactory.GesInteger((long)number);
             case ulong number:
-                return GameEventScriptValueFactory.GesDecimal(number);
+                return GameEventScriptValueFactory.GesFloat(number);
             case float number:
-                return GameEventScriptDecimalValue.Create(number);
+                return GameEventScriptValueFactory.GesFloat(number);
             case double number:
-                return GameEventScriptDecimalValue.Create(number);
-            case decimal number:
-                return GameEventScriptValueFactory.GesDecimal(number);
+                return GameEventScriptValueFactory.GesFloat(number);
         }
 
         if (TryExtractStringDictionary(value, out var dictionaryEntries))

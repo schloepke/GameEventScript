@@ -265,7 +265,7 @@ Keep the existing optimized numeric and boolean operations where useful:
 - `Add`, `Subtract`, `Multiply`, `Divide`
 - `Power`, `IntegerDivide`, `Modulo`, `Remainder`
 - primitive integer variants
-- `Equal`, `NotEqual`, comparisons
+- `Equal`, `NotEqual`, `ApproxEqual`, comparisons
 - `And`, `Or`, `Xor`, `Unary`, `Variadic`
 - `Cast`
 - `Default`

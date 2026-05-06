@@ -293,9 +293,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             private int _stage;
             private BytecodeVmValue _first;
             private BytecodeVmValue _second;
-            private decimal _rangeFrom;
-            private decimal _rangeTo;
-            private decimal _rangeStep = 1m;
+            private double _rangeFrom;
+            private double _rangeTo;
+            private double _rangeStep = 1d;
             private long _current;
             private long _to;
             private long _step;

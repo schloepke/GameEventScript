@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using System.Runtime.CompilerServices;
@@ -177,7 +178,7 @@ internal static class GesRuntimeLimitUtilities
                 return 0;
             }
 
-            return ClampRangeLength(((decimal)to - from) / step);
+            return ClampRangeLength(((double)to - from) / step);
         }
 
         if (from < to)
@@ -185,7 +186,7 @@ internal static class GesRuntimeLimitUtilities
             return 0;
         }
 
-        return ClampRangeLength(((decimal)from - to) / -(decimal)step);
+        return ClampRangeLength(((double)from - to) / -(double)step);
     }
 
     public static bool TryGetRangeLength(GameEventScriptValue value, out long length)
@@ -200,10 +201,10 @@ internal static class GesRuntimeLimitUtilities
         return false;
     }
 
-    private static long ClampRangeLength(decimal zeroBasedDistance)
+    private static long ClampRangeLength(double zeroBasedDistance)
     {
-        var length = decimal.Floor(zeroBasedDistance) + 1m;
-        if (length <= 0m)
+        var length = Math.Floor(zeroBasedDistance) + 1d;
+        if (length <= 0d)
         {
             return 0;
         }

@@ -23,11 +23,11 @@ public sealed class GameEventScriptIntegerValue : GameEventScriptValue
 
     public override long AsInteger() => Value;
 
-    public override decimal AsNumber() => Value;
+    public override double AsNumber() => Value;
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = GesDecimal(Value);
+        value = GesFloat(Value);
         return true;
     }
 

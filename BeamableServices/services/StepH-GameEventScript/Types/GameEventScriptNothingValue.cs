@@ -22,7 +22,7 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     public override long AsInteger() => 0;
 
-    public override decimal AsNumber() => 0m;
+    public override double AsNumber() => 0d;
 
     public override GameEventScriptOptionalValue AsOptional() => GameEventScriptOptionalValue.None;
 
@@ -40,7 +40,7 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = GesDecimal(0m);
+        value = GesFloat(0d);
         return true;
     }
 

@@ -26,7 +26,7 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
 
     public override long AsInteger() => TryConvertToInteger(out var value) ? value.AsInteger() : 0;
 
-    public override decimal AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0m;
+    public override double AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0d;
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateCharacterList(Value);
 
@@ -47,9 +47,9 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        if (decimal.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
+        if (double.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number))
         {
-            value = GesDecimal(number);
+            value = GesFloat(number);
             return true;
         }
 
@@ -65,9 +65,9 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
             return true;
         }
 
-        if (decimal.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var decimalNumber))
+        if (double.TryParse(Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var floatNumber))
         {
-            value = GesInteger(ToIntegerSaturated(decimalNumber));
+            value = GesInteger(ToIntegerSaturated(floatNumber));
             return true;
         }
 

@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using System;
 using System.Collections.Generic;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
@@ -62,7 +63,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
             return false;
         }
 
-        return ((decimal)value - From) % Step == 0m;
+        return ((double)value - From) % Step == 0d;
     }
 
     public override IEnumerable<GameEventScriptValue> AsEnumerable()
@@ -112,7 +113,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
             return GameEventScriptNothingValue.Instance;
         }
 
-        var value = (decimal)From + ((decimal)index - 1m) * Step;
+        var value = (double)From + ((double)index - 1d) * Step;
         if (value < long.MinValue || value > long.MaxValue)
         {
             return GameEventScriptNothingValue.Instance;
@@ -135,7 +136,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
                 return 0;
             }
 
-            return ClampLength(((decimal)To - From) / Step);
+            return ClampLength(((double)To - From) / Step);
         }
 
         if (From < To)
@@ -143,13 +144,13 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
             return 0;
         }
 
-        return ClampLength(((decimal)From - To) / -(decimal)Step);
+        return ClampLength(((double)From - To) / -(double)Step);
     }
 
-    private static long ClampLength(decimal zeroBasedDistance)
+    private static long ClampLength(double zeroBasedDistance)
     {
-        var length = decimal.Floor(zeroBasedDistance) + 1m;
-        if (length <= 0m)
+        var length = Math.Floor(zeroBasedDistance) + 1d;
+        if (length <= 0d)
         {
             return 0;
         }

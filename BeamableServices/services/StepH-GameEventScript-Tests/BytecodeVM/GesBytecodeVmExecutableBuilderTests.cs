@@ -151,7 +151,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(2m))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesFloat(2d))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["value"]);
@@ -178,7 +178,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(2m))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesFloat(2d))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(false), published[0].Arguments["ok"]);
@@ -208,7 +208,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Load(GameEventScriptManager.Compile(script));
         var hp = GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
-            ["current"] = GameEventScriptValueFactory.GesDecimal(4m)
+            ["current"] = GameEventScriptValueFactory.GesFloat(4d)
         });
 
         host.PublishToCompletion(Create("Start", ("hp", hp)));
@@ -391,7 +391,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             GameEventScriptBytecodeConstantKind.Nothing => GameEventScriptBytecodeConstant.Nothing(),
             GameEventScriptBytecodeConstantKind.Boolean => GameEventScriptBytecodeConstant.FromBoolean(constant.Boolean),
             GameEventScriptBytecodeConstantKind.Integer => GameEventScriptBytecodeConstant.FromInteger(constant.Integer),
-            GameEventScriptBytecodeConstantKind.Decimal => GameEventScriptBytecodeConstant.FromDecimal(
+            GameEventScriptBytecodeConstantKind.Float => GameEventScriptBytecodeConstant.FromFloat(
                 constant.Number,
                 constant.Unit,
                 constant.IsNaN,
@@ -573,13 +573,13 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module TypedLets
 
             on Start {
-              let numberOk as :decimal be '12.2'
-              let numberFail as :decimal be 'abc'
+              let numberOk as :float be '12.2'
+              let numberFail as :float be 'abc'
               let integerOk as :integer be '12.7'
               let percentageOk as :percentage be 5
               let degreeOk as :degree be 450
               let textOk as :text be 43.9°
-              let unitErased as :decimal be 43.9°
+              let unitErased as :float be 43.9°
               let listOk as :list be 'ab'
               let optionalNone as :optional be missing
               emit Done(numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, percentageOk: percentageOk, degreeOk: degreeOk, textOk: textOk, unitErased: unitErased, listOk: listOk, optionalNone: optionalNone)
@@ -595,13 +595,13 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         host.PublishToCompletion(Create("Start"));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(12.2m), published[0].Arguments["numberOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(12.2d), published[0].Arguments["numberOk"]);
         Assert.IsTrue(published[0].Arguments["numberFail"].IsNaN());
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["integerOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesPercentage(0.05m), published[0].Arguments["percentageOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(450m, GameEventScriptDecimalUnit.Degree), published[0].Arguments["degreeOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesPercentage(0.05d), published[0].Arguments["percentageOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(450d, GameEventScriptFloatUnit.Degree), published[0].Arguments["degreeOk"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesText("43.9°"), published[0].Arguments["textOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(43.9m), published[0].Arguments["unitErased"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(43.9d), published[0].Arguments["unitErased"]);
         Assert.HasCount(2, published[0].Arguments["listOk"].AsList());
         Assert.IsFalse(published[0].Arguments["optionalNone"].AsOptional().HasValue);
     }
@@ -751,9 +751,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
               emit Done(
                 intIsInteger: integerValue is :integer,
-                intIsDecimal: integerValue is :decimal,
-                percentIsDecimal: percentValue is :decimal,
-                degreeIsDecimal: degreeValue is :decimal,
+                intIsFloat: integerValue is :float,
+                percentIsFloat: percentValue is :float,
+                degreeIsFloat: degreeValue is :float,
                 degreeIsDegree: degreeValue is :degree,
                 meterIsMeter: meterValue is :meter,
                 secondIsSecond: secondValue is :second,
@@ -789,9 +789,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsInteger"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsDecimal"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["percentIsDecimal"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsDecimal"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsFloat"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["percentIsFloat"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsFloat"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsDegree"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["meterIsMeter"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["secondIsSecond"]);
@@ -842,7 +842,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["name"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["signature"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesText("world"), published[0].Arguments["text"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(42m), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(42d), published[0].Arguments["value"]);
     }
 
     [TestMethod]
@@ -960,7 +960,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         host.PublishToCompletion(Create(
             "Start",
-            ("value", GameEventScriptValueFactory.GesDecimal(10.4m)),
+            ("value", GameEventScriptValueFactory.GesFloat(10.4d)),
             ("heading", GameEventScriptValueFactory.GesDegree(-10))));
 
         Assert.HasCount(1, published);
@@ -1002,12 +1002,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             "Start",
             ("values", GameEventScriptValueFactory.GesList(
             [
-                GameEventScriptValueFactory.GesDecimal(2.9m),
-                GameEventScriptValueFactory.GesDecimal(5.1m)
+                GameEventScriptValueFactory.GesFloat(2.9d),
+                GameEventScriptValueFactory.GesFloat(5.1d)
             ]))));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesDecimal(2m), published[0].Arguments["first"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(2d), published[0].Arguments["first"]);
     }
 
     [TestMethod]
@@ -1078,7 +1078,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Build()
             .Load(GameEventScriptManager.Compile(script));
 
-        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesDecimal(10.9m))));
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesFloat(10.9d))));
 
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(10), published[0].Arguments["floor"]);
@@ -1089,7 +1089,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         public static readonly TestExtensionRegistry Instance = new();
 
         private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
-            GameEventScriptFastValue.FromDecimal(Math.Floor(args[0].Number)));
+            GameEventScriptFastValue.FromFloat(Math.Floor(args[0].Number)));
 
         private TestExtensionRegistry()
         {
@@ -1114,8 +1114,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         private static readonly IGameEventScriptExtensionFunction ShortestTurn = new DelegateExtensionFunction((_, args) =>
         {
-            var delta = (args[1].Number - args[0].Number + 540m) % 360m - 180m;
-            return GameEventScriptFastValue.FromDecimal(delta, GameEventScriptDecimalUnit.Degree);
+            var delta = (args[1].Number - args[0].Number + 540d) % 360d - 180d;
+            return GameEventScriptFastValue.FromFloat(delta, GameEventScriptFloatUnit.Degree);
         });
 
         private NavExtensionRegistry()

@@ -57,7 +57,7 @@ Important design choices:
 - GameEventScript is case-sensitive.
 - Values are immutable.
 - Missing data is usually represented as `nothing`, not as an exception.
-- Numeric invalidity is usually represented as decimal `NaN`.
+- Numeric invalidity is usually represented as double `NaN`.
 - Messages, handlers, collections, records, vectors, points, dice, ranges, and tags are
   first-class values.
 - Runtime behavior is defined by the JSON conformance tests and executed through
@@ -72,8 +72,8 @@ rules, selects, and event handlers.
 module Combat
 
 record :gauge as {
-    current: :decimal clamped between 0 and maximum,
-    maximum: :decimal clamped between 0 and :infinity,
+    current: :float clamped between 0 and maximum,
+    maximum: :float clamped between 0 and :infinity,
     percentage: :percentage computed by
         0% when maximum <= 0,
         otherwise (current / maximum) as :percentage
@@ -123,7 +123,7 @@ GameEventScript uses casing to keep the grammar readable.
   `player_1a` are invalid.
 - Message and handler names start uppercase and use letters only: `Start`,
   `DamageTaken`, `Done`.
-- Type names are tags: `:decimal`, `:vector`, `:gauge`.
+- Type names are tags: `:float`, `:vector`, `:gauge`.
 - Tags are also values and use letters only: `:boss`, `:ready`, `:fire`.
 
 This casing matters. `Start` and `start` are different tokens with different
@@ -401,7 +401,7 @@ let alive be true
 A `let` may declare a target type:
 
 ```eventscript
-let hp as :decimal be '12.5'
+let hp as :float be '12.5'
 let heading as :degree be 450
 let tags as :set be [1, 2, 2, 3]
 ```
@@ -545,8 +545,8 @@ Records define closed custom types.
 
 ```eventscript
 record :gauge as {
-    current: :decimal,
-    maximum: :decimal
+    current: :float,
+    maximum: :float
 }
 ```
 
@@ -555,8 +555,8 @@ computed.
 
 ```eventscript
 record :gauge as {
-    current: :decimal clamped between 0 and maximum,
-    maximum: :decimal clamped between 0 and :infinity,
+    current: :float clamped between 0 and maximum,
+    maximum: :float clamped between 0 and :infinity,
     percentage: :percentage computed by
         0% when maximum <= 0,
         otherwise (current / maximum) as :percentage
@@ -600,7 +600,14 @@ Equality:
 ```eventscript
 x = y
 x <> y
+x =~ y
+x ≈ y
+x ≅ y
 ```
+
+`=` and `<>` use exact value equality. For floats this follows normal
+double-precision behavior, so `NaN = NaN` is false. `=~` is approximate numeric
+equality; `≈` and `≅` are aliases.
 
 Logical operators:
 
@@ -680,12 +687,12 @@ percentage, degree, and dice literals keep priority.
 
 Integer `+`, `-`, `*`, `div`, `mod`, and `rem` preserve integer results when
 both operands are integers and the result fits the integer operation. Integer
-`/` returns a decimal when needed.
+`/` returns a double when needed.
 
 ```eventscript
 6 * 7      // 42 as :integer
 3 ^ 2      // 9 as :integer
-7 / 2      // 3.5 as :decimal
+7 / 2      // 3.5 as :float
 7 div 2    // 3 as :integer
 7 mod 3    // 1 as :integer
 0 - 7 rem 3 // -1 as :integer
@@ -848,7 +855,7 @@ Random numbers:
 ```
 
 If both bounds are integers, the result is an integer. If either bound is a
-decimal, the result is a decimal. Reversed bounds are normalized.
+double, the result is a double. Reversed bounds are normalized.
 
 Dice:
 
@@ -895,7 +902,7 @@ Types are written as tags. Built-in public type tags are:
 - `:text`
 - `:boolean`
 - `:integer`
-- `:decimal`
+- `:float`
 - `:percentage`
 - `:degree`
 - `:meter`
@@ -922,15 +929,15 @@ There are two equivalent conversion forms:
 let distance as :meter be 100
 let distance2 be :meter(100)
 
-let raw as :decimal be 90°
-let raw2 be :decimal(90°)
+let raw as :float be 90°
+let raw2 be :float(90°)
 ```
 
 `value as :type` is useful in declarations and readable expressions.
 `:type(value)` is useful inline.
 
 ```eventscript
-let scaled be :decimal(90°) * :decimal(100m)
+let scaled be :float(90°) * :float(100m)
 ```
 
 Type constructors use the same syntax, but may accept more than one argument for
@@ -967,16 +974,16 @@ Tags are symbolic values written with a leading colon.
 
 Tags are not text, but they convert to text using their name. Special tags
 `:infinity`, `:negativeinfinity`, `:nan`, `:pi`, `:e`, `:tau`, and `:phi`
-convert to decimal numeric values. `∞`, `∏`, `ℇ`, `τ`, and `φ` are aliases for
+convert to double numeric values. `∞`, `∏`, `ℇ`, `τ`, and `φ` are aliases for
 `:infinity`, `:pi`, `:e`, `:tau`, and `:phi`.
 
 ```eventscript
-let limit as :decimal be :infinity
-let shortLimit as :decimal be ∞
-let circle as :decimal be ∏
-let growth as :decimal be ℇ
-let turn as :decimal be τ
-let golden as :decimal be φ
+let limit as :float be :infinity
+let shortLimit as :float be ∞
+let circle as :float be ∏
+let growth as :float be ℇ
+let turn as :float be τ
+let golden as :float be φ
 ```
 
 ### `:text`
@@ -992,7 +999,7 @@ Text converts to numbers and booleans when it can be parsed. Text converts to a
 list as a list of one-character text values.
 
 ```eventscript
-let amount as :decimal be '12.5'
+let amount as :float be '12.5'
 let flag as :boolean be 'true'
 let chars as :list be 'abc'
 ```
@@ -1008,7 +1015,7 @@ false
 
 Booleans convert to numbers as `1` and `0`.
 
-### `:integer` and `:decimal`
+### `:integer` and `:float`
 
 Numbers are written without a suffix.
 
@@ -1019,8 +1026,8 @@ Numbers are written without a suffix.
 100_000.25
 ```
 
-Whole-number literals become `:integer`. Decimal literals become `:decimal`.
-Use `_` between digits as a readability separator; the decimal separator is
+Whole-number literals become `:integer`. Float literals become `:float`.
+Use `_` between digits as a readability separator; the double separator is
 always `.`.
 
 `:integer(value)` truncates toward zero. Use the standard integer extensions for
@@ -1032,19 +1039,19 @@ other rounding modes.
 :integer.floor -10.4    // -11
 ```
 
-`:decimal(value)` erases units and converts numeric-compatible values to a
-unitless decimal.
+`:float(value)` erases units and converts numeric-compatible values to a
+unitless double.
 
 ```eventscript
-:decimal(90°)   // 90
-:decimal(25%)   // 0.25
-:decimal(true)  // 1
+:float(90°)   // 90
+:float(25%)   // 0.25
+:float(true)  // 1
 ```
 
-### Decimal units: `:degree`, `:meter`, and `:second`
+### Float units: `:degree`, `:meter`, and `:second`
 
-`degree`, `meter`, and `second` are decimal units. They are not separate value
-kinds. They are `:decimal` values with an attached unit.
+`degree`, `meter`, and `second` are double units. They are not separate value
+kinds. They are `:float` values with an attached unit.
 
 ```eventscript
 90°
@@ -1065,7 +1072,7 @@ keep a matching unit, and return `NaN` for incompatible units.
 ```eventscript
 let heading as :degree be 450
 let distance as :meter be 100
-let rawHeading as :decimal be heading
+let rawHeading as :float be heading
 ```
 
 Unit arithmetic is intentionally strict.
@@ -1082,7 +1089,7 @@ Unit arithmetic is intentionally strict.
 100m mod 3   // NaN
 ```
 
-Degree values are open decimal units. Arithmetic does not automatically wrap.
+Degree values are open double units. Arithmetic does not automatically wrap.
 
 ```eventscript
 360° + 90° // 450°
@@ -1143,7 +1150,7 @@ Left-hand percentage addition and subtraction against a base are invalid.
 
 ### `:vector`
 
-Vectors store three decimal components. Two-dimensional values are represented
+Vectors store three double components. Two-dimensional values are represented
 with `z = 0`. They may also have one shared unit for all components.
 
 ```eventscript
@@ -1194,12 +1201,12 @@ let fromList as :vector be [1, 2, 3]
 let fromDict as :vector be [x: 10, y: 20]
 ```
 
-`:decimal(vector)` erases a vector's unit. `:meter(vector)` and other unit
+`:float(vector)` erases a vector's unit. `:meter(vector)` and other unit
 conversions apply a unit to a unitless vector or keep a matching vector unit.
 
 ```eventscript
 let v be :vector(3m, 4m)
-let raw be :decimal(v) // vector[x: 3, y: 4, z: 0]
+let raw be :float(v) // vector[x: 3, y: 4, z: 0]
 let remetered be :meter(raw)
 ```
 
@@ -1870,7 +1877,7 @@ public sealed class MathFloorFunction : IGameEventScriptExtensionFunction
     public GameEventScriptFastValue Invoke(
         GameEventScriptExtensionContext context,
         ReadOnlySpan<GameEventScriptFastValue> arguments)
-        => GameEventScriptFastValue.FromDecimal(Math.Floor(arguments[0].Number));
+        => GameEventScriptFastValue.FromFloat(Math.Floor(arguments[0].Number));
 }
 
 public sealed class GameExtensionRegistry : IGameEventScriptExtensionRegistry
@@ -1955,7 +1962,7 @@ The artifact exposes neutral bytecode data:
 
 `ConstantPool` stores `GameEventScriptBytecodeConstant` entries instead of boxed
 runtime values. This preserves the exact constant kind in bytecode. For example,
-`:integer -12`, `:decimal -12`, and `:percentage -1200%` can be semantically
+`:integer -12`, `:float -12`, and `:percentage -1200%` can be semantically
 numeric-compatible at runtime but must remain distinct constants in bytecode.
 
 `GameEventScriptBytecodeDumper.DumpBytecode(...)` can be used to inspect this
@@ -2181,8 +2188,8 @@ on Aim(heading, targetHeading) {
 
 ```eventscript
 record :gauge as {
-    current: :decimal clamped between 0 and maximum,
-    maximum: :decimal clamped between 0 and :infinity,
+    current: :float clamped between 0 and maximum,
+    maximum: :float clamped between 0 and :infinity,
     percentage: :percentage computed by
         0% when maximum <= 0,
         otherwise (current / maximum) as :percentage

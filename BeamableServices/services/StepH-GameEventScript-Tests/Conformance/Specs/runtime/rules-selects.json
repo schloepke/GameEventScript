@@ -141,7 +141,7 @@
       "scripts": [
         {
           "sourceName": "shared.es",
-          "text": "module Shared\nrecord :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\nrule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]"
+          "text": "module Shared\nrecord :gauge as {\n  current: :float,\n  maximum: :float\n}\n\nrule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]"
         },
         {
           "sourceName": "runtime.es",
@@ -187,7 +187,7 @@
               "args": {
                 "anyWounded": { "type": ":boolean", "value": true },
                 "candidateCount": { "type": ":integer", "value": "1" },
-                "maximum": { "type": ":decimal", "value": "5" }
+                "maximum": { "type": ":float", "value": "5" }
               }
             }
           ]

@@ -62,20 +62,20 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "2" }
+              "value": { "type": ":float", "value": "2" }
             }
           },
           "expectedPublished": [
             {
               "name": "Next",
               "args": {
-                "value": { "type": ":decimal", "value": "3" }
+                "value": { "type": ":float", "value": "3" }
               }
             },
             {
               "name": "Done",
               "args": {
-                "value": { "type": ":decimal", "value": "3" }
+                "value": { "type": ":float", "value": "3" }
               }
             }
           ]

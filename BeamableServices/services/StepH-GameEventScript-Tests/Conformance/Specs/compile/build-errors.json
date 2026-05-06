@@ -294,7 +294,7 @@
     {
       "kind": "compileError",
       "name": "custom type constructor requires labels",
-      "script": "record :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\non Start {\n  let hp be :gauge(10, 20)\n}",
+      "script": "record :gauge as {\n  current: :float,\n  maximum: :float\n}\n\non Start {\n  let hp be :gauge(10, 20)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
@@ -305,7 +305,7 @@
     {
       "kind": "compileError",
       "name": "custom type constructor rejects unknown fields",
-      "script": "record :gauge as {\n  current: :decimal,\n  maximum: :decimal\n}\n\non Start {\n  let hp be :gauge(current: 10, unknown: 20)\n}",
+      "script": "record :gauge as {\n  current: :float,\n  maximum: :float\n}\n\non Start {\n  let hp be :gauge(current: 10, unknown: 20)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",

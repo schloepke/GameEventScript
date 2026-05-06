@@ -92,7 +92,7 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "4"
               }
             }
@@ -102,7 +102,7 @@
               "name": "Notify",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 }
               }
@@ -111,7 +111,7 @@
               "name": "SeenByScript",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5"
                 }
               }
@@ -175,7 +175,7 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "4"
               }
             }
@@ -185,7 +185,7 @@
               "name": "Notify",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 }
               }
@@ -242,7 +242,7 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "4"
               }
             }
@@ -252,7 +252,7 @@
               "name": "Notify",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 }
               }
@@ -270,7 +270,7 @@
               "name": "SeenByScript",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5"
                 }
               }
@@ -310,7 +310,7 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "4"
               }
             }
@@ -320,7 +320,7 @@
               "name": "Notify",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 }
               }
@@ -329,7 +329,7 @@
               "name": "ExternalOk",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 }
               }
@@ -362,7 +362,7 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "2"
               }
             }
@@ -372,7 +372,7 @@
               "name": "Notify",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2"
                 }
               }
@@ -381,7 +381,7 @@
               "name": "Done",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2"
                 }
               }
@@ -390,7 +390,7 @@
               "name": "Final",
               "args": {
                 "value": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2"
                 }
               }

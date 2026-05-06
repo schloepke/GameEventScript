@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.Runtime;
 
 internal static class GesStandardExtensions
 {
-    private const decimal Pi = 3.1415926535897932384626433833m;
+    private const double Pi = 3.1415926535897932384626433833d;
 
     public static bool IsStandardReference(GameEventScriptExtensionReference reference)
         => IsUnaryStandardReference(reference);
@@ -73,11 +73,11 @@ internal static class GesStandardExtensions
         {
             "floor" => Math.Floor(number.Value),
             "ceil" => Math.Ceiling(number.Value),
-            "truncate" => decimal.Truncate(number.Value),
+            "truncate" => Math.Truncate(number.Value),
             "halfEven" => Math.Round(number.Value, 0, MidpointRounding.ToEven),
             "halfUp" => Math.Round(number.Value, 0, MidpointRounding.AwayFromZero),
             "halfDown" => RoundHalfTowardZero(number.Value),
-            _ => 0m
+            _ => 0d
         };
 
         return GameEventScriptFastValue.FromInteger(GesValueOperations.ToIntegerSaturated(rounded));
@@ -99,33 +99,33 @@ internal static class GesStandardExtensions
             return GameEventScriptFastValue.FromGameEventScriptValue(GesValueOperations.EvaluateWrapDegree(input.ToGameEventScriptValue()));
         }
 
-        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptDecimalUnit.Degree)
+        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptFloatUnit.Degree)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
 
-        if (input.Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer)
+        if (input.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer)
         {
-            return GameEventScriptFastValue.FromDecimal(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptDecimalUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptFloatUnit.Degree);
         }
 
-        return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+        return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
     }
 
     private static GameEventScriptFastValue EvaluateDegreeToRadians(GameEventScriptFastValue input)
     {
         if (!TryReadUnitlessOrDegreeNumeric(input, out var number) || !number.IsFinite)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
 
         try
         {
-            return GameEventScriptFastValue.FromDecimal(number.Value / 180m * Pi);
+            return GameEventScriptFastValue.FromFloat(number.Value / 180d * Pi);
         }
         catch (OverflowException)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
     }
 
@@ -133,16 +133,16 @@ internal static class GesStandardExtensions
     {
         if (!TryReadUnitlessNumeric(input, out var number) || !number.IsFinite)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
 
         try
         {
-            return GameEventScriptFastValue.FromDecimal(number.Value / Pi * 180m, GameEventScriptDecimalUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(number.Value / Pi * 180d, GameEventScriptFloatUnit.Degree);
         }
         catch (OverflowException)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesDecimalNaN());
+            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
     }
 
@@ -157,7 +157,7 @@ internal static class GesStandardExtensions
                 return true;
             }
 
-            if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var unit) && unit != GameEventScriptDecimalUnit.Degree)
+            if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var unit) && unit != GameEventScriptFloatUnit.Degree)
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;
@@ -166,7 +166,7 @@ internal static class GesStandardExtensions
             return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
-        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptDecimalUnit.Degree)
+        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptFloatUnit.Degree)
         {
             number = GesValueOperations.NumericValue.NaN();
             return false;
@@ -186,7 +186,7 @@ internal static class GesStandardExtensions
                 return true;
             }
 
-            if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out _))
+            if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out _))
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;
@@ -220,7 +220,7 @@ internal static class GesStandardExtensions
 
         switch (input.Kind)
         {
-            case GameEventScriptValueKind.Decimal:
+            case GameEventScriptValueKind.Float:
             case GameEventScriptValueKind.Integer:
             case GameEventScriptValueKind.Percentage:
             case GameEventScriptValueKind.Boolean:
@@ -232,13 +232,13 @@ internal static class GesStandardExtensions
         }
     }
 
-    private static decimal RoundHalfTowardZero(decimal value)
+    private static double RoundHalfTowardZero(double value)
     {
         var sign = Math.Sign(value);
         var absolute = Math.Abs(value);
         var floor = Math.Floor(absolute);
         var fraction = absolute - floor;
-        var roundedAbsolute = fraction > 0.5m ? floor + 1m : floor;
+        var roundedAbsolute = fraction > 0.5d ? floor + 1d : floor;
         return sign < 0 ? -roundedAbsolute : roundedAbsolute;
     }
 }

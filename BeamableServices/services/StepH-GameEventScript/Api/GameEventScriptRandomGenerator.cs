@@ -53,14 +53,14 @@ public sealed class GameEventScriptRandomGenerator
     /// initialized to generate random values from a predefined sequence.
     /// </summary>
     /// <param name="values">
-    /// An array of <c>decimal</c> values representing the predefined sequence
+    /// An array of <c>double</c> values representing the predefined sequence
     /// of random numbers to be used by the generator.
     /// </param>
     /// <returns>
     /// A new <c>GameEventScriptRandomGenerator</c> initialized to use the specified
     /// sequence of random values.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSequence(params decimal[] values) => new(new Random(), values);
+    public static GameEventScriptRandomGenerator FromSequence(params double[] values) => new(new Random(), values);
 
     /// <summary>
     /// Generates a random integer between the specified minimum and maximum values, inclusive.
@@ -82,14 +82,14 @@ public sealed class GameEventScriptRandomGenerator
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue))
-            return Math.Min(Math.Max(queuedValue <= int.MinValue ? int.MinValue : queuedValue >= int.MaxValue ? int.MaxValue : (int)decimal.Truncate(queuedValue), minInclusive), maxInclusive);
+            return Math.Min(Math.Max(queuedValue <= int.MinValue ? int.MinValue : queuedValue >= int.MaxValue ? int.MaxValue : (int)Math.Truncate(queuedValue), minInclusive), maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
         if (maxInclusive < int.MaxValue) return _random.Next(minInclusive, maxInclusive + 1);
         return minInclusive + (int)Math.Floor(_random.NextDouble() * ((long)maxInclusive - minInclusive + 1));
     }
 
     /// <summary>
-    /// Generates a random decimal value within the specified inclusive range.
+    /// Generates a random double value within the specified inclusive range.
     /// </summary>
     /// <param name="minInclusive">
     /// The minimum value of the range, inclusive.
@@ -98,28 +98,28 @@ public sealed class GameEventScriptRandomGenerator
     /// The maximum value of the range, inclusive.
     /// </param>
     /// <returns>
-    /// A random decimal value that is greater than or equal to <paramref name="minInclusive"/>
+    /// A random double value that is greater than or equal to <paramref name="minInclusive"/>
     /// and less than or equal to <paramref name="maxInclusive"/>.
     /// </returns>
-    public decimal NextInclusiveDecimal(decimal minInclusive, decimal maxInclusive)
+    public double NextInclusiveFloat(double minInclusive, double maxInclusive)
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
-        var sample = (decimal)_random.NextDouble();
+        var sample = (double)_random.NextDouble();
         return minInclusive + ((maxInclusive - minInclusive) * sample);
     }
 
-    private GameEventScriptRandomGenerator(Random random, IEnumerable<decimal>? sequence = null)
+    private GameEventScriptRandomGenerator(Random random, IEnumerable<double>? sequence = null)
     {
         _random = random;
-        _sequence = sequence == null ? null : new Queue<decimal>(sequence);
+        _sequence = sequence == null ? null : new Queue<double>(sequence);
     }
 
     private readonly Random _random;
-    private readonly Queue<decimal>? _sequence;
+    private readonly Queue<double>? _sequence;
 
-    private bool TryDequeueSequenceValue(out decimal value)
+    private bool TryDequeueSequenceValue(out double value)
     {
         if (_sequence == null || _sequence.Count == 0)
         {

@@ -25,14 +25,14 @@ public class GameEventScriptDiagnosticTest
         }
         
         on ScanArea(bearing, range) {
-          let x be :decimal(range) * bearing
-          let y be (range as :decimal) * bearing 
+          let x be :float(range) * bearing
+          let y be (range as :float) * bearing 
           emit AreaScanned(x, y)
         }
         
         on AreaScanned(_ x, _ y) {
             let move be :vector(x: x, y: y)
-            let moved be :meter(:vector(:decimal(move))) + :vector(z: 10m)
+            let moved be :meter(:vector(:float(move))) + :vector(z: 10m)
             emit Done(moved, x: x, y: y)
         }
         

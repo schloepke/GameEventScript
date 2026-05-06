@@ -4,29 +4,20 @@ using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
-public sealed class GameEventScriptDecimalValue : GameEventScriptValue
+public sealed class GameEventScriptFloatValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptDecimalValue NaN = new(0m, null, true, false, false);
-    public static readonly GameEventScriptDecimalValue Infinity = new(0m, null, false, true, false);
-    public static readonly GameEventScriptDecimalValue NegativeInfinity = new(0m, null, false, true, true);
+    public static readonly GameEventScriptFloatValue NaN = new(0d, null, true, false, false);
+    public static readonly GameEventScriptFloatValue Infinity = new(0d, null, false, true, false);
+    public static readonly GameEventScriptFloatValue NegativeInfinity = new(0d, null, false, true, true);
 
-    public static GameEventScriptDecimalValue Create(decimal value, GameEventScriptDecimalUnit? unit = null) => new(value, unit, false, false, false);
-
-    public static GameEventScriptDecimalValue Create(double value)
+    public static GameEventScriptFloatValue Create(double value, GameEventScriptFloatUnit? unit = null)
     {
         if (double.IsPositiveInfinity(value)) return Infinity;
         if (double.IsNegativeInfinity(value)) return NegativeInfinity;
-        return double.IsNaN(value) ? NaN : new GameEventScriptDecimalValue((decimal)value, null, false, false, false);
+        return double.IsNaN(value) ? NaN : new GameEventScriptFloatValue(value, unit, false, false, false);
     }
 
-    public static GameEventScriptDecimalValue Create(float value)
-    {
-        if (float.IsPositiveInfinity(value)) return Infinity;
-        if (float.IsNegativeInfinity(value)) return NegativeInfinity;
-        return float.IsNaN(value) ? NaN : new GameEventScriptDecimalValue((decimal)value, null, false, false, false);
-    }
-
-    private GameEventScriptDecimalValue(decimal value, GameEventScriptDecimalUnit? unit, bool isNaN, bool isInfinity, bool isNegativeInfinity)
+    private GameEventScriptFloatValue(double value, GameEventScriptFloatUnit? unit, bool isNaN, bool isInfinity, bool isNegativeInfinity)
     {
         Value = value;
         Unit = isNaN || isInfinity ? null : unit;
@@ -35,12 +26,12 @@ public sealed class GameEventScriptDecimalValue : GameEventScriptValue
         IsNegativeInfinityValue = isNegativeInfinity;
     }
 
-    public decimal Value { get; }
-    public GameEventScriptDecimalUnit? Unit { get; }
+    public double Value { get; }
+    public GameEventScriptFloatUnit? Unit { get; }
     public bool IsNaNValue { get; }
     public bool IsInfinityValue { get; }
     public bool IsNegativeInfinityValue { get; }
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Decimal;
+    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Float;
 
     public override string AsText() => ToString();
 
@@ -53,8 +44,8 @@ public sealed class GameEventScriptDecimalValue : GameEventScriptValue
         return ToIntegerSaturated(Value);
     }
 
-    public override decimal AsNumber()
-        => IsNaNValue ? 0m : IsInfinityValue ? IsNegativeInfinityValue ? decimal.MinValue : decimal.MaxValue : Value;
+    public override double AsNumber()
+        => IsNaNValue ? 0d : IsInfinityValue ? IsNegativeInfinityValue ? double.MinValue : double.MaxValue : Value;
 
     public override bool HasSemanticValue() => !IsNaNValue && !IsInfinityValue;
 

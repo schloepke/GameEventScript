@@ -8,10 +8,10 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptTagValue : GameEventScriptValue
 {
-    private const decimal Pi = 3.1415926535897932384626433833m;
-    private const decimal EulerNumber = 2.7182818284590452353602874714m;
-    private const decimal Tau = 6.2831853071795864769252867666m;
-    private const decimal Phi = 1.6180339887498948482045868344m;
+    private const double Pi = 3.1415926535897932384626433833d;
+    private const double EulerNumber = 2.7182818284590452353602874714d;
+    private const double Tau = 6.2831853071795864769252867666d;
+    private const double Phi = 1.6180339887498948482045868344d;
 
     public static readonly GameEventScriptTagValue Empty = new(string.Empty);
 
@@ -27,7 +27,7 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
 
     public override string AsText() => Value;
 
-    public override decimal AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0m;
+    public override double AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0d;
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateCharacterList(Value);
 
@@ -37,43 +37,43 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
     {
         if (string.Equals(Value, "infinity", StringComparison.Ordinal))
         {
-            value = GesDecimalInfinity();
+            value = GesFloatInfinity();
             return true;
         }
 
         if (string.Equals(Value, "negativeinfinity", StringComparison.Ordinal))
         {
-            value = GesDecimalNegativeInfinity();
+            value = GesFloatNegativeInfinity();
             return true;
         }
 
         if (string.Equals(Value, "nan", StringComparison.Ordinal))
         {
-            value = GesDecimalNaN();
+            value = GesFloatNaN();
             return true;
         }
 
         if (string.Equals(Value, "pi", StringComparison.Ordinal))
         {
-            value = GesDecimal(Pi);
+            value = GesFloat(Pi);
             return true;
         }
 
         if (string.Equals(Value, "e", StringComparison.Ordinal))
         {
-            value = GesDecimal(EulerNumber);
+            value = GesFloat(EulerNumber);
             return true;
         }
 
         if (string.Equals(Value, "tau", StringComparison.Ordinal))
         {
-            value = GesDecimal(Tau);
+            value = GesFloat(Tau);
             return true;
         }
 
         if (string.Equals(Value, "phi", StringComparison.Ordinal))
         {
-            value = GesDecimal(Phi);
+            value = GesFloat(Phi);
             return true;
         }
 

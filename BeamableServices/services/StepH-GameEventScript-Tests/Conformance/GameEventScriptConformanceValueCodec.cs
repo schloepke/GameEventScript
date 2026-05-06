@@ -69,22 +69,22 @@ internal static class GameEventScriptConformanceValueCodec
                 return GameEventScriptValueFactory.GesBoolean(RequireBoolean(element, "value", "boolean value"));
             case ":integer":
                 return GameEventScriptValueFactory.GesInteger(RequireInt64(element, "value", "integer value"));
-            case ":decimal":
-                return DecodeDecimalValue(element);
+            case ":float":
+                return DecodeFloatValue(element);
             case ":percentage":
-                return GameEventScriptValueFactory.GesPercentage(RequireDecimal(element, "value", "percentage ratio"));
+                return GameEventScriptValueFactory.GesPercentage(RequireFloat(element, "value", "percentage ratio"));
             case ":vector":
                 return GameEventScriptValueFactory.GesVector(
-                    RequireDecimal(element, "x", "vector x component"),
-                    RequireDecimal(element, "y", "vector y component"),
-                    RequireDecimal(element, "z", "vector z component"),
-                    DecodeOptionalDecimalUnit(element));
+                    RequireFloat(element, "x", "vector x component"),
+                    RequireFloat(element, "y", "vector y component"),
+                    RequireFloat(element, "z", "vector z component"),
+                    DecodeOptionalFloatUnit(element));
             case ":point":
                 return GameEventScriptValueFactory.GesPoint(
-                    RequireDecimal(element, "x", "point x component"),
-                    RequireDecimal(element, "y", "point y component"),
-                    RequireDecimal(element, "z", "point z component"),
-                    DecodeOptionalDecimalUnit(element));
+                    RequireFloat(element, "x", "point x component"),
+                    RequireFloat(element, "y", "point y component"),
+                    RequireFloat(element, "z", "point z component"),
+                    DecodeOptionalFloatUnit(element));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
@@ -171,8 +171,8 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
             GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
             GameEventScriptValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
-            GameEventScriptValueKind.Decimal => ToDecimalJson((GameEventScriptDecimalValue)value),
-            GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatDecimal(value.AsNumber()) },
+            GameEventScriptValueKind.Float => ToFloatJson((GameEventScriptFloatValue)value),
+            GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
             GameEventScriptValueKind.Vector => ToVectorJson((GameEventScriptVectorValue)value),
             GameEventScriptValueKind.Point => ToPointJson((GameEventScriptPointValue)value),
             GameEventScriptValueKind.Optional => ToOptionalJson(value),
@@ -188,38 +188,38 @@ internal static class GameEventScriptConformanceValueCodec
         };
     }
 
-    private static GameEventScriptValue DecodeDecimalValue(JsonElement element)
+    private static GameEventScriptValue DecodeFloatValue(JsonElement element)
     {
-        var value = RequireString(element, "value", "decimal value");
-        var unit = DecodeOptionalDecimalUnit(element);
+        var value = RequireString(element, "value", "float value");
+        var unit = DecodeOptionalFloatUnit(element);
 
         return value switch
         {
-            "NaN" => GameEventScriptValueFactory.GesDecimalNaN(),
-            "Infinity" => GameEventScriptValueFactory.GesDecimalInfinity(),
-            "-Infinity" => GameEventScriptValueFactory.GesDecimalNegativeInfinity(),
-            _ => GameEventScriptValueFactory.GesDecimal(decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
+            "NaN" => GameEventScriptValueFactory.GesFloatNaN(),
+            "Infinity" => GameEventScriptValueFactory.GesFloatInfinity(),
+            "-Infinity" => GameEventScriptValueFactory.GesFloatNegativeInfinity(),
+            _ => GameEventScriptValueFactory.GesFloat(double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
         };
     }
 
-    private static GameEventScriptDecimalUnit? DecodeOptionalDecimalUnit(JsonElement element)
+    private static GameEventScriptFloatUnit? DecodeOptionalFloatUnit(JsonElement element)
     {
         if (TryGetProperty(element, "unit", out var unitElement))
         {
             if (unitElement.ValueKind != JsonValueKind.String)
             {
-                throw new InvalidOperationException("Invalid decimal unit.");
+                throw new InvalidOperationException("Invalid float unit.");
             }
 
             var unitName = unitElement.GetString()!;
             if (!unitName.StartsWith(":", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
+                throw new InvalidOperationException($"Invalid float unit '{unitName}'.");
             }
 
-            if (!GameEventScriptDecimalUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
+            if (!GameEventScriptFloatUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
             {
-                throw new InvalidOperationException($"Invalid decimal unit '{unitName}'.");
+                throw new InvalidOperationException($"Invalid float unit '{unitName}'.");
             }
 
             return parsedUnit;
@@ -342,12 +342,12 @@ internal static class GameEventScriptConformanceValueCodec
             ["step"] = GetInternalProperty<long>(value, "Step").ToString(CultureInfo.InvariantCulture)
         };
 
-    private static JsonObject ToDecimalJson(GameEventScriptDecimalValue value)
+    private static JsonObject ToFloatJson(GameEventScriptFloatValue value)
     {
         var node = new JsonObject
         {
-            ["type"] = ":decimal",
-            ["value"] = FormatDecimal(value)
+            ["type"] = ":float",
+            ["value"] = FormatFloat(value)
         };
 
         if (value.Unit.HasValue)
@@ -363,9 +363,9 @@ internal static class GameEventScriptConformanceValueCodec
         var node = new JsonObject
         {
             ["type"] = ":vector",
-            ["x"] = FormatDecimal(value.X),
-            ["y"] = FormatDecimal(value.Y),
-            ["z"] = FormatDecimal(value.Z)
+            ["x"] = FormatFloat(value.X),
+            ["y"] = FormatFloat(value.Y),
+            ["z"] = FormatFloat(value.Z)
         };
 
         if (value.Unit.HasValue)
@@ -381,9 +381,9 @@ internal static class GameEventScriptConformanceValueCodec
         var node = new JsonObject
         {
             ["type"] = ":point",
-            ["x"] = FormatDecimal(value.X),
-            ["y"] = FormatDecimal(value.Y),
-            ["z"] = FormatDecimal(value.Z)
+            ["x"] = FormatFloat(value.X),
+            ["y"] = FormatFloat(value.Y),
+            ["z"] = FormatFloat(value.Z)
         };
 
         if (value.Unit.HasValue)
@@ -397,7 +397,7 @@ internal static class GameEventScriptConformanceValueCodec
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;
 
-    private static string FormatDecimal(GameEventScriptValue value)
+    private static string FormatFloat(GameEventScriptValue value)
     {
         if (value.IsNaN())
         {
@@ -409,11 +409,11 @@ internal static class GameEventScriptConformanceValueCodec
             return value.IsNegativeInfinity() ? "-Infinity" : "Infinity";
         }
 
-        return FormatDecimal(value.AsNumber());
+        return FormatFloat(value.AsNumber());
     }
 
-    private static string FormatDecimal(decimal value)
-        => value.ToString("0.############################", CultureInfo.InvariantCulture);
+    private static string FormatFloat(double value)
+        => value == 0d ? "0" : value.ToString("0.############################", CultureInfo.InvariantCulture);
 
     private static T GetInternalProperty<T>(GameEventScriptValue value, string propertyName)
     {
@@ -488,14 +488,14 @@ internal static class GameEventScriptConformanceValueCodec
         return ReadInt64(property, description);
     }
 
-    private static decimal RequireDecimal(JsonElement element, string propertyName, string description)
+    private static double RequireFloat(JsonElement element, string propertyName, string description)
     {
         if (!TryGetProperty(element, propertyName, out var property))
         {
             throw new InvalidOperationException($"Missing {description}.");
         }
 
-        return ReadDecimal(property, description);
+        return ReadFloat(property, description);
     }
 
     private static int ReadInt32(JsonElement element)
@@ -517,12 +517,12 @@ internal static class GameEventScriptConformanceValueCodec
             _ => throw new InvalidOperationException($"Invalid {description}; expected integer string or JSON integer.")
         };
 
-    private static decimal ReadDecimal(JsonElement element, string description)
+    private static double ReadFloat(JsonElement element, string description)
         => element.ValueKind switch
         {
-            JsonValueKind.Number when element.TryGetDecimal(out var number) => number,
-            JsonValueKind.String when decimal.TryParse(element.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var textNumber) => textNumber,
-            _ => throw new InvalidOperationException($"Invalid {description}; expected decimal string or JSON number.")
+            JsonValueKind.Number when element.TryGetDouble(out var number) => number,
+            JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var textNumber) => textNumber,
+            _ => throw new InvalidOperationException($"Invalid {description}; expected double string or JSON number.")
         };
 
     private static void RequireObject(JsonElement element, string description)

@@ -40,7 +40,7 @@ public sealed class GameEventScriptDiceValue : GameEventScriptValue
 
     public override long AsInteger() => (long)Sum();
 
-    public override decimal AsNumber() => Sum();
+    public override double AsNumber() => Sum();
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateReadOnlyList(Rolls.Select(roll => GesInteger(roll)));
 
@@ -56,7 +56,7 @@ public sealed class GameEventScriptDiceValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = GesDecimal(Sum());
+        value = GesFloat(Sum());
         return true;
     }
 
@@ -84,9 +84,9 @@ public sealed class GameEventScriptDiceValue : GameEventScriptValue
         return true;
     }
 
-    public decimal Sum()
+    public double Sum()
     {
-        decimal sum = 0;
+        double sum = 0;
         foreach (var roll in _rollsDescending) sum += roll;
         return sum;
     }

@@ -35,7 +35,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
     public override long AsInteger() => AsEnumerable().LongCount();
 
-    public override decimal AsNumber() => AsEnumerable().Count();
+    public override double AsNumber() => AsEnumerable().Count();
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateReadOnlyList(AsEnumerable());
 
@@ -128,7 +128,7 @@ public sealed class GameEventScriptSequenceValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = GesDecimal(AsEnumerable().Count());
+        value = GesFloat(AsEnumerable().Count());
         return true;
     }
 

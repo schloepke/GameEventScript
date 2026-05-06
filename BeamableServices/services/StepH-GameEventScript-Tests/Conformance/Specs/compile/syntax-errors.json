@@ -38,7 +38,7 @@
     {
       "kind": "compileError",
       "name": "type tags are case sensitive",
-      "script": "on Start(value) {\n  let numberValue as :Decimal be value\n}",
+      "script": "on Start(value) {\n  let numberValue as :Float be value\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -62,7 +62,7 @@
     {
       "kind": "compileError",
       "name": "legacy untagged type declaration is rejected",
-      "script": "on Start(value) {\n  let score as decimal be value\n}",
+      "script": "on Start(value) {\n  let score as double be value\n}",
       "expectedError": {
         "phase": "syntax"
       }

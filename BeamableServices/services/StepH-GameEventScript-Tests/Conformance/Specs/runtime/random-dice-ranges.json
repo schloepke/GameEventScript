@@ -355,8 +355,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "random can produce integer decimal and mixed values",
-      "script": "on Roll {\n  let integerValue be :random from 1 to 6\n  let decimalValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, decimalValue: decimalValue, mixedValue: mixedValue)\n}",
+      "name": "random can produce integer double and mixed values",
+      "script": "on Roll {\n  let integerValue be :random from 1 to 6\n  let floatValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)\n}",
       "randomSequence": [
         "4",
         "0.25",
@@ -376,12 +376,12 @@
                   "type": ":integer",
                   "value": "4"
                 },
-                "decimalValue": {
-                  "type": ":decimal",
+                "floatValue": {
+                  "type": ":float",
                   "value": "0.25"
                 },
                 "mixedValue": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1.5"
                 }
               }
@@ -856,7 +856,7 @@
                   "value": "4"
                 },
                 "diceTotal": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "6"
                 },
                 "base_1": {

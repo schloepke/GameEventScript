@@ -78,7 +78,7 @@
                   "value": "2"
                 },
                 "average": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2"
                 },
                 "highest": {
@@ -152,15 +152,15 @@
                   "value": "13"
                 },
                 "sorted_1": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-4"
                 },
                 "sorted_2": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-3"
                 },
                 "sorted_3": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-2"
                 }
               }

@@ -9,31 +9,31 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptPointValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptPointValue Zero = new(0m, 0m, 0m, null);
+    public static readonly GameEventScriptPointValue Zero = new(0d, 0d, 0d, null);
 
-    public static GameEventScriptPointValue Create(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit = null)
-        => x == 0m && y == 0m && z == 0m && unit is null ? Zero : new GameEventScriptPointValue(x, y, z, unit);
+    public static GameEventScriptPointValue Create(double x, double y, double z, GameEventScriptFloatUnit? unit = null)
+        => x == 0d && y == 0d && z == 0d && unit is null ? Zero : new GameEventScriptPointValue(x, y, z, unit);
 
-    private GameEventScriptPointValue(decimal x, decimal y, decimal z, GameEventScriptDecimalUnit? unit)
+    private GameEventScriptPointValue(double x, double y, double z, GameEventScriptFloatUnit? unit)
     {
         X = x;
         Y = y;
         Z = z;
         Unit = unit;
-        Components = CreateReadOnlyList(new[] { GesDecimal(x, unit), GesDecimal(y, unit), GesDecimal(z, unit) });
+        Components = CreateReadOnlyList(new[] { GesFloat(x, unit), GesFloat(y, unit), GesFloat(z, unit) });
         Members = new ReadOnlyDictionary<string, GameEventScriptValue>(
             new Dictionary<string, GameEventScriptValue>(System.StringComparer.Ordinal)
             {
-                ["x"] = GesDecimal(x, unit),
-                ["y"] = GesDecimal(y, unit),
-                ["z"] = GesDecimal(z, unit)
+                ["x"] = GesFloat(x, unit),
+                ["y"] = GesFloat(y, unit),
+                ["z"] = GesFloat(z, unit)
             });
     }
 
-    public decimal X { get; }
-    public decimal Y { get; }
-    public decimal Z { get; }
-    public GameEventScriptDecimalUnit? Unit { get; }
+    public double X { get; }
+    public double Y { get; }
+    public double Z { get; }
+    public GameEventScriptFloatUnit? Unit { get; }
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Point;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }
@@ -41,7 +41,7 @@ public sealed class GameEventScriptPointValue : GameEventScriptValue
 
     public override string AsText() => ToString();
 
-    public override bool AsBoolean() => X != 0m || Y != 0m || Z != 0m;
+    public override bool AsBoolean() => X != 0d || Y != 0d || Z != 0d;
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => Components;
 

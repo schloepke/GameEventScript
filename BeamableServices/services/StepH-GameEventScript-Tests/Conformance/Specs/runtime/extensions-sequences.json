@@ -12,16 +12,16 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "10.75"
               },
               "heading": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "350",
                 "unit": ":degree"
               },
               "target": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "10",
                 "unit": ":degree"
               }
@@ -32,24 +32,24 @@
               "name": "Done",
               "args": {
                 "floored": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10"
                 },
                 "flooredCall": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10"
                 },
                 "maxed": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "8"
                 },
                 "turnA": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "20",
                   "unit": ":degree"
                 },
                 "turnB": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "20",
                   "unit": ":degree"
                 },
@@ -62,7 +62,7 @@
                   "value": true
                 },
                 "vectorTotal": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "6",
                   "unit": ":meter"
                 },

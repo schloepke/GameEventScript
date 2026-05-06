@@ -500,7 +500,7 @@ internal static class GameEventScriptConformanceRunner
             return GameEventScriptRandomGenerator.Create();
         }
 
-        return GameEventScriptRandomGenerator.FromSequence(randomSequence.Select(value => decimal.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture)).ToArray());
+        return GameEventScriptRandomGenerator.FromSequence(randomSequence.Select(value => double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture)).ToArray());
     }
 
     private static GameEventScriptRuntimeLimits CreateRuntimeLimits(GameEventScriptRuntimeLimitsSpec? spec)
@@ -600,7 +600,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
 
     private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
         args.Length == 1
-            ? GameEventScriptFastValue.FromDecimal(Math.Floor(args[0].Number), args[0].Unit)
+            ? GameEventScriptFastValue.FromFloat(Math.Floor(args[0].Number), args[0].Unit)
             : GameEventScriptFastValue.Nothing);
 
     private static readonly IGameEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
@@ -616,7 +616,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             max = Math.Max(max, args[index].Number);
         }
 
-        return GameEventScriptFastValue.FromDecimal(max);
+        return GameEventScriptFastValue.FromFloat(max);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
@@ -628,8 +628,8 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
 
         var from = args[0].Number;
         var to = args[1].Number;
-        var delta = (to - from + 540m) % 360m - 180m;
-        return GameEventScriptFastValue.FromDecimal(delta, GameEventScriptDecimalUnit.Degree);
+        var delta = (to - from + 540d) % 360d - 180d;
+        return GameEventScriptFastValue.FromFloat(delta, GameEventScriptFloatUnit.Degree);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
@@ -640,8 +640,8 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
         }
 
         var value = args[0].Number;
-        var wrapped = ((value % 360m) + 360m) % 360m;
-        return GameEventScriptFastValue.FromBoolean(wrapped is <= 45m or >= 315m);
+        var wrapped = ((value % 360d) + 360d) % 360d;
+        return GameEventScriptFastValue.FromBoolean(wrapped is <= 45d or >= 315d);
     });
 
     private static readonly IGameEventScriptExtensionFunction TestVectorSum = new DelegateExtensionFunction((_, args) =>
@@ -653,7 +653,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
 
         return args[0].Kind switch
         {
-            GameEventScriptValueKind.Vector => GameEventScriptFastValue.FromDecimal(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
+            GameEventScriptValueKind.Vector => GameEventScriptFastValue.FromFloat(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
             _ => GameEventScriptFastValue.Nothing
         };
     });

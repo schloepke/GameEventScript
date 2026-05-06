@@ -571,12 +571,12 @@ internal static class GesBytecodeCompiler
             {
                 GameEventScriptBooleanValue boolean => GameEventScriptBytecodeConstant.FromBoolean(boolean.Value),
                 GameEventScriptIntegerValue integer => GameEventScriptBytecodeConstant.FromInteger(integer.Value),
-                GameEventScriptDecimalValue decimalValue => GameEventScriptBytecodeConstant.FromDecimal(
-                    decimalValue.Value,
-                    decimalValue.Unit,
-                    decimalValue.IsNaNValue,
-                    decimalValue.IsInfinityValue,
-                    decimalValue.IsNegativeInfinityValue),
+                GameEventScriptFloatValue floatValue => GameEventScriptBytecodeConstant.FromFloat(
+                    floatValue.Value,
+                    floatValue.Unit,
+                    floatValue.IsNaNValue,
+                    floatValue.IsInfinityValue,
+                    floatValue.IsNegativeInfinityValue),
                 GameEventScriptPercentageValue percentage => GameEventScriptBytecodeConstant.FromPercentage(percentage.Ratio),
                 GameEventScriptTextValue text => GameEventScriptBytecodeConstant.FromText(text.Value),
                 GameEventScriptTagValue tag => GameEventScriptBytecodeConstant.FromTag(tag.Value),

@@ -65,7 +65,7 @@ public sealed class GesFunctionAttribute : Attribute
         ReturnKind = returnKind;
     }
 
-    public GesFunctionAttribute(string name, GameEventScriptValueKind returnKind, GameEventScriptDecimalUnit unit)
+    public GesFunctionAttribute(string name, GameEventScriptValueKind returnKind, GameEventScriptFloatUnit unit)
         : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
@@ -79,7 +79,7 @@ public sealed class GesFunctionAttribute : Attribute
 
     public GameEventScriptValueKind? ReturnKind { get; }
 
-    public GameEventScriptDecimalUnit? ReturnUnit { get; }
+    public GameEventScriptFloatUnit? ReturnUnit { get; }
 }
 
 public sealed class GameEventScriptExtensionContext(GameEventScriptContext runtimeContext)
@@ -95,7 +95,7 @@ public readonly struct GameEventScriptFastValue
 {
     private readonly GameEventScriptValue? _reference;
 
-    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, decimal number, decimal x, decimal y, decimal z, bool boolean, GameEventScriptDecimalUnit? unit,
+    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, double number, double x, double y, double z, bool boolean, GameEventScriptFloatUnit? unit,
         GameEventScriptValue? reference)
     {
         Kind = kind;
@@ -114,17 +114,17 @@ public readonly struct GameEventScriptFastValue
     public long Integer => Kind switch
     {
         GameEventScriptValueKind.Integer => IntegerValue,
-        GameEventScriptValueKind.Decimal => IsReferenceBacked ? ToGameEventScriptValue().AsInteger() : GesValueOperations.ToIntegerSaturated(NumberValue),
+        GameEventScriptValueKind.Float => IsReferenceBacked ? ToGameEventScriptValue().AsInteger() : GesValueOperations.ToIntegerSaturated(NumberValue),
         GameEventScriptValueKind.Percentage => ToIntegerPercentage(NumberValue),
         GameEventScriptValueKind.Boolean => BooleanValue ? 1 : 0,
         _ => ToGameEventScriptValue().AsInteger()
     };
 
-    public decimal Number => Kind switch
+    public double Number => Kind switch
     {
         GameEventScriptValueKind.Integer => IntegerValue,
-        GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsNumber() : NumberValue,
-        GameEventScriptValueKind.Boolean => BooleanValue ? 1m : 0m,
+        GameEventScriptValueKind.Float or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsNumber() : NumberValue,
+        GameEventScriptValueKind.Boolean => BooleanValue ? 1d : 0d,
         _ => ToGameEventScriptValue().AsNumber()
     };
 
@@ -132,30 +132,30 @@ public readonly struct GameEventScriptFastValue
     {
         GameEventScriptValueKind.Boolean => BooleanValue,
         GameEventScriptValueKind.Integer => IntegerValue != 0,
-        GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsBoolean() : NumberValue != 0m,
-        GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point => X != 0m || Y != 0m || Z != 0m,
+        GameEventScriptValueKind.Float or GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsBoolean() : NumberValue != 0d,
+        GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point => X != 0d || Y != 0d || Z != 0d,
         _ => ToGameEventScriptValue().AsBoolean()
     };
 
     public string Text => ToGameEventScriptValue().AsText();
 
-    public GameEventScriptDecimalUnit? Unit { get; }
+    public GameEventScriptFloatUnit? Unit { get; }
 
-    public decimal X { get; }
+    public double X { get; }
 
-    public decimal Y { get; }
+    public double Y { get; }
 
-    public decimal Z { get; }
+    public double Z { get; }
 
     public bool IsReferenceBacked => _reference is not null;
 
     private long IntegerValue { get; }
 
-    private decimal NumberValue { get; }
+    private double NumberValue { get; }
 
     private bool BooleanValue { get; }
 
-    public static GameEventScriptFastValue Nothing { get; } = new(GameEventScriptValueKind.Nothing, 0, 0m, 0m, 0m, 0m, false, null, null);
+    public static GameEventScriptFastValue Nothing { get; } = new(GameEventScriptValueKind.Nothing, 0, 0d, 0d, 0d, 0d, false, null, null);
 
     public static GameEventScriptFastValue FromGameEventScriptValue(GameEventScriptValue value) => value switch
     {
@@ -163,36 +163,36 @@ public readonly struct GameEventScriptFastValue
         _ when value.IsNothing() => Nothing,
         GameEventScriptBooleanValue boolean => FromBoolean(boolean.Value),
         GameEventScriptIntegerValue integer => FromInteger(integer.Value),
-        GameEventScriptDecimalValue decimalValue when decimalValue.HasSemanticValue() => FromDecimal(decimalValue.Value, decimalValue.Unit),
+        GameEventScriptFloatValue floatValue when floatValue.HasSemanticValue() => FromFloat(floatValue.Value, floatValue.Unit),
         GameEventScriptPercentageValue percentage => FromPercentage(percentage.Ratio),
         GameEventScriptVectorValue vector => FromVector(vector.X, vector.Y, vector.Z, vector.Unit),
         GameEventScriptPointValue point => FromPoint(point.X, point.Y, point.Z, point.Unit),
-        _ => new GameEventScriptFastValue(value.Kind, 0, 0m, 0m, 0m, 0m, value.AsBoolean(), null, value)
+        _ => new GameEventScriptFastValue(value.Kind, 0, 0d, 0d, 0d, 0d, value.AsBoolean(), null, value)
     };
 
     public static GameEventScriptFastValue FromBoolean(bool value)
-        => new(GameEventScriptValueKind.Boolean, value ? 1 : 0, value ? 1m : 0m, 0m, 0m, 0m, value, null, null);
+        => new(GameEventScriptValueKind.Boolean, value ? 1 : 0, value ? 1d : 0d, 0d, 0d, 0d, value, null, null);
 
     public static GameEventScriptFastValue FromInteger(long value)
-        => new(GameEventScriptValueKind.Integer, value, value, 0m, 0m, 0m, value != 0, null, null);
+        => new(GameEventScriptValueKind.Integer, value, value, 0d, 0d, 0d, value != 0, null, null);
 
-    public static GameEventScriptFastValue FromDecimal(decimal value, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Decimal, GesValueOperations.ToIntegerSaturated(value), value, 0m, 0m, 0m, value != 0m, unit, null);
+    public static GameEventScriptFastValue FromFloat(double value, GameEventScriptFloatUnit? unit = null)
+        => new(GameEventScriptValueKind.Float, GesValueOperations.ToIntegerSaturated(value), value, 0d, 0d, 0d, value != 0d, unit, null);
 
-    public static GameEventScriptFastValue FromPercentage(decimal ratio)
-        => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0m, 0m, 0m, ratio != 0m, null, null);
+    public static GameEventScriptFastValue FromPercentage(double ratio)
+        => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0d, 0d, 0d, ratio != 0d, null, null);
 
-    public static GameEventScriptFastValue FromVector(decimal x, decimal y = 0m, decimal z = 0m, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Vector, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
+    public static GameEventScriptFastValue FromVector(double x, double y = 0d, double z = 0d, GameEventScriptFloatUnit? unit = null)
+        => new(GameEventScriptValueKind.Vector, 0, 0d, x, y, z, x != 0d || y != 0d || z != 0d, unit, null);
 
-    public static GameEventScriptFastValue FromPoint(decimal x, decimal y = 0m, decimal z = 0m, GameEventScriptDecimalUnit? unit = null)
-        => new(GameEventScriptValueKind.Point, 0, 0m, x, y, z, x != 0m || y != 0m || z != 0m, unit, null);
+    public static GameEventScriptFastValue FromPoint(double x, double y = 0d, double z = 0d, GameEventScriptFloatUnit? unit = null)
+        => new(GameEventScriptValueKind.Point, 0, 0d, x, y, z, x != 0d || y != 0d || z != 0d, unit, null);
 
     public static GameEventScriptFastValue FromText(string value)
         => FromGameEventScriptValue(GesText(value));
 
-    private static long ToIntegerPercentage(decimal ratio)
-        => GesValueOperations.ToIntegerSaturated(decimal.Truncate(ratio * 100m));
+    private static long ToIntegerPercentage(double ratio)
+        => GesValueOperations.ToIntegerSaturated(Math.Truncate(ratio * 100d));
 
     public GameEventScriptValue ToGameEventScriptValue()
     {
@@ -202,7 +202,7 @@ public readonly struct GameEventScriptFastValue
             GameEventScriptValueKind.Nothing => GesNothing(),
             GameEventScriptValueKind.Boolean => GesBoolean(BooleanValue),
             GameEventScriptValueKind.Integer => GesInteger(IntegerValue),
-            GameEventScriptValueKind.Decimal => GesDecimal(NumberValue, Unit),
+            GameEventScriptValueKind.Float => GesFloat(NumberValue, Unit),
             GameEventScriptValueKind.Percentage => GesPercentage(NumberValue),
             GameEventScriptValueKind.Vector => GesVector(X, Y, Z, Unit),
             GameEventScriptValueKind.Point => GesPoint(X, Y, Z, Unit),
@@ -333,10 +333,10 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return FastValueArgumentReader.Instance;
         }
 
-        if (parameterType == typeof(decimal))
+        if (parameterType == typeof(double))
         {
-            RequireParameterKind(method, definition, GameEventScriptValueKind.Decimal, allowUnitTypes: true);
-            return DecimalArgumentReader.Instance;
+            RequireParameterKind(method, definition, GameEventScriptValueKind.Float, allowUnitTypes: true);
+            return FloatArgumentReader.Instance;
         }
 
         if (parameterType == typeof(long))
@@ -391,7 +391,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return;
         }
 
-        if (allowUnitTypes && definition.Kind == GameEventScriptValueKind.Decimal)
+        if (allowUnitTypes && definition.Kind == GameEventScriptValueKind.Float)
         {
             return;
         }
@@ -407,10 +407,10 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return FastValueReturnConverter.Instance;
         }
 
-        if (returnType == typeof(decimal))
+        if (returnType == typeof(double))
         {
-            RequireReturnKind(method, attribute, GameEventScriptValueKind.Decimal);
-            return new DecimalReturnConverter(attribute.ReturnUnit);
+            RequireReturnKind(method, attribute, GameEventScriptValueKind.Float);
+            return new FloatReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(long))
@@ -431,14 +431,14 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return BoolReturnConverter.Instance;
         }
 
-        if (returnType == typeof(ValueTuple<decimal, GameEventScriptDecimalUnit>))
+        if (returnType == typeof(ValueTuple<double, GameEventScriptFloatUnit>))
         {
-            return DecimalUnitTupleReturnConverter.Instance;
+            return FloatUnitTupleReturnConverter.Instance;
         }
 
-        if (returnType == typeof(ValueTuple<decimal, GameEventScriptDecimalUnit?>))
+        if (returnType == typeof(ValueTuple<double, GameEventScriptFloatUnit?>))
         {
-            return DecimalNullableUnitTupleReturnConverter.Instance;
+            return FloatNullableUnitTupleReturnConverter.Instance;
         }
 
         throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' is not fast-compatible.");
@@ -524,7 +524,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             (Kind, Unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(TypeName);
         }
 
-        public ExtensionParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptDecimalUnit? unit)
+        public ExtensionParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptFloatUnit? unit)
         {
             Name = NormalizeName(name);
             TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -538,7 +538,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         public GameEventScriptValueKind? Kind { get; }
 
-        public GameEventScriptDecimalUnit? Unit { get; }
+        public GameEventScriptFloatUnit? Unit { get; }
 
         private static string NormalizeName(string name)
             => string.Equals(name, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)
@@ -557,19 +557,19 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         }
     }
 
-    private sealed class DecimalArgumentReader : IFastArgumentReader<decimal>
+    private sealed class FloatArgumentReader : IFastArgumentReader<double>
     {
-        public static readonly DecimalArgumentReader Instance = new();
+        public static readonly FloatArgumentReader Instance = new();
 
-        public bool TryRead(GameEventScriptFastValue input, out decimal value)
+        public bool TryRead(GameEventScriptFastValue input, out double value)
         {
-            if (input.Kind is GameEventScriptValueKind.Integer or GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage)
+            if (input.Kind is GameEventScriptValueKind.Integer or GameEventScriptValueKind.Float or GameEventScriptValueKind.Percentage)
             {
                 value = input.Number;
                 return true;
             }
 
-            value = 0m;
+            value = 0d;
             return false;
         }
     }
@@ -580,7 +580,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         public bool TryRead(GameEventScriptFastValue input, out long value)
         {
-            if (input.Kind is GameEventScriptValueKind.Integer or GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage or GameEventScriptValueKind.Boolean)
+            if (input.Kind is GameEventScriptValueKind.Integer or GameEventScriptValueKind.Float or GameEventScriptValueKind.Percentage or GameEventScriptValueKind.Boolean)
             {
                 value = input.Integer;
                 return true;
@@ -615,7 +615,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         public bool TryRead(GameEventScriptFastValue input, out bool value)
         {
-            if (input.Kind is GameEventScriptValueKind.Boolean or GameEventScriptValueKind.Integer or GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Percentage or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point)
+            if (input.Kind is GameEventScriptValueKind.Boolean or GameEventScriptValueKind.Integer or GameEventScriptValueKind.Float or GameEventScriptValueKind.Percentage or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point)
             {
                 value = input.Boolean;
                 return true;
@@ -639,9 +639,9 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         public GameEventScriptFastValue Convert(GameEventScriptFastValue value) => value;
     }
 
-    private sealed class DecimalReturnConverter(GameEventScriptDecimalUnit? unit) : IFastReturnConverter<decimal>
+    private sealed class FloatReturnConverter(GameEventScriptFloatUnit? unit) : IFastReturnConverter<double>
     {
-        public GameEventScriptFastValue Convert(decimal value) => GameEventScriptFastValue.FromDecimal(value, unit);
+        public GameEventScriptFastValue Convert(double value) => GameEventScriptFastValue.FromFloat(value, unit);
     }
 
     private sealed class LongReturnConverter : IFastReturnConverter<long>
@@ -665,20 +665,20 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         public GameEventScriptFastValue Convert(bool value) => GameEventScriptFastValue.FromBoolean(value);
     }
 
-    private sealed class DecimalUnitTupleReturnConverter : IFastReturnConverter<(decimal Value, GameEventScriptDecimalUnit Unit)>
+    private sealed class FloatUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptFloatUnit Unit)>
     {
-        public static readonly DecimalUnitTupleReturnConverter Instance = new();
+        public static readonly FloatUnitTupleReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert((decimal Value, GameEventScriptDecimalUnit Unit) value)
-            => GameEventScriptFastValue.FromDecimal(value.Value, value.Unit);
+        public GameEventScriptFastValue Convert((double Value, GameEventScriptFloatUnit Unit) value)
+            => GameEventScriptFastValue.FromFloat(value.Value, value.Unit);
     }
 
-    private sealed class DecimalNullableUnitTupleReturnConverter : IFastReturnConverter<(decimal Value, GameEventScriptDecimalUnit? Unit)>
+    private sealed class FloatNullableUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptFloatUnit? Unit)>
     {
-        public static readonly DecimalNullableUnitTupleReturnConverter Instance = new();
+        public static readonly FloatNullableUnitTupleReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert((decimal Value, GameEventScriptDecimalUnit? Unit) value)
-            => GameEventScriptFastValue.FromDecimal(value.Value, value.Unit);
+        public GameEventScriptFastValue Convert((double Value, GameEventScriptFloatUnit? Unit) value)
+            => GameEventScriptFastValue.FromFloat(value.Value, value.Unit);
     }
 
     private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction

@@ -54,7 +54,7 @@
                 "value": "0.25"
               },
               "heading": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "90",
                 "unit": ":degree"
               },
@@ -142,7 +142,7 @@
                   "value": "0.25"
                 },
                 "heading": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "90",
                   "unit": ":degree"
                 },
@@ -190,7 +190,7 @@
     {
       "kind": "scriptApi",
       "name": "computed custom type fields are materialized",
-      "script": "record :gauge as {\n  current: :decimal clamped between 0 and maximum,\n  maximum: :decimal clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  emit Done(meter: hp, isMeter: hp is :gauge)\n}",
+      "script": "record :gauge as {\n  current: :float clamped between 0 and maximum,\n  maximum: :float clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  emit Done(meter: hp, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": {
@@ -205,11 +205,11 @@
                   "type": ":gauge",
                   "entries": {
                     "current": {
-                      "type": ":decimal",
+                      "type": ":float",
                       "value": "100"
                     },
                     "maximum": {
-                      "type": ":decimal",
+                      "type": ":float",
                       "value": "100"
                     },
                     "percentage": {
@@ -231,7 +231,7 @@
     {
       "kind": "scriptApi",
       "name": "type constructors convert inline and construct units",
-      "script": "on Start {\n  let heading be :degree(180)\n  let distance be :meter(100)\n  let duration be :second(15)\n  let product be :decimal(90°) * :decimal(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  emit Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :degree)\n}",
+      "script": "on Start {\n  let heading be :degree(180)\n  let distance be :meter(100)\n  let duration be :second(15)\n  let product be :float(90°) * :float(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  emit Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :degree)\n}",
       "steps": [
         {
           "input": {
@@ -243,22 +243,22 @@
               "name": "Done",
               "args": {
                 "heading": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "180",
                   "unit": ":degree"
                 },
                 "distance": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "100",
                   "unit": ":meter"
                 },
                 "duration": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "15",
                   "unit": ":second"
                 },
                 "product": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "9000"
                 },
                 "ratio": {
@@ -357,19 +357,19 @@
                   "z": "6"
                 },
                 "x": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10.5"
                 },
                 "y": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 },
                 "z": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 },
                 "labeledX": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 },
                 "zero_2": {
@@ -393,7 +393,7 @@
     {
       "kind": "scriptApi",
       "name": "custom type constructors apply clamp and computed fields",
-      "script": "record :gauge as {\n  current: :decimal clamped between 0 and maximum,\n  maximum: :decimal clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
+      "script": "record :gauge as {\n  current: :float clamped between 0 and maximum,\n  maximum: :float clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": {
@@ -408,11 +408,11 @@
                   "type": ":gauge",
                   "entries": {
                     "current": {
-                      "type": ":decimal",
+                      "type": ":float",
                       "value": "100"
                     },
                     "maximum": {
-                      "type": ":decimal",
+                      "type": ":float",
                       "value": "100"
                     },
                     "percentage": {
@@ -422,7 +422,7 @@
                   }
                 },
                 "current": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "100"
                 },
                 "percentage": {
@@ -502,12 +502,12 @@
                   "unit": ":meter"
                 },
                 "x": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "13",
                   "unit": ":meter"
                 },
                 "z": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "7",
                   "unit": ":meter"
                 },
@@ -516,15 +516,15 @@
                   "value": true
                 },
                 "badAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "badScale": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "badAbs": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "zero_2": {
@@ -577,11 +577,11 @@
                   "value": "3"
                 },
                 "divide": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3.5"
                 },
                 "mixed": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3.5"
                 }
               }
@@ -593,7 +593,7 @@
     {
       "kind": "scriptApi",
       "name": "integer division modulo and remainder semantics",
-      "script": "on Start(a, b) {\n  emit Done(divPositive: a div b, divNegative: (0 - a) div b, divNegativeDivisor: a div (0 - b), decimalDiv: 7.5 div 2, sameUnitDiv: 7m div 2m, unitDivScalar: 7m div 2, modPositive: a mod b, modNegative: (0 - a) mod b, modNegativeDivisor: a mod (0 - b), remPositive: a rem b, remNegative: (0 - a) rem b, remNegativeDivisor: a rem (0 - b), divZero: a div 0, remZero: a rem 0)\n}",
+      "script": "on Start(a, b) {\n  emit Done(divPositive: a div b, divNegative: (0 - a) div b, divNegativeDivisor: a div (0 - b), floatDiv: 7.5 div 2, sameUnitDiv: 7m div 2m, unitDivScalar: 7m div 2, modPositive: a mod b, modNegative: (0 - a) mod b, modNegativeDivisor: a mod (0 - b), remPositive: a rem b, remNegative: (0 - a) rem b, remNegativeDivisor: a rem (0 - b), divZero: a div 0, remZero: a rem 0)\n}",
       "steps": [
         {
           "input": {
@@ -625,7 +625,7 @@
                   "type": ":integer",
                   "value": "-3"
                 },
-                "decimalDiv": {
+                "floatDiv": {
                   "type": ":integer",
                   "value": "3"
                 },
@@ -634,7 +634,7 @@
                   "value": "3"
                 },
                 "unitDivScalar": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3",
                   "unit": ":meter"
                 },
@@ -663,11 +663,11 @@
                   "value": "1"
                 },
                 "divZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 },
                 "remZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 }
               }
@@ -691,27 +691,27 @@
               "name": "Done",
               "args": {
                 "addToBase": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "105"
                 },
                 "subtractFromBase": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "95"
                 },
                 "multiplyBaseRight": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5"
                 },
                 "divideBaseByPercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2000"
                 },
                 "reverseAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "reverseSubtract": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "percentAdd": {
@@ -731,7 +731,7 @@
                   "value": "0.05"
                 },
                 "scalarScaleLeft": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "0.30"
                 },
                 "percentProduct": {
@@ -739,11 +739,11 @@
                   "value": "0.0225"
                 },
                 "percentRatio": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1"
                 },
                 "percentDivideZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 }
               }
@@ -754,7 +754,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "percentage arithmetic preserves compatible decimal units",
+      "name": "percentage arithmetic preserves compatible double units",
       "script": "on Start {\n  emit Done(meterAddPercent: 100m + 5%, meterSubtractPercent: 100m - 5%, meterMultiplyPercentRight: 100m * 5%, meterMultiplyPercentLeft: 5% * 100m, meterDividePercent: 100m / 5%, reverseMeterAdd: 5% + 100m, reverseMeterSubtract: 5% - 100m, percentDivideMeter: 5% / 100m)\n}",
       "steps": [
         {
@@ -767,40 +767,40 @@
               "name": "Done",
               "args": {
                 "meterAddPercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "105",
                   "unit": ":meter"
                 },
                 "meterSubtractPercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "95",
                   "unit": ":meter"
                 },
                 "meterMultiplyPercentRight": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5",
                   "unit": ":meter"
                 },
                 "meterMultiplyPercentLeft": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5",
                   "unit": ":meter"
                 },
                 "meterDividePercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2000",
                   "unit": ":meter"
                 },
                 "reverseMeterAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "reverseMeterSubtract": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "percentDivideMeter": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 }
               }
@@ -812,7 +812,7 @@
     {
       "kind": "scriptApi",
       "name": "degree literals preserve raw angles and wrap explicitly",
-      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let decimalLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let decimalValue as :decimal be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, decimalLiteral: decimalLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, decimalValue: decimalValue, isDegree: fromLiteral is :degree)\n}",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :float be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :degree)\n}",
       "steps": [
         {
           "input": {
@@ -824,62 +824,62 @@
               "name": "Done",
               "args": {
                 "fromLiteral": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "90",
                   "unit": ":degree"
                 },
                 "overLiteral": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "360",
                   "unit": ":degree"
                 },
-                "decimalLiteral": {
-                  "type": ":decimal",
+                "floatLiteral": {
+                  "type": ":float",
                   "value": "43.9",
                   "unit": ":degree"
                 },
                 "addOpen": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "450",
                   "unit": ":degree"
                 },
                 "addOver": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "380",
                   "unit": ":degree"
                 },
                 "subtractOpen": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-30",
                   "unit": ":degree"
                 },
                 "negOpen": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-90",
                   "unit": ":degree"
                 },
                 "castOpen": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "450",
                   "unit": ":degree"
                 },
                 "wrapNegative": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "350",
                   "unit": ":degree"
                 },
                 "wrapOver": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10",
                   "unit": ":degree"
                 },
                 "wrapLarge": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "280",
                   "unit": ":degree"
                 },
                 "wrapCast": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "90",
                   "unit": ":degree"
                 },
@@ -887,8 +887,8 @@
                   "type": ":text",
                   "value": "43.9°"
                 },
-                "decimalValue": {
-                  "type": ":decimal",
+                "floatValue": {
+                  "type": ":float",
                   "value": "43.9"
                 },
                 "isDegree": {
@@ -904,7 +904,7 @@
     {
       "kind": "scriptApi",
       "name": "degree arithmetic percentages helpers and comparisons",
-      "script": "on Start {\n  emit Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyDecimal: 30° * 0.2, divideDecimal: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :degree.wrap (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: :integer.floor 43.9°, ceilDegree: :integer.ceil 43.1°, roundEvenDegree: :integer.halfEven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
+      "script": "on Start {\n  emit Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyFloat: 30° * 0.2, divideFloat: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :degree.wrap (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: :integer.floor 43.9°, ceilDegree: :integer.ceil 43.1°, roundEvenDegree: :integer.halfEven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
       "steps": [
         {
           "input": {
@@ -916,84 +916,84 @@
               "name": "Done",
               "args": {
                 "addNumber": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "subtractNumber": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "addPercentRight": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "132",
                   "unit": ":degree"
                 },
                 "addPercentLeft": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "subtractPercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "108",
                   "unit": ":degree"
                 },
                 "multiplyPercentRight": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12",
                   "unit": ":degree"
                 },
                 "multiplyPercentLeft": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12",
                   "unit": ":degree"
                 },
-                "multiplyDecimal": {
-                  "type": ":decimal",
+                "multiplyFloat": {
+                  "type": ":float",
                   "value": "6",
                   "unit": ":degree"
                 },
-                "divideDecimal": {
-                  "type": ":decimal",
+                "divideFloat": {
+                  "type": ":float",
                   "value": "150",
                   "unit": ":degree"
                 },
                 "dividePercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1200",
                   "unit": ":degree"
                 },
                 "wrappedDividePercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "120",
                   "unit": ":degree"
                 },
                 "moduloDegree": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10",
                   "unit": ":degree"
                 },
                 "moduloPercent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "divideZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 },
                 "moduloZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "reverseSubtract": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "reverseDivide": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "reverseModulo": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "floorDegree": {
@@ -1009,12 +1009,12 @@
                   "value": "42"
                 },
                 "minDegree": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10",
                   "unit": ":degree"
                 },
                 "maxDegree": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "350",
                   "unit": ":degree"
                 },
@@ -1038,8 +1038,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "decimal unit literals casts and strict arithmetic",
-      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :decimal be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isDecimal: castMeter is :decimal, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
+      "name": "double unit literals casts and strict arithmetic",
+      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :float be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isFloat: castMeter is :float, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
       "steps": [
         {
           "input": {
@@ -1051,22 +1051,22 @@
               "name": "Done",
               "args": {
                 "distance": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "100",
                   "unit": ":meter"
                 },
                 "duration": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "15",
                   "unit": ":second"
                 },
                 "castMeter": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "100",
                   "unit": ":meter"
                 },
                 "rawMeter": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "100"
                 },
                 "isMeter": {
@@ -1077,53 +1077,53 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "isDecimal": {
+                "isFloat": {
                   "type": ":boolean",
                   "value": true
                 },
                 "sameAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "150",
                   "unit": ":meter"
                 },
                 "mixedAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "wrongAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "scaleLeft": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "200",
                   "unit": ":meter"
                 },
                 "scaleRight": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "200",
                   "unit": ":meter"
                 },
                 "divideScalar": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "50",
                   "unit": ":meter"
                 },
                 "divideSame": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4"
                 },
                 "unitModulo": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10",
                   "unit": ":meter"
                 },
                 "unitModuloScalar": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "wrapMeter": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 }
               }
@@ -1142,20 +1142,20 @@
             "name": "Start",
             "args": {
               "value": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "10.4"
               },
               "heading": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "-10",
                 "unit": ":degree"
               },
               "unitlessHeading": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "370"
               },
               "meterValue": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "10",
                 "unit": ":meter"
               }
@@ -1194,34 +1194,34 @@
                   "value": "-12"
                 },
                 "wrapNegative": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "350",
                   "unit": ":degree"
                 },
                 "wrapUnitless": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10",
                   "unit": ":degree"
                 },
                 "radians": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3.1415926535897932384626433833"
                 },
                 "degrees": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "180",
                   "unit": ":degree"
                 },
                 "wrapWrongUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "radiansWrongUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "fromRadiansWrongUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "halfEven_12": {
@@ -1277,23 +1277,23 @@
                   "z": "3"
                 },
                 "x": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10.5"
                 },
                 "y": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-2"
                 },
                 "z": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 },
                 "listFirst": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "10.5"
                 },
                 "dictZ": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 },
                 "vectorIsDictionary": {
@@ -1317,7 +1317,7 @@
     {
       "kind": "scriptApi",
       "name": "vector units are preserved in components and conversions",
-      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :decimal(position)\n  let rawPositionCast as :decimal be position\n  let remetered be :meter(rawPosition)\n  let sameMeter be :meter(position)\n  let wrongUnitVector be :second(position)\n  let wrongScalarUnit be :meter(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :dictionary be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
+      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :float(position)\n  let rawPositionCast as :float be position\n  let remetered be :meter(rawPosition)\n  let sameMeter be :meter(position)\n  let wrongUnitVector be :second(position)\n  let wrongScalarUnit be :meter(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :dictionary be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
       "steps": [
         {
           "input": {
@@ -1336,22 +1336,22 @@
                   "unit": ":meter"
                 },
                 "x": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3",
                   "unit": ":meter"
                 },
                 "y": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4",
                   "unit": ":meter"
                 },
                 "listY": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "4",
                   "unit": ":meter"
                 },
                 "dictX": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3",
                   "unit": ":meter"
                 },
@@ -1382,11 +1382,11 @@
                   "unit": ":meter"
                 },
                 "wrongUnitVector": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "wrongScalarUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "lifted": {
@@ -1507,12 +1507,12 @@
                   "z": "0"
                 },
                 "length_2": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5",
                   "unit": ":meter"
                 },
                 "length_3": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 }
               }
@@ -1536,27 +1536,27 @@
               "name": "Done",
               "args": {
                 "mixedUnits": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "mixedUnitless": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "partialMixedUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "liftedMixedUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "vectorProduct": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "scalarDivide": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "dimensionAdd": {
@@ -1566,15 +1566,15 @@
                   "z": "3"
                 },
                 "incompatibleScalar": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "divideZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "vectorModulo": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 }
               }
@@ -1604,7 +1604,7 @@
                 "value": "3"
               },
               "meterValue": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "5",
                 "unit": ":meter"
               }
@@ -1635,27 +1635,27 @@
                   "value": "0"
                 },
                 "distance": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12.5"
                 },
                 "naturalOne": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1"
                 },
                 "naturalZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-Infinity"
                 },
                 "naturalNegative": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "naturalInfinity": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 },
                 "naturalNaN": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "naturalRuntime": {
@@ -1663,15 +1663,15 @@
                   "value": true
                 },
                 "naturalUnit": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "boundedHigh": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "99"
                 },
                 "boundedLow": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "0"
                 },
                 "highest": {
@@ -1699,7 +1699,7 @@
     {
       "kind": "scriptApi",
       "name": "lookup and empty checks are runtime-visible",
-      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :decimal be 'abc'\n  emit Done(second: items[2], missing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
+      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :float be 'abc'\n  emit Done(second: items[2], missing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
       "steps": [
         {
           "input": {
@@ -1848,7 +1848,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "decimal edge values stay observable",
+      "name": "float edge values stay observable",
       "script": "on Start {\n  emit Done(divZero: 1 / 0, modZero: 1 mod 0, overflow: 9999999999999999999999999999 * 9999999999999999999999999999)\n}",
       "steps": [
         {
@@ -1861,16 +1861,16 @@
               "name": "Done",
               "args": {
                 "divZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 },
                 "modZero": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "overflow": {
-                  "type": ":decimal",
-                  "value": "Infinity"
+                  "type": ":float",
+                  "value": "100000000000000000000000000000000000000000000000000000000"
                 }
               }
             }
@@ -1998,11 +1998,11 @@
                 "rolls": []
               },
               "nanValue": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "NaN"
               },
               "infinityValue": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "Infinity"
               }
             }
@@ -2108,7 +2108,7 @@
     {
       "kind": "scriptApi",
       "name": "type conversions length checks and type tags",
-      "script": "on Start(optionalValue, a, b, c, d, e, f, g, h) {\n  let tagOk as :tag be :name\n  let numberOk as :decimal be '12.2'\n  let numberFail as :decimal be 'abc'\n  let integerOk as :integer be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let setOk be :set[1, 1, 2]\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, setLen: :len setOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], optionalLen: :len optionalValue, decimalLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsDecimal: b is :decimal, cIsInteger: c is :integer, dIsText: d is :text, eIsList: e is :list, fIsDictionary: f is :dictionary, gIsOptional: g is :optional, hIsSet: h is :set)\n}",
+      "script": "on Start(optionalValue, a, b, c, d, e, f, g, h) {\n  let tagOk as :tag be :name\n  let numberOk as :float be '12.2'\n  let numberFail as :float be 'abc'\n  let integerOk as :integer be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let setOk be :set[1, 1, 2]\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, setLen: :len setOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], optionalLen: :len optionalValue, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :float, cIsInteger: c is :integer, dIsText: d is :text, eIsList: e is :list, fIsDictionary: f is :dictionary, gIsOptional: g is :optional, hIsSet: h is :set)\n}",
       "randomSequence": [
         "2",
         "6",
@@ -2133,7 +2133,7 @@
                 "value": "name"
               },
               "b": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "1.5"
               },
               "c": {
@@ -2186,11 +2186,11 @@
                   "value": "name"
                 },
                 "numberOk": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12.2"
                 },
                 "numberFail": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "integerOk": {
@@ -2229,7 +2229,7 @@
                   "type": ":integer",
                   "value": "1"
                 },
-                "decimalLen": {
+                "floatLen": {
                   "type": ":nothing"
                 },
                 "booleanLen": {
@@ -2239,7 +2239,7 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "bIsDecimal": {
+                "bIsFloat": {
                   "type": ":boolean",
                   "value": true
                 },
@@ -2276,14 +2276,14 @@
     {
       "kind": "scriptApi",
       "name": "unary domain conditional and standard integer rounding forms",
-      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negDecimal be -12.34\n  let negPercent be -25%\n  let restored be -negDecimal\n  let score as :decimal be 12 when age is :boolean, or 15 when age is :decimal, otherwise 5\n  emit Done(negInt: negInt, negDecimal: negDecimal, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
+      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :float be 12 when age is :boolean, or 15 when age is :float, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
               "hp": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "-1"
               },
               "mana": {
@@ -2309,11 +2309,11 @@
               "name": "Done",
               "args": {
                 "negInt": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-12"
                 },
-                "negDecimal": {
-                  "type": ":decimal",
+                "negFloat": {
+                  "type": ":float",
                   "value": "-12.34"
                 },
                 "negPercent": {
@@ -2321,7 +2321,7 @@
                   "value": "-0.25"
                 },
                 "restored": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12.34"
                 },
                 "boolNegation": {
@@ -2361,7 +2361,7 @@
                   "value": true
                 },
                 "score": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12"
                 },
                 "floor": {
@@ -2401,7 +2401,7 @@
             "name": "Start",
             "args": {
               "hp": {
-                "type": ":decimal",
+                "type": ":float",
                 "value": "-1"
               },
               "mana": {
@@ -2427,11 +2427,11 @@
               "name": "Done",
               "args": {
                 "negInt": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-12"
                 },
-                "negDecimal": {
-                  "type": ":decimal",
+                "negFloat": {
+                  "type": ":float",
                   "value": "-12.34"
                 },
                 "negPercent": {
@@ -2439,7 +2439,7 @@
                   "value": "-0.25"
                 },
                 "restored": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "12.34"
                 },
                 "boolNegation": {
@@ -2479,7 +2479,7 @@
                   "value": true
                 },
                 "score": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "5"
                 },
                 "floor": {
@@ -2547,15 +2547,15 @@
                   "value": "512"
                 },
                 "fractional": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 },
                 "negativeExponent": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "0.25"
                 },
                 "negatedSquare": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-9"
                 },
                 "negativeBaseSquare": {
@@ -2567,7 +2567,7 @@
                   "value": "38"
                 },
                 "unitPower": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 }
               }
@@ -2579,7 +2579,7 @@
     {
       "kind": "scriptApi",
       "name": "implicit multiplication superscripts and unicode operator aliases",
-      "script": "on Start(x, y, flag) {\n  emit Done(doubleX: 2x, decimalY: 2.5y, meter: 2m, square: x², cube: y³, multiply: x × y, divide: y ÷ x, lessOrEqual: x ≤ y, greaterOrEqual: y ≥ x, notEqual: x ≠ y, notFlag: ¬flag)\n}",
+      "script": "on Start(x, y, flag) {\n  emit Done(doubleX: 2x, floatY: 2.5y, meter: 2m, square: x², cube: y³, multiply: x × y, divide: y ÷ x, lessOrEqual: x ≤ y, greaterOrEqual: y ≥ x, notEqual: x ≠ y, notFlag: ¬flag)\n}",
       "steps": [
         {
           "input": {
@@ -2607,12 +2607,12 @@
                   "type": ":integer",
                   "value": "6"
                 },
-                "decimalY": {
-                  "type": ":decimal",
+                "floatY": {
+                  "type": ":float",
                   "value": "15"
                 },
                 "meter": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2",
                   "unit": ":meter"
                 },
@@ -2629,7 +2629,7 @@
                   "value": "18"
                 },
                 "divide": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2"
                 },
                 "lessOrEqual": {
@@ -2657,7 +2657,7 @@
     {
       "kind": "scriptApi",
       "name": "additional unicode mathematical aliases",
-      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :decimal, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :decimal, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :decimal, piAlias: ∏ as :decimal, piGreater: ∏ > 3, eTag: :e as :decimal, eAlias: ℇ as :decimal, eLess: ℇ < 3, tauTag: :tau as :decimal, tauAlias: τ as :decimal, tauGreater: τ > 6, phiTag: :phi as :decimal, phiAlias: φ as :decimal, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27)\n}",
+      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :float, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :float, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :float, piAlias: ∏ as :float, piGreater: ∏ > 3, eTag: :e as :float, eAlias: ℇ as :float, eLess: ℇ < 3, tauTag: :tau as :float, tauAlias: τ as :float, tauGreater: τ > 6, phiTag: :phi as :float, phiAlias: φ as :float, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27)\n}",
       "steps": [
         {
           "input": {
@@ -2714,27 +2714,27 @@
                   "value": true
                 },
                 "infinity": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 },
                 "infinityAdd": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "Infinity"
                 },
                 "negativeInfinity": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-Infinity"
                 },
                 "unicodeNegativeInfinity": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "-Infinity"
                 },
                 "piTag": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3.1415926535897932384626433833"
                 },
                 "piAlias": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3.1415926535897932384626433833"
                 },
                 "piGreater": {
@@ -2742,11 +2742,11 @@
                   "value": true
                 },
                 "eTag": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2.7182818284590452353602874714"
                 },
                 "eAlias": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "2.7182818284590452353602874714"
                 },
                 "eLess": {
@@ -2754,11 +2754,11 @@
                   "value": true
                 },
                 "tauTag": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "6.2831853071795864769252867666"
                 },
                 "tauAlias": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "6.2831853071795864769252867666"
                 },
                 "tauGreater": {
@@ -2766,11 +2766,11 @@
                   "value": true
                 },
                 "phiTag": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1.6180339887498948482045868344"
                 },
                 "phiAlias": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1.6180339887498948482045868344"
                 },
                 "phiBetween": {
@@ -2778,19 +2778,19 @@
                   "value": true
                 },
                 "sqrtTag": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "9"
                 },
                 "sqrtAlias": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "9"
                 },
                 "cbrtTag": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 },
                 "cbrtAlias": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3"
                 }
               }
@@ -2801,8 +2801,64 @@
     },
     {
       "kind": "scriptApi",
+      "name": "approximate equality operators",
+      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, approxAscii: near =~ target, approxAlmost: near ≈ target, approxCongruent: near ≅ target, far: 0.1 =~ 0.2, nanExact: :nan = :nan, nanApprox: :nan =~ :nan, unitApprox: 1.0000000001m =~ 1m, unitMismatch: 1m =~ 1s)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "exact": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "approxAscii": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "approxAlmost": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "approxCongruent": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "far": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "nanExact": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "nanApprox": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "unitApprox": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "unitMismatch": {
+                  "type": ":boolean",
+                  "value": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "numeric literals allow underscore digit separators",
-      "script": "on Start(x) {\n  emit Done(integer: 100_000, decimal: 100_000.25, percent: 1_5%, meter: 1_000m, degree: 90_0°, second: 3_600s, square: 1_2², scaled: 2_5x)\n}",
+      "script": "on Start(x) {\n  emit Done(integer: 100_000, double: 100_000.25, percent: 1_5%, meter: 1_000m, degree: 90_0°, second: 3_600s, square: 1_2², scaled: 2_5x)\n}",
       "steps": [
         {
           "input": {
@@ -2822,8 +2878,8 @@
                   "type": ":integer",
                   "value": "100000"
                 },
-                "decimal": {
-                  "type": ":decimal",
+                "double": {
+                  "type": ":float",
                   "value": "100000.25"
                 },
                 "percent": {
@@ -2831,17 +2887,17 @@
                   "value": "0.15"
                 },
                 "meter": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "1000",
                   "unit": ":meter"
                 },
                 "degree": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "900",
                   "unit": ":degree"
                 },
                 "second": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "3600",
                   "unit": ":second"
                 },
@@ -2861,8 +2917,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "missing invalid and overflowing values remain lenient",
-      "script": "on Start(item) {\n  let nanValue as :decimal be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be missing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
+      "name": "missing invalid and large values remain lenient",
+      "script": "on Start(item) {\n  let nanValue as :float be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be missing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
       "steps": [
         {
           "input": {
@@ -2878,11 +2934,11 @@
               "name": "Done",
               "args": {
                 "nanValue": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "nanPropagated": {
-                  "type": ":decimal",
+                  "type": ":float",
                   "value": "NaN"
                 },
                 "nothing": {
@@ -2895,12 +2951,12 @@
                   "type": ":nothing"
                 },
                 "pos": {
-                  "type": ":decimal",
-                  "value": "Infinity"
+                  "type": ":float",
+                  "value": "79228162514264300000000000000"
                 },
                 "neg": {
-                  "type": ":decimal",
-                  "value": "-Infinity"
+                  "type": ":float",
+                  "value": "-79228162514264300000000000000"
                 }
               }
             }

@@ -12,7 +12,7 @@ public enum GameEventScriptBytecodeConstantKind
     Nothing,
     Boolean,
     Integer,
-    Decimal,
+    Float,
     Percentage,
     Text,
     Tag,
@@ -25,9 +25,9 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
         GameEventScriptBytecodeConstantKind kind,
         string? text = null,
         long integer = 0,
-        decimal number = 0m,
+        double number = 0d,
         bool boolean = false,
-        GameEventScriptDecimalUnit? unit = null,
+        GameEventScriptFloatUnit? unit = null,
         bool isNaN = false,
         bool isInfinity = false,
         bool isNegativeInfinity = false,
@@ -51,11 +51,11 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
 
     public long Integer { get; }
 
-    public decimal Number { get; }
+    public double Number { get; }
 
     public bool Boolean { get; }
 
-    public GameEventScriptDecimalUnit? Unit { get; }
+    public GameEventScriptFloatUnit? Unit { get; }
 
     public bool IsNaN { get; }
 
@@ -74,15 +74,15 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
     public static GameEventScriptBytecodeConstant FromInteger(long value)
         => new(GameEventScriptBytecodeConstantKind.Integer, integer: value);
 
-    public static GameEventScriptBytecodeConstant FromDecimal(
-        decimal value,
-        GameEventScriptDecimalUnit? unit = null,
+    public static GameEventScriptBytecodeConstant FromFloat(
+        double value,
+        GameEventScriptFloatUnit? unit = null,
         bool isNaN = false,
         bool isInfinity = false,
         bool isNegativeInfinity = false)
-        => new(GameEventScriptBytecodeConstantKind.Decimal, number: value, unit: unit, isNaN: isNaN, isInfinity: isInfinity, isNegativeInfinity: isNegativeInfinity);
+        => new(GameEventScriptBytecodeConstantKind.Float, number: value, unit: unit, isNaN: isNaN, isInfinity: isInfinity, isNegativeInfinity: isNegativeInfinity);
 
-    public static GameEventScriptBytecodeConstant FromPercentage(decimal ratio)
+    public static GameEventScriptBytecodeConstant FromPercentage(double ratio)
         => new(GameEventScriptBytecodeConstantKind.Percentage, number: ratio);
 
     public static GameEventScriptBytecodeConstant FromText(string value)
@@ -147,12 +147,12 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
             GameEventScriptBytecodeConstantKind.Nothing => "nothing",
             GameEventScriptBytecodeConstantKind.Boolean => Boolean ? "True" : "False",
             GameEventScriptBytecodeConstantKind.Integer => Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            GameEventScriptBytecodeConstantKind.Decimal when IsNaN => "NaN",
-            GameEventScriptBytecodeConstantKind.Decimal when IsInfinity => IsNegativeInfinity ? "-Infinity" : "Infinity",
-            GameEventScriptBytecodeConstantKind.Decimal => Unit is { } unit
+            GameEventScriptBytecodeConstantKind.Float when IsNaN => "NaN",
+            GameEventScriptBytecodeConstantKind.Float when IsInfinity => IsNegativeInfinity ? "-Infinity" : "Infinity",
+            GameEventScriptBytecodeConstantKind.Float => Unit is { } unit
                 ? $"{Number.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
                 : Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            GameEventScriptBytecodeConstantKind.Percentage => $"{(Number * 100m).ToString(System.Globalization.CultureInfo.InvariantCulture)}%",
+            GameEventScriptBytecodeConstantKind.Percentage => $"{(Number * 100d).ToString(System.Globalization.CultureInfo.InvariantCulture)}%",
             GameEventScriptBytecodeConstantKind.Text => Text ?? string.Empty,
             GameEventScriptBytecodeConstantKind.Tag => $":{Text}",
             GameEventScriptBytecodeConstantKind.Handler => $"{Text}({string.Join(",", Labels)})",
@@ -169,6 +169,7 @@ public enum GameEventScriptBytecodeOpCode
     And,
     Equal,
     NotEqual,
+    ApproxEqual,
     Less,
     Greater,
     LessOrEqual,
@@ -239,7 +240,7 @@ public enum GameEventScriptBytecodeCastKind
 {
     Boolean,
     Integer,
-    Decimal,
+    Float,
     Number,
     Percentage,
     Degree,
@@ -341,6 +342,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.Power => true,
             GameEventScriptBytecodeOpCode.Equal => true,
             GameEventScriptBytecodeOpCode.NotEqual => true,
+            GameEventScriptBytecodeOpCode.ApproxEqual => true,
             GameEventScriptBytecodeOpCode.Less => true,
             GameEventScriptBytecodeOpCode.Greater => true,
             GameEventScriptBytecodeOpCode.LessOrEqual => true,
@@ -375,6 +377,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.Power or
             GameEventScriptBytecodeOpCode.Equal or
             GameEventScriptBytecodeOpCode.NotEqual or
+            GameEventScriptBytecodeOpCode.ApproxEqual or
             GameEventScriptBytecodeOpCode.Less or
             GameEventScriptBytecodeOpCode.Greater or
             GameEventScriptBytecodeOpCode.LessOrEqual or

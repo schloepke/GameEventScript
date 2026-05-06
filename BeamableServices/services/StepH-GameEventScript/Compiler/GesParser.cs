@@ -11,8 +11,8 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed class GesParser
 {
-    private const decimal SquareRootExponent = 0.5m;
-    private const decimal CubeRootExponent = 0.3333333333333333333333333333m;
+    private const double SquareRootExponent = 0.5d;
+    private const double CubeRootExponent = 0.3333333333333333333333333333d;
 
     public static ParsedScript Parse(string script, string? sourceName = null, GameEventScriptCompileOptions? options = null)
     {
@@ -833,7 +833,7 @@ internal sealed class GesParser
     {
         var expression = ParseMembershipExpression();
 
-        while (Match(Equal, NotEqual))
+        while (Match(Equal, NotEqual, ApproxEqual))
         {
             var op = Previous.Text;
             SkipNewLines();
@@ -1175,7 +1175,7 @@ internal sealed class GesParser
     }
 
     private static bool IsImplicitMultiplicationLeftExpression(ExpressionNode expression)
-        => expression is IntegerLiteralExpressionNode or DecimalLiteralExpressionNode;
+        => expression is IntegerLiteralExpressionNode or FloatLiteralExpressionNode;
 
     private bool IsImplicitMultiplicationRightStart()
         => Current.Kind == Identifier;
@@ -1310,7 +1310,7 @@ internal sealed class GesParser
         {
             "sqrt" => SquareRootExponent,
             "cbrt" => CubeRootExponent,
-            _ => (decimal?)null
+            _ => (double?)null
         };
 
         if (!exponent.HasValue)
@@ -1319,7 +1319,7 @@ internal sealed class GesParser
             return false;
         }
 
-        var exponentNode = new DecimalLiteralExpressionNode(exponent.Value)
+        var exponentNode = new FloatLiteralExpressionNode(exponent.Value)
         {
             SourceRange = CreateRange(startToken, Previous)
         };
@@ -1405,7 +1405,7 @@ internal sealed class GesParser
         if (Match(SelectorDraw))
         {
             SkipNewLines();
-            var countToken = Expect(GesTokenKind.Decimal);
+            var countToken = Expect(GesTokenKind.Float);
             return WithRange(new DrawSelectorNode(ParsePositiveInteger(countToken, "draw count")), startToken);
         }
 
@@ -1724,21 +1724,21 @@ internal sealed class GesParser
             return ParseCollectionFactoryExpression("set");
         }
 
-        if (Match(GesTokenKind.Decimal))
+        if (Match(GesTokenKind.Float))
         {
             return Previous.TryGetIntegerValue(out var integerValue)
                 ? WithRange(new IntegerLiteralExpressionNode(integerValue), Previous)
-                : WithRange(new DecimalLiteralExpressionNode(Previous.DecimalValue), Previous);
+                : WithRange(new FloatLiteralExpressionNode(Previous.FloatValue), Previous);
         }
 
         if (Match(Percentage))
         {
-            return WithRange(new PercentageLiteralExpressionNode(Previous.DecimalValue), Previous);
+            return WithRange(new PercentageLiteralExpressionNode(Previous.FloatValue), Previous);
         }
 
-        if (Match(GesTokenKind.UnitDecimal))
+        if (Match(GesTokenKind.UnitFloat))
         {
-            return WithRange(new UnitDecimalLiteralExpressionNode(Previous.DecimalValue, Previous.UnitName), Previous);
+            return WithRange(new UnitFloatLiteralExpressionNode(Previous.FloatValue, Previous.UnitName), Previous);
         }
 
         if (Match(Text))
@@ -2081,7 +2081,7 @@ internal sealed class GesParser
     private DiceExpressionNode ParseDiceExpression()
     {
         var startToken = Previous;
-        var diceCountToken = Expect(GesTokenKind.Decimal);
+        var diceCountToken = Expect(GesTokenKind.Float);
         var sideCountToken = ParseDiceSideCountToken();
 
         var diceCount = ParsePositiveInteger(diceCountToken, "dice count");
@@ -2097,7 +2097,7 @@ internal sealed class GesParser
         if (TryParseSliceScope(out var scope))
         {
             SkipNewLines();
-            var countToken = Expect(GesTokenKind.Decimal);
+            var countToken = Expect(GesTokenKind.Float);
             return WithRange(new SequenceSliceSelectorNode("take", scope, ParsePositiveInteger(countToken, "take count")), startToken);
         }
 
@@ -2115,7 +2115,7 @@ internal sealed class GesParser
         }
 
         SkipNewLines();
-        var countToken = Expect(GesTokenKind.Decimal);
+        var countToken = Expect(GesTokenKind.Float);
         return WithRange(new SequenceSliceSelectorNode("drop", scope, ParsePositiveInteger(countToken, "drop count")), startToken);
     }
 
@@ -2153,7 +2153,7 @@ internal sealed class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        var countToken = Expect(GesTokenKind.Decimal);
+        var countToken = Expect(GesTokenKind.Float);
         var count = ParsePositiveInteger(countToken, "choose count");
         SkipNewLines();
 
@@ -2294,7 +2294,7 @@ internal sealed class GesParser
     {
         if (Match(DiceSeparator))
         {
-            return Expect(GesTokenKind.Decimal);
+            return Expect(GesTokenKind.Float);
         }
 
         if (Is(Identifier))
@@ -2303,14 +2303,14 @@ internal sealed class GesParser
             if (string.Equals(token.Text, "d", StringComparison.Ordinal))
             {
                 Advance();
-                return Expect(GesTokenKind.Decimal);
+                return Expect(GesTokenKind.Float);
             }
 
             if (IsCompactDiceToken(token.Text))
             {
                 Advance();
                 return new GesToken(
-                    GesTokenKind.Decimal,
+                    GesTokenKind.Float,
                     token.Text[1..],
                     token.Line,
                     token.Column + 1,
@@ -2343,9 +2343,9 @@ internal sealed class GesParser
 
     private int ParsePositiveInteger(GesToken numberToken, string name)
     {
-        if (!decimal.TryParse(numberToken.NormalizedNumericText, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ||
+        if (!double.TryParse(numberToken.NormalizedNumericText, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ||
             value <= 0 ||
-            value != decimal.Truncate(value))
+            value != Math.Truncate(value))
         {
             throw new GameEventScriptParseException($"Expected positive integer for {name}", numberToken.Line, numberToken.Column);
         }
@@ -2497,7 +2497,7 @@ internal sealed class GesParser
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Decimal or Percentage or UnitDecimal or Text or True or False or LeftBracket or LeftParen or Minus or Has or Empty or Not;
+        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitFloat or Text or True or False or LeftBracket or LeftParen or Minus or Has or Empty or Not;
 
     private bool IsArgumentLabelStart()
     {

@@ -30,7 +30,7 @@ public sealed class GameEventScriptOptionalValue : GameEventScriptValue
 
     public override long AsInteger() => TryConvertToInteger(out var value) ? value.AsInteger() : 0;
 
-    public override decimal AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0m;
+    public override double AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0d;
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => TryConvertToList(out var value) ? value.AsList() : System.Array.Empty<GameEventScriptValue>();
 

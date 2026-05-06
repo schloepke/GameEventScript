@@ -43,12 +43,12 @@ public sealed class GameEventScriptExternalTypeTests
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));
         Assert.HasCount(1, received);
         Assert.IsTrue(received[0].Arguments["isAim"].AsBoolean());
-        Assert.AreEqual(90m, received[0].Arguments["bearing"].AsNumber());
-        Assert.IsTrue(received[0].Arguments["bearing"].IsDecimalUnit(GameEventScriptDecimalUnit.Degree));
-        Assert.AreEqual(12m, received[0].Arguments["range"].AsNumber());
-        Assert.IsTrue(received[0].Arguments["range"].IsDecimalUnit(GameEventScriptDecimalUnit.Meter));
-        Assert.AreEqual(3m, received[0].Arguments["directionZ"].AsNumber());
-        Assert.IsTrue(received[0].Arguments["directionZ"].IsDecimalUnit(GameEventScriptDecimalUnit.Meter));
+        Assert.AreEqual(90d, received[0].Arguments["bearing"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["bearing"].IsFloatUnit(GameEventScriptFloatUnit.Degree));
+        Assert.AreEqual(12d, received[0].Arguments["range"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["range"].IsFloatUnit(GameEventScriptFloatUnit.Meter));
+        Assert.AreEqual(3d, received[0].Arguments["directionZ"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["directionZ"].IsFloatUnit(GameEventScriptFloatUnit.Meter));
         Assert.AreEqual(102, received[0].Arguments["checksum"].AsInteger());
     }
 
@@ -124,10 +124,10 @@ public sealed class GameEventScriptExternalTypeTests
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));
         Assert.HasCount(1, received);
         Assert.AreEqual(102, received[0].Arguments["score"].AsInteger());
-        Assert.AreEqual(95m, received[0].Arguments["lead"].AsNumber());
-        Assert.IsTrue(received[0].Arguments["lead"].IsDecimalUnit(GameEventScriptDecimalUnit.Degree));
-        Assert.AreEqual(12m, received[0].Arguments["distance"].AsNumber());
-        Assert.IsTrue(received[0].Arguments["distance"].IsDecimalUnit(GameEventScriptDecimalUnit.Meter));
+        Assert.AreEqual(95d, received[0].Arguments["lead"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["lead"].IsFloatUnit(GameEventScriptFloatUnit.Degree));
+        Assert.AreEqual(12d, received[0].Arguments["distance"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["distance"].IsFloatUnit(GameEventScriptFloatUnit.Meter));
     }
 
     [TestMethod]
@@ -144,9 +144,9 @@ public sealed class GameEventScriptExternalTypeTests
     {
         [GesConstruct]
         public AimValue(
-            [GesParam("bearing", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Degree)] decimal bearing,
-            [GesParam("range", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Meter)] decimal range,
-            [GesParam("direction", GameEventScriptValueKind.Vector, GameEventScriptDecimalUnit.Meter)] GameEventScriptVectorValue direction)
+            [GesParam("bearing", GameEventScriptValueKind.Float, GameEventScriptFloatUnit.Degree)] double bearing,
+            [GesParam("range", GameEventScriptValueKind.Float, GameEventScriptFloatUnit.Meter)] double range,
+            [GesParam("direction", GameEventScriptValueKind.Vector, GameEventScriptFloatUnit.Meter)] GameEventScriptVectorValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -154,13 +154,13 @@ public sealed class GameEventScriptExternalTypeTests
             Checksum = (int)(bearing + range);
         }
 
-        [GesField("bearing", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Degree)]
-        public decimal Bearing { get; }
+        [GesField("bearing", GameEventScriptValueKind.Float, GameEventScriptFloatUnit.Degree)]
+        public double Bearing { get; }
 
-        [GesField("range", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Meter)]
-        public decimal Range { get; }
+        [GesField("range", GameEventScriptValueKind.Float, GameEventScriptFloatUnit.Meter)]
+        public double Range { get; }
 
-        [GesField("direction", GameEventScriptValueKind.Vector, GameEventScriptDecimalUnit.Meter)]
+        [GesField("direction", GameEventScriptValueKind.Vector, GameEventScriptFloatUnit.Meter)]
         public GameEventScriptVectorValue Direction { get; }
 
         [GesField("checksum", GameEventScriptValueKind.Integer)]
@@ -173,20 +173,20 @@ public sealed class GameEventScriptExternalTypeTests
         [GesFunction("score", GameEventScriptValueKind.Integer)]
         public static long Score([GesParam("_", "aim")] AimValue aim) => aim.Checksum;
 
-        [GesFunction("lead", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Degree)]
-        public static decimal Lead([GesParam("heading", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Degree)] decimal heading)
-            => heading + 5m;
+        [GesFunction("lead", GameEventScriptValueKind.Float, GameEventScriptFloatUnit.Degree)]
+        public static double Lead([GesParam("heading", GameEventScriptValueKind.Float, GameEventScriptFloatUnit.Degree)] double heading)
+            => heading + 5d;
 
         [GesFunction("distance")]
-        public static (decimal, GameEventScriptDecimalUnit) Distance([GesParam("value", GameEventScriptValueKind.Decimal)] decimal value)
-            => (value, GameEventScriptDecimalUnit.Meter);
+        public static (double, GameEventScriptFloatUnit) Distance([GesParam("value", GameEventScriptValueKind.Float)] double value)
+            => (value, GameEventScriptFloatUnit.Meter);
     }
 
     [GesExtension("boxed")]
     private static class BoxedExtensionFunctions
     {
         [GesFunction("value")]
-        public static GameEventScriptFastValue Value([GesParam("_", GameEventScriptValueKind.Decimal)] GameEventScriptValue value)
+        public static GameEventScriptFastValue Value([GesParam("_", GameEventScriptValueKind.Float)] GameEventScriptValue value)
             => GameEventScriptFastValue.FromGameEventScriptValue(value);
     }
 }

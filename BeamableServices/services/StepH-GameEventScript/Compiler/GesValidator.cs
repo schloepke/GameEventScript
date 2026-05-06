@@ -1012,7 +1012,7 @@ internal static class GesValidator
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
-            "vector" or "point" or "boolean" or "integer" or "decimal" or "number" or "sequence" or
+            "vector" or "point" or "boolean" or "integer" or "float" or "number" or "sequence" or
             "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(

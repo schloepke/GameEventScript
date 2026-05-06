@@ -302,9 +302,9 @@ internal static class GesBytecodeLowerer
         {
             case BooleanLiteralExpressionNode:
             case IntegerLiteralExpressionNode:
-            case DecimalLiteralExpressionNode:
+            case FloatLiteralExpressionNode:
             case PercentageLiteralExpressionNode:
-            case UnitDecimalLiteralExpressionNode:
+            case UnitFloatLiteralExpressionNode:
             case TextLiteralExpressionNode:
             case TagLiteralExpressionNode:
             case IdentifierExpressionNode:
@@ -713,7 +713,7 @@ internal static class GesBytecodeLowerer
 
     private static bool IsKnownBinaryOperator(string operation)
         => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or "^" or
-            "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" or
+            "=" or "==" or "<>" or "=~" or "<" or ">" or "<=" or ">=" or
             "&" or "|" or "xor" or "default" or "in" or "value in" or
             "starts with" or "ends with" or
             "intersect" or "combine" or "merge" or "except" or "zip";
@@ -727,13 +727,13 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "decimal" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence";
+        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence";
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or
-            "boolean" or "integer" or "decimal" or "number" or
+            "boolean" or "integer" or "float" or "number" or
             "sequence" or "list" or "range" or "message" or "handler" or
             "dictionary" or "set" or "dice" or "optional" ||
             !string.IsNullOrWhiteSpace(typeName);
@@ -1718,7 +1718,7 @@ internal static class GesBytecodeLowerer
             {
                 "boolean" => GameEventScriptBytecodeCastKind.Boolean,
                 "integer" => GameEventScriptBytecodeCastKind.Integer,
-                "decimal" => GameEventScriptBytecodeCastKind.Decimal,
+                "float" => GameEventScriptBytecodeCastKind.Float,
                 "number" => GameEventScriptBytecodeCastKind.Number,
                 "percentage" => GameEventScriptBytecodeCastKind.Percentage,
                 "degree" => GameEventScriptBytecodeCastKind.Degree,
@@ -1751,18 +1751,18 @@ internal static class GesBytecodeLowerer
                         EmitLoadConstant(GameEventScriptValueFactory.GesInteger(integer.Value));
                         return;
 
-                    case DecimalLiteralExpressionNode decimalLiteral:
-                        EmitLoadConstant(GameEventScriptValueFactory.GesDecimal(decimalLiteral.Value));
+                    case FloatLiteralExpressionNode floatLiteral:
+                        EmitLoadConstant(GameEventScriptValueFactory.GesFloat(floatLiteral.Value));
                         return;
 
                     case PercentageLiteralExpressionNode percentage:
-                        EmitLoadConstant(GameEventScriptValueFactory.GesPercentage(percentage.PercentValue / 100m));
+                        EmitLoadConstant(GameEventScriptValueFactory.GesPercentage(percentage.PercentValue / 100d));
                         return;
 
-                    case UnitDecimalLiteralExpressionNode unitDecimal:
-                        EmitLoadConstant(GameEventScriptDecimalUnits.TryParseTypeName(unitDecimal.UnitName, out var unit)
-                            ? GameEventScriptValueFactory.GesDecimal(unitDecimal.Value, unit)
-                            : GameEventScriptValueFactory.GesDecimalNaN());
+                    case UnitFloatLiteralExpressionNode unitFloat:
+                        EmitLoadConstant(GameEventScriptFloatUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
+                            ? GameEventScriptValueFactory.GesFloat(unitFloat.Value, unit)
+                            : GameEventScriptValueFactory.GesFloatNaN());
                         return;
 
                     case TextLiteralExpressionNode text:
@@ -2466,12 +2466,12 @@ internal static class GesBytecodeLowerer
             private static bool HasExplicitNonIntegerNumeric(ExpressionNode expression)
                 => expression switch
                 {
-                    DecimalLiteralExpressionNode => true,
+                    FloatLiteralExpressionNode => true,
                     PercentageLiteralExpressionNode => true,
-                    UnitDecimalLiteralExpressionNode => true,
+                    UnitFloatLiteralExpressionNode => true,
                     BinaryExpressionNode binary => HasExplicitNonIntegerNumeric(binary.Left) || HasExplicitNonIntegerNumeric(binary.Right),
-                    TypeCastExpressionNode { TypeName: "decimal" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
-                    TypeConstructorExpressionNode { TypeName: "decimal" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
+                    TypeCastExpressionNode { TypeName: "float" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
+                    TypeConstructorExpressionNode { TypeName: "float" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
                     _ => false
                 };
 
@@ -2502,6 +2502,7 @@ internal static class GesBytecodeLowerer
                     "&" => GameEventScriptBytecodeOpCode.And,
                     "=" or "==" => GameEventScriptBytecodeOpCode.Equal,
                     "<>" => GameEventScriptBytecodeOpCode.NotEqual,
+                    "=~" => GameEventScriptBytecodeOpCode.ApproxEqual,
                     "<" => GameEventScriptBytecodeOpCode.Less,
                     ">" => GameEventScriptBytecodeOpCode.Greater,
                     "<=" => GameEventScriptBytecodeOpCode.LessOrEqual,

@@ -26,11 +26,11 @@ public sealed class GameEventScriptBooleanValue : GameEventScriptValue
 
     public override long AsInteger() => Value ? 1 : 0;
 
-    public override decimal AsNumber() => Value ? 1m : 0m;
+    public override double AsNumber() => Value ? 1d : 0d;
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = GesDecimal(Value ? 1m : 0m);
+        value = GesFloat(Value ? 1d : 0d);
         return true;
     }
 

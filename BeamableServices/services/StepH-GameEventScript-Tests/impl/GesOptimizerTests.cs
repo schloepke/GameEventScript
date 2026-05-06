@@ -12,7 +12,7 @@ public class GesOptimizerTests
     {
         const string script =
             """
-            rule always() means '12.5' as :decimal
+            rule always() means '12.5' as :float
             """;
 
         var module = GameEventScriptBuilder.Create()
@@ -25,7 +25,7 @@ public class GesOptimizerTests
 
         var normalized = (TypeCastExpressionNode)rule.Expression;
         Assert.AreEqual("boolean", normalized.TypeName);
-        Assert.IsInstanceOfType<DecimalLiteralExpressionNode>(normalized.Value);
+        Assert.IsInstanceOfType<FloatLiteralExpressionNode>(normalized.Value);
         Assert.IsNotNull(normalized.SourceRange);
         Assert.IsNotNull(normalized.Value.SourceRange);
     }

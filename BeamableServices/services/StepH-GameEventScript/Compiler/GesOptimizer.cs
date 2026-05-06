@@ -460,16 +460,16 @@ internal static class GesOptimizer
             case IntegerLiteralExpressionNode integerLiteral:
                 value = GameEventScriptValueFactory.GesInteger(integerLiteral.Value);
                 return true;
-            case DecimalLiteralExpressionNode decimalLiteral:
-                value = GameEventScriptValueFactory.GesDecimal(decimalLiteral.Value);
+            case FloatLiteralExpressionNode floatLiteral:
+                value = GameEventScriptValueFactory.GesFloat(floatLiteral.Value);
                 return true;
             case PercentageLiteralExpressionNode percentageLiteral:
-                value = GameEventScriptValueFactory.GesPercentage(percentageLiteral.PercentValue / 100m);
+                value = GameEventScriptValueFactory.GesPercentage(percentageLiteral.PercentValue / 100d);
                 return true;
-            case UnitDecimalLiteralExpressionNode unitDecimalLiteral:
-                value = GameEventScriptDecimalUnits.TryParseTypeName(unitDecimalLiteral.UnitName, out var unit)
-                    ? GameEventScriptValueFactory.GesDecimal(unitDecimalLiteral.Value, unit)
-                    : GameEventScriptValueFactory.GesDecimalNaN();
+            case UnitFloatLiteralExpressionNode unitFloatLiteral:
+                value = GameEventScriptFloatUnits.TryParseTypeName(unitFloatLiteral.UnitName, out var unit)
+                    ? GameEventScriptValueFactory.GesFloat(unitFloatLiteral.Value, unit)
+                    : GameEventScriptValueFactory.GesFloatNaN();
                 return true;
             case TextLiteralExpressionNode textLiteral:
                 value = GameEventScriptValueFactory.GesText(textLiteral.Value);
@@ -691,9 +691,9 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var unit))
+                if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var unit))
                 {
-                    value = GameEventScriptValueFactory.GesDecimal(-unwrapped.AsNumber(), unit);
+                    value = GameEventScriptValueFactory.GesFloat(-unwrapped.AsNumber(), unit);
                     return true;
                 }
 
@@ -703,7 +703,7 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                value = ToGameEventScriptDecimal(NegateNumeric(numeric));
+                value = ToGameEventScriptFloat(NegateNumeric(numeric));
                 return true;
             case "!":
                 if (operand.IsNothing())
@@ -760,61 +760,61 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesOptionalNone();
         }
 
-        if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out _))
+        if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out _))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (!TryCoerceNumericForOperation(unwrapped, out var number))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (number.IsNaN || number.IsNegativeInfinity)
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (number.IsPositiveInfinity)
         {
-            return GameEventScriptValueFactory.GesDecimalInfinity();
+            return GameEventScriptValueFactory.GesFloatInfinity();
         }
 
-        if (number.Value < 0m)
+        if (number.Value < 0d)
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        if (number.Value == 0m)
+        if (number.Value == 0d)
         {
-            return GameEventScriptValueFactory.GesDecimalNegativeInfinity();
+            return GameEventScriptValueFactory.GesFloatNegativeInfinity();
         }
 
         var result = Math.Log((double)number.Value);
         if (double.IsNaN(result))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (double.IsPositiveInfinity(result))
         {
-            return GameEventScriptValueFactory.GesDecimalInfinity();
+            return GameEventScriptValueFactory.GesFloatInfinity();
         }
 
         if (double.IsNegativeInfinity(result))
         {
-            return GameEventScriptValueFactory.GesDecimalNegativeInfinity();
+            return GameEventScriptValueFactory.GesFloatNegativeInfinity();
         }
 
         try
         {
-            return GameEventScriptValueFactory.GesDecimal((decimal)result);
+            return GameEventScriptValueFactory.GesFloat((double)result);
         }
         catch (OverflowException)
         {
             return result < 0d
-                ? GameEventScriptValueFactory.GesDecimalNegativeInfinity()
-                : GameEventScriptValueFactory.GesDecimalInfinity();
+                ? GameEventScriptValueFactory.GesFloatNegativeInfinity()
+                : GameEventScriptValueFactory.GesFloatInfinity();
         }
     }
 
@@ -869,10 +869,13 @@ internal static class GesOptimizer
                 value = GameEventScriptValueFactory.GesBoolean(left.AsBoolean() && right.AsBoolean());
                 return true;
             case "=":
-                value = GameEventScriptValueFactory.GesBoolean(left.Equals(right));
+                value = GameEventScriptValueFactory.GesBoolean(GesValueOperations.AreEqual(left, right));
                 return true;
             case "<>":
-                value = GameEventScriptValueFactory.GesBoolean(!left.Equals(right));
+                value = GameEventScriptValueFactory.GesBoolean(!GesValueOperations.AreEqual(left, right));
+                return true;
+            case "=~":
+                value = GameEventScriptValueFactory.GesBoolean(GesValueOperations.AreApproximatelyEqual(left, right));
                 return true;
             case "<":
                 value = EvaluateNumericComparison(left, right, comparison => comparison < 0);
@@ -1004,7 +1007,7 @@ internal static class GesOptimizer
                     return false;
                 }
 
-                value = ToGameEventScriptDecimal(DivideNumeric(leftDivide, rightDivide));
+                value = ToGameEventScriptFloat(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case "mod":
                 if (GesValueOperations.TryEvaluatePointBinary(left, "mod", right, out value))
@@ -1129,13 +1132,13 @@ internal static class GesOptimizer
                 converted = ConvertToPercentage(value);
                 return true;
             case "degree":
-                converted = ConvertToDecimalUnit(value, GameEventScriptDecimalUnit.Degree);
+                converted = ConvertToFloatUnit(value, GameEventScriptFloatUnit.Degree);
                 return true;
             case "meter":
-                converted = ConvertToDecimalUnit(value, GameEventScriptDecimalUnit.Meter);
+                converted = ConvertToFloatUnit(value, GameEventScriptFloatUnit.Meter);
                 return true;
             case "second":
-                converted = ConvertToDecimalUnit(value, GameEventScriptDecimalUnit.Second);
+                converted = ConvertToFloatUnit(value, GameEventScriptFloatUnit.Second);
                 return true;
             case "vector":
                 converted = ConvertToVector(value);
@@ -1149,8 +1152,8 @@ internal static class GesOptimizer
             case "integer":
                 converted = GameEventScriptValueFactory.GesInteger(value.AsInteger());
                 return true;
-            case "decimal":
-                converted = ConvertToDecimal(value);
+            case "float":
+                converted = ConvertToFloat(value);
                 return true;
             case "list":
                 converted = GameEventScriptValueFactory.GesList(value.AsList());
@@ -1190,11 +1193,11 @@ internal static class GesOptimizer
         }
     }
 
-    private static GameEventScriptValue ConvertToDecimal(GameEventScriptValue value)
+    private static GameEventScriptValue ConvertToFloat(GameEventScriptValue value)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (GesValueOperations.TryEraseVectorUnit(unwrapped, out var vectorWithoutUnit))
@@ -1204,34 +1207,34 @@ internal static class GesOptimizer
 
         if (unwrapped is GameEventScriptTagValue && unwrapped.TryConvertToNumber(out var convertedTag))
         {
-            return ConvertToDecimal(convertedTag);
+            return ConvertToFloat(convertedTag);
         }
 
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (isFinite)
         {
-            return GameEventScriptValueFactory.GesDecimal(number);
+            return GameEventScriptValueFactory.GesFloat(number);
         }
 
         if (unwrapped.IsNaN())
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         return unwrapped.IsNegativeInfinity()
-            ? GameEventScriptValueFactory.GesDecimalNegativeInfinity()
-            : GameEventScriptValueFactory.GesDecimalInfinity();
+            ? GameEventScriptValueFactory.GesFloatNegativeInfinity()
+            : GameEventScriptValueFactory.GesFloatInfinity();
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (unwrapped.IsPercentage())
@@ -1239,29 +1242,29 @@ internal static class GesOptimizer
             return unwrapped;
         }
 
-        if (unwrapped.HasDecimalUnit())
+        if (unwrapped.HasFloatUnit())
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (!TryCoerceNumeric(unwrapped, out var number, out var isFinite) || !isFinite)
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         var ratio = unwrapped.Kind == GameEventScriptValueKind.Integer
-            ? number / 100m
-            : number > 1m || number < -1m
-                ? number / 100m
+            ? number / 100d
+            : number > 1d || number < -1d
+                ? number / 100d
                 : number;
         return GameEventScriptValueFactory.GesPercentage(ratio);
     }
 
-    private static GameEventScriptValue ConvertToDecimalUnit(GameEventScriptValue value, GameEventScriptDecimalUnit unit)
+    private static GameEventScriptValue ConvertToFloatUnit(GameEventScriptValue value, GameEventScriptFloatUnit unit)
     {
         if (!TryUnwrapOptional(value, out var unwrapped))
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
         if (GesValueOperations.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
@@ -1269,19 +1272,19 @@ internal static class GesOptimizer
             return vectorWithUnit;
         }
 
-        if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out var existingUnit) && existingUnit != unit)
+        if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var existingUnit) && existingUnit != unit)
         {
-            return GameEventScriptValueFactory.GesDecimalNaN();
+            return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        if (unwrapped.Kind is GameEventScriptValueKind.Decimal or GameEventScriptValueKind.Integer &&
+        if (unwrapped.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer &&
             TryCoerceNumeric(unwrapped, out var number, out var isFinite) &&
             isFinite)
         {
-            return GameEventScriptValueFactory.GesDecimal(number, unit);
+            return GameEventScriptValueFactory.GesFloat(number, unit);
         }
 
-        return GameEventScriptValueFactory.GesDecimalNaN();
+        return GameEventScriptValueFactory.GesFloatNaN();
     }
 
     private static GameEventScriptValue ConvertToVector(GameEventScriptValue value)
@@ -1390,7 +1393,7 @@ internal static class GesOptimizer
         return true;
     }
 
-    private static bool TryCoerceNumeric(GameEventScriptValue value, out decimal number, out bool isFinite)
+    private static bool TryCoerceNumeric(GameEventScriptValue value, out double number, out bool isFinite)
     {
         number = default;
         isFinite = false;
@@ -1411,7 +1414,7 @@ internal static class GesOptimizer
                 number = value.AsInteger();
                 isFinite = true;
                 return true;
-            case GameEventScriptValueKind.Decimal:
+            case GameEventScriptValueKind.Float:
                 if (!value.IsNaN() && !value.IsInfinity())
                 {
                     number = value.AsNumber();
@@ -1426,14 +1429,14 @@ internal static class GesOptimizer
                 return true;
             case GameEventScriptValueKind.Text:
             case GameEventScriptValueKind.Tag:
-                if (decimal.TryParse(value.AsText(), out var parsed))
+                if (double.TryParse(value.AsText(), out var parsed))
                 {
                     number = parsed;
                     isFinite = true;
                 }
                 return true;
             case GameEventScriptValueKind.Boolean:
-                number = value.AsBoolean() ? 1m : 0m;
+                number = value.AsBoolean() ? 1d : 0d;
                 isFinite = true;
                 return true;
             default:
@@ -1449,7 +1452,7 @@ internal static class GesOptimizer
         NegativeInfinity
     }
 
-    private readonly record struct NumericValue(NumericKind Kind, decimal Value)
+    private readonly record struct NumericValue(NumericKind Kind, double Value)
     {
         public bool IsFinite => Kind == NumericKind.Finite;
         public bool IsNaN => Kind == NumericKind.NaN;
@@ -1457,10 +1460,10 @@ internal static class GesOptimizer
         public bool IsNegativeInfinity => Kind == NumericKind.NegativeInfinity;
         public bool IsInfinity => IsPositiveInfinity || IsNegativeInfinity;
 
-        public static NumericValue Finite(decimal value) => new(NumericKind.Finite, value);
-        public static NumericValue NaN() => new(NumericKind.NaN, 0m);
-        public static NumericValue PositiveInfinity() => new(NumericKind.PositiveInfinity, 0m);
-        public static NumericValue NegativeInfinity() => new(NumericKind.NegativeInfinity, 0m);
+        public static NumericValue Finite(double value) => new(NumericKind.Finite, value);
+        public static NumericValue NaN() => new(NumericKind.NaN, 0d);
+        public static NumericValue PositiveInfinity() => new(NumericKind.PositiveInfinity, 0d);
+        public static NumericValue NegativeInfinity() => new(NumericKind.NegativeInfinity, 0d);
     }
 
     private static bool TryCoerceNumericForOperation(GameEventScriptValue value, out NumericValue number)
@@ -1476,7 +1479,7 @@ internal static class GesOptimizer
             return TryCoerceNumericForOperation(convertedTag, out number);
         }
 
-        if (value.Kind == GameEventScriptValueKind.Decimal)
+        if (value.Kind == GameEventScriptValueKind.Float)
         {
             if (value.IsNaN())
             {
@@ -1510,7 +1513,7 @@ internal static class GesOptimizer
 
         if (value.IsText())
         {
-            if (decimal.TryParse(value.AsText(), out var parsed))
+            if (double.TryParse(value.AsText(), out var parsed))
             {
                 number = NumericValue.Finite(parsed);
                 return true;
@@ -1522,7 +1525,7 @@ internal static class GesOptimizer
 
         if (value.Kind == GameEventScriptValueKind.Boolean)
         {
-            number = NumericValue.Finite(value.AsBoolean() ? 1m : 0m);
+            number = NumericValue.Finite(value.AsBoolean() ? 1d : 0d);
             return true;
         }
 
@@ -1530,14 +1533,14 @@ internal static class GesOptimizer
         return false;
     }
 
-    private static GameEventScriptValue ToGameEventScriptDecimal(NumericValue number)
+    private static GameEventScriptValue ToGameEventScriptFloat(NumericValue number)
         => number.Kind switch
         {
-            NumericKind.Finite => GameEventScriptValueFactory.GesDecimal(number.Value),
-            NumericKind.NaN => GameEventScriptValueFactory.GesDecimalNaN(),
-            NumericKind.PositiveInfinity => GameEventScriptValueFactory.GesDecimalInfinity(),
-            NumericKind.NegativeInfinity => GameEventScriptValueFactory.GesDecimalNegativeInfinity(),
-            _ => GameEventScriptValueFactory.GesDecimalNaN()
+            NumericKind.Finite => GameEventScriptValueFactory.GesFloat(number.Value),
+            NumericKind.NaN => GameEventScriptValueFactory.GesFloatNaN(),
+            NumericKind.PositiveInfinity => GameEventScriptValueFactory.GesFloatInfinity(),
+            NumericKind.NegativeInfinity => GameEventScriptValueFactory.GesFloatNegativeInfinity(),
+            _ => GameEventScriptValueFactory.GesFloatNaN()
         };
 
     private static GameEventScriptValue ToGameEventScriptNumericResult(
@@ -1560,7 +1563,7 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesInteger(integer);
         }
 
-        return ToGameEventScriptDecimal(number);
+        return ToGameEventScriptFloat(number);
     }
 
     private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
@@ -1616,8 +1619,8 @@ internal static class GesOptimizer
             return NumericValue.Finite(sum);
         }
 
-        if (left.Value > 0m && right.Value > 0m) return NumericValue.PositiveInfinity();
-        if (left.Value < 0m && right.Value < 0m) return NumericValue.NegativeInfinity();
+        if (left.Value > 0d && right.Value > 0d) return NumericValue.PositiveInfinity();
+        if (left.Value < 0d && right.Value < 0d) return NumericValue.NegativeInfinity();
         return NumericValue.NaN();
     }
 
@@ -1654,9 +1657,9 @@ internal static class GesOptimizer
     {
         if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
 
-        if (right.IsFinite && right.Value == 0m)
+        if (right.IsFinite && right.Value == 0d)
         {
-            if (left.IsFinite && left.Value == 0m) return NumericValue.NaN();
+            if (left.IsFinite && left.Value == 0d) return NumericValue.NaN();
             return SignOf(left) >= 0 ? NumericValue.PositiveInfinity() : NumericValue.NegativeInfinity();
         }
 
@@ -1671,7 +1674,7 @@ internal static class GesOptimizer
 
         if (right.IsInfinity)
         {
-            return NumericValue.Finite(0m);
+            return NumericValue.Finite(0d);
         }
 
         if (TryDivideFinite(left.Value, right.Value, out var quotient))
@@ -1700,7 +1703,7 @@ internal static class GesOptimizer
         if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
         if (left.IsInfinity) return NumericValue.NaN();
         if (right.IsInfinity) return left.IsFinite ? NumericValue.Finite(left.Value) : NumericValue.NaN();
-        if (right.Value == 0m) return NumericValue.NaN();
+        if (right.Value == 0d) return NumericValue.NaN();
 
         if (TryModuloFinite(left.Value, right.Value, out var modulo))
         {
@@ -1715,7 +1718,7 @@ internal static class GesOptimizer
         if (left.IsNaN || right.IsNaN) return NumericValue.NaN();
         if (left.IsInfinity) return NumericValue.NaN();
         if (right.IsInfinity) return left.IsFinite ? NumericValue.Finite(left.Value) : NumericValue.NaN();
-        if (right.Value == 0m) return NumericValue.NaN();
+        if (right.Value == 0d) return NumericValue.NaN();
 
         if (TryRemainderFinite(left.Value, right.Value, out var remainder))
         {
@@ -1737,7 +1740,7 @@ internal static class GesOptimizer
             return NumericValue.Finite(negated);
         }
 
-        return value.Value < 0m ? NumericValue.PositiveInfinity() : NumericValue.NegativeInfinity();
+        return value.Value < 0d ? NumericValue.PositiveInfinity() : NumericValue.NegativeInfinity();
     }
 
     private static int SignOf(NumericValue value)
@@ -1745,15 +1748,15 @@ internal static class GesOptimizer
         if (value.IsPositiveInfinity) return 1;
         if (value.IsNegativeInfinity) return -1;
         if (!value.IsFinite) return 0;
-        return value.Value.CompareTo(0m);
+        return value.Value.CompareTo(0d);
     }
 
-    private static bool IsZero(NumericValue value) => value.IsFinite && value.Value == 0m;
+    private static bool IsZero(NumericValue value) => value.IsFinite && value.Value == 0d;
 
     private static bool TryToInteger(NumericValue number, out long integer)
     {
         if (!number.IsFinite ||
-            number.Value != decimal.Truncate(number.Value) ||
+            number.Value != Math.Truncate(number.Value) ||
             number.Value > long.MaxValue ||
             number.Value < long.MinValue)
         {
@@ -1765,7 +1768,7 @@ internal static class GesOptimizer
         return true;
     }
 
-    private static bool TryAddFinite(decimal left, decimal right, out decimal value)
+    private static bool TryAddFinite(double left, double right, out double value)
     {
         try
         {
@@ -1779,7 +1782,7 @@ internal static class GesOptimizer
         }
     }
 
-    private static bool TryMultiplyFinite(decimal left, decimal right, out decimal value)
+    private static bool TryMultiplyFinite(double left, double right, out double value)
     {
         try
         {
@@ -1793,7 +1796,7 @@ internal static class GesOptimizer
         }
     }
 
-    private static bool TryDivideFinite(decimal left, decimal right, out decimal value)
+    private static bool TryDivideFinite(double left, double right, out double value)
     {
         try
         {
@@ -1807,13 +1810,13 @@ internal static class GesOptimizer
         }
     }
 
-    private static bool TryModuloFinite(decimal left, decimal right, out decimal value)
+    private static bool TryModuloFinite(double left, double right, out double value)
     {
         try
         {
             var remainder = left % right;
-            if (remainder != 0m &&
-                (remainder < 0m && right > 0m || remainder > 0m && right < 0m))
+            if (remainder != 0d &&
+                (remainder < 0d && right > 0d || remainder > 0d && right < 0d))
             {
                 remainder += right;
             }
@@ -1828,7 +1831,7 @@ internal static class GesOptimizer
         }
     }
 
-    private static bool TryNegateFinite(decimal input, out decimal value)
+    private static bool TryNegateFinite(double input, out double value)
     {
         try
         {
@@ -1852,19 +1855,19 @@ internal static class GesOptimizer
             case GameEventScriptValueKind.Integer:
                 expression = new IntegerLiteralExpressionNode(value.AsInteger());
                 return true;
-            case GameEventScriptValueKind.Decimal:
+            case GameEventScriptValueKind.Float:
                 if (value.IsNaN() || value.IsInfinity())
                 {
                     expression = default!;
                     return false;
                 }
 
-                expression = value is GameEventScriptDecimalValue { Unit: { } unit }
-                    ? new UnitDecimalLiteralExpressionNode(value.AsNumber(), unit.ToTypeName())
-                    : new DecimalLiteralExpressionNode(value.AsNumber());
+                expression = value is GameEventScriptFloatValue { Unit: { } unit }
+                    ? new UnitFloatLiteralExpressionNode(value.AsNumber(), unit.ToTypeName())
+                    : new FloatLiteralExpressionNode(value.AsNumber());
                 return true;
             case GameEventScriptValueKind.Percentage:
-                expression = new PercentageLiteralExpressionNode(value.AsNumber() * 100m);
+                expression = new PercentageLiteralExpressionNode(value.AsNumber() * 100d);
                 return true;
             case GameEventScriptValueKind.Text:
                 expression = new TextLiteralExpressionNode(value.AsText());
@@ -1878,9 +1881,9 @@ internal static class GesOptimizer
                 expression = new TypeConstructorExpressionNode(
                     "vector",
                     new ArgumentListNode([
-                        new ArgumentNode(null, CreateDecimalLiteral(vector.X, vector.Unit)),
-                        new ArgumentNode(null, CreateDecimalLiteral(vector.Y, vector.Unit)),
-                        new ArgumentNode(null, CreateDecimalLiteral(vector.Z, vector.Unit))
+                        new ArgumentNode(null, CreateFloatLiteral(vector.X, vector.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(vector.Y, vector.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(vector.Z, vector.Unit))
                     ]));
                 return true;
             }
@@ -1890,9 +1893,9 @@ internal static class GesOptimizer
                 expression = new TypeConstructorExpressionNode(
                     "point",
                     new ArgumentListNode([
-                        new ArgumentNode(null, CreateDecimalLiteral(point.X, point.Unit)),
-                        new ArgumentNode(null, CreateDecimalLiteral(point.Y, point.Unit)),
-                        new ArgumentNode(null, CreateDecimalLiteral(point.Z, point.Unit))
+                        new ArgumentNode(null, CreateFloatLiteral(point.X, point.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(point.Y, point.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(point.Z, point.Unit))
                     ]));
                 return true;
             }
@@ -1953,12 +1956,12 @@ internal static class GesOptimizer
         }
     }
 
-    private static ExpressionNode CreateDecimalLiteral(decimal value, GameEventScriptDecimalUnit? unit)
+    private static ExpressionNode CreateFloatLiteral(double value, GameEventScriptFloatUnit? unit)
         => unit.HasValue
-            ? new UnitDecimalLiteralExpressionNode(value, GameEventScriptDecimalUnits.ToTypeName(unit.Value))
-            : new DecimalLiteralExpressionNode(value);
+            ? new UnitFloatLiteralExpressionNode(value, GameEventScriptFloatUnits.ToTypeName(unit.Value))
+            : new FloatLiteralExpressionNode(value);
 
-    private static bool TryRemainderFinite(decimal left, decimal right, out decimal value)
+    private static bool TryRemainderFinite(double left, double right, out double value)
     {
         try
         {

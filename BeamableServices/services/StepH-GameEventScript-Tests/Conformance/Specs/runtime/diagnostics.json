@@ -12,14 +12,14 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":decimal", "value": "5" }
+              "value": { "type": ":float", "value": "5" }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "result": { "type": ":decimal", "value": "7" }
+                "result": { "type": ":float", "value": "7" }
               }
             }
           ],

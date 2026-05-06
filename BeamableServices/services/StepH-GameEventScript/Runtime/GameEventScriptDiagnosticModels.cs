@@ -23,12 +23,14 @@ public enum GameEventScriptDiagnosticEventKind
     RuntimeLimitReached
 }
 
-public sealed record GameEventScriptDiagnosticEvent(
-    int Sequence,
-    GameEventScriptDiagnosticEventKind Kind,
-    string Name,
-    GameEventScriptNamedArguments Arguments,
-    string? Detail = null)
+
+public interface IGameEventScriptDiagnosticCollector
+{
+    void Record(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null);
+}
+
+
+public sealed record GameEventScriptDiagnosticEvent(int Sequence, GameEventScriptDiagnosticEventKind Kind, string Name, GameEventScriptNamedArguments Arguments, string? Detail = null)
 {
     public override string ToString()
     {
@@ -37,10 +39,6 @@ public sealed record GameEventScriptDiagnosticEvent(
     }
 }
 
-public interface IGameEventScriptDiagnosticCollector
-{
-    void Record(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null);
-}
 
 public sealed class GameEventScriptDiagnosticTraceCollector : IGameEventScriptDiagnosticCollector
 {

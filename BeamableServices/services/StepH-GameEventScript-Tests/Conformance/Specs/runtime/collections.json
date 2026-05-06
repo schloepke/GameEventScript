@@ -304,6 +304,54 @@
     },
     {
       "kind": "scriptApi",
+      "name": "streamable range selectors short circuit before range materialization",
+      "script": "on Start {\n  let values be from 1 to 100\n  emit Done(anyEarly: values[:any item where item = 1], allEarlyFalse: values[:all item where item < 1], firstEarly: values[:first item where item = 1], firstSelected: values[:select item => item + 10][:first item where item = 11], containsLast: values[:contains 100])\n}",
+      "runtimeLimits": {
+        "maxRangeItems": 5
+      },
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "anyEarly": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "allEarlyFalse": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "firstEarly": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "firstSelected": {
+                  "type": ":integer",
+                  "value": "11"
+                },
+                "containsLast": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ],
+          "unexpectedDiagnostics": [
+            {
+              "kind": "RuntimeLimitReached"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "any and all use true checks",
       "script": "on Start(items) {\n  let anyKnownFalse be items[:any item where item.points > 10]\n  let allKnownFalse be items[:all item where item.points > 10]\n  let anyUnknown be items[:any item where item.missing > 10]\n  let allUnknown be items[:all item where item.missing > 10]\n  emit Done(anyKnownFalse: anyKnownFalse, allKnownFalse: allKnownFalse, anyUnknown: anyUnknown, allUnknown: allUnknown)\n}",
       "steps": [

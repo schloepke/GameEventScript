@@ -15,19 +15,11 @@ public sealed class GameEventScriptDispatcher : IDisposable
 
     private GameEventScriptDispatcher(int workerCount, string workerName)
     {
-        if (workerCount <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(workerCount), "GameEventScript dispatcher worker count must be greater than zero.");
-        }
-
+        if (workerCount <= 0) throw new ArgumentOutOfRangeException(nameof(workerCount), "GameEventScript dispatcher worker count must be greater than zero.");
         _workers = new Thread[workerCount];
         for (var index = 0; index < _workers.Length; index++)
         {
-            var worker = new Thread(WorkerLoop)
-            {
-                IsBackground = true,
-                Name = workerCount == 1 ? workerName : $"{workerName} #{index + 1}"
-            };
+            var worker = new Thread(WorkerLoop) { IsBackground = true, Name = workerCount == 1 ? workerName : $"{workerName} #{index + 1}" };
             _workers[index] = worker;
             worker.Start();
         }
@@ -35,19 +27,14 @@ public sealed class GameEventScriptDispatcher : IDisposable
 
     public static GameEventScriptDispatcher Shared { get; } = new(1, "GameEventScript shared dispatch pump");
 
-    public static GameEventScriptDispatcher Create(int workerCount = 1)
-        => new(workerCount, "GameEventScript dispatch pump");
+    public static GameEventScriptDispatcher Create(int workerCount = 1) => new(workerCount, "GameEventScript dispatch pump");
 
     internal void Enqueue(Action workItem)
     {
         _ = workItem ?? throw new ArgumentNullException(nameof(workItem));
         lock (_gate)
         {
-            if (_disposed)
-            {
-                throw new ObjectDisposedException(nameof(GameEventScriptDispatcher));
-            }
-
+            if (_disposed) throw new ObjectDisposedException(nameof(GameEventScriptDispatcher));
             _workItems.Enqueue(workItem);
             Monitor.Pulse(_gate);
         }
@@ -57,11 +44,7 @@ public sealed class GameEventScriptDispatcher : IDisposable
     {
         lock (_gate)
         {
-            if (_disposed)
-            {
-                return;
-            }
-
+            if (_disposed) return;
             _disposed = true;
             Monitor.PulseAll(_gate);
         }
@@ -69,10 +52,7 @@ public sealed class GameEventScriptDispatcher : IDisposable
         var current = Thread.CurrentThread;
         foreach (var worker in _workers)
         {
-            if (!ReferenceEquals(worker, current))
-            {
-                worker.Join();
-            }
+            if (!ReferenceEquals(worker, current)) worker.Join();
         }
     }
 
@@ -88,11 +68,7 @@ public sealed class GameEventScriptDispatcher : IDisposable
                     Monitor.Wait(_gate);
                 }
 
-                if (_workItems.Count == 0 && _disposed)
-                {
-                    return;
-                }
-
+                if (_workItems.Count == 0 && _disposed) return;
                 workItem = _workItems.Dequeue();
             }
 

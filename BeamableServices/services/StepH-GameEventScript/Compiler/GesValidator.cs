@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -140,13 +141,20 @@ internal static class GesValidator
 
         foreach (var handler in parsedScript.Handlers)
         {
-            ValidateMessageCase(
+            if (GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message))
+            {
+                ValidateUndeliverableHandler(parsedScript, handler, errors);
+            }
+            else
+            {
+                ValidateMessageCase(
                     parsedScript,
                     handler.Message,
                     handler.Message,
                     GameEventScriptSymbolKind.Handler,
                     "Handler message names must use message casing (start uppercase and contain only letters)",
                     errors);
+            }
 
             foreach (var parameter in handler.Parameters)
             {
@@ -183,6 +191,48 @@ internal static class GesValidator
             {
                 ValidateStatementReferences(parsedScript, statement, callables, typeDefinitions, errors, handlerScope);
             }
+        }
+    }
+
+    private static void ValidateUndeliverableHandler(
+        ParsedScript parsedScript,
+        EventHandlerNode handler,
+        GesValidationErrors errors)
+    {
+        if (handler.ParameterList.Count != 1)
+        {
+            errors.Add(
+                parsedScript,
+                "System endpoint 'undeliverable' expects exactly one 'envelope' parameter",
+                handler.Message,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                handler);
+            return;
+        }
+
+        var parameter = handler.ParameterList[0];
+        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.EnvelopeArgumentName, StringComparison.Ordinal))
+        {
+            errors.Add(
+                parsedScript,
+                "System endpoint 'undeliverable' parameter signature must be 'envelope'",
+                parameter.LocalName,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                parameter);
+        }
+
+        if (!string.IsNullOrEmpty(parameter.DeclaredType) &&
+            !string.Equals(parameter.DeclaredType, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal))
+        {
+            errors.Add(
+                parsedScript,
+                "System endpoint 'undeliverable' parameter type must be ':envelope'",
+                parameter.DeclaredType!,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                parameter);
         }
     }
 
@@ -1416,7 +1466,7 @@ internal static class GesValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "sequence" or "series" or
-            "list" or "range" or "message" or "handler" or "ref" or "dictionary" or "set" or "dice" or "optional";
+            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "dictionary" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(
         ParsedScript parsedScriptContext,

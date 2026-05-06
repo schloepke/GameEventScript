@@ -74,6 +74,70 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "undeliverable endpoint receives unknown tagged messages",
+      "script": "on Start {\n  emit Unknown(value: 7) with :radio, :encrypted\n  emit Silent(value: 1) with :silent\n}\n\non undeliverable(envelope as :envelope) matching :radio {\n  emit Heard(name: envelope.message.name, signature: envelope.message.signatureid, value: envelope.message.arguments.value, tagCount: :len envelope.tags, firstTag: envelope.tags[1], secondTag: envelope.tags[2], isEnvelope: envelope is :envelope, isMessage: envelope.message is :message)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Unknown",
+              "tags": ["radio", "encrypted"],
+              "args": {
+                "value": { "type": ":integer", "value": "7" }
+              }
+            },
+            {
+              "name": "Silent",
+              "tags": ["silent"],
+              "args": {
+                "value": { "type": ":integer", "value": "1" }
+              }
+            },
+            {
+              "name": "Heard",
+              "args": {
+                "firstTag": { "type": ":tag", "value": "radio" },
+                "isEnvelope": { "type": ":boolean", "value": true },
+                "isMessage": { "type": ":boolean", "value": true },
+                "name": { "type": ":text", "value": "Unknown" },
+                "secondTag": { "type": ":tag", "value": "encrypted" },
+                "signature": { "type": ":text", "value": "Unknown(value)" },
+                "tagCount": { "type": ":integer", "value": "2" },
+                "value": { "type": ":integer", "value": "7" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "normal delivery suppresses undeliverable endpoint",
+      "script": "on Start {\n  emit Known(value: 3) with :radio\n}\n\non Known(value) matching :radio {\n  emit Normal(value: value)\n}\n\non undeliverable(envelope as :envelope) matching :radio {\n  emit Unexpected(name: envelope.message.name)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Known",
+              "tags": ["radio"],
+              "args": {
+                "value": { "type": ":integer", "value": "3" }
+              }
+            },
+            {
+              "name": "Normal",
+              "args": {
+                "value": { "type": ":integer", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

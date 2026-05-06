@@ -256,6 +256,7 @@ public enum GameEventScriptBytecodeCastKind
     Uuid,
     Sequence,
     Series,
+    Envelope,
     Ref
 }
 

@@ -1298,6 +1298,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "sequence" => value.ReferenceValue?.IsSequence() ?? false,
             "series" => value.ReferenceValue?.IsSeries() ?? false,
+            "envelope" => value.ReferenceValue is { } envelopeValue &&
+                          envelopeValue.TryGetCustomTypeName(out var envelopeTypeName) &&
+                          string.Equals(envelopeTypeName, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal),
             "list" => value.ReferenceValue?.IsList() ?? false,
             "range" => value.ReferenceValue?.IsRange() ?? false,
             "message" => value.ReferenceValue is { } messageValue &&
@@ -2748,6 +2751,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "series" => boxed.IsSeries()
                 ? input
                 : BytecodeVmValue.Nothing,
+            "envelope" => boxed.TryGetCustomTypeName(out var envelopeTypeName) &&
+                          string.Equals(envelopeTypeName, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal)
+                ? input
+                : BytecodeVmValue.Nothing,
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
                 ? BytecodeVmValue.Reference(GesList(boxed.AsList()))
                 : BytecodeVmValue.Nothing,
@@ -2944,6 +2951,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeCastKind.Uuid => "uuid",
             GameEventScriptBytecodeCastKind.Sequence => "sequence",
             GameEventScriptBytecodeCastKind.Series => "series",
+            GameEventScriptBytecodeCastKind.Envelope => "envelope",
             GameEventScriptBytecodeCastKind.Ref => "ref",
             _ => string.Empty
         };

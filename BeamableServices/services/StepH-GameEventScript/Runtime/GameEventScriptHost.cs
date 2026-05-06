@@ -530,14 +530,19 @@ public sealed class GameEventScriptHost
 
     private bool TryEnqueueInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.Name) ||
-            !TryGetSubscriptions(message.SignatureId, out var subscriptions) ||
-            subscriptions.Length == 0)
+        if (string.IsNullOrWhiteSpace(message.Name))
         {
             return false;
         }
 
+        if (!TryGetSubscriptions(message.SignatureId, out var subscriptions) ||
+            subscriptions.Length == 0)
+        {
+            return TryEnqueueUndeliverableInvocation(state, message);
+        }
+
         var accepted = false;
+        var matched = false;
         foreach (var subscription in subscriptions)
         {
             if (!subscription.MatchesTags(message))
@@ -545,10 +550,39 @@ public sealed class GameEventScriptHost
                 continue;
             }
 
+            matched = true;
             accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
         }
 
-        return accepted;
+        return matched
+            ? accepted
+            : TryEnqueueUndeliverableInvocation(state, message);
+    }
+
+    private bool TryEnqueueUndeliverableInvocation(GameEventScriptHostRunState state, GameEventScriptMessage message)
+    {
+        if (GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name) ||
+            !TryGetSubscriptions(GameEventScriptSystemEndpoints.UndeliverableSignatureId, out var subscriptions) ||
+            subscriptions.Length == 0)
+        {
+            return false;
+        }
+
+        var undeliverableMessage = GameEventScriptSystemEndpoints.CreateUndeliverableMessage(message);
+        var accepted = false;
+        var matched = false;
+        foreach (var subscription in subscriptions)
+        {
+            if (!subscription.MatchesTags(undeliverableMessage))
+            {
+                continue;
+            }
+
+            matched = true;
+            accepted |= state.Enqueue(new QueuedInvocation(undeliverableMessage, subscription));
+        }
+
+        return matched && accepted;
     }
 
     private static MessageSubscription[] InsertSubscriptionByDispatchOrder(MessageSubscription[] handlers, MessageSubscription subscription)

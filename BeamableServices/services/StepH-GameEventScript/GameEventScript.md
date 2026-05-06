@@ -123,6 +123,8 @@ GameEventScript uses casing to keep the grammar readable.
   `player_1a` are invalid.
 - Message and handler names start uppercase and use letters only: `Start`,
   `DamageTaken`, `Done`.
+- `undeliverable` is a reserved lowercase system endpoint name for fallback
+  dispatch.
 - Type names are tags: `:float`, `:vector`, `:gauge`.
 - Tags are also values and use letters only: `:boss`, `:ready`, `:fire`.
 
@@ -255,6 +257,30 @@ run earlier; `0` is normal priority.
 Script handlers are subscribers. Host callbacks registered with `Subscribe` are
 also subscribers. They participate in the same dispatch order.
 
+### Undeliverable messages
+
+`undeliverable` is a reserved system endpoint. It receives messages that could
+not be delivered to any normal subscriber after message signature and tag
+filters were applied.
+
+```eventscript
+on undeliverable(envelope as :envelope) matching :radio {
+    let message be envelope.message
+    let tags be envelope.tags
+
+    emit HeardUnknown(name: message.name, tags: tags)
+}
+```
+
+The endpoint uses the same `matching` and `without` tag filters as normal
+handlers. Without filters, it receives every undeliverable message. The envelope
+is dictionary-backed and currently guarantees:
+
+- `message`: the original message as `:message`
+- `tags`: all original envelope tags as a list of `:tag` values
+
+The fallback endpoint does not receive itself recursively.
+
 ### Messages and ordered signatures
 
 Message arguments are labeled positional slots. Labels are part of the signature
@@ -331,8 +357,9 @@ let msg be Done(value: 10)
 publish msg
 ```
 
-Publishing an unknown message or a message with no subscribers is a valid no-op.
-The message is still considered published.
+Publishing an unknown message or a message with no normal subscribers is a valid
+no-op unless an `undeliverable` endpoint matches it. The message is still
+considered published.
 
 Publishing a non-message expression is lenient and does nothing.
 
@@ -944,6 +971,7 @@ Types are written as tags. Built-in public type tags are:
 - `:range`
 - `:message`
 - `:handler`
+- `:envelope`
 - `:ref`
 - `:list`
 - `:dictionary`
@@ -1488,6 +1516,13 @@ let m as :message be h(value: 42)
 
 They can be passed as arguments, stored in dictionaries, published, and
 inspected. They are not dictionaries for type checks.
+
+### `:envelope`
+
+Envelope values are dictionary-backed system values. They are intentionally open
+so future envelope metadata can be added without changing bytecode shape. The
+current system envelope is used by `undeliverable` and exposes `message` and
+`tags`.
 
 ### `:ref`
 

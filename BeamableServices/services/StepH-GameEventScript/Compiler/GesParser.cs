@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Compiler.GesTokenKind;
 
 namespace StepH.GameEventScript.Compiler;
@@ -357,7 +358,7 @@ internal sealed class GesParser
         var startToken = Current;
         Expect(On);
         SkipNewLines();
-        var message = Expect(Message).Text;
+        var message = ParseEventHandlerMessageName();
 
         var parameters = new List<ParameterNode>();
         if (Match(LeftParen))
@@ -384,6 +385,23 @@ internal sealed class GesParser
         Expect(RightBrace);
 
         return WithRange(new EventHandlerNode(message, parameters, statements, requiredTags, excludedTags), startToken);
+    }
+
+    private string ParseEventHandlerMessageName()
+    {
+        if (Is(Message))
+        {
+            return Advance().Text;
+        }
+
+        if (Current.Kind == Identifier &&
+            GameEventScriptSystemEndpoints.IsUndeliverableName(Current.Text))
+        {
+            return Advance().Text;
+        }
+
+        var token = Current;
+        throw new GameEventScriptParseException($"Expected {Message} or system endpoint but found {token.Kind}", token);
     }
 
     private void ParseOptionalHandlerTagFilters(List<string> requiredTags, List<string> excludedTags)

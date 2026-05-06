@@ -34,7 +34,8 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeCastKind
   enum-field Uuid = 10
   enum-field Sequence = 11
   enum-field Series = 12
-  enum-field Ref = 13
+  enum-field Envelope = 13
+  enum-field Ref = 14
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeConstant
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeConstant other)
   method System.Boolean Equals(System.Object obj)

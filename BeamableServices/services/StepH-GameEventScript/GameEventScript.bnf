@@ -13,7 +13,8 @@ PredicateDefinition ::= "predicate" Identifier "(" [ ParamList ] ")" "means" Exp
 FunctionDefinition ::= "function" Identifier "(" [ ParamList ] ")" "means" Expression
 TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
 TypeFieldSeparator ::= "," | StatementSeparator
-EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
+EventHandler ::= "on" ( Message | SystemEndpoint ) [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
+SystemEndpoint ::= "undeliverable"
 EventSeparator ::= StatementSeparator
 StatementSeparator ::= [ Trivia ] ( ";" [ Trivia ] | NewLine { TriviaOrNewLine } )
 TriviaOrNewLine ::= Trivia | NewLine
@@ -192,6 +193,7 @@ TypeTag ::= ":text"
           | ":range"
           | ":message"
           | ":handler"
+          | ":envelope"
           | ":ref"
           | ":sequence"
           | ":series"

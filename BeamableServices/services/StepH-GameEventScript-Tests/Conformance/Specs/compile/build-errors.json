@@ -345,6 +345,28 @@
         "symbol": "gauge",
         "symbolKind": "Type"
       }
+    },
+    {
+      "kind": "compileError",
+      "name": "undeliverable endpoint requires envelope parameter",
+      "script": "on undeliverable(message as :message) {\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidMessageCase",
+        "symbol": "message",
+        "symbolKind": "Handler"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "undeliverable endpoint rejects non-envelope type",
+      "script": "on undeliverable(envelope as :message) {\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "message",
+        "symbolKind": "Type"
+      }
     }
   ]
 }

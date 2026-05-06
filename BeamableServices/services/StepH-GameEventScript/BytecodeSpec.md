@@ -279,6 +279,18 @@ CallableEntry
 Temporary slots are implementation details but are part of the portable frame
 layout for the bytecode version.
 
+System endpoint entries use reserved lowercase names outside normal message
+casing. The currently defined endpoint is:
+
+```text
+undeliverable(envelope)
+```
+
+It receives a dictionary-backed `:envelope` value when no normal handler could
+be queued for a message after signature and tag filters were applied. System
+endpoints still use normal handler metadata, priority, declaration order, and
+tag filters.
+
 Type definitions may reference code addresses for computed fields and clamps:
 
 ```text
@@ -501,7 +513,7 @@ Required portable value families:
 - points: `:point`
 - containers: `:optional`, `:sequence`, `:series`, `:range`, `:list`,
   `:dictionary`, `:set`, `:dice`
-- runtime values: `:message`, `:handler`, `:ref`
+- runtime values: `:message`, `:handler`, `:envelope`, `:ref`
 - custom record and external types
 
 UUIDs are RFC-compatible 128-bit binary values. They should compare by high/low
@@ -515,6 +527,11 @@ scalar, usually `:text` or `:uuid`.
 Series values are index-addressed, repeatable mathematical series. Supported
 operations are `:term`, `:take`, and `:drop`; unsupported lookup/selector
 operations evaluate to `nothing`.
+
+Envelope values are dictionary-backed system values. The bytecode model should
+treat `:envelope` as an open typed dictionary so fields can be added later
+without changing instruction shape. The currently guaranteed fields are
+`message: :message` and `tags: :list` of tag values.
 
 ### Emit, Publish, and Tags
 

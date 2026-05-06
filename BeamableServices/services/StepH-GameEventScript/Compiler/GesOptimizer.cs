@@ -739,9 +739,82 @@ internal static class GesOptimizer
 
                 value = GameEventScriptNothingValue.Instance;
                 return false;
+            case "ln":
+                value = EvaluateNaturalLogUnary(operand);
+                return true;
             default:
                 value = GameEventScriptNothingValue.Instance;
                 return false;
+        }
+    }
+
+    private static GameEventScriptValue EvaluateNaturalLogUnary(GameEventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (!TryUnwrapOptional(operand, out var unwrapped))
+        {
+            return GameEventScriptValueFactory.GesOptionalNone();
+        }
+
+        if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out _))
+        {
+            return GameEventScriptValueFactory.GesDecimalNaN();
+        }
+
+        if (!TryCoerceNumericForOperation(unwrapped, out var number))
+        {
+            return GameEventScriptValueFactory.GesDecimalNaN();
+        }
+
+        if (number.IsNaN || number.IsNegativeInfinity)
+        {
+            return GameEventScriptValueFactory.GesDecimalNaN();
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return GameEventScriptValueFactory.GesDecimalInfinity();
+        }
+
+        if (number.Value < 0m)
+        {
+            return GameEventScriptValueFactory.GesDecimalNaN();
+        }
+
+        if (number.Value == 0m)
+        {
+            return GameEventScriptValueFactory.GesDecimalNegativeInfinity();
+        }
+
+        var result = Math.Log((double)number.Value);
+        if (double.IsNaN(result))
+        {
+            return GameEventScriptValueFactory.GesDecimalNaN();
+        }
+
+        if (double.IsPositiveInfinity(result))
+        {
+            return GameEventScriptValueFactory.GesDecimalInfinity();
+        }
+
+        if (double.IsNegativeInfinity(result))
+        {
+            return GameEventScriptValueFactory.GesDecimalNegativeInfinity();
+        }
+
+        try
+        {
+            return GameEventScriptValueFactory.GesDecimal((decimal)result);
+        }
+        catch (OverflowException)
+        {
+            return result < 0d
+                ? GameEventScriptValueFactory.GesDecimalNegativeInfinity()
+                : GameEventScriptValueFactory.GesDecimalInfinity();
         }
     }
 

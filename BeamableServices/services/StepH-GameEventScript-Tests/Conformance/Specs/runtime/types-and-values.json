@@ -1586,7 +1586,7 @@
     {
       "kind": "scriptApi",
       "name": "inline literals escaped quotes and numeric helpers",
-      "script": "on Start(opt, missingValue) {\n  let text be 'Hello ''World'', I''m here'\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  emit Done(text: text, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, boundedHigh: boundedHigh, boundedLow: boundedLow, highest: highest, lowest: lowest, optionalFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
+      "script": "on Start(opt, missingValue, value, meterValue) {\n  let text be 'Hello ''World'', I''m here'\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let naturalOne be :ln :e\n  let naturalZero be :ln 0\n  let naturalNegative be :ln (0 - 1)\n  let naturalInfinity be :ln :infinity\n  let naturalNaN be :ln :nan\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  emit Done(text: text, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, naturalOne: naturalOne, naturalZero: naturalZero, naturalNegative: naturalNegative, naturalInfinity: naturalInfinity, naturalNaN: naturalNaN, naturalRuntime: :ln value > 1, naturalUnit: :ln meterValue, boundedHigh: boundedHigh, boundedLow: boundedLow, highest: highest, lowest: lowest, optionalFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
       "steps": [
         {
           "input": {
@@ -1598,6 +1598,15 @@
               },
               "missingValue": {
                 "type": ":nothing"
+              },
+              "value": {
+                "type": ":integer",
+                "value": "3"
+              },
+              "meterValue": {
+                "type": ":decimal",
+                "value": "5",
+                "unit": ":meter"
               }
             }
           },
@@ -1628,6 +1637,34 @@
                 "distance": {
                   "type": ":decimal",
                   "value": "12.5"
+                },
+                "naturalOne": {
+                  "type": ":decimal",
+                  "value": "1"
+                },
+                "naturalZero": {
+                  "type": ":decimal",
+                  "value": "-Infinity"
+                },
+                "naturalNegative": {
+                  "type": ":decimal",
+                  "value": "NaN"
+                },
+                "naturalInfinity": {
+                  "type": ":decimal",
+                  "value": "Infinity"
+                },
+                "naturalNaN": {
+                  "type": ":decimal",
+                  "value": "NaN"
+                },
+                "naturalRuntime": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "naturalUnit": {
+                  "type": ":decimal",
+                  "value": "NaN"
                 },
                 "boundedHigh": {
                   "type": ":decimal",

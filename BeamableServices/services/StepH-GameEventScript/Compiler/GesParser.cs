@@ -1285,6 +1285,7 @@ internal sealed class GesParser
             ":values" => "values",
             ":entries" => "entries",
             ":abs" => "abs",
+            ":ln" => "ln",
             ":sqrt" => "sqrt",
             ":cbrt" => "cbrt",
             _ => string.Empty

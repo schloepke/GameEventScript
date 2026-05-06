@@ -1428,6 +1428,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "values" => BytecodeVmValue.Reference(GesValues(boxed)),
             "entries" => BytecodeVmValue.Reference(GesEntries(boxed)),
             "abs" => BytecodeVmValue.FromGameEventScriptValue(EvaluateAbsUnary(boxed)),
+            "ln" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNaturalLogUnary(boxed)),
             _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown unary operator '{operation}'.")
         };
 
@@ -1794,6 +1795,74 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesValueOperations.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
             ? GesDecimal(Math.Abs(number.Value))
             : GameEventScriptNothingValue.Instance;
+    }
+
+    private static GameEventScriptValue EvaluateNaturalLogUnary(GameEventScriptValue operand)
+    {
+        if (operand.IsNothing())
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (!GesValueOperations.TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        {
+            return GesOptionalNone();
+        }
+
+        if (GameEventScriptValue.TryGetDecimalUnit(unwrapped, out _))
+        {
+            return GesDecimalNaN();
+        }
+
+        if (!GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number))
+        {
+            return GesDecimalNaN();
+        }
+
+        if (number.IsNaN || number.IsNegativeInfinity)
+        {
+            return GesDecimalNaN();
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return GesDecimalInfinity();
+        }
+
+        if (number.Value < 0m)
+        {
+            return GesDecimalNaN();
+        }
+
+        if (number.Value == 0m)
+        {
+            return GesDecimalNegativeInfinity();
+        }
+
+        var result = Math.Log((double)number.Value);
+        if (double.IsNaN(result))
+        {
+            return GesDecimalNaN();
+        }
+
+        if (double.IsPositiveInfinity(result))
+        {
+            return GesDecimalInfinity();
+        }
+
+        if (double.IsNegativeInfinity(result))
+        {
+            return GesDecimalNegativeInfinity();
+        }
+
+        try
+        {
+            return GesDecimal((decimal)result);
+        }
+        catch (OverflowException)
+        {
+            return result < 0d ? GesDecimalNegativeInfinity() : GesDecimalInfinity();
+        }
     }
 
     private static BytecodeVmValue EvaluateClamp(BytecodeVmValue rawValue, BytecodeVmValue minimumValue, BytecodeVmValue maximumValue)

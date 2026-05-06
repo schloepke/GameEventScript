@@ -721,7 +721,7 @@ internal static class GesBytecodeLowerer
     private static bool IsKnownUnaryOperator(string operation)
         => operation is "-" or "!" or "has value" or "empty" or
             "len" or "chance" or "keys" or "values" or "entries" or
-            "abs";
+            "abs" or "ln";
 
     private static bool IsKnownVariadicTaggedOperator(string operation)
         => operation is "min" or "max";

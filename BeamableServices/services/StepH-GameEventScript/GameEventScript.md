@@ -720,6 +720,7 @@ These prefix helpers are built into the language:
 :values value
 :entries dictionary
 :abs value
+:ln value
 :sqrt value
 :cbrt value
 :clamp value between min and max
@@ -735,11 +736,16 @@ let hit be :chance 25%
 let keys be :keys stats
 let entries be :entries stats
 let distance be :abs :vector(3m, 4m)
+let naturalLog be :ln :e
 let root be :sqrt 81
 let cubeRoot be ∛27
 let bounded be :clamp hp between 0 and maxHp
 let best be :max of 4 and 9 and 2
 ```
+
+`:ln` is the natural logarithm. It accepts dimensionless numeric values:
+`:ln 1` is `0`, `:ln 0` is `-Infinity`, negative values and values with units
+produce `NaN`, and `:ln :infinity` is `Infinity`.
 
 `:min` and `:max` work on any values using numeric comparison when all values
 are numeric-compatible, otherwise using the stable GameEventScript value order.

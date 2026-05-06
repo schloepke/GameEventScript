@@ -114,6 +114,10 @@ UnaryTag ::= ":len"
            | ":values"
            | ":entries"
            | ":abs"
+           | ":sqrt"
+           | "√"
+           | ":cbrt"
+           | "∛"
 VariadicTaggedExpression ::= ( ":min" | ":max" ) "of" Expression { "and" Expression }
 ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expression
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }
@@ -137,7 +141,7 @@ TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
 SequenceLiteral ::= OfArgumentList
 
 Literal ::= Number | Percentage | UnitDecimal | TextLiteral | "true" | "false"
-TagLiteral ::= ":" TagName | "∞"
+TagLiteral ::= ":" TagName | "∞" | "∏" | "ℇ" | "τ" | "φ"
 
 Message ::= UpperLetter { NameLetter }
 ModuleName ::= Identifier | Message

@@ -8,6 +8,11 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptTagValue : GameEventScriptValue
 {
+    private const decimal Pi = 3.1415926535897932384626433833m;
+    private const decimal EulerNumber = 2.7182818284590452353602874714m;
+    private const decimal Tau = 6.2831853071795864769252867666m;
+    private const decimal Phi = 1.6180339887498948482045868344m;
+
     public static readonly GameEventScriptTagValue Empty = new(string.Empty);
 
     public static GameEventScriptTagValue Create(string? value) => string.IsNullOrEmpty(value) ? Empty : new GameEventScriptTagValue(value);
@@ -45,6 +50,30 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
         if (string.Equals(Value, "nan", StringComparison.Ordinal))
         {
             value = GesDecimalNaN();
+            return true;
+        }
+
+        if (string.Equals(Value, "pi", StringComparison.Ordinal))
+        {
+            value = GesDecimal(Pi);
+            return true;
+        }
+
+        if (string.Equals(Value, "e", StringComparison.Ordinal))
+        {
+            value = GesDecimal(EulerNumber);
+            return true;
+        }
+
+        if (string.Equals(Value, "tau", StringComparison.Ordinal))
+        {
+            value = GesDecimal(Tau);
+            return true;
+        }
+
+        if (string.Equals(Value, "phi", StringComparison.Ordinal))
+        {
+            value = GesDecimal(Phi);
             return true;
         }
 

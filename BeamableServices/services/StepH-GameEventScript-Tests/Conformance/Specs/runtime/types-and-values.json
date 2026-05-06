@@ -2620,7 +2620,7 @@
     {
       "kind": "scriptApi",
       "name": "additional unicode mathematical aliases",
-      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :decimal, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :decimal, unicodeNegativeInfinity: −∞ + 1)\n}",
+      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :decimal, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :decimal, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :decimal, piAlias: ∏ as :decimal, piGreater: ∏ > 3, eTag: :e as :decimal, eAlias: ℇ as :decimal, eLess: ℇ < 3, tauTag: :tau as :decimal, tauAlias: τ as :decimal, tauGreater: τ > 6, phiTag: :phi as :decimal, phiAlias: φ as :decimal, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27)\n}",
       "steps": [
         {
           "input": {
@@ -2691,6 +2691,70 @@
                 "unicodeNegativeInfinity": {
                   "type": ":decimal",
                   "value": "-Infinity"
+                },
+                "piTag": {
+                  "type": ":decimal",
+                  "value": "3.1415926535897932384626433833"
+                },
+                "piAlias": {
+                  "type": ":decimal",
+                  "value": "3.1415926535897932384626433833"
+                },
+                "piGreater": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "eTag": {
+                  "type": ":decimal",
+                  "value": "2.7182818284590452353602874714"
+                },
+                "eAlias": {
+                  "type": ":decimal",
+                  "value": "2.7182818284590452353602874714"
+                },
+                "eLess": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tauTag": {
+                  "type": ":decimal",
+                  "value": "6.2831853071795864769252867666"
+                },
+                "tauAlias": {
+                  "type": ":decimal",
+                  "value": "6.2831853071795864769252867666"
+                },
+                "tauGreater": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "phiTag": {
+                  "type": ":decimal",
+                  "value": "1.6180339887498948482045868344"
+                },
+                "phiAlias": {
+                  "type": ":decimal",
+                  "value": "1.6180339887498948482045868344"
+                },
+                "phiBetween": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "sqrtTag": {
+                  "type": ":decimal",
+                  "value": "9"
+                },
+                "sqrtAlias": {
+                  "type": ":decimal",
+                  "value": "9"
+                },
+                "cbrtTag": {
+                  "type": ":decimal",
+                  "value": "3"
+                },
+                "cbrtAlias": {
+                  "type": ":decimal",
+                  "value": "3"
                 }
               }
             }

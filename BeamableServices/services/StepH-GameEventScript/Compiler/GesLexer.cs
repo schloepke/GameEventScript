@@ -178,7 +178,7 @@ internal sealed class GesLexer
             var startColumn = _column;
             var ch = Current;
 
-            if (char.IsLower(ch) || char.IsUpper(ch))
+            if (IsWordStart(ch))
             {
                 yield return ReadWordLikeToken(startLine, startColumn);
                 continue;
@@ -297,7 +297,7 @@ internal sealed class GesLexer
     {
         var start = _index;
         var first = Current;
-        var word = ReadWhile(char.IsLetter);
+        var word = ReadWhile(IsWordLetter);
         if (char.IsLower(first) && !IsAtEnd && Current == '_')
         {
             Advance();
@@ -533,6 +533,12 @@ internal sealed class GesLexer
                     '\u00F7' => CreateToken(GesTokenKind.Divide, "/", line, column),
                     '\u2212' => CreateToken(GesTokenKind.Minus, "-", line, column),
                     '\u221E' => CreateToken(GesTokenKind.Tag, ":infinity", line, column),
+                    '\u220F' => CreateToken(GesTokenKind.Tag, ":pi", line, column),
+                    '\u2107' => CreateToken(GesTokenKind.Tag, ":e", line, column),
+                    '\u03C4' => CreateToken(GesTokenKind.Tag, ":tau", line, column),
+                    '\u03C6' => CreateToken(GesTokenKind.Tag, ":phi", line, column),
+                    '\u221A' => CreateToken(GesTokenKind.Tag, ":sqrt", line, column),
+                    '\u221B' => CreateToken(GesTokenKind.Tag, ":cbrt", line, column),
                     '\u2227' => CreateToken(GesTokenKind.And, "&", line, column),
                     '\u2228' => CreateToken(GesTokenKind.Or, "|", line, column),
                     '\u2208' => CreateToken(GesTokenKind.In, "in", line, column),
@@ -585,9 +591,17 @@ internal sealed class GesLexer
 
     private static bool IsValidUnitBoundary(char ch) => ch == '\0' || char.IsWhiteSpace(ch) || IsStructuralBoundary(ch);
 
+    private static bool IsWordStart(char ch) => (char.IsLower(ch) || char.IsUpper(ch)) && !IsUnicodeTagAlias(ch);
+
+    private static bool IsWordLetter(char ch) => char.IsLetter(ch) && !IsUnicodeTagAlias(ch);
+
+    private static bool IsUnicodeTagAlias(char ch)
+        => ch is '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B';
+
     private static bool IsStructuralBoundary(char ch)
         => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
-            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
+            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or
+            '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
             '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u00B2' or '\u00B3';
 
     private bool StartsAttachedIllegalOperatorSequence()

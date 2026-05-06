@@ -11,6 +11,9 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed class GesParser
 {
+    private const decimal SquareRootExponent = 0.5m;
+    private const decimal CubeRootExponent = 0.3333333333333333333333333333m;
+
     public static ParsedScript Parse(string script, string? sourceName = null, GameEventScriptCompileOptions? options = null)
     {
         _ = script ?? throw new ArgumentNullException(nameof(script));
@@ -1217,8 +1220,14 @@ internal sealed class GesParser
                 return ParsePowerExpression();
             }
 
+            var taggedToken = Previous;
             SkipNewLines();
             var taggedOperand = ParseUnaryExpression();
+            if (TryCreateRootPowerExpression(taggedOperator, taggedOperand, taggedToken, out var rootExpression))
+            {
+                return rootExpression;
+            }
+
             return WithRange(new UnaryExpressionNode(taggedOperator, taggedOperand), taggedOperand);
         }
 
@@ -1276,6 +1285,8 @@ internal sealed class GesParser
             ":values" => "values",
             ":entries" => "entries",
             ":abs" => "abs",
+            ":sqrt" => "sqrt",
+            ":cbrt" => "cbrt",
             _ => string.Empty
         };
 
@@ -1285,6 +1296,33 @@ internal sealed class GesParser
         }
 
         Advance();
+        return true;
+    }
+
+    private bool TryCreateRootPowerExpression(
+        string taggedOperator,
+        ExpressionNode operand,
+        GesToken startToken,
+        out ExpressionNode expression)
+    {
+        var exponent = taggedOperator switch
+        {
+            "sqrt" => SquareRootExponent,
+            "cbrt" => CubeRootExponent,
+            _ => (decimal?)null
+        };
+
+        if (!exponent.HasValue)
+        {
+            expression = operand;
+            return false;
+        }
+
+        var exponentNode = new DecimalLiteralExpressionNode(exponent.Value)
+        {
+            SourceRange = CreateRange(startToken, Previous)
+        };
+        expression = WithRange(new BinaryExpressionNode(operand, "^", exponentNode), startToken, Previous);
         return true;
     }
 

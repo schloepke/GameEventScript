@@ -647,6 +647,8 @@ a ÷ b
 a ^ b
 x²
 x³
+√x
+∛x
 a div b
 a mod b
 a rem b
@@ -654,7 +656,8 @@ a rem b
 
 `×`, `·`, `⋅`, `÷`, `−`, `≤`, `≥`, `¬`, `≠`, `∧`, `∨`, and `⊕` are aliases
 for their ASCII forms. `/` is numeric division. `^` is exponentiation.
-Superscript `²` and `³` are aliases for `^ 2` and `^ 3`. `div` is floor
+Superscript `²` and `³` are aliases for `^ 2` and `^ 3`. `√` and `∛` are
+aliases for square root and cube root power expressions. `div` is floor
 division. `mod` is mathematical modulo. `rem` is truncating remainder. The `%`
 token is reserved for percentage literals such as `10%`; it is not the modulo
 operator.
@@ -717,6 +720,8 @@ These prefix helpers are built into the language:
 :values value
 :entries dictionary
 :abs value
+:sqrt value
+:cbrt value
 :clamp value between min and max
 :min of a and b and c
 :max of a and b and c
@@ -730,6 +735,8 @@ let hit be :chance 25%
 let keys be :keys stats
 let entries be :entries stats
 let distance be :abs :vector(3m, 4m)
+let root be :sqrt 81
+let cubeRoot be ∛27
 let bounded be :clamp hp between 0 and maxHp
 let best be :max of 4 and 9 and 2
 ```
@@ -953,12 +960,17 @@ Tags are symbolic values written with a leading colon.
 ```
 
 Tags are not text, but they convert to text using their name. Special tags
-`:infinity`, `:negativeinfinity`, and `:nan` convert to decimal non-finite
-values. `∞` is an alias for `:infinity`.
+`:infinity`, `:negativeinfinity`, `:nan`, `:pi`, `:e`, `:tau`, and `:phi`
+convert to decimal numeric values. `∞`, `∏`, `ℇ`, `τ`, and `φ` are aliases for
+`:infinity`, `:pi`, `:e`, `:tau`, and `:phi`.
 
 ```eventscript
 let limit as :decimal be :infinity
 let shortLimit as :decimal be ∞
+let circle as :decimal be ∏
+let growth as :decimal be ℇ
+let turn as :decimal be τ
+let golden as :decimal be φ
 ```
 
 ### `:text`

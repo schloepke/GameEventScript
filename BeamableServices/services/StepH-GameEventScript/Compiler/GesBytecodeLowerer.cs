@@ -728,14 +728,14 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence" or "ref";
+        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence" or "series" or "ref";
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or
             "boolean" or "integer" or "float" or "number" or
-            "sequence" or "list" or "range" or "message" or "handler" or
+            "sequence" or "series" or "list" or "range" or "message" or "handler" or
             "dictionary" or "set" or "dice" or "optional" ||
             !string.IsNullOrWhiteSpace(typeName);
 
@@ -894,6 +894,16 @@ internal static class GesBytecodeLowerer
                 if (!TryValidateExpression(count.Predicate, callables, out failureReason))
                 {
                     failureReason = $"Count predicate: {failureReason}";
+                    return false;
+                }
+
+                failureReason = string.Empty;
+                return true;
+
+            case SeriesTermSelectorNode seriesTerm when isTerminal:
+                if (!TryValidateExpression(seriesTerm.IndexExpression, callables, out failureReason))
+                {
+                    failureReason = $"Series term index: {failureReason}";
                     return false;
                 }
 
@@ -1728,6 +1738,7 @@ internal static class GesBytecodeLowerer
                 "vector" => GameEventScriptBytecodeCastKind.Vector,
                 "point" => GameEventScriptBytecodeCastKind.Point,
                 "sequence" => GameEventScriptBytecodeCastKind.Sequence,
+                "series" => GameEventScriptBytecodeCastKind.Series,
                 "ref" => GameEventScriptBytecodeCastKind.Ref,
                 _ => default
             };
@@ -2246,6 +2257,12 @@ internal static class GesBytecodeLowerer
                             GameEventScriptBytecodeSelectorKind.Count,
                             RequireSlot(count.Identifier),
                             compiler.CompileExpression(count.Predicate));
+
+                    case SeriesTermSelectorNode term when isTerminal:
+                        return new GameEventScriptBytecodeSelectorProgram(
+                            GameEventScriptBytecodeSelectorKind.SeriesTerm,
+                            -1,
+                            compiler.CompileExpression(term.IndexExpression));
 
                     case EdgeSelectorNode edge when isTerminal:
                         return new GameEventScriptBytecodeSelectorProgram(

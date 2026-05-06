@@ -191,6 +191,7 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Ref => ToRefJson((GameEventScriptRefValue)value),
             GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
             GameEventScriptValueKind.Sequence => throw new NotSupportedException("Sequence values are not part of the conformance JSON value wire format."),
+            GameEventScriptValueKind.Series => throw new NotSupportedException("Series values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
         };
     }

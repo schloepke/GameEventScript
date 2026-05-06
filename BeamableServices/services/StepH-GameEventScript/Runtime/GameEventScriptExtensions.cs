@@ -407,6 +407,17 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return FastValueReturnConverter.Instance;
         }
 
+        if (typeof(GameEventScriptValue).IsAssignableFrom(returnType))
+        {
+            return Activator.CreateInstance(typeof(GameEventScriptValueReturnConverter<>).MakeGenericType(returnType))!;
+        }
+
+        if (typeof(IGameEventScriptSeries).IsAssignableFrom(returnType))
+        {
+            RequireReturnKind(method, attribute, GameEventScriptValueKind.Series);
+            return Activator.CreateInstance(typeof(SeriesReturnConverter<>).MakeGenericType(returnType))!;
+        }
+
         if (returnType == typeof(double))
         {
             RequireReturnKind(method, attribute, GameEventScriptValueKind.Float);
@@ -637,6 +648,22 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         public static readonly FastValueReturnConverter Instance = new();
 
         public GameEventScriptFastValue Convert(GameEventScriptFastValue value) => value;
+    }
+
+    private sealed class GameEventScriptValueReturnConverter<T> : IFastReturnConverter<T>
+        where T : GameEventScriptValue
+    {
+        public GameEventScriptFastValue Convert(T value)
+            => GameEventScriptFastValue.FromGameEventScriptValue(value is null ? GameEventScriptNothingValue.Instance : value);
+    }
+
+    private sealed class SeriesReturnConverter<T> : IFastReturnConverter<T>
+        where T : IGameEventScriptSeries
+    {
+        public GameEventScriptFastValue Convert(T value)
+            => GameEventScriptFastValue.FromGameEventScriptValue(value is null
+                ? GameEventScriptNothingValue.Instance
+                : GameEventScriptValueFactory.GesSeries(value));
     }
 
     private sealed class FloatReturnConverter(GameEventScriptNumericUnit? unit) : IFastReturnConverter<double>

@@ -188,6 +188,7 @@ TypeTag ::= ":text"
           | ":handler"
           | ":ref"
           | ":sequence"
+          | ":series"
           | ":list"
           | ":dictionary"
           | ":set"
@@ -218,6 +219,7 @@ StructuredCollectionSelector ::= QuantifiedCollectionSelector
                                | DictionaryCollectionSelector
                                | SortCollectionSelector
                                | OrderByCollectionSelector
+                               | SeriesTermSelector
 QuantifiedCollectionSelector ::= QuantifiedCollectionSelectorKeyword Identifier "where" Expression
 QuantifiedCollectionSelectorKeyword ::= ":any" | ":all"
 PatternCollectionSelector ::= PatternCollectionSelectorKeyword CollectionPattern
@@ -225,6 +227,7 @@ PatternCollectionSelector ::= PatternCollectionSelectorKeyword CollectionPattern
                             | ":take" SliceSelector
 PatternCollectionSelectorKeyword ::= ":has"
 DropCollectionSelector ::= ":drop" SliceSelector
+SeriesTermSelector ::= ":term" Expression
 CountCollectionSelector ::= ":count" Identifier "where" Expression
 ChooseCollectionSelector ::= ":choose" Number [ "at" "random" ] [ Identifier "where" Expression ] [ "weighted" "by" Identifier ProjectionArrow Expression ]
 DrawCollectionSelector ::= ":draw" Number

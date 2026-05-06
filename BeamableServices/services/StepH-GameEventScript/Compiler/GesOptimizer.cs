@@ -307,6 +307,10 @@ internal static class GesOptimizer
             {
                 Predicate = edgeSelector.Predicate is null ? null : OptimizeExpression(edgeSelector.Predicate, knownTypeNames)
             },
+            SeriesTermSelectorNode seriesTermSelector => seriesTermSelector with
+            {
+                IndexExpression = OptimizeExpression(seriesTermSelector.IndexExpression, knownTypeNames)
+            },
             FilterSelectorNode filterSelector => filterSelector with
             {
                 Predicate = OptimizeExpression(filterSelector.Predicate, knownTypeNames)

@@ -161,6 +161,7 @@ internal sealed record PatternSelectorNode(DicePatternNode Pattern) : Collection
 internal sealed record ObjectMatchSelectorNode(ObjectMatchPatternNode Pattern) : CollectionSelectorNode;
 internal sealed record TakePatternSelectorNode(DicePatternNode Pattern) : CollectionSelectorNode;
 internal sealed record SequenceSliceSelectorNode(string Operation, string Scope, int Count) : CollectionSelectorNode;
+internal sealed record SeriesTermSelectorNode(ExpressionNode IndexExpression) : CollectionSelectorNode;
 internal sealed record PredicateSelectorNode(string Operator, string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
 internal sealed record CountSelectorNode(string Identifier, ExpressionNode Predicate) : CollectionSelectorNode;
 internal sealed record ChooseSelectorNode(int Count, bool AtRandom, string? Identifier, ExpressionNode? Predicate, string? WeightIdentifier, ExpressionNode? WeightExpression) : CollectionSelectorNode;

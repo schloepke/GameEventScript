@@ -939,6 +939,7 @@ Types are written as tags. Built-in public type tags are:
 - `:point`
 - `:optional`
 - `:sequence`
+- `:series`
 - `:range`
 - `:message`
 - `:handler`
@@ -1354,6 +1355,24 @@ let listValues as :list be of 10 and 20 and 30
 Sequences are also produced by helpers such as `:keys`, `:values`, and
 `:entries`. They can be materialized as lists, sets, or dice when needed.
 
+### `:series`
+
+A series is a repeatable, index-addressed value for potentially infinite
+mathematical terms. It is not a lookup collection and has no finite length.
+
+```eventscript
+let fib be :series.fibonacci()
+let odds be :series.natural(start: 1, step: 2)
+let fib7 be fib[:term 7]
+let firstFive be fib[:take first 5]
+let withoutFirstFive be fib[:drop first 5]
+```
+
+Built-in series helpers are `:series.natural()`, `:series.fibonacci()`, and
+`:series.factorial()`. `:term` is zero-based. `:take first n` materializes a
+list of the first `n` terms, while `:drop first n` returns another series. A
+series used as a scalar value reads as its first term.
+
 ### `:range`
 
 Ranges are iterable integer ranges.
@@ -1482,7 +1501,8 @@ units[:filter unit where unit.hp > 0]
 
 ### Lookup
 
-For lists, dice, ranges, and sequences, numeric lookup is one-based.
+For lists, dice, ranges, and sequences, numeric lookup is one-based. Series do
+not support lookup; use `:term` instead.
 
 ```eventscript
 [10, 20, 30][2] // 20

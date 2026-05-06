@@ -1402,6 +1402,11 @@ internal sealed class GesParser
             return ParseDropSelector();
         }
 
+        if (MatchTag(":term"))
+        {
+            return ParseSeriesTermSelector();
+        }
+
         if (Match(SelectorCount))
         {
             var identifier = ExpectIdentifier();
@@ -2132,6 +2137,13 @@ internal sealed class GesParser
         SkipNewLines();
         var countToken = Expect(GesTokenKind.Float);
         return WithRange(new SequenceSliceSelectorNode("drop", scope, ParsePositiveInteger(countToken, "drop count")), startToken);
+    }
+
+    private CollectionSelectorNode ParseSeriesTermSelector()
+    {
+        var startToken = Previous;
+        SkipNewLines();
+        return WithRange(new SeriesTermSelectorNode(ParseExpression()), startToken);
     }
 
     private bool TryParseSliceScope(out string scope)

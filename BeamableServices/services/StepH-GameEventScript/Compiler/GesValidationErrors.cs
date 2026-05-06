@@ -291,6 +291,7 @@ internal sealed class GesValidationErrors
             ExpressionSelectorNode expressionSelector => FindNodeInExpression(expressionSelector.Expression, symbol),
             PredicateSelectorNode predicateSelector => FindNodeInExpression(predicateSelector.Predicate, symbol),
             CountSelectorNode countSelector => FindNodeInExpression(countSelector.Predicate, symbol),
+            SeriesTermSelectorNode seriesTermSelector => FindNodeInExpression(seriesTermSelector.IndexExpression, symbol),
             FilterSelectorNode filterSelector => FindNodeInExpression(filterSelector.Predicate, symbol),
             SumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
             AverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),

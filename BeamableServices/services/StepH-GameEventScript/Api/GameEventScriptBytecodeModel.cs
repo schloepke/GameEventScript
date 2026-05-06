@@ -254,6 +254,7 @@ public enum GameEventScriptBytecodeCastKind
     Vector,
     Point,
     Sequence,
+    Series,
     Ref
 }
 
@@ -429,6 +430,7 @@ public enum GameEventScriptBytecodeSelectorKind
     OrderBy,
     Reverse,
     SequenceSlice,
+    SeriesTerm,
     Pattern,
     ObjectMatch,
     TakePattern,

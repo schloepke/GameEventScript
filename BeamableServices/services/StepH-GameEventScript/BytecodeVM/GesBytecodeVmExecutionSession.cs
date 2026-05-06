@@ -1291,6 +1291,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
             "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "sequence" => value.ReferenceValue?.IsSequence() ?? false,
+            "series" => value.ReferenceValue?.IsSeries() ?? false,
             "list" => value.ReferenceValue?.IsList() ?? false,
             "range" => value.ReferenceValue?.IsRange() ?? false,
             "message" => value.ReferenceValue is { } messageValue &&
@@ -2132,6 +2133,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 ? $"optional:{BuildStableSeedText(value.AsOptional().Value)}"
                 : "optional:none",
             GameEventScriptValueKind.Sequence => $"sequence:[{string.Join("|", value.AsEnumerable().Select(BuildStableSeedText))}]",
+            GameEventScriptValueKind.Series => $"series:{((GameEventScriptSeriesValue)value).SignatureId}:{((GameEventScriptSeriesValue)value).Offset}",
             GameEventScriptValueKind.Range => $"range:{((GameEventScriptRangeValue)value).From}:{((GameEventScriptRangeValue)value).To}:{((GameEventScriptRangeValue)value).Step}",
             GameEventScriptValueKind.Message =>
                 $"message:{((GameEventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((GameEventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
@@ -2682,6 +2684,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
             "float" or "number" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloat(boxed)),
             "sequence" => BytecodeVmValue.Reference(boxed.IsSequence() ? boxed : GameEventScriptValueFactory.GesSequence(boxed.AsEnumerable())),
+            "series" => boxed.IsSeries()
+                ? input
+                : BytecodeVmValue.Nothing,
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")
                 ? BytecodeVmValue.Reference(GesList(boxed.AsList()))
                 : BytecodeVmValue.Nothing,
@@ -2876,6 +2881,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeCastKind.Vector => "vector",
             GameEventScriptBytecodeCastKind.Point => "point",
             GameEventScriptBytecodeCastKind.Sequence => "sequence",
+            GameEventScriptBytecodeCastKind.Series => "series",
             GameEventScriptBytecodeCastKind.Ref => "ref",
             _ => string.Empty
         };
@@ -3178,6 +3184,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         var sourceTarget = sourceValue.ToGameEventScriptValue();
+        if (TryGetSeriesTarget(sourceTarget, out var seriesTarget))
+        {
+            return TryExecuteSeriesPipelineProgram(seriesTarget, pipeline, out value);
+        }
+
         if (!TryCheckMaterializedValue(sourceTarget, "Collection access would enumerate more range items than allowed."))
         {
             value = BytecodeVmValue.Nothing;
@@ -3233,6 +3244,116 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 : false,
             _ => Fail(out value)
         };
+    }
+
+    private bool TryExecuteSeriesPipelineProgram(
+        GameEventScriptSeriesValue source,
+        GameEventScriptBytecodePipelineProgram pipeline,
+        out BytecodeVmValue value)
+    {
+        var series = source;
+        foreach (var selector in pipeline.PrefixSelectors)
+        {
+            if (!TryApplySeriesPrefixSelector(series, selector, out series))
+            {
+                value = BytecodeVmValue.Nothing;
+                return true;
+            }
+        }
+
+        var terminal = pipeline.TerminalSelector;
+        switch (terminal.Kind)
+        {
+            case GameEventScriptBytecodeSelectorKind.SeriesTerm:
+                if (terminal.ExpressionProgram is null ||
+                    !TryExecuteExpressionProgram(terminal.ExpressionProgram, 0, out var termIndex))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.FromGameEventScriptValue(series.GetTerm(termIndex.ToGameEventScriptValue().AsInteger()));
+                return true;
+
+            case GameEventScriptBytecodeSelectorKind.SequenceSlice:
+                return TryExecuteSeriesSliceSelector(series, terminal, out value);
+
+            default:
+                value = BytecodeVmValue.Nothing;
+                return true;
+        }
+    }
+
+    private static bool TryGetSeriesTarget(GameEventScriptValue value, out GameEventScriptSeriesValue series)
+    {
+        if (value is GameEventScriptSeriesValue direct)
+        {
+            series = direct;
+            return true;
+        }
+
+        if (value.Kind == GameEventScriptValueKind.Optional)
+        {
+            var optional = value.AsOptional();
+            if (optional.HasValue && optional.Value is GameEventScriptSeriesValue optionalSeries)
+            {
+                series = optionalSeries;
+                return true;
+            }
+        }
+
+        series = default!;
+        return false;
+    }
+
+    private static bool TryApplySeriesPrefixSelector(
+        GameEventScriptSeriesValue source,
+        GameEventScriptBytecodeSelectorProgram selector,
+        out GameEventScriptSeriesValue series)
+    {
+        if (selector.Kind == GameEventScriptBytecodeSelectorKind.SequenceSlice &&
+            string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal) &&
+            string.Equals(selector.SecondaryMode, "first", StringComparison.Ordinal))
+        {
+            series = source.Drop(selector.Count);
+            return true;
+        }
+
+        series = source;
+        return false;
+    }
+
+    private bool TryExecuteSeriesSliceSelector(
+        GameEventScriptSeriesValue series,
+        GameEventScriptBytecodeSelectorProgram selector,
+        out BytecodeVmValue value)
+    {
+        if (!string.Equals(selector.SecondaryMode, "first", StringComparison.Ordinal))
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
+        if (string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal))
+        {
+            value = BytecodeVmValue.Reference(series.Drop(selector.Count));
+            return true;
+        }
+
+        if (!string.Equals(selector.EdgeMode, "take", StringComparison.Ordinal))
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
+        if (!_runtimeBudget.TryCheckRangeLength(selector.Count, "Series take would materialize more items than allowed."))
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
+        value = BytecodeVmValue.Reference(GesList(series.Take(selector.Count)));
+        return true;
     }
 
     private bool TryExecuteProgramFilter(

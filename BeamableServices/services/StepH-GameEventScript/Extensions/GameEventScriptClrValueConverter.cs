@@ -37,6 +37,8 @@ public static class GameEventScriptClrValueConverter
                 return GameEventScriptValueFactory.GesOptionalNone();
             case GameEventScriptDiceValue dice:
                 return GameEventScriptValueFactory.GesDice(dice);
+            case IGameEventScriptSeries series:
+                return GameEventScriptValueFactory.GesSeries(series);
             case GameEventScriptValue eventScriptValue:
                 return eventScriptValue;
             case string text:

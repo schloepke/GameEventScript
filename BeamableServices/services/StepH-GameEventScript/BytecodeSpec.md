@@ -13,7 +13,7 @@ VM with a program counter.
 - Represent executable script code as one linear instruction memory.
 - Make every executable position addressable by a stable instruction address.
 - Use labels only as debug/dump symbols that point at instruction addresses.
-- Compile control flow such as `if`, loops, guarded choices, rules, and selects
+- Compile control flow such as `if`, loops, guarded choices, predicates, and functions
   into jumps and calls rather than nested program objects.
 - Keep domain-heavy collection operations high-level when that is faster or
   simpler than expanding them into many tiny instructions.
@@ -58,7 +58,7 @@ when executing.
 
 ## Parameter Type Hints
 
-Handlers, rules, and selects may declare optional parameter type hints using the
+Handlers, predicates, and functions may declare optional parameter type hints using the
 same `as :type` language as value coercion:
 
 ```eventscript
@@ -66,24 +66,24 @@ on DamageTaken(unit as :unit, amount as :integer) {
     publish DamageApplied(unit: unit, amount: amount)
 }
 
-rule wounded(_ unit as :unit) means unit.hp < unit.maxHp
+predicate wounded(_ unit as :unit) means unit.hp < unit.maxHp
 
-select livingUnits(_ units as :list) means
+function livingUnits(_ units as :list) means
     units[:filter unit where not (unit is wounded)]
 ```
 
 Parameter type hints are not part of message or callable identity.
 
-Rules:
+Predicates:
 
 - `DamageTaken(unit,amount)` remains the signature id, regardless of parameter
   type hints.
 - Callable signatures still use names, labels, and positions, not types.
 - There is no overload resolution by type.
-- Different semantic meanings should use different message/rule/select names
+- Different semantic meanings should use different message/predicate/function names
   instead of type overloads.
 - A parameter type hint means "coerce this bound value as the entry starts".
-- Coercion is lenient and uses the same conversion rules as `value as :type`.
+- Coercion is lenient and uses the same conversion predicates as `value as :type`.
 - After the entry coercion, the compiler and VM may treat the local slot as
   normalized to that type for optimization.
 
@@ -101,7 +101,7 @@ Compatibility note for the current nested bytecode model: until the linear
 `Instruction[]` representation lands, handlers and callables expose this as a
 parallel `ParameterTypes` list, and callable/predicate instructions carry
 `DeclaredTypes` for their bound argument slots. The VM performs the same entry
-coercion before executing the handler, rule, or select body.
+coercion before executing the handler, predicate, or function body.
 
 The executable code should still contain explicit coercion instructions so the
 program counter and dump show where normalization happens:
@@ -125,7 +125,7 @@ An instruction address is the zero-based index into `Code`.
 @0002 JumpIfFalse @0010
 ```
 
-Rules:
+Predicates:
 
 - Runtime instructions store numeric addresses, not label strings.
 - Labels are optional debug symbols: `L_if_else = @0010`.
@@ -203,7 +203,7 @@ HandlerEntry
 
 CallableEntry
   Name
-  Kind: Rule | Select
+  Kind: Predicate | Function
   Parameters: ParameterEntry[]
   SignatureLabels
   SignatureId
@@ -463,7 +463,7 @@ instruction; debug state can identify selector/item progress when needed.
 
 ## Calls and Returns
 
-Rules and selects are normal callable entries. A call instruction transfers
+Predicates and functions are normal callable entries. A call instruction transfers
 control to the callable entry and returns to the next instruction.
 
 ```text
@@ -482,7 +482,7 @@ OperandStackBase
 ScopeMark
 ```
 
-Rules coerce their returned value to boolean at the callable boundary. Selects
+Predicates coerce their returned value to boolean at the callable boundary. Functions
 preserve the expression result.
 
 ## Debug Symbols
@@ -565,7 +565,7 @@ A grouped view may still be offered, but it must keep global addresses visible.
 During migration, an adapter may convert the current nested model to the new
 linear model internally, but the final public shape should be linear.
 
-## Compatibility Rules
+## Compatibility Predicates
 
 - New bytecode format changes must increment `FormatVersion`.
 - Old dumps are diagnostic only and are not a stable wire format.

@@ -4,55 +4,55 @@
   "tests": [
     {
       "kind": "compileError",
-      "name": "missing rule call fails module build",
+      "name": "missing predicate call fails module build",
       "script": "on Start(unit) {\n  let x be missingRule(unit)\n}",
       "expectedError": {
         "phase": "build",
-        "kind": "MissingRuleOrSelect",
+        "kind": "MissingCallable",
         "symbol": "missingRule"
       }
     },
     {
       "kind": "compileError",
-      "name": "missing select call fails module build",
+      "name": "missing function call fails module build",
       "script": "on Start(units) {\n  let x be missingSelect(units)\n}",
       "expectedError": {
         "phase": "build",
-        "kind": "MissingRuleOrSelect",
+        "kind": "MissingCallable",
         "symbol": "missingSelect"
       }
     },
     {
       "kind": "compileError",
-      "name": "invalid rule predicate requires unary rule",
-      "script": "select wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
+      "name": "invalid predicate predicate requires unary predicate",
+      "script": "function wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
       "expectedError": {
         "phase": "build",
-        "kind": "InvalidRulePredicate",
+        "kind": "InvalidPredicate",
         "symbol": "wounded",
-        "symbolKind": "Rule"
+        "symbolKind": "Predicate"
       }
     },
     {
       "kind": "compileError",
-      "name": "wrong rule arity fails module build",
-      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
+      "name": "wrong predicate arity fails module build",
+      "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
       "expectedError": {
         "phase": "build",
-        "kind": "WrongRuleArity",
+        "kind": "WrongPredicateArity",
         "symbol": "wounded",
-        "symbolKind": "Rule"
+        "symbolKind": "Predicate"
       }
     },
     {
       "kind": "compileError",
-      "name": "wrong select arity fails module build",
-      "script": "select woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]\n\non Start(units) {\n  let x be woundedUnits()\n}",
+      "name": "wrong function arity fails module build",
+      "script": "function woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]\n\non Start(units) {\n  let x be woundedUnits()\n}",
       "expectedError": {
         "phase": "build",
-        "kind": "WrongSelectArity",
+        "kind": "WrongFunctionArity",
         "symbol": "woundedUnits",
-        "symbolKind": "Select"
+        "symbolKind": "Function"
       }
     },
     {
@@ -93,26 +93,26 @@
     },
     {
       "kind": "compileError",
-      "name": "duplicate rule parameters fail module build",
-      "script": "module DuplicateRuleParameters\nrule wounded(unit, unit) means unit.hp < unit.maxHp",
+      "name": "duplicate predicate parameters fail module build",
+      "script": "module DuplicatePredicateParameters\npredicate wounded(unit, unit) means unit.hp < unit.maxHp",
       "expectedError": {
         "phase": "build",
         "kind": "DuplicateDefinitionParameter",
         "symbol": "wounded",
-        "symbolKind": "Rule",
-        "moduleName": "DuplicateRuleParameters"
+        "symbolKind": "Predicate",
+        "moduleName": "DuplicatePredicateParameters"
       }
     },
     {
       "kind": "compileError",
-      "name": "duplicate select parameters fail module build",
-      "script": "module DuplicateSelectParameters\nselect wounded(units, units) means units[:filter unit where unit.hp < unit.maxHp]",
+      "name": "duplicate function parameters fail module build",
+      "script": "module DuplicateFunctionParameters\nfunction wounded(units, units) means units[:filter unit where unit.hp < unit.maxHp]",
       "expectedError": {
         "phase": "build",
         "kind": "DuplicateDefinitionParameter",
         "symbol": "wounded",
-        "symbolKind": "Select",
-        "moduleName": "DuplicateSelectParameters"
+        "symbolKind": "Function",
+        "moduleName": "DuplicateFunctionParameters"
       }
     },
     {
@@ -140,20 +140,20 @@
     },
     {
       "kind": "compileError",
-      "name": "rule and select definitions cannot share a name",
+      "name": "predicate and function definitions cannot share a name",
       "scripts": [
         {
           "sourceName": "a.es",
-          "text": "module A\nrule wounded(_ unit) means unit.hp < unit.maxHp"
+          "text": "module A\npredicate wounded(_ unit) means unit.hp < unit.maxHp"
         },
         {
           "sourceName": "b.es",
-          "text": "module B\nselect wounded(_ unit) means unit.hp < unit.maxHp"
+          "text": "module B\nfunction wounded(_ unit) means unit.hp < unit.maxHp"
         }
       ],
       "expectedError": {
         "phase": "build",
-        "kind": "RuleSelectConflict",
+        "kind": "PredicateFunctionConflict",
         "symbol": "wounded"
       }
     },
@@ -187,6 +187,17 @@
         "phase": "build",
         "kind": "InvalidTypeConstructor",
         "symbol": "vector",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "ref constructor requires record or external target type",
+      "script": "on Start {\n  let unitRef be :ref(:integer, id: 'unit-42')\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "ref",
         "symbolKind": "Type"
       }
     },

@@ -1111,9 +1111,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             instruction.DiagnosticName));
                         return true;
 
-                    case GameEventScriptBytecodeOpCode.RulePredicate:
+                    case GameEventScriptBytecodeOpCode.PredicateTest:
                         var input = session._evaluationStack[--_top];
-                        if (!session.TryEvaluateRulePredicate(in instruction, input, _top, out var predicateValue))
+                        if (!session.TryEvaluatePredicateTest(in instruction, input, _top, out var predicateValue))
                         {
                             fiber.Complete(BytecodeVmValue.Nothing, success: false);
                             return false;

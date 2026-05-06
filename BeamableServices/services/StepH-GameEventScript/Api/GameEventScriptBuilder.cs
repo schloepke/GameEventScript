@@ -131,25 +131,25 @@ public sealed class GameEventScriptBuilder
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
         var externalTypeDefinitions = _externalTypeRegistry.Types;
         var validationTypeDefinitions = BuildValidationTypeDefinitionMap(typeDefinitions, externalTypeDefinitions, modules, errors);
-        var ruleDefinitions = BuildRuleDefinitionMap(modules, errors);
-        var selectDefinitions = BuildSelectDefinitionMap(modules, errors);
-        var callables = BuildCallableDefinitionMap(ruleDefinitions, selectDefinitions);
+        var predicateDefinitions = BuildPredicateDefinitionMap(modules, errors);
+        var functionDefinitions = BuildFunctionDefinitionMap(modules, errors);
+        var callables = BuildCallableDefinitionMap(predicateDefinitions, functionDefinitions);
         var handlers = BuildHandlerMap(modules)
             .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EventHandlerNode>)pair.Value, StringComparer.Ordinal);
 
-        foreach (var conflictName in ruleDefinitions.Keys.Where(selectDefinitions.ContainsKey))
+        foreach (var conflictName in predicateDefinitions.Keys.Where(functionDefinitions.ContainsKey))
         {
-            var conflictModule = modules.FirstOrDefault(module => module.SelectDefinitions.Any(select => string.Equals(select.Name, conflictName, StringComparison.Ordinal))) ??
-                                 modules.FirstOrDefault(module => module.RuleDefinitions.Any(rule => string.Equals(rule.Name, conflictName, StringComparison.Ordinal)));
-            var conflictNode = conflictModule?.SelectDefinitions.FirstOrDefault(select => string.Equals(select.Name, conflictName, StringComparison.Ordinal)) ??
-                               (ScriptNode?)conflictModule?.RuleDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, conflictName, StringComparison.Ordinal));
+            var conflictModule = modules.FirstOrDefault(module => module.FunctionDefinitions.Any(function => string.Equals(function.Name, conflictName, StringComparison.Ordinal))) ??
+                                 modules.FirstOrDefault(module => module.PredicateDefinitions.Any(predicate => string.Equals(predicate.Name, conflictName, StringComparison.Ordinal)));
+            var conflictNode = conflictModule?.FunctionDefinitions.FirstOrDefault(function => string.Equals(function.Name, conflictName, StringComparison.Ordinal)) ??
+                               (ScriptNode?)conflictModule?.PredicateDefinitions.FirstOrDefault(predicate => string.Equals(predicate.Name, conflictName, StringComparison.Ordinal));
 
             errors.Add(
                 conflictModule,
-                $"Name '{conflictName}' is declared as both a rule and a select",
+                $"Name '{conflictName}' is declared as both a predicate and a function",
                 conflictName,
                 GameEventScriptSymbolKind.GlobalDefinition,
-                GameEventScriptCompileErrorKind.RuleSelectConflict,
+                GameEventScriptCompileErrorKind.PredicateFunctionConflict,
                 conflictNode);
         }
 
@@ -245,22 +245,22 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static Dictionary<string, RuleDefinitionNode> BuildRuleDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static Dictionary<string, PredicateDefinitionNode> BuildPredicateDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
     {
-        var map = new Dictionary<string, RuleDefinitionNode>(StringComparer.Ordinal);
+        var map = new Dictionary<string, PredicateDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
         {
-            foreach (var ruleDefinition in module.RuleDefinitions)
+            foreach (var predicateDefinition in module.PredicateDefinitions)
             {
-                if (!map.TryAdd(ruleDefinition.Name, ruleDefinition))
+                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition))
                 {
                     errors.Add(
                         module,
-                        $"Rule '{ruleDefinition.Name}' is defined more than once",
-                        ruleDefinition.Name,
-                        GameEventScriptSymbolKind.Rule,
-                        GameEventScriptCompileErrorKind.DuplicateRule,
-                        ruleDefinition);
+                        $"Predicate '{predicateDefinition.Name}' is defined more than once",
+                        predicateDefinition.Name,
+                        GameEventScriptSymbolKind.Predicate,
+                        GameEventScriptCompileErrorKind.DuplicatePredicate,
+                        predicateDefinition);
                 }
             }
         }
@@ -268,22 +268,22 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static Dictionary<string, SelectDefinitionNode> BuildSelectDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
+    private static Dictionary<string, FunctionDefinitionNode> BuildFunctionDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
     {
-        var map = new Dictionary<string, SelectDefinitionNode>(StringComparer.Ordinal);
+        var map = new Dictionary<string, FunctionDefinitionNode>(StringComparer.Ordinal);
         foreach (var module in modules)
         {
-            foreach (var selectDefinition in module.SelectDefinitions)
+            foreach (var functionDefinition in module.FunctionDefinitions)
             {
-                if (!map.TryAdd(selectDefinition.Name, selectDefinition))
+                if (!map.TryAdd(functionDefinition.Name, functionDefinition))
                 {
                     errors.Add(
                         module,
-                        $"Select '{selectDefinition.Name}' is defined more than once",
-                        selectDefinition.Name,
-                        GameEventScriptSymbolKind.Select,
-                        GameEventScriptCompileErrorKind.DuplicateSelect,
-                        selectDefinition);
+                        $"Function '{functionDefinition.Name}' is defined more than once",
+                        functionDefinition.Name,
+                        GameEventScriptSymbolKind.Function,
+                        GameEventScriptCompileErrorKind.DuplicateFunction,
+                        functionDefinition);
                 }
             }
         }
@@ -291,28 +291,28 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, RuleDefinitionNode> ruleDefinitions,
-        IReadOnlyDictionary<string, SelectDefinitionNode> selectDefinitions)
+    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, PredicateDefinitionNode> predicateDefinitions,
+        IReadOnlyDictionary<string, FunctionDefinitionNode> functionDefinitions)
     {
         var map = new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
 
-        foreach (var pair in ruleDefinitions)
+        foreach (var pair in predicateDefinitions)
         {
             map[pair.Key] = new GesCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
-                GameEventScriptCallableKind.Rule,
+                GameEventScriptCallableKind.Predicate,
                 pair.Value.SourceRange);
         }
 
-        foreach (var pair in selectDefinitions)
+        foreach (var pair in functionDefinitions)
         {
             map[pair.Key] = new GesCallableDefinition(
                 pair.Key,
                 pair.Value.ParameterList.ToArray(),
                 pair.Value.Expression,
-                GameEventScriptCallableKind.Select,
+                GameEventScriptCallableKind.Function,
                 pair.Value.SourceRange);
         }
 

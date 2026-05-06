@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "name": "RuntimeRefs",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "refs carry target type and id",
+      "script": "record :unit as {\n  id: :text,\n  hp: :integer\n}\n\non Start(unitId) {\n  let first as :ref be :ref(:unit, id: unitId)\n  let second be :ref(type: :unit, id: unitId)\n  let casted as :ref be first as :ref\n  emit Done(ref: first, equal: first = second, castEqual: casted = first, isRef: first is :ref, type: first.type, id: first.id, text: :text(first))\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unitId": { "type": ":text", "value": "unit-42" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "ref": { "type": ":ref", "refType": ":unit", "id": "unit-42" },
+                "equal": { "type": ":boolean", "value": true },
+                "castEqual": { "type": ":boolean", "value": true },
+                "isRef": { "type": ":boolean", "value": true },
+                "type": { "type": ":tag", "value": "unit" },
+                "id": { "type": ":text", "value": "unit-42" },
+                "text": { "type": ":text", "value": "ref(:unit, unit-42)" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

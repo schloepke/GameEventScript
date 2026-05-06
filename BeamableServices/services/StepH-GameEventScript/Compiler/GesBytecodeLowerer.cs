@@ -100,7 +100,7 @@ internal static class GesBytecodeLowerer
             var expressionProgram = programCompiler.CompileExpression(callable.Expression);
             result[callable.Name] = new GameEventScriptBytecodeCallable(
                 callable.Name,
-                callable.Kind == GameEventScriptCallableKind.Rule ? GameEventScriptBytecodeCallableKind.Rule : GameEventScriptBytecodeCallableKind.Select,
+                callable.Kind == GameEventScriptCallableKind.Predicate ? GameEventScriptBytecodeCallableKind.Predicate : GameEventScriptBytecodeCallableKind.Function,
                 callable.Parameters,
                 callable.SignatureLabels,
                 GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels),
@@ -576,34 +576,34 @@ internal static class GesBytecodeLowerer
                 failureReason = string.Empty;
                 return true;
 
-            case RulePredicateExpressionNode rulePredicate:
-                if (!TryValidateExpression(rulePredicate.Value, callables, out failureReason))
+            case PredicateCallExpressionNode predicateCall:
+                if (!TryValidateExpression(predicateCall.Value, callables, out failureReason))
                 {
-                    failureReason = $"Rule predicate value: {failureReason}";
+                    failureReason = $"Predicate test value: {failureReason}";
                     return false;
                 }
 
-                if (!callables.TryGetValue(rulePredicate.RuleName, out var callable))
+                if (!callables.TryGetValue(predicateCall.RuleName, out var callable))
                 {
-                    failureReason = $"Rule '{rulePredicate.RuleName}' was not found.";
+                    failureReason = $"Predicate '{predicateCall.RuleName}' was not found.";
                     return false;
                 }
 
-                if (callable.Kind != GameEventScriptCallableKind.Rule)
+                if (callable.Kind != GameEventScriptCallableKind.Predicate)
                 {
-                    failureReason = $"Callable '{rulePredicate.RuleName}' is a {callable.Kind}, not a rule.";
+                    failureReason = $"Callable '{predicateCall.RuleName}' is a {callable.Kind}, not a predicate.";
                     return false;
                 }
 
                 if (callable.Parameters.Count != 1)
                 {
-                    failureReason = $"Rule '{rulePredicate.RuleName}' has {callable.Parameters.Count} parameters; only unary rule predicates are supported.";
+                    failureReason = $"Predicate '{predicateCall.RuleName}' has {callable.Parameters.Count} parameters; only unary predicate tests are supported.";
                     return false;
                 }
 
                 if (!TryValidateExpression(callable.Expression, callables, out failureReason))
                 {
-                    failureReason = $"Rule '{rulePredicate.RuleName}' expression: {failureReason}";
+                    failureReason = $"Predicate '{predicateCall.RuleName}' expression: {failureReason}";
                     return false;
                 }
 
@@ -728,7 +728,7 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence";
+        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "sequence" or "ref";
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
@@ -1319,7 +1319,7 @@ internal static class GesBytecodeLowerer
                     CollectExpression(binary.Right);
                     break;
 
-                case RulePredicateExpressionNode rulePredicate:
+                case PredicateCallExpressionNode rulePredicate:
                     CollectExpression(rulePredicate.Value);
                     if (callables.TryGetValue(rulePredicate.RuleName, out var callable))
                     {
@@ -1728,6 +1728,7 @@ internal static class GesBytecodeLowerer
                 "vector" => GameEventScriptBytecodeCastKind.Vector,
                 "point" => GameEventScriptBytecodeCastKind.Point,
                 "sequence" => GameEventScriptBytecodeCastKind.Sequence,
+                "ref" => GameEventScriptBytecodeCastKind.Ref,
                 _ => default
             };
 
@@ -1971,25 +1972,25 @@ internal static class GesBytecodeLowerer
                         Pop();
                         return;
 
-                    case RulePredicateExpressionNode rulePredicate:
-                        if (!compiler._callables.TryGetValue(rulePredicate.RuleName, out var callable) ||
+                    case PredicateCallExpressionNode predicateCall:
+                        if (!compiler._callables.TryGetValue(predicateCall.RuleName, out var callable) ||
                             callable.Parameters.Count != 1)
                         {
-                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support predicate test '{predicateCall.RuleName}'.");
                         }
 
                         if (!compiler.TryGetSlot(callable.Parameters[0], out var parameterSlot))
                         {
-                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support rule predicate '{rulePredicate.RuleName}'.");
+                            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support predicate test '{predicateCall.RuleName}'.");
                         }
 
-                        EmitExpression(rulePredicate.Value);
-                        var rulePredicateProgram = compiler.CompileExpression(callable.Expression);
-                        AccountNestedProgram(argumentCount: 1, rulePredicateProgram);
+                        EmitExpression(predicateCall.Value);
+                        var predicateTestProgram = compiler.CompileExpression(callable.Expression);
+                        AccountNestedProgram(argumentCount: 1, predicateTestProgram);
                         instructions.Add(new GameEventScriptBytecodeInstruction(
-                            GameEventScriptBytecodeOpCode.RulePredicate,
+                            GameEventScriptBytecodeOpCode.PredicateTest,
                             parameterSlot,
-                            ExpressionProgram: rulePredicateProgram,
+                            ExpressionProgram: predicateTestProgram,
                             DiagnosticName: callable.Name,
                             DiagnosticArgumentName: callable.Parameters[0],
                             DeclaredTypes: new string?[] { callable.ParameterList[0].DeclaredType }));
@@ -2055,9 +2056,9 @@ internal static class GesBytecodeLowerer
                         instructions.Add(new GameEventScriptBytecodeInstruction(
                             GameEventScriptBytecodeOpCode.Call,
                             A: call.Arguments.Count,
-                            CallableKind: called.Kind == GameEventScriptCallableKind.Rule
-                                ? GameEventScriptBytecodeCallableKind.Rule
-                                : GameEventScriptBytecodeCallableKind.Select,
+                            CallableKind: called.Kind == GameEventScriptCallableKind.Predicate
+                                ? GameEventScriptBytecodeCallableKind.Predicate
+                                : GameEventScriptBytecodeCallableKind.Function,
                             ExpressionProgram: callableProgram,
                             DiagnosticName: called.Name,
                             Names: called.Parameters.ToArray(),

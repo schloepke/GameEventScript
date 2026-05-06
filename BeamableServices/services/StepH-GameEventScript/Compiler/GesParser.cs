@@ -121,8 +121,8 @@ internal sealed class GesParser
     private ParsedScript ParseScript()
     {
         var typeDefinitions = new List<TypeDefinitionNode>();
-        var ruleDefinitions = new List<RuleDefinitionNode>();
-        var selectDefinitions = new List<SelectDefinitionNode>();
+        var predicateDefinitions = new List<PredicateDefinitionNode>();
+        var functionDefinitions = new List<FunctionDefinitionNode>();
         var handlers = new List<EventHandlerNode>();
         SkipStatementSeparators();
         ParseOptionalModuleDeclaration();
@@ -135,13 +135,13 @@ internal sealed class GesParser
                 {
                     typeDefinitions.Add(ParseTypeDefinition());
                 }
-                else if (Match(Rule))
+                else if (Match(Predicate))
                 {
-                    ruleDefinitions.Add(ParseRuleDefinition());
+                    predicateDefinitions.Add(ParsePredicateDefinition());
                 }
-                else if (Match(Select))
+                else if (Match(Function))
                 {
-                    selectDefinitions.Add(ParseSelectDefinition());
+                    functionDefinitions.Add(ParseFunctionDefinition());
                 }
                 else
                 {
@@ -163,7 +163,7 @@ internal sealed class GesParser
             throw new GameEventScriptCompileException(_errors);
         }
 
-        var module = new ParsedScript(_moduleName, _sourceName, typeDefinitions, ruleDefinitions, selectDefinitions, handlers);
+        var module = new ParsedScript(_moduleName, _sourceName, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
         var firstToken = _tokens.FirstOrDefault();
         if (firstToken.Kind == EndOfFile)
         {
@@ -285,7 +285,7 @@ internal sealed class GesParser
         return WithRange(new TypeFieldDefinitionNode(name, typeName, minimumExpression, maximumExpression, computedExpression), startToken);
     }
 
-    private RuleDefinitionNode ParseRuleDefinition()
+    private PredicateDefinitionNode ParsePredicateDefinition()
     {
         var startToken = Previous;
         var name = ExpectIdentifier();
@@ -293,10 +293,10 @@ internal sealed class GesParser
         Expect(Means);
         SkipNewLines();
         var expression = ParseExpression();
-        return WithRange(new RuleDefinitionNode(name, parameters, expression), startToken);
+        return WithRange(new PredicateDefinitionNode(name, parameters, expression), startToken);
     }
 
-    private SelectDefinitionNode ParseSelectDefinition()
+    private FunctionDefinitionNode ParseFunctionDefinition()
     {
         var startToken = Previous;
         var name = ExpectIdentifier();
@@ -304,7 +304,7 @@ internal sealed class GesParser
         Expect(Means);
         SkipNewLines();
         var expression = ParseExpression();
-        return WithRange(new SelectDefinitionNode(name, parameters, expression), startToken);
+        return WithRange(new FunctionDefinitionNode(name, parameters, expression), startToken);
     }
 
     private IReadOnlyList<ParameterNode> ParseDefinitionParameters()
@@ -1046,8 +1046,8 @@ internal sealed class GesParser
 
                 if (Current.Kind == Identifier)
                 {
-                    var ruleName = Advance().Text;
-                    expression = WithRange(new RulePredicateExpressionNode(expression, ruleName), expression);
+                    var predicateName = Advance().Text;
+                    expression = WithRange(new PredicateCallExpressionNode(expression, predicateName), expression);
                     continue;
                 }
 
@@ -2665,7 +2665,7 @@ internal sealed class GesParser
     {
         while (!Is(EndOfFile))
         {
-            if (Is(Module) || Is(Record) || Is(Rule) || Is(Select) || Is(On))
+            if (Is(Module) || Is(Record) || Is(Predicate) || Is(Function) || Is(On))
             {
                 return;
             }

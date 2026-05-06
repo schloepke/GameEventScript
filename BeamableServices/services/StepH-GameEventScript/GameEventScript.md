@@ -1,7 +1,7 @@
 # GameEventScript Language Guide
 
 GameEventScript is a compact scripting language for event-driven game logic. It is
-designed for rules that react to messages, inspect immutable data, publish new
+designed for predicates that react to messages, inspect immutable data, publish new
 messages, and delegate specialized calculations to host-provided extensions.
 
 This guide describes the current language as compiled to GameEventScript
@@ -38,8 +38,8 @@ return a value to its caller. Observable behavior flows through `publish`.
 The language favors readable domain expressions:
 
 ```eventscript
-rule wounded(_ unit) means unit.hp < unit.maxHp
-select woundedUnits(_ units) means units[:filter unit where unit is wounded]
+predicate wounded(_ unit) means unit.hp < unit.maxHp
+function woundedUnits(_ units) means units[:filter unit where unit is wounded]
 
 on BeginTurn(units) {
     let candidates be woundedUnits(units)
@@ -66,7 +66,7 @@ Important design choices:
 ## Program Structure
 
 A GameEventScript file may contain a module declaration, custom record types,
-rules, selects, and event handlers.
+predicates, functions, and event handlers.
 
 ```eventscript
 module Combat
@@ -79,8 +79,8 @@ record :gauge as {
         otherwise (current / maximum) as :percentage
 }
 
-rule defeated(_ unit) means unit.hp is 0 or less
-select livingUnits(_ units) means units[:filter unit where not (unit is defeated)]
+predicate defeated(_ unit) means unit.hp is 0 or less
+function livingUnits(_ units) means units[:filter unit where not (unit is defeated)]
 
 on DamageTaken(unit, amount) {
     let hp as :gauge be [current: unit.hp - amount, maximum: unit.maxHp]
@@ -114,10 +114,10 @@ on Start {
 
 GameEventScript uses casing to keep the grammar readable.
 
-- Keywords are lowercase: `module`, `record`, `rule`, `select`, `on`, `let`.
+- Keywords are lowercase: `module`, `record`, `predicate`, `function`, `on`, `let`.
 - Local names are lowercase identifiers with letters only: `unit`, `target`,
   `currentHp`.
-- Rule and select names are lowercase identifiers: `wounded`, `bestTarget`.
+- Predicate and function names are lowercase identifiers: `wounded`, `bestTarget`.
 - Identifiers may use one explicit numeric suffix at the end: `player_0`,
   `player_1`, `player_22`. Forms like `player22`, `player_01`, and
   `player_1a` are invalid.
@@ -145,7 +145,7 @@ The module declaration is optional. If it is omitted, the parser creates an
 anonymous module name. Module names may use either lowercase identifier style or
 uppercase message style.
 
-Multiple scripts can be built together. Rules, selects, record types, and
+Multiple scripts can be built together. Predicates, functions, record types, and
 handlers from all sources are merged into one runtime module.
 
 ### Top-level declarations
@@ -154,12 +154,12 @@ Top-level declarations are:
 
 ```eventscript
 record :typeName as { ... }
-rule name(parameters) means expression
-select name(parameters) means expression
+predicate name(parameters) means expression
+function name(parameters) means expression
 on Message(parameters) { statements }
 ```
 
-Rules and selects are callable definitions. Records define custom value shapes.
+Predicates and functions are callable definitions. Records define custom value shapes.
 Handlers subscribe to messages.
 
 ## Runtime Semantics
@@ -298,8 +298,8 @@ A labeled parameter must be called with the same label at the same position. An
 unlabeled `_` parameter must be called without a label.
 
 ```eventscript
-rule wounded(_ unit) means unit.hp < unit.maxHp
-rule withinRange(source, target) means source.range >= target.distance
+predicate wounded(_ unit) means unit.hp < unit.maxHp
+predicate withinRange(source, target) means source.range >= target.distance
 
 on Start(unit, source, target) {
     let a be wounded(unit)                    // ok, unlabeled
@@ -313,7 +313,7 @@ Labels do not allow argument reordering:
 withinRange(target: target, source: source) // different labels at positions
 ```
 
-The `x is ruleName` and `x is :extension.predicate` forms are the only special
+The `x is predicateName` and `x is :extension.predicate` forms are the only special
 case. They are allowed only for single-parameter callables and bind `x` to the
 first parameter, regardless of whether that parameter is labeled or `_`.
 
@@ -494,13 +494,13 @@ percentage: :percentage computed by
     otherwise (current / maximum) as :percentage
 ```
 
-### Rules
+### Predicates
 
-Rules define reusable predicates. The rule result is converted to boolean.
+Predicates define reusable predicates. The predicate result is converted to boolean.
 
 ```eventscript
-rule wounded(_ unit) means unit.hp < unit.maxHp
-rule numeric(_ value) means value * 2
+predicate wounded(_ unit) means unit.hp < unit.maxHp
+predicate numeric(_ value) means value * 2
 
 on Start(unit) {
     let a be wounded(unit)
@@ -509,7 +509,7 @@ on Start(unit) {
 }
 ```
 
-Rules are called like functions, or with `is` when the rule has exactly one
+Predicates are called like functions, or with `is` when the predicate has exactly one
 parameter.
 
 ```eventscript
@@ -517,17 +517,17 @@ unit is wounded
 wounded(unit)
 ```
 
-Calling an unknown rule, using the wrong arity, or using `x is rule` with a
-non-unary rule is a module build error.
+Calling an unknown predicate, using the wrong arity, or using `x is predicate` with a
+non-unary predicate is a module build error.
 
-### Selects
+### Functions
 
-Selects define reusable expressions. Unlike rules, selects keep the original
+Functions define reusable expressions. Unlike predicates, functions keep the original
 result value.
 
 ```eventscript
-select woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]
-select byId(_ units) means units[:dictionary unit by unit.id]
+function woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]
+function byId(_ units) means units[:dictionary unit by unit.id]
 
 on Start(units) {
     let wounded be woundedUnits(units)
@@ -536,7 +536,7 @@ on Start(units) {
 }
 ```
 
-Rules and selects share one callable namespace. A rule and a select cannot have
+Predicates and functions share one callable namespace. A predicate and a function cannot have
 the same name.
 
 ### Records and custom types
@@ -760,7 +760,7 @@ are numeric-compatible, otherwise using the stable GameEventScript value order.
 ### Domain-style boolean phrases
 
 These phrases are equivalent to simpler operators but often read better in
-rules.
+predicates.
 
 ```eventscript
 hp is 0 or less
@@ -803,7 +803,7 @@ empty values
 values is empty
 ```
 
-The main rules are:
+The main predicates are:
 
 - `nothing` has no value and is empty.
 - `optional none` has no value and is empty.
@@ -914,6 +914,7 @@ Types are written as tags. Built-in public type tags are:
 - `:range`
 - `:message`
 - `:handler`
+- `:ref`
 - `:list`
 - `:dictionary`
 - `:set`
@@ -947,6 +948,7 @@ types that define construction shapes.
 let offset be :vector(10m, 20m)
 let position be :point(10m, 20m)
 let hp be :gauge(current: 10, maximum: 20)
+let targetRef be :ref(:unit, id: 'unit-42')
 ```
 
 ### `:nothing`
@@ -1115,7 +1117,7 @@ Percentages are ratios, not units. `5%` stores the ratio `0.05`.
 100%
 ```
 
-Percentage arithmetic has special rules so that right-hand percentages can be
+Percentage arithmetic has special predicates so that right-hand percentages can be
 relative to a left base value.
 
 ```eventscript
@@ -1247,7 +1249,7 @@ let position be :point(10m, 20m)
 let elevated be :point(10m, 20m, 5m)
 ```
 
-Points use the same shared-unit rule as vectors. All components must be unitless
+Points use the same shared-unit predicate as vectors. All components must be unitless
 or all components must use the same unit.
 
 ```eventscript
@@ -1419,6 +1421,25 @@ let m as :message be h(value: 42)
 
 They can be passed as arguments, stored in dictionaries, published, and
 inspected. They are not dictionaries for type checks.
+
+### `:ref`
+
+Refs are immutable handles to record or external-type state. A ref stores only
+the target type and a stable id; it does not read or mutate the target object by
+itself.
+
+```eventscript
+record :unit as {
+    id: :text,
+    hp: :integer
+}
+
+let unitRef as :ref be :ref(:unit, id: 'unit-42')
+unitRef.type // :unit
+unitRef.id   // unit-42
+```
+
+`:ref(value)` is a cast and succeeds only when `value` is already a ref.
 
 ## Collection Language
 
@@ -1601,7 +1622,7 @@ dice. They are lenient no-ops for unordered sets and dictionaries.
 
 ### Choosing
 
-`:choose` selects items from a collection.
+`:choose` functions items from a collection.
 
 ```eventscript
 units[:choose 1]
@@ -1648,7 +1669,7 @@ units[:has [faction: 'orc', alive: true]]
 units[:has [owner: [team: 'red']]]
 ```
 
-Rules:
+Predicates:
 
 - Extra keys in the actual object are allowed.
 - All specified keys must exist.
@@ -2047,8 +2068,8 @@ Diagnostic event kinds include:
 - `ParameterBound`
 - `LetEvaluated`
 - `ExpressionEvaluatedToNothing`
-- `RuleCalled`
-- `SelectCalled`
+- `PredicateCalled`
+- `FunctionCalled`
 - `EventPublished`
 - `RuntimeLimitReached`
 
@@ -2065,12 +2086,12 @@ syntax.
 
 Module build errors include:
 
-- missing rule/select calls
-- wrong rule/select arity
+- missing predicate/function calls
+- wrong predicate/function arity
 - wrong argument labels
 - duplicate variables in a scope
-- duplicate handler/rule/select parameters
-- rule/select name conflicts
+- duplicate handler/predicate/function parameters
+- predicate/function name conflicts
 - invalid type constructors
 - custom type constructor fields that do not exist
 
@@ -2117,7 +2138,7 @@ whole range. Materializing a range as a list or set is subject to range limits.
 ### Damage and defeat
 
 ```eventscript
-rule defeated(_ unit) means unit.hp is 0 or less
+predicate defeated(_ unit) means unit.hp is 0 or less
 
 on DamageTaken(unit, amount) {
     let hp be unit.hp - amount
@@ -2133,8 +2154,8 @@ on DamageTaken(unit, amount) {
 ### Filtering candidates
 
 ```eventscript
-rule targetable(_ unit) means unit.alive and not unit.hidden
-select targetableUnits(_ units) means units[:filter unit where unit is targetable]
+predicate targetable(_ unit) means unit.alive and not unit.hidden
+function targetableUnits(_ units) means units[:filter unit where unit is targetable]
 
 on ChooseTarget(units) {
     let candidates be targetableUnits(units)
@@ -2146,7 +2167,7 @@ on ChooseTarget(units) {
 ### Building a lookup dictionary
 
 ```eventscript
-select unitsById(_ units) means units[:dictionary unit by unit.id]
+function unitsById(_ units) means units[:dictionary unit by unit.id]
 
 on Start(units) {
     let byId be unitsById(units)

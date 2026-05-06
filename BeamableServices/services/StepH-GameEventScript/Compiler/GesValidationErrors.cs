@@ -59,15 +59,15 @@ internal sealed class GesValidationErrors
         return symbolKind switch
         {
             GameEventScriptSymbolKind.Type => module.TypeDefinitions.FirstOrDefault(type => string.Equals(type.Name, symbol, StringComparison.Ordinal)),
-            GameEventScriptSymbolKind.Rule => module.RuleDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, symbol, StringComparison.Ordinal)),
-            GameEventScriptSymbolKind.Select => module.SelectDefinitions.FirstOrDefault(select => string.Equals(select.Name, symbol, StringComparison.Ordinal)),
+            GameEventScriptSymbolKind.Predicate => module.PredicateDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, symbol, StringComparison.Ordinal)),
+            GameEventScriptSymbolKind.Function => module.FunctionDefinitions.FirstOrDefault(select => string.Equals(select.Name, symbol, StringComparison.Ordinal)),
             GameEventScriptSymbolKind.Handler => module.Handlers.FirstOrDefault(handler => string.Equals(handler.Message, symbol, StringComparison.Ordinal)) ??
                                                  FindNodeInModule(module, symbol),
             GameEventScriptSymbolKind.Message => module.Handlers.FirstOrDefault(handler => string.Equals(handler.Message, symbol, StringComparison.Ordinal)) ??
                                                  FindNodeInModule(module, symbol),
             GameEventScriptSymbolKind.Variable => FindVariableNode(module, symbol),
-            GameEventScriptSymbolKind.GlobalDefinition => module.RuleDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, symbol, StringComparison.Ordinal)) ??
-                                                          module.SelectDefinitions.FirstOrDefault(select => string.Equals(select.Name, symbol, StringComparison.Ordinal)) ??
+            GameEventScriptSymbolKind.GlobalDefinition => module.PredicateDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, symbol, StringComparison.Ordinal)) ??
+                                                          module.FunctionDefinitions.FirstOrDefault(select => string.Equals(select.Name, symbol, StringComparison.Ordinal)) ??
                                                           FindNodeInModule(module, symbol),
             _ => FindNodeInModule(module, symbol)
         };
@@ -84,7 +84,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var rule in parsedScript.RuleDefinitions)
+        foreach (var rule in parsedScript.PredicateDefinitions)
         {
             var parameter = rule.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
             if (parameter is not null)
@@ -99,7 +99,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var select in parsedScript.SelectDefinitions)
+        foreach (var select in parsedScript.FunctionDefinitions)
         {
             var parameter = select.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
             if (parameter is not null)
@@ -143,7 +143,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var rule in parsedScript.RuleDefinitions)
+        foreach (var rule in parsedScript.PredicateDefinitions)
         {
             var expressionNode = FindNodeInExpression(rule.Expression, symbol);
             if (expressionNode is not null)
@@ -152,7 +152,7 @@ internal sealed class GesValidationErrors
             }
         }
 
-        foreach (var select in parsedScript.SelectDefinitions)
+        foreach (var select in parsedScript.FunctionDefinitions)
         {
             var expressionNode = FindNodeInExpression(select.Expression, symbol);
             if (expressionNode is not null)
@@ -212,7 +212,7 @@ internal sealed class GesValidationErrors
                 return identifier;
             case CallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal):
                 return call;
-            case RulePredicateExpressionNode rulePredicate when string.Equals(rulePredicate.RuleName, symbol, StringComparison.Ordinal):
+            case PredicateCallExpressionNode rulePredicate when string.Equals(rulePredicate.RuleName, symbol, StringComparison.Ordinal):
                 return rulePredicate;
             case TypeConstructorExpressionNode constructor when string.Equals(constructor.TypeName, symbol, StringComparison.Ordinal):
                 return constructor;
@@ -228,7 +228,7 @@ internal sealed class GesValidationErrors
             BinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
             TypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
             TypeCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
-            RulePredicateExpressionNode rulePredicate => FindNodeInExpression(rulePredicate.Value, symbol),
+            PredicateCallExpressionNode rulePredicate => FindNodeInExpression(rulePredicate.Value, symbol),
             ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
             CollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),

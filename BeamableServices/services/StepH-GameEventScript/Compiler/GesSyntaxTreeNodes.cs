@@ -25,9 +25,9 @@ internal abstract record ScriptNode
 
 // Root node of the syntax tree
 
-internal sealed record ParsedScript(string ModuleName, string SourceName, IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<RuleDefinitionNode> RuleDefinitions, IReadOnlyList<SelectDefinitionNode> SelectDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
+internal sealed record ParsedScript(string ModuleName, string SourceName, IReadOnlyList<TypeDefinitionNode> TypeDefinitions, IReadOnlyList<PredicateDefinitionNode> PredicateDefinitions, IReadOnlyList<FunctionDefinitionNode> FunctionDefinitions, IReadOnlyList<EventHandlerNode> Handlers) : ScriptNode;
 
-// Type/Rule/Select/Handler nodes
+// Type/Predicate/Function/Handler nodes
 
 internal sealed record ParameterNode(string? ExternalLabel, string LocalName, string? DeclaredType = null) : ScriptNode
 {
@@ -66,12 +66,12 @@ internal sealed record EventHandlerNode(
 
 internal sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : ScriptNode;
 internal sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression) : ScriptNode;
-internal sealed record RuleDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
+internal sealed record PredicateDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
 {
     public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
 }
 
-internal sealed record SelectDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
+internal sealed record FunctionDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
 {
     public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
 }
@@ -146,7 +146,7 @@ internal sealed record GeneratedCollectionExpressionNode(string CollectionType, 
 internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;
 internal sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
-internal sealed record RulePredicateExpressionNode(ExpressionNode Value, string RuleName) : ExpressionNode;
+internal sealed record PredicateCallExpressionNode(ExpressionNode Value, string RuleName) : ExpressionNode;
 internal sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
 internal sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;

@@ -77,10 +77,10 @@ public class GameEventScriptCompileException : Exception
 /// The specific symbol associated with the error, if applicable.
 /// </param>
 /// <param name="SymbolKind">
-/// The kind of symbol (e.g., Type, Rule, Select, etc.) involved in the error.
+/// The kind of symbol (e.g., Type, Predicate, Function, etc.) involved in the error.
 /// </param>
 /// <param name="Kind">
-/// The classification of the error (e.g., Syntax, MissingRuleOrSelect, DuplicateType, etc.).
+/// The classification of the error (e.g., Syntax, MissingCallable, DuplicateType, etc.).
 /// </param>
 /// <param name="SourceLocation">
 /// The precise source location where the error occurred, including file name and optional
@@ -134,77 +134,77 @@ public enum GameEventScriptCompileErrorKind
     DuplicateType,
 
     /// <summary>
-    /// Represents an error caused by the presence of duplicate rules in a Game Event Script.
+    /// Represents an error caused by the presence of duplicate predicates in a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This error indicates that the script defines multiple rules with the same name or signature,
+    /// This error indicates that the script defines multiple predicates with the same name or signature,
     /// which leads to conflicts and ambiguity during the compilation process.
-    /// To resolve this issue, ensure that all rules in the script have unique names or signatures.
+    /// To resolve this issue, ensure that all predicates in the script have unique names or signatures.
     /// </remarks>
-    DuplicateRule,
+    DuplicatePredicate,
 
     /// <summary>
-    /// Represents an error caused by multiple select statements being defined with identical signatures in a Game Event Script.
+    /// Represents an error caused by multiple functions being defined with identical signatures in a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This error indicates that the script contains redundant or conflicting select statements, resulting in ambiguity or
-    /// unintended behavior during compilation. Each select statement within a script must be uniquely defined to ensure
+    /// This error indicates that the script contains redundant or conflicting functions, resulting in ambiguity or
+    /// unintended behavior during compilation. Each function within a script must be uniquely defined to ensure
     /// proper execution and avoid logical conflicts.
     /// </remarks>
-    DuplicateSelect,
+    DuplicateFunction,
 
     /// <summary>
-    /// Represents a conflict between a rule and a select statement in the Game Event Script.
+    /// Represents a conflict between a predicate and a function in the Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This error indicates that the script contains a logical conflict where a rule and a select statement
+    /// This error indicates that the script contains a logical conflict where a predicate and a function
     /// are defined in a way that makes them incompatible or mutually exclusive. Such issues typically arise
     /// from structural or logical errors in the script's design, requiring adjustments to resolve the conflict
     /// and achieve consistent behavior.
     /// </remarks>
-    RuleSelectConflict,
+    PredicateFunctionConflict,
 
     /// <summary>
-    /// Represents an error indicating that a required rule or select statement is missing during
+    /// Represents an error indicating that a required predicate or function is missing during
     /// the compilation of a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This error occurs when the script does not define a rule or select statement needed for proper
-    /// execution. A rule or select statement is essential for defining the logic and flow in the script,
+    /// This error occurs when the script does not define a predicate or function needed for proper
+    /// execution. A predicate or function is essential for defining the logic and flow in the script,
     /// and its absence prevents successful compilation.
     /// </remarks>
-    MissingRuleOrSelect,
+    MissingCallable,
 
     /// <summary>
-    /// Indicates that a rule within the Game Event Script contains an invalid predicate.
+    /// Indicates that a predicate expression within the Game Event Script is invalid.
     /// </summary>
     /// <remarks>
-    /// This error occurs when the predicate associated with a rule is not valid, according to the requirements
-    /// of the script's logic or semantic rules. Common causes may include unsupported operations,
-    /// invalid references, or expressions that cannot be evaluated in the context of the rule's execution.
+    /// This error occurs when a predicate use is not valid, according to the requirements
+    /// of the script's logic or semantic requirements. Common causes may include unsupported operations,
+    /// invalid references, or expressions that cannot be evaluated in the context of the predicate's execution.
     /// </remarks>
-    InvalidRulePredicate,
+    InvalidPredicate,
 
     /// <summary>
-    /// Indicates an arity mismatch for a rule encountered during the compilation of a Game Event Script.
+    /// Indicates an arity mismatch for a predicate encountered during the compilation of a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This error occurs when the number of arguments provided to a rule does not match the expected arity
-    /// defined for that rule. It suggests that the script includes a rule invocation with either too few or too
+    /// This error occurs when the number of arguments provided to a predicate does not match the expected arity
+    /// defined for that predicate. It suggests that the script includes a predicate invocation with either too few or too
     /// many arguments, leading to a compilation failure.
     /// </remarks>
-    WrongRuleArity,
+    WrongPredicateArity,
 
     /// <summary>
-    /// Represents an error that occurs when a select statement in a Game Event Script
+    /// Represents an error that occurs when a function in a Game Event Script
     /// has an incorrect number of arguments.
     /// </summary>
     /// <remarks>
-    /// This error indicates that the select statement does not match the expected arity,
-    /// meaning the number of arguments provided to the select does not align with the
-    /// predefined requirements or function signature for that select in the script.
+    /// This error indicates that the function does not match the expected arity,
+    /// meaning the number of arguments provided to the function does not align with the
+    /// predefined requirements or function signature for that function in the script.
     /// </remarks>
-    WrongSelectArity,
+    WrongFunctionArity,
 
     /// <summary>
     /// Indicates an error where multiple handler parameters with the same name are defined in a Game Event Script.
@@ -286,7 +286,7 @@ public enum GameEventScriptCompileErrorKind
 /// </summary>
 /// <remarks>
 /// Each value in this enum corresponds to a distinct type of script element,
-/// such as type definitions, rules, event handlers, or variables. These classifications
+/// such as type definitions, predicates, functions, event handlers, or variables. These classifications
 /// are critical for parsing, symbol resolution, and error reporting during
 /// the compilation and validation phases of Game Event Scripts.
 /// </remarks>
@@ -315,26 +315,20 @@ public enum GameEventScriptSymbolKind
     Type,
 
     /// <summary>
-    /// Represents a rule defined within a Game Event Script.
+    /// Represents a predicate defined within a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// A rule specifies conditional logic or directives that define how certain
-    /// events or scenarios should be handled within the script. It typically includes
-    /// criteria and corresponding actions that dictate the script's behavior
-    /// in response to specific game events.
+    /// A predicate specifies reusable boolean logic within the script.
     /// </remarks>
-    Rule,
+    Predicate,
 
     /// <summary>
-    /// Represents a selection construct within a Game Event Script.
+    /// Represents a function defined within a Game Event Script.
     /// </summary>
     /// <remarks>
-    /// This symbol indicates a decision-making or branching mechanism within the script,
-    /// allowing for the dynamic execution of specific logic paths based on conditions or input.
-    /// It plays a key role in determining the flow control and behavior of the script
-    /// during runtime based on specified criteria.
+    /// A function specifies reusable value-producing logic within the script.
     /// </remarks>
-    Select,
+    Function,
 
     /// <summary>
     /// Represents a handler definition within a Game Event Script.

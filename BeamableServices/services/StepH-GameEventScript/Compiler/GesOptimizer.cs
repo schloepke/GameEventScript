@@ -58,7 +58,7 @@ internal static class GesOptimizer
     private static GesCallableDefinition OptimizeCallableDefinition(GesCallableDefinition definition, ISet<string> knownTypeNames)
     {
         var optimized = OptimizeExpression(definition.Expression, knownTypeNames);
-        if (definition.Kind == GameEventScriptCallableKind.Rule)
+        if (definition.Kind == GameEventScriptCallableKind.Predicate)
         {
             optimized = EnsureBooleanRuleExpression(optimized);
         }
@@ -188,7 +188,7 @@ internal static class GesOptimizer
                 }).ToArray(),
                 OtherwiseExpression = OptimizeExpression(guardedChoice.OtherwiseExpression, knownTypeNames)
             },
-            RulePredicateExpressionNode rulePredicate => rulePredicate with
+            PredicateCallExpressionNode rulePredicate => rulePredicate with
             {
                 Value = OptimizeExpression(rulePredicate.Value, knownTypeNames)
             },
@@ -1177,6 +1177,9 @@ internal static class GesOptimizer
                 return true;
             case "handler":
                 converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptNothingValue.Instance;
+                return true;
+            case "ref":
+                converted = value.IsRef() ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "dictionary":
                 converted = GameEventScriptValueFactory.GesDictionary(value.AsDictionary());

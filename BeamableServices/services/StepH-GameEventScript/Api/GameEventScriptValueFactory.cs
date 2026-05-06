@@ -199,6 +199,15 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesHandler(GameEventScriptMessageSignature signature) => GameEventScriptHandlerValue.Create(signature);
 
     /// <summary>
+    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a typed reference.
+    /// </summary>
+    /// <param name="typeName">The referenced record or external type name. A leading colon is allowed.</param>
+    /// <param name="id">The stable reference id.</param>
+    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the typed reference.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static GameEventScriptValue GesRef(string typeName, string id) => GameEventScriptRefValue.Create(typeName, id);
+
+    /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a sequence of values derived from the provided source value.
     /// </summary>
     /// <param name="source">The source <see cref="GameEventScriptValue"/> to extract values from. Cannot be null.</param>

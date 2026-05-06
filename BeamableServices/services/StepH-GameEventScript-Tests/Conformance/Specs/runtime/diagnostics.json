@@ -33,9 +33,9 @@
     },
     {
       "kind": "scriptApi",
-      "name": "compile diagnostics record rule and select calls",
+      "name": "compile diagnostics record predicate and function calls",
       "compileOptions": { "enableDiagnostics": true },
-      "script": "rule wounded(_ unit) means unit.hp < unit.maxHp\nselect woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  emit Done(byRule: byRule, count: :len bySelect)\n}",
+      "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  emit Done(byRule: byRule, count: :len bySelect)\n}",
       "steps": [
         {
           "input": {
@@ -72,8 +72,8 @@
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "RuleCalled", "name": "wounded" },
-            { "kind": "SelectCalled", "name": "woundedUnits" },
+            { "kind": "PredicateCalled", "name": "wounded" },
+            { "kind": "FunctionCalled", "name": "woundedUnits" },
             { "kind": "EventPublished", "name": "Done" }
           ]
         }

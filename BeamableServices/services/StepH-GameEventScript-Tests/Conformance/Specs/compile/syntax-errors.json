@@ -12,8 +12,8 @@
     },
     {
       "kind": "compileError",
-      "name": "malformed rule parameter fails syntax analysis",
-      "script": "module BrokenCombat\nrule unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  emit Done\n}",
+      "name": "malformed predicate parameter fails syntax analysis",
+      "script": "module BrokenCombat\npredicate unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -165,8 +165,8 @@
     },
     {
       "kind": "compileError",
-      "name": "rule select and handler identifiers enforce casing",
-      "script": "rule Wounded(unit) means unit.hp < unit.maxHp\nselect filter(Units) means Units\non Start(Target) {\n  emit Done\n}",
+      "name": "predicate function and handler identifiers enforce casing",
+      "script": "predicate Wounded(unit) means unit.hp < unit.maxHp\nfunction filter(Units) means Units\non Start(Target) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }

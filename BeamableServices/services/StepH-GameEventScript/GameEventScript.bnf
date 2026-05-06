@@ -6,11 +6,11 @@ WhiteSpace ::= " " | "\t"
 LineComment ::= "//" { AnyCharExceptLineBreak }
 
 ModuleDeclaration ::= "module" ModuleName
-TopLevel ::= TypeDefinition | RuleDefinition | SelectDefinition | EventEndpoint
+TopLevel ::= TypeDefinition | PredicateDefinition | FunctionDefinition | EventEndpoint
 EventEndpoint ::= EventHandler
 TypeDefinition ::= "record" TypeTag "as" "{" { StatementSeparator } [ TypeFieldDefinition { TypeFieldSeparator TypeFieldDefinition } ] { StatementSeparator } "}"
-RuleDefinition ::= "rule" Identifier "(" [ ParamList ] ")" "means" Expression
-SelectDefinition ::= "select" Identifier "(" [ ParamList ] ")" "means" Expression
+PredicateDefinition ::= "predicate" Identifier "(" [ ParamList ] ")" "means" Expression
+FunctionDefinition ::= "function" Identifier "(" [ ParamList ] ")" "means" Expression
 TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
 TypeFieldSeparator ::= "," | StatementSeparator
 EventHandler ::= "on" Message [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
@@ -184,6 +184,7 @@ TypeTag ::= ":text"
           | ":range"
           | ":message"
           | ":handler"
+          | ":ref"
           | ":sequence"
           | ":list"
           | ":dictionary"

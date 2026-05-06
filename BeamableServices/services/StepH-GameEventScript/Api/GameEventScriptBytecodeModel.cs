@@ -214,7 +214,7 @@ public enum GameEventScriptBytecodeOpCode
     SeededRandom,
     Cast,
     TypeConstructor,
-    RulePredicate,
+    PredicateTest,
     MemberAccess,
     IndexedAccess,
     BuildList,
@@ -234,8 +234,8 @@ public enum GameEventScriptBytecodeOpCode
 
 public enum GameEventScriptBytecodeCallableKind
 {
-    Rule,
-    Select
+    Predicate,
+    Function
 }
 
 public enum GameEventScriptBytecodeCastKind
@@ -250,7 +250,8 @@ public enum GameEventScriptBytecodeCastKind
     Second,
     Vector,
     Point,
-    Sequence
+    Sequence,
+    Ref
 }
 
 public sealed record class GameEventScriptBytecodeInstruction(
@@ -274,7 +275,7 @@ internal enum GameEventScriptBytecodeProjectionFastKind
 {
     None,
     Operand,
-    RulePredicate,
+    PredicateTest,
     Binary,
     BinaryCastBoolean,
     BinaryThenBinary,
@@ -303,7 +304,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
         {
             1 when IsProjectionOperand(instructions[0]) => GameEventScriptBytecodeProjectionFastKind.Operand,
             2 when IsProjectionOperand(instructions[0]) &&
-                   instructions[1].OpCode == GameEventScriptBytecodeOpCode.RulePredicate => GameEventScriptBytecodeProjectionFastKind.RulePredicate,
+                   instructions[1].OpCode == GameEventScriptBytecodeOpCode.PredicateTest => GameEventScriptBytecodeProjectionFastKind.PredicateTest,
             3 when IsProjectionOperand(instructions[0]) &&
                    IsProjectionOperand(instructions[1]) &&
                    IsProjectionBinaryOp(instructions[2].OpCode) => GameEventScriptBytecodeProjectionFastKind.Binary,
@@ -337,7 +338,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
             GameEventScriptBytecodeOpCode.LoadConstant => true,
             GameEventScriptBytecodeOpCode.LoadSlot => true,
             GameEventScriptBytecodeOpCode.Cast => instruction.CastKind == GameEventScriptBytecodeCastKind.Boolean,
-            GameEventScriptBytecodeOpCode.RulePredicate => instruction.ExpressionProgram is not null,
+            GameEventScriptBytecodeOpCode.PredicateTest => instruction.ExpressionProgram is not null,
             GameEventScriptBytecodeOpCode.Or => true,
             GameEventScriptBytecodeOpCode.Xor => true,
             GameEventScriptBytecodeOpCode.And => true,

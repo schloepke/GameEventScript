@@ -12,18 +12,18 @@ public class GesOptimizerTests
     {
         const string script =
             """
-            rule always() means '12.5' as :float
+            predicate always() means '12.5' as :float
             """;
 
         var module = GameEventScriptBuilder.Create()
             .AddScript(script, "optimizer.es")
             .BuildModule();
 
-        var rule = module.Callables["always"];
-        Assert.AreEqual(GameEventScriptCallableKind.Rule, rule.Kind);
-        Assert.IsInstanceOfType<TypeCastExpressionNode>(rule.Expression);
+        var predicate = module.Callables["always"];
+        Assert.AreEqual(GameEventScriptCallableKind.Predicate, predicate.Kind);
+        Assert.IsInstanceOfType<TypeCastExpressionNode>(predicate.Expression);
 
-        var normalized = (TypeCastExpressionNode)rule.Expression;
+        var normalized = (TypeCastExpressionNode)predicate.Expression;
         Assert.AreEqual("boolean", normalized.TypeName);
         Assert.IsInstanceOfType<FloatLiteralExpressionNode>(normalized.Value);
         Assert.IsNotNull(normalized.SourceRange);

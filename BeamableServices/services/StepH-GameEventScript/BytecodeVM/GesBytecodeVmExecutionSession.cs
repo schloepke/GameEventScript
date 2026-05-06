@@ -687,9 +687,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         instruction.DiagnosticName));
                     break;
 
-                case GameEventScriptBytecodeOpCode.RulePredicate:
+                case GameEventScriptBytecodeOpCode.PredicateTest:
                     var input = _evaluationStack[--top];
-                    if (!TryEvaluateRulePredicate(instruction, input, top, out var predicateValue))
+                    if (!TryEvaluatePredicateTest(instruction, input, top, out var predicateValue))
                     {
                         value = BytecodeVmValue.Nothing;
                         return false;
@@ -1169,6 +1169,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                          (messageValue.Kind == GameEventScriptValueKind.Message || GesMessageValueCodec.TryReadMessageValue(messageValue, out _)),
             "handler" => value.ReferenceValue is { } handlerValue &&
                          (handlerValue.Kind == GameEventScriptValueKind.Handler || GesMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
+            "ref" => value.ReferenceValue?.IsRef() ?? false,
             "dictionary" => value.ReferenceValue?.IsDictionary() ?? false,
             "set" => value.ReferenceValue?.IsSet() ?? false,
             "dice" => value.ReferenceValue?.IsDice() ?? false,
@@ -1996,6 +1997,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptValueKind.Message =>
                 $"message:{((GameEventScriptMessageValue)value).Value.SignatureId}:[{string.Join("|", ((GameEventScriptMessageValue)value).Value.Arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
             GameEventScriptValueKind.Handler => $"handler:{((GameEventScriptHandlerValue)value).Signature.SignatureId}",
+            GameEventScriptValueKind.Ref => $"ref:{((GameEventScriptRefValue)value).TypeName}:{((GameEventScriptRefValue)value).Id}",
             GameEventScriptValueKind.List => $"list:[{string.Join("|", value.AsList().Select(BuildStableSeedText))}]",
             GameEventScriptValueKind.Dictionary =>
                 $"dict:[{string.Join("|", value.AsDictionary().OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={BuildStableSeedText(pair.Value)}"))}]",
@@ -2014,7 +2016,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             ? $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
             : $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
-    private bool TryEvaluateRulePredicate(
+    private bool TryEvaluatePredicateTest(
         in GameEventScriptBytecodeInstruction instruction,
         BytecodeVmValue input,
         int stackBase,
@@ -2036,19 +2038,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             try
             {
-                if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var ruleInput))
+                if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var predicateInput))
                 {
                     return false;
                 }
 
-                RecordRuleCalled(instruction, ruleInput);
+                RecordPredicateCalled(instruction, predicateInput);
                 if (!_diagnosticsEnabled &&
-                    TryEvaluateSimpleRulePredicate(instruction.ExpressionProgram, instruction.A, ruleInput, out value))
+                    TryEvaluateSimplePredicateTest(instruction.ExpressionProgram, instruction.A, predicateInput, out value))
                 {
                     return true;
                 }
 
-                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, ruleInput, instruction.ExpressionProgram, stackBase, out value))
+                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, predicateInput, instruction.ExpressionProgram, stackBase, out value))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -2066,13 +2068,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         EnterScope();
         try
         {
-            if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var ruleInput))
+            if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var predicateInput))
             {
                 return false;
             }
 
-            RecordRuleCalled(instruction, ruleInput);
-            var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, ruleInput);
+            RecordPredicateCalled(instruction, predicateInput);
+            var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, predicateInput);
             if (!parameterDefined ||
                 !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
             {
@@ -2090,7 +2092,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryEvaluateSimpleRulePredicate(
+    private bool TryEvaluateSimplePredicateTest(
         GameEventScriptBytecodeExpressionProgram program,
         int parameterSlot,
         BytecodeVmValue input,
@@ -2194,7 +2196,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            if (instruction.CallableKind == GameEventScriptBytecodeCallableKind.Rule)
+            if (instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate)
             {
                 value = BytecodeVmValue.Boolean(value.AsBoolean());
             }
@@ -2223,6 +2225,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (typeName is "vector" or "point")
         {
             return EvaluateSpatialConstructor(typeName, labels, stack, start, count);
+        }
+
+        if (typeName == "ref")
+        {
+            return EvaluateRefConstructor(labels, stack, start, count);
         }
 
         if (TryEvaluateExternalTypeConstructor(typeName, labels, stack, start, count, out var externalValue))
@@ -2257,6 +2264,127 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryConvertDeclaredType(typeName, stack[start], out var converted)
             ? converted
             : BytecodeVmValue.Nothing;
+    }
+
+    private BytecodeVmValue EvaluateRefConstructor(
+        string[]? labels,
+        BytecodeVmValue[] stack,
+        int start,
+        int count)
+    {
+        if (count == 1 &&
+            labels is { Length: > 0 } &&
+            string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        {
+            return TryConvertDeclaredType("ref", stack[start], out var converted)
+                ? converted
+                : BytecodeVmValue.Nothing;
+        }
+
+        if (count != 2 || labels is null || labels.Length < count)
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        if (!TryGetRefConstructorArgumentIndexes(labels, count, out var typeIndex, out var idIndex))
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        if (!TryReadRefTypeName(stack[start + typeIndex].ToGameEventScriptValue(), out var targetTypeName) ||
+            !IsReferenceTargetType(targetTypeName))
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        var id = GesValueOperations.ToText(stack[start + idIndex].ToGameEventScriptValue()).Trim();
+        return id.Length == 0
+            ? BytecodeVmValue.Nothing
+            : BytecodeVmValue.Reference(GesRef(targetTypeName, id));
+    }
+
+    private bool IsReferenceTargetType(string typeName)
+        => _compiledScript.TypeDefinitions.ContainsKey(typeName) ||
+           _compiledScript.ExternalTypeRegistry.Types.ContainsKey(typeName);
+
+    private static bool TryGetRefConstructorArgumentIndexes(
+        IReadOnlyList<string> labels,
+        int count,
+        out int typeIndex,
+        out int idIndex)
+    {
+        typeIndex = -1;
+        idIndex = -1;
+        for (var index = 0; index < count; index++)
+        {
+            var label = labels[index];
+            if (string.Equals(label, "type", StringComparison.Ordinal))
+            {
+                if (typeIndex >= 0)
+                {
+                    return false;
+                }
+
+                typeIndex = index;
+                continue;
+            }
+
+            if (string.Equals(label, "id", StringComparison.Ordinal))
+            {
+                if (idIndex >= 0)
+                {
+                    return false;
+                }
+
+                idIndex = index;
+                continue;
+            }
+
+            if (string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                if (typeIndex < 0)
+                {
+                    typeIndex = index;
+                    continue;
+                }
+
+                if (idIndex < 0)
+                {
+                    idIndex = index;
+                    continue;
+                }
+            }
+
+            return false;
+        }
+
+        return typeIndex >= 0 && idIndex >= 0 && typeIndex != idIndex;
+    }
+
+    private static bool TryReadRefTypeName(GameEventScriptValue value, out string typeName)
+    {
+        typeName = value.Kind switch
+        {
+            GameEventScriptValueKind.Tag => value.AsText(),
+            GameEventScriptValueKind.Text => value.AsText(),
+            _ => string.Empty
+        };
+
+        typeName = NormalizeRefTargetTypeName(typeName);
+        return typeName.Length > 0;
+    }
+
+    private static string NormalizeRefTargetTypeName(string typeName)
+    {
+        if (string.IsNullOrWhiteSpace(typeName))
+        {
+            return string.Empty;
+        }
+
+        var normalized = typeName.Trim();
+        return normalized.StartsWith(":", StringComparison.Ordinal)
+            ? normalized[1..]
+            : normalized;
     }
 
     private bool TryEvaluateExternalTypeConstructor(
@@ -2436,6 +2564,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 : GesMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
                     ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateHandlerValue(handler))
                     : BytecodeVmValue.Nothing,
+            "ref" => boxed.IsRef()
+                ? input
+                : BytecodeVmValue.Nothing,
             "dictionary" => BytecodeVmValue.Reference(GesDictionary(boxed.AsDictionary())),
             "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
                 ? BytecodeVmValue.Reference(GesSet(boxed.AsSet()))
@@ -2613,6 +2744,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeCastKind.Vector => "vector",
             GameEventScriptBytecodeCastKind.Point => "point",
             GameEventScriptBytecodeCastKind.Sequence => "sequence",
+            GameEventScriptBytecodeCastKind.Ref => "ref",
             _ => string.Empty
         };
 
@@ -4680,9 +4812,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeProjectionFastKind.Operand:
                 return TryGetProjectionOperand(instructions[0], identifierSlot, item, out value);
 
-            case GameEventScriptBytecodeProjectionFastKind.RulePredicate:
+            case GameEventScriptBytecodeProjectionFastKind.PredicateTest:
                 return TryGetProjectionOperand(instructions[0], identifierSlot, item, out var predicateInput) &&
-                       TryEvaluateRulePredicate(instructions[1], predicateInput, 0, out value);
+                       TryEvaluatePredicateTest(instructions[1], predicateInput, 0, out value);
 
             case GameEventScriptBytecodeProjectionFastKind.Binary:
                 return TryEvaluateProjectionBinaryPattern(
@@ -4782,14 +4914,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     SetAt(top - 1, BytecodeVmValue.Boolean(GetAt(top - 1).AsBoolean()));
                     break;
 
-                case GameEventScriptBytecodeOpCode.RulePredicate:
+                case GameEventScriptBytecodeOpCode.PredicateTest:
                     if (top < 1)
                     {
                         return false;
                     }
 
                     var predicateInput = Pop();
-                    if (!TryEvaluateRulePredicate(instruction, predicateInput, 0, out var predicateValue))
+                    if (!TryEvaluatePredicateTest(instruction, predicateInput, 0, out var predicateValue))
                     {
                         return false;
                     }
@@ -5209,20 +5341,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordRuleCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue input)
+    private void RecordPredicateCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue input)
     {
         if (!_diagnosticsEnabled)
         {
             return;
         }
 
-        var ruleName = instruction.DiagnosticName ?? string.Empty;
+        var predicateName = instruction.DiagnosticName ?? string.Empty;
         var argumentName = instruction.DiagnosticArgumentName ?? "value";
         RecordDiagnostic(
-            GameEventScriptDiagnosticEventKind.RuleCalled,
-            ruleName,
+            GameEventScriptDiagnosticEventKind.PredicateCalled,
+            predicateName,
             CreateSingleArgument(argumentName, input.ToGameEventScriptValue()),
-            $"rule '{ruleName}' called");
+            $"predicate '{predicateName}' called");
     }
 
     private void RecordCallableCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue[] stack, int start, int count)
@@ -5242,10 +5374,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 stack[start + argumentIndex].ToGameEventScriptValue());
         }
 
-        var kind = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Rule
-            ? GameEventScriptDiagnosticEventKind.RuleCalled
-            : GameEventScriptDiagnosticEventKind.SelectCalled;
-        var kindText = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Rule ? "rule" : "select";
+        var kind = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate
+            ? GameEventScriptDiagnosticEventKind.PredicateCalled
+            : GameEventScriptDiagnosticEventKind.FunctionCalled;
+        var kindText = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate ? "predicate" : "function";
         RecordDiagnostic(
             kind,
             callableName,

@@ -402,8 +402,8 @@ public sealed class GameEventScriptHostSteppingTests
         var bytecode = GameEventScriptBuilder.Create()
             .AddScript(
                 """
-                rule high(value) means value >= 2
-                select boost(_ value) means value + 1
+                predicate high(value) means value >= 2
+                function boost(_ value) means value + 1
 
                 on Start(values, seed) {
                   let total be values[:filter value where value is high][:select value -> boost(value)][:sum value -> value]

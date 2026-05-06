@@ -104,6 +104,10 @@ internal static class GameEventScriptConformanceValueCodec
                     TryGetProperty(element, "step", out var stepElement) ? ReadInt64(stepElement, "range step") : 1L);
             case ":message":
                 return GameEventScriptValueFactory.GesMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
+            case ":ref":
+                return GameEventScriptValueFactory.GesRef(
+                    RequireCanonicalTypeName(element, TryGetProperty(element, "refType", out _) ? "refType" : "targetType", "ref target type")[1..],
+                    RequireString(element, "id", "ref id"));
             default:
                 return GameEventScriptValueFactory.GesCustomType(type[1..], DecodeEntries(element));
         }
@@ -184,6 +188,7 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
             GameEventScriptValueKind.Range => ToRangeJson(value),
             GameEventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GameEventScriptMessage>(value, "Value")) },
+            GameEventScriptValueKind.Ref => ToRefJson((GameEventScriptRefValue)value),
             GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
             GameEventScriptValueKind.Sequence => throw new NotSupportedException("Sequence values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
@@ -411,6 +416,14 @@ internal static class GameEventScriptConformanceValueCodec
 
         return node;
     }
+
+    private static JsonObject ToRefJson(GameEventScriptRefValue value)
+        => new()
+        {
+            ["type"] = ":ref",
+            ["refType"] = ToCanonicalTypeName(value.TypeName),
+            ["id"] = value.Id
+        };
 
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;

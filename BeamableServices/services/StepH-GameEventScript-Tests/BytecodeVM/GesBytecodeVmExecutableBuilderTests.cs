@@ -112,7 +112,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """
             module Runtime
 
-            select boosted(_ value as :integer) means value + 1
+            function boosted(_ value as :integer) means value + 1
 
             on Start(value as :integer) {
               emit Done(value: boosted(value))
@@ -130,7 +130,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual("integer", callable.ParameterTypes[0]);
         StringAssert.Contains(dump, "handler #0 Start(value)");
         StringAssert.Contains(dump, "params=[value as :integer]");
-        StringAssert.Contains(dump, "callable #0 Select boosted(_) params=[value as :integer]");
+        StringAssert.Contains(dump, "callable #0 Function boosted(_) params=[value as :integer]");
     }
 
     [TestMethod]
@@ -164,8 +164,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """
             module Runtime
 
-            rule high(value as :integer) means value > 2
-            select boosted(_ value as :integer) means value + 1
+            predicate high(value as :integer) means value > 2
+            function boosted(_ value as :integer) means value + 1
 
             on Start(value) {
               emit Done(ok: value is high, boosted: boosted(value))
@@ -224,7 +224,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """
             module Runtime
 
-            select boosted(_ value) means value + 2
+            function boosted(_ value) means value + 2
 
             on Start(value) {
               let total be boosted(value)
@@ -899,7 +899,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """
             module Diagnostics
 
-            rule high(value) means value > 3
+            predicate high(value) means value > 3
 
             on Start(value) {
               let score be value + 2
@@ -930,7 +930,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.LetEvaluated && diagnostic.Name == "score"));
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.LetEvaluated && diagnostic.Name == "missingValue"));
         Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing && diagnostic.Name == "missingValue"));
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.RuleCalled && diagnostic.Name == "high"));
+        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.PredicateCalled && diagnostic.Name == "high"));
     }
 
     [TestMethod]

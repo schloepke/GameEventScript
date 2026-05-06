@@ -17,8 +17,8 @@ public enum GameEventScriptDiagnosticEventKind
     ParameterBound,
     LetEvaluated,
     ExpressionEvaluatedToNothing,
-    RuleCalled,
-    SelectCalled,
+    PredicateCalled,
+    FunctionCalled,
     EventPublished,
     RuntimeLimitReached
 }

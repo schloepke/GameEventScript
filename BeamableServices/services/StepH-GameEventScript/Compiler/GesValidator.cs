@@ -51,90 +51,90 @@ internal static class GesValidator
             }
         }
 
-        foreach (var ruleDefinition in parsedScript.RuleDefinitions)
+        foreach (var predicateDefinition in parsedScript.PredicateDefinitions)
         {
             ValidateIdentifierCase(
                     parsedScript,
-                    ruleDefinition.Name,
-                    ruleDefinition.Name,
-                    GameEventScriptSymbolKind.Rule,
-                    "Rule names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    predicateDefinition.Name,
+                    predicateDefinition.Name,
+                    GameEventScriptSymbolKind.Predicate,
+                    "Predicate names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
 
-            foreach (var parameter in ruleDefinition.Parameters)
+            foreach (var parameter in predicateDefinition.Parameters)
             {
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
-                    ruleDefinition.Name,
-                    GameEventScriptSymbolKind.Rule,
-                    $"Rule '{ruleDefinition.Name}' declares an invalid parameter name '{parameter}'",
+                    predicateDefinition.Name,
+                    GameEventScriptSymbolKind.Predicate,
+                    $"Predicate '{predicateDefinition.Name}' declares an invalid parameter name '{parameter}'",
                     errors);
             }
 
-            ValidateParameterTypeHints(parsedScript, "Rule", ruleDefinition.Name, ruleDefinition.ParameterList, typeDefinitions, errors);
+            ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
 
-            var duplicateParameters = ruleDefinition.Parameters
+            var duplicateParameters = predicateDefinition.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
                 .Select(group => group.Key);
 
             foreach (var duplicateParameter in duplicateParameters)
             {
-                var duplicateParameterNode = ruleDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+                var duplicateParameterNode = predicateDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
                 errors.Add(
                     parsedScript,
-                    $"Rule '{ruleDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
-                    ruleDefinition.Name,
-                    GameEventScriptSymbolKind.Rule,
+                    $"Predicate '{predicateDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
+                    predicateDefinition.Name,
+                    GameEventScriptSymbolKind.Predicate,
                     GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
                     duplicateParameterNode);
             }
 
-            ValidateExpressionReferences(parsedScript, ruleDefinition.Expression, callables, typeDefinitions, errors);
+            ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors);
         }
 
-        foreach (var selectDefinition in parsedScript.SelectDefinitions)
+        foreach (var functionDefinition in parsedScript.FunctionDefinitions)
         {
             ValidateIdentifierCase(
                     parsedScript,
-                    selectDefinition.Name,
-                    selectDefinition.Name,
-                    GameEventScriptSymbolKind.Select,
-                    "Select names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
+                    functionDefinition.Name,
+                    functionDefinition.Name,
+                    GameEventScriptSymbolKind.Function,
+                    "Function names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
 
-            foreach (var parameter in selectDefinition.Parameters)
+            foreach (var parameter in functionDefinition.Parameters)
             {
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
-                    selectDefinition.Name,
-                    GameEventScriptSymbolKind.Select,
-                    $"Select '{selectDefinition.Name}' declares an invalid parameter name '{parameter}'",
+                    functionDefinition.Name,
+                    GameEventScriptSymbolKind.Function,
+                    $"Function '{functionDefinition.Name}' declares an invalid parameter name '{parameter}'",
                     errors);
             }
 
-            ValidateParameterTypeHints(parsedScript, "Select", selectDefinition.Name, selectDefinition.ParameterList, typeDefinitions, errors);
+            ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, errors);
 
-            var duplicateParameters = selectDefinition.Parameters
+            var duplicateParameters = functionDefinition.Parameters
                 .GroupBy(parameter => parameter, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
                 .Select(group => group.Key);
 
             foreach (var duplicateParameter in duplicateParameters)
             {
-                var duplicateParameterNode = selectDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+                var duplicateParameterNode = functionDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
                 errors.Add(
                     parsedScript,
-                    $"Select '{selectDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
-                    selectDefinition.Name,
-                    GameEventScriptSymbolKind.Select,
+                    $"Function '{functionDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
+                    functionDefinition.Name,
+                    GameEventScriptSymbolKind.Function,
                     GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
                     duplicateParameterNode);
             }
 
-            ValidateExpressionReferences(parsedScript, selectDefinition.Expression, callables, typeDefinitions, errors);
+            ValidateExpressionReferences(parsedScript, functionDefinition.Expression, callables, typeDefinitions, errors);
         }
 
         foreach (var handler in parsedScript.Handlers)
@@ -337,7 +337,7 @@ internal static class GesValidator
                         call.Name,
                         call.Name,
                         GameEventScriptSymbolKind.GlobalDefinition,
-                        $"Call target '{call.Name}' must use identifier casing (rule/select names start lowercase)",
+                        $"Call target '{call.Name}' must use identifier casing (predicate/function names start lowercase)",
                         errors);
                     ValidateDuplicateNamedArguments(parsedScriptContext, call.Name, call.ArgumentList.Arguments, errors);
                     ValidateCallExpression(parsedScriptContext, call, callables, typeDefinitions, errors);
@@ -420,24 +420,24 @@ internal static class GesValidator
                     ValidateTypeConstructorExpression(parsedScriptContext, typeConstructor, callables, typeDefinitions, errors);
                     return;
 
-                case RulePredicateExpressionNode rulePredicate:
+                case PredicateCallExpressionNode rulePredicate:
                     ValidateIdentifierCase(
                         parsedScriptContext,
                         rulePredicate.RuleName,
                         rulePredicate.RuleName,
-                        GameEventScriptSymbolKind.Rule,
-                        $"Rule predicate target '{rulePredicate.RuleName}' must use identifier casing (start lowercase)",
+                        GameEventScriptSymbolKind.Predicate,
+                        $"Predicate test target '{rulePredicate.RuleName}' must use identifier casing (start lowercase)",
                         errors);
                     if (!callables.TryGetValue(rulePredicate.RuleName, out var callableDefinition) ||
-                        callableDefinition.Kind != GameEventScriptCallableKind.Rule ||
+                        callableDefinition.Kind != GameEventScriptCallableKind.Predicate ||
                         callableDefinition.Parameters.Count != 1)
                     {
                         errors.Add(
                             parsedScriptContext,
-                            $"Rule '{rulePredicate.RuleName}' must exist and declare exactly one parameter to be used with 'is'",
+                            $"Predicate '{rulePredicate.RuleName}' must exist and declare exactly one parameter to be used with 'is'",
                             rulePredicate.RuleName,
-                            GameEventScriptSymbolKind.Rule,
-                            GameEventScriptCompileErrorKind.InvalidRulePredicate);
+                            GameEventScriptSymbolKind.Predicate,
+                            GameEventScriptCompileErrorKind.InvalidPredicate);
                     }
 
                     expression = rulePredicate.Value;
@@ -798,10 +798,10 @@ internal static class GesValidator
             {
                 errors.Add(
                     parsedScriptContext,
-                    $"No rule or select named '{call.Name}' exists",
+                    $"No predicate or function named '{call.Name}' exists",
                     call.Name,
                     GameEventScriptSymbolKind.GlobalDefinition,
-                    GameEventScriptCompileErrorKind.MissingRuleOrSelect);
+                    GameEventScriptCompileErrorKind.MissingCallable);
             }
 
             return;
@@ -833,8 +833,8 @@ internal static class GesValidator
                 parsedScriptContext,
                 $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
                 name,
-                kind == GameEventScriptCallableKind.Rule ? GameEventScriptSymbolKind.Rule : GameEventScriptSymbolKind.Select,
-                kind == GameEventScriptCallableKind.Rule ? GameEventScriptCompileErrorKind.WrongRuleArity : GameEventScriptCompileErrorKind.WrongSelectArity);
+                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
+                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
         }
     }
 
@@ -864,7 +864,7 @@ internal static class GesValidator
 
         if (IsBuiltinConstructorType(constructor.TypeName))
         {
-            ValidateBuiltinTypeConstructor(parsedScriptContext, constructor, errors);
+            ValidateBuiltinTypeConstructor(parsedScriptContext, constructor, typeDefinitions, errors);
             return;
         }
 
@@ -896,6 +896,7 @@ internal static class GesValidator
     private static void ValidateBuiltinTypeConstructor(
         ParsedScript parsedScriptContext,
         TypeConstructorExpressionNode constructor,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
         switch (constructor.TypeName)
@@ -903,6 +904,9 @@ internal static class GesValidator
             case "vector":
             case "point":
                 ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
+                return;
+            case "ref":
+                ValidateRefConstructor(parsedScriptContext, constructor, typeDefinitions, errors);
                 return;
             default:
                 if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
@@ -916,6 +920,127 @@ internal static class GesValidator
 
                 return;
         }
+    }
+
+    private static void ValidateRefConstructor(
+        ParsedScript parsedScriptContext,
+        TypeConstructorExpressionNode constructor,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        GesValidationErrors errors)
+    {
+        if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
+        {
+            return;
+        }
+
+        if (constructor.Arguments.Count != 2)
+        {
+            AddTypeConstructorError(
+                parsedScriptContext,
+                constructor.TypeName,
+                "Type constructor ':ref' expects a target type and id",
+                errors);
+            return;
+        }
+
+        if (!TryGetRefConstructorArgumentIndexes(constructor.Arguments, out var typeIndex, out var idIndex))
+        {
+            AddTypeConstructorError(
+                parsedScriptContext,
+                constructor.TypeName,
+                "Type constructor ':ref' expects arguments shaped as ':ref(:type, id: value)' or ':ref(type: :type, id: value)'",
+                errors);
+            return;
+        }
+
+        _ = idIndex;
+        var typeExpression = constructor.Arguments[typeIndex].Expression;
+        if (TryGetLiteralRefTargetTypeName(typeExpression, out var targetTypeName) &&
+            !typeDefinitions.ContainsKey(targetTypeName))
+        {
+            AddTypeConstructorError(
+                parsedScriptContext,
+                constructor.TypeName,
+                $"Type constructor ':ref' target ':{targetTypeName}' must be a record or external type",
+                errors);
+        }
+    }
+
+    private static bool TryGetRefConstructorArgumentIndexes(
+        IReadOnlyList<ArgumentNode> arguments,
+        out int typeIndex,
+        out int idIndex)
+    {
+        typeIndex = -1;
+        idIndex = -1;
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            var label = arguments[index].Label ?? GameEventScriptMessageSignature.UnlabeledParameterName;
+            if (string.Equals(label, "type", StringComparison.Ordinal))
+            {
+                if (typeIndex >= 0)
+                {
+                    return false;
+                }
+
+                typeIndex = index;
+                continue;
+            }
+
+            if (string.Equals(label, "id", StringComparison.Ordinal))
+            {
+                if (idIndex >= 0)
+                {
+                    return false;
+                }
+
+                idIndex = index;
+                continue;
+            }
+
+            if (string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                if (typeIndex < 0)
+                {
+                    typeIndex = index;
+                    continue;
+                }
+
+                if (idIndex < 0)
+                {
+                    idIndex = index;
+                    continue;
+                }
+            }
+
+            return false;
+        }
+
+        return typeIndex >= 0 && idIndex >= 0 && typeIndex != idIndex;
+    }
+
+    private static bool TryGetLiteralRefTargetTypeName(ExpressionNode expression, out string typeName)
+    {
+        typeName = expression switch
+        {
+            TagLiteralExpressionNode tag => tag.Name,
+            TextLiteralExpressionNode text => text.Value,
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(typeName))
+        {
+            typeName = string.Empty;
+            return false;
+        }
+
+        typeName = typeName.Trim();
+        if (typeName.StartsWith(":", StringComparison.Ordinal))
+        {
+            typeName = typeName[1..];
+        }
+
+        return typeName.Length > 0;
     }
 
     private static void ValidateVectorConstructor(
@@ -1013,7 +1138,7 @@ internal static class GesValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or "boolean" or "integer" or "float" or "number" or "sequence" or
-            "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
+            "list" or "range" or "message" or "handler" or "ref" or "dictionary" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(
         ParsedScript parsedScriptContext,
@@ -1041,8 +1166,8 @@ internal static class GesValidator
                 parsedScriptContext,
                 $"{kind} '{name}' expects {expectedCount} argument(s) but received {actualCount}",
                 name,
-                kind == GameEventScriptCallableKind.Rule ? GameEventScriptSymbolKind.Rule : GameEventScriptSymbolKind.Select,
-                kind == GameEventScriptCallableKind.Rule ? GameEventScriptCompileErrorKind.WrongRuleArity : GameEventScriptCompileErrorKind.WrongSelectArity);
+                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
+                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
         }
     }
 

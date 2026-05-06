@@ -458,6 +458,103 @@ internal static class GesValueOperations
         return ToGameEventScriptFloat(number, unit);
     }
 
+    public static bool TryEvaluateIntegerBinary(GameEventScriptValue left, string operation, GameEventScriptValue right, out GameEventScriptValue value)
+    {
+        if (left is not GameEventScriptIntegerValue leftIntegerValue ||
+            right is not GameEventScriptIntegerValue rightIntegerValue)
+        {
+            value = GameEventScriptNothingValue.Instance;
+            return false;
+        }
+
+        var leftInteger = leftIntegerValue.Value;
+        var rightInteger = rightIntegerValue.Value;
+        switch (operation)
+        {
+            case "+":
+                if (leftIntegerValue.Unit == rightIntegerValue.Unit &&
+                    TryAddInteger(leftInteger, rightInteger, out var sum))
+                {
+                    value = GameEventScriptValueFactory.GesInteger(sum, leftIntegerValue.Unit);
+                    return true;
+                }
+
+                break;
+
+            case "-":
+                if (leftIntegerValue.Unit == rightIntegerValue.Unit &&
+                    TrySubtractInteger(leftInteger, rightInteger, out var difference))
+                {
+                    value = GameEventScriptValueFactory.GesInteger(difference, leftIntegerValue.Unit);
+                    return true;
+                }
+
+                break;
+
+            case "*":
+                if (!(leftIntegerValue.Unit.HasValue && rightIntegerValue.Unit.HasValue) &&
+                    TryMultiplyInteger(leftInteger, rightInteger, out var product))
+                {
+                    value = GameEventScriptValueFactory.GesInteger(product, leftIntegerValue.Unit ?? rightIntegerValue.Unit);
+                    return true;
+                }
+
+                break;
+
+            case "div":
+                if (TryGetDivideResultUnit(leftIntegerValue.Unit, rightIntegerValue.Unit, out var integerDivideUnit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    var quotient = leftInteger / rightInteger;
+                    var remainder = leftInteger % rightInteger;
+                    if (remainder != 0 && (remainder > 0) != (rightInteger > 0))
+                    {
+                        quotient--;
+                    }
+
+                    value = GameEventScriptValueFactory.GesInteger(quotient, integerDivideUnit);
+                    return true;
+                }
+
+                break;
+
+            case "mod":
+                if (leftIntegerValue.Unit.HasValue == rightIntegerValue.Unit.HasValue &&
+                    (!leftIntegerValue.Unit.HasValue || leftIntegerValue.Unit == rightIntegerValue.Unit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    var modulo = leftInteger % rightInteger;
+                    if (modulo != 0 &&
+                        (modulo < 0 && rightInteger > 0 || modulo > 0 && rightInteger < 0))
+                    {
+                        modulo += rightInteger;
+                    }
+
+                    value = GameEventScriptValueFactory.GesInteger(modulo, leftIntegerValue.Unit);
+                    return true;
+                }
+
+                break;
+
+            case "rem":
+                if (leftIntegerValue.Unit.HasValue == rightIntegerValue.Unit.HasValue &&
+                    (!leftIntegerValue.Unit.HasValue || leftIntegerValue.Unit == rightIntegerValue.Unit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
+                {
+                    value = GameEventScriptValueFactory.GesInteger(leftInteger % rightInteger, leftIntegerValue.Unit);
+                    return true;
+                }
+
+                break;
+        }
+
+        value = GameEventScriptNothingValue.Instance;
+        return false;
+    }
+
     public static bool TryEvaluatePercentageBinary(GameEventScriptValue left, string operation, GameEventScriptValue right, out GameEventScriptValue value)
     {
         var leftIsPercentage = left.IsPercentage();
@@ -590,6 +687,33 @@ internal static class GesValueOperations
 
         value = ToGameEventScriptNumericResult(left, operation, right, result, resultUnit);
         return true;
+    }
+
+    private static bool TryGetDivideResultUnit(
+        GameEventScriptNumericUnit? leftUnit,
+        GameEventScriptNumericUnit? rightUnit,
+        out GameEventScriptNumericUnit? resultUnit)
+    {
+        if (!leftUnit.HasValue && !rightUnit.HasValue)
+        {
+            resultUnit = null;
+            return true;
+        }
+
+        if (leftUnit.HasValue && !rightUnit.HasValue)
+        {
+            resultUnit = leftUnit;
+            return true;
+        }
+
+        if (leftUnit.HasValue && rightUnit.HasValue && leftUnit == rightUnit)
+        {
+            resultUnit = null;
+            return true;
+        }
+
+        resultUnit = null;
+        return false;
     }
 
     public static bool TryEvaluateVectorBinary(GameEventScriptValue left, string operation, GameEventScriptValue right, out GameEventScriptValue value)
@@ -1523,6 +1647,54 @@ internal static class GesValueOperations
     }
 
     public static bool IsZero(NumericValue value) => value.IsFinite && value.Value == 0d;
+
+    private static bool TryAddInteger(long left, long right, out long value)
+    {
+        value = left + right;
+        return ((left ^ value) & (right ^ value)) >= 0;
+    }
+
+    private static bool TrySubtractInteger(long left, long right, out long value)
+    {
+        value = left - right;
+        return ((left ^ right) & (left ^ value)) >= 0;
+    }
+
+    private static bool TryMultiplyInteger(long left, long right, out long value)
+    {
+        if (left == 0 || right == 0)
+        {
+            value = 0;
+            return true;
+        }
+
+        if (left == -1)
+        {
+            if (right == long.MinValue)
+            {
+                value = default;
+                return false;
+            }
+
+            value = -right;
+            return true;
+        }
+
+        if (right == -1)
+        {
+            if (left == long.MinValue)
+            {
+                value = default;
+                return false;
+            }
+
+            value = -left;
+            return true;
+        }
+
+        value = left * right;
+        return value / right == left;
+    }
 
     public static bool TryAddFinite(double left, double right, out double value)
     {

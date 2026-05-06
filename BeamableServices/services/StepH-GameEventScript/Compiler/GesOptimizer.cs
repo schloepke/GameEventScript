@@ -905,6 +905,11 @@ internal static class GesOptimizer
                     return true;
                 }
 
+                if (GesValueOperations.TryEvaluateIntegerBinary(left, "+", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluatePercentageBinary(left, "+", right, out value))
                 {
                     return true;
@@ -935,6 +940,11 @@ internal static class GesOptimizer
                     return true;
                 }
 
+                if (GesValueOperations.TryEvaluateIntegerBinary(left, "-", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluatePercentageBinary(left, "-", right, out value))
                 {
                     return true;
@@ -961,6 +971,11 @@ internal static class GesOptimizer
                 }
 
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "*", right, out value))
+                {
+                    return true;
+                }
+
+                if (GesValueOperations.TryEvaluateIntegerBinary(left, "*", right, out value))
                 {
                     return true;
                 }
@@ -1025,6 +1040,11 @@ internal static class GesOptimizer
                     return true;
                 }
 
+                if (GesValueOperations.TryEvaluateIntegerBinary(left, "mod", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateUnitBinary(left, "mod", right, out value))
                 {
                     return true;
@@ -1050,6 +1070,11 @@ internal static class GesOptimizer
                     return true;
                 }
 
+                if (GesValueOperations.TryEvaluateIntegerBinary(left, "div", right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluateUnitBinary(left, "div", right, out value))
                 {
                     return true;
@@ -1071,6 +1096,11 @@ internal static class GesOptimizer
                 }
 
                 if (GesValueOperations.TryEvaluateVectorBinary(left, "rem", right, out value))
+                {
+                    return true;
+                }
+
+                if (GesValueOperations.TryEvaluateIntegerBinary(left, "rem", right, out value))
                 {
                     return true;
                 }

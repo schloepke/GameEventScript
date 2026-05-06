@@ -392,6 +392,34 @@
     },
     {
       "kind": "scriptApi",
+      "name": "random integer bounds preserve int64 values",
+      "script": "on Roll {\n  let maxValue be :random from 9223372036854775807 to 9223372036854775807\n  let negativeValue be :random from 0 - 9223372036854775807 to 0 - 9223372036854775807\n  emit Done(maxValue: maxValue, negativeValue: negativeValue)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Roll",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "maxValue": {
+                  "type": ":integer",
+                  "value": "9223372036854775807"
+                },
+                "negativeValue": {
+                  "type": ":integer",
+                  "value": "-9223372036854775807"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "random upper bound keeps arithmetic together",
       "script": "on Mixed(max) {\n  if :random 1 to max * 2 > 3 {\n    emit Passed\n  }\n}",
       "randomSequence": [

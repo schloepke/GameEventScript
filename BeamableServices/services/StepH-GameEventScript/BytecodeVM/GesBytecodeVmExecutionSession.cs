@@ -1471,14 +1471,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
             unwrappedFrom.Kind == GameEventScriptValueKind.Integer &&
             unwrappedTo.Kind == GameEventScriptValueKind.Integer)
         {
-            var from = ToIntSaturated(unwrappedFrom.AsInteger());
-            var to = ToIntSaturated(unwrappedTo.AsInteger());
+            var from = unwrappedFrom.AsInteger();
+            var to = unwrappedTo.AsInteger();
             if (from > to)
             {
                 (from, to) = (to, from);
             }
 
-            return TryNextInclusiveInt(from, to, out var next)
+            return TryNextInclusiveInteger(from, to, out var next)
                 ? BytecodeVmValue.Integer(next)
                 : BytecodeVmValue.Nothing;
         }
@@ -1737,6 +1737,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return vector;
         }
 
+        if (GesValueOperations.TryEvaluateIntegerBinary(left, "+", right, out var integer))
+        {
+            return integer;
+        }
+
         if (GesValueOperations.TryEvaluatePercentageBinary(left, "+", right, out var percentage))
         {
             return percentage;
@@ -1778,6 +1783,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (GesValueOperations.TryEvaluateVectorBinary(left, operation, right, out var vector))
         {
             return vector;
+        }
+
+        if (GesValueOperations.TryEvaluateIntegerBinary(left, operation, right, out var integer))
+        {
+            return integer;
         }
 
         if (GesValueOperations.TryEvaluatePercentageBinary(left, operation, right, out var percentage))
@@ -2077,6 +2087,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
         try
         {
             value = _randomScopes.Peek().NextInclusiveInt(minInclusive, maxInclusive);
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private bool TryNextInclusiveInteger(long minInclusive, long maxInclusive, out long value)
+    {
+        try
+        {
+            value = _randomScopes.Peek().NextInclusiveInteger(minInclusive, maxInclusive);
             return true;
         }
         catch

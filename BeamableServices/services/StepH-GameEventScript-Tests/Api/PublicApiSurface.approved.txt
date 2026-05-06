@@ -446,6 +446,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptNamedArguments
 sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
   method System.Double NextInclusiveFloat(System.Double minInclusive, System.Double maxInclusive)
   method System.Int32 NextInclusiveInt(System.Int32 minInclusive, System.Int32 maxInclusive)
+  method System.Int64 NextInclusiveInteger(System.Int64 minInclusive, System.Int64 maxInclusive)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator Create()
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromRandom(System.Random random)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int32 seed)

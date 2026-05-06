@@ -101,7 +101,10 @@ public sealed class GameEventScriptExternalTypeTests
             """
             on Start {
               let aim be :aim(range: 12m, bearing: 90°, direction: :vector(1m, 2m, 3m))
-              emit Done(score: :aim.score aim)
+              emit Done(
+                score: :aim.score aim,
+                lead: :aim.lead heading: 90°,
+                distance: :aim.distance value: 12)
             }
             """;
 
@@ -113,14 +116,27 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypes(registry)
-            .WithRegistry(AimExtensionRegistry.Instance)
+            .WithRegistry(GameEventScriptExtensionRegistry.Create(typeof(AimExtensionFunctions)))
             .Build()
             .Load(bytecode)
-            .Subscribe("Done", ["score"], (message, _) => received.Add(message));
+            .Subscribe("Done", ["score", "lead", "distance"], (message, _) => received.Add(message));
 
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));
         Assert.HasCount(1, received);
         Assert.AreEqual(102, received[0].Arguments["score"].AsInteger());
+        Assert.AreEqual(95m, received[0].Arguments["lead"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["lead"].IsDecimalUnit(GameEventScriptDecimalUnit.Degree));
+        Assert.AreEqual(12m, received[0].Arguments["distance"].AsNumber());
+        Assert.IsTrue(received[0].Arguments["distance"].IsDecimalUnit(GameEventScriptDecimalUnit.Meter));
+    }
+
+    [TestMethod]
+    public void AnnotatedExtensionsRejectBoxedValueParameters()
+    {
+        var exception = Assert.ThrowsExactly<ArgumentException>(() =>
+            GameEventScriptExtensionRegistry.Create(typeof(BoxedExtensionFunctions)));
+
+        StringAssert.Contains(exception.Message, "cannot use boxed GameEventScriptValue");
     }
 
     [GesType("aim")]
@@ -151,37 +167,26 @@ public sealed class GameEventScriptExternalTypeTests
         public int Checksum { get; }
     }
 
-    private sealed class AimExtensionRegistry : IGameEventScriptExtensionRegistry
+    [GesExtension("aim")]
+    private static class AimExtensionFunctions
     {
-        public static readonly AimExtensionRegistry Instance = new();
+        [GesFunction("score", GameEventScriptValueKind.Integer)]
+        public static long Score([GesParam("_", "aim")] AimValue aim) => aim.Checksum;
 
-        private static readonly IGameEventScriptExtensionFunction Score = new DelegateExtensionFunction((_, args) =>
-            args.Length == 1 && args[0].TryGetExternalObject<AimValue>(out var aim)
-                ? GameEventScriptFastValue.FromInteger(aim.Checksum)
-                : GameEventScriptFastValue.Nothing);
+        [GesFunction("lead", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Degree)]
+        public static decimal Lead([GesParam("heading", GameEventScriptValueKind.Decimal, GameEventScriptDecimalUnit.Degree)] decimal heading)
+            => heading + 5m;
 
-        private AimExtensionRegistry()
-        {
-        }
-
-        public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
-        {
-            if (reference.SignatureId == "aim.score(_)")
-            {
-                function = Score;
-                return true;
-            }
-
-            function = default!;
-            return false;
-        }
+        [GesFunction("distance")]
+        public static (decimal, GameEventScriptDecimalUnit) Distance([GesParam("value", GameEventScriptValueKind.Decimal)] decimal value)
+            => (value, GameEventScriptDecimalUnit.Meter);
     }
 
-    private delegate GameEventScriptFastValue ExtensionInvoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments);
-
-    private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IGameEventScriptExtensionFunction
+    [GesExtension("boxed")]
+    private static class BoxedExtensionFunctions
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
-            => invoke(context, arguments);
+        [GesFunction("value")]
+        public static GameEventScriptFastValue Value([GesParam("_", GameEventScriptValueKind.Decimal)] GameEventScriptValue value)
+            => GameEventScriptFastValue.FromGameEventScriptValue(value);
     }
 }

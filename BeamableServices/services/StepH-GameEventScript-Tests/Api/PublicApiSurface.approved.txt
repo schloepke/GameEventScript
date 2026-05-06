@@ -578,6 +578,10 @@ sealed class StepH.GameEventScript.Runtime.GameEventScriptExtensionReference
   property System.String ExtensionName { get }
   property System.String FunctionName { get }
   property System.String SignatureId { get }
+sealed class StepH.GameEventScript.Runtime.GameEventScriptExtensionRegistry
+  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExtensionReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction& function)
+  method static StepH.GameEventScript.Runtime.GameEventScriptExtensionRegistry Create(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+  method static StepH.GameEventScript.Runtime.GameEventScriptExtensionRegistry Create(System.Type[] extensionTypes)
 sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorDefinition
   ctor GameEventScriptExternalTypeConstructorDefinition(System.String typeName, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeParameterDefinition> parameters)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeParameterDefinition> Parameters { get }
@@ -677,6 +681,9 @@ sealed class StepH.GameEventScript.Runtime.GameEventScriptRunStepResult
   property System.Int32 PublishedMessages { get set }
 sealed class StepH.GameEventScript.Runtime.GesConstructAttribute
   ctor GesConstructAttribute()
+sealed class StepH.GameEventScript.Runtime.GesExtensionAttribute
+  ctor GesExtensionAttribute(System.String name)
+  property System.String Name { get }
 sealed class StepH.GameEventScript.Runtime.GesFieldAttribute
   ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Types.GameEventScriptValueKind kind)
   ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Types.GameEventScriptValueKind kind, StepH.GameEventScript.Types.GameEventScriptDecimalUnit unit)
@@ -685,6 +692,14 @@ sealed class StepH.GameEventScript.Runtime.GesFieldAttribute
   property StepH.GameEventScript.Types.GameEventScriptValueKind? Kind { get }
   property System.String Name { get }
   property System.String TypeName { get }
+sealed class StepH.GameEventScript.Runtime.GesFunctionAttribute
+  ctor GesFunctionAttribute(System.String name)
+  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Types.GameEventScriptValueKind returnKind)
+  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Types.GameEventScriptValueKind returnKind, StepH.GameEventScript.Types.GameEventScriptDecimalUnit unit)
+  property StepH.GameEventScript.Types.GameEventScriptDecimalUnit? ReturnUnit { get }
+  property StepH.GameEventScript.Types.GameEventScriptValueKind? ReturnKind { get }
+  property System.String Name { get }
+  property System.String ReturnTypeName { get }
 sealed class StepH.GameEventScript.Runtime.GesParamAttribute
   ctor GesParamAttribute(System.String name, StepH.GameEventScript.Types.GameEventScriptValueKind kind)
   ctor GesParamAttribute(System.String name, StepH.GameEventScript.Types.GameEventScriptValueKind kind, StepH.GameEventScript.Types.GameEventScriptDecimalUnit unit)

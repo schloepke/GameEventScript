@@ -2144,6 +2144,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return EvaluateSpatialConstructor(typeName, labels, stack, start, count);
         }
 
+        if (TryEvaluateExternalTypeConstructor(typeName, labels, stack, start, count, out var externalValue))
+        {
+            return externalValue;
+        }
+
         if (_compiledScript.TypeDefinitions.TryGetValue(typeName, out var typeDefinition))
         {
             var values = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
@@ -2171,6 +2176,73 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryConvertDeclaredType(typeName, stack[start], out var converted)
             ? converted
             : BytecodeVmValue.Nothing;
+    }
+
+    private bool TryEvaluateExternalTypeConstructor(
+        string typeName,
+        string[]? labels,
+        BytecodeVmValue[] stack,
+        int start,
+        int count,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (labels is null || labels.Length < count || HasUnlabeledConstructorArgument(labels, count) ||
+            !_compiledScript.TryGetBoundExternalTypeConstructor(typeName, labels, out var constructor))
+        {
+            return false;
+        }
+
+        if (constructor.Definition.Parameters.Count != count)
+        {
+            return true;
+        }
+
+        var arguments = new GameEventScriptValue[count];
+        for (var parameterIndex = 0; parameterIndex < constructor.Definition.Parameters.Count; parameterIndex++)
+        {
+            var parameter = constructor.Definition.Parameters[parameterIndex];
+            var argumentIndex = IndexOf(labels, parameter.Name, count);
+            if (argumentIndex < 0 ||
+                string.Equals(labels[argumentIndex], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) ||
+                !TryConvertDeclaredType(parameter.TypeName, stack[start + argumentIndex], out var converted))
+            {
+                return true;
+            }
+
+            arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(
+                converted.ToGameEventScriptValue(),
+                parameter);
+        }
+
+        value = BytecodeVmValue.FromGameEventScriptValue(constructor.Invoke(arguments));
+        return true;
+    }
+
+    private static bool HasUnlabeledConstructorArgument(IReadOnlyList<string> labels, int count)
+    {
+        for (var index = 0; index < count; index++)
+        {
+            if (string.Equals(labels[index], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int IndexOf(IReadOnlyList<string> labels, string label, int count)
+    {
+        for (var index = 0; index < count; index++)
+        {
+            if (string.Equals(labels[index], label, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private BytecodeVmValue EvaluateSpatialConstructor(
@@ -2295,7 +2367,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     : BytecodeVmValue.Reference(GesOptionalSome(boxed)),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
                 ? BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
-                : input
+                : boxed.TryGetCustomTypeName(out var customTypeName) &&
+                  string.Equals(customTypeName, declaredType, StringComparison.Ordinal)
+                    ? input
+                    : BytecodeVmValue.Nothing
         };
 
         return true;

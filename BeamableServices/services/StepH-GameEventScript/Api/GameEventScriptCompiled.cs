@@ -14,6 +14,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeConstant> constantPool,
         IReadOnlyList<string> signatures,
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
+        IReadOnlyList<GameEventScriptExternalTypeConstructorReference> externalTypeConstructorReferences,
         IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
         IReadOnlyList<string> typeMetadata,
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
@@ -26,6 +27,7 @@ public sealed class GameEventScriptCompiled
         ConstantPool = constantPool ?? throw new ArgumentNullException(nameof(constantPool));
         Signatures = signatures ?? throw new ArgumentNullException(nameof(signatures));
         ExternalReferences = externalReferences ?? throw new ArgumentNullException(nameof(externalReferences));
+        ExternalTypeConstructorReferences = externalTypeConstructorReferences ?? throw new ArgumentNullException(nameof(externalTypeConstructorReferences));
         NamedArgumentLayouts = namedArgumentLayouts ?? throw new ArgumentNullException(nameof(namedArgumentLayouts));
         TypeMetadata = typeMetadata ?? throw new ArgumentNullException(nameof(typeMetadata));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
@@ -43,6 +45,8 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<string> Signatures { get; }
 
     public IReadOnlyList<GameEventScriptExtensionReference> ExternalReferences { get; }
+
+    public IReadOnlyList<GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get; }
 
     public IReadOnlyList<IReadOnlyList<string>> NamedArgumentLayouts { get; }
 

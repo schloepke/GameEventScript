@@ -375,6 +375,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.ExternalReferences
                 .Select(reference => new GameEventScriptExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels.ToArray()))
                 .ToArray(),
+            original.ExternalTypeConstructorReferences
+                .Select(reference => new GameEventScriptExternalTypeConstructorReference(reference.TypeName, reference.ArgumentLabels.ToArray()))
+                .ToArray(),
             original.NamedArgumentLayouts.Select(layout => (IReadOnlyList<string>)layout.ToArray()).ToArray(),
             original.TypeMetadata.ToArray(),
             original.Callables.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),

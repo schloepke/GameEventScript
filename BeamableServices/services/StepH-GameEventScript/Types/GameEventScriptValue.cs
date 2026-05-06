@@ -151,6 +151,12 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public bool TryGetCustomTypeName(out string typeName)
     {
+        if (this is IGameEventScriptCustomTypeValue customTypeValue)
+        {
+            typeName = customTypeValue.CustomTypeName;
+            return true;
+        }
+
         if (this is GameEventScriptDictionaryValue dictionary && dictionary.Storage.TryGetValue(HiddenTypeKey, out var marker) && marker.Kind == GameEventScriptValueKind.Tag)
         {
             typeName = marker.AsText();
@@ -158,6 +164,33 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         }
 
         typeName = string.Empty;
+        return false;
+    }
+
+    public bool TryGetExternalObject<T>(out T value)
+    {
+        if (TryGetExternalObject(typeof(T), out var externalObject) &&
+            externalObject is T typed)
+        {
+            value = typed;
+            return true;
+        }
+
+        value = default!;
+        return false;
+    }
+
+    public bool TryGetExternalObject(Type objectType, out object value)
+    {
+        _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
+        if (this is IGameEventScriptExternalObjectValue externalObject &&
+            objectType.IsInstanceOfType(externalObject.Instance))
+        {
+            value = externalObject.Instance;
+            return true;
+        }
+
+        value = default!;
         return false;
     }
 

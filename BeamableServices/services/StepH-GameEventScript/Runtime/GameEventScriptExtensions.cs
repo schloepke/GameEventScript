@@ -170,6 +170,28 @@ public readonly struct GameEventScriptFastValue
             _ => GesNothing()
         };
     }
+
+    public bool TryGetExternalObject<T>(out T value)
+    {
+        if (_reference is not null)
+        {
+            return _reference.TryGetExternalObject(out value);
+        }
+
+        value = default!;
+        return false;
+    }
+
+    public bool TryGetExternalObject(Type objectType, out object value)
+    {
+        if (_reference is not null)
+        {
+            return _reference.TryGetExternalObject(objectType, out value);
+        }
+
+        value = default!;
+        return false;
+    }
 }
 
 public sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry

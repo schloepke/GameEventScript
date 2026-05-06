@@ -7,10 +7,15 @@ namespace StepH.GameEventScript.Runtime;
 
 internal static class GesDynamicLinker
 {
-    public static void Bind(GesBytecodeVmExecutable compiledScript, IGameEventScriptExtensionRegistry registry)
+    public static void Bind(
+        GesBytecodeVmExecutable compiledScript,
+        IGameEventScriptExtensionRegistry registry,
+        IGameEventScriptExternalTypeRegistry externalTypeRegistry)
     {
         _ = compiledScript ?? throw new ArgumentNullException(nameof(compiledScript));
         _ = registry ?? throw new ArgumentNullException(nameof(registry));
+        _ = externalTypeRegistry ?? throw new ArgumentNullException(nameof(externalTypeRegistry));
         compiledScript.BindExtensions(registry);
+        compiledScript.BindExternalTypes(externalTypeRegistry);
     }
 }

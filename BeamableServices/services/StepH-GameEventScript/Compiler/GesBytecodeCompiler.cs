@@ -29,6 +29,8 @@ internal static class GesBytecodeCompiler
         private readonly List<string> _signatures = [];
         private readonly Dictionary<string, int> _externalReferenceIndex = new(StringComparer.Ordinal);
         private readonly List<GameEventScriptExtensionReference> _externalReferences = [];
+        private readonly Dictionary<string, int> _externalTypeConstructorReferenceIndex = new(StringComparer.Ordinal);
+        private readonly List<GameEventScriptExternalTypeConstructorReference> _externalTypeConstructorReferences = [];
         private readonly Dictionary<string, int> _namedArgumentLayoutIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
@@ -62,6 +64,7 @@ internal static class GesBytecodeCompiler
                 _constantPool.ToArray(),
                 _signatures.ToArray(),
                 _externalReferences.ToArray(),
+                _externalTypeConstructorReferences.ToArray(),
                 _namedArgumentLayouts.ToArray(),
                 _typeMetadata.ToArray(),
                 callables,
@@ -116,6 +119,35 @@ internal static class GesBytecodeCompiler
             _externalReferenceIndex[reference.SignatureId] = index;
             AddString(reference.ExtensionName);
             AddString(reference.FunctionName);
+            foreach (var label in reference.ArgumentLabels)
+            {
+                AddString(label);
+            }
+
+            return index;
+        }
+
+        private int AddExternalTypeConstructorReference(GameEventScriptExternalTypeConstructorReference reference)
+        {
+            if (!module.ExternalTypeDefinitions.TryGetValue(reference.TypeName, out var typeDefinition))
+            {
+                throw new GameEventScriptCompileException($"GameEventScript external type ':{reference.TypeName}' is not registered.");
+            }
+
+            if (!typeDefinition.TryGetConstructor(reference.ArgumentLabels, out _))
+            {
+                throw new GameEventScriptCompileException($"GameEventScript external type constructor ':{reference.SignatureId}' is not registered.");
+            }
+
+            if (_externalTypeConstructorReferenceIndex.TryGetValue(reference.SignatureId, out var existing))
+            {
+                return existing;
+            }
+
+            var index = _externalTypeConstructorReferences.Count;
+            _externalTypeConstructorReferences.Add(reference);
+            _externalTypeConstructorReferenceIndex[reference.SignatureId] = index;
+            AddTypeMetadata(reference.TypeName);
             foreach (var label in reference.ArgumentLabels)
             {
                 AddString(label);
@@ -289,6 +321,16 @@ internal static class GesBytecodeCompiler
                     AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
                 }
             }
+
+            foreach (var type in module.ExternalTypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
+            {
+                AddTypeMetadata(type.Name);
+                foreach (var field in type.Fields)
+                {
+                    AddString(field.Name);
+                    AddTypeMetadata(field.TypeName);
+                }
+            }
         }
 
         private void CollectBytecodeMetadata(
@@ -384,6 +426,13 @@ internal static class GesBytecodeCompiler
                 if (instruction.Names is { } names)
                 {
                     AddNamedArgumentLayout(names);
+                }
+
+                if (instruction.OpCode == GameEventScriptBytecodeOpCode.TypeConstructor &&
+                    instruction.DiagnosticName is { } typeName &&
+                    module.ExternalTypeDefinitions.ContainsKey(typeName))
+                {
+                    AddExternalTypeConstructorReference(new GameEventScriptExternalTypeConstructorReference(typeName, instruction.Names));
                 }
 
                 CollectExpressionMetadata(instruction.ExpressionProgram);

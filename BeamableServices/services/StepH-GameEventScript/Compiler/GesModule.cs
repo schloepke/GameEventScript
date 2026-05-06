@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -14,14 +15,18 @@ internal enum GameEventScriptCallableKind
 internal sealed class GesModule
 {
     internal GesModule(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers)
+        IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
+        IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition>? externalTypeDefinitions = null)
     {
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        ExternalTypeDefinitions = externalTypeDefinitions ?? new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
     }
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
+
+    internal IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> ExternalTypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, GesCallableDefinition> Callables { get; }
 

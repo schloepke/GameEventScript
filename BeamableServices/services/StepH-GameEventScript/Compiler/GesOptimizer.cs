@@ -15,6 +15,10 @@ internal static class GesOptimizer
     {
         _ = options ?? new GameEventScriptCompileOptions();
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
+        foreach (var typeName in module.ExternalTypeDefinitions.Keys)
+        {
+            knownTypeNames.Add(typeName);
+        }
 
         var optimizedTypes = module.TypeDefinitions.ToDictionary(
             pair => pair.Key,
@@ -36,7 +40,8 @@ internal static class GesOptimizer
         return new GesModule(
             optimizedTypes,
             optimizedCallables,
-            optimizedHandlers);
+            optimizedHandlers,
+            module.ExternalTypeDefinitions);
     }
 
     private static TypeDefinitionNode OptimizeTypeDefinition(TypeDefinitionNode definition, ISet<string> knownTypeNames)

@@ -13,6 +13,9 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _boundExtensions = new Dictionary<string, IGameEventScriptExtensionFunction>(StringComparer.Ordinal);
     private IGameEventScriptExtensionFunction[] _boundExtensionSlots = [];
+    private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
+    private IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> _boundExternalTypeConstructors =
+        new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal);
 
     internal GesBytecodeVmExecutable(
         GameEventScriptCompileOptions options,
@@ -50,6 +53,8 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> DispatchIndex => _dispatchIndex;
 
     internal IGameEventScriptExtensionRegistry ExtensionRegistry => _extensionRegistry;
+
+    internal IGameEventScriptExternalTypeRegistry ExternalTypeRegistry => _externalTypeRegistry;
 
     IEnumerable<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptContext> Handler)> IGameEventScriptMessageHandlerCollection.Handlers
         => _messageHandlers;
@@ -107,4 +112,38 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         function = default!;
         return false;
     }
+
+    internal void BindExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    {
+        _externalTypeRegistry = registry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
+        if (BytecodeModule.ExternalTypeConstructorReferences.Count == 0)
+        {
+            _boundExternalTypeConstructors = new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal);
+            return;
+        }
+
+        if (ReferenceEquals(_externalTypeRegistry, GameEventScriptEmptyExternalTypeRegistry.Instance))
+        {
+            var reference = BytecodeModule.ExternalTypeConstructorReferences[0];
+            throw new GameEventScriptDynamicLinkException($"GameEventScript external type registry is required to bind ':{reference.SignatureId}'.");
+        }
+
+        var bound = new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal);
+        foreach (var reference in BytecodeModule.ExternalTypeConstructorReferences)
+        {
+            if (!_externalTypeRegistry.TryResolve(reference, out var constructor))
+            {
+                throw new GameEventScriptDynamicLinkException($"GameEventScript external type constructor ':{reference.SignatureId}' is not registered in the configured registry.");
+            }
+
+            bound[reference.SignatureId] = constructor;
+        }
+
+        _boundExternalTypeConstructors = bound;
+    }
+
+    internal bool TryGetBoundExternalTypeConstructor(string typeName, IReadOnlyList<string>? argumentLabels, out IGameEventScriptExternalTypeConstructor constructor)
+        => _boundExternalTypeConstructors.TryGetValue(
+            GameEventScriptExternalTypeConstructorReference.CreateSignatureId(typeName, argumentLabels),
+            out constructor!);
 }

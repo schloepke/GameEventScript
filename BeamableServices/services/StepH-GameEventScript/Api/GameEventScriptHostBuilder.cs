@@ -14,6 +14,7 @@ public sealed class GameEventScriptHostBuilder
     private IGameEventScriptDiagnosticCollector? _diagnosticCollector;
     private Action<GameEventScriptMessage>? _publishedMessageObserver;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
+    private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
     private GameEventScriptDispatchMode _dispatchMode = GameEventScriptDispatchMode.Manual;
     private GameEventScriptDispatcher? _dispatcher;
@@ -109,6 +110,25 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
+    /// Configures the external CLR-backed GameEventScript type registry used to bind loaded bytecode.
+    /// </summary>
+    /// <param name="registry">The external type registry to use.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptHostBuilder WithExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    {
+        _externalTypeRegistry = registry ?? throw new ArgumentNullException(nameof(registry));
+        return this;
+    }
+
+    /// <summary>
+    /// Configures external CLR-backed GameEventScript types by scanning annotated CLR types.
+    /// </summary>
+    /// <param name="types">CLR types annotated with <see cref="GesTypeAttribute"/>.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptHostBuilder WithExternalTypes(params Type[] types)
+        => WithExternalTypes(GameEventScriptExternalTypeRegistry.Create(types));
+
+    /// <summary>
     /// Configures the <see cref="GameEventScriptHostBuilder"/> to use the specified
     /// <see cref="GameEventScriptRuntimeLimits"/> for controlling runtime constraints during script execution.
     /// </summary>
@@ -172,5 +192,14 @@ public sealed class GameEventScriptHostBuilder
     /// A new instance of <see cref="GameEventScriptHost"/> configured with the specified
     /// random generator, diagnostic collector, message observer, extension registry, and runtime limits.
     /// </returns>
-    public GameEventScriptHost Build() => new(_random ?? GameEventScriptRandomGenerator.Create(), _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, _dispatchMode, _dispatcher, _publishHook);
+    public GameEventScriptHost Build() => new(
+        _random ?? GameEventScriptRandomGenerator.Create(),
+        _diagnosticCollector,
+        _publishedMessageObserver,
+        _extensionRegistry,
+        _externalTypeRegistry,
+        _runtimeLimits,
+        _dispatchMode,
+        _dispatcher,
+        _publishHook);
 }

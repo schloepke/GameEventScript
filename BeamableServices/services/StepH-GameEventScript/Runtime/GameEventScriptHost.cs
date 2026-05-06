@@ -18,6 +18,7 @@ public sealed class GameEventScriptHost
     private readonly IGameEventScriptDiagnosticCollector? _diagnosticCollector;
     private readonly Action<GameEventScriptMessage>? _publishedMessageObserver;
     private readonly IGameEventScriptExtensionRegistry _extensionRegistry;
+    private readonly IGameEventScriptExternalTypeRegistry _externalTypeRegistry;
     private readonly GameEventScriptRuntimeLimits _runtimeLimits;
     private readonly GameEventScriptDispatchMode _dispatchMode;
     private readonly GameEventScriptDispatcher _dispatcher;
@@ -30,7 +31,10 @@ public sealed class GameEventScriptHost
     private long _nextRegistrationOrder;
 
     internal GameEventScriptHost(GameEventScriptRandomGenerator random, IGameEventScriptDiagnosticCollector? diagnosticCollector, Action<GameEventScriptMessage>? publishedMessageObserver,
-        IGameEventScriptExtensionRegistry? extensionRegistry, GameEventScriptRuntimeLimits? runtimeLimits, GameEventScriptDispatchMode dispatchMode = GameEventScriptDispatchMode.Manual,
+        IGameEventScriptExtensionRegistry? extensionRegistry,
+        IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
+        GameEventScriptRuntimeLimits? runtimeLimits,
+        GameEventScriptDispatchMode dispatchMode = GameEventScriptDispatchMode.Manual,
         GameEventScriptDispatcher? dispatcher = null,
         Func<GameEventScriptMessage, bool>? publishHook = null)
     {
@@ -38,6 +42,7 @@ public sealed class GameEventScriptHost
         _diagnosticCollector = diagnosticCollector;
         _publishedMessageObserver = publishedMessageObserver;
         _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
+        _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
         _dispatchMode = dispatchMode;
         _dispatcher = dispatcher ?? GameEventScriptDispatcher.Shared;
@@ -60,7 +65,7 @@ public sealed class GameEventScriptHost
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
         if (handlers is GesBytecodeVmExecutable registerCompiled)
         {
-            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry);
+            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry, _externalTypeRegistry);
             RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
             return this;
         }
@@ -110,7 +115,7 @@ public sealed class GameEventScriptHost
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
         if (handlers is GesBytecodeVmExecutable registerCompiled)
         {
-            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry);
+            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry, _externalTypeRegistry);
             RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
             return this;
         }

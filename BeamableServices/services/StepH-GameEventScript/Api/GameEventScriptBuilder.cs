@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
 
@@ -13,6 +14,7 @@ public sealed class GameEventScriptBuilder
 {
     private readonly List<SourceInput> _sources = [];
     private GameEventScriptCompileOptions _options = new();
+    private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
 
     /// <summary>
     /// Creates an instance of the GameEventScriptBuilder.
@@ -49,6 +51,25 @@ public sealed class GameEventScriptBuilder
         };
         return this;
     }
+
+    /// <summary>
+    /// Configures external CLR-backed GameEventScript types that may be referenced by the compiled scripts.
+    /// </summary>
+    /// <param name="registry">The external type registry to use during compilation.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptBuilder WithExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    {
+        _externalTypeRegistry = registry ?? throw new ArgumentNullException(nameof(registry));
+        return this;
+    }
+
+    /// <summary>
+    /// Configures external CLR-backed GameEventScript types by scanning annotated CLR types.
+    /// </summary>
+    /// <param name="types">CLR types annotated with <see cref="GesTypeAttribute"/>.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptBuilder WithExternalTypes(params Type[] types)
+        => WithExternalTypes(GameEventScriptExternalTypeRegistry.Create(types));
 
     /// <summary>
     /// Adds a GameEventScript source string to the builder.
@@ -108,6 +129,8 @@ public sealed class GameEventScriptBuilder
             .ToArray();
         var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
+        var externalTypeDefinitions = _externalTypeRegistry.Types;
+        var validationTypeDefinitions = BuildValidationTypeDefinitionMap(typeDefinitions, externalTypeDefinitions, modules, errors);
         var ruleDefinitions = BuildRuleDefinitionMap(modules, errors);
         var selectDefinitions = BuildSelectDefinitionMap(modules, errors);
         var callables = BuildCallableDefinitionMap(ruleDefinitions, selectDefinitions);
@@ -132,12 +155,12 @@ public sealed class GameEventScriptBuilder
 
         foreach (var module in modules)
         {
-            GesValidator.ValidateModule(module, callables, typeDefinitions, compileOptions, errors);
+            GesValidator.ValidateModule(module, callables, validationTypeDefinitions, compileOptions, errors);
         }
 
         errors.ThrowIfAny();
 
-        var moduleResult = new GesModule(typeDefinitions, callables, handlers);
+        var moduleResult = new GesModule(typeDefinitions, callables, handlers, externalTypeDefinitions);
         return compileOptions.Optimize ? GesOptimizer.Optimize(moduleResult, compileOptions) : moduleResult;
     }
 
@@ -159,6 +182,41 @@ public sealed class GameEventScriptBuilder
 
                 handlers.Add(handler);
             }
+        }
+
+        return map;
+    }
+
+    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(
+        IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes,
+        IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> externalTypes,
+        IReadOnlyList<ParsedScript> modules,
+        GesValidationErrors errors)
+    {
+        if (externalTypes.Count == 0)
+        {
+            return scriptTypes;
+        }
+
+        var map = new Dictionary<string, TypeDefinitionNode>(scriptTypes, StringComparer.Ordinal);
+        foreach (var externalType in externalTypes.Values)
+        {
+            if (map.ContainsKey(externalType.Name))
+            {
+                var module = modules.FirstOrDefault(parsedModule => parsedModule.TypeDefinitions.Any(type => string.Equals(type.Name, externalType.Name, StringComparison.Ordinal)));
+                errors.Add(
+                    module,
+                    $"Type '{externalType.Name}' is defined both as a script record and an external type",
+                    externalType.Name,
+                    GameEventScriptSymbolKind.Type,
+                    GameEventScriptCompileErrorKind.DuplicateType);
+                continue;
+            }
+
+            var fields = externalType.Fields
+                .Select(field => new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null))
+                .ToArray();
+            map[externalType.Name] = new TypeDefinitionNode(externalType.Name, fields);
         }
 
         return map;

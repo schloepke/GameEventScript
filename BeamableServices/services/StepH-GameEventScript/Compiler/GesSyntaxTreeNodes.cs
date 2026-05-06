@@ -127,6 +127,7 @@ internal sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode
 internal sealed record IntegerLiteralExpressionNode(long Value) : ExpressionNode;
 internal sealed record FloatLiteralExpressionNode(double Value) : ExpressionNode;
 internal sealed record PercentageLiteralExpressionNode(double PercentValue) : ExpressionNode;
+internal sealed record UnitIntegerLiteralExpressionNode(long Value, string UnitName) : ExpressionNode;
 internal sealed record UnitFloatLiteralExpressionNode(double Value, string UnitName) : ExpressionNode;
 internal sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;

@@ -152,15 +152,15 @@
                   "value": "13"
                 },
                 "sorted_1": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-4"
                 },
                 "sorted_2": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-3"
                 },
                 "sorted_3": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-2"
                 }
               }

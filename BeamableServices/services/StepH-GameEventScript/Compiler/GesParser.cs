@@ -1736,9 +1736,11 @@ internal sealed class GesParser
             return WithRange(new PercentageLiteralExpressionNode(Previous.FloatValue), Previous);
         }
 
-        if (Match(GesTokenKind.UnitFloat))
+        if (Match(GesTokenKind.UnitNumber))
         {
-            return WithRange(new UnitFloatLiteralExpressionNode(Previous.FloatValue, Previous.UnitName), Previous);
+            return Previous.TryGetIntegerValue(out var integerValue)
+                ? WithRange(new UnitIntegerLiteralExpressionNode(integerValue, Previous.UnitName), Previous)
+                : WithRange(new UnitFloatLiteralExpressionNode(Previous.FloatValue, Previous.UnitName), Previous);
         }
 
         if (Match(Text))
@@ -2497,7 +2499,7 @@ internal sealed class GesParser
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitFloat or Text or True or False or LeftBracket or LeftParen or Minus or Has or Empty or Not;
+        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or LeftBracket or LeftParen or Minus or Has or Empty or Not;
 
     private bool IsArgumentLabelStart()
     {

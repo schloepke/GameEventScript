@@ -33,7 +33,7 @@ public sealed class GesFieldAttribute : Attribute
         Kind = kind;
     }
 
-    public GesFieldAttribute(string name, GameEventScriptValueKind kind, GameEventScriptFloatUnit unit)
+    public GesFieldAttribute(string name, GameEventScriptValueKind kind, GameEventScriptNumericUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -47,7 +47,7 @@ public sealed class GesFieldAttribute : Attribute
 
     public GameEventScriptValueKind? Kind { get; }
 
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
 }
 
 [AttributeUsage(AttributeTargets.Constructor | AttributeTargets.Method)]
@@ -69,7 +69,7 @@ public sealed class GesParamAttribute : Attribute
         Kind = kind;
     }
 
-    public GesParamAttribute(string name, GameEventScriptValueKind kind, GameEventScriptFloatUnit unit)
+    public GesParamAttribute(string name, GameEventScriptValueKind kind, GameEventScriptNumericUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -83,7 +83,7 @@ public sealed class GesParamAttribute : Attribute
 
     public GameEventScriptValueKind? Kind { get; }
 
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
 }
 
 public interface IGameEventScriptExternalTypeRegistry
@@ -178,12 +178,12 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
     {
     }
 
-    public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind kind, GameEventScriptFloatUnit unit)
-        : this(name, kind, (GameEventScriptFloatUnit?)unit)
+    public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind kind, GameEventScriptNumericUnit unit)
+        : this(name, kind, (GameEventScriptNumericUnit?)unit)
     {
     }
 
-    internal GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind? kind, GameEventScriptFloatUnit? unit)
+    internal GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind? kind, GameEventScriptNumericUnit? unit)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
         TypeName = kind is { } resolvedKind
@@ -199,7 +199,7 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
 
     public GameEventScriptValueKind? Kind { get; }
 
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
 }
 
 public sealed class GameEventScriptExternalTypeParameterDefinition
@@ -216,12 +216,12 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
     {
     }
 
-    public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptFloatUnit unit)
-        : this(name, kind, (GameEventScriptFloatUnit?)unit)
+    public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptNumericUnit unit)
+        : this(name, kind, (GameEventScriptNumericUnit?)unit)
     {
     }
 
-    internal GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind? kind, GameEventScriptFloatUnit? unit)
+    internal GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind? kind, GameEventScriptNumericUnit? unit)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
         TypeName = kind is { } resolvedKind
@@ -237,7 +237,7 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
 
     public GameEventScriptValueKind? Kind { get; }
 
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
 }
 
 public sealed class GameEventScriptExternalTypeConstructorDefinition(string typeName, IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
@@ -553,11 +553,11 @@ internal static class GameEventScriptExternalTypeRuntime
 
 internal static class GameEventScriptExternalTypeNames
 {
-    public static string ToTypeName(GameEventScriptValueKind kind, GameEventScriptFloatUnit? unit)
+    public static string ToTypeName(GameEventScriptValueKind kind, GameEventScriptNumericUnit? unit)
     {
-        if (unit is not null && kind is not (GameEventScriptValueKind.Float or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point))
+        if (unit is not null && kind is not (GameEventScriptValueKind.Integer or GameEventScriptValueKind.Float or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point))
         {
-            throw new ArgumentException($"External GameEventScript type '{kind}' cannot declare a double unit.", nameof(unit));
+            throw new ArgumentException($"External GameEventScript type '{kind}' cannot declare a numeric unit.", nameof(unit));
         }
 
         return kind switch
@@ -569,7 +569,7 @@ internal static class GameEventScriptExternalTypeNames
             GameEventScriptValueKind.Vector => "vector",
             GameEventScriptValueKind.Point => "point",
             GameEventScriptValueKind.Float => unit?.ToTypeName() ?? "float",
-            GameEventScriptValueKind.Integer => "integer",
+            GameEventScriptValueKind.Integer => unit?.ToTypeName() ?? "integer",
             GameEventScriptValueKind.Boolean => "boolean",
             GameEventScriptValueKind.Optional => "optional",
             GameEventScriptValueKind.Sequence => "sequence",
@@ -584,9 +584,9 @@ internal static class GameEventScriptExternalTypeNames
         };
     }
 
-    public static (GameEventScriptValueKind? Kind, GameEventScriptFloatUnit? Unit) GetKindAndUnit(string typeName)
+    public static (GameEventScriptValueKind? Kind, GameEventScriptNumericUnit? Unit) GetKindAndUnit(string typeName)
     {
-        if (GameEventScriptFloatUnits.TryParseTypeName(typeName, out var unit))
+        if (GameEventScriptNumericUnits.TryParseTypeName(typeName, out var unit))
         {
             return (GameEventScriptValueKind.Float, unit);
         }
@@ -703,7 +703,7 @@ internal static class GameEventScriptExternalTypeValueConverter
     private static GameEventScriptValue CoerceToDeclaredType(
         GameEventScriptValue value,
         GameEventScriptValueKind? kind,
-        GameEventScriptFloatUnit? unit,
+        GameEventScriptNumericUnit? unit,
         string typeName)
     {
         if (kind == GameEventScriptValueKind.Vector &&
@@ -724,6 +724,12 @@ internal static class GameEventScriptExternalTypeValueConverter
             unit is not null)
         {
             return GesFloat(value.AsNumber(), unit);
+        }
+
+        if (kind == GameEventScriptValueKind.Integer &&
+            unit is not null)
+        {
+            return GesInteger(value.AsInteger(), unit);
         }
 
         return CoerceToDeclaredTypeCore(value, typeName);

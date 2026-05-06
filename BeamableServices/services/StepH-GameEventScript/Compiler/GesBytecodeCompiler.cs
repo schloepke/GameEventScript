@@ -570,7 +570,7 @@ internal static class GesBytecodeCompiler
             return value switch
             {
                 GameEventScriptBooleanValue boolean => GameEventScriptBytecodeConstant.FromBoolean(boolean.Value),
-                GameEventScriptIntegerValue integer => GameEventScriptBytecodeConstant.FromInteger(integer.Value),
+                GameEventScriptIntegerValue integer => GameEventScriptBytecodeConstant.FromInteger(integer.Value, integer.Unit),
                 GameEventScriptFloatValue floatValue => GameEventScriptBytecodeConstant.FromFloat(
                     floatValue.Value,
                     floatValue.Unit,

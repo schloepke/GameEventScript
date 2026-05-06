@@ -16,7 +16,7 @@ internal enum GesTokenKind
     Tag,
     Float,
     Percentage,
-    UnitFloat,
+    UnitNumber,
     Text,
     True,
     False,
@@ -104,7 +104,7 @@ internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Lin
 
     public bool TryGetIntegerValue(out long value)
     {
-        if (Kind == GesTokenKind.Float &&
+        if (Kind is GesTokenKind.Float or GesTokenKind.UnitNumber &&
             Text.IndexOf('.') < 0 &&
             long.TryParse(NormalizeNumericText(Text), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
         {
@@ -247,8 +247,8 @@ internal sealed class GesLexer
     private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn)
         => new(kind, text, startLine, startColumn, _line, _column);
 
-    private GesToken CreateUnitFloatToken(string text, string unitName, int startLine, int startColumn)
-        => new(GesTokenKind.UnitFloat, text, startLine, startColumn, _line, _column, unitName);
+    private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn)
+        => new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName);
 
     private static GesToken CreateWordToken(string text, int line, int column, int endLine, int endColumn)
     {
@@ -408,7 +408,7 @@ internal sealed class GesLexer
         {
             Advance();
             text = _input[start..(_index - 1)];
-            if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitFloatToken(text, "degree", line, column);
+            if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitNumberToken(text, "degree", line, column);
             while (!IsAtEnd && !char.IsWhiteSpace(Current))
             {
                 Advance();
@@ -424,7 +424,7 @@ internal sealed class GesLexer
             var unitName = Current == 'm' ? "meter" : "second";
             Advance();
             text = _input[start..(_index - 1)];
-            return CreateUnitFloatToken(text, unitName, line, column);
+            return CreateUnitNumberToken(text, unitName, line, column);
         }
 
         if (!IsAtEnd && char.IsLetter(Current)) return CreateToken(GesTokenKind.Float, text, line, column);

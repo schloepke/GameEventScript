@@ -27,7 +27,7 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
         long integer = 0,
         double number = 0d,
         bool boolean = false,
-        GameEventScriptFloatUnit? unit = null,
+        GameEventScriptNumericUnit? unit = null,
         bool isNaN = false,
         bool isInfinity = false,
         bool isNegativeInfinity = false,
@@ -55,7 +55,7 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
 
     public bool Boolean { get; }
 
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
 
     public bool IsNaN { get; }
 
@@ -71,12 +71,12 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
     public static GameEventScriptBytecodeConstant FromBoolean(bool value)
         => new(GameEventScriptBytecodeConstantKind.Boolean, boolean: value);
 
-    public static GameEventScriptBytecodeConstant FromInteger(long value)
-        => new(GameEventScriptBytecodeConstantKind.Integer, integer: value);
+    public static GameEventScriptBytecodeConstant FromInteger(long value, GameEventScriptNumericUnit? unit = null)
+        => new(GameEventScriptBytecodeConstantKind.Integer, integer: value, unit: unit);
 
     public static GameEventScriptBytecodeConstant FromFloat(
         double value,
-        GameEventScriptFloatUnit? unit = null,
+        GameEventScriptNumericUnit? unit = null,
         bool isNaN = false,
         bool isInfinity = false,
         bool isNegativeInfinity = false)
@@ -146,7 +146,9 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
         {
             GameEventScriptBytecodeConstantKind.Nothing => "nothing",
             GameEventScriptBytecodeConstantKind.Boolean => Boolean ? "True" : "False",
-            GameEventScriptBytecodeConstantKind.Integer => Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            GameEventScriptBytecodeConstantKind.Integer => Unit is { } unit
+                ? $"{Integer.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
+                : Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
             GameEventScriptBytecodeConstantKind.Float when IsNaN => "NaN",
             GameEventScriptBytecodeConstantKind.Float when IsInfinity => IsNegativeInfinity ? "-Infinity" : "Infinity",
             GameEventScriptBytecodeConstantKind.Float => Unit is { } unit

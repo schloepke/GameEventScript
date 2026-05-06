@@ -1033,7 +1033,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             BytecodeVmValueKind.Nothing => GameEventScriptFastValue.Nothing,
             BytecodeVmValueKind.Boolean => GameEventScriptFastValue.FromBoolean(value.BooleanValue),
-            BytecodeVmValueKind.Integer => GameEventScriptFastValue.FromInteger(value.IntegerValue),
+            BytecodeVmValueKind.Integer => GameEventScriptFastValue.FromInteger(value.IntegerValue, value.Unit),
             BytecodeVmValueKind.Float => GameEventScriptFastValue.FromFloat(value.Number, value.Unit),
             BytecodeVmValueKind.Percentage => GameEventScriptFastValue.FromPercentage(value.Number),
             BytecodeVmValueKind.Reference => GameEventScriptFastValue.FromGameEventScriptValue(value.ReferenceValue ?? GameEventScriptNothingValue.Instance),
@@ -1149,12 +1149,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
             "percentage" => value.Kind == BytecodeVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
-            "degree" => value.Kind == BytecodeVmValueKind.Float && value.Unit == GameEventScriptFloatUnit.Degree ||
-                        (value.ReferenceValue?.IsFloatUnit(GameEventScriptFloatUnit.Degree) ?? false),
-            "meter" => value.Kind == BytecodeVmValueKind.Float && value.Unit == GameEventScriptFloatUnit.Meter ||
-                       (value.ReferenceValue?.IsFloatUnit(GameEventScriptFloatUnit.Meter) ?? false),
-            "second" => value.Kind == BytecodeVmValueKind.Float && value.Unit == GameEventScriptFloatUnit.Second ||
-                        (value.ReferenceValue?.IsFloatUnit(GameEventScriptFloatUnit.Second) ?? false),
+            "degree" => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == GameEventScriptNumericUnit.Degree ||
+                        (value.ReferenceValue?.IsNumericUnit(GameEventScriptNumericUnit.Degree) ?? false),
+            "meter" => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == GameEventScriptNumericUnit.Meter ||
+                       (value.ReferenceValue?.IsNumericUnit(GameEventScriptNumericUnit.Meter) ?? false),
+            "second" => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == GameEventScriptNumericUnit.Second ||
+                        (value.ReferenceValue?.IsNumericUnit(GameEventScriptNumericUnit.Second) ?? false),
             "vector" => value.ReferenceValue?.IsVector() ?? false,
             "point" => value.ReferenceValue?.IsPoint() ?? false,
             "float" => value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float or BytecodeVmValueKind.Percentage ||
@@ -1685,7 +1685,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return vectorNegation;
         }
 
-        if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var unit))
+        if (unwrapped is GameEventScriptIntegerValue { Value: not long.MinValue } integer)
+        {
+            return GesInteger(-integer.Value, integer.Unit);
+        }
+
+        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var unit))
         {
             return GesFloat(-unwrapped.AsNumber(), unit);
         }
@@ -1814,7 +1819,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return GesOptionalNone();
         }
 
-        if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out _))
+        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out _))
         {
             return GesFloatNaN();
         }
@@ -1895,10 +1900,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-        GameEventScriptValue.TryGetFloatUnit(raw, out var unit);
+        GameEventScriptValue.TryGetNumericUnit(raw, out var unit);
         return BytecodeVmValue.FromGameEventScriptValue(GesFloat(
             Math.Min(Math.Max(rawNumber.Value, lower), upper),
-            raw.HasFloatUnit() ? unit : null));
+            raw.HasNumericUnit() ? unit : null));
     }
 
     private bool TryNextInclusiveFloat(double minInclusive, double maxInclusive, out double value)
@@ -2409,9 +2414,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "tag" => BytecodeVmValue.Reference(GesTag(boxed.AsText())),
             "text" => BytecodeVmValue.Reference(GesText(GesValueOperations.ToText(boxed))),
             "percentage" => BytecodeVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
-            "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloatUnit(boxed, GameEventScriptFloatUnit.Degree)),
-            "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloatUnit(boxed, GameEventScriptFloatUnit.Meter)),
-            "second" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloatUnit(boxed, GameEventScriptFloatUnit.Second)),
+            "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptNumericUnit.Degree)),
+            "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptNumericUnit.Meter)),
+            "second" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptNumericUnit.Second)),
             "vector" => BytecodeVmValue.Reference(ConvertToVector(boxed)),
             "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
@@ -2463,7 +2468,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 value = BytecodeVmValue.Boolean(input.AsBoolean());
                 return true;
             case "integer" when input.Kind == BytecodeVmValueKind.Integer:
-                value = input;
+                value = input.Unit.HasValue ? BytecodeVmValue.Integer(input.IntegerValue) : input;
                 return true;
             case "integer" when input.Kind == BytecodeVmValueKind.Boolean:
                 value = BytecodeVmValue.Integer(input.BooleanValue ? 1 : 0);
@@ -2480,11 +2485,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case "percentage":
                 return TryConvertPrimitiveToPercentage(input, out value);
             case "degree":
-                return TryConvertPrimitiveToFloatUnit(input, GameEventScriptFloatUnit.Degree, out value);
+                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptNumericUnit.Degree, out value);
             case "meter":
-                return TryConvertPrimitiveToFloatUnit(input, GameEventScriptFloatUnit.Meter, out value);
+                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptNumericUnit.Meter, out value);
             case "second":
-                return TryConvertPrimitiveToFloatUnit(input, GameEventScriptFloatUnit.Second, out value);
+                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptNumericUnit.Second, out value);
             default:
                 value = input;
                 return false;
@@ -2516,6 +2521,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 value = input;
                 return true;
             case BytecodeVmValueKind.Integer:
+                if (input.Unit.HasValue)
+                {
+                    value = BytecodeVmValue.NaN();
+                    return true;
+                }
+
                 value = BytecodeVmValue.Percentage(input.IntegerValue / 100d);
                 return true;
             case BytecodeVmValueKind.Boolean:
@@ -2534,12 +2545,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private static bool TryConvertPrimitiveToFloatUnit(BytecodeVmValue input, GameEventScriptFloatUnit unit, out BytecodeVmValue value)
+    private static bool TryConvertPrimitiveToNumericUnit(BytecodeVmValue input, GameEventScriptNumericUnit unit, out BytecodeVmValue value)
     {
         switch (input.Kind)
         {
             case BytecodeVmValueKind.Integer:
-                value = BytecodeVmValue.Float(input.IntegerValue, unit);
+                value = input.Unit.HasValue && input.Unit != unit
+                    ? BytecodeVmValue.NaN()
+                    : BytecodeVmValue.Integer(input.IntegerValue, unit);
                 return true;
             case BytecodeVmValueKind.Float when input.Unit.HasValue && input.Unit != unit:
                 value = BytecodeVmValue.NaN();
@@ -2637,7 +2650,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return unwrapped;
         }
 
-        if (unwrapped.HasFloatUnit())
+        if (unwrapped.HasNumericUnit())
         {
             return GesFloatNaN();
         }
@@ -2656,7 +2669,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesPercentage(ratio);
     }
 
-    private static GameEventScriptValue ConvertToFloatUnit(GameEventScriptValue value, GameEventScriptFloatUnit unit)
+    private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit)
     {
         if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
         {
@@ -2668,12 +2681,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return vectorWithUnit;
         }
 
-        if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var existingUnit) && existingUnit != unit)
+        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var existingUnit) && existingUnit != unit)
         {
             return GesFloatNaN();
         }
 
-        if (unwrapped.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer &&
+        if (unwrapped.Kind == GameEventScriptValueKind.Integer &&
+            GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var integerNumber) &&
+            integerNumber.IsFinite)
+        {
+            return GesInteger(GesValueOperations.ToIntegerSaturated(integerNumber.Value), unit);
+        }
+
+        if (unwrapped.Kind == GameEventScriptValueKind.Float &&
             GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) &&
             number.IsFinite)
         {
@@ -2847,8 +2867,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
-        GameEventScriptValue.TryGetFloatUnit(fieldValue, out var unit);
-        return GameEventScriptValueFactory.GesFloat(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasFloatUnit() ? unit : null);
+        GameEventScriptValue.TryGetNumericUnit(fieldValue, out var unit);
+        return GameEventScriptValueFactory.GesFloat(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasNumericUnit() ? unit : null);
     }
 
     private GameEventScriptValue EvaluateCustomTypeExpression(
@@ -5342,7 +5362,7 @@ internal readonly record struct BytecodeVmValue(
     double Number,
     long IntegerValue,
     bool BooleanValue,
-    GameEventScriptFloatUnit? Unit,
+    GameEventScriptNumericUnit? Unit,
     GameEventScriptValue? ReferenceValue)
 {
     public static BytecodeVmValue Nothing { get; } = new(BytecodeVmValueKind.Nothing, 0d, 0, false, null, null);
@@ -5350,10 +5370,10 @@ internal readonly record struct BytecodeVmValue(
     public static BytecodeVmValue Boolean(bool value)
         => new(BytecodeVmValueKind.Boolean, value ? 1d : 0d, value ? 1 : 0, value, null, null);
 
-    public static BytecodeVmValue Integer(long value)
-        => new(BytecodeVmValueKind.Integer, value, value, value != 0, null, null);
+    public static BytecodeVmValue Integer(long value, GameEventScriptNumericUnit? unit = null)
+        => new(BytecodeVmValueKind.Integer, value, value, value != 0, unit, null);
 
-    public static BytecodeVmValue Float(double value, GameEventScriptFloatUnit? unit = null)
+    public static BytecodeVmValue Float(double value, GameEventScriptNumericUnit? unit = null)
         => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, unit, null);
 
     public static BytecodeVmValue Percentage(double ratio)
@@ -5369,7 +5389,7 @@ internal readonly record struct BytecodeVmValue(
         => value switch
         {
             GameEventScriptBooleanValue boolean => Boolean(boolean.Value),
-            GameEventScriptIntegerValue integer => Integer(integer.Value),
+            GameEventScriptIntegerValue integer => Integer(integer.Value, integer.Unit),
             GameEventScriptFloatValue floatValue when floatValue.HasSemanticValue() => Float(floatValue.Value, floatValue.Unit),
             GameEventScriptPercentageValue percentage => Percentage(percentage.Ratio),
             _ => Reference(value)
@@ -5380,7 +5400,7 @@ internal readonly record struct BytecodeVmValue(
         {
             GameEventScriptValueKind.Nothing => Nothing,
             GameEventScriptValueKind.Boolean => Boolean(value.Boolean),
-            GameEventScriptValueKind.Integer => Integer(value.Integer),
+            GameEventScriptValueKind.Integer => Integer(value.Integer, value.Unit),
             GameEventScriptValueKind.Float when !value.IsReferenceBacked => Float(value.Number, value.Unit),
             GameEventScriptValueKind.Percentage when !value.IsReferenceBacked => Percentage(value.Number),
             _ => FromGameEventScriptValue(value.ToGameEventScriptValue())
@@ -5391,7 +5411,7 @@ internal readonly record struct BytecodeVmValue(
         {
             GameEventScriptBytecodeConstantKind.Nothing => Nothing,
             GameEventScriptBytecodeConstantKind.Boolean => Boolean(constant.Boolean),
-            GameEventScriptBytecodeConstantKind.Integer => Integer(constant.Integer),
+            GameEventScriptBytecodeConstantKind.Integer => Integer(constant.Integer, constant.Unit),
             GameEventScriptBytecodeConstantKind.Float when constant.IsNaN => Reference(GesFloatNaN()),
             GameEventScriptBytecodeConstantKind.Float when constant.IsInfinity => Reference(constant.IsNegativeInfinity
                 ? GesFloatNegativeInfinity()
@@ -5432,7 +5452,7 @@ internal readonly record struct BytecodeVmValue(
         {
             BytecodeVmValueKind.Nothing => GameEventScriptNothingValue.Instance,
             BytecodeVmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(BooleanValue),
-            BytecodeVmValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue),
+            BytecodeVmValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue, Unit),
             BytecodeVmValueKind.Float => GameEventScriptValueFactory.GesFloat(Number, Unit),
             BytecodeVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(Number),
             BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptNothingValue.Instance,
@@ -5482,6 +5502,12 @@ internal readonly record struct BytecodeVmValue(
     {
         if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
         {
+            if (left.Unit != right.Unit)
+            {
+                comparison = default;
+                return false;
+            }
+
             comparison = left.IntegerValue.CompareTo(right.IntegerValue);
             return true;
         }
@@ -5515,6 +5541,12 @@ internal readonly record struct BytecodeVmValue(
     {
         if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
         {
+            if (left.Unit != right.Unit)
+            {
+                comparison = default;
+                return false;
+            }
+
             comparison = left.IntegerValue.CompareTo(right.IntegerValue);
             return true;
         }
@@ -5527,9 +5559,10 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerAdd(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            left.Unit == right.Unit &&
             TryAddInteger(leftInteger, rightInteger, out var result))
         {
-            value = Integer(result);
+            value = Integer(result, left.Unit);
             return true;
         }
 
@@ -5541,9 +5574,10 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerSubtract(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            left.Unit == right.Unit &&
             TrySubtractInteger(leftInteger, rightInteger, out var result))
         {
-            value = Integer(result);
+            value = Integer(result, left.Unit);
             return true;
         }
 
@@ -5555,9 +5589,10 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerMultiply(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            !(left.Unit.HasValue && right.Unit.HasValue) &&
             TryMultiplyInteger(leftInteger, rightInteger, out var result))
         {
-            value = Integer(result);
+            value = Integer(result, left.Unit ?? right.Unit);
             return true;
         }
 
@@ -5569,10 +5604,11 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            TryGetDivideResultUnit(left.Unit, right.Unit, out var resultUnit) &&
             rightInteger != 0 &&
             !(leftInteger == long.MinValue && rightInteger == -1))
         {
-            value = Float((double)leftInteger / rightInteger);
+            value = Float((double)leftInteger / rightInteger, resultUnit);
             return true;
         }
 
@@ -5584,6 +5620,7 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerFloorDivide(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            TryGetDivideResultUnit(left.Unit, right.Unit, out var resultUnit) &&
             rightInteger != 0 &&
             !(leftInteger == long.MinValue && rightInteger == -1))
         {
@@ -5594,7 +5631,7 @@ internal readonly record struct BytecodeVmValue(
                 quotient--;
             }
 
-            value = Integer(quotient);
+            value = Integer(quotient, resultUnit);
             return true;
         }
 
@@ -5606,6 +5643,8 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerModulo(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            left.Unit.HasValue == right.Unit.HasValue &&
+            (!left.Unit.HasValue || left.Unit == right.Unit) &&
             rightInteger != 0 &&
             !(leftInteger == long.MinValue && rightInteger == -1))
         {
@@ -5616,7 +5655,7 @@ internal readonly record struct BytecodeVmValue(
                 modulo += rightInteger;
             }
 
-            value = Integer(modulo);
+            value = Integer(modulo, left.Unit);
             return true;
         }
 
@@ -5628,10 +5667,12 @@ internal readonly record struct BytecodeVmValue(
     public static bool TryPrimitiveIntegerRemainder(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
     {
         if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
+            left.Unit.HasValue == right.Unit.HasValue &&
+            (!left.Unit.HasValue || left.Unit == right.Unit) &&
             rightInteger != 0 &&
             !(leftInteger == long.MinValue && rightInteger == -1))
         {
-            value = Integer(leftInteger % rightInteger);
+            value = Integer(leftInteger % rightInteger, left.Unit);
             return true;
         }
 
@@ -6075,9 +6116,9 @@ internal readonly record struct BytecodeVmValue(
     }
 
     private static bool TryGetDivideResultUnit(
-        GameEventScriptFloatUnit? leftUnit,
-        GameEventScriptFloatUnit? rightUnit,
-        out GameEventScriptFloatUnit? resultUnit)
+        GameEventScriptNumericUnit? leftUnit,
+        GameEventScriptNumericUnit? rightUnit,
+        out GameEventScriptNumericUnit? resultUnit)
     {
         if (!leftUnit.HasValue && !rightUnit.HasValue)
         {
@@ -6206,7 +6247,7 @@ internal readonly record struct BytecodeVmValue(
     private static bool TryGetPrimitiveNumeric(
         in BytecodeVmValue input,
         out double number,
-        out GameEventScriptFloatUnit? unit,
+        out GameEventScriptNumericUnit? unit,
         out bool isPercentage)
     {
         switch (input.Kind)
@@ -6218,7 +6259,7 @@ internal readonly record struct BytecodeVmValue(
                 return true;
             case BytecodeVmValueKind.Integer:
                 number = input.IntegerValue;
-                unit = null;
+                unit = input.Unit;
                 isPercentage = false;
                 return true;
             case BytecodeVmValueKind.Float:
@@ -6336,7 +6377,7 @@ internal readonly record struct BytecodeVmValue(
 
     private bool TryGetNumeric(
         out GesValueOperations.NumericValue number,
-        out GameEventScriptFloatUnit? unit,
+        out GameEventScriptNumericUnit? unit,
         out bool isPercentage)
     {
         switch (Kind)
@@ -6348,7 +6389,7 @@ internal readonly record struct BytecodeVmValue(
                 return true;
             case BytecodeVmValueKind.Integer:
                 number = GesValueOperations.NumericValue.Finite(IntegerValue);
-                unit = null;
+                unit = Unit;
                 isPercentage = false;
                 return true;
             case BytecodeVmValueKind.Float:
@@ -6364,7 +6405,7 @@ internal readonly record struct BytecodeVmValue(
             case BytecodeVmValueKind.Reference when ReferenceValue is { } reference &&
                                                        GesValueOperations.TryCoerceNumericForOperation(reference, out var referenceNumber):
                 number = referenceNumber;
-                unit = GameEventScriptValue.TryGetFloatUnit(reference, out var referenceUnit) ? referenceUnit : null;
+                unit = GameEventScriptValue.TryGetNumericUnit(reference, out var referenceUnit) ? referenceUnit : null;
                 isPercentage = reference.IsPercentage();
                 return true;
             default:
@@ -6445,7 +6486,7 @@ internal readonly record struct BytecodeVmValue(
         => Kind == BytecodeVmValueKind.Nothing ||
            ReferenceValue is { } reference && reference.IsNothing();
 
-    private static BytecodeVmValue FromFloatNumeric(GesValueOperations.NumericValue number, GameEventScriptFloatUnit? unit = null)
+    private static BytecodeVmValue FromFloatNumeric(GesValueOperations.NumericValue number, GameEventScriptNumericUnit? unit = null)
         => number.IsFinite
             ? Float(number.Value, unit)
             : Reference(GesValueOperations.ToGameEventScriptFloat(number));
@@ -6455,17 +6496,15 @@ internal readonly record struct BytecodeVmValue(
         string operation,
         BytecodeVmValue right,
         double value,
-        GameEventScriptFloatUnit? unit = null)
-        => unit is null &&
-           operation == "div" &&
+        GameEventScriptNumericUnit? unit = null)
+        => operation == "div" &&
            TryToInteger(value, out var quotient)
-            ? Integer(quotient)
-            : unit is null &&
-           operation is "+" or "-" or "*" or "mod" or "rem" &&
+            ? Integer(quotient, unit)
+            : operation is "+" or "-" or "*" or "mod" or "rem" &&
            left.Kind == BytecodeVmValueKind.Integer &&
            right.Kind == BytecodeVmValueKind.Integer &&
            TryToInteger(value, out var integer)
-            ? Integer(integer)
+            ? Integer(integer, unit)
             : Float(value, unit);
 
     private static BytecodeVmValue FromPercentageNumeric(GesValueOperations.NumericValue number)
@@ -6486,43 +6525,50 @@ internal readonly record struct BytecodeVmValue(
         switch (operation)
         {
             case "+":
-                if (TryAddInteger(leftInteger, rightInteger, out var sum))
+                if (left.Unit == right.Unit &&
+                    TryAddInteger(leftInteger, rightInteger, out var sum))
                 {
-                    value = Integer(sum);
+                    value = Integer(sum, left.Unit);
                     return true;
                 }
 
                 break;
 
             case "-":
-                if (TrySubtractInteger(leftInteger, rightInteger, out var difference))
+                if (left.Unit == right.Unit &&
+                    TrySubtractInteger(leftInteger, rightInteger, out var difference))
                 {
-                    value = Integer(difference);
+                    value = Integer(difference, left.Unit);
                     return true;
                 }
 
                 break;
 
             case "*":
-                if (TryMultiplyInteger(leftInteger, rightInteger, out var product))
+                if (!(left.Unit.HasValue && right.Unit.HasValue) &&
+                    TryMultiplyInteger(leftInteger, rightInteger, out var product))
                 {
-                    value = Integer(product);
+                    value = Integer(product, left.Unit ?? right.Unit);
                     return true;
                 }
 
                 break;
 
             case "/":
-                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                if (TryGetDivideResultUnit(left.Unit, right.Unit, out var divideUnit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
                 {
-                    value = Float((double)leftInteger / rightInteger);
+                    value = Float((double)leftInteger / rightInteger, divideUnit);
                     return true;
                 }
 
                 break;
 
             case "div":
-                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                if (TryGetDivideResultUnit(left.Unit, right.Unit, out var integerDivideUnit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
                 {
                     var quotient = leftInteger / rightInteger;
                     var remainder = leftInteger % rightInteger;
@@ -6531,14 +6577,17 @@ internal readonly record struct BytecodeVmValue(
                         quotient--;
                     }
 
-                    value = Integer(quotient);
+                    value = Integer(quotient, integerDivideUnit);
                     return true;
                 }
 
                 break;
 
             case "mod":
-                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                if (left.Unit.HasValue == right.Unit.HasValue &&
+                    (!left.Unit.HasValue || left.Unit == right.Unit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
                 {
                     var modulo = leftInteger % rightInteger;
                     if (modulo != 0 &&
@@ -6547,16 +6596,19 @@ internal readonly record struct BytecodeVmValue(
                         modulo += rightInteger;
                     }
 
-                    value = Integer(modulo);
+                    value = Integer(modulo, left.Unit);
                     return true;
                 }
 
                 break;
 
             case "rem":
-                if (rightInteger != 0 && !(leftInteger == long.MinValue && rightInteger == -1))
+                if (left.Unit.HasValue == right.Unit.HasValue &&
+                    (!left.Unit.HasValue || left.Unit == right.Unit) &&
+                    rightInteger != 0 &&
+                    !(leftInteger == long.MinValue && rightInteger == -1))
                 {
-                    value = Integer(leftInteger % rightInteger);
+                    value = Integer(leftInteger % rightInteger, left.Unit);
                     return true;
                 }
 

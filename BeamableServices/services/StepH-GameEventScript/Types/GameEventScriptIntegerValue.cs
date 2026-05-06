@@ -6,15 +6,16 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptIntegerValue : GameEventScriptValue
 {
-    
-    public static GameEventScriptIntegerValue Create(long value) => new(value);
+    public static GameEventScriptIntegerValue Create(long value, GameEventScriptNumericUnit? unit = null) => new(value, unit);
 
-    private GameEventScriptIntegerValue(long value)
+    private GameEventScriptIntegerValue(long value, GameEventScriptNumericUnit? unit)
     {
         Value = value;
+        Unit = unit;
     }
 
     public long Value { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Integer;
 
     public override string AsText() => ToString();
@@ -33,7 +34,7 @@ public sealed class GameEventScriptIntegerValue : GameEventScriptValue
 
     internal override bool TryConvertToInteger(out GameEventScriptValue value)
     {
-        value = this;
+        value = Unit.HasValue ? GesInteger(Value) : this;
         return true;
     }
 

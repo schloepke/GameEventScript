@@ -49,8 +49,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsInteger() => Kind == GameEventScriptValueKind.Integer;
     public bool IsText() => Kind == GameEventScriptValueKind.Text;
     public bool IsPercentage() => Kind == GameEventScriptValueKind.Percentage;
-    public bool IsFloatUnit(GameEventScriptFloatUnit unit) => this is GameEventScriptFloatValue floatValue && floatValue.Unit == unit;
-    public bool HasFloatUnit() => this is GameEventScriptFloatValue { Unit: not null };
+    public bool IsNumericUnit(GameEventScriptNumericUnit unit) => TryGetNumericUnit(this, out var valueUnit) && valueUnit == unit;
+    public bool HasNumericUnit() => TryGetNumericUnit(this, out _);
     public bool IsVector() => Kind == GameEventScriptValueKind.Vector;
     public bool IsPoint() => Kind == GameEventScriptValueKind.Point;
     public bool IsSequence() => Kind == GameEventScriptValueKind.Sequence;
@@ -236,7 +236,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Vector => FormatVector((GameEventScriptVectorValue)this),
             GameEventScriptValueKind.Point => FormatPoint((GameEventScriptPointValue)this),
             GameEventScriptValueKind.Float => FormatFloatValue((GameEventScriptFloatValue)this),
-            GameEventScriptValueKind.Integer => AsInteger().ToString(CultureInfo.InvariantCulture),
+            GameEventScriptValueKind.Integer => FormatIntegerValue((GameEventScriptIntegerValue)this),
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
             GameEventScriptValueKind.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
             GameEventScriptValueKind.Sequence => $"sequence[{string.Join(", ", AsEnumerable().Select(x => x.ToString()))}]",
@@ -314,7 +314,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         {
             if (IsNaN()) return int.MinValue;
             if (IsInfinity()) return IsNegativeInfinity() ? int.MinValue + 1 : int.MaxValue;
-            if (TryGetFloatUnit(this, out var unit))
+            if (TryGetNumericUnit(this, out var unit))
             {
                 var numberHash = new HashCode();
                 numberHash.Add(AsNumber());
@@ -815,6 +815,14 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             : formatted;
     }
 
+    internal static string FormatIntegerValue(GameEventScriptIntegerValue value)
+    {
+        var formatted = value.Value.ToString(CultureInfo.InvariantCulture);
+        return value.Unit.HasValue
+            ? $"{formatted}{value.Unit.Value.ToSuffix()}"
+            : formatted;
+    }
+
     public static double WrapDegrees(double degrees)
     {
         var wrapped = degrees % 360d;
@@ -826,8 +834,14 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         return wrapped == 360d ? 0d : wrapped;
     }
 
-    internal static bool TryGetFloatUnit(GameEventScriptValue value, out GameEventScriptFloatUnit unit)
+    internal static bool TryGetNumericUnit(GameEventScriptValue value, out GameEventScriptNumericUnit unit)
     {
+        if (value is GameEventScriptIntegerValue { Unit: { } integerUnit })
+        {
+            unit = integerUnit;
+            return true;
+        }
+
         if (value is GameEventScriptFloatValue { Unit: { } floatUnit })
         {
             unit = floatUnit;
@@ -839,13 +853,13 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     }
 
     private static bool HaveCompatibleNumericUnits(GameEventScriptValue left, GameEventScriptValue right)
-        => TryGetFloatUnit(left, out var leftUnit) == TryGetFloatUnit(right, out var rightUnit) &&
-           (!TryGetFloatUnit(left, out _) || leftUnit == rightUnit);
+        => TryGetNumericUnit(left, out var leftUnit) == TryGetNumericUnit(right, out var rightUnit) &&
+           (!TryGetNumericUnit(left, out _) || leftUnit == rightUnit);
 
     private static int CompareNumericUnits(GameEventScriptValue left, GameEventScriptValue right)
     {
-        var leftHasUnit = TryGetFloatUnit(left, out var leftUnit);
-        var rightHasUnit = TryGetFloatUnit(right, out var rightUnit);
+        var leftHasUnit = TryGetNumericUnit(left, out var leftUnit);
+        var rightHasUnit = TryGetNumericUnit(right, out var rightUnit);
         if (!leftHasUnit && !rightHasUnit)
         {
             return 0;
@@ -877,7 +891,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     internal static string FormatPoint(GameEventScriptPointValue value)
         => $"point[x: {FormatFloatComponent(value.X, value.Unit)}, y: {FormatFloatComponent(value.Y, value.Unit)}, z: {FormatFloatComponent(value.Z, value.Unit)}]";
 
-    internal static string FormatFloatComponent(double value, GameEventScriptFloatUnit? unit = null)
+    internal static string FormatFloatComponent(double value, GameEventScriptNumericUnit? unit = null)
     {
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
         return unit.HasValue ? $"{formatted}{unit.Value.ToSuffix()}" : formatted;

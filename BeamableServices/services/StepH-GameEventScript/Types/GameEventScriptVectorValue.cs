@@ -11,10 +11,10 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
 {
     public static readonly GameEventScriptVectorValue Zero = new(0d, 0d, 0d, null);
 
-    public static GameEventScriptVectorValue Create(double x, double y, double z, GameEventScriptFloatUnit? unit = null)
+    public static GameEventScriptVectorValue Create(double x, double y, double z, GameEventScriptNumericUnit? unit = null)
         => x == 0d && y == 0d && z == 0d && unit is null ? Zero : new GameEventScriptVectorValue(x, y, z, unit);
 
-    private GameEventScriptVectorValue(double x, double y, double z, GameEventScriptFloatUnit? unit)
+    private GameEventScriptVectorValue(double x, double y, double z, GameEventScriptNumericUnit? unit)
     {
         X = x;
         Y = y;
@@ -33,7 +33,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
     public double X { get; }
     public double Y { get; }
     public double Z { get; }
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Vector;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }

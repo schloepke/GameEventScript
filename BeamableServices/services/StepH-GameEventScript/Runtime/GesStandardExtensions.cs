@@ -99,14 +99,14 @@ internal static class GesStandardExtensions
             return GameEventScriptFastValue.FromGameEventScriptValue(GesValueOperations.EvaluateWrapDegree(input.ToGameEventScriptValue()));
         }
 
-        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptFloatUnit.Degree)
+        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptNumericUnit.Degree)
         {
             return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
 
         if (input.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer)
         {
-            return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptFloatUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptNumericUnit.Degree);
         }
 
         return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
@@ -138,7 +138,7 @@ internal static class GesStandardExtensions
 
         try
         {
-            return GameEventScriptFastValue.FromFloat(number.Value / Pi * 180d, GameEventScriptFloatUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(number.Value / Pi * 180d, GameEventScriptNumericUnit.Degree);
         }
         catch (OverflowException)
         {
@@ -157,7 +157,7 @@ internal static class GesStandardExtensions
                 return true;
             }
 
-            if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var unit) && unit != GameEventScriptFloatUnit.Degree)
+            if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var unit) && unit != GameEventScriptNumericUnit.Degree)
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;
@@ -166,7 +166,7 @@ internal static class GesStandardExtensions
             return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
         }
 
-        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptFloatUnit.Degree)
+        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptNumericUnit.Degree)
         {
             number = GesValueOperations.NumericValue.NaN();
             return false;
@@ -186,7 +186,7 @@ internal static class GesStandardExtensions
                 return true;
             }
 
-            if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out _))
+            if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out _))
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;

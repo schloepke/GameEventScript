@@ -302,6 +302,7 @@ internal static class GesBytecodeLowerer
         {
             case BooleanLiteralExpressionNode:
             case IntegerLiteralExpressionNode:
+            case UnitIntegerLiteralExpressionNode:
             case FloatLiteralExpressionNode:
             case PercentageLiteralExpressionNode:
             case UnitFloatLiteralExpressionNode:
@@ -1751,6 +1752,12 @@ internal static class GesBytecodeLowerer
                         EmitLoadConstant(GameEventScriptValueFactory.GesInteger(integer.Value));
                         return;
 
+                    case UnitIntegerLiteralExpressionNode unitInteger:
+                        EmitLoadConstant(GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
+                            ? GameEventScriptValueFactory.GesInteger(unitInteger.Value, integerUnit)
+                            : GameEventScriptValueFactory.GesFloatNaN());
+                        return;
+
                     case FloatLiteralExpressionNode floatLiteral:
                         EmitLoadConstant(GameEventScriptValueFactory.GesFloat(floatLiteral.Value));
                         return;
@@ -1760,7 +1767,7 @@ internal static class GesBytecodeLowerer
                         return;
 
                     case UnitFloatLiteralExpressionNode unitFloat:
-                        EmitLoadConstant(GameEventScriptFloatUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
+                        EmitLoadConstant(GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
                             ? GameEventScriptValueFactory.GesFloat(unitFloat.Value, unit)
                             : GameEventScriptValueFactory.GesFloatNaN());
                         return;
@@ -2456,6 +2463,7 @@ internal static class GesBytecodeLowerer
                 => expression switch
                 {
                     IntegerLiteralExpressionNode => true,
+                    UnitIntegerLiteralExpressionNode => true,
                     IdentifierExpressionNode => true,
                     BinaryExpressionNode binary => ShouldPreferPrimitiveIntegerOp(binary),
                     TypeCastExpressionNode { TypeName: "integer" } => true,

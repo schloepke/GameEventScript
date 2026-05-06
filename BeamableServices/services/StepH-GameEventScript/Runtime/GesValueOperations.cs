@@ -422,7 +422,7 @@ internal static class GesValueOperations
         return false;
     }
 
-    public static GameEventScriptValue ToGameEventScriptFloat(NumericValue number, GameEventScriptFloatUnit? unit = null)
+    public static GameEventScriptValue ToGameEventScriptFloat(NumericValue number, GameEventScriptNumericUnit? unit = null)
     {
         return number.Kind switch
         {
@@ -439,22 +439,20 @@ internal static class GesValueOperations
         string operation,
         GameEventScriptValue right,
         NumericValue number,
-        GameEventScriptFloatUnit? unit = null)
+        GameEventScriptNumericUnit? unit = null)
     {
-        if (unit is null &&
-            operation == "div" &&
+        if (operation == "div" &&
             TryToInteger(number, out var quotient))
         {
-            return GameEventScriptValueFactory.GesInteger(quotient);
+            return GameEventScriptValueFactory.GesInteger(quotient, unit);
         }
 
-        if (unit is null &&
-            operation is "+" or "-" or "*" or "mod" or "rem" or "^" &&
+        if (operation is "+" or "-" or "*" or "mod" or "rem" or "^" &&
             left.Kind == GameEventScriptValueKind.Integer &&
             right.Kind == GameEventScriptValueKind.Integer &&
             TryToInteger(number, out var integer))
         {
-            return GameEventScriptValueFactory.GesInteger(integer);
+            return GameEventScriptValueFactory.GesInteger(integer, unit);
         }
 
         return ToGameEventScriptFloat(number, unit);
@@ -477,8 +475,8 @@ internal static class GesValueOperations
             return true;
         }
 
-        var leftHasUnit = GameEventScriptValue.TryGetFloatUnit(left, out var leftUnit);
-        var rightHasUnit = GameEventScriptValue.TryGetFloatUnit(right, out var rightUnit);
+        var leftHasUnit = GameEventScriptValue.TryGetNumericUnit(left, out var leftUnit);
+        var rightHasUnit = GameEventScriptValue.TryGetNumericUnit(right, out var rightUnit);
         if (leftIsPercentage && rightHasUnit && operation is "+" or "-" or "/")
         {
             value = GameEventScriptValueFactory.GesFloatNaN();
@@ -544,8 +542,8 @@ internal static class GesValueOperations
 
     public static bool TryEvaluateUnitBinary(GameEventScriptValue left, string operation, GameEventScriptValue right, out GameEventScriptValue value)
     {
-        var leftHasUnit = GameEventScriptValue.TryGetFloatUnit(left, out var leftUnit);
-        var rightHasUnit = GameEventScriptValue.TryGetFloatUnit(right, out var rightUnit);
+        var leftHasUnit = GameEventScriptValue.TryGetNumericUnit(left, out var leftUnit);
+        var rightHasUnit = GameEventScriptValue.TryGetNumericUnit(right, out var rightUnit);
         if (operation is not ("+" or "-" or "*" or "/" or "div" or "mod" or "rem" or "^") || (!leftHasUnit && !rightHasUnit))
         {
             value = GameEventScriptNothingValue.Instance;
@@ -559,7 +557,7 @@ internal static class GesValueOperations
             return true;
         }
 
-        var resultUnit = default(GameEventScriptFloatUnit?);
+        var resultUnit = default(GameEventScriptNumericUnit?);
         var valid = operation switch
         {
             "+" or "-" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
@@ -767,7 +765,7 @@ internal static class GesValueOperations
 
         var labels = new[] { "x", "y", "z" };
         var values = new double[3];
-        var unit = default(GameEventScriptFloatUnit?);
+        var unit = default(GameEventScriptNumericUnit?);
         var initialized = false;
 
         foreach (var pair in components)
@@ -816,7 +814,7 @@ internal static class GesValueOperations
 
         var labels = new[] { "x", "y", "z" };
         var values = new double[3];
-        var unit = default(GameEventScriptFloatUnit?);
+        var unit = default(GameEventScriptNumericUnit?);
         var initialized = false;
 
         foreach (var pair in components)
@@ -900,7 +898,7 @@ internal static class GesValueOperations
         }
     }
 
-    public static bool TryApplyVectorUnit(GameEventScriptValue value, GameEventScriptFloatUnit unit, out GameEventScriptValue converted)
+    public static bool TryApplyVectorUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit, out GameEventScriptValue converted)
     {
         switch (value)
         {
@@ -932,7 +930,7 @@ internal static class GesValueOperations
             return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        if (GameEventScriptValue.TryGetFloatUnit(unwrapped, out var unit) && unit != GameEventScriptFloatUnit.Degree)
+        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var unit) && unit != GameEventScriptNumericUnit.Degree)
         {
             return GameEventScriptValueFactory.GesFloatNaN();
         }
@@ -967,18 +965,18 @@ internal static class GesValueOperations
 
     public static bool HaveCompatibleNumericUnits(GameEventScriptValue left, GameEventScriptValue right)
     {
-        var leftHasUnit = GameEventScriptValue.TryGetFloatUnit(left, out var leftUnit);
-        var rightHasUnit = GameEventScriptValue.TryGetFloatUnit(right, out var rightUnit);
+        var leftHasUnit = GameEventScriptValue.TryGetNumericUnit(left, out var leftUnit);
+        var rightHasUnit = GameEventScriptValue.TryGetNumericUnit(right, out var rightUnit);
         return leftHasUnit == rightHasUnit && (!leftHasUnit || leftUnit == rightUnit);
     }
 
-    private static bool TryGetCommonNumericUnit(IEnumerable<GameEventScriptValue> values, out GameEventScriptFloatUnit? unit)
+    private static bool TryGetCommonNumericUnit(IEnumerable<GameEventScriptValue> values, out GameEventScriptNumericUnit? unit)
     {
         unit = null;
         var initialized = false;
         foreach (var value in values)
         {
-            var hasUnit = GameEventScriptValue.TryGetFloatUnit(value, out var currentUnit);
+            var hasUnit = GameEventScriptValue.TryGetNumericUnit(value, out var currentUnit);
             if (!initialized)
             {
                 unit = hasUnit ? currentUnit : null;
@@ -995,15 +993,15 @@ internal static class GesValueOperations
         return true;
     }
 
-    private static bool SetUnit(GameEventScriptFloatUnit? value, out GameEventScriptFloatUnit? unit)
+    private static bool SetUnit(GameEventScriptNumericUnit? value, out GameEventScriptNumericUnit? unit)
     {
         unit = value;
         return true;
     }
 
-    private readonly record struct VectorComponents(double X, double Y, double Z, GameEventScriptFloatUnit? Unit);
+    private readonly record struct VectorComponents(double X, double Y, double Z, GameEventScriptNumericUnit? Unit);
 
-    private readonly record struct PointComponents(double X, double Y, double Z, GameEventScriptFloatUnit? Unit);
+    private readonly record struct PointComponents(double X, double Y, double Z, GameEventScriptNumericUnit? Unit);
 
     private static bool TryReadVector(GameEventScriptValue value, out VectorComponents vector)
     {
@@ -1040,7 +1038,7 @@ internal static class GesValueOperations
         }
 
         var values = new double[3];
-        var unit = default(GameEventScriptFloatUnit?);
+        var unit = default(GameEventScriptNumericUnit?);
         var initialized = false;
 
         for (var index = 0; index < components.Count; index++)
@@ -1078,7 +1076,7 @@ internal static class GesValueOperations
         }
 
         var values = new double[3];
-        var unit = default(GameEventScriptFloatUnit?);
+        var unit = default(GameEventScriptNumericUnit?);
         var initialized = false;
 
         for (var index = 0; index < components.Count; index++)
@@ -1110,7 +1108,7 @@ internal static class GesValueOperations
     private static bool TryReadVectorComponent(
         GameEventScriptValue component,
         out double value,
-        out GameEventScriptFloatUnit? unit,
+        out GameEventScriptNumericUnit? unit,
         out bool invalid)
     {
         value = default;
@@ -1130,7 +1128,7 @@ internal static class GesValueOperations
         }
 
         value = number.Value;
-        unit = GameEventScriptValue.TryGetFloatUnit(unwrapped, out var floatUnit) ? floatUnit : null;
+        unit = GameEventScriptValue.TryGetNumericUnit(unwrapped, out var floatUnit) ? floatUnit : null;
         return true;
     }
 
@@ -1141,7 +1139,7 @@ internal static class GesValueOperations
             return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        var scalarHasUnit = GameEventScriptValue.TryGetFloatUnit(scalar, out var scalarUnit);
+        var scalarHasUnit = GameEventScriptValue.TryGetNumericUnit(scalar, out var scalarUnit);
         if (!TryGetVectorScalarResultUnit(vector.Unit, scalarHasUnit ? scalarUnit : null, operation, out var resultUnit))
         {
             return GameEventScriptValueFactory.GesFloatNaN();
@@ -1166,10 +1164,10 @@ internal static class GesValueOperations
     }
 
     private static bool TryGetVectorScalarResultUnit(
-        GameEventScriptFloatUnit? vectorUnit,
-        GameEventScriptFloatUnit? scalarUnit,
+        GameEventScriptNumericUnit? vectorUnit,
+        GameEventScriptNumericUnit? scalarUnit,
         string operation,
-        out GameEventScriptFloatUnit? resultUnit)
+        out GameEventScriptNumericUnit? resultUnit)
     {
         resultUnit = null;
         if (operation == "*")
@@ -1209,7 +1207,7 @@ internal static class GesValueOperations
         NumericValue x,
         NumericValue y,
         NumericValue z,
-        GameEventScriptFloatUnit? unit)
+        GameEventScriptNumericUnit? unit)
     {
         if (!x.IsFinite || !y.IsFinite || !z.IsFinite)
         {
@@ -1223,7 +1221,7 @@ internal static class GesValueOperations
         NumericValue x,
         NumericValue y,
         NumericValue z,
-        GameEventScriptFloatUnit? unit)
+        GameEventScriptNumericUnit? unit)
     {
         if (!x.IsFinite || !y.IsFinite || !z.IsFinite)
         {
@@ -1628,7 +1626,7 @@ internal static class GesValueOperations
         {
             GameEventScriptValueKind.Text => value.AsText(),
             GameEventScriptValueKind.Float => value.ToString(),
-            GameEventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
+            GameEventScriptValueKind.Integer => value.ToString(),
             GameEventScriptValueKind.Boolean => value.AsBoolean().ToString(),
             _ => value.ToString()
         };

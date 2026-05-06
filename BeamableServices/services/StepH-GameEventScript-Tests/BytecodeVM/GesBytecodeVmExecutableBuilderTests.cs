@@ -599,7 +599,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(published[0].Arguments["numberFail"].IsNaN());
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["integerOk"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesPercentage(0.05d), published[0].Arguments["percentageOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(450d, GameEventScriptFloatUnit.Degree), published[0].Arguments["degreeOk"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(450d, GameEventScriptNumericUnit.Degree), published[0].Arguments["degreeOk"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesText("43.9°"), published[0].Arguments["textOk"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesFloat(43.9d), published[0].Arguments["unitErased"]);
         Assert.HasCount(2, published[0].Arguments["listOk"].AsList());
@@ -1115,7 +1115,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         private static readonly IGameEventScriptExtensionFunction ShortestTurn = new DelegateExtensionFunction((_, args) =>
         {
             var delta = (args[1].Number - args[0].Number + 540d) % 360d - 180d;
-            return GameEventScriptFastValue.FromFloat(delta, GameEventScriptFloatUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(delta, GameEventScriptNumericUnit.Degree);
         });
 
         private NavExtensionRegistry()

@@ -141,7 +141,7 @@ ExtensionReference ::= ":" Identifier "." Identifier
 TypeConstructorExpression ::= TypeTag ParenthesizedArgumentList
 SequenceLiteral ::= OfArgumentList
 
-Literal ::= Number | Percentage | UnitFloat | TextLiteral | "true" | "false"
+Literal ::= Number | Percentage | UnitNumber | TextLiteral | "true" | "false"
 TagLiteral ::= ":" TagName | "∞" | "∏" | "ℇ" | "τ" | "φ"
 
 Message ::= UpperLetter { NameLetter }
@@ -154,7 +154,7 @@ Number ::= DigitGroup [ "." DigitGroup ]
 DigitGroup ::= Digit { [ "_" ] Digit }
 NumericSuffix ::= "0" | NonZeroDigit { Digit }
 Percentage ::= Number "%"
-UnitFloat ::= Number ( "°" | "m" | "s" )
+UnitNumber ::= Number ( "°" | "m" | "s" )
 TextLiteral ::= "'" { TextChar } "'"
 TextChar ::= EscapedSingleQuote | AnyCharButSingleQuote
 EscapedSingleQuote ::= "''"

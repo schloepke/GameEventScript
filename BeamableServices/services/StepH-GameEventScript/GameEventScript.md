@@ -1030,8 +1030,8 @@ Whole-number literals become `:integer`. Float literals become `:float`.
 Use `_` between digits as a readability separator; the double separator is
 always `.`.
 
-`:integer(value)` truncates toward zero. Use the standard integer extensions for
-other rounding modes.
+`:integer(value)` erases units and truncates toward zero. Use the standard
+integer extensions for other rounding modes.
 
 ```eventscript
 :integer(10.9)          // 10
@@ -1048,15 +1048,17 @@ unitless double.
 :float(true)  // 1
 ```
 
-### Float units: `:degree`, `:meter`, and `:second`
+### Numeric units: `:degree`, `:meter`, and `:second`
 
-`degree`, `meter`, and `second` are double units. They are not separate value
-kinds. They are `:float` values with an attached unit.
+`degree`, `meter`, and `second` are scalar numeric units. They are not separate
+value kinds. Whole-number unit literals stay `:integer`; fractional unit
+literals stay `:float`.
 
 ```eventscript
-90°
+90°    // integer with :degree
 -10°
-100m
+100m   // integer with :meter
+100.5m // float with :meter
 15s
 ```
 
@@ -1078,18 +1080,18 @@ let rawHeading as :float be heading
 Unit arithmetic is intentionally strict.
 
 ```eventscript
-100m + 50m // 150m
+100m + 50m // 150m as :integer
 100m + 50  // NaN
 100m + 5s  // NaN
-100m * 2   // 200m
-2 * 100m   // 200m
+100m * 2   // 200m as :integer
+2 * 100m   // 200m as :integer
 100m / 2   // 50m
 100m / 25m // 4
-370m mod 90m // 10m
+370m mod 90m // 10m as :integer
 100m mod 3   // NaN
 ```
 
-Degree values are open double units. Arithmetic does not automatically wrap.
+Degree values are open numeric units. Arithmetic does not automatically wrap.
 
 ```eventscript
 360° + 90° // 450°

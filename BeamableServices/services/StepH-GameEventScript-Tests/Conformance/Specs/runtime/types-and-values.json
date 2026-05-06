@@ -243,17 +243,17 @@
               "name": "Done",
               "args": {
                 "heading": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "180",
                   "unit": ":degree"
                 },
                 "distance": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "100",
                   "unit": ":meter"
                 },
                 "duration": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "15",
                   "unit": ":second"
                 },
@@ -634,7 +634,7 @@
                   "value": "3"
                 },
                 "unitDivScalar": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "3",
                   "unit": ":meter"
                 },
@@ -754,7 +754,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "percentage arithmetic preserves compatible double units",
+      "name": "percentage arithmetic preserves compatible numeric units",
       "script": "on Start {\n  emit Done(meterAddPercent: 100m + 5%, meterSubtractPercent: 100m - 5%, meterMultiplyPercentRight: 100m * 5%, meterMultiplyPercentLeft: 5% * 100m, meterDividePercent: 100m / 5%, reverseMeterAdd: 5% + 100m, reverseMeterSubtract: 5% - 100m, percentDivideMeter: 5% / 100m)\n}",
       "steps": [
         {
@@ -824,12 +824,12 @@
               "name": "Done",
               "args": {
                 "fromLiteral": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "90",
                   "unit": ":degree"
                 },
                 "overLiteral": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "360",
                   "unit": ":degree"
                 },
@@ -839,27 +839,27 @@
                   "unit": ":degree"
                 },
                 "addOpen": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "450",
                   "unit": ":degree"
                 },
                 "addOver": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "380",
                   "unit": ":degree"
                 },
                 "subtractOpen": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-30",
                   "unit": ":degree"
                 },
                 "negOpen": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-90",
                   "unit": ":degree"
                 },
                 "castOpen": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "450",
                   "unit": ":degree"
                 },
@@ -968,7 +968,7 @@
                   "unit": ":degree"
                 },
                 "moduloDegree": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "10",
                   "unit": ":degree"
                 },
@@ -1009,12 +1009,12 @@
                   "value": "42"
                 },
                 "minDegree": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "10",
                   "unit": ":degree"
                 },
                 "maxDegree": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "350",
                   "unit": ":degree"
                 },
@@ -1038,7 +1038,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "double unit literals casts and strict arithmetic",
+      "name": "numeric unit literals casts and strict arithmetic",
       "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :float be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isFloat: castMeter is :float, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
       "steps": [
         {
@@ -1051,17 +1051,17 @@
               "name": "Done",
               "args": {
                 "distance": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "100",
                   "unit": ":meter"
                 },
                 "duration": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "15",
                   "unit": ":second"
                 },
                 "castMeter": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "100",
                   "unit": ":meter"
                 },
@@ -1082,7 +1082,7 @@
                   "value": true
                 },
                 "sameAdd": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "150",
                   "unit": ":meter"
                 },
@@ -1095,12 +1095,12 @@
                   "value": "NaN"
                 },
                 "scaleLeft": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "200",
                   "unit": ":meter"
                 },
                 "scaleRight": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "200",
                   "unit": ":meter"
                 },
@@ -1114,7 +1114,7 @@
                   "value": "4"
                 },
                 "unitModulo": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "10",
                   "unit": ":meter"
                 },
@@ -2309,7 +2309,7 @@
               "name": "Done",
               "args": {
                 "negInt": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-12"
                 },
                 "negFloat": {
@@ -2427,7 +2427,7 @@
               "name": "Done",
               "args": {
                 "negInt": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-12"
                 },
                 "negFloat": {
@@ -2555,7 +2555,7 @@
                   "value": "0.25"
                 },
                 "negatedSquare": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "-9"
                 },
                 "negativeBaseSquare": {
@@ -2612,7 +2612,7 @@
                   "value": "15"
                 },
                 "meter": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "2",
                   "unit": ":meter"
                 },
@@ -2887,17 +2887,17 @@
                   "value": "0.15"
                 },
                 "meter": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "1000",
                   "unit": ":meter"
                 },
                 "degree": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "900",
                   "unit": ":degree"
                 },
                 "second": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "3600",
                   "unit": ":second"
                 },

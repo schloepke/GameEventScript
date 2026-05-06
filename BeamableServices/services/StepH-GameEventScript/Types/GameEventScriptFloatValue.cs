@@ -10,14 +10,14 @@ public sealed class GameEventScriptFloatValue : GameEventScriptValue
     public static readonly GameEventScriptFloatValue Infinity = new(0d, null, false, true, false);
     public static readonly GameEventScriptFloatValue NegativeInfinity = new(0d, null, false, true, true);
 
-    public static GameEventScriptFloatValue Create(double value, GameEventScriptFloatUnit? unit = null)
+    public static GameEventScriptFloatValue Create(double value, GameEventScriptNumericUnit? unit = null)
     {
         if (double.IsPositiveInfinity(value)) return Infinity;
         if (double.IsNegativeInfinity(value)) return NegativeInfinity;
         return double.IsNaN(value) ? NaN : new GameEventScriptFloatValue(value, unit, false, false, false);
     }
 
-    private GameEventScriptFloatValue(double value, GameEventScriptFloatUnit? unit, bool isNaN, bool isInfinity, bool isNegativeInfinity)
+    private GameEventScriptFloatValue(double value, GameEventScriptNumericUnit? unit, bool isNaN, bool isInfinity, bool isNegativeInfinity)
     {
         Value = value;
         Unit = isNaN || isInfinity ? null : unit;
@@ -27,7 +27,7 @@ public sealed class GameEventScriptFloatValue : GameEventScriptValue
     }
 
     public double Value { get; }
-    public GameEventScriptFloatUnit? Unit { get; }
+    public GameEventScriptNumericUnit? Unit { get; }
     public bool IsNaNValue { get; }
     public bool IsInfinityValue { get; }
     public bool IsNegativeInfinityValue { get; }

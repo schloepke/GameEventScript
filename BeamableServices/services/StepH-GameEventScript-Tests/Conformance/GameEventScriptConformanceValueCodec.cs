@@ -68,7 +68,9 @@ internal static class GameEventScriptConformanceValueCodec
             case ":boolean":
                 return GameEventScriptValueFactory.GesBoolean(RequireBoolean(element, "value", "boolean value"));
             case ":integer":
-                return GameEventScriptValueFactory.GesInteger(RequireInt64(element, "value", "integer value"));
+                return GameEventScriptValueFactory.GesInteger(
+                    RequireInt64(element, "value", "integer value"),
+                    DecodeOptionalNumericUnit(element));
             case ":float":
                 return DecodeFloatValue(element);
             case ":percentage":
@@ -78,13 +80,13 @@ internal static class GameEventScriptConformanceValueCodec
                     RequireFloat(element, "x", "vector x component"),
                     RequireFloat(element, "y", "vector y component"),
                     RequireFloat(element, "z", "vector z component"),
-                    DecodeOptionalFloatUnit(element));
+                    DecodeOptionalNumericUnit(element));
             case ":point":
                 return GameEventScriptValueFactory.GesPoint(
                     RequireFloat(element, "x", "point x component"),
                     RequireFloat(element, "y", "point y component"),
                     RequireFloat(element, "z", "point z component"),
-                    DecodeOptionalFloatUnit(element));
+                    DecodeOptionalNumericUnit(element));
             case ":optional":
                 return DecodeOptionalValue(element);
             case ":list":
@@ -170,7 +172,7 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
             GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
             GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
-            GameEventScriptValueKind.Integer => new JsonObject { ["type"] = ":integer", ["value"] = value.AsInteger().ToString(CultureInfo.InvariantCulture) },
+            GameEventScriptValueKind.Integer => ToIntegerJson((GameEventScriptIntegerValue)value),
             GameEventScriptValueKind.Float => ToFloatJson((GameEventScriptFloatValue)value),
             GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
             GameEventScriptValueKind.Vector => ToVectorJson((GameEventScriptVectorValue)value),
@@ -191,7 +193,7 @@ internal static class GameEventScriptConformanceValueCodec
     private static GameEventScriptValue DecodeFloatValue(JsonElement element)
     {
         var value = RequireString(element, "value", "float value");
-        var unit = DecodeOptionalFloatUnit(element);
+        var unit = DecodeOptionalNumericUnit(element);
 
         return value switch
         {
@@ -202,24 +204,24 @@ internal static class GameEventScriptConformanceValueCodec
         };
     }
 
-    private static GameEventScriptFloatUnit? DecodeOptionalFloatUnit(JsonElement element)
+    private static GameEventScriptNumericUnit? DecodeOptionalNumericUnit(JsonElement element)
     {
         if (TryGetProperty(element, "unit", out var unitElement))
         {
             if (unitElement.ValueKind != JsonValueKind.String)
             {
-                throw new InvalidOperationException("Invalid float unit.");
+                throw new InvalidOperationException("Invalid numeric unit.");
             }
 
             var unitName = unitElement.GetString()!;
             if (!unitName.StartsWith(":", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException($"Invalid float unit '{unitName}'.");
+                throw new InvalidOperationException($"Invalid numeric unit '{unitName}'.");
             }
 
-            if (!GameEventScriptFloatUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
+            if (!GameEventScriptNumericUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
             {
-                throw new InvalidOperationException($"Invalid float unit '{unitName}'.");
+                throw new InvalidOperationException($"Invalid numeric unit '{unitName}'.");
             }
 
             return parsedUnit;
@@ -348,6 +350,22 @@ internal static class GameEventScriptConformanceValueCodec
         {
             ["type"] = ":float",
             ["value"] = FormatFloat(value)
+        };
+
+        if (value.Unit.HasValue)
+        {
+            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+        }
+
+        return node;
+    }
+
+    private static JsonObject ToIntegerJson(GameEventScriptIntegerValue value)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = ":integer",
+            ["value"] = value.Value.ToString(CultureInfo.InvariantCulture)
         };
 
         if (value.Unit.HasValue)

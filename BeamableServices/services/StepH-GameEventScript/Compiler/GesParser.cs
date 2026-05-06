@@ -715,11 +715,11 @@ internal sealed class GesParser
 
     private ExpressionNode ParseGuardedChoiceExpression()
     {
-        var expression = ParseDefaultExpression();
+        var expression = ParseImplicationExpression();
         if (Match(When))
         {
             var branches = new List<GuardedChoiceBranchNode>();
-            var conditionExpression = ParseDefaultExpression();
+            var conditionExpression = ParseImplicationExpression();
             branches.Add(new GuardedChoiceBranchNode(expression, conditionExpression));
 
             while (Match(Comma))
@@ -733,22 +733,35 @@ internal sealed class GesParser
                 Match(Or);
                 SkipNewLines();
 
-                var branchValue = ParseDefaultExpression();
+                var branchValue = ParseImplicationExpression();
                 SkipNewLines();
                 Expect(When);
                 SkipNewLines();
-                var branchCondition = ParseDefaultExpression();
+                var branchCondition = ParseImplicationExpression();
                 branches.Add(new GuardedChoiceBranchNode(branchValue, branchCondition));
             }
 
             SkipNewLines();
             Expect(Otherwise);
             SkipNewLines();
-            var otherwiseExpression = ParseDefaultExpression();
+            var otherwiseExpression = ParseImplicationExpression();
             expression = WithRange(new GuardedChoiceExpressionNode(branches, otherwiseExpression), expression, otherwiseExpression);
         }
 
         return expression;
+    }
+
+    private ExpressionNode ParseImplicationExpression()
+    {
+        var expression = ParseDefaultExpression();
+        if (!Match(Arrow))
+        {
+            return expression;
+        }
+
+        SkipNewLines();
+        var right = ParseImplicationExpression();
+        return WithRange(new BinaryExpressionNode(expression, "->", right), expression, right);
     }
 
     private ExpressionNode ParseDefaultExpression()
@@ -1445,7 +1458,7 @@ internal sealed class GesParser
         if (Match(SelectorSum))
         {
             var identifier = ExpectIdentifier();
-            Expect(Arrow);
+            Expect(ProjectionArrow);
             var projection = ParseExpression();
             return WithRange(new SumSelectorNode(identifier, projection), startToken);
         }
@@ -1453,7 +1466,7 @@ internal sealed class GesParser
         if (Match(SelectorAverage))
         {
             var identifier = ExpectIdentifier();
-            Expect(Arrow);
+            Expect(ProjectionArrow);
             var projection = ParseExpression();
             return WithRange(new AverageSelectorNode(identifier, projection), startToken);
         }
@@ -1481,7 +1494,7 @@ internal sealed class GesParser
         if (Match(SelectorSelect))
         {
             var identifier = ExpectIdentifier();
-            Expect(Arrow);
+            Expect(ProjectionArrow);
             var projection = ParseExpression();
             return WithRange(new SelectSelectorNode(identifier, projection), startToken);
         }
@@ -1496,7 +1509,7 @@ internal sealed class GesParser
             var keyProjection = ParseExpression();
             SkipNewLines();
             ExpressionNode? valueProjection = null;
-            if (Match(Arrow))
+            if (Match(ProjectionArrow))
             {
                 SkipNewLines();
                 valueProjection = ParseExpression();
@@ -1579,7 +1592,7 @@ internal sealed class GesParser
         ExpectWord("by");
         SkipNewLines();
         var identifier = ExpectIdentifier();
-        Expect(Arrow);
+        Expect(ProjectionArrow);
         var projection = ParseExpression();
         var direction = ParseSortDirection();
         return WithRange(new OrderBySelectorNode(direction, identifier, projection), startToken);
@@ -1590,7 +1603,7 @@ internal sealed class GesParser
         var startToken = Previous;
         SkipNewLines();
         var identifier = ExpectIdentifier();
-        Expect(Arrow);
+        Expect(ProjectionArrow);
         var projection = ParseExpression();
 
         return op switch
@@ -1631,7 +1644,7 @@ internal sealed class GesParser
 
         SkipNewLines();
         var identifier = ExpectIdentifier();
-        Expect(Arrow);
+        Expect(ProjectionArrow);
         var projection = ParseExpression();
         return WithRange(new DistinctSelectorNode(identifier, projection), startToken);
     }
@@ -1643,7 +1656,7 @@ internal sealed class GesParser
         ExpectWord("by");
         SkipNewLines();
         var identifier = ExpectIdentifier();
-        Expect(Arrow);
+        Expect(ProjectionArrow);
         var projection = ParseExpression();
         return WithRange(new GroupBySelectorNode(identifier, projection), startToken);
     }
@@ -1973,7 +1986,7 @@ internal sealed class GesParser
         }
 
         SkipNewLines();
-        Expect(Arrow);
+        Expect(ProjectionArrow);
         SkipNewLines();
         var projection = ParseExpression();
         return WithRange(new GeneratedCollectionExpressionNode(collectionType, identifier, source, predicate, projection), startToken);
@@ -2198,7 +2211,7 @@ internal sealed class GesParser
             SkipNewLines();
             weightIdentifier = ExpectIdentifier();
             SkipNewLines();
-            Expect(Arrow);
+            Expect(ProjectionArrow);
             SkipNewLines();
             weightExpression = ParseExpression();
         }

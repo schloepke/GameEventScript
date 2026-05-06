@@ -235,7 +235,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        if (condition.AsBoolean())
+        if (condition.IsTrue())
         {
             return TryExecuteStatementProgram(statement.ThenProgram);
         }
@@ -605,6 +605,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     _evaluationStack[top++] = EvaluateProgramBinary(instruction.OpCode, left, right);
                     break;
 
+                case GameEventScriptBytecodeOpCode.ShortCircuitOr:
+                case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+                    var shortCircuitLeft = _evaluationStack[--top];
+                    if (!TryEvaluateShortCircuitLogical(in instruction, shortCircuitLeft, top, out var shortCircuitValue))
+                    {
+                        value = BytecodeVmValue.Nothing;
+                        return false;
+                    }
+
+                    _evaluationStack[top++] = shortCircuitValue;
+                    break;
+
                 case GameEventScriptBytecodeOpCode.Unary:
                     if (!TryEvaluateUnaryOperation(instruction.DiagnosticName, _evaluationStack[top - 1], out var unaryValue))
                     {
@@ -776,6 +789,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             _evaluationStack,
                             top,
                             instruction.A,
+                            instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
                             out var extensionValue))
                     {
                         value = BytecodeVmValue.Nothing;
@@ -983,6 +997,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         BytecodeVmValue[] stack,
         int start,
         int count,
+        bool requirePredicateResult,
         out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
@@ -1005,7 +1020,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (GesStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
         {
             value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
-            return true;
+            return NormalizeExtensionPredicateResult(requirePredicateResult, ref value);
         }
 
         IGameEventScriptExtensionFunction function;
@@ -1025,6 +1040,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         value = BytecodeVmValue.FromGameEventScriptFastValue(function.Invoke(new GameEventScriptExtensionContext(_context), arguments));
+        return NormalizeExtensionPredicateResult(requirePredicateResult, ref value);
+    }
+
+    private static bool NormalizeExtensionPredicateResult(bool requirePredicateResult, ref BytecodeVmValue value)
+    {
+        if (!requirePredicateResult ||
+            value.Kind == BytecodeVmValueKind.Boolean ||
+            value.IsNothingLike())
+        {
+            return true;
+        }
+
+        value = BytecodeVmValue.Nothing;
         return true;
     }
 
@@ -1042,6 +1070,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private BytecodeVmValue EvaluateProgramBinary(GameEventScriptBytecodeOpCode opCode, in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        switch (opCode)
+        {
+            case GameEventScriptBytecodeOpCode.Or:
+                return EvaluateLogicalOr(left, right);
+            case GameEventScriptBytecodeOpCode.Xor:
+                return EvaluateLogicalXor(left, right);
+            case GameEventScriptBytecodeOpCode.And:
+                return EvaluateLogicalAnd(left, right);
+            case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+                return EvaluateLogicalImplies(left, right);
+        }
+
         if (opCode != GameEventScriptBytecodeOpCode.Default &&
             (left.IsNothingLike() || right.IsNothingLike()))
         {
@@ -1050,12 +1090,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         switch (opCode)
         {
-            case GameEventScriptBytecodeOpCode.Or:
-                return BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean());
-            case GameEventScriptBytecodeOpCode.Xor:
-                return BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean());
-            case GameEventScriptBytecodeOpCode.And:
-                return BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean());
             case GameEventScriptBytecodeOpCode.Power:
                 return BytecodeVmValue.Power(left, right);
             case GameEventScriptBytecodeOpCode.Equal:
@@ -1129,6 +1163,100 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     ? value
                     : throw new InvalidOperationException($"BytecodeVM invariant failed: binary opcode '{opCode}' could not be evaluated.");
         }
+    }
+
+    private bool TryEvaluateShortCircuitLogical(
+        in GameEventScriptBytecodeInstruction instruction,
+        BytecodeVmValue left,
+        int stackBase,
+        out BytecodeVmValue value)
+    {
+        if (TryEvaluateLogicalShortCircuit(instruction.OpCode, left, out value))
+        {
+            return true;
+        }
+
+        if (instruction.ExpressionProgram is null ||
+            !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out var right))
+        {
+            value = BytecodeVmValue.Nothing;
+            return false;
+        }
+
+        value = instruction.OpCode switch
+        {
+            GameEventScriptBytecodeOpCode.ShortCircuitOr => EvaluateLogicalOr(left, right),
+            GameEventScriptBytecodeOpCode.ShortCircuitAnd => EvaluateLogicalAnd(left, right),
+            GameEventScriptBytecodeOpCode.ShortCircuitImplies => EvaluateLogicalImplies(left, right),
+            _ => BytecodeVmValue.Nothing
+        };
+        return true;
+    }
+
+    private static bool TryEvaluateLogicalShortCircuit(
+        GameEventScriptBytecodeOpCode opCode,
+        in BytecodeVmValue left,
+        out BytecodeVmValue value)
+    {
+        switch (opCode)
+        {
+            case GameEventScriptBytecodeOpCode.ShortCircuitOr when left.IsTrue():
+                value = BytecodeVmValue.Boolean(true);
+                return true;
+            case GameEventScriptBytecodeOpCode.ShortCircuitAnd when left.IsFalse():
+                value = BytecodeVmValue.Boolean(false);
+                return true;
+            case GameEventScriptBytecodeOpCode.ShortCircuitImplies when left.IsFalse():
+                value = BytecodeVmValue.Boolean(true);
+                return true;
+            default:
+                value = BytecodeVmValue.Nothing;
+                return false;
+        }
+    }
+
+    private static BytecodeVmValue EvaluateLogicalAnd(in BytecodeVmValue left, in BytecodeVmValue right)
+    {
+        if (left.IsFalse() || right.IsFalse())
+        {
+            return BytecodeVmValue.Boolean(false);
+        }
+
+        return left.IsNothing() || right.IsNothing()
+            ? BytecodeVmValue.Nothing
+            : BytecodeVmValue.Boolean(true);
+    }
+
+    private static BytecodeVmValue EvaluateLogicalOr(in BytecodeVmValue left, in BytecodeVmValue right)
+    {
+        if (left.IsTrue() || right.IsTrue())
+        {
+            return BytecodeVmValue.Boolean(true);
+        }
+
+        return left.IsNothing() || right.IsNothing()
+            ? BytecodeVmValue.Nothing
+            : BytecodeVmValue.Boolean(false);
+    }
+
+    private static BytecodeVmValue EvaluateLogicalXor(in BytecodeVmValue left, in BytecodeVmValue right)
+        => left.IsNothing() || right.IsNothing()
+            ? BytecodeVmValue.Nothing
+            : BytecodeVmValue.Boolean(left.IsTrue() ^ right.IsTrue());
+
+    private static BytecodeVmValue EvaluateLogicalImplies(in BytecodeVmValue left, in BytecodeVmValue right)
+    {
+        if (left.IsFalse() || right.IsTrue())
+        {
+            return BytecodeVmValue.Boolean(true);
+        }
+
+        if (left.IsNothing() || right.IsNothing())
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        return BytecodeVmValue.Boolean(false);
     }
 
     private BytecodeVmValue EvaluateProgramCast(GameEventScriptBytecodeCastKind castKind, BytecodeVmValue input)
@@ -1221,7 +1349,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                if (!predicate.AsBoolean())
+                if (!predicate.IsTrue())
                 {
                     continue;
                 }
@@ -1322,7 +1450,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            if (condition.AsBoolean())
+            if (condition.IsTrue())
             {
                 return TryExecuteExpressionProgram(values[branchIndex], 0, out value);
             }
@@ -1479,6 +1607,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
+        if (operation is "|" or "xor" or "&" or "->")
+        {
+            value = operation switch
+            {
+                "|" => EvaluateLogicalOr(leftRawValue, rightRawValue),
+                "xor" => EvaluateLogicalXor(leftRawValue, rightRawValue),
+                "&" => EvaluateLogicalAnd(leftRawValue, rightRawValue),
+                "->" => EvaluateLogicalImplies(leftRawValue, rightRawValue),
+                _ => BytecodeVmValue.Nothing
+            };
+            return true;
+        }
+
         if (leftRaw.IsNothing() || rightRaw.IsNothing())
         {
             value = BytecodeVmValue.Nothing;
@@ -1494,9 +1635,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         value = operation switch
         {
-            "|" => BytecodeVmValue.Boolean(left.AsBoolean() || right.AsBoolean()),
-            "xor" => BytecodeVmValue.Boolean(left.AsBoolean() ^ right.AsBoolean()),
-            "&" => BytecodeVmValue.Boolean(left.AsBoolean() && right.AsBoolean()),
             "=" or "==" => BytecodeVmValue.Boolean(GesValueOperations.AreEqual(left, right)),
             "<>" => BytecodeVmValue.Boolean(!GesValueOperations.AreEqual(left, right)),
             "=~" => BytecodeVmValue.Boolean(GesValueOperations.AreApproximatelyEqual(left, right)),
@@ -1532,6 +1670,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Or => "|",
             GameEventScriptBytecodeOpCode.Xor => "xor",
             GameEventScriptBytecodeOpCode.And => "&",
+            GameEventScriptBytecodeOpCode.ShortCircuitImplies => "->",
             GameEventScriptBytecodeOpCode.Power => "^",
             GameEventScriptBytecodeOpCode.Equal => "=",
             GameEventScriptBytecodeOpCode.NotEqual => "<>",
@@ -2056,7 +2195,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                value = BytecodeVmValue.Boolean(value.AsBoolean());
                 return true;
             }
             finally
@@ -2082,7 +2220,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            value = BytecodeVmValue.Boolean(value.AsBoolean());
             return true;
         }
         finally
@@ -2194,11 +2331,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             if (!TryExecuteExpressionProgram(instruction.ExpressionProgram, start, out value))
             {
                 return false;
-            }
-
-            if (instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate)
-            {
-                value = BytecodeVmValue.Boolean(value.AsBoolean());
             }
 
             return true;
@@ -3123,7 +3255,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                if (predicate.AsBoolean())
+                if (predicate.IsTrue())
                 {
                     result.Add(item.ToGameEventScriptValue());
                 }
@@ -3198,13 +3330,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                if (isAny && predicate.AsBoolean())
+                if (isAny && predicate.IsTrue())
                 {
                     result = true;
                     return true;
                 }
 
-                if (!isAny && !predicate.AsBoolean())
+                if (!isAny && !predicate.IsTrue())
                 {
                     result = false;
                     return true;
@@ -3258,7 +3390,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    if (!prefixPredicate.AsBoolean())
+                    if (!prefixPredicate.IsTrue())
                     {
                         include = false;
                         break;
@@ -3349,7 +3481,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    if (!prefixPredicate.AsBoolean())
+                    if (!prefixPredicate.IsTrue())
                     {
                         include = false;
                         break;
@@ -3441,7 +3573,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    if (!prefixPredicate.AsBoolean())
+                    if (!prefixPredicate.IsTrue())
                     {
                         include = false;
                         break;
@@ -3489,7 +3621,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            if (predicate.AsBoolean())
+            if (predicate.IsTrue())
             {
                 count++;
             }
@@ -3530,7 +3662,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    if (!prefixPredicate.AsBoolean())
+                    if (!prefixPredicate.IsTrue())
                     {
                         include = false;
                         break;
@@ -3560,7 +3692,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             if (terminal.ExpressionProgram is not null &&
-                (!TryEvaluatePipelineTerminalProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate) || !predicate.AsBoolean()))
+                (!TryEvaluatePipelineTerminalProjection(terminal.IdentifierSlot, terminal.ExpressionProgram, item, out var predicate) || !predicate.IsTrue()))
             {
                 continue;
             }
@@ -3977,7 +4109,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            if (predicate.AsBoolean())
+            if (predicate.IsTrue())
             {
                 filtered.Add(item);
             }
@@ -4698,7 +4830,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    if (!predicate.AsBoolean())
+                    if (!predicate.IsTrue())
                     {
                         include = false;
                         return true;
@@ -4767,7 +4899,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var instructions = expressionProgram.Instructions;
         return instructions.Length == 1 &&
                instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-               LoadConstant(instructions[0].ConstantIndex).AsBoolean();
+               LoadConstant(instructions[0].ConstantIndex).IsTrue();
     }
 
     private bool TryEvaluateProgramProjection(
@@ -5566,6 +5698,15 @@ internal readonly record struct BytecodeVmValue(
             BytecodeVmValueKind.Reference => ReferenceValue?.AsBoolean() ?? false,
             _ => false
         };
+
+    public bool IsTrue()
+        => !IsNothing() && AsBoolean();
+
+    public bool IsFalse()
+        => !IsNothing() && !AsBoolean();
+
+    public bool IsNothing()
+        => IsNothingLike();
 
     public bool TryGetFiniteNumber(out double value)
     {

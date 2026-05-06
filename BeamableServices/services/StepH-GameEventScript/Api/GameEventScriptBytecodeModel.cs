@@ -229,7 +229,10 @@ public enum GameEventScriptBytecodeOpCode
     Pipeline,
     GeneratedCollection,
     GuardedChoice,
-    Power
+    Power,
+    ShortCircuitOr,
+    ShortCircuitAnd,
+    ShortCircuitImplies
 }
 
 public enum GameEventScriptBytecodeCallableKind
@@ -260,7 +263,7 @@ public sealed record class GameEventScriptBytecodeInstruction(
     int B = -1,
     int ConstantIndex = -1,
     GameEventScriptBytecodeCastKind CastKind = default,
-    GameEventScriptBytecodeCallableKind CallableKind = default,
+    GameEventScriptBytecodeCallableKind CallableKind = GameEventScriptBytecodeCallableKind.Function,
     GameEventScriptBytecodeExpressionProgram? ExpressionProgram = null,
     GameEventScriptBytecodePipelineProgram? PipelineProgram = null,
     GameEventScriptBytecodeGeneratedCollectionProgram? GeneratedCollectionProgram = null,

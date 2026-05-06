@@ -270,8 +270,12 @@ Keep the existing optimized numeric and boolean operations where useful:
 - `Cast`
 - `Default`
 
+Logical operations use three-valued truth tables with `nothing` as unknown.
 Short-circuiting source constructs should compile to jumps when preserving lazy
-behavior matters.
+behavior matters. In the current nested bytecode model, `and` and `or` are
+represented by `ShortCircuitAnd` and `ShortCircuitOr` instructions that carry
+the right-hand expression as a nested program. Implication uses the same shape
+with `ShortCircuitImplies`.
 
 ### Control Flow
 
@@ -482,8 +486,11 @@ OperandStackBase
 ScopeMark
 ```
 
-Predicates coerce their returned value to boolean at the callable boundary. Functions
-preserve the expression result.
+Predicate bodies must compile as `:boolean` or `:nothing`; an explicit `as :boolean`
+marks intentional boolean coercion. Predicate calls preserve `nothing` so missing
+information remains "no statement" instead of becoming `false`. Runtime truth tests
+and false tests both fail for `nothing`; `else` branches run when the condition is not true.
+Functions preserve the expression result.
 
 ## Debug Symbols
 

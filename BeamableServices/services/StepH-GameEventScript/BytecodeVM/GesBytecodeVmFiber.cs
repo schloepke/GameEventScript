@@ -516,7 +516,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return CompleteFailure(fiber);
                     }
 
-                    var branch = condition.AsBoolean() ? statement.ThenProgram : statement.ElseProgram;
+                    var branch = condition.IsTrue()
+                        ? statement.ThenProgram
+                        : statement.ElseProgram;
                     if (branch is null)
                     {
                         fiber.Complete(BytecodeVmValue.Nothing);
@@ -1029,6 +1031,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         session._evaluationStack[_top++] = session.EvaluateProgramBinary(instruction.OpCode, left, right);
                         return true;
 
+                    case GameEventScriptBytecodeOpCode.ShortCircuitOr:
+                    case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                    case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+                        var shortCircuitLeft = session._evaluationStack[--_top];
+                        if (!session.TryEvaluateShortCircuitLogical(in instruction, shortCircuitLeft, _top, out var shortCircuitValue))
+                        {
+                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                            return false;
+                        }
+
+                        session._evaluationStack[_top++] = shortCircuitValue;
+                        return true;
+
                     case GameEventScriptBytecodeOpCode.Unary:
                         if (!session.TryEvaluateUnaryOperation(instruction.DiagnosticName, session._evaluationStack[_top - 1], out var unaryValue))
                         {
@@ -1200,6 +1215,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                                 session._evaluationStack,
                                 _top,
                                 instruction.A,
+                                instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
                                 out var extensionValue))
                         {
                             fiber.Complete(BytecodeVmValue.Nothing, success: false);

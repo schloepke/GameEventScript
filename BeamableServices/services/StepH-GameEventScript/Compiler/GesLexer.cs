@@ -76,6 +76,7 @@ internal enum GesTokenKind
     Colon,
     Underscore,
     Arrow,
+    ProjectionArrow,
     Or,
     Xor,
     And,
@@ -508,6 +509,9 @@ internal sealed class GesLexer
             case '-' when next == '>':
                 Advance();
                 return CreateToken(GesTokenKind.Arrow, "->", line, column);
+            case '=' when next == '>':
+                Advance();
+                return CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column);
             default:
                 return ch switch
                 {
@@ -555,6 +559,9 @@ internal sealed class GesLexer
                     '\u2260' => CreateToken(GesTokenKind.NotEqual, "<>", line, column),
                     '\u2248' => CreateToken(GesTokenKind.ApproxEqual, "=~", line, column),
                     '\u2245' => CreateToken(GesTokenKind.ApproxEqual, "=~", line, column),
+                    '\u2192' => CreateToken(GesTokenKind.Arrow, "->", line, column),
+                    '\u21D2' => CreateToken(GesTokenKind.Arrow, "->", line, column),
+                    '\u21A6' => CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column),
                     '\u00B2' => CreateToken(GesTokenKind.SuperscriptInteger, "2", line, column),
                     '\u00B3' => CreateToken(GesTokenKind.SuperscriptInteger, "3", line, column),
                     '%' => CreateToken(GesTokenKind.Illegal, "%", line, column),
@@ -608,7 +615,8 @@ internal sealed class GesLexer
         => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
             '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or
             '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
-            '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u00B2' or '\u00B3';
+            '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u2248' or '\u2245' or
+            '\u2192' or '\u21D2' or '\u21A6' or '\u00B2' or '\u00B3';
 
     private bool StartsAttachedIllegalOperatorSequence()
     {

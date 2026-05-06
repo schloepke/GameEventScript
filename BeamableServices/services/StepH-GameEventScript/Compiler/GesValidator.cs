@@ -92,6 +92,7 @@ internal static class GesValidator
             }
 
             ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors);
+            ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors);
         }
 
         foreach (var functionDefinition in parsedScript.FunctionDefinitions)
@@ -308,6 +309,280 @@ internal static class GesValidator
         {
             ValidateStatementReferences(parsedScriptContext, nested, callables, typeDefinitions, errors, bodyScope);
         }
+    }
+
+    private enum StaticExpressionKind
+    {
+        Boolean,
+        Nothing,
+        Other,
+        Unknown
+    }
+
+    private readonly struct StaticExpressionInfo
+    {
+        private StaticExpressionInfo(StaticExpressionKind kind, string? typeName)
+        {
+            Kind = kind;
+            TypeName = typeName;
+        }
+
+        public StaticExpressionKind Kind { get; }
+
+        public string? TypeName { get; }
+
+        public bool IsPredicateCompatible => Kind is StaticExpressionKind.Boolean or StaticExpressionKind.Nothing;
+
+        public static StaticExpressionInfo Boolean { get; } = new(StaticExpressionKind.Boolean, "boolean");
+
+        public static StaticExpressionInfo Nothing { get; } = new(StaticExpressionKind.Nothing, "nothing");
+
+        public static StaticExpressionInfo Unknown { get; } = new(StaticExpressionKind.Unknown, null);
+
+        public static StaticExpressionInfo Other(string? typeName = null) => new(StaticExpressionKind.Other, typeName);
+    }
+
+    private static void ValidatePredicateResultExpression(
+        ParsedScript parsedScriptContext,
+        PredicateDefinitionNode predicateDefinition,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        GesValidationErrors errors)
+    {
+        var parameterTypes = BuildDeclaredTypeMap(predicateDefinition.ParameterList);
+        var result = ClassifyExpression(
+            predicateDefinition.Expression,
+            callables,
+            typeDefinitions,
+            parameterTypes,
+            new HashSet<string>(StringComparer.Ordinal));
+
+        if (result.IsPredicateCompatible)
+        {
+            return;
+        }
+
+        errors.Add(
+            parsedScriptContext,
+            $"Predicate '{predicateDefinition.Name}' must return :boolean or :nothing; use 'as :boolean' for explicit boolean coercion.",
+            predicateDefinition.Name,
+            GameEventScriptSymbolKind.Predicate,
+            GameEventScriptCompileErrorKind.InvalidPredicate,
+            predicateDefinition.Expression);
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<ParameterNode> parameters)
+    {
+        var types = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var parameter in parameters)
+        {
+            if (!string.IsNullOrWhiteSpace(parameter.DeclaredType))
+            {
+                types[parameter.LocalName] = parameter.DeclaredType!;
+            }
+        }
+
+        return types;
+    }
+
+    private static StaticExpressionInfo ClassifyExpression(
+        ExpressionNode expression,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        ISet<string> visitedCallables)
+    {
+        switch (expression)
+        {
+            case BooleanLiteralExpressionNode:
+                return StaticExpressionInfo.Boolean;
+
+            case TypeCheckExpressionNode:
+            case PredicateCallExpressionNode:
+            case ExtensionPredicateExpressionNode:
+                return StaticExpressionInfo.Boolean;
+
+            case IdentifierExpressionNode identifier:
+                return declaredTypes.TryGetValue(identifier.Name, out var declaredType)
+                    ? FromDeclaredType(declaredType)
+                    : StaticExpressionInfo.Unknown;
+
+            case MemberAccessExpressionNode memberAccess:
+                return ClassifyMemberAccess(memberAccess, callables, typeDefinitions, declaredTypes, visitedCallables);
+
+            case CollectionAccessExpressionNode collectionAccess:
+                return ClassifyCollectionAccess(collectionAccess);
+
+            case CallExpressionNode call:
+                return ClassifyCall(call, callables, typeDefinitions, visitedCallables);
+
+            case TypeCastExpressionNode typeCast:
+                return FromDeclaredType(typeCast.TypeName);
+
+            case TypeConstructorExpressionNode typeConstructor:
+                return FromDeclaredType(typeConstructor.TypeName);
+
+            case UnaryExpressionNode unary:
+                return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, visitedCallables);
+
+            case BinaryExpressionNode binary:
+                return ClassifyBinary(binary, callables, typeDefinitions, declaredTypes, visitedCallables);
+
+            case GuardedChoiceExpressionNode guardedChoice:
+                return ClassifyGuardedChoice(guardedChoice, callables, typeDefinitions, declaredTypes, visitedCallables);
+
+            default:
+                return StaticExpressionInfo.Other();
+        }
+    }
+
+    private static StaticExpressionInfo FromDeclaredType(string? typeName)
+        => typeName switch
+        {
+            "boolean" => StaticExpressionInfo.Boolean,
+            "nothing" => StaticExpressionInfo.Nothing,
+            null or "" => StaticExpressionInfo.Unknown,
+            _ => StaticExpressionInfo.Other(typeName)
+        };
+
+    private static StaticExpressionInfo ClassifyMemberAccess(
+        MemberAccessExpressionNode memberAccess,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        ISet<string> visitedCallables)
+    {
+        var target = ClassifyExpression(memberAccess.Target, callables, typeDefinitions, declaredTypes, visitedCallables);
+        if (string.IsNullOrWhiteSpace(target.TypeName) ||
+            !typeDefinitions.TryGetValue(target.TypeName!, out var typeDefinition))
+        {
+            return StaticExpressionInfo.Unknown;
+        }
+
+        var field = typeDefinition.Fields.FirstOrDefault(candidate => string.Equals(candidate.Name, memberAccess.Member, StringComparison.Ordinal));
+        return field is null ? StaticExpressionInfo.Unknown : FromDeclaredType(field.TypeName);
+    }
+
+    private static StaticExpressionInfo ClassifyCollectionAccess(CollectionAccessExpressionNode collectionAccess)
+        => collectionAccess.Selector switch
+        {
+            PredicateSelectorNode => StaticExpressionInfo.Boolean,
+            ContainsSelectorNode => StaticExpressionInfo.Boolean,
+            _ => StaticExpressionInfo.Unknown
+        };
+
+    private static StaticExpressionInfo ClassifyCall(
+        CallExpressionNode call,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        ISet<string> visitedCallables)
+    {
+        if (!callables.TryGetValue(call.Name, out var callable))
+        {
+            return StaticExpressionInfo.Unknown;
+        }
+
+        if (callable.Kind == GameEventScriptCallableKind.Predicate)
+        {
+            return StaticExpressionInfo.Boolean;
+        }
+
+        var callableKey = $"{callable.Kind}:{callable.Name}";
+        if (!visitedCallables.Add(callableKey))
+        {
+            return StaticExpressionInfo.Unknown;
+        }
+
+        try
+        {
+            return ClassifyExpression(
+                callable.Expression,
+                callables,
+                typeDefinitions,
+                BuildDeclaredTypeMap(callable.ParameterList),
+                visitedCallables);
+        }
+        finally
+        {
+            visitedCallables.Remove(callableKey);
+        }
+    }
+
+    private static StaticExpressionInfo ClassifyUnary(
+        UnaryExpressionNode unary,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        ISet<string> visitedCallables)
+    {
+        return unary.Operator switch
+        {
+            "has value" or "empty" or "chance" => StaticExpressionInfo.Boolean,
+            "!" => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
+                ? StaticExpressionInfo.Boolean
+                : StaticExpressionInfo.Unknown,
+            _ => StaticExpressionInfo.Other()
+        };
+    }
+
+    private static StaticExpressionInfo ClassifyBinary(
+        BinaryExpressionNode binary,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        ISet<string> visitedCallables)
+    {
+        return binary.Operator switch
+        {
+            "=" or "==" or "<>" or "=~" or "<" or ">" or "<=" or ">=" or
+                "in" or "value in" or "starts with" or "ends with" => StaticExpressionInfo.Boolean,
+            "&" or "|" or "xor" or "->" => ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible &&
+                                           ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
+                ? StaticExpressionInfo.Boolean
+                : StaticExpressionInfo.Unknown,
+            "default" => MergePredicateCompatibleResults(
+                ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables),
+                ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables)),
+            _ => StaticExpressionInfo.Other()
+        };
+    }
+
+    private static StaticExpressionInfo ClassifyGuardedChoice(
+        GuardedChoiceExpressionNode guardedChoice,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        ISet<string> visitedCallables)
+    {
+        var result = StaticExpressionInfo.Nothing;
+        foreach (var branch in guardedChoice.Branches)
+        {
+            result = MergePredicateCompatibleResults(
+                result,
+                ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
+            if (!result.IsPredicateCompatible)
+            {
+                return result;
+            }
+        }
+
+        return MergePredicateCompatibleResults(
+            result,
+            ClassifyExpression(guardedChoice.OtherwiseExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
+    }
+
+    private static StaticExpressionInfo MergePredicateCompatibleResults(StaticExpressionInfo left, StaticExpressionInfo right)
+    {
+        if (!left.IsPredicateCompatible || !right.IsPredicateCompatible)
+        {
+            return left.Kind == StaticExpressionKind.Unknown || right.Kind == StaticExpressionKind.Unknown
+                ? StaticExpressionInfo.Unknown
+                : StaticExpressionInfo.Other();
+        }
+
+        return left.Kind == StaticExpressionKind.Boolean || right.Kind == StaticExpressionKind.Boolean
+            ? StaticExpressionInfo.Boolean
+            : StaticExpressionInfo.Nothing;
     }
 
     private static void ValidateExpressionReferences(

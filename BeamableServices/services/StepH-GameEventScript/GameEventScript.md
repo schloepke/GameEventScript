@@ -496,16 +496,23 @@ percentage: :percentage computed by
 
 ### Predicates
 
-Predicates define reusable predicates. The predicate result is converted to boolean.
+Predicates define reusable predicates. A predicate body must be statically identifiable
+as `:boolean` or `:nothing`. Use `as :boolean` when a predicate should intentionally
+coerce a value to boolean.
+If a predicate cannot be evaluated because required information is missing, the
+predicate result remains `nothing`.
+`nothing` is neither true nor false: true checks and false checks both fail for it.
+Control flow executes `else` when the condition is not true, and selectors such
+as `:any` and `:all` use true checks for their predicates.
 
 ```eventscript
 predicate wounded(_ unit) means unit.hp < unit.maxHp
-predicate numeric(_ value) means value * 2
+predicate numeric(_ value) means value * 2 as :boolean
 
 on Start(unit) {
     let a be wounded(unit)
     let b be unit is wounded
-    let c be numeric(2) // true, because 4 is truthy
+    let c be numeric(2) // true, explicit boolean coercion
 }
 ```
 
@@ -624,7 +631,28 @@ a ⊕ b
 a or b
 a | b
 a ∨ b
+a -> b
+a → b
+a ⇒ b
 ```
+
+Logical operators use three-valued truth tables. `nothing` represents an unknown
+statement, not `false`: `not nothing` is `nothing`, `false and nothing` is
+`false`, `true and nothing` is `nothing`, `true or nothing` is `true`, and
+`false or nothing` is `nothing`. `xor` returns `nothing` when either operand is
+`nothing`.
+
+`a -> b` is implication; `→` and `⇒` are aliases. It is right-associative, so
+`a -> b -> c` means `a -> (b -> c)`. It behaves like `not a or b` under the
+same three-valued logic: if `a` is false, the result is true; if `a` is true,
+`b` decides the result; if `a` is `nothing`, the result is true only when `b` is
+true, otherwise it remains `nothing`.
+
+`and`, `or`, and `->` short-circuit. The right-hand expression of `a and b` is
+skipped when `a` is false. The right-hand expression of `a or b` is skipped when
+`a` is true. The right-hand expression of `a -> b` is skipped when `a` is false.
+When the left side is `nothing`, the right side is still evaluated because it can
+determine `nothing and false`, `nothing or true`, or `nothing -> true`.
 
 Relational operators:
 
@@ -879,7 +907,7 @@ Seeded random scopes derive a deterministic local random stream from a seed.
 Expression form:
 
 ```eventscript
-let rolls be :random with seed :list[:select item from 1 to 3 -> :random from 1 to 6]
+let rolls be :random with seed :list[:select item from 1 to 3 => :random from 1 to 6]
 ```
 
 Statement form:
@@ -1480,10 +1508,10 @@ position[:y]
 Generated collections produce lists or sets from ranges or iterable values.
 
 ```eventscript
-let squares be :list[:select item from 1 to 5 -> item * item]
-let evens be :list[:select item from 1 to 10 where item mod 2 = 0 -> item]
-let doubled be :list[:select item in values -> item * 2]
-let residues be :set[:select item in values where item > 3 -> item mod 2]
+let squares be :list[:select item from 1 to 5 => item * item]
+let evens be :list[:select item from 1 to 10 where item mod 2 = 0 => item]
+let doubled be :list[:select item in values => item * 2]
+let residues be :set[:select item in values where item > 3 => item mod 2]
 ```
 
 Use `from ... to ... [step ...]` directly inside generated collections. Do not
@@ -1493,11 +1521,12 @@ write `in from ...`.
 
 ```eventscript
 units[:filter unit where unit.alive]
-units[:select unit -> unit.name]
+units[:select unit => unit.name]
 units[:dictionary unit by unit.id]
-units[:dictionary unit by unit.id -> unit.name]
+units[:dictionary unit by unit.id => unit.name]
 ```
 
+Projection selectors use `=>`; `↦` is an alias for the same projection arrow.
 Dictionary projection uses last-wins semantics when duplicate keys occur.
 
 ### Quantifiers and count
@@ -1513,12 +1542,12 @@ units[:count unit where unit.hp < unit.maxHp]
 ### Aggregates and extrema
 
 ```eventscript
-units[:sum unit -> unit.hp]
-units[:average unit -> unit.hp]
-units[:min unit -> unit.hp]
-units[:max unit -> unit.hp]
-units[:highest unit -> unit.hp]
-units[:lowest unit -> unit.hp]
+units[:sum unit => unit.hp]
+units[:average unit => unit.hp]
+units[:min unit => unit.hp]
+units[:max unit => unit.hp]
+units[:highest unit => unit.hp]
+units[:lowest unit => unit.hp]
 ```
 
 `:sum` and `:average` aggregate projected numeric values. `:min`, `:max`,
@@ -1545,10 +1574,10 @@ units[:single unit where unit.role = :boss]
 items[:sort ascending]
 items[:sort descending]
 
-units[:order by unit -> unit.initiative descending]
+units[:order by unit => unit.initiative descending]
 items[:distinct]
-units[:distinct by unit -> unit.faction]
-units[:group by unit -> unit.faction]
+units[:distinct by unit => unit.faction]
+units[:group by unit => unit.faction]
 ```
 
 `:group by` returns a dictionary whose keys are projected group values and whose
@@ -1628,7 +1657,7 @@ dice. They are lenient no-ops for unordered sets and dictionaries.
 units[:choose 1]
 units[:choose 1 unit where unit.alive]
 units[:choose 2 at random unit where unit.alive]
-units[:choose 1 weighted by unit -> unit.weight]
+units[:choose 1 weighted by unit => unit.weight]
 ```
 
 Without `at random`, the first matching items are chosen. With `at random`, the
@@ -2154,7 +2183,13 @@ on DamageTaken(unit, amount) {
 ### Filtering candidates
 
 ```eventscript
-predicate targetable(_ unit) means unit.alive and not unit.hidden
+record :unit as {
+    alive: :boolean,
+    hidden: :boolean,
+    id: :text
+}
+
+predicate targetable(_ unit as :unit) means unit.alive and not unit.hidden
 function targetableUnits(_ units) means units[:filter unit where unit is targetable]
 
 on ChooseTarget(units) {
@@ -2182,7 +2217,7 @@ on Start(units) {
 on RollAttack {
     let roll be :dice 4d6
     let crit be roll[:has pair of 6]
-    let total be roll[:sum die -> die]
+    let total be roll[:sum die => die]
 
     if crit {
         publish CriticalHit(total: total)

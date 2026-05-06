@@ -412,7 +412,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module Collections
 
             on Start {
-              let values be :list[:select item from 1 to 3 -> item]
+              let values be :list[:select item from 1 to 3 => item]
               emit Done(count: :len values)
             }
             """;
@@ -976,7 +976,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module Extensions
 
             on Start(values) {
-              let floored be values[:select item -> :math.floor item]
+              let floored be values[:select item => :math.floor item]
               emit Done(first: floored[1])
             }
             """;

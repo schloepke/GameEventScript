@@ -35,6 +35,28 @@
     },
     {
       "kind": "compileError",
+      "name": "predicate result rejects implicit numeric coercion",
+      "script": "predicate numeric(_ value) means value * 2\n\non Start {\n  emit Done\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidPredicate",
+        "symbol": "numeric",
+        "symbolKind": "Predicate"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "predicate result rejects unknown member truthiness",
+      "script": "predicate alive(_ unit) means unit.alive\n\non Start {\n  emit Done\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidPredicate",
+        "symbol": "alive",
+        "symbolKind": "Predicate"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "wrong predicate arity fails module build",
       "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be wounded(unit, unit)\n}",
       "expectedError": {

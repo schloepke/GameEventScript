@@ -58,10 +58,6 @@ internal static class GesOptimizer
     private static GesCallableDefinition OptimizeCallableDefinition(GesCallableDefinition definition, ISet<string> knownTypeNames)
     {
         var optimized = OptimizeExpression(definition.Expression, knownTypeNames);
-        if (definition.Kind == GameEventScriptCallableKind.Predicate)
-        {
-            optimized = EnsureBooleanRuleExpression(optimized);
-        }
 
         return new GesCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
@@ -120,19 +116,6 @@ internal static class GesOptimizer
             },
             _ => source
         };
-
-    private static ExpressionNode EnsureBooleanRuleExpression(ExpressionNode expression)
-    {
-        if (expression is TypeCastExpressionNode { TypeName: "boolean" })
-        {
-            return expression;
-        }
-
-        return new TypeCastExpressionNode(expression, "boolean")
-        {
-            SourceRange = expression.SourceRange
-        };
-    }
 
     private static ExpressionNode OptimizeExpression(ExpressionNode expression, ISet<string> knownTypeNames)
     {
@@ -856,6 +839,22 @@ internal static class GesOptimizer
             return true;
         }
 
+        switch (binary.Operator)
+        {
+            case "|":
+                value = EvaluateLogicalOr(leftRaw, rightRaw);
+                return true;
+            case "xor":
+                value = EvaluateLogicalXor(leftRaw, rightRaw);
+                return true;
+            case "&":
+                value = EvaluateLogicalAnd(leftRaw, rightRaw);
+                return true;
+            case "->":
+                value = EvaluateLogicalImplies(leftRaw, rightRaw);
+                return true;
+        }
+
         if (leftRaw.IsNothing() || rightRaw.IsNothing())
         {
             value = GameEventScriptNothingValue.Instance;
@@ -870,15 +869,6 @@ internal static class GesOptimizer
 
         switch (binary.Operator)
         {
-            case "|":
-                value = GameEventScriptValueFactory.GesBoolean(left.AsBoolean() || right.AsBoolean());
-                return true;
-            case "xor":
-                value = GameEventScriptValueFactory.GesBoolean(left.AsBoolean() ^ right.AsBoolean());
-                return true;
-            case "&":
-                value = GameEventScriptValueFactory.GesBoolean(left.AsBoolean() && right.AsBoolean());
-                return true;
             case "=":
                 value = GameEventScriptValueFactory.GesBoolean(GesValueOperations.AreEqual(left, right));
                 return true;
@@ -1115,6 +1105,56 @@ internal static class GesOptimizer
                 return false;
         }
     }
+
+    private static GameEventScriptValue EvaluateLogicalAnd(GameEventScriptValue left, GameEventScriptValue right)
+    {
+        if (IsFalse(left) || IsFalse(right))
+        {
+            return GameEventScriptValueFactory.GesBoolean(false);
+        }
+
+        return left.IsNothing() || right.IsNothing()
+            ? GameEventScriptNothingValue.Instance
+            : GameEventScriptValueFactory.GesBoolean(true);
+    }
+
+    private static GameEventScriptValue EvaluateLogicalOr(GameEventScriptValue left, GameEventScriptValue right)
+    {
+        if (IsTrue(left) || IsTrue(right))
+        {
+            return GameEventScriptValueFactory.GesBoolean(true);
+        }
+
+        return left.IsNothing() || right.IsNothing()
+            ? GameEventScriptNothingValue.Instance
+            : GameEventScriptValueFactory.GesBoolean(false);
+    }
+
+    private static GameEventScriptValue EvaluateLogicalXor(GameEventScriptValue left, GameEventScriptValue right)
+        => left.IsNothing() || right.IsNothing()
+            ? GameEventScriptNothingValue.Instance
+            : GameEventScriptValueFactory.GesBoolean(IsTrue(left) ^ IsTrue(right));
+
+    private static GameEventScriptValue EvaluateLogicalImplies(GameEventScriptValue left, GameEventScriptValue right)
+    {
+        if (IsFalse(left) || IsTrue(right))
+        {
+            return GameEventScriptValueFactory.GesBoolean(true);
+        }
+
+        if (left.IsNothing() || right.IsNothing())
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        return GameEventScriptValueFactory.GesBoolean(false);
+    }
+
+    private static bool IsTrue(GameEventScriptValue value)
+        => !value.IsNothing() && value.AsBoolean();
+
+    private static bool IsFalse(GameEventScriptValue value)
+        => !value.IsNothing() && !value.AsBoolean();
 
     private static GameEventScriptValue EvaluateNumericComparison(GameEventScriptValue left, GameEventScriptValue right, Func<int, bool> predicate)
     {

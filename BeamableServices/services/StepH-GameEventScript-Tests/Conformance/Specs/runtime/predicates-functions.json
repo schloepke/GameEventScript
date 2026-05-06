@@ -105,8 +105,8 @@
             {
               "name": "Done",
               "args": {
-                "byCall": { "type": ":boolean", "value": false },
-                "byPredicate": { "type": ":boolean", "value": false },
+                "byCall": { "type": ":nothing" },
+                "byPredicate": { "type": ":nothing" },
                 "woundedCount": { "type": ":integer", "value": "0" }
               }
             }
@@ -116,8 +116,37 @@
     },
     {
       "kind": "scriptApi",
-      "name": "predicates coerce to boolean while functions keep original value",
-      "script": "predicate numeric(_ value) means value * 2\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byRuleTwo be numeric(2)\n  let byRuleZero be numeric(0)\n  let bySelect be numericSelect(2)\n  let byPredicate be 2 is numeric\n  emit Done(byRuleTwo: byRuleTwo, byRuleZero: byRuleZero, bySelect: bySelect, byPredicate: byPredicate)\n}",
+      "name": "predicates accept typed boolean record fields",
+      "script": "record :unit as {\n  alive: :boolean,\n  hidden: :boolean\n}\n\npredicate targetable(_ unit as :unit) means unit.alive and not unit.hidden\n\non Start(unit) {\n  emit Done(targetable: unit is targetable)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":dictionary",
+                "entries": {
+                  "alive": { "type": ":boolean", "value": true },
+                  "hidden": { "type": ":boolean", "value": false }
+                }
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "targetable": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "predicates allow explicit boolean coercion while functions keep original value",
+      "script": "predicate numeric(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byRuleTwo be numeric(2)\n  let byRuleZero be numeric(0)\n  let bySelect be numericSelect(2)\n  let byPredicate be 2 is numeric\n  emit Done(byRuleTwo: byRuleTwo, byRuleZero: byRuleZero, bySelect: bySelect, byPredicate: byPredicate)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

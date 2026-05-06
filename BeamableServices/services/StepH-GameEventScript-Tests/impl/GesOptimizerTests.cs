@@ -8,26 +8,21 @@ namespace StepH_GameEventScript_Tests.impl;
 public class GesOptimizerTests
 {
     [TestMethod]
-    public void ModuleBuilderOptimizesRuleExpressionsWithBooleanNormalizationAndConstantCastFolding()
+    public void ModuleBuilderDoesNotAddImplicitPredicateBooleanNormalization()
     {
         const string script =
             """
-            predicate always() means '12.5' as :float
+            predicate high(value) means value > 3
             """;
 
         var module = GameEventScriptBuilder.Create()
             .AddScript(script, "optimizer.es")
             .BuildModule();
 
-        var predicate = module.Callables["always"];
+        var predicate = module.Callables["high"];
         Assert.AreEqual(GameEventScriptCallableKind.Predicate, predicate.Kind);
-        Assert.IsInstanceOfType<TypeCastExpressionNode>(predicate.Expression);
-
-        var normalized = (TypeCastExpressionNode)predicate.Expression;
-        Assert.AreEqual("boolean", normalized.TypeName);
-        Assert.IsInstanceOfType<FloatLiteralExpressionNode>(normalized.Value);
-        Assert.IsNotNull(normalized.SourceRange);
-        Assert.IsNotNull(normalized.Value.SourceRange);
+        Assert.IsInstanceOfType<BinaryExpressionNode>(predicate.Expression);
+        Assert.IsNotNull(predicate.Expression.SourceRange);
     }
 
     [TestMethod]

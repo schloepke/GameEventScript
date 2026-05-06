@@ -2657,7 +2657,7 @@
     {
       "kind": "scriptApi",
       "name": "additional unicode mathematical aliases",
-      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :float, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :float, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :float, piAlias: ∏ as :float, piGreater: ∏ > 3, eTag: :e as :float, eAlias: ℇ as :float, eLess: ℇ < 3, tauTag: :tau as :float, tauAlias: τ as :float, tauGreater: τ > 6, phiTag: :phi as :float, phiAlias: φ as :float, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27)\n}",
+      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  let projected be :list[:select item from 1 to 2↦item + 1]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :float, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :float, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :float, piAlias: ∏ as :float, piGreater: ∏ > 3, eTag: :e as :float, eAlias: ℇ as :float, eLess: ℇ < 3, tauTag: :tau as :float, tauAlias: τ as :float, tauGreater: τ > 6, phiTag: :phi as :float, phiAlias: φ as :float, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])\n}",
       "steps": [
         {
           "input": {
@@ -2791,6 +2791,10 @@
                 },
                 "cbrtAlias": {
                   "type": ":float",
+                  "value": "3"
+                },
+                "projectionAlias": {
+                  "type": ":integer",
                   "value": "3"
                 }
               }

@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "collections project filter aggregate and choose edges",
-      "script": "on Compute(items) {\n  let names be items[:select item -> item.name]\n  let positive be items[:filter item where item.points > 0]\n  let total be items[:sum item -> item.points]\n  let positiveCount be items[:count item where item.points > 0]\n  let averagePoints be items[:average item -> item.points]\n  let highestItem be items[:highest item -> item.points]\n  let lowestItem be items[:lowest item -> item.points]\n  emit Done(nameCount: :len names, positiveCount: :len positive, total: total, counted: positiveCount, average: averagePoints, highest: highestItem.name, lowest: lowestItem.name)\n}",
+      "script": "on Compute(items) {\n  let names be items[:select item => item.name]\n  let positive be items[:filter item where item.points > 0]\n  let total be items[:sum item => item.points]\n  let positiveCount be items[:count item where item.points > 0]\n  let averagePoints be items[:average item => item.points]\n  let highestItem be items[:highest item => item.points]\n  let lowestItem be items[:lowest item => item.points]\n  emit Done(nameCount: :len names, positiveCount: :len positive, total: total, counted: positiveCount, average: averagePoints, highest: highestItem.name, lowest: lowestItem.name)\n}",
       "steps": [
         {
           "input": {
@@ -98,7 +98,7 @@
     {
       "kind": "scriptApi",
       "name": "streamable selector chains preserve observable results",
-      "script": "on Start(values) {\n  let sorted be values[:filter value where value > 1][:select value -> value * -1][:sort ascending]\n  emit Done(filterSelectSum: values[:filter value where value > 2][:select value -> value * 3][:sum value -> value], filterCount: values[:filter value where value mod 2 = 0][:count value where value > 2], firstSelected: values[:select value -> value + 10][:first value where value > 12], lastSelected: values[:select value -> value + 10][:last value where value < 15], singleSelected: values[:select value -> value + 10][:single value where value = 13], sorted_1: sorted[1], sorted_2: sorted[2], sorted_3: sorted[3])\n}",
+      "script": "on Start(values) {\n  let sorted be values[:filter value where value > 1][:select value => value * -1][:sort ascending]\n  emit Done(filterSelectSum: values[:filter value where value > 2][:select value => value * 3][:sum value => value], filterCount: values[:filter value where value mod 2 = 0][:count value where value > 2], firstSelected: values[:select value => value + 10][:first value where value > 12], lastSelected: values[:select value => value + 10][:last value where value < 15], singleSelected: values[:select value => value + 10][:single value where value = 13], sorted_1: sorted[1], sorted_2: sorted[2], sorted_3: sorted[3])\n}",
       "steps": [
         {
           "input": {
@@ -172,7 +172,7 @@
     {
       "kind": "scriptApi",
       "name": "selector variants are observable through runtime behavior",
-      "script": "on Start(items) {\n  let hasAny be items[:any item where item.points > 10]\n  let allValid be items[:all item where item.points >= 0]\n  let firstTwo be items[:take first 2]\n  let withoutLast be items[:drop last 1]\n  let firstAlive be items[:first item where item.alive]\n  let lastAlive be items[:last item where item.alive]\n  let singleBoss be items[:single item where item.role = :boss]\n  let weakest be items[:min item -> item.points]\n  let strongest be items[:max item -> item.points]\n  let topItem be items[:highest item -> item.points]\n  let lowItem be items[:lowest item -> item.points]\n  emit Done(hasAny: hasAny, allValid: allValid, firstTwoCount: :len firstTwo, withoutLastCount: :len withoutLast, firstAlive: firstAlive.name, lastAlive: lastAlive.name, singleBoss: singleBoss.name, weakest: weakest.name, strongest: strongest.name, topItem: topItem.name, lowItem: lowItem.name)\n}",
+      "script": "on Start(items) {\n  let hasAny be items[:any item where item.points > 10]\n  let allValid be items[:all item where item.points >= 0]\n  let firstTwo be items[:take first 2]\n  let withoutLast be items[:drop last 1]\n  let firstAlive be items[:first item where item.alive]\n  let lastAlive be items[:last item where item.alive]\n  let singleBoss be items[:single item where item.role = :boss]\n  let weakest be items[:min item => item.points]\n  let strongest be items[:max item => item.points]\n  let topItem be items[:highest item => item.points]\n  let lowItem be items[:lowest item => item.points]\n  emit Done(hasAny: hasAny, allValid: allValid, firstTwoCount: :len firstTwo, withoutLastCount: :len withoutLast, firstAlive: firstAlive.name, lastAlive: lastAlive.name, singleBoss: singleBoss.name, weakest: weakest.name, strongest: strongest.name, topItem: topItem.name, lowItem: lowItem.name)\n}",
       "steps": [
         {
           "input": {
@@ -304,8 +304,50 @@
     },
     {
       "kind": "scriptApi",
+      "name": "any and all use true checks",
+      "script": "on Start(items) {\n  let anyKnownFalse be items[:any item where item.points > 10]\n  let allKnownFalse be items[:all item where item.points > 10]\n  let anyUnknown be items[:any item where item.missing > 10]\n  let allUnknown be items[:all item where item.missing > 10]\n  emit Done(anyKnownFalse: anyKnownFalse, allKnownFalse: allKnownFalse, anyUnknown: anyUnknown, allUnknown: allUnknown)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "items": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "points": { "type": ":integer", "value": "3" }
+                    }
+                  },
+                  {
+                    "type": ":dictionary",
+                    "entries": {
+                      "points": { "type": ":integer", "value": "7" }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "anyKnownFalse": { "type": ":boolean", "value": false },
+                "allKnownFalse": { "type": ":boolean", "value": false },
+                "anyUnknown": { "type": ":boolean", "value": false },
+                "allUnknown": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "selectors can be nested inside projections",
-      "script": "on Nested(items) {\n  let values be items[:select item -> item.points[:all point where point.x > 0]]\n  emit Done(first: values[1], second: values[2])\n}",
+      "script": "on Nested(items) {\n  let values be items[:select item => item.points[:all point where point.x > 0]]\n  emit Done(first: values[1], second: values[2])\n}",
       "steps": [
         {
           "input": {
@@ -395,7 +437,7 @@
     {
       "kind": "scriptApi",
       "name": "dictionary selectors use last wins semantics",
-      "script": "on Start(items) {\n  let byId be items[:dictionary item by item.id]\n  let namesById be items[:dictionary item by item.id -> item.name]\n  emit Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
+      "script": "on Start(items) {\n  let byId be items[:dictionary item by item.id]\n  let namesById be items[:dictionary item by item.id => item.name]\n  emit Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
       "steps": [
         {
           "input": {
@@ -492,7 +534,7 @@
     {
       "kind": "scriptApi",
       "name": "collections sort order distinct and group",
-      "script": "on Start(values, units) {\n  let ascendingValues be values[:sort ascending]\n  let descendingValues be values[:sort descending]\n  let byPriority be units[:order by item -> item.priority descending]\n  let firstValue be values[:first]\n  let lastValue be values[:last]\n  let distinctValues be values[:distinct]\n  let distinctFactions be units[:distinct by unit -> unit.faction]\n  let groups be units[:group by unit -> unit.faction]\n  emit Done(asc_1: ascendingValues[1], asc_2: ascendingValues[2], asc_3: ascendingValues[3], desc_1: descendingValues[1], desc_2: descendingValues[2], desc_3: descendingValues[3], priority_1: byPriority[1].name, priority_2: byPriority[2].name, priority_3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: :len distinctValues, distinct_1: distinctFactions[1].name, distinct_2: distinctFactions[2].name, melee_1: groups[:melee][1].name, melee_2: groups[:melee][2].name, ranged_1: groups[:ranged][1].name)\n}",
+      "script": "on Start(values, units) {\n  let ascendingValues be values[:sort ascending]\n  let descendingValues be values[:sort descending]\n  let byPriority be units[:order by item => item.priority descending]\n  let firstValue be values[:first]\n  let lastValue be values[:last]\n  let distinctValues be values[:distinct]\n  let distinctFactions be units[:distinct by unit => unit.faction]\n  let groups be units[:group by unit => unit.faction]\n  emit Done(asc_1: ascendingValues[1], asc_2: ascendingValues[2], asc_3: ascendingValues[3], desc_1: descendingValues[1], desc_2: descendingValues[2], desc_3: descendingValues[3], priority_1: byPriority[1].name, priority_2: byPriority[2].name, priority_3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: :len distinctValues, distinct_1: distinctFactions[1].name, distinct_2: distinctFactions[2].name, melee_1: groups[:melee][1].name, melee_2: groups[:melee][2].name, ranged_1: groups[:ranged][1].name)\n}",
       "steps": [
         {
           "input": {

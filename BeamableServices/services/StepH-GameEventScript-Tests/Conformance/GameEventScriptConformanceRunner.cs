@@ -658,6 +658,12 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
         };
     });
 
+    private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((_, _) =>
+        GameEventScriptFastValue.FromBoolean(true));
+
+    private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) =>
+        throw new InvalidOperationException("Configured conformance extension failure."));
+
     private GameEventScriptConformanceExtensionRegistry()
     {
     }
@@ -704,6 +710,22 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             IsUnlabeled(reference.ArgumentLabels[0]))
         {
             function = TestVectorSum;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "truth", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count == 0)
+        {
+            function = TestTruth;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "fail", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count == 0)
+        {
+            function = TestFail;
             return true;
         }
 

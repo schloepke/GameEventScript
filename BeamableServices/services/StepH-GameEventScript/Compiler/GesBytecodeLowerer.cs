@@ -715,7 +715,7 @@ internal static class GesBytecodeLowerer
     private static bool IsKnownBinaryOperator(string operation)
         => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or "^" or
             "=" or "==" or "<>" or "=~" or "<" or ">" or "<=" or ">=" or
-            "&" or "|" or "xor" or "default" or "in" or "value in" or
+            "&" or "|" or "xor" or "->" or "default" or "in" or "value in" or
             "starts with" or "ends with" or
             "intersect" or "combine" or "merge" or "except" or "zip";
 
@@ -1823,6 +1823,7 @@ internal static class GesBytecodeLowerer
                             GameEventScriptBytecodeOpCode.CallExtension,
                             A: extensionCall.Arguments.Count,
                             B: extensionReferenceIndex,
+                            CallableKind: GameEventScriptBytecodeCallableKind.Function,
                             DiagnosticName: extensionCall.ExtensionName,
                             DiagnosticArgumentName: extensionCall.FunctionName,
                             Names: extensionArgumentNames));
@@ -1966,6 +1967,11 @@ internal static class GesBytecodeLowerer
                         return;
 
                     case BinaryExpressionNode binary:
+                        if (TryEmitShortCircuitBinary(binary))
+                        {
+                            return;
+                        }
+
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
                         instructions.Add(new GameEventScriptBytecodeInstruction(ToBinaryOpCode(binary)));
@@ -2006,6 +2012,7 @@ internal static class GesBytecodeLowerer
                             GameEventScriptBytecodeOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
+                            CallableKind: GameEventScriptBytecodeCallableKind.Predicate,
                             DiagnosticName: extensionPredicate.ExtensionName,
                             DiagnosticArgumentName: extensionPredicate.FunctionName,
                             Names: [GameEventScriptMessageSignature.UnlabeledParameterName]));
@@ -2415,6 +2422,29 @@ internal static class GesBytecodeLowerer
                 Push();
             }
 
+            private bool TryEmitShortCircuitBinary(BinaryExpressionNode binary)
+            {
+                GameEventScriptBytecodeOpCode? opCode = binary.Operator switch
+                {
+                    "|" => GameEventScriptBytecodeOpCode.ShortCircuitOr,
+                    "&" => GameEventScriptBytecodeOpCode.ShortCircuitAnd,
+                    "->" => GameEventScriptBytecodeOpCode.ShortCircuitImplies,
+                    _ => null
+                };
+                if (opCode is null)
+                {
+                    return false;
+                }
+
+                EmitExpression(binary.Left);
+                var rightProgram = compiler.CompileExpression(binary.Right);
+                AccountNestedProgram(argumentCount: 1, rightProgram);
+                instructions.Add(new GameEventScriptBytecodeInstruction(
+                    opCode.Value,
+                    ExpressionProgram: rightProgram));
+                return true;
+            }
+
             private void Push()
             {
                 _stackDepth++;
@@ -2509,6 +2539,7 @@ internal static class GesBytecodeLowerer
                     "|" => GameEventScriptBytecodeOpCode.Or,
                     "xor" => GameEventScriptBytecodeOpCode.Xor,
                     "&" => GameEventScriptBytecodeOpCode.And,
+                    "->" => GameEventScriptBytecodeOpCode.ShortCircuitImplies,
                     "=" or "==" => GameEventScriptBytecodeOpCode.Equal,
                     "<>" => GameEventScriptBytecodeOpCode.NotEqual,
                     "=~" => GameEventScriptBytecodeOpCode.ApproxEqual,

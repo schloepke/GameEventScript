@@ -102,7 +102,7 @@
     {
       "kind": "compileError",
       "name": "direct range is rejected after in generated collections",
-      "script": "on Start {\n  let values be :list[:select item in from 1 to 5 -> item]\n}",
+      "script": "on Start {\n  let values be :list[:select item in from 1 to 5 => item]\n}",
       "expectedError": {
         "phase": "syntax"
       }

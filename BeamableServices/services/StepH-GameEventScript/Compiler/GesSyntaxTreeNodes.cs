@@ -146,7 +146,7 @@ internal sealed record GeneratedCollectionExpressionNode(string CollectionType, 
 internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;
 internal sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
-internal sealed record PredicateCallExpressionNode(ExpressionNode Value, string RuleName) : ExpressionNode;
+internal sealed record PredicateCallExpressionNode(ExpressionNode Value, string PredicateName) : ExpressionNode;
 internal sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
 internal sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;
 internal sealed record TypeCastExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;

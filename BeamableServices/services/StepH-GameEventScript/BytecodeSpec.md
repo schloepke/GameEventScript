@@ -512,7 +512,7 @@ L_if_7_else = @0108
 L_if_7_end = @0110
 L_for_8_head = @0201
 L_for_8_end = @0210
-L_rule_wounded = @0500
+L_predicate_wounded = @0500
 ```
 
 The VM never needs labels to execute. They exist for dumps, debugger UI, traces,

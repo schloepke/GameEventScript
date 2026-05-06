@@ -35,7 +35,7 @@
       "kind": "scriptApi",
       "name": "compile diagnostics record predicate and function calls",
       "compileOptions": { "enableDiagnostics": true },
-      "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byRule be wounded(unit)\n  let bySelect be woundedUnits(units)\n  emit Done(byRule: byRule, count: :len bySelect)\n}",
+      "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byPredicate be wounded(unit)\n  let byFunction be woundedUnits(units)\n  emit Done(byPredicate: byPredicate, count: :len byFunction)\n}",
       "steps": [
         {
           "input": {
@@ -66,7 +66,7 @@
             {
               "name": "Done",
               "args": {
-                "byRule": { "type": ":boolean", "value": true },
+                "byPredicate": { "type": ":boolean", "value": true },
                 "count": { "type": ":integer", "value": "1" }
               }
             }

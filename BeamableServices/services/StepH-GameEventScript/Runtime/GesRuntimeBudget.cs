@@ -171,22 +171,7 @@ internal static class GesRuntimeLimitUtilities
             return 0;
         }
 
-        if (step > 0)
-        {
-            if (from > to)
-            {
-                return 0;
-            }
-
-            return ClampRangeLength(((double)to - from) / step);
-        }
-
-        if (from < to)
-        {
-            return 0;
-        }
-
-        return ClampRangeLength(((double)from - to) / -(double)step);
+        return GameEventScriptRangeMath.GetLength(from, to, step);
     }
 
     public static bool TryGetRangeLength(GameEventScriptValue value, out long length)
@@ -201,14 +186,4 @@ internal static class GesRuntimeLimitUtilities
         return false;
     }
 
-    private static long ClampRangeLength(double zeroBasedDistance)
-    {
-        var length = Math.Floor(zeroBasedDistance) + 1d;
-        if (length <= 0d)
-        {
-            return 0;
-        }
-
-        return length > long.MaxValue ? long.MaxValue : (long)length;
-    }
 }

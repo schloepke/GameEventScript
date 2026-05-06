@@ -252,22 +252,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
             source.RangeToProgram is null ||
             !TryExecuteExpressionProgram(source.RangeFromProgram, 0, out var fromValue) ||
             !TryExecuteExpressionProgram(source.RangeToProgram, 0, out var toValue) ||
-            !fromValue.TryGetFiniteNumber(out var fromNumber) ||
-            !toValue.TryGetFiniteNumber(out var toNumber))
+            !fromValue.TryGetRangeInteger(out var from) ||
+            !toValue.TryGetRangeInteger(out var to))
         {
             return false;
         }
 
-        var stepNumber = 1d;
+        var step = 1L;
         if (source.RangeStepProgram is not null &&
-            (!TryExecuteExpressionProgram(source.RangeStepProgram, 0, out var stepValue) || !stepValue.TryGetFiniteNumber(out stepNumber)))
+            (!TryExecuteExpressionProgram(source.RangeStepProgram, 0, out var stepValue) || !stepValue.TryGetRangeInteger(out step)))
         {
             return false;
         }
 
-        var from = ToLongSaturated(fromNumber);
-        var to = ToLongSaturated(toNumber);
-        var step = ToLongSaturated(stepNumber);
         if (step == 0)
         {
             return true;
@@ -1328,7 +1325,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecuteGeneratedCollectionProgram(GameEventScriptBytecodeGeneratedCollectionProgram program, out BytecodeVmValue value)
     {
-        if (!TryMaterializeIterationSource(program.Source, out var sourceItems))
+        if (!TryGetIterationSourceItems(program.Source, out var sourceItems))
         {
             value = BytecodeVmValue.Nothing;
             return false;
@@ -1377,7 +1374,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryMaterializeIterationSource(GameEventScriptBytecodeIterationSourceProgram source, out GameEventScriptValue[] items)
+    private bool TryGetIterationSourceItems(GameEventScriptBytecodeIterationSourceProgram source, out IEnumerable<GameEventScriptValue> items)
     {
         switch (source.Kind)
         {
@@ -1396,7 +1393,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                items = boxedCollection.AsEnumerable().ToArray();
+                items = boxedCollection.AsEnumerable();
                 return true;
 
             case GameEventScriptBytecodeIterationSourceKind.Range:
@@ -1425,7 +1422,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                items = boxedRange.AsEnumerable().ToArray();
+                items = boxedRange.AsEnumerable();
                 return true;
 
             default:
@@ -1505,20 +1502,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static BytecodeVmValue EvaluateRangeExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue, BytecodeVmValue stepValue)
     {
-        if (!GesValueOperations.TryCoerceNumericForOperation(fromValue.ToGameEventScriptValue(), out var fromNumber) ||
-            !GesValueOperations.TryCoerceNumericForOperation(toValue.ToGameEventScriptValue(), out var toNumber) ||
-            !GesValueOperations.TryCoerceNumericForOperation(stepValue.ToGameEventScriptValue(), out var stepNumber) ||
-            !fromNumber.IsFinite ||
-            !toNumber.IsFinite ||
-            !stepNumber.IsFinite)
+        if (!fromValue.TryGetRangeInteger(out var from) ||
+            !toValue.TryGetRangeInteger(out var to) ||
+            !stepValue.TryGetRangeInteger(out var step))
         {
             return BytecodeVmValue.Nothing;
         }
 
-        return BytecodeVmValue.Reference(GesRange(
-            GesValueOperations.ToIntegerSaturated(fromNumber.Value),
-            GesValueOperations.ToIntegerSaturated(toNumber.Value),
-            GesValueOperations.ToIntegerSaturated(stepNumber.Value)));
+        return BytecodeVmValue.Reference(GesRange(from, to, step));
     }
 
     private BytecodeVmValue EvaluateDiceExpression(int diceCount, int sideCount)
@@ -5927,6 +5918,44 @@ internal readonly record struct BytecodeVmValue(
         return false;
     }
 
+    public bool TryGetRangeInteger(out long value)
+    {
+        switch (Kind)
+        {
+            case BytecodeVmValueKind.Boolean:
+                value = BooleanValue ? 1L : 0L;
+                return true;
+            case BytecodeVmValueKind.Integer:
+                value = IntegerValue;
+                return true;
+            case BytecodeVmValueKind.Float:
+            case BytecodeVmValueKind.Percentage:
+                return TryFiniteDoubleToLong(Number, out value);
+            case BytecodeVmValueKind.Reference when ReferenceValue is { } reference:
+                if (!GesValueOperations.TryUnwrapOptionalForOperation(reference, out var unwrapped))
+                {
+                    value = 0L;
+                    return false;
+                }
+
+                if (unwrapped is GameEventScriptIntegerValue integer)
+                {
+                    value = integer.Value;
+                    return true;
+                }
+
+                if (GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) && number.IsFinite)
+                {
+                    return TryFiniteDoubleToLong(number.Value, out value);
+                }
+
+                break;
+        }
+
+        value = 0L;
+        return false;
+    }
+
     public GameEventScriptValue ToGameEventScriptValue()
         => Kind switch
         {
@@ -7215,5 +7244,17 @@ internal readonly record struct BytecodeVmValue(
         if (value > long.MaxValue) return long.MaxValue;
         if (value < long.MinValue) return long.MinValue;
         return (long)value;
+    }
+
+    private static bool TryFiniteDoubleToLong(double input, out long value)
+    {
+        if (double.IsNaN(input) || double.IsInfinity(input))
+        {
+            value = 0L;
+            return false;
+        }
+
+        value = ToLongSaturated(input);
+        return true;
     }
 }

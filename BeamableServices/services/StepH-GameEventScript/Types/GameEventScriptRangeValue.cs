@@ -1,6 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using System;
 using System.Collections.Generic;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
@@ -51,19 +50,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
             return false;
         }
 
-        if (Step > 0)
-        {
-            if (value < From || value > To)
-            {
-                return false;
-            }
-        }
-        else if (value > From || value < To)
-        {
-            return false;
-        }
-
-        return ((double)value - From) % Step == 0d;
+        return GameEventScriptRangeMath.Contains(From, To, Step, value);
     }
 
     public override IEnumerable<GameEventScriptValue> AsEnumerable()
@@ -107,56 +94,15 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
 
     protected override GameEventScriptValue LookupCore(GameEventScriptValue selector)
     {
-        var index = selector.AsInteger();
-        if (index <= 0 || index > GetLength())
+        if (!GameEventScriptRangeMath.TryGetTerm(From, To, Step, selector.AsInteger(), out var value))
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        var value = (double)From + ((double)index - 1d) * Step;
-        if (value < long.MinValue || value > long.MaxValue)
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        return GesInteger((long)value);
+        return GesInteger(value);
     }
 
-    private long GetLength()
-    {
-        if (Step == 0)
-        {
-            return 0;
-        }
-
-        if (Step > 0)
-        {
-            if (From > To)
-            {
-                return 0;
-            }
-
-            return ClampLength(((double)To - From) / Step);
-        }
-
-        if (From < To)
-        {
-            return 0;
-        }
-
-        return ClampLength(((double)From - To) / -(double)Step);
-    }
-
-    private static long ClampLength(double zeroBasedDistance)
-    {
-        var length = Math.Floor(zeroBasedDistance) + 1d;
-        if (length <= 0d)
-        {
-            return 0;
-        }
-
-        return length > long.MaxValue ? long.MaxValue : (long)length;
-    }
+    private long GetLength() => GameEventScriptRangeMath.GetLength(From, To, Step);
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {

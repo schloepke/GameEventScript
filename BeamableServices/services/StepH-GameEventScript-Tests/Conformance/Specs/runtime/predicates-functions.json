@@ -146,7 +146,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates allow explicit boolean coercion while functions keep original value",
-      "script": "predicate numeric(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byRuleTwo be numeric(2)\n  let byRuleZero be numeric(0)\n  let bySelect be numericSelect(2)\n  let byPredicate be 2 is numeric\n  emit Done(byRuleTwo: byRuleTwo, byRuleZero: byRuleZero, bySelect: bySelect, byPredicate: byPredicate)\n}",
+      "script": "predicate numeric(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byPredicateCallTwo be numeric(2)\n  let byPredicateCallZero be numeric(0)\n  let byFunction be numericSelect(2)\n  let byPredicateOperator be 2 is numeric\n  emit Done(byPredicateCallTwo: byPredicateCallTwo, byPredicateCallZero: byPredicateCallZero, byFunction: byFunction, byPredicateOperator: byPredicateOperator)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -154,10 +154,10 @@
             {
               "name": "Done",
               "args": {
-                "byRuleTwo": { "type": ":boolean", "value": true },
-                "byRuleZero": { "type": ":boolean", "value": false },
-                "bySelect": { "type": ":integer", "value": "4" },
-                "byPredicate": { "type": ":boolean", "value": true }
+                "byPredicateCallTwo": { "type": ":boolean", "value": true },
+                "byPredicateCallZero": { "type": ":boolean", "value": false },
+                "byFunction": { "type": ":integer", "value": "4" },
+                "byPredicateOperator": { "type": ":boolean", "value": true }
               }
             }
           ]

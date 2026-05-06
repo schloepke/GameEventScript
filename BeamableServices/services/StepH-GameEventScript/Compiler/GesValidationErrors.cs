@@ -212,8 +212,8 @@ internal sealed class GesValidationErrors
                 return identifier;
             case CallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal):
                 return call;
-            case PredicateCallExpressionNode rulePredicate when string.Equals(rulePredicate.RuleName, symbol, StringComparison.Ordinal):
-                return rulePredicate;
+            case PredicateCallExpressionNode predicateCall when string.Equals(predicateCall.PredicateName, symbol, StringComparison.Ordinal):
+                return predicateCall;
             case TypeConstructorExpressionNode constructor when string.Equals(constructor.TypeName, symbol, StringComparison.Ordinal):
                 return constructor;
             case MessageLiteralExpressionNode message when string.Equals(message.Message, symbol, StringComparison.Ordinal):
@@ -228,7 +228,7 @@ internal sealed class GesValidationErrors
             BinaryExpressionNode binary => FindNodeInExpression(binary.Left, symbol) ?? FindNodeInExpression(binary.Right, symbol),
             TypeCastExpressionNode cast => FindNodeInExpression(cast.Value, symbol),
             TypeCheckExpressionNode check => FindNodeInExpression(check.Value, symbol),
-            PredicateCallExpressionNode rulePredicate => FindNodeInExpression(rulePredicate.Value, symbol),
+            PredicateCallExpressionNode predicateCall => FindNodeInExpression(predicateCall.Value, symbol),
             ExtensionPredicateExpressionNode extensionPredicate => FindNodeInExpression(extensionPredicate.Value, symbol),
             MemberAccessExpressionNode member => FindNodeInExpression(member.Target, symbol),
             CollectionAccessExpressionNode collection => FindNodeInExpression(collection.Target, symbol) ?? FindNodeInSelector(collection.Selector, symbol),

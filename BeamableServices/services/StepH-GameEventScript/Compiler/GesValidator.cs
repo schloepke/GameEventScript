@@ -695,27 +695,27 @@ internal static class GesValidator
                     ValidateTypeConstructorExpression(parsedScriptContext, typeConstructor, callables, typeDefinitions, errors);
                     return;
 
-                case PredicateCallExpressionNode rulePredicate:
+                case PredicateCallExpressionNode predicateCall:
                     ValidateIdentifierCase(
                         parsedScriptContext,
-                        rulePredicate.RuleName,
-                        rulePredicate.RuleName,
+                        predicateCall.PredicateName,
+                        predicateCall.PredicateName,
                         GameEventScriptSymbolKind.Predicate,
-                        $"Predicate test target '{rulePredicate.RuleName}' must use identifier casing (start lowercase)",
+                        $"Predicate test target '{predicateCall.PredicateName}' must use identifier casing (start lowercase)",
                         errors);
-                    if (!callables.TryGetValue(rulePredicate.RuleName, out var callableDefinition) ||
+                    if (!callables.TryGetValue(predicateCall.PredicateName, out var callableDefinition) ||
                         callableDefinition.Kind != GameEventScriptCallableKind.Predicate ||
                         callableDefinition.Parameters.Count != 1)
                     {
                         errors.Add(
                             parsedScriptContext,
-                            $"Predicate '{rulePredicate.RuleName}' must exist and declare exactly one parameter to be used with 'is'",
-                            rulePredicate.RuleName,
+                            $"Predicate '{predicateCall.PredicateName}' must exist and declare exactly one parameter to be used with 'is'",
+                            predicateCall.PredicateName,
                             GameEventScriptSymbolKind.Predicate,
                             GameEventScriptCompileErrorKind.InvalidPredicate);
                     }
 
-                    expression = rulePredicate.Value;
+                    expression = predicateCall.Value;
                     continue;
 
                 case ExtensionPredicateExpressionNode extensionPredicate:

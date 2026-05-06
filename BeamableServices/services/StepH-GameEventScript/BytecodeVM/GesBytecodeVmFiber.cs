@@ -293,9 +293,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             private int _stage;
             private BytecodeVmValue _first;
             private BytecodeVmValue _second;
-            private double _rangeFrom;
-            private double _rangeTo;
-            private double _rangeStep = 1d;
+            private long _rangeFrom;
+            private long _rangeTo;
+            private long _rangeStep = 1L;
             private long _current;
             private long _to;
             private long _step;
@@ -563,7 +563,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (_stage == 1)
                 {
                     if (!fiber.TryTakeResult(out _first, out var success) || !success ||
-                        !_first.TryGetFiniteNumber(out _rangeFrom))
+                        !_first.TryGetRangeInteger(out _rangeFrom))
                     {
                         return CompleteFailure(fiber);
                     }
@@ -576,7 +576,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (_stage == 2)
                 {
                     if (!fiber.TryTakeResult(out _second, out var success) || !success ||
-                        !_second.TryGetFiniteNumber(out _rangeTo))
+                        !_second.TryGetRangeInteger(out _rangeTo))
                     {
                         return CompleteFailure(fiber);
                     }
@@ -594,7 +594,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (_stage == 3)
                 {
                     if (!fiber.TryTakeResult(out var stepValue, out var success) || !success ||
-                        !stepValue.TryGetFiniteNumber(out _rangeStep))
+                        !stepValue.TryGetRangeInteger(out _rangeStep))
                     {
                         return CompleteFailure(fiber);
                     }
@@ -657,9 +657,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             private FrameSignal InitializeRangeLoop(Fiber fiber)
             {
                 var session = fiber._session;
-                var from = ToLongSaturated(_rangeFrom);
-                var to = ToLongSaturated(_rangeTo);
-                var step = ToLongSaturated(_rangeStep);
+                var from = _rangeFrom;
+                var to = _rangeTo;
+                var step = _rangeStep;
                 if (step == 0)
                 {
                     fiber.Complete(BytecodeVmValue.Nothing);

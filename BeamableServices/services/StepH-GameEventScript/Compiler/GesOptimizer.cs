@@ -171,9 +171,9 @@ internal static class GesOptimizer
                 }).ToArray(),
                 OtherwiseExpression = OptimizeExpression(guardedChoice.OtherwiseExpression, knownTypeNames)
             },
-            PredicateCallExpressionNode rulePredicate => rulePredicate with
+            PredicateCallExpressionNode predicateCall => predicateCall with
             {
-                Value = OptimizeExpression(rulePredicate.Value, knownTypeNames)
+                Value = OptimizeExpression(predicateCall.Value, knownTypeNames)
             },
             ExtensionPredicateExpressionNode extensionPredicate => extensionPredicate with
             {

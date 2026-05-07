@@ -49,8 +49,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
         _runtimeBudget = context.RuntimeBudget;
         _plan = plan;
         _diagnosticsEnabled = diagnosticsEnabled;
-        _locals = new BytecodeVmValue[plan.SlotCount];
-        _assignedSlots = new bool[plan.SlotCount];
+        var localSlotCount = Math.Max(plan.SlotCount, compiledScript.LinearExecutable.MaxFrameSlots);
+        _locals = new BytecodeVmValue[localSlotCount];
+        _assignedSlots = new bool[localSlotCount];
         _evaluationStackCapacity = Math.Max(16, Math.Max(plan.MaxStackDepth, compiledScript.BytecodeModule.MaxStackDepth) + 16);
         _randomScopes.Push(context.Random);
     }
@@ -71,6 +72,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryInvoke(GesBytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
+        if (CanExecuteLinearHandler(handler))
+        {
+            return TryInvokeLinearHandler(handler, args);
+        }
+
         EnterScope();
         try
         {
@@ -109,6 +115,756 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             ExitScope();
         }
+    }
+
+    private bool CanExecuteLinearHandler(GesBytecodeVmCompiledHandler handler)
+    {
+        if (_diagnosticsEnabled)
+        {
+            return false;
+        }
+
+        var code = _compiledScript.LinearExecutable.Code;
+        if ((uint)handler.EntryAddress >= (uint)code.Count)
+        {
+            return false;
+        }
+
+        for (var pc = handler.EntryAddress; pc < code.Count; pc++)
+        {
+            var instruction = code[pc];
+            if (!CanExecuteLinearInstruction(instruction))
+            {
+                return false;
+            }
+
+            if (instruction.OpCode == GameEventScriptBytecodeOpCode.Return)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool CanExecuteLinearInstruction(GameEventScriptBytecodeInstruction instruction)
+    {
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.Pipeline:
+            case GameEventScriptBytecodeOpCode.GeneratedCollection:
+            case GameEventScriptBytecodeOpCode.GuardedChoice:
+            case GameEventScriptBytecodeOpCode.SeededRandom:
+            case GameEventScriptBytecodeOpCode.Call:
+            case GameEventScriptBytecodeOpCode.PredicateTest:
+                return false;
+
+            default:
+                return true;
+        }
+    }
+
+    private bool TryInvokeLinearHandler(GesBytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
+    {
+        EnterScope();
+        try
+        {
+            RecordHandlerInvoked(handler.Message, args);
+            return TryExecuteLinearRange(handler.EntryAddress, _compiledScript.LinearExecutable.Code.Count, handler, args, out _);
+        }
+        finally
+        {
+            ExitScope();
+        }
+    }
+
+    private bool TryExecuteLinearRange(
+        int startAddress,
+        int endAddress,
+        GesBytecodeVmCompiledHandler? handler,
+        IReadOnlyDictionary<string, GameEventScriptValue>? args,
+        out bool returned)
+    {
+        returned = false;
+        var code = _compiledScript.LinearExecutable.Code;
+        if ((uint)startAddress > (uint)code.Count ||
+            (uint)endAddress > (uint)code.Count ||
+            startAddress > endAddress)
+        {
+            return false;
+        }
+
+        var pc = startAddress;
+        while (pc < endAddress)
+        {
+            if (!TryConsumeExecutionStep("Linear instruction execution budget exhausted."))
+            {
+                _halted = true;
+                returned = true;
+                return true;
+            }
+
+            var instruction = code[pc];
+            switch (instruction.OpCode)
+            {
+                case GameEventScriptBytecodeOpCode.Nop:
+                    break;
+
+                case GameEventScriptBytecodeOpCode.EnterScope:
+                    EnterScope();
+                    break;
+
+                case GameEventScriptBytecodeOpCode.ExitScope:
+                    ExitScope();
+                    break;
+
+                case GameEventScriptBytecodeOpCode.BindParameter:
+                    if (handler is null || args is null ||
+                        (uint)instruction.A >= (uint)handler.Parameters.Count ||
+                        !TryGetArgumentValue(args, handler.Parameters[instruction.A], instruction.A, out var parameterValue) ||
+                        !DefineSlot(instruction.Dest, BytecodeVmValue.FromGameEventScriptValue(parameterValue)))
+                    {
+                        return false;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.CoerceSlot:
+                    if (!TryReadTypeMetadata(instruction.Data, out var typeName) ||
+                        !TryConvertDeclaredType(typeName, ResolveSlot(instruction.A), out var coercedValue) ||
+                        !DefineSlot(instruction.Dest, coercedValue))
+                    {
+                        return false;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.LoadConstant:
+                    if (!DefineSlot(instruction.Dest, LoadConstant(instruction.Data)))
+                    {
+                        return false;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.LoadSlot:
+                case GameEventScriptBytecodeOpCode.CopySlot:
+                    if (!DefineSlot(instruction.Dest, ResolveSlot(instruction.A)))
+                    {
+                        return false;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Jump:
+                    if (!TryMoveLinearPc(instruction.Target, endAddress, ref pc))
+                    {
+                        return false;
+                    }
+                    continue;
+
+                case GameEventScriptBytecodeOpCode.JumpIfTrue:
+                    if (ResolveSlot(instruction.A).IsTrue())
+                    {
+                        if (!TryMoveLinearPc(instruction.Target, endAddress, ref pc))
+                        {
+                            return false;
+                        }
+                        continue;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.JumpIfFalse:
+                    if (ResolveSlot(instruction.A).IsFalse())
+                    {
+                        if (!TryMoveLinearPc(instruction.Target, endAddress, ref pc))
+                        {
+                            return false;
+                        }
+                        continue;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
+                    if (!ResolveSlot(instruction.A).IsTrue())
+                    {
+                        if (!TryMoveLinearPc(instruction.Target, endAddress, ref pc))
+                        {
+                            return false;
+                        }
+                        continue;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Return:
+                    returned = true;
+                    return true;
+
+                case GameEventScriptBytecodeOpCode.PublishValue:
+                    if (!TryPublishLinearLayout(instruction.Data))
+                    {
+                        return false;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.PublishMessageValue:
+                    if (!TryPublishLinearMessageValue(instruction.Data, ResolveSlot(instruction.A)))
+                    {
+                        return false;
+                    }
+                    break;
+
+                case GameEventScriptBytecodeOpCode.ForRange:
+                    if (!TryExecuteLinearRangeFor(instruction))
+                    {
+                        return false;
+                    }
+                    pc = instruction.Target2;
+                    continue;
+
+                case GameEventScriptBytecodeOpCode.ForCollection:
+                    if (!TryExecuteLinearCollectionFor(instruction))
+                    {
+                        return false;
+                    }
+                    pc = instruction.Target2;
+                    continue;
+
+                case GameEventScriptBytecodeOpCode.SeededRandomBlock:
+                    if (!TryExecuteLinearSeededRandomBlock(instruction))
+                    {
+                        return false;
+                    }
+                    pc = instruction.Target2;
+                    continue;
+
+                default:
+                    if (!TryExecuteLinearValueInstruction(instruction))
+                    {
+                        return false;
+                    }
+                    break;
+            }
+
+            pc++;
+        }
+
+        return true;
+    }
+
+    private bool TryMoveLinearPc(int target, int endAddress, ref int pc)
+    {
+        if (target < 0 || target > endAddress)
+        {
+            return false;
+        }
+
+        pc = target;
+        return true;
+    }
+
+    private bool TryExecuteLinearValueInstruction(GameEventScriptBytecodeInstruction instruction)
+    {
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.Or:
+            case GameEventScriptBytecodeOpCode.Xor:
+            case GameEventScriptBytecodeOpCode.And:
+            case GameEventScriptBytecodeOpCode.Power:
+            case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+            case GameEventScriptBytecodeOpCode.Equal:
+            case GameEventScriptBytecodeOpCode.NotEqual:
+            case GameEventScriptBytecodeOpCode.ApproxEqual:
+            case GameEventScriptBytecodeOpCode.Less:
+            case GameEventScriptBytecodeOpCode.Greater:
+            case GameEventScriptBytecodeOpCode.LessOrEqual:
+            case GameEventScriptBytecodeOpCode.GreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.Add:
+            case GameEventScriptBytecodeOpCode.Subtract:
+            case GameEventScriptBytecodeOpCode.Multiply:
+            case GameEventScriptBytecodeOpCode.Divide:
+            case GameEventScriptBytecodeOpCode.IntegerDivide:
+            case GameEventScriptBytecodeOpCode.Modulo:
+            case GameEventScriptBytecodeOpCode.Remainder:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+            case GameEventScriptBytecodeOpCode.Default:
+            case GameEventScriptBytecodeOpCode.Contains:
+            case GameEventScriptBytecodeOpCode.ContainsValue:
+            case GameEventScriptBytecodeOpCode.StartsWith:
+            case GameEventScriptBytecodeOpCode.EndsWith:
+            case GameEventScriptBytecodeOpCode.Intersect:
+            case GameEventScriptBytecodeOpCode.Combine:
+            case GameEventScriptBytecodeOpCode.Except:
+            case GameEventScriptBytecodeOpCode.Zip:
+                return DefineSlot(
+                    instruction.Dest,
+                    EvaluateProgramBinary(instruction.OpCode, ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+
+            case GameEventScriptBytecodeOpCode.Clamp:
+                return DefineSlot(
+                    instruction.Dest,
+                    EvaluateClamp(ResolveSlot(instruction.A), ResolveSlot(instruction.B), ResolveSlot(instruction.C)));
+
+            case GameEventScriptBytecodeOpCode.Random:
+                return DefineSlot(
+                    instruction.Dest,
+                    EvaluateRandomExpression(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+
+            case GameEventScriptBytecodeOpCode.Dice:
+                return DefineSlot(instruction.Dest, EvaluateDiceExpression(instruction.A, instruction.B));
+
+            case GameEventScriptBytecodeOpCode.IndexedAccess:
+                return DefineSlot(instruction.Dest, EvaluateIndexedAccess(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+        }
+
+        if (!TryGetOperationLayout(instruction.Data, out var layout))
+        {
+            return false;
+        }
+
+        var operands = CopyLinearOperands(layout.ArgumentSlots);
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.Unary:
+                if (!TryEvaluateUnaryOperation(layout.Name, ResolveSlot(instruction.A), out var unaryValue))
+                {
+                    return false;
+                }
+                return DefineSlot(instruction.Dest, unaryValue);
+
+            case GameEventScriptBytecodeOpCode.Variadic:
+                if (!TryEvaluateVariadicOperation(layout.Name, operands, 0, operands.Length, out var variadicValue))
+                {
+                    return false;
+                }
+                return DefineSlot(instruction.Dest, variadicValue);
+
+            case GameEventScriptBytecodeOpCode.Range:
+                return DefineSlot(
+                    instruction.Dest,
+                    EvaluateRangeExpression(
+                        operands.Length > 0 ? operands[0] : ResolveSlot(instruction.A),
+                        operands.Length > 1 ? operands[1] : ResolveSlot(instruction.B),
+                        operands.Length > 2 ? operands[2] : BytecodeVmValue.Integer(1)));
+
+            case GameEventScriptBytecodeOpCode.Cast:
+                return DefineSlot(instruction.Dest, EvaluateProgramCast(layout.CastKind, ResolveSlot(instruction.A)));
+
+            case GameEventScriptBytecodeOpCode.TypeConstructor:
+                return DefineSlot(
+                    instruction.Dest,
+                    EvaluateTypeConstructor(layout.Name, layout.Names.ToArray(), operands, 0, operands.Length));
+
+            case GameEventScriptBytecodeOpCode.TypeCheck:
+                return DefineSlot(
+                    instruction.Dest,
+                    BytecodeVmValue.Boolean(IsValueOfType(ResolveSlot(instruction.A), layout.Name)));
+
+            case GameEventScriptBytecodeOpCode.PredicateTest:
+                if (!TryEvaluateLinearPredicateTest(layout, ResolveSlot(instruction.A), out var predicateValue))
+                {
+                    return false;
+                }
+                return DefineSlot(instruction.Dest, predicateValue);
+
+            case GameEventScriptBytecodeOpCode.Call:
+                if (!TryEvaluateLinearCallable(layout, operands, out var callValue))
+                {
+                    return false;
+                }
+                return DefineSlot(instruction.Dest, callValue);
+
+            case GameEventScriptBytecodeOpCode.MemberAccess:
+                return DefineSlot(instruction.Dest, EvaluateMemberAccess(ResolveSlot(instruction.A), layout.Name));
+
+            case GameEventScriptBytecodeOpCode.BuildList:
+                return DefineSlot(instruction.Dest, BuildListValue(operands, 0, operands.Length));
+
+            case GameEventScriptBytecodeOpCode.BuildSequence:
+                return DefineSlot(instruction.Dest, BuildSequenceValue(operands, 0, operands.Length));
+
+            case GameEventScriptBytecodeOpCode.BuildSet:
+                return DefineSlot(instruction.Dest, BuildSetValue(operands, 0, operands.Length));
+
+            case GameEventScriptBytecodeOpCode.BuildDictionary:
+                return DefineSlot(instruction.Dest, BuildDictionaryValue(operands, 0, operands.Length, layout.Names.ToArray()));
+
+            case GameEventScriptBytecodeOpCode.BuildMessage:
+                return DefineSlot(
+                    instruction.Dest,
+                    BuildMessageValue(
+                        operands,
+                        0,
+                        operands.Length,
+                        layout.Names.ToArray(),
+                        layout.Name,
+                        layout.ArgumentName));
+
+            case GameEventScriptBytecodeOpCode.BindHandler:
+                if (operands.Length == 0)
+                {
+                    return DefineSlot(instruction.Dest, BytecodeVmValue.Nothing);
+                }
+
+                return DefineSlot(
+                    instruction.Dest,
+                    BindHandlerValue(operands[0], operands, 1, operands.Length - 1, layout.Names.ToArray()));
+
+            case GameEventScriptBytecodeOpCode.CallExtension:
+                if (!TryCallExtension(
+                        layout.Name,
+                        layout.ArgumentName,
+                        layout.Names.ToArray(),
+                        layout.ExternalReferenceIndex,
+                        operands,
+                        0,
+                        operands.Length,
+                        layout.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
+                        out var extensionValue))
+                {
+                    return false;
+                }
+                return DefineSlot(instruction.Dest, extensionValue);
+
+            default:
+                return false;
+        }
+    }
+
+    private bool TryEvaluateLinearPredicateTest(GameEventScriptBytecodeOperationLayout layout, BytecodeVmValue input, out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (string.IsNullOrEmpty(layout.Name) ||
+            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
+        {
+            return false;
+        }
+
+        var instruction = new GameEventScriptBytecodeStackInstruction(
+            GameEventScriptBytecodeOpCode.PredicateTest,
+            layout.ParameterSlots.Count > 0 ? layout.ParameterSlots[0] : -1,
+            ExpressionProgram: callable.ExpressionProgram,
+            DiagnosticName: layout.Name,
+            DiagnosticArgumentName: layout.ArgumentName,
+            DeclaredTypes: layout.DeclaredTypes.ToArray());
+        return TryEvaluatePredicateTest(instruction, input, 0, out value);
+    }
+
+    private bool TryEvaluateLinearCallable(GameEventScriptBytecodeOperationLayout layout, BytecodeVmValue[] operands, out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (string.IsNullOrEmpty(layout.Name) ||
+            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
+        {
+            return false;
+        }
+
+        var instruction = new GameEventScriptBytecodeStackInstruction(
+            GameEventScriptBytecodeOpCode.Call,
+            operands.Length,
+            CallableKind: layout.CallableKind,
+            ExpressionProgram: callable.ExpressionProgram,
+            DiagnosticName: layout.Name,
+            Names: layout.Names.ToArray(),
+            Slots: layout.ParameterSlots.ToArray(),
+            DeclaredTypes: layout.DeclaredTypes.ToArray());
+        return TryEvaluateCallable(instruction, operands, 0, operands.Length, out value);
+    }
+
+    private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<int> slots)
+    {
+        if (slots.Count == 0)
+        {
+            return [];
+        }
+
+        var operands = new BytecodeVmValue[slots.Count];
+        for (var index = 0; index < slots.Count; index++)
+        {
+            operands[index] = ResolveSlot(slots[index]);
+        }
+
+        return operands;
+    }
+
+    private bool TryPublishLinearLayout(int layoutIndex)
+    {
+        if (!TryGetPublishLayout(layoutIndex, out var layout) ||
+            string.IsNullOrEmpty(layout.MessageName) ||
+            string.IsNullOrEmpty(layout.SignatureId) ||
+            layout.ArgumentNames.Count != layout.ArgumentSlots.Count)
+        {
+            return false;
+        }
+
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[layout.ArgumentNames.Count];
+        for (var argumentIndex = 0; argumentIndex < pairs.Length; argumentIndex++)
+        {
+            var argumentName = layout.ArgumentNames[argumentIndex];
+            var value = ResolveSlot(layout.ArgumentSlots[argumentIndex]);
+            RecordPublishArgumentEvaluatedToNothing(argumentName, value);
+            pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
+                argumentName,
+                value.ToGameEventScriptValue());
+        }
+
+        var message = GameEventScriptMessage.CreatePrecomputed(
+            layout.MessageName,
+            pairs.Length == 0
+                ? GameEventScriptNamedArguments.Empty
+                : GameEventScriptNamedArguments.CreateOrdered(pairs),
+            layout.SignatureId);
+        PublishMessage(layout.Kind, ApplyLinearTags(message, layout.TagSlots));
+        return true;
+    }
+
+    private bool TryPublishLinearMessageValue(int layoutIndex, BytecodeVmValue messageValue)
+    {
+        if (!TryGetPublishLayout(layoutIndex, out var layout))
+        {
+            return false;
+        }
+
+        var boxed = messageValue.ToGameEventScriptValue();
+        if (!GesMessageValueCodec.TryReadMessageValue(boxed, out var message))
+        {
+            return true;
+        }
+
+        PublishMessage(layout.Kind, ApplyLinearTags(message, layout.TagSlots));
+        return true;
+    }
+
+    private GameEventScriptMessage ApplyLinearTags(GameEventScriptMessage message, IReadOnlyList<int> tagSlots)
+    {
+        if (tagSlots.Count == 0)
+        {
+            return message;
+        }
+
+        var builder = new MessageTagBuilder();
+        foreach (var tagSlot in tagSlots)
+        {
+            AddTags(builder, ResolveSlot(tagSlot).ToGameEventScriptValue());
+        }
+
+        var tags = builder.ToArray();
+        return tags.Count == 0 ? message : message.WithTags(tags);
+    }
+
+    private bool TryExecuteLinearRangeFor(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetLoopLayout(instruction.Data, out var loopLayout) ||
+            !TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout) ||
+            !ResolveSlot(sourceLayout.RangeFromSlot).TryGetRangeInteger(out var from) ||
+            !ResolveSlot(sourceLayout.RangeToSlot).TryGetRangeInteger(out var to))
+        {
+            return false;
+        }
+
+        var step = 1L;
+        if (sourceLayout.RangeStepSlot >= 0 &&
+            !ResolveSlot(sourceLayout.RangeStepSlot).TryGetRangeInteger(out step))
+        {
+            return false;
+        }
+
+        if (step == 0)
+        {
+            return true;
+        }
+
+        var length = GesRuntimeLimitUtilities.GetRangeLength(from, to, step);
+        if (!_runtimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
+        {
+            return true;
+        }
+
+        if (step > 0)
+        {
+            for (var item = from; item <= to; item += step)
+            {
+                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.Target, instruction.Target2))
+                {
+                    return false;
+                }
+
+                if (_halted || long.MaxValue - item < step)
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            for (var item = from; item >= to; item += step)
+            {
+                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.Target, instruction.Target2))
+                {
+                    return false;
+                }
+
+                if (_halted || long.MinValue - item > step)
+                {
+                    break;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private bool TryExecuteLinearCollectionFor(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetLoopLayout(instruction.Data, out var loopLayout) ||
+            !TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout))
+        {
+            return false;
+        }
+
+        var sourceValue = ResolveSlot(sourceLayout.CollectionSlot).ToGameEventScriptValue();
+        if (GesRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
+            !_runtimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
+        {
+            return true;
+        }
+
+        foreach (var item in sourceValue.AsEnumerable())
+        {
+            if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.FromGameEventScriptValue(item), instruction.Target, instruction.Target2))
+            {
+                return false;
+            }
+
+            if (_halted)
+            {
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    private bool TryExecuteLinearLoopIteration(int identifierSlot, BytecodeVmValue item, int bodyStart, int bodyEnd)
+    {
+        if (!_runtimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
+        {
+            _halted = true;
+            return true;
+        }
+
+        EnterScope();
+        try
+        {
+            if (!DefineSlot(identifierSlot, item))
+            {
+                return false;
+            }
+
+            return TryExecuteLinearRange(bodyStart, bodyEnd, null, null, out _);
+        }
+        finally
+        {
+            ExitScope();
+        }
+    }
+
+    private bool TryExecuteLinearSeededRandomBlock(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetSeededRandomBlockLayout(instruction.Data, out var layout))
+        {
+            return false;
+        }
+
+        PushSeededRandomScope(ResolveSlot(layout.SeedSlot).ToGameEventScriptValue());
+        try
+        {
+            return TryExecuteLinearRange(instruction.Target, instruction.Target2, null, null, out _);
+        }
+        finally
+        {
+            PopSeededRandomScope();
+        }
+    }
+
+    private bool TryReadTypeMetadata(int index, out string typeName)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.TypeMetadata.Count)
+        {
+            typeName = _compiledScript.BytecodeModule.TypeMetadata[index];
+            return true;
+        }
+
+        typeName = string.Empty;
+        return false;
+    }
+
+    private bool TryGetOperationLayout(int index, out GameEventScriptBytecodeOperationLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.OperationLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.OperationLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetPublishLayout(int index, out GameEventScriptBytecodePublishLayoutEntry layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.PublishLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.PublishLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetIterationSourceLayout(int index, out GameEventScriptBytecodeIterationSourceLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.IterationSourceLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.IterationSourceLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetLoopLayout(int index, out GameEventScriptBytecodeLoopLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.LoopLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.LoopLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetSeededRandomBlockLayout(int index, out GameEventScriptBytecodeSeededRandomBlockLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.SeededRandomBlockLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.SeededRandomBlockLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
     }
 
     private static bool TryGetArgumentValue(IReadOnlyDictionary<string, GameEventScriptValue> args, string parameter, int parameterIndex, out GameEventScriptValue value)

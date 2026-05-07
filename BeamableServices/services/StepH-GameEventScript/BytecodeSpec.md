@@ -874,17 +874,20 @@ A grouped view may still be offered, but it must keep global addresses visible.
 2. Done: the BytecodeVM executable builder consumes and validates the public
    linear `Code` segment plus side tables into an internal linear executable
    artifact.
-3. Remove internal nested `StatementProgram`, nested `ExpressionProgram`, and
-   nested branch/body program references once the side tables cover every
-   high-level operation.
+3. In progress: the VM can execute supported handler instruction ranges
+   directly from the linear `Code` segment using frame slots and `pc`. Handlers
+   that require callable/predicate frames, pipelines, generated collections,
+   guarded choices, diagnostics, or helper expressions still fall back to the
+   compatibility executor until those features have linear frame support.
 4. Keep conformance behavior unchanged; only bytecode shape and VM internals
    should move.
 
 The current compiler emits the public linear model through an adapter over the
 internal compatibility model, and the VM load path now builds a validated linear
-runtime artifact from that public model. Top-level execution still uses the
-compatibility statement executor while the linear executor replacement is being
-implemented.
+runtime artifact from that public model. Top-level execution has a linear fast
+path for supported handler ranges; the compatibility statement executor remains
+for helper-heavy language features while the linear call-frame replacement is
+being implemented.
 
 ## Compatibility Predicates
 

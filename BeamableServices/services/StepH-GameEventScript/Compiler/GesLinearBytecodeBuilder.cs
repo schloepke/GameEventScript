@@ -472,6 +472,10 @@ internal sealed class GesLinearBytecodeBuilder
         int count = 0)
     {
         var names = instruction.Names ?? [];
+        var parameterSlots = instruction.Slots ??
+            (instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest && instruction.A >= 0
+                ? [instruction.A]
+                : null);
         var layoutIndex = _operationLayouts.Count;
         _operationLayouts.Add(new GameEventScriptBytecodeOperationLayout(
             instruction.OpCode,
@@ -479,7 +483,7 @@ internal sealed class GesLinearBytecodeBuilder
             instruction.DiagnosticArgumentName,
             names,
             argumentSlots,
-            instruction.Slots,
+            parameterSlots,
             instruction.DeclaredTypes,
             instruction.CallableKind,
             instruction.CastKind,

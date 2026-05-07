@@ -118,6 +118,8 @@ internal sealed class GesLinearBytecodeBuilder
                 field.ComputedEntryAddress = EmitExpressionEntry(field.ComputedProgram);
             }
         }
+
+        FlushDeferredHelpers();
     }
 
     private int EmitExpressionEntry(GameEventScriptBytecodeExpressionProgram program)
@@ -367,7 +369,7 @@ internal sealed class GesLinearBytecodeBuilder
             case GameEventScriptBytecodeOpCode.Unary:
                 if (stack.TryPop(out var unarySource))
                 {
-                    var layoutIndex = AddOperationLayout(instruction, [unarySource], count: 1);
+                    var layoutIndex = AddOperationLayout(instruction, [unarySource], state, count: 1);
                     stack.Push(EmitValueInstruction(state, instruction.OpCode, a: unarySource, data: layoutIndex));
                 }
                 break;
@@ -384,7 +386,7 @@ internal sealed class GesLinearBytecodeBuilder
             case GameEventScriptBytecodeOpCode.PredicateTest:
                 if (stack.TryPop(out var input))
                 {
-                    var layoutIndex = AddOperationLayout(instruction, [input], count: 1);
+                    var layoutIndex = AddOperationLayout(instruction, [input], state, count: 1);
                     stack.Push(EmitValueInstruction(state, instruction.OpCode, a: input, data: layoutIndex));
                 }
                 break;
@@ -439,7 +441,7 @@ internal sealed class GesLinearBytecodeBuilder
         var b = operands.Length > 1 ? operands[1] : instruction.B;
         var c = operands.Length > 2 ? operands[2] : -1;
         var layoutIndex = NeedsOperationLayout(instruction)
-            ? AddOperationLayout(instruction, operands, argumentCount)
+            ? AddOperationLayout(instruction, operands, state, argumentCount)
             : -1;
         stack.Push(EmitValueInstruction(state, instruction.OpCode, a, b, c, data: layoutIndex));
     }
@@ -482,6 +484,7 @@ internal sealed class GesLinearBytecodeBuilder
     private int AddOperationLayout(
         GameEventScriptBytecodeStackInstruction instruction,
         IReadOnlyList<int> argumentSlots,
+        ExpressionState state,
         int count = 0)
     {
         var names = instruction.Names ?? [];
@@ -490,20 +493,35 @@ internal sealed class GesLinearBytecodeBuilder
                 ? [instruction.A]
                 : null);
         var layoutIndex = _operationLayouts.Count;
-        _operationLayouts.Add(new GameEventScriptBytecodeOperationLayout(
-            instruction.OpCode,
-            instruction.DiagnosticName,
-            instruction.DiagnosticArgumentName,
-            names,
-            argumentSlots,
-            parameterSlots,
-            instruction.DeclaredTypes,
-            instruction.CallableKind,
-            instruction.CastKind,
-            instruction.B,
-            names.Length == 0 ? -1 : _resolveNamedArgumentLayoutIndex(names),
-            count: count));
+        var namedArgumentLayoutIndex = names.Length == 0 ? -1 : _resolveNamedArgumentLayoutIndex(names);
+        _operationLayouts.Add(CreateOperationLayout(expressionEntryAddress: -1));
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom &&
+            instruction.ExpressionProgram is not null)
+        {
+            _deferredHelperEmitters.Add(() =>
+            {
+                var expressionEntryAddress = EmitExpressionEntry(instruction.ExpressionProgram, state);
+                _operationLayouts[layoutIndex] = CreateOperationLayout(expressionEntryAddress);
+            });
+        }
+
         return layoutIndex;
+
+        GameEventScriptBytecodeOperationLayout CreateOperationLayout(int expressionEntryAddress)
+            => new(
+                instruction.OpCode,
+                instruction.DiagnosticName,
+                instruction.DiagnosticArgumentName,
+                names,
+                argumentSlots,
+                parameterSlots,
+                instruction.DeclaredTypes,
+                instruction.CallableKind,
+                instruction.CastKind,
+                instruction.B,
+                namedArgumentLayoutIndex,
+                expressionEntryAddress: expressionEntryAddress,
+                count: count);
     }
 
     private int AddPublishLayout(GameEventScriptBytecodePublishLayoutEntry layout)
@@ -597,6 +615,19 @@ internal sealed class GesLinearBytecodeBuilder
             program.CollectionType,
             program.IdentifierSlot,
             sourceLayoutIndex));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var predicateEntryAddress = program.PredicateProgram is null
+                ? -1
+                : EmitExpressionEntry(program.PredicateProgram, state);
+            var projectionEntryAddress = EmitExpressionEntry(program.ProjectionProgram, state);
+            _generatedCollectionLayouts[index] = new GameEventScriptBytecodeGeneratedCollectionLayout(
+                program.CollectionType,
+                program.IdentifierSlot,
+                sourceLayoutIndex,
+                predicateEntryAddress,
+                projectionEntryAddress);
+        });
         return index;
     }
 

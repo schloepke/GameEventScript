@@ -23,13 +23,8 @@ public sealed class GameEventScriptContext
     /// Provides the execution context for running game event scripts, managing runtime constraints,
     /// diagnostics, random generation, and extension mechanisms.
     /// </summary>
-    public GameEventScriptContext(
-        GameEventScriptRandomGenerator random,
-        Func<GameEventScriptMessage, bool> emit,
-        IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
-        GameEventScriptRuntimeLimits? runtimeLimits = null,
-        IGameEventScriptExtensionRegistry? extensionRegistry = null,
-        Func<GameEventScriptMessage, bool>? publish = null)
+    public GameEventScriptContext(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit, IGameEventScriptDiagnosticCollector? diagnosticCollector = null, GameEventScriptRuntimeLimits? runtimeLimits = null,
+        IGameEventScriptExtensionRegistry? extensionRegistry = null, Func<GameEventScriptMessage, bool>? publish = null)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _emit = emit ?? throw new ArgumentNullException(nameof(emit));
@@ -73,10 +68,7 @@ public sealed class GameEventScriptContext
     /// The message must have a valid non-empty name to be emitted.
     /// </summary>
     /// <param name="message">The game event script message to be emitted. Must not be null, and its name must not be empty or whitespace.</param>
-    public bool Emit(GameEventScriptMessage message)
-    {
-        return !string.IsNullOrWhiteSpace(message.Name) && _emit(message);
-    }
+    public bool Emit(GameEventScriptMessage message) => !string.IsNullOrWhiteSpace(message.Name) && _emit(message);
 
     /// <summary>
     /// Emits a game event script message using a string identifier.
@@ -105,10 +97,7 @@ public sealed class GameEventScriptContext
     /// If no hook is configured, publishing falls back to <see cref="Emit(GameEventScriptMessage)"/>.
     /// </summary>
     /// <param name="message">The game event script message to be published. Must not be null, and its name must not be empty or whitespace.</param>
-    public bool Publish(GameEventScriptMessage message)
-    {
-        return !string.IsNullOrWhiteSpace(message.Name) && _publish(message);
-    }
+    public bool Publish(GameEventScriptMessage message) => !string.IsNullOrWhiteSpace(message.Name) && _publish(message);
 
     /// <summary>
     /// Publishes a game event script message using a string identifier.
@@ -140,8 +129,7 @@ public sealed class GameEventScriptContext
     /// <param name="name">The identifier or name associated with the diagnostic event.</param>
     /// <param name="arguments">The collection of arguments related to the event.</param>
     /// <param name="detail">An optional detailed description of the event.</param>
-    public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
-        => DiagnosticCollector?.Record(kind, name, arguments, detail);
+    public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null) => DiagnosticCollector?.Record(kind, name, arguments, detail);
 
     internal GesRuntimeBudget RuntimeBudget { get; }
 }

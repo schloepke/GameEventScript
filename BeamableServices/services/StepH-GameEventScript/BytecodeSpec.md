@@ -18,12 +18,12 @@ linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
 callables, and computed field helpers, plus public side tables for operation,
 publish, loop, selector/pipeline, generated-collection, seeded-random, and
 guarded-choice metadata. The synchronous VM executes supported handler ranges,
-simple callable/predicate frames, and guarded-choice helper entries directly
-from that linear code with a VM-owned call-frame stack. Selector, pipeline,
-generated-collection, and some helper expressions still use internal
-compatibility structures while the executor migration continues, so helper entry
-address fields may be `-1` until those helpers are emitted into the global code
-segment.
+simple callable/predicate frames, generated-collection helpers, and
+guarded-choice and seeded-random expression helper entries directly from that
+linear code with a VM-owned call-frame stack. Selector, pipeline, and some
+helper expressions still use internal compatibility structures while the
+executor migration continues, so helper entry address fields may be `-1` until
+those helpers are emitted into the global code segment.
 
 ## Goals
 
@@ -566,10 +566,12 @@ compiler-assigned loop temporary slot.
 - `Range dst fromSlot toSlot stepSlot`
 - `Dice dst count sides`
 - `Random dst fromSlot toSlot`
-- `SeededRandom dst seedSlot bodyAddress`
+- `SeededRandom dst seedSlot operationLayoutIndex`
 - `TypeConstructor dst typeIndex callLayoutIndex`
 
 These remain high-level because they map directly to public value semantics.
+For `SeededRandom`, the operation layout stores the body helper entry in
+`ExpressionEntryAddress`.
 
 Required portable value families:
 
@@ -786,6 +788,12 @@ IterationSourcePlan
 Direct ranges after `in` remain invalid at source level. Range iteration should
 use the explicit range source fields.
 
+At runtime, the generated-collection opcode evaluates the source slots from its
+iteration-source layout, binds `IdentifierSlot` temporarily for each item,
+evaluates the optional predicate helper, then evaluates only the projection
+helper for included items. `MaxGeneratedCollectionItems` applies while
+materializing the result.
+
 ### Patterns
 
 Dice and object-match patterns are side-table data.
@@ -880,9 +888,10 @@ A grouped view may still be offered, but it must keep global addresses visible.
    linear `Code` segment plus side tables into an internal linear executable
    artifact.
 3. In progress: the VM can execute supported handler instruction ranges, simple
-   callable/predicate frames, and guarded choices directly from the linear
-   `Code` segment using frame slots, `pc`, and a VM-owned call-frame stack.
-   Handlers that require pipelines, generated collections, diagnostics,
+   callable/predicate frames, generated collections, and guarded choices
+   directly from the linear `Code` segment using frame slots, `pc`, and a
+   VM-owned call-frame stack. Seeded-random expression bodies also execute from
+   operation-layout helper entries. Handlers that require pipelines, diagnostics,
    helper-heavy callable graphs, or remaining helper expressions still fall back
    to the compatibility executor until those features have linear frame support.
 4. Keep conformance behavior unchanged; only bytecode shape and VM internals
@@ -891,10 +900,11 @@ A grouped view may still be offered, but it must keep global addresses visible.
 The current compiler emits the public linear model through an adapter over the
 internal compatibility model, and the VM load path now builds a validated linear
 runtime artifact from that public model. Top-level execution, simple
-callable/predicate frames, and guarded choices have a linear fast path backed by
-VM-owned call frames; the compatibility statement executor remains for
-helper-heavy language features while the remaining helper entry points are
-lowered.
+callable/predicate frames, generated collections, and guarded choices have a
+linear fast path backed by VM-owned call frames, and seeded-random expression
+bodies use operation-layout helper entries; the compatibility statement executor
+remains for helper-heavy language features while the remaining helper entry
+points are lowered.
 
 ## Compatibility Predicates
 

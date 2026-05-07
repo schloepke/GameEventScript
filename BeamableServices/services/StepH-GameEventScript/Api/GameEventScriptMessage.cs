@@ -36,8 +36,7 @@ public sealed class GameEventScriptMessage
     /// <param name="arguments">The named message arguments.</param>
     /// <param name="tags">Envelope tags associated with the message.</param>
     /// <returns>A new message instance.</returns>
-    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags)
-        => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
+    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags) => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
 
     /// <summary>
     /// Constructs a <see cref="GameEventScriptMessage"/> instance with a specified name and associated arguments.
@@ -51,9 +50,7 @@ public sealed class GameEventScriptMessage
     /// </param>
     /// <returns>A new instance of the <see cref="GameEventScriptMessage"/> class constructed with the specified name and arguments.</returns>
     public static GameEventScriptMessage Create(string name, params (string name, GameEventScriptValue value)[] arguments)
-        => new(name, GameEventScriptNamedArguments.CreateOrdered(arguments
-            .Select(pair => new KeyValuePair<string, GameEventScriptValue>(pair.name, pair.value))
-            .ToArray()));
+        => new(name, GameEventScriptNamedArguments.CreateOrdered(arguments.Select(pair => new KeyValuePair<string, GameEventScriptValue>(pair.name, pair.value)).ToArray()));
 
     /// <summary>
     /// Represents an empty or default message instance for the GameEventScriptMessage class.
@@ -103,9 +100,7 @@ public sealed class GameEventScriptMessage
     public override string ToString()
     {
         var message = Arguments.Count == 0 ? Name : $"{Name}({Arguments})";
-        return Tags.Count == 0
-            ? message
-            : $"{message} with {string.Join(", ", Tags.Select(tag => $":{tag}"))}";
+        return Tags.Count == 0 ? message : $"{message} with {string.Join(", ", Tags.Select(tag => $":{tag}"))}";
     }
 
     /// <summary>
@@ -124,19 +119,14 @@ public sealed class GameEventScriptMessage
     /// </summary>
     /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
     /// <returns>A message copy with the merged tags.</returns>
-    public GameEventScriptMessage WithTags(IEnumerable<string>? tags)
-    {
-        var normalizedTags = NormalizeTags(Tags.Concat(tags ?? []));
-        return new GameEventScriptMessage(Name, Arguments, SignatureId, normalizedTags);
-    }
+    public GameEventScriptMessage WithTags(IEnumerable<string>? tags) => new(Name, Arguments, SignatureId, NormalizeTags(Tags.Concat(tags ?? [])));
 
     /// <summary>
     /// Creates a copy of this message with the provided envelope tags merged into the existing tag set.
     /// </summary>
     /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
     /// <returns>A message copy with the merged tags.</returns>
-    public GameEventScriptMessage WithTags(params string[] tags)
-        => WithTags((IEnumerable<string>?)tags);
+    public GameEventScriptMessage WithTags(params string[] tags) => WithTags((IEnumerable<string>?)tags);
 
     private GameEventScriptMessage(string name, GameEventScriptNamedArguments? arguments = null, IEnumerable<string>? tags = null)
     {
@@ -159,15 +149,9 @@ public sealed class GameEventScriptMessage
 
     internal static string NormalizeTagName(string? tag)
     {
-        if (string.IsNullOrWhiteSpace(tag))
-        {
-            return string.Empty;
-        }
-
+        if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
         var normalized = tag.Trim();
-        return normalized.Length > 0 && normalized[0] == ':'
-            ? normalized[1..]
-            : normalized;
+        return normalized.Length > 0 && normalized[0] == ':' ? normalized[1..] : normalized;
     }
 
     internal static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)

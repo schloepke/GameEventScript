@@ -152,9 +152,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Pipeline:
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-            case GameEventScriptBytecodeOpCode.SeededRandom:
                 return false;
+
+            case GameEventScriptBytecodeOpCode.SeededRandom:
+                return CanExecuteLinearSeededRandom(instruction.Data, visitingCallables);
+
+            case GameEventScriptBytecodeOpCode.GeneratedCollection:
+                return CanExecuteLinearGeneratedCollection(instruction.Data, visitingCallables);
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
                 return CanExecuteLinearGuardedChoice(instruction.Data, visitingCallables);
@@ -211,6 +215,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return CanExecuteLinearEntry(layout.OtherwiseEntryAddress, visitingCallables);
     }
+
+    private bool CanExecuteLinearGeneratedCollection(int layoutIndex, HashSet<string> visitingCallables)
+    {
+        if (!TryGetGeneratedCollectionLayout(layoutIndex, out var layout) ||
+            layout.ProjectionEntryAddress < 0 ||
+            (layout.PredicateEntryAddress >= 0 && !CanExecuteLinearEntry(layout.PredicateEntryAddress, visitingCallables)))
+        {
+            return false;
+        }
+
+        return CanExecuteLinearEntry(layout.ProjectionEntryAddress, visitingCallables);
+    }
+
+    private bool CanExecuteLinearSeededRandom(int layoutIndex, HashSet<string> visitingCallables)
+        => TryGetOperationLayout(layoutIndex, out var layout) &&
+           layout.ExpressionEntryAddress >= 0 &&
+           CanExecuteLinearEntry(layout.ExpressionEntryAddress, visitingCallables);
 
     private bool CanExecuteLinearEntry(int entryAddress, HashSet<string> visitingCallables)
     {
@@ -628,8 +649,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Dice:
                 return DefineSlot(instruction.Dest, EvaluateDiceExpression(instruction.A, instruction.B));
 
+            case GameEventScriptBytecodeOpCode.SeededRandom:
+                if (!TryEvaluateLinearSeededRandom(instruction.Data, ResolveSlot(instruction.A), out var seededValue))
+                {
+                    return false;
+                }
+
+                return DefineSlot(instruction.Dest, seededValue);
+
             case GameEventScriptBytecodeOpCode.IndexedAccess:
                 return DefineSlot(instruction.Dest, EvaluateIndexedAccess(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+
+            case GameEventScriptBytecodeOpCode.GeneratedCollection:
+                if (!TryEvaluateLinearGeneratedCollection(instruction.Data, out var generatedValue))
+                {
+                    return false;
+                }
+
+                return DefineSlot(instruction.Dest, generatedValue);
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
                 if (!TryEvaluateLinearGuardedChoice(instruction.Data, out var guardedValue))
@@ -740,6 +777,85 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
+    private bool TryEvaluateLinearSeededRandom(int layoutIndex, BytecodeVmValue seed, out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (!TryGetOperationLayout(layoutIndex, out var layout) ||
+            layout.ExpressionEntryAddress < 0)
+        {
+            return false;
+        }
+
+        PushSeededRandomScope(seed.ToGameEventScriptValue());
+        try
+        {
+            return TryEvaluateLinearHelperExpression(layout.ExpressionEntryAddress, out value);
+        }
+        finally
+        {
+            PopSeededRandomScope();
+        }
+    }
+
+    private bool TryEvaluateLinearGeneratedCollection(int layoutIndex, out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (!TryGetGeneratedCollectionLayout(layoutIndex, out var layout) ||
+            layout.ProjectionEntryAddress < 0 ||
+            !TryGetLinearIterationSourceItems(layout.IterationSourceLayoutIndex, out var sourceItems))
+        {
+            return false;
+        }
+
+        var values = new List<GameEventScriptValue>();
+        foreach (var item in sourceItems)
+        {
+            if (!_runtimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
+            {
+                break;
+            }
+
+            var fastItem = BytecodeVmValue.FromGameEventScriptValue(item);
+            if (layout.PredicateEntryAddress >= 0)
+            {
+                if (!TryEvaluateLinearHelperExpressionWithTemporarySlot(
+                        layout.IdentifierSlot,
+                        fastItem,
+                        layout.PredicateEntryAddress,
+                        out var predicate))
+                {
+                    return false;
+                }
+
+                if (!predicate.IsTrue())
+                {
+                    continue;
+                }
+            }
+
+            if (!_runtimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
+            {
+                break;
+            }
+
+            if (!TryEvaluateLinearHelperExpressionWithTemporarySlot(
+                    layout.IdentifierSlot,
+                    fastItem,
+                    layout.ProjectionEntryAddress,
+                    out var projected))
+            {
+                return false;
+            }
+
+            values.Add(projected.ToGameEventScriptValue());
+        }
+
+        value = BytecodeVmValue.Reference(layout.CollectionType == "set"
+            ? GameEventScriptValueFactory.GesSet(values)
+            : GameEventScriptValueFactory.GesList(values));
+        return true;
+    }
+
     private bool TryEvaluateLinearGuardedChoice(int layoutIndex, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
@@ -780,6 +896,76 @@ internal sealed partial class GesBytecodeVmExecutionSession
                    out var returned,
                    out value) &&
                returned;
+    }
+
+    private bool TryEvaluateLinearHelperExpressionWithTemporarySlot(
+        int slot,
+        BytecodeVmValue slotValue,
+        int entryAddress,
+        out BytecodeVmValue value)
+    {
+        if ((uint)slot >= (uint)_locals.Length)
+        {
+            value = BytecodeVmValue.Nothing;
+            return false;
+        }
+
+        var hadValue = _assignedSlots[slot];
+        var previous = _locals[slot];
+        _locals[slot] = slotValue;
+        _assignedSlots[slot] = true;
+        var success = TryEvaluateLinearHelperExpression(entryAddress, out value);
+        RestoreSlot(slot, hadValue, previous);
+        return success;
+    }
+
+    private bool TryGetLinearIterationSourceItems(int layoutIndex, out IEnumerable<GameEventScriptValue> items)
+    {
+        if (!TryGetIterationSourceLayout(layoutIndex, out var source))
+        {
+            items = [];
+            return false;
+        }
+
+        switch (source.Kind)
+        {
+            case GameEventScriptBytecodeIterationSourceKind.Collection:
+            {
+                var boxedCollection = ResolveSlot(source.CollectionSlot).ToGameEventScriptValue();
+                if (!TryCheckMaterializedValue(boxedCollection, "Iteration source would enumerate more range items than allowed."))
+                {
+                    items = [];
+                    return true;
+                }
+
+                items = boxedCollection.AsEnumerable();
+                return true;
+            }
+
+            case GameEventScriptBytecodeIterationSourceKind.Range:
+            {
+                var step = source.RangeStepSlot >= 0
+                    ? ResolveSlot(source.RangeStepSlot)
+                    : BytecodeVmValue.Integer(1);
+                var rangeValue = EvaluateRangeExpression(
+                    ResolveSlot(source.RangeFromSlot),
+                    ResolveSlot(source.RangeToSlot),
+                    step);
+                var boxedRange = rangeValue.ToGameEventScriptValue();
+                if (!TryCheckMaterializedValue(boxedRange, "Range item count exceeds the configured limit."))
+                {
+                    items = [];
+                    return true;
+                }
+
+                items = boxedRange.AsEnumerable();
+                return true;
+            }
+
+            default:
+                items = [];
+                return false;
+        }
     }
 
     private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<int> slots)
@@ -1063,6 +1249,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if ((uint)index < (uint)_compiledScript.BytecodeModule.SeededRandomBlockLayouts.Count)
         {
             layout = _compiledScript.BytecodeModule.SeededRandomBlockLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetGeneratedCollectionLayout(int index, out GameEventScriptBytecodeGeneratedCollectionLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.GeneratedCollectionLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.GeneratedCollectionLayouts[index];
             return true;
         }
 

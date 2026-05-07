@@ -85,6 +85,8 @@ internal sealed class GesLinearBytecodeBuilder
 
             var state = new ExpressionState(callable.Parameters.Count);
             var result = EmitExpression(callable.ExpressionProgram, state);
+            callable.LocalSlotCount = Math.Max(callable.LocalSlotCount, state.NextSlot);
+            _maxFrameSlots = Math.Max(_maxFrameSlots, callable.LocalSlotCount);
             callable.ReturnSlot = result;
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Return, A: result));
         }

@@ -27,14 +27,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private readonly GameEventScriptContext _context;
     private readonly GesRuntimeBudget _runtimeBudget;
     private readonly GameEventScriptBytecodeExecutionPlan _plan;
-    private readonly BytecodeVmValue[] _locals;
-    private readonly bool[] _assignedSlots;
+    private BytecodeVmValue[] _locals;
+    private bool[] _assignedSlots;
     private readonly int _evaluationStackCapacity;
     private BytecodeVmValue[]? _evaluationStackStorage;
     private BytecodeVmValue[] _evaluationStack => _evaluationStackStorage ??= new BytecodeVmValue[_evaluationStackCapacity];
     private readonly bool _diagnosticsEnabled;
-    private readonly List<LocalChange> _changes = [];
-    private readonly List<int> _scopeMarks = [];
+    private List<LocalChange> _changes = [];
+    private List<int> _scopeMarks = [];
     private readonly Stack<GameEventScriptRandomGenerator> _randomScopes = new();
     private bool _halted;
 
@@ -133,7 +133,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         for (var pc = handler.EntryAddress; pc < code.Count; pc++)
         {
             var instruction = code[pc];
-            if (!CanExecuteLinearInstruction(instruction))
+            if (!CanExecuteLinearInstruction(instruction, []))
             {
                 return false;
             }
@@ -147,7 +147,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    private bool CanExecuteLinearInstruction(GameEventScriptBytecodeInstruction instruction)
+    private bool CanExecuteLinearInstruction(GameEventScriptBytecodeInstruction instruction, HashSet<string> visitingCallables)
     {
         switch (instruction.OpCode)
         {
@@ -155,12 +155,58 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
             case GameEventScriptBytecodeOpCode.GuardedChoice:
             case GameEventScriptBytecodeOpCode.SeededRandom:
+                return false;
+
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.PredicateTest:
-                return false;
+                return TryGetOperationLayout(instruction.Data, out var layout) &&
+                       !string.IsNullOrEmpty(layout.Name) &&
+                       CanExecuteLinearCallable(layout.Name, visitingCallables);
 
             default:
                 return true;
+        }
+    }
+
+    private bool CanExecuteLinearCallable(string callableName, HashSet<string> visitingCallables)
+    {
+        if (!_compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable))
+        {
+            return false;
+        }
+
+        if (!visitingCallables.Add(callable.SignatureId))
+        {
+            return false;
+        }
+
+        try
+        {
+            var code = _compiledScript.LinearExecutable.Code;
+            if ((uint)callable.EntryAddress >= (uint)code.Count)
+            {
+                return false;
+            }
+
+            for (var pc = callable.EntryAddress; pc < code.Count; pc++)
+            {
+                var instruction = code[pc];
+                if (!CanExecuteLinearInstruction(instruction, visitingCallables))
+                {
+                    return false;
+                }
+
+                if (instruction.OpCode == GameEventScriptBytecodeOpCode.Return)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        finally
+        {
+            visitingCallables.Remove(callable.SignatureId);
         }
     }
 
@@ -170,7 +216,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
         try
         {
             RecordHandlerInvoked(handler.Message, args);
-            return TryExecuteLinearRange(handler.EntryAddress, _compiledScript.LinearExecutable.Code.Count, handler, args, out _);
+            return TryExecuteLinearRange(
+                handler.EntryAddress,
+                _compiledScript.LinearExecutable.Code.Count,
+                LinearArgumentSource.ForHandler(handler, args),
+                out _,
+                out _);
         }
         finally
         {
@@ -181,11 +232,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryExecuteLinearRange(
         int startAddress,
         int endAddress,
-        GesBytecodeVmCompiledHandler? handler,
-        IReadOnlyDictionary<string, GameEventScriptValue>? args,
-        out bool returned)
+        LinearArgumentSource? arguments,
+        out bool returned,
+        out BytecodeVmValue returnValue)
     {
         returned = false;
+        returnValue = BytecodeVmValue.Nothing;
         var code = _compiledScript.LinearExecutable.Code;
         if ((uint)startAddress > (uint)code.Count ||
             (uint)endAddress > (uint)code.Count ||
@@ -219,10 +271,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.BindParameter:
-                    if (handler is null || args is null ||
-                        (uint)instruction.A >= (uint)handler.Parameters.Count ||
-                        !TryGetArgumentValue(args, handler.Parameters[instruction.A], instruction.A, out var parameterValue) ||
-                        !DefineSlot(instruction.Dest, BytecodeVmValue.FromGameEventScriptValue(parameterValue)))
+                    if (arguments is null ||
+                        !arguments.TryGetValue(instruction.A, out var parameterValue) ||
+                        !DefineSlot(instruction.Dest, parameterValue))
                     {
                         return false;
                     }
@@ -294,6 +345,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 case GameEventScriptBytecodeOpCode.Return:
                     returned = true;
+                    returnValue = ResolveSlot(instruction.A);
                     return true;
 
                 case GameEventScriptBytecodeOpCode.PublishValue:
@@ -541,21 +593,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryEvaluateLinearPredicateTest(GameEventScriptBytecodeOperationLayout layout, BytecodeVmValue input, out BytecodeVmValue value)
     {
-        value = BytecodeVmValue.Nothing;
-        if (string.IsNullOrEmpty(layout.Name) ||
-            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
-        {
-            return false;
-        }
-
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.PredicateTest,
-            layout.ParameterSlots.Count > 0 ? layout.ParameterSlots[0] : -1,
-            ExpressionProgram: callable.ExpressionProgram,
-            DiagnosticName: layout.Name,
-            DiagnosticArgumentName: layout.ArgumentName,
-            DeclaredTypes: layout.DeclaredTypes.ToArray());
-        return TryEvaluatePredicateTest(instruction, input, 0, out value);
+        return TryEvaluateLinearCallable(layout, [input], out value) &&
+               NormalizeExtensionPredicateResult(requirePredicateResult: true, ref value);
     }
 
     private bool TryEvaluateLinearCallable(GameEventScriptBytecodeOperationLayout layout, BytecodeVmValue[] operands, out BytecodeVmValue value)
@@ -567,16 +606,56 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.Call,
-            operands.Length,
-            CallableKind: layout.CallableKind,
-            ExpressionProgram: callable.ExpressionProgram,
-            DiagnosticName: layout.Name,
-            Names: layout.Names.ToArray(),
-            Slots: layout.ParameterSlots.ToArray(),
-            DeclaredTypes: layout.DeclaredTypes.ToArray());
-        return TryEvaluateCallable(instruction, operands, 0, operands.Length, out value);
+        return TryExecuteLinearCallableFrame(callable, operands, out value);
+    }
+
+    private bool TryExecuteLinearCallableFrame(GameEventScriptBytecodeCallable callable, BytecodeVmValue[] arguments, out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        {
+            return true;
+        }
+
+        var previousLocals = _locals;
+        var previousAssignedSlots = _assignedSlots;
+        var previousChanges = _changes;
+        var previousScopeMarks = _scopeMarks;
+        _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
+        _assignedSlots = new bool[_locals.Length];
+        _changes = [];
+        _scopeMarks = [];
+        try
+        {
+            EnterScope();
+            try
+            {
+                if (!TryExecuteLinearRange(
+                        callable.EntryAddress,
+                        _compiledScript.LinearExecutable.Code.Count,
+                        LinearArgumentSource.ForValues(arguments),
+                        out _,
+                        out value))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                ExitScope();
+            }
+        }
+        finally
+        {
+            _locals = previousLocals;
+            _assignedSlots = previousAssignedSlots;
+            _changes = previousChanges;
+            _scopeMarks = previousScopeMarks;
+            _runtimeBudget.ExitCall();
+        }
     }
 
     private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<int> slots)
@@ -769,7 +848,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            return TryExecuteLinearRange(bodyStart, bodyEnd, null, null, out _);
+            return TryExecuteLinearRange(bodyStart, bodyEnd, null, out _, out _);
         }
         finally
         {
@@ -787,7 +866,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         PushSeededRandomScope(ResolveSlot(layout.SeedSlot).ToGameEventScriptValue());
         try
         {
-            return TryExecuteLinearRange(instruction.Target, instruction.Target2, null, null, out _);
+            return TryExecuteLinearRange(instruction.Target, instruction.Target2, null, out _, out _);
         }
         finally
         {
@@ -865,6 +944,58 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         layout = default!;
         return false;
+    }
+
+    private sealed class LinearArgumentSource
+    {
+        private readonly GesBytecodeVmCompiledHandler? _handler;
+        private readonly IReadOnlyDictionary<string, GameEventScriptValue>? _handlerArgs;
+        private readonly IReadOnlyList<BytecodeVmValue>? _values;
+
+        private LinearArgumentSource(
+            GesBytecodeVmCompiledHandler? handler,
+            IReadOnlyDictionary<string, GameEventScriptValue>? handlerArgs,
+            IReadOnlyList<BytecodeVmValue>? values)
+        {
+            _handler = handler;
+            _handlerArgs = handlerArgs;
+            _values = values;
+        }
+
+        public static LinearArgumentSource ForHandler(
+            GesBytecodeVmCompiledHandler handler,
+            IReadOnlyDictionary<string, GameEventScriptValue> args)
+            => new(handler, args, null);
+
+        public static LinearArgumentSource ForValues(IReadOnlyList<BytecodeVmValue> values)
+            => new(null, null, values);
+
+        public bool TryGetValue(int index, out BytecodeVmValue value)
+        {
+            if (_values is not null)
+            {
+                if ((uint)index < (uint)_values.Count)
+                {
+                    value = _values[index];
+                    return true;
+                }
+
+                value = BytecodeVmValue.Nothing;
+                return false;
+            }
+
+            if (_handler is not null &&
+                _handlerArgs is not null &&
+                (uint)index < (uint)_handler.Parameters.Count &&
+                TryGetArgumentValue(_handlerArgs, _handler.Parameters[index], index, out var handlerValue))
+            {
+                value = BytecodeVmValue.FromGameEventScriptValue(handlerValue);
+                return true;
+            }
+
+            value = BytecodeVmValue.Nothing;
+            return false;
+        }
     }
 
     private static bool TryGetArgumentValue(IReadOnlyDictionary<string, GameEventScriptValue> args, string parameter, int parameterIndex, out GameEventScriptValue value)

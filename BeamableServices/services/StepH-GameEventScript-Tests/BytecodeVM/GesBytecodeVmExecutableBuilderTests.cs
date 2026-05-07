@@ -251,6 +251,56 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmExecutesSimpleCallablesFromLinearPublicCode()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            function boosted(_ value) means value + 1
+
+            on Start(value) {
+              emit Done(value: boosted(value), replacement: 2)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var originalConstant = compiled.ConstantPool
+            .Select((constant, index) => (constant, index))
+            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
+            .index;
+        var replacementConstant = compiled.ConstantPool
+            .Select((constant, index) => (constant, index))
+            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
+            .index;
+        var callableEntry = compiled.Callables["boosted"].EntryAddress;
+        var callableEnd = Array.FindIndex(
+            compiled.Code.ToArray(),
+            callableEntry,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
+        var code = compiled.Code
+            .Select((instruction, index) => index >= callableEntry &&
+                                           index < callableEnd &&
+                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
+                                           instruction.Data == originalConstant
+                ? instruction with { Data = replacementConstant }
+                : instruction)
+            .ToArray();
+        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(rewritten);
+
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["value"]);
+    }
+
+    [TestMethod]
     public void BytecodeVmExecutableBuilderRejectsInvalidLinearSideTableIndex()
     {
         const string script =

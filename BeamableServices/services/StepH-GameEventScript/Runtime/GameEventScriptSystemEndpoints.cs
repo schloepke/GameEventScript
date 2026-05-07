@@ -18,19 +18,29 @@ internal static class GameEventScriptSystemEndpoints
     public static bool IsUndeliverableName(string? name)
         => string.Equals(name, UndeliverableName, System.StringComparison.Ordinal);
 
-    public static GameEventScriptMessage CreateUndeliverableMessage(GameEventScriptMessage original)
-    {
-        var envelope = GesCustomType(EnvelopeTypeName, new Dictionary<string, GameEventScriptValue>
+    public static GameEventScriptValue CreateEnvelopeValue(GameEventScriptMessage original)
+        => GesCustomType(EnvelopeTypeName, new Dictionary<string, GameEventScriptValue>
         {
             ["message"] = GesMessage(original),
             ["tags"] = GesList(original.Tags.Select(GesTag))
         });
 
+    public static GameEventScriptMessage CreateEnvelopeDispatchMessage(GameEventScriptMessage original)
+        => GameEventScriptMessage.Create(
+            original.Name,
+            new Dictionary<string, GameEventScriptValue>
+            {
+                [EnvelopeArgumentName] = CreateEnvelopeValue(original)
+            },
+            original.Tags);
+
+    public static GameEventScriptMessage CreateUndeliverableMessage(GameEventScriptMessage original)
+    {
         return GameEventScriptMessage.Create(
             UndeliverableName,
             new Dictionary<string, GameEventScriptValue>
             {
-                [EnvelopeArgumentName] = envelope
+                [EnvelopeArgumentName] = CreateEnvelopeValue(original)
             },
             original.Tags);
     }

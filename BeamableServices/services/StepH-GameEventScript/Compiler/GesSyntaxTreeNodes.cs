@@ -48,8 +48,15 @@ internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) :
     public IReadOnlyList<ExpressionNode> Expressions => Arguments.Select(argument => argument.Expression).ToArray();
 }
 
+internal enum EventHandlerDispatchKind
+{
+    ExactSignature,
+    MessageEnvelope
+}
+
 internal sealed record EventHandlerNode(
     string Message,
+    EventHandlerDispatchKind DispatchKind,
     IReadOnlyList<ParameterNode> ParameterList,
     IReadOnlyList<StatementNode> Statements,
     IReadOnlyList<string>? RequiredTags = null,

@@ -82,6 +82,9 @@ internal static class GesBytecodeCompiler
                         var signatureId = GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels);
                         return new GameEventScriptBytecodeHandler(
                             pair.Key,
+                            handler.DispatchKind == EventHandlerDispatchKind.MessageEnvelope
+                                ? GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
+                                : GameEventScriptBytecodeHandlerDispatchKind.ExactSignature,
                             handler.Parameters,
                             handler.SignatureLabels,
                             signatureId,

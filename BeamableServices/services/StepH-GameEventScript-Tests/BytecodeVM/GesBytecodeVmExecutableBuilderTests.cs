@@ -260,6 +260,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 [
                     new EventHandlerNode(
                         "Start",
+                        EventHandlerDispatchKind.ExactSignature,
                         Array.Empty<ParameterNode>(),
                         [new UnknownStatementNode()])
                 ]

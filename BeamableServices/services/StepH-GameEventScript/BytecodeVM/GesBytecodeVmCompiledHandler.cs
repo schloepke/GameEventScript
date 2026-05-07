@@ -11,6 +11,7 @@ internal sealed class GesBytecodeVmCompiledHandler
     {
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         Message = handler.Message;
+        DispatchKind = handler.DispatchKind;
         Parameters = handler.Parameters.ToArray();
         SignatureLabels = handler.SignatureLabels.ToArray();
         ParameterTypes = handler.ParameterTypes.ToArray();
@@ -24,6 +25,8 @@ internal sealed class GesBytecodeVmCompiledHandler
     }
 
     public string Message { get; }
+
+    public GameEventScriptBytecodeHandlerDispatchKind DispatchKind { get; }
 
     public IReadOnlyList<string> Parameters { get; }
 

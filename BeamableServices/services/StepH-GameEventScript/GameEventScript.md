@@ -159,6 +159,7 @@ record :typeName as { ... }
 predicate name(parameters) means expression
 function name(parameters) means expression
 on Message(parameters) { statements }
+on Message as envelope { statements }
 ```
 
 Predicates and functions are callable definitions. Records define custom value shapes.
@@ -174,7 +175,8 @@ When a message is published:
 
 1. The message is appended to the current run queue if the queue limit allows it.
 2. The queue is drained in order.
-3. For each message, subscribers with the exact same signature are invoked.
+3. For each message, subscribers with the exact same signature and matching
+   message-envelope subscribers are invoked.
 4. Follow-up messages published by subscribers are appended to the same queue.
 
 Host and context `Publish(...)` calls return `true` when the message was
@@ -250,12 +252,33 @@ main host API is `Publish(...)` plus `Update(...)`.
 
 ### Subscriber order
 
-Subscribers are matched by message signature. Matching subscribers run by host
-priority, then by registration order for equal priority. Higher priority values
-run earlier; `0` is normal priority.
+Subscribers are matched by message signature, or explicitly by message name when
+the handler uses envelope dispatch. Matching subscribers run by host priority,
+then by registration order for equal priority. Higher priority values run
+earlier; `0` is normal priority.
 
 Script handlers are subscribers. Host callbacks registered with `Subscribe` are
 also subscribers. They participate in the same dispatch order.
+
+### Message envelope handlers
+
+Use `on Message as envelope` to subscribe to every signature with the same
+message name. The handler still uses normal `matching` and `without` tag
+filters, but it receives a single `:envelope` value instead of the message
+arguments.
+
+```eventscript
+on Damage as envelope matching :radio {
+    emit HeardDamage(
+        signature: envelope.message.signatureid,
+        tags: envelope.tags)
+}
+```
+
+This is an explicit name-based subscription. It counts as normal delivery, so a
+matching envelope handler prevents `undeliverable` fallback. If the envelope
+handler's tag filters do not match, delivery can still fall through to
+`undeliverable`.
 
 ### Undeliverable messages
 
@@ -264,7 +287,7 @@ not be delivered to any normal subscriber after message signature and tag
 filters were applied.
 
 ```eventscript
-on undeliverable(envelope as :envelope) matching :radio {
+on undeliverable as envelope matching :radio {
     let message be envelope.message
     let tags be envelope.tags
 
@@ -278,6 +301,9 @@ is dictionary-backed and currently guarantees:
 
 - `message`: the original message as `:message`
 - `tags`: all original envelope tags as a list of `:tag` values
+
+The legacy parenthesized form `on undeliverable(envelope as :envelope)` is
+invalid; system endpoints bind their envelope through `as`.
 
 The fallback endpoint does not receive itself recursively.
 

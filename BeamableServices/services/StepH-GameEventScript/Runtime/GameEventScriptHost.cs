@@ -24,6 +24,7 @@ public sealed class GameEventScriptHost
     private readonly GameEventScriptDispatcher _dispatcher;
     private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly Dictionary<string, MessageSubscription[]> _dispatchIndex = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, MessageSubscription[]> _messageEnvelopeDispatchIndex = new(StringComparer.Ordinal);
     private readonly object _dispatchGate = new();
     private readonly object _pumpGate = new();
     private GameEventScriptHostRunState _liveState;
@@ -338,6 +339,7 @@ public sealed class GameEventScriptHost
     {
         var subscription = new MessageSubscription(
             signature,
+            GameEventScriptBytecodeHandlerDispatchKind.ExactSignature,
             priority,
             _nextRegistrationOrder++,
             handler,
@@ -359,6 +361,7 @@ public sealed class GameEventScriptHost
     {
         var subscription = new MessageSubscription(
             signature,
+            handler.DispatchKind,
             priority,
             _nextRegistrationOrder++,
             null,
@@ -367,9 +370,19 @@ public sealed class GameEventScriptHost
             handler.RequiredTags,
             handler.ExcludedTags);
 
-        _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
-            ? InsertSubscriptionByDispatchOrder(handlers, subscription)
-            : [subscription];
+        if (handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope)
+        {
+            _messageEnvelopeDispatchIndex[subscription.Definition.Name] =
+                _messageEnvelopeDispatchIndex.TryGetValue(subscription.Definition.Name, out var envelopeHandlers)
+                    ? InsertSubscriptionByDispatchOrder(envelopeHandlers, subscription)
+                    : [subscription];
+            return;
+        }
+
+        _dispatchIndex[subscription.Definition.SignatureId] =
+            _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var exactHandlers)
+                ? InsertSubscriptionByDispatchOrder(exactHandlers, subscription)
+                : [subscription];
     }
 
     private void DrainToCompletion(GameEventScriptHostRunState state)
@@ -528,6 +541,14 @@ public sealed class GameEventScriptHost
         }
     }
 
+    private bool TryGetEnvelopeSubscriptions(string messageName, out MessageSubscription[] subscriptions)
+    {
+        lock (_dispatchGate)
+        {
+            return _messageEnvelopeDispatchIndex.TryGetValue(messageName, out subscriptions!);
+        }
+    }
+
     private bool TryEnqueueInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.Name))
@@ -535,15 +556,22 @@ public sealed class GameEventScriptHost
             return false;
         }
 
-        if (!TryGetSubscriptions(message.SignatureId, out var subscriptions) ||
-            subscriptions.Length == 0)
+        var hasExactSubscriptions = TryGetSubscriptions(message.SignatureId, out var exactSubscriptions) &&
+                                    exactSubscriptions.Length > 0;
+        var hasEnvelopeSubscriptions = TryGetEnvelopeSubscriptions(message.Name, out var envelopeSubscriptions) &&
+                                       envelopeSubscriptions.Length > 0;
+        if (!hasExactSubscriptions && !hasEnvelopeSubscriptions)
         {
             return TryEnqueueUndeliverableInvocation(state, message);
         }
 
         var accepted = false;
         var matched = false;
-        foreach (var subscription in subscriptions)
+        foreach (var subscription in EnumerateDispatchSubscriptions(
+                     exactSubscriptions,
+                     hasExactSubscriptions,
+                     envelopeSubscriptions,
+                     hasEnvelopeSubscriptions))
         {
             if (!subscription.MatchesTags(message))
             {
@@ -551,7 +579,10 @@ public sealed class GameEventScriptHost
             }
 
             matched = true;
-            accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
+            var dispatchMessage = subscription.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
+                ? GameEventScriptSystemEndpoints.CreateEnvelopeDispatchMessage(message)
+                : message;
+            accepted |= state.Enqueue(new QueuedInvocation(dispatchMessage, subscription));
         }
 
         return matched
@@ -561,9 +592,16 @@ public sealed class GameEventScriptHost
 
     private bool TryEnqueueUndeliverableInvocation(GameEventScriptHostRunState state, GameEventScriptMessage message)
     {
-        if (GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name) ||
-            !TryGetSubscriptions(GameEventScriptSystemEndpoints.UndeliverableSignatureId, out var subscriptions) ||
-            subscriptions.Length == 0)
+        if (GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name))
+        {
+            return false;
+        }
+
+        var hasExactSubscriptions = TryGetSubscriptions(GameEventScriptSystemEndpoints.UndeliverableSignatureId, out var exactSubscriptions) &&
+                                    exactSubscriptions.Length > 0;
+        var hasEnvelopeSubscriptions = TryGetEnvelopeSubscriptions(GameEventScriptSystemEndpoints.UndeliverableName, out var envelopeSubscriptions) &&
+                                       envelopeSubscriptions.Length > 0;
+        if (!hasExactSubscriptions && !hasEnvelopeSubscriptions)
         {
             return false;
         }
@@ -571,7 +609,11 @@ public sealed class GameEventScriptHost
         var undeliverableMessage = GameEventScriptSystemEndpoints.CreateUndeliverableMessage(message);
         var accepted = false;
         var matched = false;
-        foreach (var subscription in subscriptions)
+        foreach (var subscription in EnumerateDispatchSubscriptions(
+                     exactSubscriptions,
+                     hasExactSubscriptions,
+                     envelopeSubscriptions,
+                     hasEnvelopeSubscriptions))
         {
             if (!subscription.MatchesTags(undeliverableMessage))
             {
@@ -583,6 +625,57 @@ public sealed class GameEventScriptHost
         }
 
         return matched && accepted;
+    }
+
+    private static IEnumerable<MessageSubscription> EnumerateDispatchSubscriptions(
+        MessageSubscription[] exactSubscriptions,
+        bool hasExactSubscriptions,
+        MessageSubscription[] envelopeSubscriptions,
+        bool hasEnvelopeSubscriptions)
+    {
+        if (!hasExactSubscriptions)
+        {
+            foreach (var subscription in envelopeSubscriptions)
+            {
+                yield return subscription;
+            }
+
+            yield break;
+        }
+
+        if (!hasEnvelopeSubscriptions)
+        {
+            foreach (var subscription in exactSubscriptions)
+            {
+                yield return subscription;
+            }
+
+            yield break;
+        }
+
+        var exactIndex = 0;
+        var envelopeIndex = 0;
+        while (exactIndex < exactSubscriptions.Length && envelopeIndex < envelopeSubscriptions.Length)
+        {
+            if (CompareDispatchOrder(exactSubscriptions[exactIndex], envelopeSubscriptions[envelopeIndex]) <= 0)
+            {
+                yield return exactSubscriptions[exactIndex++];
+            }
+            else
+            {
+                yield return envelopeSubscriptions[envelopeIndex++];
+            }
+        }
+
+        while (exactIndex < exactSubscriptions.Length)
+        {
+            yield return exactSubscriptions[exactIndex++];
+        }
+
+        while (envelopeIndex < envelopeSubscriptions.Length)
+        {
+            yield return envelopeSubscriptions[envelopeIndex++];
+        }
     }
 
     private static MessageSubscription[] InsertSubscriptionByDispatchOrder(MessageSubscription[] handlers, MessageSubscription subscription)
@@ -616,6 +709,7 @@ public sealed class GameEventScriptHost
 
     internal sealed record MessageSubscription(
         GameEventScriptMessageSignature Definition,
+        GameEventScriptBytecodeHandlerDispatchKind DispatchKind,
         int Priority,
         long RegistrationOrder,
         Action<GameEventScriptMessage, GameEventScriptContext>? Handler,

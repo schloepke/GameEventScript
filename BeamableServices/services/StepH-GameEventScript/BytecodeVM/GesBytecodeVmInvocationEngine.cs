@@ -1,3 +1,4 @@
+using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 
@@ -7,11 +8,16 @@ internal static class GesBytecodeVmInvocationEngine
 {
     public static void InvokeMessage(GesBytecodeVmExecutable compiledScript, GameEventScriptContext context, GameEventScriptMessage message)
     {
-        foreach (var handler in GesInvocationKernel.GetMatchingHandlers(compiledScript.DispatchIndex, message))
+        var exactHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.DispatchIndex, message);
+        var envelopeHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.MessageEnvelopeDispatchIndex, message.Name);
+        foreach (var handler in exactHandlers.Concat(envelopeHandlers).OrderBy(handler => handler.DeclarationOrder))
         {
             if (MatchesTags(handler, message))
             {
-                InvokeHandler(compiledScript, context, handler, message);
+                var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
+                    ? GameEventScriptSystemEndpoints.CreateEnvelopeDispatchMessage(message)
+                    : message;
+                InvokeHandler(compiledScript, context, handler, dispatchMessage);
             }
         }
     }

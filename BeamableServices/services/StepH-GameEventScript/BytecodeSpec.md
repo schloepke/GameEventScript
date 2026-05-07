@@ -255,6 +255,7 @@ Handlers and callables are metadata over the shared code segment.
 ```text
 HandlerEntry
   MessageName
+  DispatchKind: ExactSignature | MessageEnvelope
   SignatureId
   Parameters: ParameterEntry[]
   SignatureLabels
@@ -279,11 +280,18 @@ CallableEntry
 Temporary slots are implementation details but are part of the portable frame
 layout for the bytecode version.
 
+`ExactSignature` handlers subscribe by `SignatureId`. `MessageEnvelope` handlers
+subscribe by `MessageName` and tag filters only; the runtime invokes them with a
+single `:envelope` argument whose `message` field is the original message.
+Message-envelope handlers count as normal delivery and therefore prevent
+`undeliverable` fallback when their tag filters match.
+
 System endpoint entries use reserved lowercase names outside normal message
-casing. The currently defined endpoint is:
+casing and bind their envelope with explicit `as` syntax. The currently defined
+endpoint is:
 
 ```text
-undeliverable(envelope)
+undeliverable as envelope
 ```
 
 It receives a dictionary-backed `:envelope` value when no normal handler could
@@ -569,7 +577,8 @@ Handlers may declare static tag filters:
 
 - `matching :a, :b`: all required tags must be present.
 - `without :x, :y`: none of the excluded tags may be present.
-- no filter: any tag set matches as long as the message signature matches.
+- no filter: any tag set matches as long as the message signature matches, or
+  the message name matches for `MessageEnvelope` handlers.
 
 The instruction uses a side-table layout:
 

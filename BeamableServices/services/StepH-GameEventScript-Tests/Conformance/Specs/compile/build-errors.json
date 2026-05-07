@@ -348,24 +348,24 @@
     },
     {
       "kind": "compileError",
-      "name": "undeliverable endpoint requires envelope parameter",
+      "name": "undeliverable endpoint rejects normal parameter syntax",
       "script": "on undeliverable(message as :message) {\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidMessageCase",
-        "symbol": "message",
+        "symbol": "undeliverable",
         "symbolKind": "Handler"
       }
     },
     {
       "kind": "compileError",
-      "name": "undeliverable endpoint rejects non-envelope type",
-      "script": "on undeliverable(envelope as :message) {\n}",
+      "name": "undeliverable endpoint rejects legacy envelope parameter syntax",
+      "script": "on undeliverable(envelope as :envelope) {\n}",
       "expectedError": {
         "phase": "build",
-        "kind": "InvalidTypeConstructor",
-        "symbol": "message",
-        "symbolKind": "Type"
+        "kind": "InvalidMessageCase",
+        "symbol": "undeliverable",
+        "symbolKind": "Handler"
       }
     }
   ]

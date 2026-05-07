@@ -718,8 +718,15 @@ public sealed class GameEventScriptBytecodeExecutionPlan
         => _slots.TryGetValue(name, out slot);
 }
 
+public enum GameEventScriptBytecodeHandlerDispatchKind
+{
+    ExactSignature,
+    MessageEnvelope
+}
+
 public sealed class GameEventScriptBytecodeHandler(
     string message,
+    GameEventScriptBytecodeHandlerDispatchKind dispatchKind,
     IReadOnlyList<string> parameters,
     IReadOnlyList<string> signatureLabels,
     string signatureId,
@@ -730,6 +737,8 @@ public sealed class GameEventScriptBytecodeHandler(
     IReadOnlyList<string>? excludedTags = null)
 {
     public string Message { get; } = message ?? throw new ArgumentNullException(nameof(message));
+
+    public GameEventScriptBytecodeHandlerDispatchKind DispatchKind { get; } = dispatchKind;
 
     public IReadOnlyList<string> Parameters { get; } = parameters ?? throw new ArgumentNullException(nameof(parameters));
 

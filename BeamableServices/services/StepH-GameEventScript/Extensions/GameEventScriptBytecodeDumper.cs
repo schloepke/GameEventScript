@@ -114,6 +114,7 @@ public static class GameEventScriptBytecodeDumper
             var handler = handlers[i];
             builder.Append("  handler #").Append(i.ToString(CultureInfo.InvariantCulture))
                 .Append(' ').Append(handler.SignatureId)
+                .Append(" dispatch=").Append(handler.DispatchKind)
                 .Append(" declarationOrder=").Append(handler.DeclarationOrder.ToString(CultureInfo.InvariantCulture))
                 .Append(" params=[").Append(FormatParameters(handler.Parameters, handler.ParameterTypes)).Append(']')
                 .Append(" matching=[").Append(FormatTags(handler.RequiredTags)).Append(']')

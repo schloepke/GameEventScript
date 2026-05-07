@@ -360,8 +360,20 @@ internal sealed class GesParser
         SkipNewLines();
         var message = ParseEventHandlerMessageName();
 
+        var dispatchKind = EventHandlerDispatchKind.ExactSignature;
         var parameters = new List<ParameterNode>();
-        if (Match(LeftParen))
+        if (Match(As))
+        {
+            SkipNewLines();
+            var envelopeToken = Current;
+            var envelopeLocalName = ExpectIdentifier();
+            dispatchKind = EventHandlerDispatchKind.MessageEnvelope;
+            parameters.Add(WithRange(new ParameterNode(
+                GameEventScriptSystemEndpoints.EnvelopeArgumentName,
+                envelopeLocalName,
+                GameEventScriptSystemEndpoints.EnvelopeTypeName), envelopeToken));
+        }
+        else if (Match(LeftParen))
         {
             if (!Is(RightParen))
             {
@@ -384,7 +396,7 @@ internal sealed class GesParser
         var statements = ParseStatementsUntil(RightBrace);
         Expect(RightBrace);
 
-        return WithRange(new EventHandlerNode(message, parameters, statements, requiredTags, excludedTags), startToken);
+        return WithRange(new EventHandlerNode(message, dispatchKind, parameters, statements, requiredTags, excludedTags), startToken);
     }
 
     private string ParseEventHandlerMessageName()

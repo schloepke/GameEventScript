@@ -154,6 +154,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Handler,
                     "Handler message names must use message casing (start uppercase and contain only letters)",
                     errors);
+                ValidateMessageEnvelopeHandler(parsedScript, handler, errors);
             }
 
             foreach (var parameter in handler.Parameters)
@@ -199,11 +200,11 @@ internal static class GesValidator
         EventHandlerNode handler,
         GesValidationErrors errors)
     {
-        if (handler.ParameterList.Count != 1)
+        if (handler.DispatchKind != EventHandlerDispatchKind.MessageEnvelope)
         {
             errors.Add(
                 parsedScript,
-                "System endpoint 'undeliverable' expects exactly one 'envelope' parameter",
+                "System endpoint 'undeliverable' must use 'as envelope' syntax",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.InvalidMessageCase,
@@ -212,27 +213,52 @@ internal static class GesValidator
         }
 
         var parameter = handler.ParameterList[0];
-        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.EnvelopeArgumentName, StringComparison.Ordinal))
+        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.EnvelopeArgumentName, StringComparison.Ordinal) ||
+            !string.Equals(parameter.DeclaredType, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal))
         {
             errors.Add(
                 parsedScript,
-                "System endpoint 'undeliverable' parameter signature must be 'envelope'",
+                "System endpoint 'undeliverable' must bind an ':envelope' value",
                 parameter.LocalName,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.InvalidMessageCase,
                 parameter);
         }
+    }
 
-        if (!string.IsNullOrEmpty(parameter.DeclaredType) &&
+    private static void ValidateMessageEnvelopeHandler(
+        ParsedScript parsedScript,
+        EventHandlerNode handler,
+        GesValidationErrors errors)
+    {
+        if (handler.DispatchKind != EventHandlerDispatchKind.MessageEnvelope)
+        {
+            return;
+        }
+
+        if (handler.ParameterList.Count != 1)
+        {
+            errors.Add(
+                parsedScript,
+                "Message-envelope handlers expect exactly one envelope parameter",
+                handler.Message,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                handler);
+            return;
+        }
+
+        var parameter = handler.ParameterList[0];
+        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.EnvelopeArgumentName, StringComparison.Ordinal) ||
             !string.Equals(parameter.DeclaredType, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal))
         {
             errors.Add(
                 parsedScript,
-                "System endpoint 'undeliverable' parameter type must be ':envelope'",
-                parameter.DeclaredType!,
-                GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
-                parameter);
+                "Message-envelope handlers must bind an ':envelope' value",
+                handler.Message,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                handler);
         }
     }
 

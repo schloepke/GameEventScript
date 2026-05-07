@@ -13,7 +13,11 @@ PredicateDefinition ::= "predicate" Identifier "(" [ ParamList ] ")" "means" Exp
 FunctionDefinition ::= "function" Identifier "(" [ ParamList ] ")" "means" Expression
 TypeFieldDefinition ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
 TypeFieldSeparator ::= "," | StatementSeparator
-EventHandler ::= "on" ( Message | SystemEndpoint ) [ "(" [ ParamList ] ")" ] { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
+EventHandler ::= "on" ( Message [ EventHandlerBinding ] | SystemEndpoint SystemEndpointBinding ) { HandlerTagFilter } { NewLine } "{" { StatementSeparator } [ Statement { StatementSeparator Statement } ] { StatementSeparator } "}"
+EventHandlerBinding ::= "(" [ ParamList ] ")"
+                    | "as" Identifier
+SystemEndpointBinding ::= "as" Identifier
+HandlerTagFilter ::= ( "matching" | "without" ) TagLiteral { "," TagLiteral }
 SystemEndpoint ::= "undeliverable"
 EventSeparator ::= StatementSeparator
 StatementSeparator ::= [ Trivia ] ( ";" [ Trivia ] | NewLine { TriviaOrNewLine } )

@@ -78,7 +78,7 @@
     {
       "kind": "scriptApi",
       "name": "undeliverable endpoint receives unknown tagged messages",
-      "script": "on Start {\n  emit Unknown(value: 7) with :radio, :encrypted\n  emit Silent(value: 1) with :silent\n}\n\non undeliverable(envelope as :envelope) matching :radio {\n  emit Heard(name: envelope.message.name, signature: envelope.message.signatureid, value: envelope.message.arguments.value, tagCount: :len envelope.tags, firstTag: envelope.tags[1], secondTag: envelope.tags[2], isEnvelope: envelope is :envelope, isMessage: envelope.message is :message)\n}",
+      "script": "on Start {\n  emit Unknown(value: 7) with :radio, :encrypted\n  emit Silent(value: 1) with :silent\n}\n\non undeliverable as envelope matching :radio {\n  emit Heard(name: envelope.message.name, signature: envelope.message.signatureid, value: envelope.message.arguments.value, tagCount: :len envelope.tags, firstTag: envelope.tags[1], secondTag: envelope.tags[2], isEnvelope: envelope is :envelope, isMessage: envelope.message is :message)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -117,7 +117,7 @@
     {
       "kind": "scriptApi",
       "name": "normal delivery suppresses undeliverable endpoint",
-      "script": "on Start {\n  emit Known(value: 3) with :radio\n}\n\non Known(value) matching :radio {\n  emit Normal(value: value)\n}\n\non undeliverable(envelope as :envelope) matching :radio {\n  emit Unexpected(name: envelope.message.name)\n}",
+      "script": "on Start {\n  emit Known(value: 3) with :radio\n}\n\non Known(value) matching :radio {\n  emit Normal(value: value)\n}\n\non undeliverable as envelope matching :radio {\n  emit Unexpected(name: envelope.message.name)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -133,6 +133,99 @@
               "name": "Normal",
               "args": {
                 "value": { "type": ":integer", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "message envelope handler receives matching names with original envelope",
+      "script": "on Start {\n  emit Damage(amount: 3) with :radio, :enemy\n  emit Damage(amount: 5, kind: 'fire') with :radio\n  emit Damage(amount: 7) with :silent\n}\n\non Damage as envelope matching :radio {\n  emit Heard(signature: envelope.message.signatureid, amount: envelope.message.arguments.amount, tagCount: :len envelope.tags, firstTag: envelope.tags[1], isEnvelope: envelope is :envelope)\n}\n\non undeliverable as envelope matching :silent {\n  emit Missed(signature: envelope.message.signatureid, amount: envelope.message.arguments.amount, tag: envelope.tags[1])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Damage",
+              "tags": ["radio", "enemy"],
+              "args": {
+                "amount": { "type": ":integer", "value": "3" }
+              }
+            },
+            {
+              "name": "Damage",
+              "tags": ["radio"],
+              "args": {
+                "amount": { "type": ":integer", "value": "5" },
+                "kind": { "type": ":text", "value": "fire" }
+              }
+            },
+            {
+              "name": "Damage",
+              "tags": ["silent"],
+              "args": {
+                "amount": { "type": ":integer", "value": "7" }
+              }
+            },
+            {
+              "name": "Heard",
+              "args": {
+                "amount": { "type": ":integer", "value": "3" },
+                "firstTag": { "type": ":tag", "value": "radio" },
+                "isEnvelope": { "type": ":boolean", "value": true },
+                "signature": { "type": ":text", "value": "Damage(amount)" },
+                "tagCount": { "type": ":integer", "value": "2" }
+              }
+            },
+            {
+              "name": "Heard",
+              "args": {
+                "amount": { "type": ":integer", "value": "5" },
+                "firstTag": { "type": ":tag", "value": "radio" },
+                "isEnvelope": { "type": ":boolean", "value": true },
+                "signature": { "type": ":text", "value": "Damage(amount,kind)" },
+                "tagCount": { "type": ":integer", "value": "1" }
+              }
+            },
+            {
+              "name": "Missed",
+              "args": {
+                "amount": { "type": ":integer", "value": "7" },
+                "signature": { "type": ":text", "value": "Damage(amount)" },
+                "tag": { "type": ":tag", "value": "silent" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "exact and envelope handlers share dispatch order",
+      "script": "on Start {\n  emit Damage(amount: 9) with :radio\n}\n\non Damage(amount) matching :radio {\n  emit Exact(amount: amount)\n}\n\non Damage as envelope matching :radio {\n  emit Any(signature: envelope.message.signatureid)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Damage",
+              "tags": ["radio"],
+              "args": {
+                "amount": { "type": ":integer", "value": "9" }
+              }
+            },
+            {
+              "name": "Exact",
+              "args": {
+                "amount": { "type": ":integer", "value": "9" }
+              }
+            },
+            {
+              "name": "Any",
+              "args": {
+                "signature": { "type": ":text", "value": "Damage(amount)" }
               }
             }
           ]

@@ -580,7 +580,7 @@ internal sealed class GesLinearBytecodeBuilder
         return index;
     }
 
-    private int AddSelectorLayout(GameEventScriptBytecodeSelectorProgram selector)
+    private int AddSelectorLayout(GameEventScriptBytecodeSelectorProgram selector, ExpressionState state)
     {
         var index = _selectorLayouts.Count;
         _selectorLayouts.Add(new GameEventScriptBytecodeSelectorLayout(
@@ -591,14 +591,35 @@ internal sealed class GesLinearBytecodeBuilder
             selector.Count,
             selector.SecondaryIdentifierSlot,
             selector.Flag));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var expressionEntryAddress = selector.ExpressionProgram is null
+                ? -1
+                : EmitExpressionEntry(selector.ExpressionProgram, state);
+            var secondaryExpressionEntryAddress = selector.SecondaryExpressionProgram is null
+                ? -1
+                : EmitExpressionEntry(selector.SecondaryExpressionProgram, state);
+            _selectorLayouts[index] = new GameEventScriptBytecodeSelectorLayout(
+                selector.Kind,
+                selector.IdentifierSlot,
+                selector.EdgeMode,
+                selector.SecondaryMode,
+                selector.Count,
+                selector.SecondaryIdentifierSlot,
+                selector.Flag,
+                expressionEntryAddress,
+                secondaryExpressionEntryAddress);
+        });
         return index;
     }
 
     private int AddPipelineLayout(GameEventScriptBytecodePipelineProgram program, ExpressionState state)
     {
         var sourceSlot = EmitExpression(program.SourceProgram, state);
-        var prefixSelectorIndexes = program.PrefixSelectors.Select(AddSelectorLayout).ToArray();
-        var terminalSelectorIndex = AddSelectorLayout(program.TerminalSelector);
+        var prefixSelectorIndexes = program.PrefixSelectors
+            .Select(selector => AddSelectorLayout(selector, state))
+            .ToArray();
+        var terminalSelectorIndex = AddSelectorLayout(program.TerminalSelector, state);
         var index = _pipelineLayouts.Count;
         _pipelineLayouts.Add(new GameEventScriptBytecodePipelineLayout(
             sourceSlot,

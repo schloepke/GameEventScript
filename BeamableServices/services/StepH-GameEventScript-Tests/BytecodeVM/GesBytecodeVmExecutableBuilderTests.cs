@@ -166,7 +166,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(1, compiled.PipelineLayouts);
         Assert.IsTrue(compiled.SelectorLayouts.Any(layout =>
             layout.Kind == GameEventScriptBytecodeSelectorKind.Select &&
-            layout.IdentifierSlot >= 0));
+            layout.IdentifierSlot >= 0 &&
+            layout.ExpressionEntryAddress >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline &&
             instruction.Data >= 0 &&
@@ -456,6 +457,29 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["first"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[0].Arguments["replacement"]);
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeStoresPipelineSelectorHelperEntryAddresses()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start {
+              let values be [1, 2, 3][:select item => item + 1]
+              emit Done(first: values[1], replacement: 2)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var selector = compiled.SelectorLayouts[compiled.PipelineLayouts.Single().TerminalSelectorLayoutIndex];
+        Assert.AreEqual(GameEventScriptBytecodeSelectorKind.Select, selector.Kind);
+        Assert.IsGreaterThanOrEqualTo(0, selector.ExpressionEntryAddress);
+        Assert.IsTrue(compiled.Code
+            .Skip(selector.ExpressionEntryAddress)
+            .TakeWhile(instruction => instruction.OpCode != GameEventScriptBytecodeOpCode.Return)
+            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.Add or GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd));
     }
 
     [TestMethod]

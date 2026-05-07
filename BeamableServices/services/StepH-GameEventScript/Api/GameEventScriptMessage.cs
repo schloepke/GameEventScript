@@ -156,21 +156,13 @@ public sealed class GameEventScriptMessage
 
     internal static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
     {
-        if (tags is null)
-        {
-            return [];
-        }
-
+        if (tags is null) return [];
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var normalizedTags = new List<string>();
         foreach (var tag in tags)
         {
             var normalized = NormalizeTagName(tag);
-            if (normalized.Length == 0 || !seen.Add(normalized))
-            {
-                continue;
-            }
-
+            if (normalized.Length == 0 || !seen.Add(normalized)) continue;
             normalizedTags.Add(normalized);
         }
 

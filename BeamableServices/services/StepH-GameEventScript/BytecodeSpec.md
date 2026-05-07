@@ -20,10 +20,10 @@ publish, loop, selector/pipeline, generated-collection, seeded-random, and
 guarded-choice metadata. The synchronous VM executes supported handler ranges,
 simple callable/predicate frames, generated-collection helpers, and
 guarded-choice and seeded-random expression helper entries directly from that
-linear code with a VM-owned call-frame stack. Selector, pipeline, and some
-helper expressions still use internal compatibility structures while the
-executor migration continues, so helper entry address fields may be `-1` until
-those helpers are emitted into the global code segment.
+linear code with a VM-owned call-frame stack. Pipeline selector helper entry
+addresses are emitted into `SelectorLayouts`, but runtime pipeline execution
+currently keeps the compatibility executor's indexed/streaming hot paths until
+the linear selector executor has equivalent allocation behavior.
 
 ## Goals
 
@@ -891,9 +891,10 @@ A grouped view may still be offered, but it must keep global addresses visible.
    callable/predicate frames, generated collections, and guarded choices
    directly from the linear `Code` segment using frame slots, `pc`, and a
    VM-owned call-frame stack. Seeded-random expression bodies also execute from
-   operation-layout helper entries. Handlers that require pipelines, diagnostics,
-   helper-heavy callable graphs, or remaining helper expressions still fall back
-   to the compatibility executor until those features have linear frame support.
+   operation-layout helper entries. Pipelines already carry selector helper entry
+   addresses in `SelectorLayouts`, but runtime execution still falls back to the
+   compatibility executor to preserve the existing allocation-sensitive pipeline
+   hot paths until the linear selector executor is optimized.
 4. Keep conformance behavior unchanged; only bytecode shape and VM internals
    should move.
 
@@ -902,9 +903,9 @@ internal compatibility model, and the VM load path now builds a validated linear
 runtime artifact from that public model. Top-level execution, simple
 callable/predicate frames, generated collections, and guarded choices have a
 linear fast path backed by VM-owned call frames, and seeded-random expression
-bodies use operation-layout helper entries; the compatibility statement executor
-remains for helper-heavy language features while the remaining helper entry
-points are lowered.
+bodies use operation-layout helper entries. Pipeline selectors now expose helper
+entry addresses in the public linear code, while pipeline runtime execution stays
+on the compatibility executor's optimized selector paths for now.
 
 ## Compatibility Predicates
 

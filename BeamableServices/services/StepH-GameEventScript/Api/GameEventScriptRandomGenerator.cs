@@ -78,8 +78,7 @@ public sealed class GameEventScriptRandomGenerator
     /// <returns>
     /// A random integer within the range defined by <paramref name="minInclusive"/> and <paramref name="maxInclusive"/>.
     /// </returns>
-    public int NextInclusiveInt(int minInclusive, int maxInclusive)
-        => (int)NextInclusiveInteger(minInclusive, maxInclusive);
+    public int NextInclusiveInt(int minInclusive, int maxInclusive) => (int)NextInclusiveInteger(minInclusive, maxInclusive);
 
     /// <summary>
     /// Generates a random 64-bit signed integer between the specified minimum and maximum values, inclusive.
@@ -127,8 +126,8 @@ public sealed class GameEventScriptRandomGenerator
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
-        var sample = (double)_random.NextDouble();
-        return minInclusive + ((maxInclusive - minInclusive) * sample);
+        var sample = _random.NextDouble();
+        return minInclusive + (maxInclusive - minInclusive) * sample;
     }
 
     private GameEventScriptRandomGenerator(Random random, IEnumerable<double>? sequence = null)

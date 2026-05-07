@@ -20,7 +20,9 @@ public sealed class GameEventScriptCompiled
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
         IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
-        int maxStackDepth)
+        int maxStackDepth,
+        IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
+        int maxFrameSlots = 0)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         StringPool = stringPool ?? throw new ArgumentNullException(nameof(stringPool));
@@ -34,6 +36,8 @@ public sealed class GameEventScriptCompiled
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         MaxStackDepth = Math.Max(1, maxStackDepth);
+        Code = code ?? [];
+        MaxFrameSlots = Math.Max(1, maxFrameSlots);
     }
 
     public GameEventScriptCompileOptions Options { get; }
@@ -58,5 +62,9 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get; }
 
-    public int MaxStackDepth { get; }
+    public IReadOnlyList<GameEventScriptBytecodeInstruction> Code { get; }
+
+    public int MaxFrameSlots { get; }
+
+    internal int MaxStackDepth { get; }
 }

@@ -1668,7 +1668,7 @@ internal static class GesBytecodeLowerer
                 return program;
             }
 
-            var instructions = new List<GameEventScriptBytecodeInstruction>();
+            var instructions = new List<GameEventScriptBytecodeStackInstruction>();
             var builder = new ExpressionBuilder(this, instructions);
             builder.EmitExpression(expression);
             program = new GameEventScriptBytecodeExpressionProgram(instructions.ToArray(), Math.Max(1, builder.MaxStackDepth));
@@ -1748,7 +1748,7 @@ internal static class GesBytecodeLowerer
             return IsKnownTypeCast(typeName);
         }
 
-        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<GameEventScriptBytecodeInstruction> instructions)
+        private sealed class ExpressionBuilder(ProgramCompiler compiler, List<GameEventScriptBytecodeStackInstruction> instructions)
         {
             private int _stackDepth;
 
@@ -1810,7 +1810,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.BuildMessage,
                             A: message.Arguments.Count,
                             DiagnosticName: GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
@@ -1832,7 +1832,7 @@ internal static class GesBytecodeLowerer
                             extensionCall.ExtensionName,
                             extensionCall.FunctionName,
                             extensionArgumentNames);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.CallExtension,
                             A: extensionCall.Arguments.Count,
                             B: extensionReferenceIndex,
@@ -1849,7 +1849,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BuildList, A: list.Items.Count));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.BuildList, A: list.Items.Count));
                         CollapseValuesToSingle(list.Items.Count);
                         return;
 
@@ -1859,7 +1859,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BuildSequence, A: sequence.Items.Count));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.BuildSequence, A: sequence.Items.Count));
                         CollapseValuesToSingle(sequence.Items.Count);
                         return;
 
@@ -1869,7 +1869,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(item);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BuildSet, A: set.Items.Count));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.BuildSet, A: set.Items.Count));
                         CollapseValuesToSingle(set.Items.Count);
                         return;
 
@@ -1882,7 +1882,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(entry.Value);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.BuildDictionary,
                             A: dictionary.Entries.Count,
                             Names: names));
@@ -1895,13 +1895,13 @@ internal static class GesBytecodeLowerer
                             throw new InvalidOperationException($"Missing GameEventScript bytecode local slot '{identifier.Name}'.");
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.LoadSlot, slot));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.LoadSlot, slot));
                         Push();
                         return;
 
                     case UnaryExpressionNode unary:
                         EmitExpression(unary.Operand);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.Unary,
                             DiagnosticName: unary.Operator));
                         return;
@@ -1912,7 +1912,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(argument);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.Variadic,
                             A: variadic.Arguments.Count,
                             DiagnosticName: variadic.Operator));
@@ -1923,14 +1923,14 @@ internal static class GesBytecodeLowerer
                         EmitExpression(clamp.Value);
                         EmitExpression(clamp.Minimum);
                         EmitExpression(clamp.Maximum);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Clamp));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.Clamp));
                         CollapseValuesToSingle(3);
                         return;
 
                     case RandomExpressionNode random:
                         EmitExpression(random.FromExpression);
                         EmitExpression(random.ToExpression);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Random));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.Random));
                         Pop();
                         return;
 
@@ -1944,12 +1944,12 @@ internal static class GesBytecodeLowerer
                             rangeValueCount = 3;
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Range, A: rangeValueCount));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.Range, A: rangeValueCount));
                         CollapseValuesToSingle(rangeValueCount);
                         return;
 
                     case DiceExpressionNode dice:
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.Dice,
                             A: dice.DiceCount,
                             B: dice.SideCount));
@@ -1960,20 +1960,20 @@ internal static class GesBytecodeLowerer
                         EmitExpression(seededRandom.SeedExpression);
                         var seededBodyProgram = compiler.CompileExpression(seededRandom.BodyExpression);
                         AccountNestedProgram(argumentCount: 1, seededBodyProgram);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.SeededRandom,
                             ExpressionProgram: seededBodyProgram));
                         return;
 
                     case GeneratedCollectionExpressionNode generatedCollection:
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.GeneratedCollection,
                             GeneratedCollectionProgram: CompileGeneratedCollection(generatedCollection)));
                         Push();
                         return;
 
                     case GuardedChoiceExpressionNode guardedChoice:
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.GuardedChoice,
                             GuardedChoiceProgram: CompileGuardedChoice(guardedChoice)));
                         Push();
@@ -1987,7 +1987,7 @@ internal static class GesBytecodeLowerer
 
                         EmitExpression(binary.Left);
                         EmitExpression(binary.Right);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(ToBinaryOpCode(binary)));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(ToBinaryOpCode(binary)));
                         Pop();
                         return;
 
@@ -2006,7 +2006,7 @@ internal static class GesBytecodeLowerer
                         EmitExpression(predicateCall.Value);
                         var predicateTestProgram = compiler.CompileExpression(callable.Expression);
                         AccountNestedProgram(argumentCount: 1, predicateTestProgram);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.PredicateTest,
                             parameterSlot,
                             ExpressionProgram: predicateTestProgram,
@@ -2021,7 +2021,7 @@ internal static class GesBytecodeLowerer
                             extensionPredicate.ExtensionName,
                             extensionPredicate.FunctionName,
                             [GameEventScriptMessageSignature.UnlabeledParameterName]);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.CallExtension,
                             A: 1,
                             B: predicateExtensionReferenceIndex,
@@ -2040,7 +2040,7 @@ internal static class GesBytecodeLowerer
                             }
 
                             var dynamicBindArgumentNames = new string[call.ArgumentList.Count];
-                            instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.LoadSlot, A: handlerSlot));
+                            instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.LoadSlot, A: handlerSlot));
                             Push();
                             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
                             {
@@ -2049,7 +2049,7 @@ internal static class GesBytecodeLowerer
                                 EmitExpression(argument.Expression);
                             }
 
-                            instructions.Add(new GameEventScriptBytecodeInstruction(
+                            instructions.Add(new GameEventScriptBytecodeStackInstruction(
                                 GameEventScriptBytecodeOpCode.BindHandler,
                                 A: call.ArgumentList.Count,
                                 Names: dynamicBindArgumentNames));
@@ -2073,7 +2073,7 @@ internal static class GesBytecodeLowerer
 
                         var callableProgram = compiler.CompileExpression(called.Expression);
                         AccountNestedProgram(call.Arguments.Count, callableProgram);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.Call,
                             A: call.Arguments.Count,
                             CallableKind: called.Kind == GameEventScriptCallableKind.Predicate
@@ -2094,7 +2094,7 @@ internal static class GesBytecodeLowerer
                         }
 
                         EmitExpression(typeCast.Value);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Cast, CastKind: castKind));
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.Cast, CastKind: castKind));
                         return;
 
                     case TypeConstructorExpressionNode typeConstructor:
@@ -2103,7 +2103,7 @@ internal static class GesBytecodeLowerer
                             compiler.TryGetCastKind(typeConstructor.TypeName, out var constructorCastKind))
                         {
                             EmitExpression(typeConstructor.Arguments[0].Expression);
-                            instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Cast, CastKind: constructorCastKind));
+                            instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.Cast, CastKind: constructorCastKind));
                             return;
                         }
 
@@ -2115,7 +2115,7 @@ internal static class GesBytecodeLowerer
                             EmitExpression(argument.Expression);
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.TypeConstructor,
                             A: typeConstructor.Arguments.Count,
                             DiagnosticName: typeConstructor.TypeName,
@@ -2125,14 +2125,14 @@ internal static class GesBytecodeLowerer
 
                     case TypeCheckExpressionNode typeCheck:
                         EmitExpression(typeCheck.Value);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.TypeCheck,
                             DiagnosticName: typeCheck.TypeName));
                         return;
 
                     case MemberAccessExpressionNode memberAccess:
                         EmitExpression(memberAccess.Target);
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.MemberAccess,
                             DiagnosticName: memberAccess.Member));
                         return;
@@ -2142,12 +2142,12 @@ internal static class GesBytecodeLowerer
                         {
                             EmitExpression(collectionAccess.Target);
                             EmitExpression(selector.Expression);
-                            instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.IndexedAccess));
+                            instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.IndexedAccess));
                             Pop();
                             return;
                         }
 
-                        instructions.Add(new GameEventScriptBytecodeInstruction(
+                        instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.Pipeline,
                             PipelineProgram: CompilePipeline(collectionAccess)));
                         Push();
@@ -2437,7 +2437,7 @@ internal static class GesBytecodeLowerer
             private void EmitLoadConstant(GameEventScriptValue value)
             {
                 var constantIndex = compiler._constantResolver?.Invoke(value) ?? -1;
-                instructions.Add(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.LoadConstant, ConstantIndex: constantIndex));
+                instructions.Add(new GameEventScriptBytecodeStackInstruction(GameEventScriptBytecodeOpCode.LoadConstant, ConstantIndex: constantIndex));
                 Push();
             }
 
@@ -2458,7 +2458,7 @@ internal static class GesBytecodeLowerer
                 EmitExpression(binary.Left);
                 var rightProgram = compiler.CompileExpression(binary.Right);
                 AccountNestedProgram(argumentCount: 1, rightProgram);
-                instructions.Add(new GameEventScriptBytecodeInstruction(
+                instructions.Add(new GameEventScriptBytecodeStackInstruction(
                     opCode.Value,
                     ExpressionProgram: rightProgram));
                 return true;

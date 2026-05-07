@@ -974,7 +974,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return FrameSignal.Running;
             }
 
-            private bool ExecuteInstruction(Fiber fiber, in GameEventScriptBytecodeInstruction instruction)
+            private bool ExecuteInstruction(Fiber fiber, in GameEventScriptBytecodeStackInstruction instruction)
             {
                 var session = fiber._session;
                 switch (instruction.OpCode)

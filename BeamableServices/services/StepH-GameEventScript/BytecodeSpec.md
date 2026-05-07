@@ -1,16 +1,24 @@
 # GameEventScript Bytecode Spec
 
-Status: draft for the next public bytecode model.
+Status: public bytecode target and current linear artifact shape.
 
 This document defines the intended portable bytecode shape for
 `GameEventScriptCompiled`. The goal is a compact, portable, high-level bytecode
 for the GameEventScript DSL that is naturally executable by a linear
 program-counter VM.
 
-The next VM model is **operand-stack-free**. Normal expression evaluation reads
-from and writes to explicit local slots. A portable call stack is still part of
-the VM state for calls, return addresses, frame metadata, scoped locals, and
-resumable execution. The C# call stack is not part of script control flow.
+The public bytecode model is **operand-stack-free**. Normal expression
+evaluation reads from and writes to explicit local slots. A portable call stack
+is still part of the VM target state for calls, return addresses, frame
+metadata, scoped locals, and resumable execution. The C# call stack is not part
+of script control flow.
+
+Implementation note: the current public artifact already exposes the global
+linear `Code` segment, `MaxFrameSlots`, and entry addresses for handlers,
+callables, and computed field helpers. Some high-level operation metadata is
+still carried by internal compatibility structures while the executor migration
+continues; those structures are not part of the public bytecode boundary or the
+diagnostic dump.
 
 ## Goals
 
@@ -38,8 +46,8 @@ resumable execution. The C# call stack is not part of script control flow.
 
 ## Top-Level Artifact
 
-The next public `GameEventScriptCompiled` model should be shaped around a single
-code segment and side tables:
+The public `GameEventScriptCompiled` model is shaped around a single code
+segment and side tables:
 
 ```text
 GameEventScriptCompiled
@@ -71,6 +79,34 @@ GameEventScriptCompiled
 Existing pools remain important. They keep instructions small and preserve
 portable data identity. Runtime values are decoded from bytecode constants only
 when executing.
+
+Current C# public surface:
+
+```text
+GameEventScriptCompiled
+  StringPool
+  ConstantPool
+  Signatures
+  ExternalReferences
+  ExternalTypeConstructorReferences
+  NamedArgumentLayouts
+  TypeMetadata
+  Code: IReadOnlyList<GameEventScriptBytecodeInstruction>
+  Handlers
+  Callables
+  TypeDefinitions
+  MaxFrameSlots
+
+GameEventScriptBytecodeInstruction
+  OpCode
+  Dest
+  A
+  B
+  C
+  Target
+  Target2
+  Data
+```
 
 `MaxFrameSlots` is the maximum local slot count needed by any handler or
 callable frame, including parameters, user `let` bindings, compiler temporaries,
@@ -396,10 +432,10 @@ Implication is right-associative at source level and uses the truth table for
 `not a or b`: false antecedent yields `true`; unknown participates as
 `nothing` unless the consequent resolves the result to `true`.
 
-Compatibility note for the current nested bytecode model: until the linear
-format lands, `and`, `or`, and implication may still appear as
-`ShortCircuitAnd`, `ShortCircuitOr`, and `ShortCircuitImplies` instructions with
-a nested right-hand expression program.
+Compatibility note for the internal executor: public linear code lowers
+short-circuiting to branch instructions. Internal compatibility structures may
+still use `ShortCircuitAnd`, `ShortCircuitOr`, and `ShortCircuitImplies` until
+the executor consumes the linear code segment directly.
 
 ### Control Flow
 
@@ -621,9 +657,9 @@ Standard intrinsics are non-overridable and do not appear in
 `CallStandard` or an equivalent direct intrinsic id, not as a host extension
 lookup.
 
-Compatibility note for the current nested bytecode model: standard intrinsics
-are currently parsed like extensions and may execute through `CallExtension`
-with an external reference slot of `-1`.
+Compatibility note for the internal executor: standard intrinsics may still
+execute through the legacy `CallExtension` path with an external reference slot
+of `-1` until dedicated standard-intrinsic side tables land.
 
 External type constructors are collected separately in
 `ExternalTypeConstructorReferences` and dynamically bound against the host's
@@ -816,24 +852,20 @@ A grouped view may still be offered, but it must keep global addresses visible.
 
 ## Migration Plan
 
-1. Finalize this operand-stack-free public bytecode model and increment
-   `FormatVersion`.
-2. Add side-table types for call layouts, publish layouts, pipeline plans,
+1. Add side-table types for call layouts, publish layouts, pipeline plans,
    selector plans, iteration sources, generated collections, patterns, scopes,
    and loop plans.
-3. Update the compiler lowerer to allocate parameter, local, and temporary slots
-   and emit linear `Code`.
-4. Update the dumper to show global addresses, labels, and explicit slot
-   operands.
-5. Update the BytecodeVM executable builder to consume linear public bytecode.
-6. Remove nested `StatementProgram`, nested `ExpressionProgram`, and nested
-   branch/body program references from the public artifact.
-7. Keep conformance behavior unchanged; only bytecode shape and VM internals
+2. Update the BytecodeVM executable builder to consume linear public bytecode.
+3. Remove internal nested `StatementProgram`, nested `ExpressionProgram`, and
+   nested branch/body program references once the side tables cover every
+   high-level operation.
+4. Keep conformance behavior unchanged; only bytecode shape and VM internals
    should move.
 
-During migration, an adapter may convert the current nested model to the new
-linear model internally, but the final public shape should be linear and
-operand-stack-free.
+The current compiler emits the public linear model through an adapter over the
+internal compatibility model. That keeps public API and dumps aligned with the
+target architecture while preserving runtime behavior during the executor
+replacement.
 
 ## Compatibility Predicates
 

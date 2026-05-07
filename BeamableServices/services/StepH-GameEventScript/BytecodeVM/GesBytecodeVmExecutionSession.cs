@@ -1171,7 +1171,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryEvaluateShortCircuitLogical(
-        in GameEventScriptBytecodeInstruction instruction,
+        in GameEventScriptBytecodeStackInstruction instruction,
         BytecodeVmValue left,
         int stackBase,
         out BytecodeVmValue value)
@@ -2196,7 +2196,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             : $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
     private bool TryEvaluatePredicateTest(
-        in GameEventScriptBytecodeInstruction instruction,
+        in GameEventScriptBytecodeStackInstruction instruction,
         BytecodeVmValue input,
         int stackBase,
         out BytecodeVmValue value,
@@ -2326,7 +2326,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryEvaluateCallable(
-        in GameEventScriptBytecodeInstruction instruction,
+        in GameEventScriptBytecodeStackInstruction instruction,
         BytecodeVmValue[] stack,
         int start,
         int count,
@@ -5671,9 +5671,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryEvaluateProjectionBinaryPattern(
-        in GameEventScriptBytecodeInstruction leftInstruction,
-        in GameEventScriptBytecodeInstruction rightInstruction,
-        in GameEventScriptBytecodeInstruction opInstruction,
+        in GameEventScriptBytecodeStackInstruction leftInstruction,
+        in GameEventScriptBytecodeStackInstruction rightInstruction,
+        in GameEventScriptBytecodeStackInstruction opInstruction,
         int identifierSlot,
         BytecodeVmValue item,
         out BytecodeVmValue value)
@@ -5781,7 +5781,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryGetProjectionOperand(
-        in GameEventScriptBytecodeInstruction instruction,
+        in GameEventScriptBytecodeStackInstruction instruction,
         int identifierSlot,
         BytecodeVmValue item,
         out BytecodeVmValue value)
@@ -5996,7 +5996,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordPredicateCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue input)
+    private void RecordPredicateCalled(in GameEventScriptBytecodeStackInstruction instruction, BytecodeVmValue input)
     {
         if (!_diagnosticsEnabled)
         {
@@ -6012,7 +6012,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             $"predicate '{predicateName}' called");
     }
 
-    private void RecordCallableCalled(in GameEventScriptBytecodeInstruction instruction, BytecodeVmValue[] stack, int start, int count)
+    private void RecordCallableCalled(in GameEventScriptBytecodeStackInstruction instruction, BytecodeVmValue[] stack, int start, int count)
     {
         if (!_diagnosticsEnabled)
         {

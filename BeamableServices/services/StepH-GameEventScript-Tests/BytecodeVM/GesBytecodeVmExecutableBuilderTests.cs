@@ -28,16 +28,25 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             }
             """;
 
-        var first = GameEventScriptManager.Compile(script).DumpBytecode();
+        var compiled = GameEventScriptManager.Compile(script);
+        var first = compiled.DumpBytecode();
         var second = GameEventScriptManager.Compile(script).DumpBytecode();
 
         Assert.AreEqual(first, second);
         StringAssert.Contains(first, "gameeventscript bytecode v1");
+        StringAssert.Contains(first, "maxFrameSlots:");
+        StringAssert.Contains(first, "code[");
+        StringAssert.Contains(first, "@0000");
         StringAssert.Contains(first, "handlers[1]");
         StringAssert.Contains(first, "LoadConstant");
         StringAssert.Contains(first, "LoadSlot");
         StringAssert.Contains(first, "BuildMessage");
         StringAssert.Contains(first, "Publish");
+        Assert.IsFalse(first.Contains("maxStackDepth", StringComparison.Ordinal));
+        Assert.IsFalse(first.Contains("nestedExpression", StringComparison.Ordinal));
+        Assert.IsNotEmpty(compiled.Code);
+        Assert.IsGreaterThanOrEqualTo(compiled.Handlers["Start"][0].LocalSlotCount, compiled.MaxFrameSlots);
+        Assert.IsGreaterThanOrEqualTo(compiled.Handlers["Start"][0].EntryAddress, 0);
         Assert.IsFalse(first.Contains("EvaluateExpression", StringComparison.Ordinal));
     }
 
@@ -130,7 +139,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual("integer", callable.ParameterTypes[0]);
         StringAssert.Contains(dump, "handler #0 Start(value)");
         StringAssert.Contains(dump, "params=[value as :integer]");
-        StringAssert.Contains(dump, "callable #0 Function boosted(_) params=[value as :integer]");
+        StringAssert.Contains(dump, "callable #0 Function boosted(_) entry=@");
+        StringAssert.Contains(dump, "params=[value as :integer]");
     }
 
     [TestMethod]
@@ -384,7 +394,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.Callables.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             original.Handlers.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<GameEventScriptBytecodeHandler>)pair.Value.ToArray(), StringComparer.Ordinal),
             original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
-            original.MaxStackDepth);
+            original.MaxStackDepth,
+            original.Code.ToArray(),
+            original.MaxFrameSlots);
 
     private static GameEventScriptBytecodeConstant CloneConstant(GameEventScriptBytecodeConstant constant)
         => constant.Kind switch

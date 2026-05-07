@@ -232,7 +232,23 @@ public enum GameEventScriptBytecodeOpCode
     Power,
     ShortCircuitOr,
     ShortCircuitAnd,
-    ShortCircuitImplies
+    ShortCircuitImplies,
+    Nop,
+    BindParameter,
+    CoerceSlot,
+    CopySlot,
+    Jump,
+    JumpIfTrue,
+    JumpIfFalse,
+    JumpIfNotTrue,
+    EnterScope,
+    ExitScope,
+    Return,
+    PublishValue,
+    PublishMessageValue,
+    ForRange,
+    ForCollection,
+    SeededRandomBlock
 }
 
 public enum GameEventScriptBytecodeCallableKind
@@ -260,7 +276,17 @@ public enum GameEventScriptBytecodeCastKind
     Ref
 }
 
-public sealed record class GameEventScriptBytecodeInstruction(
+public readonly record struct GameEventScriptBytecodeInstruction(
+    GameEventScriptBytecodeOpCode OpCode,
+    int Dest = -1,
+    int A = -1,
+    int B = -1,
+    int C = -1,
+    int Target = -1,
+    int Target2 = -1,
+    int Data = -1);
+
+internal sealed record class GameEventScriptBytecodeStackInstruction(
     GameEventScriptBytecodeOpCode OpCode,
     int A = -1,
     int B = -1,
@@ -289,9 +315,9 @@ internal enum GameEventScriptBytecodeProjectionFastKind
     Stack
 }
 
-public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBytecodeInstruction[] instructions, int maxStackDepth)
+internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBytecodeStackInstruction[] instructions, int maxStackDepth)
 {
-    public GameEventScriptBytecodeInstruction[] Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
+    public GameEventScriptBytecodeStackInstruction[] Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
 
     public int MaxStackDepth { get; } = maxStackDepth;
 
@@ -299,7 +325,7 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
 
     internal bool CanEvaluateProjectionFast => ProjectionFastKind != GameEventScriptBytecodeProjectionFastKind.None;
 
-    private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeInstruction[] instructions, int maxStackDepth)
+    private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeStackInstruction[] instructions, int maxStackDepth)
     {
         if (instructions.Length is 0 or > 8 || maxStackDepth > 3 || !instructions.All(CanEvaluateProjectionInstructionFast))
         {
@@ -335,10 +361,10 @@ public sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptByte
         };
     }
 
-    private static bool IsProjectionOperand(GameEventScriptBytecodeInstruction instruction)
+    private static bool IsProjectionOperand(GameEventScriptBytecodeStackInstruction instruction)
         => instruction.OpCode is GameEventScriptBytecodeOpCode.LoadConstant or GameEventScriptBytecodeOpCode.LoadSlot;
 
-    private static bool CanEvaluateProjectionInstructionFast(GameEventScriptBytecodeInstruction instruction)
+    private static bool CanEvaluateProjectionInstructionFast(GameEventScriptBytecodeStackInstruction instruction)
         => instruction.OpCode switch
         {
             GameEventScriptBytecodeOpCode.LoadConstant => true,
@@ -441,7 +467,7 @@ public enum GameEventScriptBytecodeSelectorKind
     Shuffle
 }
 
-public sealed class GameEventScriptBytecodeSelectorProgram(
+internal sealed class GameEventScriptBytecodeSelectorProgram(
     GameEventScriptBytecodeSelectorKind kind,
     int identifierSlot,
     GameEventScriptBytecodeExpressionProgram? expressionProgram,
@@ -477,7 +503,7 @@ public sealed class GameEventScriptBytecodeSelectorProgram(
     public GameEventScriptBytecodeObjectMatchPattern? ObjectPattern { get; } = objectPattern;
 }
 
-public sealed class GameEventScriptBytecodePipelineProgram(
+internal sealed class GameEventScriptBytecodePipelineProgram(
     GameEventScriptBytecodeExpressionProgram sourceProgram,
     GameEventScriptBytecodeSelectorProgram[] prefixSelectors,
     GameEventScriptBytecodeSelectorProgram terminalSelector)
@@ -489,7 +515,7 @@ public sealed class GameEventScriptBytecodePipelineProgram(
     public GameEventScriptBytecodeSelectorProgram TerminalSelector { get; } = terminalSelector ?? throw new ArgumentNullException(nameof(terminalSelector));
 }
 
-public sealed class GameEventScriptBytecodeGeneratedCollectionProgram(
+internal sealed class GameEventScriptBytecodeGeneratedCollectionProgram(
     string collectionType,
     int identifierSlot,
     GameEventScriptBytecodeIterationSourceProgram source,
@@ -507,7 +533,7 @@ public sealed class GameEventScriptBytecodeGeneratedCollectionProgram(
     public GameEventScriptBytecodeExpressionProgram ProjectionProgram { get; } = projectionProgram ?? throw new ArgumentNullException(nameof(projectionProgram));
 }
 
-public sealed class GameEventScriptBytecodeGuardedChoiceProgram(
+internal sealed class GameEventScriptBytecodeGuardedChoiceProgram(
     GameEventScriptBytecodeExpressionProgram[] valuePrograms,
     GameEventScriptBytecodeExpressionProgram[] conditionPrograms,
     GameEventScriptBytecodeExpressionProgram otherwiseProgram)
@@ -519,7 +545,7 @@ public sealed class GameEventScriptBytecodeGuardedChoiceProgram(
     public GameEventScriptBytecodeExpressionProgram OtherwiseProgram { get; } = otherwiseProgram ?? throw new ArgumentNullException(nameof(otherwiseProgram));
 }
 
-public sealed class GameEventScriptBytecodePublishLayout(
+internal sealed class GameEventScriptBytecodePublishLayout(
     string messageName,
     string signatureId,
     string[] argumentNames,
@@ -540,7 +566,7 @@ public enum GameEventScriptBytecodeIterationSourceKind
     Range
 }
 
-public sealed class GameEventScriptBytecodeIterationSourceProgram(
+internal sealed class GameEventScriptBytecodeIterationSourceProgram(
     GameEventScriptBytecodeIterationSourceKind kind,
     GameEventScriptBytecodeExpressionProgram? collectionProgram,
     GameEventScriptBytecodeExpressionProgram? rangeFromProgram,
@@ -558,39 +584,39 @@ public sealed class GameEventScriptBytecodeIterationSourceProgram(
     public GameEventScriptBytecodeExpressionProgram? RangeStepProgram { get; } = rangeStepProgram;
 }
 
-public abstract class GameEventScriptBytecodeDicePattern;
+internal abstract class GameEventScriptBytecodeDicePattern;
 
-public sealed class GameEventScriptBytecodeFullHousePattern : GameEventScriptBytecodeDicePattern;
+internal sealed class GameEventScriptBytecodeFullHousePattern : GameEventScriptBytecodeDicePattern;
 
-public sealed class GameEventScriptBytecodeStraightPattern : GameEventScriptBytecodeDicePattern;
+internal sealed class GameEventScriptBytecodeStraightPattern : GameEventScriptBytecodeDicePattern;
 
-public sealed class GameEventScriptBytecodeDiceCountPattern(int count, GameEventScriptBytecodeExpressionProgram? faceProgram) : GameEventScriptBytecodeDicePattern
+internal sealed class GameEventScriptBytecodeDiceCountPattern(int count, GameEventScriptBytecodeExpressionProgram? faceProgram) : GameEventScriptBytecodeDicePattern
 {
     public int Count { get; } = count;
 
     public GameEventScriptBytecodeExpressionProgram? FaceProgram { get; } = faceProgram;
 }
 
-public sealed class GameEventScriptBytecodeObjectMatchPattern(GameEventScriptBytecodeObjectMatchEntry[] entries)
+internal sealed class GameEventScriptBytecodeObjectMatchPattern(GameEventScriptBytecodeObjectMatchEntry[] entries)
 {
     public GameEventScriptBytecodeObjectMatchEntry[] Entries { get; } = entries ?? throw new ArgumentNullException(nameof(entries));
 }
 
-public sealed class GameEventScriptBytecodeObjectMatchEntry(string key, GameEventScriptBytecodeObjectMatchValue value)
+internal sealed class GameEventScriptBytecodeObjectMatchEntry(string key, GameEventScriptBytecodeObjectMatchValue value)
 {
     public string Key { get; } = key ?? throw new ArgumentNullException(nameof(key));
 
     public GameEventScriptBytecodeObjectMatchValue Value { get; } = value ?? throw new ArgumentNullException(nameof(value));
 }
 
-public abstract class GameEventScriptBytecodeObjectMatchValue;
+internal abstract class GameEventScriptBytecodeObjectMatchValue;
 
-public sealed class GameEventScriptBytecodeObjectMatchExpressionValue(GameEventScriptBytecodeExpressionProgram expressionProgram) : GameEventScriptBytecodeObjectMatchValue
+internal sealed class GameEventScriptBytecodeObjectMatchExpressionValue(GameEventScriptBytecodeExpressionProgram expressionProgram) : GameEventScriptBytecodeObjectMatchValue
 {
     public GameEventScriptBytecodeExpressionProgram ExpressionProgram { get; } = expressionProgram ?? throw new ArgumentNullException(nameof(expressionProgram));
 }
 
-public sealed class GameEventScriptBytecodeObjectMatchNestedValue(GameEventScriptBytecodeObjectMatchPattern pattern) : GameEventScriptBytecodeObjectMatchValue
+internal sealed class GameEventScriptBytecodeObjectMatchNestedValue(GameEventScriptBytecodeObjectMatchPattern pattern) : GameEventScriptBytecodeObjectMatchValue
 {
     public GameEventScriptBytecodeObjectMatchPattern Pattern { get; } = pattern ?? throw new ArgumentNullException(nameof(pattern));
 }
@@ -612,14 +638,14 @@ public enum GameEventScriptBytecodePublishKind
     Publish
 }
 
-public sealed class GameEventScriptBytecodeStatementProgram(GameEventScriptBytecodeStatement[] statements, bool createsScope)
+internal sealed class GameEventScriptBytecodeStatementProgram(GameEventScriptBytecodeStatement[] statements, bool createsScope)
 {
     public GameEventScriptBytecodeStatement[] Statements { get; } = statements ?? throw new ArgumentNullException(nameof(statements));
 
     public bool CreatesScope { get; } = createsScope;
 }
 
-public sealed class GameEventScriptBytecodeStatement(
+internal sealed class GameEventScriptBytecodeStatement(
     GameEventScriptBytecodeStatementKind kind,
     string? name = null,
     string? declaredType = null,
@@ -667,25 +693,56 @@ public sealed class GameEventScriptBytecodeTypeDefinition(
     public IReadOnlyList<GameEventScriptBytecodeTypeFieldDefinition> Fields { get; } = fields ?? throw new ArgumentNullException(nameof(fields));
 }
 
-public sealed class GameEventScriptBytecodeTypeFieldDefinition(
-    string name,
-    string typeName,
-    GameEventScriptBytecodeExpressionProgram? minimumProgram,
-    GameEventScriptBytecodeExpressionProgram? maximumProgram,
-    GameEventScriptBytecodeExpressionProgram? computedProgram)
+public sealed class GameEventScriptBytecodeTypeFieldDefinition
 {
-    public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
+    internal GameEventScriptBytecodeTypeFieldDefinition(
+        string name,
+        string typeName,
+        GameEventScriptBytecodeExpressionProgram? minimumProgram,
+        GameEventScriptBytecodeExpressionProgram? maximumProgram,
+        GameEventScriptBytecodeExpressionProgram? computedProgram)
+        : this(name, typeName, -1, -1, -1, minimumProgram, maximumProgram, computedProgram)
+    {
+    }
 
-    public string TypeName { get; } = typeName ?? throw new ArgumentNullException(nameof(typeName));
+    internal GameEventScriptBytecodeTypeFieldDefinition(
+        string name,
+        string typeName,
+        int minimumEntryAddress,
+        int maximumEntryAddress,
+        int computedEntryAddress,
+        GameEventScriptBytecodeExpressionProgram? minimumProgram,
+        GameEventScriptBytecodeExpressionProgram? maximumProgram,
+        GameEventScriptBytecodeExpressionProgram? computedProgram)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
+        MinimumEntryAddress = minimumEntryAddress;
+        MaximumEntryAddress = maximumEntryAddress;
+        ComputedEntryAddress = computedEntryAddress;
+        MinimumProgram = minimumProgram;
+        MaximumProgram = maximumProgram;
+        ComputedProgram = computedProgram;
+    }
 
-    public GameEventScriptBytecodeExpressionProgram? MinimumProgram { get; } = minimumProgram;
+    public string Name { get; }
 
-    public GameEventScriptBytecodeExpressionProgram? MaximumProgram { get; } = maximumProgram;
+    public string TypeName { get; }
 
-    public GameEventScriptBytecodeExpressionProgram? ComputedProgram { get; } = computedProgram;
+    public int MinimumEntryAddress { get; internal set; }
+
+    public int MaximumEntryAddress { get; internal set; }
+
+    public int ComputedEntryAddress { get; internal set; }
+
+    internal GameEventScriptBytecodeExpressionProgram? MinimumProgram { get; }
+
+    internal GameEventScriptBytecodeExpressionProgram? MaximumProgram { get; }
+
+    internal GameEventScriptBytecodeExpressionProgram? ComputedProgram { get; }
 }
 
-public sealed class GameEventScriptBytecodeExecutionPlan
+internal sealed class GameEventScriptBytecodeExecutionPlan
 {
     private readonly IReadOnlyDictionary<string, int> _slots;
 
@@ -724,39 +781,64 @@ public enum GameEventScriptBytecodeHandlerDispatchKind
     MessageEnvelope
 }
 
-public sealed class GameEventScriptBytecodeHandler(
-    string message,
-    GameEventScriptBytecodeHandlerDispatchKind dispatchKind,
-    IReadOnlyList<string> parameters,
-    IReadOnlyList<string> signatureLabels,
-    string signatureId,
-    int declarationOrder,
-    GameEventScriptBytecodeExecutionPlan executionPlan,
-    IReadOnlyList<string?>? parameterTypes = null,
-    IReadOnlyList<string>? requiredTags = null,
-    IReadOnlyList<string>? excludedTags = null)
+public sealed class GameEventScriptBytecodeHandler
 {
-    public string Message { get; } = message ?? throw new ArgumentNullException(nameof(message));
+    internal GameEventScriptBytecodeHandler(
+        string message,
+        GameEventScriptBytecodeHandlerDispatchKind dispatchKind,
+        IReadOnlyList<string> parameters,
+        IReadOnlyList<string> signatureLabels,
+        string signatureId,
+        int declarationOrder,
+        GameEventScriptBytecodeExecutionPlan executionPlan,
+        IReadOnlyList<string?>? parameterTypes = null,
+        IReadOnlyList<string>? requiredTags = null,
+        IReadOnlyList<string>? excludedTags = null,
+        int entryAddress = -1)
+    {
+        Message = message ?? throw new ArgumentNullException(nameof(message));
+        DispatchKind = dispatchKind;
+        Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        SignatureLabels = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
+        ParameterTypes = NormalizeParameterTypes(parameterTypes, parameters);
+        RequiredTags = NormalizeTags(requiredTags);
+        ExcludedTags = NormalizeTags(excludedTags);
+        SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
+        DeclarationOrder = declarationOrder;
+        ExecutionPlan = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
+        EntryAddress = entryAddress;
+        LocalSlotCount = executionPlan.SlotCount;
+        Slots = executionPlan.Slots;
+        Definition = GameEventScriptMessageSignature.Create(message, signatureLabels);
+    }
 
-    public GameEventScriptBytecodeHandlerDispatchKind DispatchKind { get; } = dispatchKind;
+    public string Message { get; }
 
-    public IReadOnlyList<string> Parameters { get; } = parameters ?? throw new ArgumentNullException(nameof(parameters));
+    public GameEventScriptBytecodeHandlerDispatchKind DispatchKind { get; }
 
-    public IReadOnlyList<string> SignatureLabels { get; } = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
+    public IReadOnlyList<string> Parameters { get; }
 
-    public IReadOnlyList<string?> ParameterTypes { get; } = NormalizeParameterTypes(parameterTypes, parameters);
+    public IReadOnlyList<string> SignatureLabels { get; }
 
-    public IReadOnlyList<string> RequiredTags { get; } = NormalizeTags(requiredTags);
+    public IReadOnlyList<string?> ParameterTypes { get; }
 
-    public IReadOnlyList<string> ExcludedTags { get; } = NormalizeTags(excludedTags);
+    public IReadOnlyList<string> RequiredTags { get; }
 
-    public string SignatureId { get; } = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
+    public IReadOnlyList<string> ExcludedTags { get; }
 
-    public int DeclarationOrder { get; } = declarationOrder;
+    public string SignatureId { get; }
 
-    public GameEventScriptBytecodeExecutionPlan ExecutionPlan { get; } = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
+    public int DeclarationOrder { get; }
 
-    public GameEventScriptMessageSignature Definition { get; } = GameEventScriptMessageSignature.Create(message, signatureLabels);
+    public int EntryAddress { get; internal set; }
+
+    public int LocalSlotCount { get; }
+
+    public IReadOnlyDictionary<string, int> Slots { get; }
+
+    internal GameEventScriptBytecodeExecutionPlan ExecutionPlan { get; }
+
+    public GameEventScriptMessageSignature Definition { get; }
 
     private static IReadOnlyList<string?> NormalizeParameterTypes(IReadOnlyList<string?>? parameterTypes, IReadOnlyList<string> parameters)
     {
@@ -778,28 +860,51 @@ public sealed class GameEventScriptBytecodeHandler(
         => GameEventScriptMessage.NormalizeTags(tags);
 }
 
-public sealed class GameEventScriptBytecodeCallable(
-    string name,
-    GameEventScriptBytecodeCallableKind kind,
-    IReadOnlyList<string> parameters,
-    IReadOnlyList<string> signatureLabels,
-    string signatureId,
-    GameEventScriptBytecodeExpressionProgram expressionProgram,
-    IReadOnlyList<string?>? parameterTypes = null)
+public sealed class GameEventScriptBytecodeCallable
 {
-    public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
+    internal GameEventScriptBytecodeCallable(
+        string name,
+        GameEventScriptBytecodeCallableKind kind,
+        IReadOnlyList<string> parameters,
+        IReadOnlyList<string> signatureLabels,
+        string signatureId,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        IReadOnlyList<string?>? parameterTypes = null,
+        int entryAddress = -1,
+        int localSlotCount = 0,
+        int returnSlot = -1)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        Kind = kind;
+        Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+        SignatureLabels = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
+        ParameterTypes = NormalizeParameterTypes(parameterTypes, parameters);
+        SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
+        ExpressionProgram = expressionProgram ?? throw new ArgumentNullException(nameof(expressionProgram));
+        EntryAddress = entryAddress;
+        LocalSlotCount = localSlotCount;
+        ReturnSlot = returnSlot;
+    }
 
-    public GameEventScriptBytecodeCallableKind Kind { get; } = kind;
+    public string Name { get; }
 
-    public IReadOnlyList<string> Parameters { get; } = parameters ?? throw new ArgumentNullException(nameof(parameters));
+    public GameEventScriptBytecodeCallableKind Kind { get; }
 
-    public IReadOnlyList<string> SignatureLabels { get; } = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
+    public IReadOnlyList<string> Parameters { get; }
 
-    public IReadOnlyList<string?> ParameterTypes { get; } = NormalizeParameterTypes(parameterTypes, parameters);
+    public IReadOnlyList<string> SignatureLabels { get; }
 
-    public string SignatureId { get; } = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
+    public IReadOnlyList<string?> ParameterTypes { get; }
 
-    public GameEventScriptBytecodeExpressionProgram ExpressionProgram { get; } = expressionProgram ?? throw new ArgumentNullException(nameof(expressionProgram));
+    public string SignatureId { get; }
+
+    public int EntryAddress { get; internal set; }
+
+    public int LocalSlotCount { get; internal set; }
+
+    public int ReturnSlot { get; internal set; }
+
+    internal GameEventScriptBytecodeExpressionProgram ExpressionProgram { get; }
 
     private static IReadOnlyList<string?> NormalizeParameterTypes(IReadOnlyList<string?>? parameterTypes, IReadOnlyList<string> parameters)
     {

@@ -57,6 +57,10 @@ internal static class GesBytecodeCompiler
             var maxStackDepth = Math.Max(
                 GetMaxStackDepth(handlers),
                 Math.Max(GetMaxStackDepth(callables), GetMaxStackDepth(typeDefinitions)));
+            var linearBuilder = new GesLinearBytecodeBuilder();
+            linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group));
+            linearBuilder.AddCallables(callables.Values);
+            linearBuilder.AddTypeDefinitions(typeDefinitions.Values);
 
             return new GameEventScriptCompiled(
                 options,
@@ -70,7 +74,9 @@ internal static class GesBytecodeCompiler
                 callables,
                 handlers,
                 typeDefinitions,
-                maxStackDepth);
+                maxStackDepth,
+                linearBuilder.Code.ToArray(),
+                linearBuilder.MaxFrameSlots);
         }
 
         private IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> BuildHandlers()

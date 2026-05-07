@@ -44,7 +44,17 @@ may keep the specialized compatibility evaluator instead of allocating a
 callable frame for every pipeline item. Layout-free statement expressions
 reached through compatibility execution may also use public linear helper
 entries; these helper runs must isolate their temporary slots from handler
-locals and scope-change tracking.
+locals and scope-change tracking. Simple operation-layout statement expressions
+are supported for those public linear helper entries when the operation consumes
+only already-lowered slot operands and local metadata; this currently includes
+`Cast`, `TypeCheck`, `MemberAccess`, `Unary`, `Variadic`, `Range`, and
+`TypeConstructor`, plus local builders `BuildList`, `BuildSequence`, `BuildSet`,
+`BuildDictionary`, and `BuildMessage`. The compatibility Fiber may use the same
+public helper entries through a slice-aware linear helper frame. Immediate
+operation-layout value execution should avoid
+per-execution operand-array materialization when possible; operand buffers may
+be reused because the values are consumed before the instruction returns, and
+fixed operand operations should read directly from their source slots.
 
 ## Goals
 
@@ -926,11 +936,16 @@ A grouped view may still be offered, but it must keep global addresses visible.
    compatibility expression execution can use public linear callable entries in
    isolated VM frames. Supported layout-free statement expressions reached
    through compatibility execution can use public linear helper entries with
-   isolated temporary slots. The manual stepping Fiber uses the same
-   single-instruction linear executor for simple supported handlers, including
+   isolated temporary slots, and simple operation-layout statement expressions
+   such as `Cast`, `TypeCheck`, `MemberAccess`, `Unary`, `Variadic`, `Range`,
+   `TypeConstructor`, and local builders such as `BuildList`, `BuildSequence`,
+   `BuildSet`, `BuildDictionary`, and `BuildMessage` can use the same public
+   helper mechanism. The manual stepping Fiber uses the same single-instruction
+   linear executor for simple supported handlers, including
    fiber-safe generated collections, guarded choices, and seeded-random
-   expression helpers plus pausable linear range/collection loops and
-   seeded-random blocks. Pipelines already carry selector helper entry addresses
+   expression helpers, supported layout-free compatibility expression frames,
+   plus pausable linear range/collection loops and seeded-random blocks.
+   Pipelines already carry selector helper entry addresses
    in `SelectorLayouts`, but runtime execution still falls back to the
    compatibility executor to preserve the existing allocation-sensitive pipeline
    hot paths until the linear selector executor is optimized.
@@ -958,9 +973,12 @@ Supported compatibility function and predicate calls can also dispatch into
 their public linear callable entries; pipeline predicate fast paths remain on
 the compatibility evaluator where that avoids per-item frame allocation.
 Layout-free statement expressions in compatibility execution can use public
-linear helper entries; complex high-level expressions continue through their
-existing specialized helper paths until the full statement executor owns those
-flows end to end.
+linear helper entries, and simple operation-layout statement expressions can use
+the same path when their metadata is local to the instruction. Other complex
+high-level expressions continue through their existing specialized helper paths
+until the full statement executor owns those flows end to end. The
+compatibility Fiber mirrors this for supported layout-free and simple
+operation-layout expression frames with a pausable linear helper frame.
 
 ## Compatibility Predicates
 

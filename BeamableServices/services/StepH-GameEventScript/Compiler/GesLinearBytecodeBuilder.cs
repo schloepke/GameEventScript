@@ -741,7 +741,7 @@ internal sealed class GesLinearBytecodeBuilder
                 instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom ||
                 instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest ||
                 instruction.OpCode == GameEventScriptBytecodeOpCode.Call ||
-                NeedsOperationLayout(instruction) ||
+                (NeedsOperationLayout(instruction) && !CanDeferOperationLayoutExpression(instruction.OpCode)) ||
                 ContainsDeferredEntryBlocker(instruction.ExpressionProgram))
             {
                 return true;
@@ -750,6 +750,21 @@ internal sealed class GesLinearBytecodeBuilder
 
         return false;
     }
+
+    private static bool CanDeferOperationLayoutExpression(GameEventScriptBytecodeOpCode opCode)
+        => opCode is
+            GameEventScriptBytecodeOpCode.Cast or
+            GameEventScriptBytecodeOpCode.TypeCheck or
+            GameEventScriptBytecodeOpCode.MemberAccess or
+            GameEventScriptBytecodeOpCode.Unary or
+            GameEventScriptBytecodeOpCode.Variadic or
+            GameEventScriptBytecodeOpCode.Range or
+            GameEventScriptBytecodeOpCode.TypeConstructor or
+            GameEventScriptBytecodeOpCode.BuildList or
+            GameEventScriptBytecodeOpCode.BuildSequence or
+            GameEventScriptBytecodeOpCode.BuildSet or
+            GameEventScriptBytecodeOpCode.BuildDictionary or
+            GameEventScriptBytecodeOpCode.BuildMessage;
 
     private static int GetExpressionSlotUpperBound(GameEventScriptBytecodeExpressionProgram? program)
     {

@@ -874,7 +874,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        var operands = CopyLinearOperands(layout.ArgumentSlots);
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Unary:
@@ -885,29 +884,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 return DefineSlot(instruction.Dest, unaryValue);
 
-            case GameEventScriptBytecodeOpCode.Variadic:
-                if (!TryEvaluateVariadicOperation(layout.Name, operands, 0, operands.Length, out var variadicValue))
-                {
-                    return false;
-                }
-
-                return DefineSlot(instruction.Dest, variadicValue);
-
-            case GameEventScriptBytecodeOpCode.Range:
-                return DefineSlot(
-                    instruction.Dest,
-                    EvaluateRangeExpression(
-                        operands.Length > 0 ? operands[0] : ResolveSlot(instruction.A),
-                        operands.Length > 1 ? operands[1] : ResolveSlot(instruction.B),
-                        operands.Length > 2 ? operands[2] : BytecodeVmValue.Integer(1)));
-
             case GameEventScriptBytecodeOpCode.Cast:
                 return DefineSlot(instruction.Dest, EvaluateProgramCast(layout.CastKind, ResolveSlot(instruction.A)));
-
-            case GameEventScriptBytecodeOpCode.TypeConstructor:
-                return DefineSlot(
-                    instruction.Dest,
-                    EvaluateTypeConstructor(layout.Name, layout.Names.ToArray(), operands, 0, operands.Length));
 
             case GameEventScriptBytecodeOpCode.TypeCheck:
                 return DefineSlot(
@@ -917,58 +895,102 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.MemberAccess:
                 return DefineSlot(instruction.Dest, EvaluateMemberAccess(ResolveSlot(instruction.A), layout.Name));
 
-            case GameEventScriptBytecodeOpCode.BuildList:
-                return DefineSlot(instruction.Dest, BuildListValue(operands, 0, operands.Length));
-
-            case GameEventScriptBytecodeOpCode.BuildSequence:
-                return DefineSlot(instruction.Dest, BuildSequenceValue(operands, 0, operands.Length));
-
-            case GameEventScriptBytecodeOpCode.BuildSet:
-                return DefineSlot(instruction.Dest, BuildSetValue(operands, 0, operands.Length));
-
-            case GameEventScriptBytecodeOpCode.BuildDictionary:
-                return DefineSlot(instruction.Dest, BuildDictionaryValue(operands, 0, operands.Length, layout.Names.ToArray()));
-
-            case GameEventScriptBytecodeOpCode.BuildMessage:
+            case GameEventScriptBytecodeOpCode.Range:
                 return DefineSlot(
                     instruction.Dest,
-                    BuildMessageValue(
-                        operands,
-                        0,
-                        operands.Length,
-                        layout.Names.ToArray(),
-                        layout.Name,
-                        layout.ArgumentName));
+                    EvaluateRangeExpression(
+                        ResolveSlot(instruction.A),
+                        ResolveSlot(instruction.B),
+                        instruction.C >= 0 ? ResolveSlot(instruction.C) : BytecodeVmValue.Integer(1)));
+        }
 
-            case GameEventScriptBytecodeOpCode.BindHandler:
-                if (operands.Length == 0)
-                {
-                    return DefineSlot(instruction.Dest, BytecodeVmValue.Nothing);
-                }
+        var operandCount = layout.ArgumentSlots.Count;
+        var operands = operandCount == 0
+            ? Array.Empty<BytecodeVmValue>()
+            : ArrayPool<BytecodeVmValue>.Shared.Rent(operandCount);
+        if (operandCount > 0)
+        {
+            CopyLinearOperands(layout.ArgumentSlots, operands);
+        }
 
-                return DefineSlot(
-                    instruction.Dest,
-                    BindHandlerValue(operands[0], operands, 1, operands.Length - 1, layout.Names.ToArray()));
+        try
+        {
+            switch (instruction.OpCode)
+            {
+                case GameEventScriptBytecodeOpCode.Variadic:
+                    if (!TryEvaluateVariadicOperation(layout.Name, operands, 0, operandCount, out var variadicValue))
+                    {
+                        return false;
+                    }
 
-            case GameEventScriptBytecodeOpCode.CallExtension:
-                if (!TryCallExtension(
-                        layout.Name,
-                        layout.ArgumentName,
-                        layout.Names.ToArray(),
-                        layout.ExternalReferenceIndex,
-                        operands,
-                        0,
-                        operands.Length,
-                        layout.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
-                        out var extensionValue))
-                {
+                    return DefineSlot(instruction.Dest, variadicValue);
+
+                case GameEventScriptBytecodeOpCode.TypeConstructor:
+                    return DefineSlot(
+                        instruction.Dest,
+                        EvaluateTypeConstructor(layout.Name, AsArray(layout.Names), operands, 0, operandCount));
+
+                case GameEventScriptBytecodeOpCode.BuildList:
+                    return DefineSlot(instruction.Dest, BuildListValue(operands, 0, operandCount));
+
+                case GameEventScriptBytecodeOpCode.BuildSequence:
+                    return DefineSlot(instruction.Dest, BuildSequenceValue(operands, 0, operandCount));
+
+                case GameEventScriptBytecodeOpCode.BuildSet:
+                    return DefineSlot(instruction.Dest, BuildSetValue(operands, 0, operandCount));
+
+                case GameEventScriptBytecodeOpCode.BuildDictionary:
+                    return DefineSlot(instruction.Dest, BuildDictionaryValue(operands, 0, operandCount, AsArray(layout.Names)));
+
+                case GameEventScriptBytecodeOpCode.BuildMessage:
+                    return DefineSlot(
+                        instruction.Dest,
+                        BuildMessageValue(
+                            operands,
+                            0,
+                            operandCount,
+                            AsArray(layout.Names),
+                            layout.Name,
+                            layout.ArgumentName));
+
+                case GameEventScriptBytecodeOpCode.BindHandler:
+                    if (operandCount == 0)
+                    {
+                        return DefineSlot(instruction.Dest, BytecodeVmValue.Nothing);
+                    }
+
+                    return DefineSlot(
+                        instruction.Dest,
+                        BindHandlerValue(operands[0], operands, 1, operandCount - 1, AsArray(layout.Names)));
+
+                case GameEventScriptBytecodeOpCode.CallExtension:
+                    if (!TryCallExtension(
+                            layout.Name,
+                            layout.ArgumentName,
+                            AsArray(layout.Names),
+                            layout.ExternalReferenceIndex,
+                            operands,
+                            0,
+                            operandCount,
+                            layout.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
+                            out var extensionValue))
+                    {
+                        return false;
+                    }
+
+                    return DefineSlot(instruction.Dest, extensionValue);
+
+                default:
                     return false;
-                }
-
-                return DefineSlot(instruction.Dest, extensionValue);
-
-            default:
-                return false;
+            }
+        }
+        finally
+        {
+            if (operandCount > 0)
+            {
+                Array.Clear(operands, 0, operandCount);
+                ArrayPool<BytecodeVmValue>.Shared.Return(operands);
+            }
         }
     }
 
@@ -1238,6 +1260,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return operands;
     }
+
+    private void CopyLinearOperands(IReadOnlyList<int> slots, BytecodeVmValue[] operands)
+    {
+        for (var index = 0; index < slots.Count; index++)
+        {
+            operands[index] = ResolveSlot(slots[index]);
+        }
+    }
+
+    private static string[] AsArray(IReadOnlyList<string> values)
+        => values as string[] ?? values.ToArray();
 
     private bool TryPublishLinearLayout(int layoutIndex)
     {

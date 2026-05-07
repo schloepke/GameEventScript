@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
@@ -760,7 +761,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1;
-                    fiber.Push(new ExpressionFrame(statement.ExpressionProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, statement.ExpressionProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -805,7 +806,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                         _publishPairs = new KeyValuePair<string, GameEventScriptValue>[layout.ArgumentNames.Length];
                         _stage = 1;
-                        fiber.Push(new ExpressionFrame(layout.ArgumentPrograms[0], 0));
+                        fiber.Push(ExpressionFrame.Create(fiber._session, layout.ArgumentPrograms[0], 0));
                         return FrameSignal.Running;
                     }
 
@@ -815,7 +816,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1000;
-                    fiber.Push(new ExpressionFrame(statement.ExpressionProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, statement.ExpressionProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -857,7 +858,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (argumentIndex < publishLayout.ArgumentNames.Length)
                 {
                     _stage = argumentIndex + 1;
-                    fiber.Push(new ExpressionFrame(publishLayout.ArgumentPrograms[argumentIndex], 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, publishLayout.ArgumentPrograms[argumentIndex], 0));
                     return FrameSignal.Running;
                 }
 
@@ -877,7 +878,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 _publishTags = new GesBytecodeVmExecutionSession.MessageTagBuilder();
                 _stage = 2000;
-                fiber.Push(new ExpressionFrame(statement.TagPrograms[0], 0));
+                fiber.Push(ExpressionFrame.Create(fiber._session, statement.TagPrograms[0], 0));
                 return FrameSignal.Running;
             }
 
@@ -893,7 +894,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (tagIndex < statement.TagPrograms.Length)
                 {
                     _stage = 2000 + tagIndex;
-                    fiber.Push(new ExpressionFrame(statement.TagPrograms[tagIndex], 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, statement.TagPrograms[tagIndex], 0));
                     return FrameSignal.Running;
                 }
 
@@ -929,7 +930,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1;
-                    fiber.Push(new ExpressionFrame(statement.ExpressionProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, statement.ExpressionProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -980,7 +981,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1;
-                    fiber.Push(new ExpressionFrame(source.RangeFromProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, source.RangeFromProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -993,7 +994,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 2;
-                    fiber.Push(new ExpressionFrame(source!.RangeToProgram!, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, source!.RangeToProgram!, 0));
                     return FrameSignal.Running;
                 }
 
@@ -1008,7 +1009,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     if (source!.RangeStepProgram is not null)
                     {
                         _stage = 3;
-                        fiber.Push(new ExpressionFrame(source.RangeStepProgram, 0));
+                        fiber.Push(ExpressionFrame.Create(fiber._session, source.RangeStepProgram, 0));
                         return FrameSignal.Running;
                     }
 
@@ -1121,7 +1122,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1;
-                    fiber.Push(new ExpressionFrame(source.CollectionProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, source.CollectionProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -1199,7 +1200,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1;
-                    fiber.Push(new ExpressionFrame(statement.ExpressionProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, statement.ExpressionProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -1229,7 +1230,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     _stage = 1;
-                    fiber.Push(new ExpressionFrame(statement.ExpressionProgram, 0));
+                    fiber.Push(ExpressionFrame.Create(fiber._session, statement.ExpressionProgram, 0));
                     return FrameSignal.Running;
                 }
 
@@ -1344,6 +1345,122 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
         }
 
+        private sealed class LinearHelperExpressionFrame : Frame
+        {
+            private readonly int _entryAddress;
+            private readonly int _temporaryBaseSlot;
+            private LinearArgumentSource? _arguments;
+            private List<LinearCallFrame>? _callFrames;
+            private BytecodeVmValue[]? _previousValues;
+            private bool[]? _previousAssignedSlots;
+            private bool _previousSuppressLocalChangeTracking;
+            private int _temporarySlotCount;
+            private int _pc;
+            private int _endAddress;
+            private bool _initialized;
+
+            public LinearHelperExpressionFrame(int entryAddress, int temporaryBaseSlot)
+            {
+                _entryAddress = entryAddress;
+                _temporaryBaseSlot = temporaryBaseSlot;
+                _pc = entryAddress;
+            }
+
+            public override FrameSignal Run(Fiber fiber)
+            {
+                var session = fiber._session;
+                var code = session._compiledScript.LinearExecutable.Code;
+                if (!_initialized)
+                {
+                    _initialized = true;
+                    _endAddress = code.Count;
+                    if ((uint)_entryAddress >= (uint)code.Count ||
+                        _temporaryBaseSlot < 0 ||
+                        _temporaryBaseSlot >= session._locals.Length)
+                    {
+                        fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                        return FrameSignal.Completed;
+                    }
+
+                    _temporarySlotCount = session._locals.Length - _temporaryBaseSlot;
+                    _previousValues = ArrayPool<BytecodeVmValue>.Shared.Rent(_temporarySlotCount);
+                    _previousAssignedSlots = ArrayPool<bool>.Shared.Rent(_temporarySlotCount);
+                    for (var index = 0; index < _temporarySlotCount; index++)
+                    {
+                        var slot = _temporaryBaseSlot + index;
+                        _previousValues[index] = session._locals[slot];
+                        _previousAssignedSlots[index] = session._assignedSlots[slot];
+                    }
+
+                    _previousSuppressLocalChangeTracking = session._suppressLocalChangeTracking;
+                    session._suppressLocalChangeTracking = true;
+                }
+
+                while (_pc < _endAddress)
+                {
+                    if (!fiber.TryConsumeInstruction("Linear expression helper execution budget exhausted."))
+                    {
+                        return FrameSignal.Paused;
+                    }
+
+                    var instruction = code[_pc];
+                    if (!session.TryExecuteLinearInstruction(
+                            instruction,
+                            ref _pc,
+                            ref _endAddress,
+                            ref _arguments,
+                            ref _callFrames,
+                            out var returned,
+                            out var returnValue))
+                    {
+                        fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                        return FrameSignal.Completed;
+                    }
+
+                    if (returned)
+                    {
+                        fiber.Complete(returnValue);
+                        return FrameSignal.Completed;
+                    }
+
+                    if (session._halted)
+                    {
+                        fiber.Halt();
+                        return FrameSignal.Paused;
+                    }
+                }
+
+                fiber.Complete(BytecodeVmValue.Nothing);
+                return FrameSignal.Completed;
+            }
+
+            public override void Exit(Fiber fiber)
+            {
+                var session = fiber._session;
+                session.UnwindLinearCallFrames(_callFrames);
+                if (!_initialized)
+                {
+                    return;
+                }
+
+                session._suppressLocalChangeTracking = _previousSuppressLocalChangeTracking;
+                if (_previousValues is not null && _previousAssignedSlots is not null)
+                {
+                    for (var index = 0; index < _temporarySlotCount; index++)
+                    {
+                        var slot = _temporaryBaseSlot + index;
+                        session._locals[slot] = _previousValues[index];
+                        session._assignedSlots[slot] = _previousAssignedSlots[index];
+                    }
+
+                    Array.Clear(_previousValues, 0, _temporarySlotCount);
+                    ArrayPool<BytecodeVmValue>.Shared.Return(_previousValues);
+                    Array.Clear(_previousAssignedSlots, 0, _temporarySlotCount);
+                    ArrayPool<bool>.Shared.Return(_previousAssignedSlots);
+                }
+            }
+        }
+
         private sealed class ExpressionFrame : Frame
         {
             private readonly GameEventScriptBytecodeExpressionProgram _program;
@@ -1352,7 +1469,22 @@ internal sealed partial class GesBytecodeVmExecutionSession
             private int _top;
             private bool _initialized;
 
-            public ExpressionFrame(GameEventScriptBytecodeExpressionProgram program, int stackBase)
+            public static Frame Create(
+                GesBytecodeVmExecutionSession session,
+                GameEventScriptBytecodeExpressionProgram program,
+                int stackBase)
+            {
+                if (stackBase == 0 &&
+                    program.LinearTemporaryBaseSlot >= 0 &&
+                    session.CanExecuteLinearEntryCached(program.LinearEntryAddress))
+                {
+                    return new LinearHelperExpressionFrame(program.LinearEntryAddress, program.LinearTemporaryBaseSlot);
+                }
+
+                return new ExpressionFrame(program, stackBase);
+            }
+
+            private ExpressionFrame(GameEventScriptBytecodeExpressionProgram program, int stackBase)
             {
                 _program = program;
                 _stackBase = stackBase;

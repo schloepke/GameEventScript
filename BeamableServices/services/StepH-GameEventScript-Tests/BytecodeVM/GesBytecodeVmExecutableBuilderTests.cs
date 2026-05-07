@@ -51,6 +51,33 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeLowersImplicationWithBranchingTriStateShape()
+    {
+        const string script =
+            """
+            module ShortCircuit
+
+            on Start(missing) {
+              let skipped be false -> missing
+              let resolved be missing -> true
+              emit Done(skipped: skipped, resolved: resolved)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.JumpIfFalse));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies &&
+            instruction.Dest >= 0 &&
+            instruction.A == instruction.B));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies &&
+            instruction.Dest >= 0 &&
+            instruction.A != instruction.B));
+    }
+
+    [TestMethod]
     public void CompiledArtifactDoesNotExposeBytecodeVmState()
     {
         var compiledType = typeof(GameEventScriptCompiled);

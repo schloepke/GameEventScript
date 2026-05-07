@@ -327,7 +327,15 @@ internal sealed class GesLinearBytecodeBuilder
     private int EmitShortCircuitExpression(GameEventScriptBytecodeStackInstruction instruction, ExpressionState state, int left)
     {
         var result = state.Allocate();
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: result, A: left));
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies)
+        {
+            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ShortCircuitImplies, Dest: result, A: left, B: left));
+        }
+        else
+        {
+            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: result, A: left));
+        }
+
         var branch = instruction.OpCode switch
         {
             GameEventScriptBytecodeOpCode.ShortCircuitOr => GameEventScriptBytecodeOpCode.JumpIfTrue,
@@ -338,7 +346,13 @@ internal sealed class GesLinearBytecodeBuilder
         if (instruction.ExpressionProgram is not null)
         {
             var right = EmitExpression(instruction.ExpressionProgram, state);
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: result, A: right));
+            var opCode = instruction.OpCode switch
+            {
+                GameEventScriptBytecodeOpCode.ShortCircuitOr => GameEventScriptBytecodeOpCode.Or,
+                GameEventScriptBytecodeOpCode.ShortCircuitAnd => GameEventScriptBytecodeOpCode.And,
+                _ => GameEventScriptBytecodeOpCode.ShortCircuitImplies
+            };
+            Emit(new GameEventScriptBytecodeInstruction(opCode, Dest: result, A: left, B: right));
         }
 
         PatchTarget(jump, _code.Count);

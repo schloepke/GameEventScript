@@ -15,10 +15,11 @@ of script control flow.
 
 Implementation note: the current public artifact already exposes the global
 linear `Code` segment, `MaxFrameSlots`, and entry addresses for handlers,
-callables, and computed field helpers. Some high-level operation metadata is
-still carried by internal compatibility structures while the executor migration
-continues; those structures are not part of the public bytecode boundary or the
-diagnostic dump.
+callables, and computed field helpers. The synchronous VM expression path
+executes cached linear slot programs with a program counter. Some top-level
+statement and high-level operation metadata is still carried by internal
+compatibility structures while the executor migration continues; those
+structures are not part of the public bytecode boundary or the diagnostic dump.
 
 ## Goals
 

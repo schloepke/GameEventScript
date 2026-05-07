@@ -871,7 +871,9 @@ A grouped view may still be offered, but it must keep global addresses visible.
 
 1. Continue expanding side-table coverage until every high-level operation has
    all helper entry addresses in the global code segment.
-2. Update the BytecodeVM executable builder to consume linear public bytecode.
+2. Done: the BytecodeVM executable builder consumes and validates the public
+   linear `Code` segment plus side tables into an internal linear executable
+   artifact.
 3. Remove internal nested `StatementProgram`, nested `ExpressionProgram`, and
    nested branch/body program references once the side tables cover every
    high-level operation.
@@ -879,9 +881,10 @@ A grouped view may still be offered, but it must keep global addresses visible.
    should move.
 
 The current compiler emits the public linear model through an adapter over the
-internal compatibility model. That keeps public API and dumps aligned with the
-target architecture while preserving runtime behavior during the executor
-replacement.
+internal compatibility model, and the VM load path now builds a validated linear
+runtime artifact from that public model. Top-level execution still uses the
+compatibility statement executor while the linear executor replacement is being
+implemented.
 
 ## Compatibility Predicates
 

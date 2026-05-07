@@ -175,6 +175,65 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmExecutableBuilderBuildsLinearExecutableFromPublicBytecode()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            function boosted(_ value) means value + 2
+
+            on Start(value) {
+              let total be boosted(value)
+              emit Done(value: total) with :local
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var executable = GesBytecodeVmExecutableBuilder.Build(compiled);
+        var handler = compiled.Handlers["Start"][0];
+        var linearHandler = executable.LinearExecutable.Handlers.Single(entry => entry.SignatureId == handler.SignatureId);
+        var callable = compiled.Callables["boosted"];
+        var linearCallable = executable.LinearExecutable.Callables.Single(entry => entry.SignatureId == callable.SignatureId);
+
+        Assert.HasCount(compiled.Code.Count, executable.LinearExecutable.Code);
+        Assert.AreEqual(compiled.MaxFrameSlots, executable.LinearExecutable.MaxFrameSlots);
+        Assert.AreEqual(handler.EntryAddress, linearHandler.EntryAddress);
+        Assert.AreEqual(handler.LocalSlotCount, linearHandler.LocalSlotCount);
+        Assert.AreEqual(callable.EntryAddress, linearCallable.EntryAddress);
+        Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
+        Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.PublishValue &&
+            instruction.Data >= 0 &&
+            instruction.Data < compiled.PublishLayouts.Count));
+    }
+
+    [TestMethod]
+    public void BytecodeVmExecutableBuilderRejectsInvalidLinearSideTableIndex()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start {
+              emit Done(value: 1)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var code = compiled.Code.ToArray();
+        var publishInstructionIndex = Array.FindIndex(
+            code,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PublishValue);
+        Assert.IsGreaterThanOrEqualTo(0, publishInstructionIndex);
+        code[publishInstructionIndex] = code[publishInstructionIndex] with { Data = compiled.PublishLayouts.Count };
+        var invalid = RebuildCompiledArtifactFromPublicData(compiled, code);
+
+        var exception = Assert.ThrowsExactly<InvalidOperationException>(() => GesBytecodeVmExecutableBuilder.Build(invalid));
+        StringAssert.Contains(exception.Message, "publish layout");
+    }
+
+    [TestMethod]
     public void CompiledArtifactDoesNotExposeBytecodeVmState()
     {
         var compiledType = typeof(GameEventScriptCompiled);
@@ -497,7 +556,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                type.IsSubclassOf(typeof(GameEventScriptValue));
     }
 
-    private static GameEventScriptCompiled RebuildCompiledArtifactFromPublicData(GameEventScriptCompiled original)
+    private static GameEventScriptCompiled RebuildCompiledArtifactFromPublicData(
+        GameEventScriptCompiled original,
+        IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null)
         => new(
             new GameEventScriptCompileOptions
             {
@@ -519,7 +580,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.Handlers.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<GameEventScriptBytecodeHandler>)pair.Value.ToArray(), StringComparer.Ordinal),
             original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             original.MaxStackDepth,
-            original.Code.ToArray(),
+            code?.ToArray() ?? original.Code.ToArray(),
             original.MaxFrameSlots,
             original.OperationLayouts.ToArray(),
             original.PublishLayouts.ToArray(),

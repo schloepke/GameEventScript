@@ -10,6 +10,7 @@ internal static class GesBytecodeVmExecutableBuilder
     public static GesBytecodeVmExecutable Build(GameEventScriptCompiled compiled)
     {
         _ = compiled ?? throw new ArgumentNullException(nameof(compiled));
+        var linearExecutable = GesBytecodeVmLinearExecutable.Build(compiled);
         var handlers = compiled.Handlers.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<GesBytecodeVmCompiledHandler>)pair.Value
@@ -20,6 +21,7 @@ internal static class GesBytecodeVmExecutableBuilder
         return new GesBytecodeVmExecutable(
             compiled.Options,
             compiled,
+            linearExecutable,
             handlers,
             compiled.TypeDefinitions);
     }

@@ -19,6 +19,9 @@ internal sealed class GesBytecodeVmCompiledHandler
         ExcludedTags = handler.ExcludedTags.ToArray();
         SignatureId = handler.SignatureId;
         DeclarationOrder = handler.DeclarationOrder;
+        EntryAddress = handler.EntryAddress;
+        LocalSlotCount = handler.LocalSlotCount;
+        Slots = handler.Slots.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         DiagnosticsEnabled = diagnosticsEnabled;
         ExecutionPlan = handler.ExecutionPlan;
         Definition = handler.Definition;
@@ -41,6 +44,12 @@ internal sealed class GesBytecodeVmCompiledHandler
     public string SignatureId { get; }
 
     public int DeclarationOrder { get; }
+
+    public int EntryAddress { get; }
+
+    public int LocalSlotCount { get; }
+
+    public IReadOnlyDictionary<string, int> Slots { get; }
 
     public GameEventScriptMessageSignature Definition { get; }
 

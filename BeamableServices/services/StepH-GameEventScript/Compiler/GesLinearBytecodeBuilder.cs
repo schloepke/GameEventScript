@@ -19,6 +19,8 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<GameEventScriptBytecodePipelineLayout> _pipelineLayouts = [];
     private readonly List<GameEventScriptBytecodeGeneratedCollectionLayout> _generatedCollectionLayouts = [];
     private readonly List<GameEventScriptBytecodeGuardedChoiceLayout> _guardedChoiceLayouts = [];
+    private readonly List<Action> _deferredHelperEmitters = [];
+    private int _currentFrameSlotCount;
     private int _maxFrameSlots = 1;
 
     public GesLinearBytecodeBuilder(
@@ -56,10 +58,13 @@ internal sealed class GesLinearBytecodeBuilder
         foreach (var handler in handlers)
         {
             handler.EntryAddress = _code.Count;
+            _currentFrameSlotCount = handler.LocalSlotCount;
             _maxFrameSlots = Math.Max(_maxFrameSlots, handler.LocalSlotCount);
             EmitParameterBindings(handler.Parameters, handler.ParameterTypes, handler.ExecutionPlan);
             EmitStatementProgram(handler.ExecutionPlan.StatementProgram, handler.ExecutionPlan);
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Return));
+            FlushDeferredHelpers();
+            _maxFrameSlots = Math.Max(_maxFrameSlots, _currentFrameSlotCount);
         }
     }
 
@@ -69,6 +74,7 @@ internal sealed class GesLinearBytecodeBuilder
         {
             callable.EntryAddress = _code.Count;
             callable.LocalSlotCount = Math.Max(callable.Parameters.Count + callable.ExpressionProgram.MaxStackDepth + 1, callable.Parameters.Count + 1);
+            _currentFrameSlotCount = callable.LocalSlotCount;
             _maxFrameSlots = Math.Max(_maxFrameSlots, callable.LocalSlotCount);
             for (var index = 0; index < callable.Parameters.Count; index++)
             {
@@ -85,10 +91,11 @@ internal sealed class GesLinearBytecodeBuilder
 
             var state = new ExpressionState(callable.Parameters.Count);
             var result = EmitExpression(callable.ExpressionProgram, state);
-            callable.LocalSlotCount = Math.Max(callable.LocalSlotCount, state.NextSlot);
-            _maxFrameSlots = Math.Max(_maxFrameSlots, callable.LocalSlotCount);
             callable.ReturnSlot = result;
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Return, A: result));
+            FlushDeferredHelpers();
+            callable.LocalSlotCount = Math.Max(callable.LocalSlotCount, _currentFrameSlotCount);
+            _maxFrameSlots = Math.Max(_maxFrameSlots, callable.LocalSlotCount);
         }
     }
 
@@ -114,11 +121,14 @@ internal sealed class GesLinearBytecodeBuilder
     }
 
     private int EmitExpressionEntry(GameEventScriptBytecodeExpressionProgram program)
+        => EmitExpressionEntry(program, new ExpressionState(0));
+
+    private int EmitExpressionEntry(GameEventScriptBytecodeExpressionProgram program, ExpressionState state)
     {
         var entry = _code.Count;
-        var state = new ExpressionState(0);
         var result = EmitExpression(program, state);
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
+        _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
         Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Return, A: result));
         return entry;
     }
@@ -332,6 +342,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
+        _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
         return stack.Count > 0 ? stack.Peek() : -1;
     }
 
@@ -401,7 +412,7 @@ internal sealed class GesLinearBytecodeBuilder
             case GameEventScriptBytecodeOpCode.GuardedChoice:
                 if (instruction.GuardedChoiceProgram is not null)
                 {
-                    var layoutIndex = AddGuardedChoiceLayout(instruction.GuardedChoiceProgram);
+                    var layoutIndex = AddGuardedChoiceLayout(instruction.GuardedChoiceProgram, state);
                     stack.Push(EmitValueInstruction(state, instruction.OpCode, data: layoutIndex));
                 }
                 break;
@@ -589,13 +600,39 @@ internal sealed class GesLinearBytecodeBuilder
         return index;
     }
 
-    private int AddGuardedChoiceLayout(GameEventScriptBytecodeGuardedChoiceProgram program)
+    private int AddGuardedChoiceLayout(GameEventScriptBytecodeGuardedChoiceProgram program, ExpressionState state)
     {
         var index = _guardedChoiceLayouts.Count;
         _guardedChoiceLayouts.Add(new GameEventScriptBytecodeGuardedChoiceLayout(
             Enumerable.Repeat(-1, program.ValuePrograms.Length).ToArray(),
             Enumerable.Repeat(-1, program.ConditionPrograms.Length).ToArray()));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var valueEntryAddresses = new int[program.ValuePrograms.Length];
+            var conditionEntryAddresses = new int[program.ConditionPrograms.Length];
+            for (var branchIndex = 0; branchIndex < conditionEntryAddresses.Length; branchIndex++)
+            {
+                conditionEntryAddresses[branchIndex] = EmitExpressionEntry(program.ConditionPrograms[branchIndex], state);
+                valueEntryAddresses[branchIndex] = EmitExpressionEntry(program.ValuePrograms[branchIndex], state);
+            }
+
+            var otherwiseEntryAddress = EmitExpressionEntry(program.OtherwiseProgram, state);
+            _guardedChoiceLayouts[index] = new GameEventScriptBytecodeGuardedChoiceLayout(
+                valueEntryAddresses,
+                conditionEntryAddresses,
+                otherwiseEntryAddress);
+        });
         return index;
+    }
+
+    private void FlushDeferredHelpers()
+    {
+        for (var index = 0; index < _deferredHelperEmitters.Count; index++)
+        {
+            _deferredHelperEmitters[index]();
+        }
+
+        _deferredHelperEmitters.Clear();
     }
 
     private int EmitValueInstruction(

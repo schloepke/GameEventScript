@@ -8,8 +8,8 @@ namespace StepH.GameEventScript.Compiler;
 
 internal enum GameEventScriptCallableKind
 {
-    Predicate,
-    Function
+    PredicateCall,
+    FunctionCall
 }
 
 internal sealed class GesModule

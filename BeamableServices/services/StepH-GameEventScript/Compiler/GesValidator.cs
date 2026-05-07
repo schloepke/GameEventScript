@@ -558,7 +558,7 @@ internal static class GesValidator
             return StaticExpressionInfo.Unknown;
         }
 
-        if (callable.Kind == GameEventScriptCallableKind.Predicate)
+        if (callable.Kind == GameEventScriptCallableKind.PredicateCall)
         {
             return StaticExpressionInfo.Boolean;
         }
@@ -780,7 +780,7 @@ internal static class GesValidator
                         $"Predicate test target '{predicateCall.PredicateName}' must use identifier casing (start lowercase)",
                         errors);
                     if (!callables.TryGetValue(predicateCall.PredicateName, out var callableDefinition) ||
-                        callableDefinition.Kind != GameEventScriptCallableKind.Predicate ||
+                        callableDefinition.Kind != GameEventScriptCallableKind.PredicateCall ||
                         callableDefinition.Parameters.Count != 1)
                     {
                         errors.Add(
@@ -1187,8 +1187,8 @@ internal static class GesValidator
                 parsedScriptContext,
                 $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
                 name,
-                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
-                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
+                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
+                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
         }
     }
 
@@ -1520,8 +1520,8 @@ internal static class GesValidator
                 parsedScriptContext,
                 $"{kind} '{name}' expects {expectedCount} argument(s) but received {actualCount}",
                 name,
-                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
-                kind == GameEventScriptCallableKind.Predicate ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
+                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
+                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
         }
     }
 

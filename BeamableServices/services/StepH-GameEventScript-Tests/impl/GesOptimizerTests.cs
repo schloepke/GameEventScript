@@ -20,7 +20,7 @@ public class GesOptimizerTests
             .BuildModule();
 
         var predicate = module.Callables["high"];
-        Assert.AreEqual(GameEventScriptCallableKind.Predicate, predicate.Kind);
+        Assert.AreEqual(GameEventScriptCallableKind.PredicateCall, predicate.Kind);
         Assert.IsInstanceOfType<BinaryExpressionNode>(predicate.Expression);
         Assert.IsNotNull(predicate.Expression.SourceRange);
     }

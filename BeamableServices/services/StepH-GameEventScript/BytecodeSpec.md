@@ -17,12 +17,13 @@ Implementation note: the current public artifact already exposes the global
 linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
 callables, and computed field helpers, plus public side tables for operation,
 publish, loop, selector/pipeline, generated-collection, seeded-random, and
-guarded-choice metadata. The synchronous VM executes supported handler ranges
-and simple callable/predicate frames directly from that linear code. Selector,
-pipeline, generated-collection, guarded-choice, and some helper expressions
-still use internal compatibility structures while the executor migration
-continues, so helper entry address fields may be `-1` until those helpers are
-emitted into the global code segment.
+guarded-choice metadata. The synchronous VM executes supported handler ranges,
+simple callable/predicate frames, and guarded-choice helper entries directly
+from that linear code with a VM-owned call-frame stack. Selector, pipeline,
+generated-collection, and some helper expressions still use internal
+compatibility structures while the executor migration continues, so helper entry
+address fields may be `-1` until those helpers are emitted into the global code
+segment.
 
 ## Goals
 
@@ -482,8 +483,11 @@ Example:
 @0110 ...
 ```
 
-Guarded expressions lower to a sequence of condition jumps and value writes to a
-shared destination slot.
+Guarded expressions may lower either to explicit condition jumps and value
+writes to a shared destination slot, or to a high-level `GuardedChoice`
+instruction whose side-table layout stores condition, value, and otherwise
+helper entry addresses. In the high-level form, condition helpers are evaluated
+in order and only the selected value helper is evaluated.
 
 ### Calls and Returns
 
@@ -875,21 +879,22 @@ A grouped view may still be offered, but it must keep global addresses visible.
 2. Done: the BytecodeVM executable builder consumes and validates the public
    linear `Code` segment plus side tables into an internal linear executable
    artifact.
-3. In progress: the VM can execute supported handler instruction ranges and
-   simple callable/predicate frames directly from the linear `Code` segment
-   using frame slots and `pc`. Handlers that require pipelines, generated
-   collections, guarded choices, diagnostics, recursive/script-heavy callable
-   graphs, or helper expressions still fall back to the compatibility executor
-   until those features have linear frame support.
+3. In progress: the VM can execute supported handler instruction ranges, simple
+   callable/predicate frames, and guarded choices directly from the linear
+   `Code` segment using frame slots, `pc`, and a VM-owned call-frame stack.
+   Handlers that require pipelines, generated collections, diagnostics,
+   helper-heavy callable graphs, or remaining helper expressions still fall back
+   to the compatibility executor until those features have linear frame support.
 4. Keep conformance behavior unchanged; only bytecode shape and VM internals
    should move.
 
 The current compiler emits the public linear model through an adapter over the
 internal compatibility model, and the VM load path now builds a validated linear
-runtime artifact from that public model. Top-level execution and simple
-callable/predicate frames have a linear fast path; the compatibility statement
-executor remains for helper-heavy language features while the fully portable
-call-stack scheduler is completed.
+runtime artifact from that public model. Top-level execution, simple
+callable/predicate frames, and guarded choices have a linear fast path backed by
+VM-owned call frames; the compatibility statement executor remains for
+helper-heavy language features while the remaining helper entry points are
+lowered.
 
 ## Compatibility Predicates
 

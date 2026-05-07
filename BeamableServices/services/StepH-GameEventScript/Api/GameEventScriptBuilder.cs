@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
+using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
+using static StepH.GameEventScript.Api.GameEventScriptSymbolKind;
+using static StepH.GameEventScript.Compiler.GameEventScriptCallableKind;
 
 namespace StepH.GameEventScript.Api;
 
@@ -38,7 +41,7 @@ public sealed class GameEventScriptBuilder
     }
 
     /// <summary>
-    /// Enables or disables diagnostic information generation during the compilation process in order add trace generation into the compiled code.
+    /// Enables or disables diagnostic information generation during the compilation process in order to add trace generation into the compiled code.
     /// </summary>
     /// <param name="enabled">A boolean value indicating whether diagnostic information should be enabled. Defaults to true.</param>
     /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified diagnostic setting applied.</returns>
@@ -124,9 +127,7 @@ public sealed class GameEventScriptBuilder
     internal GesModule BuildModule(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
-        var modules = _sources
-            .Select(source => GesParser.Parse(source.Text, source.SourceName, compileOptions))
-            .ToArray();
+        var modules = _sources.Select(source => GesParser.Parse(source.Text, source.SourceName, compileOptions)).ToArray();
         var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
         var externalTypeDefinitions = _externalTypeRegistry.Types;
@@ -134,8 +135,7 @@ public sealed class GameEventScriptBuilder
         var predicateDefinitions = BuildPredicateDefinitionMap(modules, errors);
         var functionDefinitions = BuildFunctionDefinitionMap(modules, errors);
         var callables = BuildCallableDefinitionMap(predicateDefinitions, functionDefinitions);
-        var handlers = BuildHandlerMap(modules)
-            .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EventHandlerNode>)pair.Value, StringComparer.Ordinal);
+        var handlers = BuildHandlerMap(modules).ToDictionary(pair => pair.Key, IReadOnlyList<EventHandlerNode> (pair) => pair.Value, StringComparer.Ordinal);
 
         foreach (var conflictName in predicateDefinitions.Keys.Where(functionDefinitions.ContainsKey))
         {
@@ -143,14 +143,7 @@ public sealed class GameEventScriptBuilder
                                  modules.FirstOrDefault(module => module.PredicateDefinitions.Any(predicate => string.Equals(predicate.Name, conflictName, StringComparison.Ordinal)));
             var conflictNode = conflictModule?.FunctionDefinitions.FirstOrDefault(function => string.Equals(function.Name, conflictName, StringComparison.Ordinal)) ??
                                (ScriptNode?)conflictModule?.PredicateDefinitions.FirstOrDefault(predicate => string.Equals(predicate.Name, conflictName, StringComparison.Ordinal));
-
-            errors.Add(
-                conflictModule,
-                $"Name '{conflictName}' is declared as both a predicate and a function",
-                conflictName,
-                GameEventScriptSymbolKind.GlobalDefinition,
-                GameEventScriptCompileErrorKind.PredicateFunctionConflict,
-                conflictNode);
+            errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, PredicateFunctionConflict, conflictNode);
         }
 
         foreach (var module in modules)
@@ -187,35 +180,21 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(
-        IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes,
-        IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> externalTypes,
-        IReadOnlyList<ParsedScript> modules,
-        GesValidationErrors errors)
+    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes, IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> externalTypes,
+        IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
     {
-        if (externalTypes.Count == 0)
-        {
-            return scriptTypes;
-        }
-
+        if (externalTypes.Count == 0) return scriptTypes;
         var map = new Dictionary<string, TypeDefinitionNode>(scriptTypes, StringComparer.Ordinal);
         foreach (var externalType in externalTypes.Values)
         {
             if (map.ContainsKey(externalType.Name))
             {
                 var module = modules.FirstOrDefault(parsedModule => parsedModule.TypeDefinitions.Any(type => string.Equals(type.Name, externalType.Name, StringComparison.Ordinal)));
-                errors.Add(
-                    module,
-                    $"Type '{externalType.Name}' is defined both as a script record and an external type",
-                    externalType.Name,
-                    GameEventScriptSymbolKind.Type,
-                    GameEventScriptCompileErrorKind.DuplicateType);
+                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GameEventScriptSymbolKind.Type, DuplicateType);
                 continue;
             }
 
-            var fields = externalType.Fields
-                .Select(field => new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null))
-                .ToArray();
+            var fields = externalType.Fields.Select(field => new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null)).ToArray();
             map[externalType.Name] = new TypeDefinitionNode(externalType.Name, fields);
         }
 
@@ -231,13 +210,7 @@ public sealed class GameEventScriptBuilder
             {
                 if (!map.TryAdd(typeDefinition.Name, typeDefinition))
                 {
-                    errors.Add(
-                        module,
-                        $"Type '{typeDefinition.Name}' is defined more than once",
-                        typeDefinition.Name,
-                        GameEventScriptSymbolKind.Type,
-                        GameEventScriptCompileErrorKind.DuplicateType,
-                        typeDefinition);
+                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GameEventScriptSymbolKind.Type, DuplicateType, typeDefinition);
                 }
             }
         }
@@ -252,16 +225,7 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var predicateDefinition in module.PredicateDefinitions)
             {
-                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition))
-                {
-                    errors.Add(
-                        module,
-                        $"Predicate '{predicateDefinition.Name}' is defined more than once",
-                        predicateDefinition.Name,
-                        GameEventScriptSymbolKind.Predicate,
-                        GameEventScriptCompileErrorKind.DuplicatePredicate,
-                        predicateDefinition);
-                }
+                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition)) errors.Add(module, $"Predicate '{predicateDefinition.Name}' is defined more than once", predicateDefinition.Name, Predicate, DuplicatePredicate, predicateDefinition);
             }
         }
 
@@ -275,45 +239,25 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var functionDefinition in module.FunctionDefinitions)
             {
-                if (!map.TryAdd(functionDefinition.Name, functionDefinition))
-                {
-                    errors.Add(
-                        module,
-                        $"Function '{functionDefinition.Name}' is defined more than once",
-                        functionDefinition.Name,
-                        GameEventScriptSymbolKind.Function,
-                        GameEventScriptCompileErrorKind.DuplicateFunction,
-                        functionDefinition);
-                }
+                if (!map.TryAdd(functionDefinition.Name, functionDefinition)) errors.Add(module, $"Function '{functionDefinition.Name}' is defined more than once", functionDefinition.Name, Function, DuplicateFunction, functionDefinition);
             }
         }
 
         return map;
     }
 
-    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, PredicateDefinitionNode> predicateDefinitions,
-        IReadOnlyDictionary<string, FunctionDefinitionNode> functionDefinitions)
+    private static Dictionary<string, GesCallableDefinition> BuildCallableDefinitionMap(IReadOnlyDictionary<string, PredicateDefinitionNode> predicateDefinitions, IReadOnlyDictionary<string, FunctionDefinitionNode> functionDefinitions)
     {
         var map = new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
 
         foreach (var pair in predicateDefinitions)
         {
-            map[pair.Key] = new GesCallableDefinition(
-                pair.Key,
-                pair.Value.ParameterList.ToArray(),
-                pair.Value.Expression,
-                GameEventScriptCallableKind.Predicate,
-                pair.Value.SourceRange);
+            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList.ToArray(), pair.Value.Expression, PredicateCall, pair.Value.SourceRange);
         }
 
         foreach (var pair in functionDefinitions)
         {
-            map[pair.Key] = new GesCallableDefinition(
-                pair.Key,
-                pair.Value.ParameterList.ToArray(),
-                pair.Value.Expression,
-                GameEventScriptCallableKind.Function,
-                pair.Value.SourceRange);
+            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList.ToArray(), pair.Value.Expression, FunctionCall, pair.Value.SourceRange);
         }
 
         return map;

@@ -153,9 +153,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             case GameEventScriptBytecodeOpCode.Pipeline:
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
             case GameEventScriptBytecodeOpCode.SeededRandom:
                 return false;
+
+            case GameEventScriptBytecodeOpCode.GuardedChoice:
+                return CanExecuteLinearGuardedChoice(instruction.Data, visitingCallables);
 
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.PredicateTest:
@@ -177,37 +179,62 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         if (!visitingCallables.Add(callable.SignatureId))
         {
-            return false;
+            return true;
         }
 
         try
         {
-            var code = _compiledScript.LinearExecutable.Code;
-            if ((uint)callable.EntryAddress >= (uint)code.Count)
-            {
-                return false;
-            }
-
-            for (var pc = callable.EntryAddress; pc < code.Count; pc++)
-            {
-                var instruction = code[pc];
-                if (!CanExecuteLinearInstruction(instruction, visitingCallables))
-                {
-                    return false;
-                }
-
-                if (instruction.OpCode == GameEventScriptBytecodeOpCode.Return)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return CanExecuteLinearEntry(callable.EntryAddress, visitingCallables);
         }
         finally
         {
             visitingCallables.Remove(callable.SignatureId);
         }
+    }
+
+    private bool CanExecuteLinearGuardedChoice(int layoutIndex, HashSet<string> visitingCallables)
+    {
+        if (!TryGetGuardedChoiceLayout(layoutIndex, out var layout) ||
+            layout.ConditionEntryAddresses.Count != layout.ValueEntryAddresses.Count)
+        {
+            return false;
+        }
+
+        for (var branchIndex = 0; branchIndex < layout.ConditionEntryAddresses.Count; branchIndex++)
+        {
+            if (!CanExecuteLinearEntry(layout.ConditionEntryAddresses[branchIndex], visitingCallables) ||
+                !CanExecuteLinearEntry(layout.ValueEntryAddresses[branchIndex], visitingCallables))
+            {
+                return false;
+            }
+        }
+
+        return CanExecuteLinearEntry(layout.OtherwiseEntryAddress, visitingCallables);
+    }
+
+    private bool CanExecuteLinearEntry(int entryAddress, HashSet<string> visitingCallables)
+    {
+        var code = _compiledScript.LinearExecutable.Code;
+        if ((uint)entryAddress >= (uint)code.Count)
+        {
+            return false;
+        }
+
+        for (var pc = entryAddress; pc < code.Count; pc++)
+        {
+            var instruction = code[pc];
+            if (!CanExecuteLinearInstruction(instruction, visitingCallables))
+            {
+                return false;
+            }
+
+            if (instruction.OpCode == GameEventScriptBytecodeOpCode.Return)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool TryInvokeLinearHandler(GesBytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
@@ -247,20 +274,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         var pc = startAddress;
-        while (pc < endAddress)
+        var callFrames = new List<LinearCallFrame>();
+        try
         {
-            if (!TryConsumeExecutionStep("Linear instruction execution budget exhausted."))
+            while (pc < endAddress)
             {
-                _halted = true;
-                returned = true;
-                return true;
-            }
+                if (!TryConsumeExecutionStep("Linear instruction execution budget exhausted."))
+                {
+                    _halted = true;
+                    returned = true;
+                    return true;
+                }
 
-            var instruction = code[pc];
-            switch (instruction.OpCode)
-            {
-                case GameEventScriptBytecodeOpCode.Nop:
-                    break;
+                var instruction = code[pc];
+                switch (instruction.OpCode)
+                {
+                    case GameEventScriptBytecodeOpCode.Nop:
+                        break;
 
                 case GameEventScriptBytecodeOpCode.EnterScope:
                     EnterScope();
@@ -344,9 +374,37 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.Return:
-                    returned = true;
                     returnValue = ResolveSlot(instruction.A);
-                    return true;
+                    if (callFrames.Count == 0)
+                    {
+                        returned = true;
+                        return true;
+                    }
+
+                    var frame = callFrames[^1];
+                    callFrames.RemoveAt(callFrames.Count - 1);
+                    ExitScope();
+                    _locals = frame.Locals;
+                    _assignedSlots = frame.AssignedSlots;
+                    _changes = frame.Changes;
+                    _scopeMarks = frame.ScopeMarks;
+                    arguments = frame.Arguments;
+                    endAddress = frame.EndAddress;
+                    _runtimeBudget.ExitCall();
+
+                    if (frame.NormalizePredicateResult &&
+                        !NormalizeExtensionPredicateResult(requirePredicateResult: true, ref returnValue))
+                    {
+                        return false;
+                    }
+
+                    if (!DefineSlot(frame.ReturnDestinationSlot, returnValue))
+                    {
+                        return false;
+                    }
+
+                    pc = frame.ReturnAddress;
+                    continue;
 
                 case GameEventScriptBytecodeOpCode.PublishValue:
                     if (!TryPublishLinearLayout(instruction.Data))
@@ -386,18 +444,115 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     pc = instruction.Target2;
                     continue;
 
-                default:
-                    if (!TryExecuteLinearValueInstruction(instruction))
+                case GameEventScriptBytecodeOpCode.Call:
+                case GameEventScriptBytecodeOpCode.PredicateTest:
+                    if (!TryEnterLinearCallFrame(
+                            instruction,
+                            arguments,
+                            endAddress,
+                            pc + 1,
+                            callFrames,
+                            out arguments,
+                            out endAddress,
+                            out pc))
                     {
                         return false;
                     }
-                    break;
+
+                    continue;
+
+                    default:
+                        if (!TryExecuteLinearValueInstruction(instruction))
+                        {
+                            return false;
+                        }
+                        break;
+                }
+
+                pc++;
             }
 
-            pc++;
+            return true;
+        }
+        finally
+        {
+            UnwindLinearCallFrames(callFrames);
+        }
+    }
+
+    private bool TryEnterLinearCallFrame(
+        GameEventScriptBytecodeInstruction instruction,
+        LinearArgumentSource? currentArguments,
+        int currentEndAddress,
+        int returnAddress,
+        List<LinearCallFrame> callFrames,
+        out LinearArgumentSource? nextArguments,
+        out int nextEndAddress,
+        out int nextPc)
+    {
+        nextArguments = currentArguments;
+        nextEndAddress = currentEndAddress;
+        nextPc = returnAddress;
+
+        if (!TryGetOperationLayout(instruction.Data, out var layout) ||
+            string.IsNullOrEmpty(layout.Name) ||
+            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
+        {
+            return false;
         }
 
+        var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest;
+        var callArguments = normalizePredicateResult
+            ? new[] { ResolveSlot(instruction.A) }
+            : CopyLinearOperands(layout.ArgumentSlots);
+
+        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        {
+            var value = BytecodeVmValue.Nothing;
+            if (normalizePredicateResult &&
+                !NormalizeExtensionPredicateResult(requirePredicateResult: true, ref value))
+            {
+                return false;
+            }
+
+            return DefineSlot(instruction.Dest, value);
+        }
+
+        callFrames.Add(new LinearCallFrame(
+            _locals,
+            _assignedSlots,
+            _changes,
+            _scopeMarks,
+            currentArguments,
+            currentEndAddress,
+            returnAddress,
+            instruction.Dest,
+            normalizePredicateResult));
+
+        _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
+        _assignedSlots = new bool[_locals.Length];
+        _changes = [];
+        _scopeMarks = [];
+        nextArguments = LinearArgumentSource.ForValues(callArguments);
+        nextEndAddress = _compiledScript.LinearExecutable.Code.Count;
+        nextPc = callable.EntryAddress;
+        EnterScope();
         return true;
+    }
+
+    private void UnwindLinearCallFrames(List<LinearCallFrame> callFrames)
+    {
+        while (callFrames.Count > 0)
+        {
+            var frame = callFrames[^1];
+            callFrames.RemoveAt(callFrames.Count - 1);
+            ExitScope();
+            _locals = frame.Locals;
+            _assignedSlots = frame.AssignedSlots;
+            _changes = frame.Changes;
+            _scopeMarks = frame.ScopeMarks;
+            _runtimeBudget.ExitCall();
+        }
     }
 
     private bool TryMoveLinearPc(int target, int endAddress, ref int pc)
@@ -475,6 +630,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeOpCode.IndexedAccess:
                 return DefineSlot(instruction.Dest, EvaluateIndexedAccess(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+
+            case GameEventScriptBytecodeOpCode.GuardedChoice:
+                if (!TryEvaluateLinearGuardedChoice(instruction.Data, out var guardedValue))
+                {
+                    return false;
+                }
+
+                return DefineSlot(instruction.Dest, guardedValue);
         }
 
         if (!TryGetOperationLayout(instruction.Data, out var layout))
@@ -519,20 +682,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return DefineSlot(
                     instruction.Dest,
                     BytecodeVmValue.Boolean(IsValueOfType(ResolveSlot(instruction.A), layout.Name)));
-
-            case GameEventScriptBytecodeOpCode.PredicateTest:
-                if (!TryEvaluateLinearPredicateTest(layout, ResolveSlot(instruction.A), out var predicateValue))
-                {
-                    return false;
-                }
-                return DefineSlot(instruction.Dest, predicateValue);
-
-            case GameEventScriptBytecodeOpCode.Call:
-                if (!TryEvaluateLinearCallable(layout, operands, out var callValue))
-                {
-                    return false;
-                }
-                return DefineSlot(instruction.Dest, callValue);
 
             case GameEventScriptBytecodeOpCode.MemberAccess:
                 return DefineSlot(instruction.Dest, EvaluateMemberAccess(ResolveSlot(instruction.A), layout.Name));
@@ -591,71 +740,46 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryEvaluateLinearPredicateTest(GameEventScriptBytecodeOperationLayout layout, BytecodeVmValue input, out BytecodeVmValue value)
-    {
-        return TryEvaluateLinearCallable(layout, [input], out value) &&
-               NormalizeExtensionPredicateResult(requirePredicateResult: true, ref value);
-    }
-
-    private bool TryEvaluateLinearCallable(GameEventScriptBytecodeOperationLayout layout, BytecodeVmValue[] operands, out BytecodeVmValue value)
+    private bool TryEvaluateLinearGuardedChoice(int layoutIndex, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (string.IsNullOrEmpty(layout.Name) ||
-            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
+        if (!TryGetGuardedChoiceLayout(layoutIndex, out var layout) ||
+            layout.ConditionEntryAddresses.Count != layout.ValueEntryAddresses.Count)
         {
             return false;
         }
 
-        return TryExecuteLinearCallableFrame(callable, operands, out value);
+        for (var branchIndex = 0; branchIndex < layout.ConditionEntryAddresses.Count; branchIndex++)
+        {
+            if (!TryEvaluateLinearHelperExpression(layout.ConditionEntryAddresses[branchIndex], out var condition))
+            {
+                return false;
+            }
+
+            if (condition.IsTrue())
+            {
+                return TryEvaluateLinearHelperExpression(layout.ValueEntryAddresses[branchIndex], out value);
+            }
+        }
+
+        return TryEvaluateLinearHelperExpression(layout.OtherwiseEntryAddress, out value);
     }
 
-    private bool TryExecuteLinearCallableFrame(GameEventScriptBytecodeCallable callable, BytecodeVmValue[] arguments, out BytecodeVmValue value)
+    private bool TryEvaluateLinearHelperExpression(int entryAddress, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
+        if ((uint)entryAddress >= (uint)_compiledScript.LinearExecutable.Code.Count)
         {
-            return true;
+            return false;
         }
 
-        var previousLocals = _locals;
-        var previousAssignedSlots = _assignedSlots;
-        var previousChanges = _changes;
-        var previousScopeMarks = _scopeMarks;
-        _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
-        _assignedSlots = new bool[_locals.Length];
-        _changes = [];
-        _scopeMarks = [];
-        try
-        {
-            EnterScope();
-            try
-            {
-                if (!TryExecuteLinearRange(
-                        callable.EntryAddress,
-                        _compiledScript.LinearExecutable.Code.Count,
-                        LinearArgumentSource.ForValues(arguments),
-                        out _,
-                        out value))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-
-                return true;
-            }
-            finally
-            {
-                ExitScope();
-            }
-        }
-        finally
-        {
-            _locals = previousLocals;
-            _assignedSlots = previousAssignedSlots;
-            _changes = previousChanges;
-            _scopeMarks = previousScopeMarks;
-            _runtimeBudget.ExitCall();
-        }
+        return TryExecuteLinearRange(
+                   entryAddress,
+                   _compiledScript.LinearExecutable.Code.Count,
+                   null,
+                   out var returned,
+                   out value) &&
+               returned;
     }
 
     private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<int> slots)
@@ -944,6 +1068,48 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         layout = default!;
         return false;
+    }
+
+    private bool TryGetGuardedChoiceLayout(int index, out GameEventScriptBytecodeGuardedChoiceLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.GuardedChoiceLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.GuardedChoiceLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private sealed class LinearCallFrame(
+        BytecodeVmValue[] locals,
+        bool[] assignedSlots,
+        List<LocalChange> changes,
+        List<int> scopeMarks,
+        LinearArgumentSource? arguments,
+        int endAddress,
+        int returnAddress,
+        int returnDestinationSlot,
+        bool normalizePredicateResult)
+    {
+        public BytecodeVmValue[] Locals { get; } = locals;
+
+        public bool[] AssignedSlots { get; } = assignedSlots;
+
+        public List<LocalChange> Changes { get; } = changes;
+
+        public List<int> ScopeMarks { get; } = scopeMarks;
+
+        public LinearArgumentSource? Arguments { get; } = arguments;
+
+        public int EndAddress { get; } = endAddress;
+
+        public int ReturnAddress { get; } = returnAddress;
+
+        public int ReturnDestinationSlot { get; } = returnDestinationSlot;
+
+        public bool NormalizePredicateResult { get; } = normalizePredicateResult;
     }
 
     private sealed class LinearArgumentSource

@@ -20,7 +20,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
         Y = y;
         Z = z;
         Unit = unit;
-        Components = CreateReadOnlyList(new[] { GesFloat(x, unit), GesFloat(y, unit), GesFloat(z, unit) });
+        Components = CreateReadOnlyList([GesFloat(x, unit), GesFloat(y, unit), GesFloat(z, unit)]);
         Members = new ReadOnlyDictionary<string, GameEventScriptValue>(
             new Dictionary<string, GameEventScriptValue>(System.StringComparer.Ordinal)
             {
@@ -55,11 +55,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
 
     public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
     {
-        if (Members.TryGetValue(key, out value))
-        {
-            return true;
-        }
-
+        if (Members.TryGetValue(key, out value)) return true;
         value = GameEventScriptNothingValue.Instance;
         return false;
     }

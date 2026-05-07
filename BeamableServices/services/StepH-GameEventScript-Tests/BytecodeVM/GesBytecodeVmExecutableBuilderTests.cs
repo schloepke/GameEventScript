@@ -301,6 +301,112 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmExecutesNestedCallablesFromLinearPublicCode()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            function addOne(_ value) means value + 1
+            function boosted(_ value) means addOne(value) + 1
+
+            on Start(value) {
+              emit Done(value: boosted(value), replacement: 2)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var originalConstant = compiled.ConstantPool
+            .Select((constant, index) => (constant, index))
+            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
+            .index;
+        var replacementConstant = compiled.ConstantPool
+            .Select((constant, index) => (constant, index))
+            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
+            .index;
+        var callableEntry = compiled.Callables["addOne"].EntryAddress;
+        var callableEnd = Array.FindIndex(
+            compiled.Code.ToArray(),
+            callableEntry,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
+        var code = compiled.Code
+            .Select((instruction, index) => index >= callableEntry &&
+                                           index < callableEnd &&
+                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
+                                           instruction.Data == originalConstant
+                ? instruction with { Data = replacementConstant }
+                : instruction)
+            .ToArray();
+        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(rewritten);
+
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(8), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[0].Arguments["replacement"]);
+    }
+
+    [TestMethod]
+    public void BytecodeVmExecutesGuardedChoicesFromLinearPublicCode()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start(value) {
+              let selected be 1 when value > 0, otherwise 2
+              emit Done(value: selected, replacement: 3)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var layout = compiled.GuardedChoiceLayouts.Single();
+        Assert.IsTrue(layout.ConditionEntryAddresses.All(address => address >= 0));
+        Assert.IsTrue(layout.ValueEntryAddresses.All(address => address >= 0));
+        Assert.IsGreaterThanOrEqualTo(0, layout.OtherwiseEntryAddress);
+
+        var originalConstant = compiled.ConstantPool
+            .Select((constant, index) => (constant, index))
+            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
+            .index;
+        var replacementConstant = compiled.ConstantPool
+            .Select((constant, index) => (constant, index))
+            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
+            .index;
+        var otherwiseEnd = Array.FindIndex(
+            compiled.Code.ToArray(),
+            layout.OtherwiseEntryAddress,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
+        var code = compiled.Code
+            .Select((instruction, index) => index >= layout.OtherwiseEntryAddress &&
+                                           index < otherwiseEnd &&
+                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
+                                           instruction.Data == originalConstant
+                ? instruction with { Data = replacementConstant }
+                : instruction)
+            .ToArray();
+        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(rewritten);
+
+        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(-1))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["value"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["replacement"]);
+    }
+
+    [TestMethod]
     public void BytecodeVmExecutableBuilderRejectsInvalidLinearSideTableIndex()
     {
         const string script =

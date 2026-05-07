@@ -100,7 +100,7 @@ internal static class GesBytecodeLowerer
             var expressionProgram = programCompiler.CompileExpression(callable.Expression);
             result[callable.Name] = new GameEventScriptBytecodeCallable(
                 callable.Name,
-                callable.Kind == GameEventScriptCallableKind.Predicate ? GameEventScriptBytecodeCallableKind.Predicate : GameEventScriptBytecodeCallableKind.Function,
+                callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptBytecodeCallableKind.Predicate : GameEventScriptBytecodeCallableKind.Function,
                 callable.Parameters,
                 callable.SignatureLabels,
                 GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels),
@@ -589,7 +589,7 @@ internal static class GesBytecodeLowerer
                     return false;
                 }
 
-                if (callable.Kind != GameEventScriptCallableKind.Predicate)
+                if (callable.Kind != GameEventScriptCallableKind.PredicateCall)
                 {
                     failureReason = $"Callable '{predicateCall.PredicateName}' is a {callable.Kind}, not a predicate.";
                     return false;
@@ -2076,7 +2076,7 @@ internal static class GesBytecodeLowerer
                         instructions.Add(new GameEventScriptBytecodeStackInstruction(
                             GameEventScriptBytecodeOpCode.Call,
                             A: call.Arguments.Count,
-                            CallableKind: called.Kind == GameEventScriptCallableKind.Predicate
+                            CallableKind: called.Kind == GameEventScriptCallableKind.PredicateCall
                                 ? GameEventScriptBytecodeCallableKind.Predicate
                                 : GameEventScriptBytecodeCallableKind.Function,
                             ExpressionProgram: callableProgram,

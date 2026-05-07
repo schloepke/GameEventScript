@@ -7,12 +7,49 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed class GesLinearBytecodeBuilder
 {
+    private readonly Func<string, int> _resolveTypeMetadataIndex;
+    private readonly Func<IReadOnlyList<string>, int> _resolveNamedArgumentLayoutIndex;
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
+    private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
+    private readonly List<GameEventScriptBytecodePublishLayoutEntry> _publishLayouts = [];
+    private readonly List<GameEventScriptBytecodeIterationSourceLayout> _iterationSourceLayouts = [];
+    private readonly List<GameEventScriptBytecodeLoopLayout> _loopLayouts = [];
+    private readonly List<GameEventScriptBytecodeSeededRandomBlockLayout> _seededRandomBlockLayouts = [];
+    private readonly List<GameEventScriptBytecodeSelectorLayout> _selectorLayouts = [];
+    private readonly List<GameEventScriptBytecodePipelineLayout> _pipelineLayouts = [];
+    private readonly List<GameEventScriptBytecodeGeneratedCollectionLayout> _generatedCollectionLayouts = [];
+    private readonly List<GameEventScriptBytecodeGuardedChoiceLayout> _guardedChoiceLayouts = [];
     private int _maxFrameSlots = 1;
+
+    public GesLinearBytecodeBuilder(
+        Func<string, int>? resolveTypeMetadataIndex = null,
+        Func<IReadOnlyList<string>, int>? resolveNamedArgumentLayoutIndex = null)
+    {
+        _resolveTypeMetadataIndex = resolveTypeMetadataIndex ?? (_ => -1);
+        _resolveNamedArgumentLayoutIndex = resolveNamedArgumentLayoutIndex ?? (_ => -1);
+    }
 
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code => _code;
 
     public int MaxFrameSlots => _maxFrameSlots;
+
+    public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts => _operationLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry> PublishLayouts => _publishLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts => _iterationSourceLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeLoopLayout> LoopLayouts => _loopLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts => _seededRandomBlockLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeSelectorLayout> SelectorLayouts => _selectorLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodePipelineLayout> PipelineLayouts => _pipelineLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts => _generatedCollectionLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts => _guardedChoiceLayouts;
 
     public void AddHandlers(IEnumerable<GameEventScriptBytecodeHandler> handlers)
     {
@@ -38,7 +75,11 @@ internal sealed class GesLinearBytecodeBuilder
                 Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BindParameter, Dest: index, A: index));
                 if (index < callable.ParameterTypes.Count && !string.IsNullOrEmpty(callable.ParameterTypes[index]))
                 {
-                    Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CoerceSlot, Dest: index, A: index));
+                    Emit(new GameEventScriptBytecodeInstruction(
+                        GameEventScriptBytecodeOpCode.CoerceSlot,
+                        Dest: index,
+                        A: index,
+                        Data: ResolveTypeMetadataIndex(callable.ParameterTypes[index])));
                 }
             }
 
@@ -95,7 +136,11 @@ internal sealed class GesLinearBytecodeBuilder
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.BindParameter, Dest: slot, A: index));
             if (index < parameterTypes.Count && !string.IsNullOrEmpty(parameterTypes[index]))
             {
-                Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CoerceSlot, Dest: slot, A: slot));
+                Emit(new GameEventScriptBytecodeInstruction(
+                    GameEventScriptBytecodeOpCode.CoerceSlot,
+                    Dest: slot,
+                    A: slot,
+                    Data: ResolveTypeMetadataIndex(parameterTypes[index])));
             }
         }
     }
@@ -131,7 +176,11 @@ internal sealed class GesLinearBytecodeBuilder
                     Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: letSlot, A: result));
                     if (!string.IsNullOrEmpty(statement.DeclaredType))
                     {
-                        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CoerceSlot, Dest: letSlot, A: letSlot));
+                        Emit(new GameEventScriptBytecodeInstruction(
+                            GameEventScriptBytecodeOpCode.CoerceSlot,
+                            Dest: letSlot,
+                            A: letSlot,
+                            Data: ResolveTypeMetadataIndex(statement.DeclaredType)));
                     }
                 }
                 break;
@@ -164,26 +213,47 @@ internal sealed class GesLinearBytecodeBuilder
 
     private void EmitPublish(GameEventScriptBytecodeStatement statement, GameEventScriptBytecodeExecutionPlan plan)
     {
+        var state = new ExpressionState(plan.SlotCount);
+        var tagSlots = new List<int>(statement.TagPrograms.Length);
         foreach (var tagProgram in statement.TagPrograms)
         {
-            _ = EmitExpression(tagProgram, new ExpressionState(plan.SlotCount));
+            tagSlots.Add(EmitExpression(tagProgram, state));
         }
 
         if (statement.PublishLayout is not null)
         {
+            var argumentSlots = new List<int>(statement.PublishLayout.ArgumentPrograms.Length);
             foreach (var argumentProgram in statement.PublishLayout.ArgumentPrograms)
             {
-                _ = EmitExpression(argumentProgram, new ExpressionState(plan.SlotCount));
+                argumentSlots.Add(EmitExpression(argumentProgram, state));
             }
 
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.PublishValue, A: (int)statement.PublishKind));
+            var publishLayoutIndex = AddPublishLayout(new GameEventScriptBytecodePublishLayoutEntry(
+                statement.PublishKind,
+                statement.PublishLayout.MessageName,
+                statement.PublishLayout.SignatureId,
+                statement.PublishLayout.ArgumentNames,
+                argumentSlots,
+                tagSlots: tagSlots));
+            Emit(new GameEventScriptBytecodeInstruction(
+                GameEventScriptBytecodeOpCode.PublishValue,
+                A: (int)statement.PublishKind,
+                Data: publishLayoutIndex));
             return;
         }
 
         if (statement.ExpressionProgram is not null)
         {
-            var messageSlot = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.PublishMessageValue, A: messageSlot, B: (int)statement.PublishKind));
+            var messageSlot = EmitExpression(statement.ExpressionProgram, state);
+            var publishLayoutIndex = AddPublishLayout(new GameEventScriptBytecodePublishLayoutEntry(
+                statement.PublishKind,
+                messageSlot: messageSlot,
+                tagSlots: tagSlots));
+            Emit(new GameEventScriptBytecodeInstruction(
+                GameEventScriptBytecodeOpCode.PublishMessageValue,
+                A: messageSlot,
+                B: (int)statement.PublishKind,
+                Data: publishLayoutIndex));
         }
     }
 
@@ -214,10 +284,16 @@ internal sealed class GesLinearBytecodeBuilder
             return;
         }
 
+        var state = new ExpressionState(plan.SlotCount);
+        var sourceLayoutIndex = AddIterationSourceLayout(statement.IterationSource, state);
+        var identifierSlot = !string.IsNullOrEmpty(statement.Name) && plan.TryGetSlot(statement.Name, out var slot)
+            ? slot
+            : -1;
+        var loopLayoutIndex = AddLoopLayout(new GameEventScriptBytecodeLoopLayout(identifierSlot, sourceLayoutIndex));
         var opCode = statement.Kind == GameEventScriptBytecodeStatementKind.ForRange
             ? GameEventScriptBytecodeOpCode.ForRange
             : GameEventScriptBytecodeOpCode.ForCollection;
-        var loopInstruction = Emit(new GameEventScriptBytecodeInstruction(opCode));
+        var loopInstruction = Emit(new GameEventScriptBytecodeInstruction(opCode, Data: loopLayoutIndex));
         var bodyAddress = _code.Count;
         EmitStatementProgram(statement.BodyProgram, plan);
         PatchTargets(loopInstruction, bodyAddress, _code.Count);
@@ -225,12 +301,17 @@ internal sealed class GesLinearBytecodeBuilder
 
     private void EmitSeededRandom(GameEventScriptBytecodeStatement statement, GameEventScriptBytecodeExecutionPlan plan)
     {
+        var state = new ExpressionState(plan.SlotCount);
+        var seedSlot = -1;
         if (statement.ExpressionProgram is not null)
         {
-            _ = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
+            seedSlot = EmitExpression(statement.ExpressionProgram, state);
         }
 
-        var blockInstruction = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.SeededRandomBlock));
+        var layoutIndex = AddSeededRandomBlockLayout(new GameEventScriptBytecodeSeededRandomBlockLayout(seedSlot));
+        var blockInstruction = Emit(new GameEventScriptBytecodeInstruction(
+            GameEventScriptBytecodeOpCode.SeededRandomBlock,
+            Data: layoutIndex));
         var bodyAddress = _code.Count;
         if (statement.BodyProgram is not null)
         {
@@ -273,7 +354,8 @@ internal sealed class GesLinearBytecodeBuilder
             case GameEventScriptBytecodeOpCode.Unary:
                 if (stack.TryPop(out var unarySource))
                 {
-                    stack.Push(EmitValueInstruction(state, instruction.OpCode, a: unarySource, data: (int)instruction.CastKind));
+                    var layoutIndex = AddOperationLayout(instruction, [unarySource], count: 1);
+                    stack.Push(EmitValueInstruction(state, instruction.OpCode, a: unarySource, data: layoutIndex));
                 }
                 break;
 
@@ -289,15 +371,37 @@ internal sealed class GesLinearBytecodeBuilder
             case GameEventScriptBytecodeOpCode.PredicateTest:
                 if (stack.TryPop(out var input))
                 {
-                    stack.Push(EmitValueInstruction(state, instruction.OpCode, a: input));
+                    var layoutIndex = AddOperationLayout(instruction, [input], count: 1);
+                    stack.Push(EmitValueInstruction(state, instruction.OpCode, a: input, data: layoutIndex));
                 }
                 break;
 
             case GameEventScriptBytecodeOpCode.Dice:
-            case GameEventScriptBytecodeOpCode.Pipeline:
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
                 stack.Push(EmitValueInstruction(state, instruction.OpCode, a: instruction.A, b: instruction.B));
+                break;
+
+            case GameEventScriptBytecodeOpCode.Pipeline:
+                if (instruction.PipelineProgram is not null)
+                {
+                    var layoutIndex = AddPipelineLayout(instruction.PipelineProgram, state);
+                    stack.Push(EmitValueInstruction(state, instruction.OpCode, data: layoutIndex));
+                }
+                break;
+
+            case GameEventScriptBytecodeOpCode.GeneratedCollection:
+                if (instruction.GeneratedCollectionProgram is not null)
+                {
+                    var layoutIndex = AddGeneratedCollectionLayout(instruction.GeneratedCollectionProgram, state);
+                    stack.Push(EmitValueInstruction(state, instruction.OpCode, data: layoutIndex));
+                }
+                break;
+
+            case GameEventScriptBytecodeOpCode.GuardedChoice:
+                if (instruction.GuardedChoiceProgram is not null)
+                {
+                    var layoutIndex = AddGuardedChoiceLayout(instruction.GuardedChoiceProgram);
+                    stack.Push(EmitValueInstruction(state, instruction.OpCode, data: layoutIndex));
+                }
                 break;
 
             default:
@@ -321,7 +425,10 @@ internal sealed class GesLinearBytecodeBuilder
         var a = operands.Length > 0 ? operands[0] : instruction.A;
         var b = operands.Length > 1 ? operands[1] : instruction.B;
         var c = operands.Length > 2 ? operands[2] : -1;
-        stack.Push(EmitValueInstruction(state, instruction.OpCode, a, b, c, data: instruction.A));
+        var layoutIndex = NeedsOperationLayout(instruction)
+            ? AddOperationLayout(instruction, operands, argumentCount)
+            : -1;
+        stack.Push(EmitValueInstruction(state, instruction.OpCode, a, b, c, data: layoutIndex));
     }
 
     private int EmitShortCircuitExpression(GameEventScriptBytecodeStackInstruction instruction, ExpressionState state, int left)
@@ -359,6 +466,132 @@ internal sealed class GesLinearBytecodeBuilder
         return result;
     }
 
+    private int AddOperationLayout(
+        GameEventScriptBytecodeStackInstruction instruction,
+        IReadOnlyList<int> argumentSlots,
+        int count = 0)
+    {
+        var names = instruction.Names ?? [];
+        var layoutIndex = _operationLayouts.Count;
+        _operationLayouts.Add(new GameEventScriptBytecodeOperationLayout(
+            instruction.OpCode,
+            instruction.DiagnosticName,
+            instruction.DiagnosticArgumentName,
+            names,
+            argumentSlots,
+            instruction.Slots,
+            instruction.DeclaredTypes,
+            instruction.CallableKind,
+            instruction.CastKind,
+            instruction.B,
+            names.Length == 0 ? -1 : _resolveNamedArgumentLayoutIndex(names),
+            count: count));
+        return layoutIndex;
+    }
+
+    private int AddPublishLayout(GameEventScriptBytecodePublishLayoutEntry layout)
+    {
+        var index = _publishLayouts.Count;
+        _publishLayouts.Add(layout);
+        return index;
+    }
+
+    private int AddIterationSourceLayout(GameEventScriptBytecodeIterationSourceProgram source, ExpressionState state)
+    {
+        var collectionSlot = -1;
+        var rangeFromSlot = -1;
+        var rangeToSlot = -1;
+        var rangeStepSlot = -1;
+        if (source.Kind == GameEventScriptBytecodeIterationSourceKind.Collection)
+        {
+            collectionSlot = source.CollectionProgram is null
+                ? -1
+                : EmitExpression(source.CollectionProgram, state);
+        }
+        else
+        {
+            rangeFromSlot = source.RangeFromProgram is null
+                ? -1
+                : EmitExpression(source.RangeFromProgram, state);
+            rangeToSlot = source.RangeToProgram is null
+                ? -1
+                : EmitExpression(source.RangeToProgram, state);
+            rangeStepSlot = source.RangeStepProgram is null
+                ? -1
+                : EmitExpression(source.RangeStepProgram, state);
+        }
+
+        var index = _iterationSourceLayouts.Count;
+        _iterationSourceLayouts.Add(new GameEventScriptBytecodeIterationSourceLayout(
+            source.Kind,
+            collectionSlot,
+            rangeFromSlot,
+            rangeToSlot,
+            rangeStepSlot));
+        return index;
+    }
+
+    private int AddLoopLayout(GameEventScriptBytecodeLoopLayout layout)
+    {
+        var index = _loopLayouts.Count;
+        _loopLayouts.Add(layout);
+        return index;
+    }
+
+    private int AddSeededRandomBlockLayout(GameEventScriptBytecodeSeededRandomBlockLayout layout)
+    {
+        var index = _seededRandomBlockLayouts.Count;
+        _seededRandomBlockLayouts.Add(layout);
+        return index;
+    }
+
+    private int AddSelectorLayout(GameEventScriptBytecodeSelectorProgram selector)
+    {
+        var index = _selectorLayouts.Count;
+        _selectorLayouts.Add(new GameEventScriptBytecodeSelectorLayout(
+            selector.Kind,
+            selector.IdentifierSlot,
+            selector.EdgeMode,
+            selector.SecondaryMode,
+            selector.Count,
+            selector.SecondaryIdentifierSlot,
+            selector.Flag));
+        return index;
+    }
+
+    private int AddPipelineLayout(GameEventScriptBytecodePipelineProgram program, ExpressionState state)
+    {
+        var sourceSlot = EmitExpression(program.SourceProgram, state);
+        var prefixSelectorIndexes = program.PrefixSelectors.Select(AddSelectorLayout).ToArray();
+        var terminalSelectorIndex = AddSelectorLayout(program.TerminalSelector);
+        var index = _pipelineLayouts.Count;
+        _pipelineLayouts.Add(new GameEventScriptBytecodePipelineLayout(
+            sourceSlot,
+            prefixSelectorIndexes,
+            terminalSelectorIndex));
+        return index;
+    }
+
+    private int AddGeneratedCollectionLayout(GameEventScriptBytecodeGeneratedCollectionProgram program, ExpressionState state)
+    {
+        var sourceLayoutIndex = AddIterationSourceLayout(program.Source, state);
+        var index = _generatedCollectionLayouts.Count;
+        _generatedCollectionLayouts.Add(new GameEventScriptBytecodeGeneratedCollectionLayout(
+            program.CollectionType,
+            program.IdentifierSlot,
+            sourceLayoutIndex));
+        return index;
+    }
+
+    private int AddGuardedChoiceLayout(GameEventScriptBytecodeGuardedChoiceProgram program)
+    {
+        var index = _guardedChoiceLayouts.Count;
+        _guardedChoiceLayouts.Add(new GameEventScriptBytecodeGuardedChoiceLayout(
+            Enumerable.Repeat(-1, program.ValuePrograms.Length).ToArray(),
+            Enumerable.Repeat(-1, program.ConditionPrograms.Length).ToArray()));
+        return index;
+    }
+
     private int EmitValueInstruction(
         ExpressionState state,
         GameEventScriptBytecodeOpCode opCode,
@@ -384,6 +617,30 @@ internal sealed class GesLinearBytecodeBuilder
 
     private void PatchTargets(int address, int target, int target2)
         => _code[address] = _code[address] with { Target = target, Target2 = target2 };
+
+    private int ResolveTypeMetadataIndex(string? typeName)
+        => string.IsNullOrEmpty(typeName)
+            ? -1
+            : _resolveTypeMetadataIndex(typeName);
+
+    private static bool NeedsOperationLayout(GameEventScriptBytecodeStackInstruction instruction)
+        => instruction.OpCode is
+            GameEventScriptBytecodeOpCode.Cast or
+            GameEventScriptBytecodeOpCode.TypeCheck or
+            GameEventScriptBytecodeOpCode.MemberAccess or
+            GameEventScriptBytecodeOpCode.Unary or
+            GameEventScriptBytecodeOpCode.Variadic or
+            GameEventScriptBytecodeOpCode.Range or
+            GameEventScriptBytecodeOpCode.SeededRandom or
+            GameEventScriptBytecodeOpCode.TypeConstructor or
+            GameEventScriptBytecodeOpCode.BuildList or
+            GameEventScriptBytecodeOpCode.BuildSequence or
+            GameEventScriptBytecodeOpCode.BuildSet or
+            GameEventScriptBytecodeOpCode.BuildDictionary or
+            GameEventScriptBytecodeOpCode.BuildMessage or
+            GameEventScriptBytecodeOpCode.BindHandler or
+            GameEventScriptBytecodeOpCode.CallExtension or
+            GameEventScriptBytecodeOpCode.Call;
 
     private static int GetStackArgumentCount(GameEventScriptBytecodeStackInstruction instruction)
         => instruction.OpCode switch

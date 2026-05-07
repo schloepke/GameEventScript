@@ -78,6 +78,103 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeStoresPublishMetadataInSideTables()
+    {
+        const string script =
+            """
+            module SideTables
+
+            on Start(value) {
+              let msg be Done(value: value)
+              emit msg with :radio
+              emit Done(value: value + 1) with :local
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.HasCount(2, compiled.PublishLayouts);
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.PublishValue &&
+            instruction.Data >= 0 &&
+            instruction.Data < compiled.PublishLayouts.Count));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.PublishMessageValue &&
+            instruction.Data >= 0 &&
+            instruction.Data < compiled.PublishLayouts.Count));
+
+        var direct = compiled.PublishLayouts.First(layout => layout.MessageName == "Done");
+        Assert.AreEqual("Done(value)", direct.SignatureId);
+        Assert.HasCount(1, direct.ArgumentNames);
+        Assert.HasCount(1, direct.ArgumentSlots);
+        Assert.HasCount(1, direct.TagSlots);
+        Assert.IsTrue(compiled.OperationLayouts.Any(layout =>
+            layout.OpCode == GameEventScriptBytecodeOpCode.BuildMessage &&
+            layout.Name == "Done" &&
+            layout.Names.SequenceEqual(new[] { "value" })));
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeStoresLoopAndSeededRandomMetadataInSideTables()
+    {
+        const string script =
+            """
+            module SideTables
+
+            on Start {
+              for item from 1 to 3 emit Tick(value: item)
+              :random with 7 {
+                emit Done(value: :random from 1 to 6)
+              }
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.HasCount(1, compiled.LoopLayouts);
+        Assert.HasCount(1, compiled.SeededRandomBlockLayouts);
+        Assert.IsTrue(compiled.IterationSourceLayouts.Any(layout =>
+            layout.Kind == GameEventScriptBytecodeIterationSourceKind.Range &&
+            layout.RangeFromSlot >= 0 &&
+            layout.RangeToSlot >= 0));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.ForRange &&
+            instruction.Data >= 0 &&
+            instruction.Data < compiled.LoopLayouts.Count));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandomBlock &&
+            instruction.Data >= 0 &&
+            instruction.Data < compiled.SeededRandomBlockLayouts.Count));
+        Assert.IsGreaterThanOrEqualTo(0, compiled.SeededRandomBlockLayouts[0].SeedSlot);
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeStoresPipelineMetadataInSideTables()
+    {
+        const string script =
+            """
+            module SideTables
+
+            on Start(values) {
+              let selected be values[:select item => item + 1]
+              emit Done(count: :len selected)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.HasCount(1, compiled.PipelineLayouts);
+        Assert.IsTrue(compiled.SelectorLayouts.Any(layout =>
+            layout.Kind == GameEventScriptBytecodeSelectorKind.Select &&
+            layout.IdentifierSlot >= 0));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline &&
+            instruction.Data >= 0 &&
+            instruction.Data < compiled.PipelineLayouts.Count));
+        Assert.IsGreaterThanOrEqualTo(0, compiled.PipelineLayouts[0].SourceSlot);
+    }
+
+    [TestMethod]
     public void CompiledArtifactDoesNotExposeBytecodeVmState()
     {
         var compiledType = typeof(GameEventScriptCompiled);
@@ -423,7 +520,16 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             original.MaxStackDepth,
             original.Code.ToArray(),
-            original.MaxFrameSlots);
+            original.MaxFrameSlots,
+            original.OperationLayouts.ToArray(),
+            original.PublishLayouts.ToArray(),
+            original.IterationSourceLayouts.ToArray(),
+            original.LoopLayouts.ToArray(),
+            original.SeededRandomBlockLayouts.ToArray(),
+            original.SelectorLayouts.ToArray(),
+            original.PipelineLayouts.ToArray(),
+            original.GeneratedCollectionLayouts.ToArray(),
+            original.GuardedChoiceLayouts.ToArray());
 
     private static GameEventScriptBytecodeConstant CloneConstant(GameEventScriptBytecodeConstant constant)
         => constant.Kind switch

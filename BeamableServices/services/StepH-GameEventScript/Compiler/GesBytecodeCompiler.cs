@@ -57,7 +57,7 @@ internal static class GesBytecodeCompiler
             var maxStackDepth = Math.Max(
                 GetMaxStackDepth(handlers),
                 Math.Max(GetMaxStackDepth(callables), GetMaxStackDepth(typeDefinitions)));
-            var linearBuilder = new GesLinearBytecodeBuilder();
+            var linearBuilder = new GesLinearBytecodeBuilder(AddTypeMetadata, AddNamedArgumentLayout);
             linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group));
             linearBuilder.AddCallables(callables.Values);
             linearBuilder.AddTypeDefinitions(typeDefinitions.Values);
@@ -76,7 +76,16 @@ internal static class GesBytecodeCompiler
                 typeDefinitions,
                 maxStackDepth,
                 linearBuilder.Code.ToArray(),
-                linearBuilder.MaxFrameSlots);
+                linearBuilder.MaxFrameSlots,
+                linearBuilder.OperationLayouts.ToArray(),
+                linearBuilder.PublishLayouts.ToArray(),
+                linearBuilder.IterationSourceLayouts.ToArray(),
+                linearBuilder.LoopLayouts.ToArray(),
+                linearBuilder.SeededRandomBlockLayouts.ToArray(),
+                linearBuilder.SelectorLayouts.ToArray(),
+                linearBuilder.PipelineLayouts.ToArray(),
+                linearBuilder.GeneratedCollectionLayouts.ToArray(),
+                linearBuilder.GuardedChoiceLayouts.ToArray());
         }
 
         private IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> BuildHandlers()

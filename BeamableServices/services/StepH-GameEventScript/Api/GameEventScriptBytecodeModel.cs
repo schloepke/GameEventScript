@@ -286,6 +286,266 @@ public readonly record struct GameEventScriptBytecodeInstruction(
     int Target2 = -1,
     int Data = -1);
 
+public sealed class GameEventScriptBytecodeOperationLayout
+{
+    public GameEventScriptBytecodeOperationLayout(
+        GameEventScriptBytecodeOpCode opCode,
+        string? name = null,
+        string? argumentName = null,
+        IReadOnlyList<string>? names = null,
+        IReadOnlyList<int>? argumentSlots = null,
+        IReadOnlyList<int>? parameterSlots = null,
+        IReadOnlyList<string?>? declaredTypes = null,
+        GameEventScriptBytecodeCallableKind callableKind = GameEventScriptBytecodeCallableKind.Function,
+        GameEventScriptBytecodeCastKind castKind = default,
+        int externalReferenceIndex = -1,
+        int namedArgumentLayoutIndex = -1,
+        int expressionEntryAddress = -1,
+        int secondaryExpressionEntryAddress = -1,
+        int count = 0,
+        bool flag = false)
+    {
+        OpCode = opCode;
+        Name = name;
+        ArgumentName = argumentName;
+        Names = names?.ToArray() ?? [];
+        ArgumentSlots = argumentSlots?.ToArray() ?? [];
+        ParameterSlots = parameterSlots?.ToArray() ?? [];
+        DeclaredTypes = declaredTypes?.ToArray() ?? [];
+        CallableKind = callableKind;
+        CastKind = castKind;
+        ExternalReferenceIndex = externalReferenceIndex;
+        NamedArgumentLayoutIndex = namedArgumentLayoutIndex;
+        ExpressionEntryAddress = expressionEntryAddress;
+        SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
+        Count = count;
+        Flag = flag;
+    }
+
+    public GameEventScriptBytecodeOpCode OpCode { get; }
+
+    public string? Name { get; }
+
+    public string? ArgumentName { get; }
+
+    public IReadOnlyList<string> Names { get; }
+
+    public IReadOnlyList<int> ArgumentSlots { get; }
+
+    public IReadOnlyList<int> ParameterSlots { get; }
+
+    public IReadOnlyList<string?> DeclaredTypes { get; }
+
+    public GameEventScriptBytecodeCallableKind CallableKind { get; }
+
+    public GameEventScriptBytecodeCastKind CastKind { get; }
+
+    public int ExternalReferenceIndex { get; }
+
+    public int NamedArgumentLayoutIndex { get; }
+
+    public int ExpressionEntryAddress { get; }
+
+    public int SecondaryExpressionEntryAddress { get; }
+
+    public int Count { get; }
+
+    public bool Flag { get; }
+}
+
+public sealed class GameEventScriptBytecodePublishLayoutEntry
+{
+    public GameEventScriptBytecodePublishLayoutEntry(
+        GameEventScriptBytecodePublishKind kind,
+        string? messageName = null,
+        string? signatureId = null,
+        IReadOnlyList<string>? argumentNames = null,
+        IReadOnlyList<int>? argumentSlots = null,
+        int messageSlot = -1,
+        IReadOnlyList<int>? tagSlots = null)
+    {
+        Kind = kind;
+        MessageName = messageName;
+        SignatureId = signatureId;
+        ArgumentNames = argumentNames?.ToArray() ?? [];
+        ArgumentSlots = argumentSlots?.ToArray() ?? [];
+        MessageSlot = messageSlot;
+        TagSlots = tagSlots?.ToArray() ?? [];
+    }
+
+    public GameEventScriptBytecodePublishKind Kind { get; }
+
+    public string? MessageName { get; }
+
+    public string? SignatureId { get; }
+
+    public IReadOnlyList<string> ArgumentNames { get; }
+
+    public IReadOnlyList<int> ArgumentSlots { get; }
+
+    public int MessageSlot { get; }
+
+    public IReadOnlyList<int> TagSlots { get; }
+}
+
+public sealed class GameEventScriptBytecodeIterationSourceLayout
+{
+    public GameEventScriptBytecodeIterationSourceLayout(
+        GameEventScriptBytecodeIterationSourceKind kind,
+        int collectionSlot = -1,
+        int rangeFromSlot = -1,
+        int rangeToSlot = -1,
+        int rangeStepSlot = -1)
+    {
+        Kind = kind;
+        CollectionSlot = collectionSlot;
+        RangeFromSlot = rangeFromSlot;
+        RangeToSlot = rangeToSlot;
+        RangeStepSlot = rangeStepSlot;
+    }
+
+    public GameEventScriptBytecodeIterationSourceKind Kind { get; }
+
+    public int CollectionSlot { get; }
+
+    public int RangeFromSlot { get; }
+
+    public int RangeToSlot { get; }
+
+    public int RangeStepSlot { get; }
+}
+
+public sealed class GameEventScriptBytecodeLoopLayout
+{
+    public GameEventScriptBytecodeLoopLayout(int identifierSlot, int iterationSourceLayoutIndex)
+    {
+        IdentifierSlot = identifierSlot;
+        IterationSourceLayoutIndex = iterationSourceLayoutIndex;
+    }
+
+    public int IdentifierSlot { get; }
+
+    public int IterationSourceLayoutIndex { get; }
+}
+
+public sealed class GameEventScriptBytecodeSeededRandomBlockLayout
+{
+    public GameEventScriptBytecodeSeededRandomBlockLayout(int seedSlot)
+    {
+        SeedSlot = seedSlot;
+    }
+
+    public int SeedSlot { get; }
+}
+
+public sealed class GameEventScriptBytecodeSelectorLayout
+{
+    public GameEventScriptBytecodeSelectorLayout(
+        GameEventScriptBytecodeSelectorKind kind,
+        int identifierSlot = -1,
+        string? edgeMode = null,
+        string? secondaryMode = null,
+        int count = 0,
+        int secondaryIdentifierSlot = -1,
+        bool flag = false,
+        int expressionEntryAddress = -1,
+        int secondaryExpressionEntryAddress = -1)
+    {
+        Kind = kind;
+        IdentifierSlot = identifierSlot;
+        EdgeMode = edgeMode;
+        SecondaryMode = secondaryMode;
+        Count = count;
+        SecondaryIdentifierSlot = secondaryIdentifierSlot;
+        Flag = flag;
+        ExpressionEntryAddress = expressionEntryAddress;
+        SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
+    }
+
+    public GameEventScriptBytecodeSelectorKind Kind { get; }
+
+    public int IdentifierSlot { get; }
+
+    public string? EdgeMode { get; }
+
+    public string? SecondaryMode { get; }
+
+    public int Count { get; }
+
+    public int SecondaryIdentifierSlot { get; }
+
+    public bool Flag { get; }
+
+    public int ExpressionEntryAddress { get; }
+
+    public int SecondaryExpressionEntryAddress { get; }
+}
+
+public sealed class GameEventScriptBytecodePipelineLayout
+{
+    public GameEventScriptBytecodePipelineLayout(
+        int sourceSlot,
+        IReadOnlyList<int>? prefixSelectorLayoutIndexes,
+        int terminalSelectorLayoutIndex)
+    {
+        SourceSlot = sourceSlot;
+        PrefixSelectorLayoutIndexes = prefixSelectorLayoutIndexes?.ToArray() ?? [];
+        TerminalSelectorLayoutIndex = terminalSelectorLayoutIndex;
+    }
+
+    public int SourceSlot { get; }
+
+    public IReadOnlyList<int> PrefixSelectorLayoutIndexes { get; }
+
+    public int TerminalSelectorLayoutIndex { get; }
+}
+
+public sealed class GameEventScriptBytecodeGeneratedCollectionLayout
+{
+    public GameEventScriptBytecodeGeneratedCollectionLayout(
+        string collectionType,
+        int identifierSlot,
+        int iterationSourceLayoutIndex,
+        int predicateEntryAddress = -1,
+        int projectionEntryAddress = -1)
+    {
+        CollectionType = collectionType ?? throw new ArgumentNullException(nameof(collectionType));
+        IdentifierSlot = identifierSlot;
+        IterationSourceLayoutIndex = iterationSourceLayoutIndex;
+        PredicateEntryAddress = predicateEntryAddress;
+        ProjectionEntryAddress = projectionEntryAddress;
+    }
+
+    public string CollectionType { get; }
+
+    public int IdentifierSlot { get; }
+
+    public int IterationSourceLayoutIndex { get; }
+
+    public int PredicateEntryAddress { get; }
+
+    public int ProjectionEntryAddress { get; }
+}
+
+public sealed class GameEventScriptBytecodeGuardedChoiceLayout
+{
+    public GameEventScriptBytecodeGuardedChoiceLayout(
+        IReadOnlyList<int>? valueEntryAddresses,
+        IReadOnlyList<int>? conditionEntryAddresses,
+        int otherwiseEntryAddress = -1)
+    {
+        ValueEntryAddresses = valueEntryAddresses?.ToArray() ?? [];
+        ConditionEntryAddresses = conditionEntryAddresses?.ToArray() ?? [];
+        OtherwiseEntryAddress = otherwiseEntryAddress;
+    }
+
+    public IReadOnlyList<int> ValueEntryAddresses { get; }
+
+    public IReadOnlyList<int> ConditionEntryAddresses { get; }
+
+    public int OtherwiseEntryAddress { get; }
+}
+
 internal sealed record class GameEventScriptBytecodeStackInstruction(
     GameEventScriptBytecodeOpCode OpCode,
     int A = -1,

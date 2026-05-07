@@ -22,7 +22,16 @@ public sealed class GameEventScriptCompiled
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
         int maxStackDepth,
         IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
-        int maxFrameSlots = 0)
+        int maxFrameSlots = 0,
+        IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry>? publishLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout>? iterationSourceLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeLoopLayout>? loopLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout>? seededRandomBlockLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeSelectorLayout>? selectorLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodePipelineLayout>? pipelineLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout>? generatedCollectionLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout>? guardedChoiceLayouts = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         StringPool = stringPool ?? throw new ArgumentNullException(nameof(stringPool));
@@ -38,6 +47,15 @@ public sealed class GameEventScriptCompiled
         MaxStackDepth = Math.Max(1, maxStackDepth);
         Code = code ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
+        OperationLayouts = operationLayouts ?? [];
+        PublishLayouts = publishLayouts ?? [];
+        IterationSourceLayouts = iterationSourceLayouts ?? [];
+        LoopLayouts = loopLayouts ?? [];
+        SeededRandomBlockLayouts = seededRandomBlockLayouts ?? [];
+        SelectorLayouts = selectorLayouts ?? [];
+        PipelineLayouts = pipelineLayouts ?? [];
+        GeneratedCollectionLayouts = generatedCollectionLayouts ?? [];
+        GuardedChoiceLayouts = guardedChoiceLayouts ?? [];
     }
 
     public GameEventScriptCompileOptions Options { get; }
@@ -65,6 +83,24 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code { get; }
 
     public int MaxFrameSlots { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry> PublishLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeLoopLayout> LoopLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeSelectorLayout> SelectorLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodePipelineLayout> PipelineLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get; }
 
     internal int MaxStackDepth { get; }
 }

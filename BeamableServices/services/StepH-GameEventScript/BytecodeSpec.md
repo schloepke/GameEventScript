@@ -14,12 +14,14 @@ metadata, scoped locals, and resumable execution. The C# call stack is not part
 of script control flow.
 
 Implementation note: the current public artifact already exposes the global
-linear `Code` segment, `MaxFrameSlots`, and entry addresses for handlers,
-callables, and computed field helpers. The synchronous VM expression path
-executes cached linear slot programs with a program counter. Some top-level
-statement and high-level operation metadata is still carried by internal
-compatibility structures while the executor migration continues; those
-structures are not part of the public bytecode boundary or the diagnostic dump.
+linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
+callables, and computed field helpers, plus public side tables for operation,
+publish, loop, selector/pipeline, generated-collection, seeded-random, and
+guarded-choice metadata. The synchronous VM expression path executes cached
+linear slot programs with a program counter. Selector and guarded-branch helper
+expressions still use internal compatibility structures while the executor
+migration continues, so helper entry address fields may be `-1` until those
+helpers are emitted into the global code segment.
 
 ## Goals
 
@@ -64,12 +66,15 @@ GameEventScriptCompiled
   Handlers: HandlerEntry[]
   Callables: CallableEntry[]
   TypeDefinitions: TypeDefinitionEntry[]
+  OperationLayouts
   PublishLayouts
-  CallLayouts
-  PipelinePlans
-  SelectorPlans
-  IterationSourcePlans
-  GeneratedCollectionPlans
+  IterationSourceLayouts
+  LoopLayouts
+  SeededRandomBlockLayouts
+  SelectorLayouts
+  PipelineLayouts
+  GeneratedCollectionLayouts
+  GuardedChoiceLayouts
   DicePatterns
   ObjectMatchPatterns
   DebugSymbols
@@ -97,6 +102,15 @@ GameEventScriptCompiled
   Callables
   TypeDefinitions
   MaxFrameSlots
+  OperationLayouts
+  PublishLayouts
+  IterationSourceLayouts
+  LoopLayouts
+  SeededRandomBlockLayouts
+  SelectorLayouts
+  PipelineLayouts
+  GeneratedCollectionLayouts
+  GuardedChoiceLayouts
 
 GameEventScriptBytecodeInstruction
   OpCode
@@ -241,9 +255,9 @@ avoid per-instruction object graphs. Operands are interpreted by opcode:
 - `Data`: index into a side table for larger DSL-specific metadata.
 
 Large structured metadata belongs in side tables, not nested instruction
-objects. Examples: publish layouts, call layouts, pipeline plans, selector
-plans, record type layouts, object match patterns, dice patterns, and loop
-plans.
+objects. Examples: operation layouts, publish layouts, selector/pipeline
+layouts, iteration-source layouts, generated-collection layouts, guarded-choice
+layouts, object match patterns, dice patterns, and loop layouts.
 
 An instruction that produces `nothing` writes it to `Dest`. There is no implicit
 push. There are no `Pop` or `Duplicate` instructions in the portable target
@@ -624,10 +638,12 @@ The instruction uses a side-table layout:
 
 ```text
 PublishLayout
+  Kind
   MessageName
   SignatureId
-  ArgumentLabelsLayoutIndex
+  ArgumentNames[]
   ArgumentSlots[]
+  MessageSlot?
   TagSlots[]
 ```
 
@@ -853,9 +869,8 @@ A grouped view may still be offered, but it must keep global addresses visible.
 
 ## Migration Plan
 
-1. Add side-table types for call layouts, publish layouts, pipeline plans,
-   selector plans, iteration sources, generated collections, patterns, scopes,
-   and loop plans.
+1. Continue expanding side-table coverage until every high-level operation has
+   all helper entry addresses in the global code segment.
 2. Update the BytecodeVM executable builder to consume linear public bytecode.
 3. Remove internal nested `StatementProgram`, nested `ExpressionProgram`, and
    nested branch/body program references once the side tables cover every

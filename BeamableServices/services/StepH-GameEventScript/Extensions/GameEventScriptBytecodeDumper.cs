@@ -30,6 +30,7 @@ public static class GameEventScriptBytecodeDumper
         AppendExternalReferences(builder, module);
         AppendConstants(builder, module);
         AppendNamedArgumentLayouts(builder, module);
+        AppendSideTables(builder, module);
         AppendCode(builder, module);
         AppendCallables(builder, module);
         AppendTypeDefinitions(builder, module);
@@ -64,6 +65,178 @@ public static class GameEventScriptBytecodeDumper
         {
             builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture)).Append(": ")
                 .AppendLine(string.Join(", ", module.NamedArgumentLayouts[i]));
+        }
+    }
+
+    private static void AppendSideTables(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        AppendOperationLayouts(builder, module);
+        AppendPublishLayouts(builder, module);
+        AppendIterationSourceLayouts(builder, module);
+        AppendLoopLayouts(builder, module);
+        AppendSeededRandomBlockLayouts(builder, module);
+        AppendSelectorLayouts(builder, module);
+        AppendPipelineLayouts(builder, module);
+        AppendGeneratedCollectionLayouts(builder, module);
+        AppendGuardedChoiceLayouts(builder, module);
+    }
+
+    private static void AppendOperationLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("operationLayouts[").Append(module.OperationLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.OperationLayouts.Count; i++)
+        {
+            var layout = module.OperationLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture))
+                .Append(": ").Append(layout.OpCode);
+            AppendText(builder, "name", layout.Name);
+            AppendText(builder, "argument", layout.ArgumentName);
+            AppendIndex(builder, "external", layout.ExternalReferenceIndex);
+            AppendIndex(builder, "namedLayout", layout.NamedArgumentLayoutIndex);
+            AppendAddress(builder, "expr", layout.ExpressionEntryAddress);
+            AppendAddress(builder, "secondaryExpr", layout.SecondaryExpressionEntryAddress);
+            if (layout.Count != 0)
+            {
+                AppendIndex(builder, "count", layout.Count);
+            }
+
+            if (layout.Flag)
+            {
+                builder.Append(" flag=true");
+            }
+
+            AppendSlotList(builder, "args", layout.ArgumentSlots);
+            AppendSlotList(builder, "params", layout.ParameterSlots);
+            AppendStringList(builder, "names", layout.Names);
+            AppendNullableStringList(builder, "types", layout.DeclaredTypes);
+            builder.Append(" callable=").Append(layout.CallableKind)
+                .Append(" cast=").AppendLine(layout.CastKind.ToString());
+        }
+    }
+
+    private static void AppendPublishLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("publishLayouts[").Append(module.PublishLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.PublishLayouts.Count; i++)
+        {
+            var layout = module.PublishLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture))
+                .Append(": kind=").Append(layout.Kind);
+            AppendText(builder, "message", layout.MessageName);
+            AppendText(builder, "signature", layout.SignatureId);
+            AppendSlot(builder, "messageSlot", layout.MessageSlot);
+            AppendStringList(builder, "args", layout.ArgumentNames);
+            AppendSlotList(builder, "argSlots", layout.ArgumentSlots);
+            AppendSlotList(builder, "tags", layout.TagSlots);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendIterationSourceLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("iterationSourceLayouts[").Append(module.IterationSourceLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.IterationSourceLayouts.Count; i++)
+        {
+            var layout = module.IterationSourceLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture))
+                .Append(": kind=").Append(layout.Kind);
+            AppendSlot(builder, "collection", layout.CollectionSlot);
+            AppendSlot(builder, "from", layout.RangeFromSlot);
+            AppendSlot(builder, "to", layout.RangeToSlot);
+            AppendSlot(builder, "step", layout.RangeStepSlot);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendLoopLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("loopLayouts[").Append(module.LoopLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.LoopLayouts.Count; i++)
+        {
+            var layout = module.LoopLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture)).Append(':');
+            AppendSlot(builder, "identifier", layout.IdentifierSlot);
+            AppendIndex(builder, "source", layout.IterationSourceLayoutIndex);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendSeededRandomBlockLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("seededRandomBlockLayouts[").Append(module.SeededRandomBlockLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.SeededRandomBlockLayouts.Count; i++)
+        {
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture)).Append(':');
+            AppendSlot(builder, "seed", module.SeededRandomBlockLayouts[i].SeedSlot);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendSelectorLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("selectorLayouts[").Append(module.SelectorLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.SelectorLayouts.Count; i++)
+        {
+            var layout = module.SelectorLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture))
+                .Append(": kind=").Append(layout.Kind);
+            AppendSlot(builder, "identifier", layout.IdentifierSlot);
+            AppendText(builder, "edge", layout.EdgeMode);
+            AppendText(builder, "secondary", layout.SecondaryMode);
+            AppendIndex(builder, "count", layout.Count);
+            AppendSlot(builder, "secondaryIdentifier", layout.SecondaryIdentifierSlot);
+            AppendAddress(builder, "expr", layout.ExpressionEntryAddress);
+            AppendAddress(builder, "secondaryExpr", layout.SecondaryExpressionEntryAddress);
+            if (layout.Flag)
+            {
+                builder.Append(" flag=true");
+            }
+
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendPipelineLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("pipelineLayouts[").Append(module.PipelineLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.PipelineLayouts.Count; i++)
+        {
+            var layout = module.PipelineLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture)).Append(':');
+            AppendSlot(builder, "source", layout.SourceSlot);
+            AppendIndexList(builder, "prefixSelectors", layout.PrefixSelectorLayoutIndexes);
+            AppendIndex(builder, "terminalSelector", layout.TerminalSelectorLayoutIndex);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendGeneratedCollectionLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("generatedCollectionLayouts[").Append(module.GeneratedCollectionLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.GeneratedCollectionLayouts.Count; i++)
+        {
+            var layout = module.GeneratedCollectionLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture))
+                .Append(": collection=").Append(layout.CollectionType);
+            AppendSlot(builder, "identifier", layout.IdentifierSlot);
+            AppendIndex(builder, "source", layout.IterationSourceLayoutIndex);
+            AppendAddress(builder, "predicate", layout.PredicateEntryAddress);
+            AppendAddress(builder, "projection", layout.ProjectionEntryAddress);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendGuardedChoiceLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("guardedChoiceLayouts[").Append(module.GuardedChoiceLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.GuardedChoiceLayouts.Count; i++)
+        {
+            var layout = module.GuardedChoiceLayouts[i];
+            builder.Append("  #").Append(i.ToString(CultureInfo.InvariantCulture)).Append(':');
+            AppendIndexList(builder, "values", layout.ValueEntryAddresses);
+            AppendIndexList(builder, "conditions", layout.ConditionEntryAddresses);
+            AppendAddress(builder, "otherwise", layout.OtherwiseEntryAddress);
+            builder.AppendLine();
         }
     }
 
@@ -188,6 +361,38 @@ public static class GameEventScriptBytecodeDumper
         {
             AppendConstant(builder, module, instruction.Data);
         }
+        else if (instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue)
+        {
+            AppendIndex(builder, "publishLayout", instruction.Data);
+        }
+        else if (instruction.OpCode is GameEventScriptBytecodeOpCode.ForRange or GameEventScriptBytecodeOpCode.ForCollection)
+        {
+            AppendIndex(builder, "loopLayout", instruction.Data);
+        }
+        else if (instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandomBlock)
+        {
+            AppendIndex(builder, "seededRandomBlockLayout", instruction.Data);
+        }
+        else if (instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline)
+        {
+            AppendIndex(builder, "pipelineLayout", instruction.Data);
+        }
+        else if (instruction.OpCode == GameEventScriptBytecodeOpCode.GeneratedCollection)
+        {
+            AppendIndex(builder, "generatedCollectionLayout", instruction.Data);
+        }
+        else if (instruction.OpCode == GameEventScriptBytecodeOpCode.GuardedChoice)
+        {
+            AppendIndex(builder, "guardedChoiceLayout", instruction.Data);
+        }
+        else if (IsOperationLayoutInstruction(instruction.OpCode))
+        {
+            AppendIndex(builder, "operationLayout", instruction.Data);
+        }
+        else if (instruction.OpCode == GameEventScriptBytecodeOpCode.CoerceSlot)
+        {
+            AppendIndex(builder, "type", instruction.Data);
+        }
         else
         {
             AppendIndex(builder, "data", instruction.Data);
@@ -234,11 +439,59 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
+    private static void AppendText(StringBuilder builder, string name, string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+        {
+            builder.Append(' ').Append(name).Append('=').Append(value);
+        }
+    }
+
     private static void AppendSlot(StringBuilder builder, string name, int value)
     {
         if (value >= 0)
         {
             builder.Append(' ').Append(name).Append("=s").Append(value.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static void AppendSlotList(StringBuilder builder, string name, IReadOnlyList<int> values)
+    {
+        if (values.Count > 0)
+        {
+            builder.Append(' ').Append(name).Append("=[")
+                .Append(string.Join(", ", values.Select(value => value < 0 ? "none" : $"s{value.ToString(CultureInfo.InvariantCulture)}")))
+                .Append(']');
+        }
+    }
+
+    private static void AppendIndexList(StringBuilder builder, string name, IReadOnlyList<int> values)
+    {
+        if (values.Count > 0)
+        {
+            builder.Append(' ').Append(name).Append("=[")
+                .Append(string.Join(", ", values.Select(value => value < 0 ? "none" : value.ToString(CultureInfo.InvariantCulture))))
+                .Append(']');
+        }
+    }
+
+    private static void AppendStringList(StringBuilder builder, string name, IReadOnlyList<string> values)
+    {
+        if (values.Count > 0)
+        {
+            builder.Append(' ').Append(name).Append("=[")
+                .Append(string.Join(", ", values))
+                .Append(']');
+        }
+    }
+
+    private static void AppendNullableStringList(StringBuilder builder, string name, IReadOnlyList<string?> values)
+    {
+        if (values.Count > 0)
+        {
+            builder.Append(' ').Append(name).Append("=[")
+                .Append(string.Join(", ", values.Select(value => string.IsNullOrEmpty(value) ? "none" : value)))
+                .Append(']');
         }
     }
 
@@ -254,6 +507,26 @@ public static class GameEventScriptBytecodeDumper
         => value < 0
             ? "none"
             : value.ToString("0000", CultureInfo.InvariantCulture);
+
+    private static bool IsOperationLayoutInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is
+            GameEventScriptBytecodeOpCode.Cast or
+            GameEventScriptBytecodeOpCode.TypeCheck or
+            GameEventScriptBytecodeOpCode.MemberAccess or
+            GameEventScriptBytecodeOpCode.Unary or
+            GameEventScriptBytecodeOpCode.Variadic or
+            GameEventScriptBytecodeOpCode.Range or
+            GameEventScriptBytecodeOpCode.SeededRandom or
+            GameEventScriptBytecodeOpCode.TypeConstructor or
+            GameEventScriptBytecodeOpCode.BuildList or
+            GameEventScriptBytecodeOpCode.BuildSequence or
+            GameEventScriptBytecodeOpCode.BuildSet or
+            GameEventScriptBytecodeOpCode.BuildDictionary or
+            GameEventScriptBytecodeOpCode.BuildMessage or
+            GameEventScriptBytecodeOpCode.BindHandler or
+            GameEventScriptBytecodeOpCode.CallExtension or
+            GameEventScriptBytecodeOpCode.Call or
+            GameEventScriptBytecodeOpCode.PredicateTest;
 
     private static void AppendPool(StringBuilder builder, string name, IReadOnlyList<string> values)
     {

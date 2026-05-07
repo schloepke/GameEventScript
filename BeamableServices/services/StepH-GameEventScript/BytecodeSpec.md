@@ -15,12 +15,13 @@ of script control flow.
 
 Implementation note: the current public artifact already exposes the global
 linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
-callables, and computed field helpers, plus public side tables for operation,
-publish, loop, selector/pipeline, generated-collection, seeded-random, and
-guarded-choice metadata. The synchronous VM executes supported handler ranges,
-simple callable/predicate frames, generated-collection helpers, and
-guarded-choice and seeded-random expression helper entries directly from that
-linear code with a VM-owned call-frame stack. The manual stepping Fiber also
+callables, and computed/clamped type-field helpers, plus public side tables for
+operation, publish, loop, selector/pipeline, generated-collection,
+seeded-random, and guarded-choice metadata. The synchronous VM executes
+supported handler ranges, simple callable/predicate frames, generated-collection
+helpers, guarded-choice and seeded-random expression helper entries, and
+supported type-field helper entries directly from that linear code with a
+VM-owned call-frame stack. The manual stepping Fiber also
 uses linear instruction execution for simple supported handlers, including
 fiber-safe generated-collection, guarded-choice, and seeded-random expression
 helpers plus pausable linear range/collection loops and seeded-random blocks,
@@ -28,7 +29,11 @@ while pipeline cases still use the compatibility Fiber path. Pipeline selector
 helper entry addresses are emitted into
 `SelectorLayouts`, but runtime pipeline execution currently keeps the
 compatibility executor's indexed/streaming hot paths until the linear selector
-executor has equivalent allocation behavior.
+executor has equivalent allocation behavior; non-fast selector expressions may
+evaluate through their public linear helper entries while staying inside those
+compatibility pipeline paths. Generated collections running from compatibility
+statement/expression paths may likewise evaluate their predicate/projection
+helpers through public linear entry addresses.
 
 ## Goals
 
@@ -377,7 +382,10 @@ TypeFieldEntry
 ```
 
 These addresses point at expression code that writes one value into the declared
-return slot.
+return slot. During record construction, computed-field and clamp helpers run in
+helper frames whose visible slots contain the already materialized field values.
+Temporary slots for these helpers must start after the source field slots so a
+helper cannot overwrite its own inputs.
 
 ## Opcode Families
 
@@ -895,8 +903,12 @@ A grouped view may still be offered, but it must keep global addresses visible.
 3. In progress: the VM can execute supported handler instruction ranges, simple
    callable/predicate frames, generated collections, and guarded choices
    directly from the linear `Code` segment using frame slots, `pc`, and a
-   VM-owned call-frame stack. Seeded-random expression bodies also execute from
-   operation-layout helper entries. The manual stepping Fiber uses the same
+   VM-owned call-frame stack. Seeded-random expression bodies and supported
+   type-field helper entries also execute from linear helper entry addresses.
+   Compatibility pipeline execution can use public linear helper entries for
+   non-fast selector expressions while preserving the indexed/streaming pipeline
+   hot paths. Generated collections in compatibility execution can use public
+   linear predicate/projection helpers. The manual stepping Fiber uses the same
    single-instruction linear executor for simple supported handlers, including
    fiber-safe generated collections, guarded choices, and seeded-random
    expression helpers plus pausable linear range/collection loops and
@@ -910,14 +922,18 @@ A grouped view may still be offered, but it must keep global addresses visible.
 The current compiler emits the public linear model through an adapter over the
 internal compatibility model, and the VM load path now builds a validated linear
 runtime artifact from that public model. Top-level execution, simple
-callable/predicate frames, generated collections, and guarded choices have a
-linear fast path backed by VM-owned call frames, and seeded-random expression
-bodies use operation-layout helper entries. Manual stepping uses the shared
+callable/predicate frames, generated collections, guarded choices, and supported
+type-field helpers have a linear fast path backed by VM-owned call frames, and
+seeded-random expression bodies use operation-layout helper entries. Manual
+stepping uses the shared
 linear instruction stepper for simple supported handler ranges, fiber-safe
 expression helper calls, pausable range/collection loops, and seeded-random
 blocks. Pipeline selectors now expose helper entry addresses in the public
-linear code, while pipeline runtime execution stays on the compatibility
-executor's optimized selector paths for now.
+linear code, and non-fast selector expressions can execute from those helper
+entries while pipeline runtime execution stays on the compatibility executor's
+optimized selector paths for now. Generated-collection predicate/projection
+helpers are also used from compatibility statement/expression paths when their
+linear entries are supported.
 
 ## Compatibility Predicates
 

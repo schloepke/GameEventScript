@@ -36,6 +36,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private List<LocalChange> _changes = [];
     private List<int> _scopeMarks = [];
     private readonly Stack<GameEventScriptRandomGenerator> _randomScopes = new();
+    private Dictionary<int, bool>? _linearEntrySupportCache;
     private bool _halted;
 
     private GesBytecodeVmExecutionSession(
@@ -448,7 +449,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         var pc = startAddress;
-        var callFrames = new List<LinearCallFrame>();
+        List<LinearCallFrame>? callFrames = null;
         try
         {
             while (pc < endAddress)
@@ -466,7 +467,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         ref pc,
                         ref endAddress,
                         ref arguments,
-                        callFrames,
+                        ref callFrames,
                         out returned,
                         out returnValue))
                 {
@@ -492,7 +493,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         ref int pc,
         ref int endAddress,
         ref LinearArgumentSource? arguments,
-        List<LinearCallFrame> callFrames,
+        ref List<LinearCallFrame>? callFrames,
         out bool returned,
         out BytecodeVmValue returnValue)
     {
@@ -587,7 +588,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeOpCode.Return:
                 returnValue = ResolveSlot(instruction.A);
-                if (callFrames.Count == 0)
+                if (callFrames is null || callFrames.Count == 0)
                 {
                     returned = true;
                     return true;
@@ -670,7 +671,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     arguments,
                     endAddress,
                     pc + 1,
-                    callFrames,
+                    ref callFrames,
                     out arguments,
                     out endAddress,
                     out pc);
@@ -691,7 +692,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         LinearArgumentSource? currentArguments,
         int currentEndAddress,
         int returnAddress,
-        List<LinearCallFrame> callFrames,
+        ref List<LinearCallFrame>? callFrames,
         out LinearArgumentSource? nextArguments,
         out int nextEndAddress,
         out int nextPc)
@@ -724,6 +725,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return DefineSlot(instruction.Dest, value);
         }
 
+        callFrames ??= [];
         callFrames.Add(new LinearCallFrame(
             _locals,
             _assignedSlots,
@@ -746,8 +748,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private void UnwindLinearCallFrames(List<LinearCallFrame> callFrames)
+    private void UnwindLinearCallFrames(List<LinearCallFrame>? callFrames)
     {
+        if (callFrames is null)
+        {
+            return;
+        }
+
         while (callFrames.Count > 0)
         {
             var frame = callFrames[^1];
@@ -1084,6 +1091,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
                    out var returned,
                    out value) &&
                returned;
+    }
+
+    private bool CanExecuteLinearEntryCached(int entryAddress)
+    {
+        if (_diagnosticsEnabled || entryAddress < 0)
+        {
+            return false;
+        }
+
+        _linearEntrySupportCache ??= new Dictionary<int, bool>();
+        if (_linearEntrySupportCache.TryGetValue(entryAddress, out var supported))
+        {
+            return supported;
+        }
+
+        supported = CanExecuteLinearEntry(entryAddress, []);
+        _linearEntrySupportCache[entryAddress] = supported;
+        return supported;
     }
 
     private bool TryEvaluateLinearHelperExpressionWithTemporarySlot(
@@ -2887,7 +2912,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             var fastItem = BytecodeVmValue.FromGameEventScriptValue(item);
             if (program.PredicateProgram is not null)
             {
-                if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.PredicateProgram, 0, out var predicate))
+                if (!TryEvaluateGeneratedCollectionExpressionWithTemporarySlot(
+                        program.IdentifierSlot,
+                        fastItem,
+                        program.PredicateProgram,
+                        out var predicate))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -2904,7 +2933,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 break;
             }
 
-            if (!TryExecuteExpressionProgramWithTemporarySlot(program.IdentifierSlot, fastItem, program.ProjectionProgram, 0, out var projected))
+            if (!TryEvaluateGeneratedCollectionExpressionWithTemporarySlot(
+                    program.IdentifierSlot,
+                    fastItem,
+                    program.ProjectionProgram,
+                    out var projected))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -2917,6 +2950,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
             ? GameEventScriptValueFactory.GesSet(values)
             : GameEventScriptValueFactory.GesList(values));
         return true;
+    }
+
+    private bool TryEvaluateGeneratedCollectionExpressionWithTemporarySlot(
+        int identifierSlot,
+        BytecodeVmValue item,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        out BytecodeVmValue value)
+    {
+        if (CanExecuteLinearEntryCached(expressionProgram.LinearEntryAddress))
+        {
+            return TryEvaluateLinearHelperExpressionWithTemporarySlot(
+                identifierSlot,
+                item,
+                expressionProgram.LinearEntryAddress,
+                out value);
+        }
+
+        return TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
     }
 
     private bool TryGetIterationSourceItems(GameEventScriptBytecodeIterationSourceProgram source, out IEnumerable<GameEventScriptValue> items)
@@ -4691,7 +4742,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var sourceValues = value.AsDictionary().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         var materializedValues = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
 
-        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedProgram is null))
+        foreach (var field in typeDefinition.Fields.Where(field => !IsComputedTypeField(field)))
         {
             sourceValues.TryGetValue(field.Name, out var rawValue);
             rawValue ??= GameEventScriptNothingValue.Instance;
@@ -4702,14 +4753,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
             materializedValues[field.Name] = fieldValue;
         }
 
-        foreach (var field in typeDefinition.Fields.Where(field => field.ComputedProgram is not null))
+        foreach (var field in typeDefinition.Fields.Where(IsComputedTypeField))
         {
-            var computedValue = EvaluateCustomTypeExpression(field.ComputedProgram!, sourceValues, materializedValues);
+            var computedValue = EvaluateCustomTypeExpression(
+                field.ComputedEntryAddress,
+                field.ComputedProgram,
+                sourceValues,
+                materializedValues);
             materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
         }
 
         return GameEventScriptValueFactory.GesCustomType(typeDefinition.Name, materializedValues);
     }
+
+    private static bool IsComputedTypeField(GameEventScriptBytecodeTypeFieldDefinition field)
+        => field.ComputedEntryAddress >= 0 || field.ComputedProgram is not null;
 
     private GameEventScriptValue ConvertValueToDeclaredType(GameEventScriptValue value, string declaredType)
         => TryConvertDeclaredType(declaredType, BytecodeVmValue.FromGameEventScriptValue(value), out var converted)
@@ -4724,13 +4782,22 @@ internal sealed partial class GesBytecodeVmExecutionSession
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
     {
         _ = typeDefinition;
-        if (field.MinimumProgram is null || field.MaximumProgram is null)
+        if (!HasCustomTypeExpression(field.MinimumEntryAddress, field.MinimumProgram) ||
+            !HasCustomTypeExpression(field.MaximumEntryAddress, field.MaximumProgram))
         {
             return fieldValue;
         }
 
-        var minimum = EvaluateCustomTypeExpression(field.MinimumProgram, sourceValues, materializedValues);
-        var maximum = EvaluateCustomTypeExpression(field.MaximumProgram, sourceValues, materializedValues);
+        var minimum = EvaluateCustomTypeExpression(
+            field.MinimumEntryAddress,
+            field.MinimumProgram,
+            sourceValues,
+            materializedValues);
+        var maximum = EvaluateCustomTypeExpression(
+            field.MaximumEntryAddress,
+            field.MaximumProgram,
+            sourceValues,
+            materializedValues);
         if (!GesValueOperations.HaveCompatibleNumericUnits(fieldValue, minimum) ||
             !GesValueOperations.HaveCompatibleNumericUnits(fieldValue, maximum) ||
             !GesValueOperations.HaveCompatibleNumericUnits(minimum, maximum))
@@ -4759,6 +4826,72 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
         GameEventScriptValue.TryGetNumericUnit(fieldValue, out var unit);
         return GameEventScriptValueFactory.GesFloat(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasNumericUnit() ? unit : null);
+    }
+
+    private static bool HasCustomTypeExpression(int entryAddress, GameEventScriptBytecodeExpressionProgram? expressionProgram)
+        => entryAddress >= 0 || expressionProgram is not null;
+
+    private GameEventScriptValue EvaluateCustomTypeExpression(
+        int entryAddress,
+        GameEventScriptBytecodeExpressionProgram? expressionProgram,
+        IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
+        IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
+    {
+        if (TryEvaluateLinearCustomTypeExpression(entryAddress, sourceValues, materializedValues, out var linearValue))
+        {
+            return linearValue;
+        }
+
+        return expressionProgram is null
+            ? GameEventScriptNothingValue.Instance
+            : EvaluateCustomTypeExpression(expressionProgram, sourceValues, materializedValues);
+    }
+
+    private bool TryEvaluateLinearCustomTypeExpression(
+        int entryAddress,
+        IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
+        IReadOnlyDictionary<string, GameEventScriptValue> materializedValues,
+        out GameEventScriptValue value)
+    {
+        value = GameEventScriptNothingValue.Instance;
+        if (entryAddress < 0 ||
+            _diagnosticsEnabled ||
+            !CanExecuteLinearEntry(entryAddress, []))
+        {
+            return false;
+        }
+
+        EnterScope();
+        try
+        {
+            foreach (var pair in sourceValues)
+            {
+                if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
+                {
+                    return false;
+                }
+            }
+
+            foreach (var pair in materializedValues)
+            {
+                if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
+                {
+                    return false;
+                }
+            }
+
+            if (!TryEvaluateLinearHelperExpression(entryAddress, out var linearValue))
+            {
+                return false;
+            }
+
+            value = linearValue.ToGameEventScriptValue();
+            return true;
+        }
+        finally
+        {
+            ExitScope();
+        }
     }
 
     private GameEventScriptValue EvaluateCustomTypeExpression(
@@ -4951,7 +5084,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             case GameEventScriptBytecodeSelectorKind.SeriesTerm:
                 if (terminal.ExpressionProgram is null ||
-                    !TryExecuteExpressionProgram(terminal.ExpressionProgram, 0, out var termIndex))
+                    !TryEvaluateSelectorExpression(terminal, out var termIndex))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -5885,7 +6018,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         var terminal = pipeline.TerminalSelector;
         if (terminal.ExpressionProgram is null ||
-            !TryExecuteExpressionProgram(terminal.ExpressionProgram, 0, out var needle))
+            !TryEvaluateSelectorExpression(terminal, out var needle))
         {
             value = BytecodeVmValue.Nothing;
             return false;
@@ -6121,7 +6254,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         IReadOnlyList<GameEventScriptValue> chosen;
         if (selector.SecondaryExpressionProgram is not null && selector.SecondaryIdentifierSlot >= 0)
         {
-            if (!TryChooseWeightedItems(candidates, selector.Count, selector.SecondaryIdentifierSlot, selector.SecondaryExpressionProgram, out chosen))
+            if (!TryChooseWeightedItems(
+                    candidates,
+                    selector.Count,
+                    selector.SecondaryIdentifierSlot,
+                    selector.SecondaryExpressionProgram,
+                    selector.SecondaryExpressionEntryAddress,
+                    out chosen))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -6183,6 +6322,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         int count,
         int identifierSlot,
         GameEventScriptBytecodeExpressionProgram weightProgram,
+        int weightEntryAddress,
         out IReadOnlyList<GameEventScriptValue> chosen)
     {
         var remaining = candidates.ToList();
@@ -6195,7 +6335,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             foreach (var candidate in remaining)
             {
-                if (!TryEvaluateProgramProjection(identifierSlot, weightProgram, BytecodeVmValue.FromGameEventScriptValue(candidate), out var weightValue))
+                if (!TryEvaluateProgramProjection(
+                        identifierSlot,
+                        weightProgram,
+                        weightEntryAddress,
+                        BytecodeVmValue.FromGameEventScriptValue(candidate),
+                        out var weightValue))
                 {
                     chosen = [];
                     return false;
@@ -6916,31 +7061,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         GameEventScriptBytecodeExpressionProgram expressionProgram,
         BytecodeVmValue item,
         out BytecodeVmValue value)
-    {
-        var instructions = expressionProgram.Instructions;
-        if (instructions.Length == 1 &&
-            (instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadSlot ||
-             instructions[0].OpCode == GameEventScriptBytecodeOpCode.LoadConstant))
-        {
-            if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
-            {
-                value = BytecodeVmValue.Nothing;
-                return true;
-            }
-
-            ref readonly var instruction = ref instructions[0];
-            if (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadSlot)
-            {
-                value = instruction.A == identifierSlot ? item : ResolveSlot(instruction.A);
-                return true;
-            }
-
-            value = LoadConstant(instruction.ConstantIndex);
-            return true;
-        }
-
-        return TryEvaluateProgramProjection(identifierSlot, expressionProgram, item, out value);
-    }
+        => TryEvaluateProgramProjection(identifierSlot, expressionProgram, item, out value);
 
     private static bool IsIdentityProjection(int identifierSlot, GameEventScriptBytecodeExpressionProgram expressionProgram)
     {
@@ -6958,9 +7079,35 @@ internal sealed partial class GesBytecodeVmExecutionSession
                LoadConstant(instructions[0].ConstantIndex).IsTrue();
     }
 
+    private bool TryEvaluateSelectorExpression(
+        GameEventScriptBytecodeSelectorProgram selector,
+        out BytecodeVmValue value)
+    {
+        if (selector.ExpressionProgram is null)
+        {
+            value = BytecodeVmValue.Nothing;
+            return false;
+        }
+
+        if (CanExecuteLinearEntryCached(selector.ExpressionProgram.LinearEntryAddress))
+        {
+            return TryEvaluateLinearHelperExpression(selector.ExpressionProgram.LinearEntryAddress, out value);
+        }
+
+        return TryExecuteExpressionProgram(selector.ExpressionProgram, 0, out value);
+    }
+
     private bool TryEvaluateProgramProjection(
         int identifierSlot,
         GameEventScriptBytecodeExpressionProgram expressionProgram,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
+        => TryEvaluateProgramProjection(identifierSlot, expressionProgram, expressionProgram.LinearEntryAddress, item, out value);
+
+    private bool TryEvaluateProgramProjection(
+        int identifierSlot,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        int expressionEntryAddress,
         BytecodeVmValue item,
         out BytecodeVmValue value)
     {
@@ -6969,9 +7116,51 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        return handled
+        if (handled)
+        {
+            return false;
+        }
+
+        if (TryEvaluateLinearSelectorProjection(
+                identifierSlot,
+                expressionProgram,
+                expressionEntryAddress,
+                item,
+                out value,
+                out var handledLinear))
+        {
+            return true;
+        }
+
+        return handledLinear
             ? false
             : TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
+    }
+
+    private bool TryEvaluateLinearSelectorProjection(
+        int identifierSlot,
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        int expressionEntryAddress,
+        BytecodeVmValue item,
+        out BytecodeVmValue value,
+        out bool handled)
+    {
+        value = BytecodeVmValue.Nothing;
+        handled = false;
+        if (expressionProgram.CanEvaluateProjectionFast ||
+            !CanExecuteLinearEntryCached(expressionEntryAddress))
+        {
+            return false;
+        }
+
+        handled = true;
+        return identifierSlot >= 0
+            ? TryEvaluateLinearHelperExpressionWithTemporarySlot(
+                identifierSlot,
+                item,
+                expressionEntryAddress,
+                out value)
+            : TryEvaluateLinearHelperExpression(expressionEntryAddress, out value);
     }
 
     private bool TryEvaluateProjectionFast(

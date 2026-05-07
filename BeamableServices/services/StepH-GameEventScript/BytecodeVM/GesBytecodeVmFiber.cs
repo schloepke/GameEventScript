@@ -175,7 +175,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             int endAddress,
             LinearArgumentSource? arguments) : Frame
         {
-            private readonly List<LinearCallFrame> _callFrames = [];
+            private List<LinearCallFrame>? _callFrames;
             private LinearArgumentSource? _arguments = arguments;
             private int _pc = startAddress;
             private int _endAddress = endAddress;
@@ -235,7 +235,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             ref _pc,
                             ref _endAddress,
                             ref _arguments,
-                            _callFrames,
+                            ref _callFrames,
                             out var returned,
                             out var returnValue))
                     {

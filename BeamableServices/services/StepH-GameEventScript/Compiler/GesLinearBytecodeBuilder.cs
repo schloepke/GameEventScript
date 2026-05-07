@@ -123,11 +123,12 @@ internal sealed class GesLinearBytecodeBuilder
     }
 
     private int EmitExpressionEntry(GameEventScriptBytecodeExpressionProgram program)
-        => EmitExpressionEntry(program, new ExpressionState(0));
+        => EmitExpressionEntry(program, new ExpressionState(GetExpressionSlotUpperBound(program)));
 
     private int EmitExpressionEntry(GameEventScriptBytecodeExpressionProgram program, ExpressionState state)
     {
         var entry = _code.Count;
+        program.SetLinearEntryAddress(entry);
         var result = EmitExpression(program, state);
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
@@ -599,6 +600,7 @@ internal sealed class GesLinearBytecodeBuilder
             var secondaryExpressionEntryAddress = selector.SecondaryExpressionProgram is null
                 ? -1
                 : EmitExpressionEntry(selector.SecondaryExpressionProgram, state);
+            selector.SetLinearEntryAddresses(expressionEntryAddress, secondaryExpressionEntryAddress);
             _selectorLayouts[index] = new GameEventScriptBytecodeSelectorLayout(
                 selector.Kind,
                 selector.IdentifierSlot,
@@ -685,6 +687,121 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         _deferredHelperEmitters.Clear();
+    }
+
+    private static int GetExpressionSlotUpperBound(GameEventScriptBytecodeExpressionProgram? program)
+    {
+        var maxSlot = -1;
+        CollectExpressionSlots(program, ref maxSlot);
+        return maxSlot + 1;
+    }
+
+    private static void CollectExpressionSlots(GameEventScriptBytecodeExpressionProgram? program, ref int maxSlot)
+    {
+        if (program is null)
+        {
+            return;
+        }
+
+        foreach (var instruction in program.Instructions)
+        {
+            if (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadSlot && instruction.A >= 0)
+            {
+                maxSlot = Math.Max(maxSlot, instruction.A);
+            }
+
+            CollectExpressionSlots(instruction.ExpressionProgram, ref maxSlot);
+            CollectPipelineSlots(instruction.PipelineProgram, ref maxSlot);
+            CollectGeneratedCollectionSlots(instruction.GeneratedCollectionProgram, ref maxSlot);
+            CollectGuardedChoiceSlots(instruction.GuardedChoiceProgram, ref maxSlot);
+        }
+    }
+
+    private static void CollectPipelineSlots(GameEventScriptBytecodePipelineProgram? program, ref int maxSlot)
+    {
+        if (program is null)
+        {
+            return;
+        }
+
+        CollectExpressionSlots(program.SourceProgram, ref maxSlot);
+        foreach (var selector in program.PrefixSelectors)
+        {
+            CollectSelectorSlots(selector, ref maxSlot);
+        }
+
+        CollectSelectorSlots(program.TerminalSelector, ref maxSlot);
+    }
+
+    private static void CollectSelectorSlots(GameEventScriptBytecodeSelectorProgram? selector, ref int maxSlot)
+    {
+        if (selector is null)
+        {
+            return;
+        }
+
+        if (selector.IdentifierSlot >= 0)
+        {
+            maxSlot = Math.Max(maxSlot, selector.IdentifierSlot);
+        }
+
+        if (selector.SecondaryIdentifierSlot >= 0)
+        {
+            maxSlot = Math.Max(maxSlot, selector.SecondaryIdentifierSlot);
+        }
+
+        CollectExpressionSlots(selector.ExpressionProgram, ref maxSlot);
+        CollectExpressionSlots(selector.SecondaryExpressionProgram, ref maxSlot);
+    }
+
+    private static void CollectGeneratedCollectionSlots(GameEventScriptBytecodeGeneratedCollectionProgram? program, ref int maxSlot)
+    {
+        if (program is null)
+        {
+            return;
+        }
+
+        if (program.IdentifierSlot >= 0)
+        {
+            maxSlot = Math.Max(maxSlot, program.IdentifierSlot);
+        }
+
+        CollectIterationSourceSlots(program.Source, ref maxSlot);
+        CollectExpressionSlots(program.PredicateProgram, ref maxSlot);
+        CollectExpressionSlots(program.ProjectionProgram, ref maxSlot);
+    }
+
+    private static void CollectGuardedChoiceSlots(GameEventScriptBytecodeGuardedChoiceProgram? program, ref int maxSlot)
+    {
+        if (program is null)
+        {
+            return;
+        }
+
+        foreach (var condition in program.ConditionPrograms)
+        {
+            CollectExpressionSlots(condition, ref maxSlot);
+        }
+
+        foreach (var value in program.ValuePrograms)
+        {
+            CollectExpressionSlots(value, ref maxSlot);
+        }
+
+        CollectExpressionSlots(program.OtherwiseProgram, ref maxSlot);
+    }
+
+    private static void CollectIterationSourceSlots(GameEventScriptBytecodeIterationSourceProgram? source, ref int maxSlot)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        CollectExpressionSlots(source.CollectionProgram, ref maxSlot);
+        CollectExpressionSlots(source.RangeFromProgram, ref maxSlot);
+        CollectExpressionSlots(source.RangeToProgram, ref maxSlot);
+        CollectExpressionSlots(source.RangeStepProgram, ref maxSlot);
     }
 
     private int EmitValueInstruction(

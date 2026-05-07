@@ -99,10 +99,8 @@ public sealed class GameEventScriptRandomGenerator
     public long NextInclusiveInteger(long minInclusive, long maxInclusive)
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        if (TryDequeueSequenceValue(out var queuedValue))
-            return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
+        if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
-
         var span = unchecked((ulong)(maxInclusive - minInclusive) + 1UL);
         var offset = NextUInt64Below(span);
         return unchecked(minInclusive + (long)offset);
@@ -176,11 +174,11 @@ public sealed class GameEventScriptRandomGenerator
         return BitConverter.ToUInt64(_uint64Buffer, 0);
     }
 
-    private static long ToLongSaturated(double value)
+    private static long ToLongSaturated(double value) => value switch
     {
-        if (double.IsNaN(value)) return 0;
-        if (value <= long.MinValue) return long.MinValue;
-        if (value >= long.MaxValue) return long.MaxValue;
-        return (long)Math.Truncate(value);
-    }
+        double.NaN => 0,
+        <= long.MinValue => long.MinValue,
+        >= long.MaxValue => long.MaxValue,
+        _ => (long)Math.Truncate(value)
+    };
 }

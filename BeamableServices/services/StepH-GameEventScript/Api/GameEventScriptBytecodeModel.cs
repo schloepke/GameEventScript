@@ -585,6 +585,11 @@ internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBy
 
     internal bool CanEvaluateProjectionFast => ProjectionFastKind != GameEventScriptBytecodeProjectionFastKind.None;
 
+    internal int LinearEntryAddress { get; private set; } = -1;
+
+    internal void SetLinearEntryAddress(int entryAddress)
+        => LinearEntryAddress = entryAddress;
+
     private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeStackInstruction[] instructions, int maxStackDepth)
     {
         if (instructions.Length is 0 or > 8 || maxStackDepth > 3 || !instructions.All(CanEvaluateProjectionInstructionFast))
@@ -761,6 +766,16 @@ internal sealed class GameEventScriptBytecodeSelectorProgram(
     public GameEventScriptBytecodeDicePattern? DicePattern { get; } = dicePattern;
 
     public GameEventScriptBytecodeObjectMatchPattern? ObjectPattern { get; } = objectPattern;
+
+    internal int ExpressionEntryAddress { get; private set; } = -1;
+
+    internal int SecondaryExpressionEntryAddress { get; private set; } = -1;
+
+    internal void SetLinearEntryAddresses(int expressionEntryAddress, int secondaryExpressionEntryAddress)
+    {
+        ExpressionEntryAddress = expressionEntryAddress;
+        SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
+    }
 }
 
 internal sealed class GameEventScriptBytecodePipelineProgram(

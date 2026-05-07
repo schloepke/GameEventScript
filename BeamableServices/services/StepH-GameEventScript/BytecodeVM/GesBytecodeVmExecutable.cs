@@ -17,6 +17,8 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> _boundExternalTypeConstructors =
         new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal);
+    private readonly object _linearEntrySupportCacheLock = new();
+    private readonly Dictionary<int, bool> _linearEntrySupportCache = [];
 
     internal GesBytecodeVmExecutable(
         GameEventScriptCompileOptions options,
@@ -161,4 +163,20 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         => _boundExternalTypeConstructors.TryGetValue(
             GameEventScriptExternalTypeConstructorReference.CreateSignatureId(typeName, argumentLabels),
             out constructor!);
+
+    internal bool TryGetLinearEntrySupport(int entryAddress, out bool supported)
+    {
+        lock (_linearEntrySupportCacheLock)
+        {
+            return _linearEntrySupportCache.TryGetValue(entryAddress, out supported);
+        }
+    }
+
+    internal void SetLinearEntrySupport(int entryAddress, bool supported)
+    {
+        lock (_linearEntrySupportCacheLock)
+        {
+            _linearEntrySupportCache[entryAddress] = supported;
+        }
+    }
 }

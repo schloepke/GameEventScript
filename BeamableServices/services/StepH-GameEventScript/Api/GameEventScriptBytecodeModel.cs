@@ -587,8 +587,13 @@ internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBy
 
     internal int LinearEntryAddress { get; private set; } = -1;
 
-    internal void SetLinearEntryAddress(int entryAddress)
-        => LinearEntryAddress = entryAddress;
+    internal int LinearTemporaryBaseSlot { get; private set; } = -1;
+
+    internal void SetLinearEntryAddress(int entryAddress, int temporaryBaseSlot = -1)
+    {
+        LinearEntryAddress = entryAddress;
+        LinearTemporaryBaseSlot = temporaryBaseSlot;
+    }
 
     private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeStackInstruction[] instructions, int maxStackDepth)
     {

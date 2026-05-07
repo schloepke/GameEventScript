@@ -128,7 +128,7 @@ internal sealed class GesLinearBytecodeBuilder
     private int EmitExpressionEntry(GameEventScriptBytecodeExpressionProgram program, ExpressionState state)
     {
         var entry = _code.Count;
-        program.SetLinearEntryAddress(entry);
+        program.SetLinearEntryAddress(entry, state.BaseSlot);
         var result = EmitExpression(program, state);
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
@@ -188,6 +188,7 @@ internal sealed class GesLinearBytecodeBuilder
                     plan.TryGetSlot(statement.Name, out var letSlot))
                 {
                     var result = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
+                    DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
                     Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: letSlot, A: result));
                     if (!string.IsNullOrEmpty(statement.DeclaredType))
                     {
@@ -204,6 +205,7 @@ internal sealed class GesLinearBytecodeBuilder
                 if (statement.ExpressionProgram is not null)
                 {
                     _ = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
+                    DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
                 }
                 break;
 
@@ -233,6 +235,7 @@ internal sealed class GesLinearBytecodeBuilder
         foreach (var tagProgram in statement.TagPrograms)
         {
             tagSlots.Add(EmitExpression(tagProgram, state));
+            DeferExpressionEntry(tagProgram, plan.SlotCount);
         }
 
         if (statement.PublishLayout is not null)
@@ -241,6 +244,7 @@ internal sealed class GesLinearBytecodeBuilder
             foreach (var argumentProgram in statement.PublishLayout.ArgumentPrograms)
             {
                 argumentSlots.Add(EmitExpression(argumentProgram, state));
+                DeferExpressionEntry(argumentProgram, plan.SlotCount);
             }
 
             var publishLayoutIndex = AddPublishLayout(new GameEventScriptBytecodePublishLayoutEntry(
@@ -260,6 +264,7 @@ internal sealed class GesLinearBytecodeBuilder
         if (statement.ExpressionProgram is not null)
         {
             var messageSlot = EmitExpression(statement.ExpressionProgram, state);
+            DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
             var publishLayoutIndex = AddPublishLayout(new GameEventScriptBytecodePublishLayoutEntry(
                 statement.PublishKind,
                 messageSlot: messageSlot,
@@ -280,6 +285,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var condition = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
+        DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
         var jumpToElse = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, A: condition));
         EmitStatementProgram(statement.ThenProgram, plan);
         var jumpToEnd = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump));
@@ -321,6 +327,7 @@ internal sealed class GesLinearBytecodeBuilder
         if (statement.ExpressionProgram is not null)
         {
             seedSlot = EmitExpression(statement.ExpressionProgram, state);
+            DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
         }
 
         var layoutIndex = AddSeededRandomBlockLayout(new GameEventScriptBytecodeSeededRandomBlockLayout(seedSlot));
@@ -543,18 +550,22 @@ internal sealed class GesLinearBytecodeBuilder
             collectionSlot = source.CollectionProgram is null
                 ? -1
                 : EmitExpression(source.CollectionProgram, state);
+            DeferExpressionEntry(source.CollectionProgram, state.BaseSlot);
         }
         else
         {
             rangeFromSlot = source.RangeFromProgram is null
                 ? -1
                 : EmitExpression(source.RangeFromProgram, state);
+            DeferExpressionEntry(source.RangeFromProgram, state.BaseSlot);
             rangeToSlot = source.RangeToProgram is null
                 ? -1
                 : EmitExpression(source.RangeToProgram, state);
+            DeferExpressionEntry(source.RangeToProgram, state.BaseSlot);
             rangeStepSlot = source.RangeStepProgram is null
                 ? -1
                 : EmitExpression(source.RangeStepProgram, state);
+            DeferExpressionEntry(source.RangeStepProgram, state.BaseSlot);
         }
 
         var index = _iterationSourceLayouts.Count;
@@ -687,6 +698,57 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         _deferredHelperEmitters.Clear();
+    }
+
+    private void DeferExpressionEntry(GameEventScriptBytecodeExpressionProgram? program, int temporaryBaseSlot)
+    {
+        if (program is null || !CanDeferExpressionEntry(program))
+        {
+            return;
+        }
+
+        _deferredHelperEmitters.Add(() =>
+        {
+            if (program.LinearEntryAddress < 0)
+            {
+                _ = EmitExpressionEntry(program, new ExpressionState(temporaryBaseSlot));
+            }
+        });
+    }
+
+    private static bool CanDeferExpressionEntry(GameEventScriptBytecodeExpressionProgram program)
+    {
+        if (program.Instructions.Length <= 1)
+        {
+            return false;
+        }
+
+        return !ContainsDeferredEntryBlocker(program);
+    }
+
+    private static bool ContainsDeferredEntryBlocker(GameEventScriptBytecodeExpressionProgram? program)
+    {
+        if (program is null)
+        {
+            return false;
+        }
+
+        foreach (var instruction in program.Instructions)
+        {
+            if (instruction.PipelineProgram is not null ||
+                instruction.GeneratedCollectionProgram is not null ||
+                instruction.GuardedChoiceProgram is not null ||
+                instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom ||
+                instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest ||
+                instruction.OpCode == GameEventScriptBytecodeOpCode.Call ||
+                NeedsOperationLayout(instruction) ||
+                ContainsDeferredEntryBlocker(instruction.ExpressionProgram))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static int GetExpressionSlotUpperBound(GameEventScriptBytecodeExpressionProgram? program)
@@ -919,6 +981,8 @@ internal sealed class GesLinearBytecodeBuilder
 
     private sealed class ExpressionState(int nextSlot)
     {
+        public int BaseSlot { get; } = Math.Max(0, nextSlot);
+
         public int NextSlot { get; private set; } = Math.Max(0, nextSlot);
 
         public int Allocate()

@@ -52,7 +52,7 @@ public sealed class BytecodeVmPerformanceReportTests
 
         WarmUp(input);
 
-        var bytecodeVmCompile = Measure<GameEventScriptCompiled>("ges compile", BuildPerformanceBytecode);
+        var bytecodeVmCompile = Measure("ges compile", BuildPerformanceBytecode);
         var bytecodeVmBuild = Measure<IGameEventScriptMessageHandlerCollection>("bytecodevm build", () => BuildExecutable(bytecodeVmCompile.Value));
 
         var bytecodeVmRun = MeasureRun(bytecodeVmBuild.Value, input, MeasuredRuns);

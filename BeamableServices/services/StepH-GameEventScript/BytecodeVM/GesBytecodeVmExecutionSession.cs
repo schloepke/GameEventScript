@@ -36,7 +36,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private List<LocalChange> _changes = [];
     private List<int> _scopeMarks = [];
     private readonly Stack<GameEventScriptRandomGenerator> _randomScopes = new();
-    private Dictionary<int, bool>? _linearEntrySupportCache;
+    private bool _suppressLocalChangeTracking;
     private bool _halted;
 
     private GesBytecodeVmExecutionSession(
@@ -1089,8 +1089,51 @@ internal sealed partial class GesBytecodeVmExecutionSession
                    _compiledScript.LinearExecutable.Code.Count,
                    null,
                    out var returned,
-                   out value) &&
-               returned;
+               out value) &&
+           returned;
+    }
+
+    private bool TryEvaluateLinearHelperExpressionWithIsolatedTemporaries(
+        int entryAddress,
+        int temporaryBaseSlot,
+        out BytecodeVmValue value)
+    {
+        if (temporaryBaseSlot < 0 || temporaryBaseSlot >= _locals.Length)
+        {
+            return TryEvaluateLinearHelperExpression(entryAddress, out value);
+        }
+
+        var temporarySlotCount = _locals.Length - temporaryBaseSlot;
+        var previousValues = ArrayPool<BytecodeVmValue>.Shared.Rent(temporarySlotCount);
+        var previousAssignedSlots = ArrayPool<bool>.Shared.Rent(temporarySlotCount);
+        for (var index = 0; index < temporarySlotCount; index++)
+        {
+            var slot = temporaryBaseSlot + index;
+            previousValues[index] = _locals[slot];
+            previousAssignedSlots[index] = _assignedSlots[slot];
+        }
+
+        var previousSuppressLocalChangeTracking = _suppressLocalChangeTracking;
+        _suppressLocalChangeTracking = true;
+        try
+        {
+            return TryEvaluateLinearHelperExpression(entryAddress, out value);
+        }
+        finally
+        {
+            _suppressLocalChangeTracking = previousSuppressLocalChangeTracking;
+            for (var index = 0; index < temporarySlotCount; index++)
+            {
+                var slot = temporaryBaseSlot + index;
+                _locals[slot] = previousValues[index];
+                _assignedSlots[slot] = previousAssignedSlots[index];
+            }
+
+            Array.Clear(previousValues, 0, temporarySlotCount);
+            ArrayPool<BytecodeVmValue>.Shared.Return(previousValues);
+            Array.Clear(previousAssignedSlots, 0, temporarySlotCount);
+            ArrayPool<bool>.Shared.Return(previousAssignedSlots);
+        }
     }
 
     private bool CanExecuteLinearEntryCached(int entryAddress)
@@ -1100,14 +1143,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        _linearEntrySupportCache ??= new Dictionary<int, bool>();
-        if (_linearEntrySupportCache.TryGetValue(entryAddress, out var supported))
+        if (_compiledScript.TryGetLinearEntrySupport(entryAddress, out var supported))
         {
             return supported;
         }
 
         supported = CanExecuteLinearEntry(entryAddress, []);
-        _linearEntrySupportCache[entryAddress] = supported;
+        _compiledScript.SetLinearEntrySupport(entryAddress, supported);
         return supported;
     }
 
@@ -1998,6 +2040,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecuteExpressionProgram(GameEventScriptBytecodeExpressionProgram program, int stackBase, out BytecodeVmValue value)
     {
+        if (stackBase == 0 &&
+            CanExecuteLinearEntryCached(program.LinearEntryAddress))
+        {
+            return TryEvaluateLinearHelperExpressionWithIsolatedTemporaries(
+                program.LinearEntryAddress,
+                program.LinearTemporaryBaseSlot,
+                out value);
+        }
+
+        return TryExecuteCompatibilityExpressionProgram(program, stackBase, out value);
+    }
+
+    private bool TryExecuteCompatibilityExpressionProgram(GameEventScriptBytecodeExpressionProgram program, int stackBase, out BytecodeVmValue value)
+    {
         var linear = GesLinearExpressionProgram.GetOrCreate(program);
         var slots = ArrayPool<BytecodeVmValue>.Shared.Rent(linear.MaxSlots);
         Array.Clear(slots, 0, linear.MaxSlots);
@@ -2885,6 +2941,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         PushSeededRandomScope(seed.ToGameEventScriptValue());
         try
         {
+            if (CanExecuteLinearEntryCached(bodyProgram.LinearEntryAddress))
+            {
+                return TryEvaluateLinearHelperExpression(bodyProgram.LinearEntryAddress, out value);
+            }
+
             return TryExecuteExpressionProgram(bodyProgram, stackBase, out value);
         }
         finally
@@ -3039,7 +3100,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         for (var branchIndex = 0; branchIndex < conditions.Length; branchIndex++)
         {
-            if (!TryExecuteExpressionProgram(conditions[branchIndex], 0, out var condition))
+            if (!TryEvaluateGuardedChoiceExpression(conditions[branchIndex], out var condition))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -3047,11 +3108,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             if (condition.IsTrue())
             {
-                return TryExecuteExpressionProgram(values[branchIndex], 0, out value);
+                return TryEvaluateGuardedChoiceExpression(values[branchIndex], out value);
             }
         }
 
-        return TryExecuteExpressionProgram(program.OtherwiseProgram, 0, out value);
+        return TryEvaluateGuardedChoiceExpression(program.OtherwiseProgram, out value);
+    }
+
+    private bool TryEvaluateGuardedChoiceExpression(
+        GameEventScriptBytecodeExpressionProgram expressionProgram,
+        out BytecodeVmValue value)
+    {
+        if (CanExecuteLinearEntryCached(expressionProgram.LinearEntryAddress))
+        {
+            return TryEvaluateLinearHelperExpression(expressionProgram.LinearEntryAddress, out value);
+        }
+
+        return TryExecuteExpressionProgram(expressionProgram, 0, out value);
     }
 
     private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue)
@@ -3784,7 +3857,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         BytecodeVmValue input,
         int stackBase,
         out BytecodeVmValue value,
-        string? parameterName = null)
+        string? parameterName = null,
+        bool allowLinearCallableFallback = true)
     {
         value = BytecodeVmValue.Nothing;
         if (instruction.ExpressionProgram is null)
@@ -3811,6 +3885,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     TryEvaluateSimplePredicateTest(instruction.ExpressionProgram, instruction.A, predicateInput, out value))
                 {
                     return true;
+                }
+
+                if (allowLinearCallableFallback &&
+                    TryGetSupportedLinearCallable(instruction.DiagnosticName, out var linearPredicate))
+                {
+                    return TryEvaluateLinearCallableEntry(
+                        linearPredicate,
+                        [predicateInput],
+                        normalizePredicateResult: true,
+                        out value);
                 }
 
                 if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, predicateInput, instruction.ExpressionProgram, stackBase, out value))
@@ -3878,7 +3962,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Less or
             GameEventScriptBytecodeOpCode.Greater or
             GameEventScriptBytecodeOpCode.LessOrEqual or
-            GameEventScriptBytecodeOpCode.GreaterOrEqual))
+            GameEventScriptBytecodeOpCode.GreaterOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual))
         {
             return false;
         }
@@ -3904,6 +3994,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Greater => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison > 0),
             GameEventScriptBytecodeOpCode.LessOrEqual => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison <= 0),
             GameEventScriptBytecodeOpCode.GreaterOrEqual => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison >= 0),
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
+                ? BytecodeVmValue.Boolean(comparison == 0)
+                : BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(input, right)),
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
+                ? BytecodeVmValue.Boolean(comparison != 0)
+                : BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(input, right)),
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
+                ? BytecodeVmValue.Boolean(comparison < 0)
+                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison < 0),
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
+                ? BytecodeVmValue.Boolean(comparison > 0)
+                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison > 0),
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
+                ? BytecodeVmValue.Boolean(comparison <= 0)
+                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison <= 0),
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
+                ? BytecodeVmValue.Boolean(comparison >= 0)
+                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison >= 0),
             _ => BytecodeVmValue.Nothing
         };
         return true;
@@ -3936,6 +4044,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         try
         {
             RecordCallableCalled(instruction, stack, start, count);
+            var arguments = new BytecodeVmValue[count];
             for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
             {
                 var argumentValue = stack[start + argumentIndex];
@@ -3945,7 +4054,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                if (!DefineSlot(instruction.Slots[argumentIndex], argumentValue))
+                arguments[argumentIndex] = argumentValue;
+            }
+
+            if (TryGetSupportedLinearCallable(callableName, out var linearCallable))
+            {
+                return TryEvaluateLinearCallableEntry(
+                    linearCallable,
+                    arguments,
+                    instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
+                    out value);
+            }
+
+            for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+            {
+                if (!DefineSlot(instruction.Slots[argumentIndex], arguments[argumentIndex]))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -3963,6 +4086,63 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             ExitScope();
             _runtimeBudget.ExitCall();
+        }
+    }
+
+    private bool TryGetSupportedLinearCallable(string? callableName, out GameEventScriptBytecodeCallable callable)
+    {
+        if (!string.IsNullOrEmpty(callableName) &&
+            _compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out callable!) &&
+            CanExecuteLinearEntryCached(callable.EntryAddress))
+        {
+            return true;
+        }
+
+        callable = default!;
+        return false;
+    }
+
+    private bool TryEvaluateLinearCallableEntry(
+        GameEventScriptBytecodeCallable callable,
+        IReadOnlyList<BytecodeVmValue> arguments,
+        bool normalizePredicateResult,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        var previousLocals = _locals;
+        var previousAssignedSlots = _assignedSlots;
+        var previousChanges = _changes;
+        var previousScopeMarks = _scopeMarks;
+
+        _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
+        _assignedSlots = new bool[_locals.Length];
+        _changes = [];
+        _scopeMarks = [];
+        EnterScope();
+        try
+        {
+            var success = TryExecuteLinearRange(
+                callable.EntryAddress,
+                _compiledScript.LinearExecutable.Code.Count,
+                LinearArgumentSource.ForValues(arguments),
+                out var returned,
+                out value);
+            if (!success || !returned)
+            {
+                value = BytecodeVmValue.Nothing;
+                return false;
+            }
+
+            return !normalizePredicateResult ||
+                   NormalizeExtensionPredicateResult(requirePredicateResult: true, ref value);
+        }
+        finally
+        {
+            ExitScope();
+            _locals = previousLocals;
+            _assignedSlots = previousAssignedSlots;
+            _changes = previousChanges;
+            _scopeMarks = previousScopeMarks;
         }
     }
 
@@ -7191,7 +7371,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeProjectionFastKind.PredicateTest:
                 return TryGetProjectionOperand(instructions[0], identifierSlot, item, out var predicateInput) &&
-                       TryEvaluatePredicateTest(instructions[1], predicateInput, 0, out value);
+                       TryEvaluatePredicateTest(
+                           instructions[1],
+                           predicateInput,
+                           0,
+                           out value,
+                           allowLinearCallableFallback: false);
 
             case GameEventScriptBytecodeProjectionFastKind.Binary:
                 return TryEvaluateProjectionBinaryPattern(
@@ -7298,7 +7483,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     var predicateInput = Pop();
-                    if (!TryEvaluatePredicateTest(instruction, predicateInput, 0, out var predicateValue))
+                    if (!TryEvaluatePredicateTest(
+                            instruction,
+                            predicateInput,
+                            0,
+                            out var predicateValue,
+                            allowLinearCallableFallback: false))
                     {
                         return false;
                     }
@@ -7635,7 +7825,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var hadValue = _assignedSlots[slot];
         var previous = _locals[slot];
-        _changes.Add(new LocalChange(slot, hadValue, previous));
+        if (!_suppressLocalChangeTracking)
+        {
+            _changes.Add(new LocalChange(slot, hadValue, previous));
+        }
+
         _locals[slot] = value;
         _assignedSlots[slot] = true;
         return true;

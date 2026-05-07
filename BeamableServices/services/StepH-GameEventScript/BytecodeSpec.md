@@ -33,7 +33,18 @@ executor has equivalent allocation behavior; non-fast selector expressions may
 evaluate through their public linear helper entries while staying inside those
 compatibility pipeline paths. Generated collections running from compatibility
 statement/expression paths may likewise evaluate their predicate/projection
-helpers through public linear entry addresses.
+helpers through public linear entry addresses. Guarded choices in compatibility
+execution may evaluate their condition/value/otherwise helpers through public
+linear entry addresses as well. Seeded-random expression bodies may use their
+operation-layout helper entries from compatibility expression execution when
+supported. Function and predicate calls reached through compatibility expression
+execution may use their public callable entry addresses in isolated VM frames
+when the entry is supported. Allocation-sensitive pipeline predicate fast paths
+may keep the specialized compatibility evaluator instead of allocating a
+callable frame for every pipeline item. Layout-free statement expressions
+reached through compatibility execution may also use public linear helper
+entries; these helper runs must isolate their temporary slots from handler
+locals and scope-change tracking.
 
 ## Goals
 
@@ -908,7 +919,14 @@ A grouped view may still be offered, but it must keep global addresses visible.
    Compatibility pipeline execution can use public linear helper entries for
    non-fast selector expressions while preserving the indexed/streaming pipeline
    hot paths. Generated collections in compatibility execution can use public
-   linear predicate/projection helpers. The manual stepping Fiber uses the same
+   linear predicate/projection helpers, and guarded choices can use public
+   linear condition/value/otherwise helpers. Seeded-random expression bodies
+   can use their operation-layout helper entries from compatibility expression
+   execution. Supported function and predicate calls reached through
+   compatibility expression execution can use public linear callable entries in
+   isolated VM frames. Supported layout-free statement expressions reached
+   through compatibility execution can use public linear helper entries with
+   isolated temporary slots. The manual stepping Fiber uses the same
    single-instruction linear executor for simple supported handlers, including
    fiber-safe generated collections, guarded choices, and seeded-random
    expression helpers plus pausable linear range/collection loops and
@@ -933,7 +951,16 @@ linear code, and non-fast selector expressions can execute from those helper
 entries while pipeline runtime execution stays on the compatibility executor's
 optimized selector paths for now. Generated-collection predicate/projection
 helpers are also used from compatibility statement/expression paths when their
-linear entries are supported.
+linear entries are supported, and guarded-choice helper expressions follow the
+same compatibility-linear fallback pattern. Seeded-random expression bodies use
+the same public-helper fallback inside compatibility expression execution.
+Supported compatibility function and predicate calls can also dispatch into
+their public linear callable entries; pipeline predicate fast paths remain on
+the compatibility evaluator where that avoids per-item frame allocation.
+Layout-free statement expressions in compatibility execution can use public
+linear helper entries; complex high-level expressions continue through their
+existing specialized helper paths until the full statement executor owns those
+flows end to end.
 
 ## Compatibility Predicates
 

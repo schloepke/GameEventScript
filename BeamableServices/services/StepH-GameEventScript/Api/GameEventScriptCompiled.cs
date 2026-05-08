@@ -23,6 +23,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
         int maxFrameSlots = 0,
         IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout>? diagnosticLayouts = null,
         IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry>? publishLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout>? iterationSourceLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeLoopLayout>? loopLayouts = null,
@@ -48,6 +49,7 @@ public sealed class GameEventScriptCompiled
         Code = code ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
         OperationLayouts = operationLayouts ?? [];
+        DiagnosticLayouts = diagnosticLayouts ?? [];
         PublishLayouts = publishLayouts ?? [];
         IterationSourceLayouts = iterationSourceLayouts ?? [];
         LoopLayouts = loopLayouts ?? [];
@@ -87,6 +89,8 @@ public sealed class GameEventScriptCompiled
     public int MaxFrameSlots { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry> PublishLayouts { get; }
 

@@ -9,8 +9,10 @@ internal sealed class GesLinearBytecodeBuilder
 {
     private readonly Func<string, int> _resolveTypeMetadataIndex;
     private readonly Func<IReadOnlyList<string>, int> _resolveNamedArgumentLayoutIndex;
+    private readonly bool _emitDiagnosticLayouts;
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
     private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
+    private readonly List<GameEventScriptBytecodeDiagnosticLayout> _diagnosticLayouts = [];
     private readonly List<GameEventScriptBytecodePublishLayoutEntry> _publishLayouts = [];
     private readonly List<GameEventScriptBytecodeIterationSourceLayout> _iterationSourceLayouts = [];
     private readonly List<GameEventScriptBytecodeLoopLayout> _loopLayouts = [];
@@ -27,10 +29,12 @@ internal sealed class GesLinearBytecodeBuilder
 
     public GesLinearBytecodeBuilder(
         Func<string, int>? resolveTypeMetadataIndex = null,
-        Func<IReadOnlyList<string>, int>? resolveNamedArgumentLayoutIndex = null)
+        Func<IReadOnlyList<string>, int>? resolveNamedArgumentLayoutIndex = null,
+        bool emitDiagnosticLayouts = false)
     {
         _resolveTypeMetadataIndex = resolveTypeMetadataIndex ?? (_ => -1);
         _resolveNamedArgumentLayoutIndex = resolveNamedArgumentLayoutIndex ?? (_ => -1);
+        _emitDiagnosticLayouts = emitDiagnosticLayouts;
     }
 
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code => _code;
@@ -38,6 +42,8 @@ internal sealed class GesLinearBytecodeBuilder
     public int MaxFrameSlots => _maxFrameSlots;
 
     public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts => _operationLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts => _diagnosticLayouts;
 
     public IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry> PublishLayouts => _publishLayouts;
 
@@ -197,23 +203,45 @@ internal sealed class GesLinearBytecodeBuilder
                 {
                     var result = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
                     DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
-                    Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: letSlot, A: result));
+                    var diagnosticAddress = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: letSlot, A: result));
                     if (!string.IsNullOrEmpty(statement.DeclaredType))
                     {
-                        Emit(new GameEventScriptBytecodeInstruction(
+                        diagnosticAddress = Emit(new GameEventScriptBytecodeInstruction(
                             GameEventScriptBytecodeOpCode.CoerceSlot,
                             Dest: letSlot,
                             A: letSlot,
                             Data: ResolveTypeMetadataIndex(statement.DeclaredType)));
                     }
+
+                    AddDiagnosticLayout(
+                        GameEventScriptBytecodeDiagnosticKind.LetEvaluated,
+                        GameEventScriptBytecodeDiagnosticTiming.AfterInstruction,
+                        diagnosticAddress,
+                        letSlot,
+                        statement.Name);
+                    AddDiagnosticLayout(
+                        GameEventScriptBytecodeDiagnosticKind.ExpressionEvaluatedToNothing,
+                        GameEventScriptBytecodeDiagnosticTiming.AfterInstruction,
+                        diagnosticAddress,
+                        letSlot,
+                        statement.Name);
                 }
                 break;
 
             case GameEventScriptBytecodeStatementKind.Expression:
                 if (statement.ExpressionProgram is not null)
                 {
-                    _ = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
+                    var result = EmitExpression(statement.ExpressionProgram, new ExpressionState(plan.SlotCount));
                     DeferExpressionEntry(statement.ExpressionProgram, plan.SlotCount);
+                    if (_code.Count > 0)
+                    {
+                        AddDiagnosticLayout(
+                            GameEventScriptBytecodeDiagnosticKind.ExpressionEvaluatedToNothing,
+                            GameEventScriptBytecodeDiagnosticTiming.AfterInstruction,
+                            _code.Count - 1,
+                            result,
+                            string.IsNullOrWhiteSpace(statement.DiagnosticName) ? "Expression" : statement.DiagnosticName!);
+                    }
                 }
                 break;
 
@@ -547,6 +575,21 @@ internal sealed class GesLinearBytecodeBuilder
         return index;
     }
 
+    private void AddDiagnosticLayout(
+        GameEventScriptBytecodeDiagnosticKind kind,
+        GameEventScriptBytecodeDiagnosticTiming timing,
+        int address,
+        int slot,
+        string name)
+    {
+        if (!_emitDiagnosticLayouts)
+        {
+            return;
+        }
+
+        _diagnosticLayouts.Add(new GameEventScriptBytecodeDiagnosticLayout(kind, timing, address, slot, name));
+    }
+
     private int AddIterationSourceLayout(GameEventScriptBytecodeIterationSourceProgram source, ExpressionState state)
     {
         var collectionSlot = -1;
@@ -627,7 +670,6 @@ internal sealed class GesLinearBytecodeBuilder
             var secondaryExpressionEntryAddress = selector.SecondaryExpressionProgram is null
                 ? -1
                 : EmitExpressionEntry(selector.SecondaryExpressionProgram, state);
-            selector.SetLinearEntryAddresses(expressionEntryAddress, secondaryExpressionEntryAddress);
             _selectorLayouts[index] = new GameEventScriptBytecodeSelectorLayout(
                 selector.Kind,
                 selector.IdentifierSlot,

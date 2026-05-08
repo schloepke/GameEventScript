@@ -117,11 +117,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool CanExecuteLinearHandler(GesBytecodeVmCompiledHandler handler)
     {
-        if (_diagnosticsEnabled)
-        {
-            return false;
-        }
-
         var code = _compiledScript.LinearExecutable.Code;
         if ((uint)handler.EntryAddress >= (uint)code.Count)
         {
@@ -147,11 +142,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool CanExecuteLinearFiberHandler(GesBytecodeVmCompiledHandler handler)
     {
-        if (_diagnosticsEnabled)
-        {
-            return false;
-        }
-
         return CanExecuteLinearFiberEntry(handler.EntryAddress, []);
     }
 
@@ -593,7 +583,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         EnterScope();
         try
         {
-            RecordHandlerInvoked(handler.Message, args);
             return TryExecuteLinearRange(
                 handler.EntryAddress,
                 _compiledScript.LinearExecutable.Code.Count,
@@ -637,7 +626,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                var instruction = code[pc];
+                var instructionAddress = pc;
+                if (!RecordLinearHandlerInvokedIfReady(arguments))
+                {
+                    return false;
+                }
+
+                RecordLinearDiagnosticsBefore(instructionAddress);
+                var instruction = code[instructionAddress];
+                var callFrameCountBefore = callFrames?.Count ?? 0;
                 if (!TryExecuteLinearInstruction(
                         instruction,
                         ref pc,
@@ -650,10 +647,22 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
+                var callFrameCountAfter = callFrames?.Count ?? 0;
+                if (callFrameCountAfter <= callFrameCountBefore ||
+                    instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.PredicateTest))
+                {
+                    RecordLinearDiagnosticsAfter(instructionAddress);
+                }
+
                 if (returned)
                 {
                     return true;
                 }
+            }
+
+            if (!RecordLinearHandlerInvokedIfReady(arguments))
+            {
+                return false;
             }
 
             return true;
@@ -699,6 +708,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
+                RecordLinearParameterBoundFromBind(arguments, instruction.A, instruction.Dest);
                 pc++;
                 return true;
 
@@ -710,6 +720,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
+                RecordLinearParameterBoundFromCoerce(arguments, instruction.Dest, coercedValue);
                 pc++;
                 return true;
 
@@ -792,6 +803,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
+                RecordLinearDiagnosticsAfter(frame.CallInstructionAddress);
                 pc = frame.ReturnAddress;
                 return true;
 
@@ -844,6 +856,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PredicateTest:
                 return TryEnterLinearCallFrame(
                     instruction,
+                    pc,
                     arguments,
                     endAddress,
                     pc + 1,
@@ -865,6 +878,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryEnterLinearCallFrame(
         GameEventScriptBytecodeInstruction instruction,
+        int callInstructionAddress,
         LinearArgumentSource? currentArguments,
         int currentEndAddress,
         int returnAddress,
@@ -901,6 +915,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return DefineSlot(instruction.Dest, value);
         }
 
+        if (!RecordLinearCallableCalled(layout, callArguments, normalizePredicateResult))
+        {
+            _runtimeBudget.ExitCall();
+            return false;
+        }
+
         callFrames ??= [];
         callFrames.Add(new LinearCallFrame(
             _locals,
@@ -911,6 +931,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             currentEndAddress,
             returnAddress,
             instruction.Dest,
+            callInstructionAddress,
             normalizePredicateResult));
 
         _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
@@ -953,6 +974,115 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         pc = target;
         return true;
+    }
+
+    private bool RecordLinearHandlerInvokedIfReady(LinearArgumentSource? arguments)
+    {
+        if (!_diagnosticsEnabled ||
+            arguments is null ||
+            !arguments.TryMarkHandlerInvoked(out var message, out var handlerArgs))
+        {
+            return true;
+        }
+
+        RecordHandlerInvoked(message, handlerArgs);
+        return true;
+    }
+
+    private void RecordLinearParameterBoundFromBind(LinearArgumentSource? arguments, int parameterIndex, int slot)
+    {
+        if (!_diagnosticsEnabled ||
+            arguments is null ||
+            !arguments.TryGetHandlerParameterDiagnostic(parameterIndex, out var diagnostic))
+        {
+            return;
+        }
+
+        if (diagnostic.HasDeclaredType)
+        {
+            arguments.MarkPendingTypedParameter(slot, parameterIndex);
+            return;
+        }
+
+        RecordParameterBound(diagnostic.Name, diagnostic.OriginalValue);
+        arguments.MarkParameterDiagnosticRecorded(parameterIndex);
+    }
+
+    private void RecordLinearParameterBoundFromCoerce(LinearArgumentSource? arguments, int slot, BytecodeVmValue coercedValue)
+    {
+        if (!_diagnosticsEnabled ||
+            arguments is null ||
+            !arguments.TryTakePendingTypedParameter(slot, out var parameterIndex) ||
+            !arguments.TryGetHandlerParameterDiagnostic(parameterIndex, out var diagnostic))
+        {
+            return;
+        }
+
+        RecordParameterBound(diagnostic.Name, coercedValue.ToGameEventScriptValue());
+        arguments.MarkParameterDiagnosticRecorded(parameterIndex);
+    }
+
+    private bool RecordLinearCallableCalled(
+        GameEventScriptBytecodeOperationLayout layout,
+        IReadOnlyList<BytecodeVmValue> arguments,
+        bool normalizePredicateResult)
+    {
+        if (!_diagnosticsEnabled)
+        {
+            return true;
+        }
+
+        if (normalizePredicateResult)
+        {
+            var predicateInput = arguments.Count > 0 ? arguments[0] : BytecodeVmValue.Nothing;
+            if (!TryConvertParameterType(layout.DeclaredTypes, 0, predicateInput, out predicateInput))
+            {
+                return false;
+            }
+
+            RecordPredicateCalled(layout.Name ?? string.Empty, layout.ArgumentName ?? "value", predicateInput);
+            return true;
+        }
+
+        RecordCallableCalled(layout.Name ?? string.Empty, layout.CallableKind, layout.Names, arguments);
+        return true;
+    }
+
+    private void RecordLinearDiagnosticsBefore(int address)
+        => RecordLinearDiagnostics(_compiledScript.LinearExecutable.DiagnosticsBefore, address);
+
+    private void RecordLinearDiagnosticsAfter(int address)
+        => RecordLinearDiagnostics(_compiledScript.LinearExecutable.DiagnosticsAfter, address);
+
+    private void RecordLinearDiagnostics(
+        IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] sites,
+        int address)
+    {
+        if (!_diagnosticsEnabled ||
+            (uint)address >= (uint)sites.Length)
+        {
+            return;
+        }
+
+        var entries = sites[address];
+        for (var index = 0; index < entries.Count; index++)
+        {
+            var entry = entries[index];
+            var value = ResolveSlot(entry.Slot);
+            switch (entry.Kind)
+            {
+                case GameEventScriptBytecodeDiagnosticKind.LetEvaluated:
+                    RecordLetEvaluated(entry.Name, value);
+                    break;
+
+                case GameEventScriptBytecodeDiagnosticKind.ExpressionEvaluatedToNothing:
+                    if (value.Kind == BytecodeVmValueKind.Nothing)
+                    {
+                        RecordExpressionEvaluatedToNothing(entry.Name);
+                    }
+                    break;
+            }
+        }
     }
 
     private bool TryExecuteLinearValueInstruction(GameEventScriptBytecodeInstruction instruction)
@@ -2802,7 +2932,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool CanExecuteLinearEntryCached(int entryAddress)
     {
-        if (_diagnosticsEnabled || entryAddress < 0)
+        if (entryAddress < 0)
         {
             return false;
         }
@@ -3267,6 +3397,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         int endAddress,
         int returnAddress,
         int returnDestinationSlot,
+        int callInstructionAddress,
         bool normalizePredicateResult)
     {
         public BytecodeVmValue[] Locals { get; } = locals;
@@ -3285,6 +3416,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         public int ReturnDestinationSlot { get; } = returnDestinationSlot;
 
+        public int CallInstructionAddress { get; } = callInstructionAddress;
+
         public bool NormalizePredicateResult { get; } = normalizePredicateResult;
     }
 
@@ -3293,6 +3426,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
         private readonly GesBytecodeVmCompiledHandler? _handler;
         private readonly IReadOnlyDictionary<string, GameEventScriptValue>? _handlerArgs;
         private readonly IReadOnlyList<BytecodeVmValue>? _values;
+        private Dictionary<int, int>? _pendingTypedParameterSlots;
+        private bool[]? _recordedParameterDiagnostics;
+        private int _recordedParameterDiagnosticCount;
+        private bool _handlerInvoked;
 
         private LinearArgumentSource(
             GesBytecodeVmCompiledHandler? handler,
@@ -3338,7 +3475,86 @@ internal sealed partial class GesBytecodeVmExecutionSession
             value = BytecodeVmValue.Nothing;
             return false;
         }
+
+        public bool TryGetHandlerParameterDiagnostic(int index, out LinearParameterDiagnostic diagnostic)
+        {
+            if (_handler is not null &&
+                _handlerArgs is not null &&
+                (uint)index < (uint)_handler.Parameters.Count &&
+                TryGetArgumentValue(_handlerArgs, _handler.Parameters[index], index, out var originalValue))
+            {
+                diagnostic = new LinearParameterDiagnostic(
+                    _handler.Parameters[index],
+                    originalValue,
+                    HasParameterType(_handler.ParameterTypes, index));
+                return true;
+            }
+
+            diagnostic = default;
+            return false;
+        }
+
+        public void MarkPendingTypedParameter(int slot, int parameterIndex)
+        {
+            _pendingTypedParameterSlots ??= [];
+            _pendingTypedParameterSlots[slot] = parameterIndex;
+        }
+
+        public bool TryTakePendingTypedParameter(int slot, out int parameterIndex)
+        {
+            if (_pendingTypedParameterSlots is not null &&
+                _pendingTypedParameterSlots.Remove(slot, out parameterIndex))
+            {
+                return true;
+            }
+
+            parameterIndex = -1;
+            return false;
+        }
+
+        public void MarkParameterDiagnosticRecorded(int parameterIndex)
+        {
+            if (_handler is null ||
+                (uint)parameterIndex >= (uint)_handler.Parameters.Count)
+            {
+                return;
+            }
+
+            _recordedParameterDiagnostics ??= new bool[_handler.Parameters.Count];
+            if (_recordedParameterDiagnostics[parameterIndex])
+            {
+                return;
+            }
+
+            _recordedParameterDiagnostics[parameterIndex] = true;
+            _recordedParameterDiagnosticCount++;
+        }
+
+        public bool TryMarkHandlerInvoked(
+            out string message,
+            out IReadOnlyDictionary<string, GameEventScriptValue> args)
+        {
+            if (_handler is not null &&
+                _handlerArgs is not null &&
+                !_handlerInvoked &&
+                _recordedParameterDiagnosticCount >= _handler.Parameters.Count)
+            {
+                _handlerInvoked = true;
+                message = _handler.Message;
+                args = _handlerArgs;
+                return true;
+            }
+
+            message = string.Empty;
+            args = GameEventScriptNamedArguments.Empty;
+            return false;
+        }
     }
+
+    private readonly record struct LinearParameterDiagnostic(
+        string Name,
+        GameEventScriptValue OriginalValue,
+        bool HasDeclaredType);
 
     private static bool TryGetArgumentValue(IReadOnlyDictionary<string, GameEventScriptValue> args, string parameter, int parameterIndex, out GameEventScriptValue value)
     {
@@ -5618,8 +5834,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
 
                 RecordPredicateCalled(instruction, predicateInput);
-                if (!_diagnosticsEnabled &&
-                    TryEvaluateSimplePredicateTest(instruction.ExpressionProgram, instruction.A, predicateInput, out value))
+                if (TryEvaluateSimplePredicateTest(instruction.ExpressionProgram, instruction.A, predicateInput, out value))
                 {
                     return true;
                 }
@@ -6772,7 +6987,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         value = GameEventScriptNothingValue.Instance;
         if (entryAddress < 0 ||
-            _diagnosticsEnabled ||
             !CanExecuteLinearEntry(entryAddress, [], allowPipeline: true))
         {
             return false;
@@ -8176,7 +8390,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     selector.Count,
                     selector.SecondaryIdentifierSlot,
                     selector.SecondaryExpressionProgram,
-                    selector.SecondaryExpressionEntryAddress,
+                    selector.SecondaryExpressionProgram.LinearEntryAddress,
                     out chosen))
             {
                 value = BytecodeVmValue.Nothing;
@@ -9685,6 +9899,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
             $"predicate '{predicateName}' called");
     }
 
+    private void RecordPredicateCalled(string predicateName, string argumentName, BytecodeVmValue input)
+    {
+        if (!_diagnosticsEnabled)
+        {
+            return;
+        }
+
+        RecordDiagnostic(
+            GameEventScriptDiagnosticEventKind.PredicateCalled,
+            predicateName,
+            CreateSingleArgument(argumentName, input.ToGameEventScriptValue()),
+            $"predicate '{predicateName}' called");
+    }
+
     private void RecordCallableCalled(in GameEventScriptBytecodeStackInstruction instruction, BytecodeVmValue[] stack, int start, int count)
     {
         if (!_diagnosticsEnabled)
@@ -9706,6 +9934,36 @@ internal sealed partial class GesBytecodeVmExecutionSession
             ? GameEventScriptDiagnosticEventKind.PredicateCalled
             : GameEventScriptDiagnosticEventKind.FunctionCalled;
         var kindText = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate ? "predicate" : "function";
+        RecordDiagnostic(
+            kind,
+            callableName,
+            GameEventScriptNamedArguments.CreateOrdered(pairs),
+            $"{kindText} '{callableName}' called");
+    }
+
+    private void RecordCallableCalled(
+        string callableName,
+        GameEventScriptBytecodeCallableKind callableKind,
+        IReadOnlyList<string> parameters,
+        IReadOnlyList<BytecodeVmValue> arguments)
+    {
+        if (!_diagnosticsEnabled)
+        {
+            return;
+        }
+
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[Math.Min(parameters.Count, arguments.Count)];
+        for (var argumentIndex = 0; argumentIndex < pairs.Length; argumentIndex++)
+        {
+            pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
+                parameters[argumentIndex],
+                arguments[argumentIndex].ToGameEventScriptValue());
+        }
+
+        var kind = callableKind == GameEventScriptBytecodeCallableKind.Predicate
+            ? GameEventScriptDiagnosticEventKind.PredicateCalled
+            : GameEventScriptDiagnosticEventKind.FunctionCalled;
+        var kindText = callableKind == GameEventScriptBytecodeCallableKind.Predicate ? "predicate" : "function";
         RecordDiagnostic(
             kind,
             callableName,
@@ -9754,6 +10012,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
             name,
             CreateSingleArgument(name, GameEventScriptNothingValue.Instance),
             "Expression statement evaluated to Nothing.");
+    }
+
+    private void RecordExpressionEvaluatedToNothing(string name)
+    {
+        if (!_diagnosticsEnabled)
+        {
+            return;
+        }
+
+        RecordDiagnostic(
+            GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing,
+            name,
+            CreateSingleArgument(name, GameEventScriptNothingValue.Instance),
+            $"Expression '{name}' evaluated to Nothing.");
     }
 
     private void RecordDiagnostic(

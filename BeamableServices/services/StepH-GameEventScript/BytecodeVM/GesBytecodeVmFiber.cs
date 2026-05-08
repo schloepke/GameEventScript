@@ -217,10 +217,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return FrameSignal.Paused;
                     }
 
-                    var instruction = code[_pc];
+                    var instructionAddress = _pc;
+                    if (!session.RecordLinearHandlerInvokedIfReady(_arguments))
+                    {
+                        fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                        return FrameSignal.Completed;
+                    }
+
+                    session.RecordLinearDiagnosticsBefore(instructionAddress);
+                    var instruction = code[instructionAddress];
+                    var callFrameCountBefore = _callFrames?.Count ?? 0;
                     if (TryStartLinearChildFrame(session, instruction, out var childFrame))
                     {
                         _pc = instruction.Target2;
+                        session.RecordLinearDiagnosticsAfter(instructionAddress);
                         if (childFrame is not null)
                         {
                             _waitingForChild = true;
@@ -244,6 +254,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return FrameSignal.Completed;
                     }
 
+                    var callFrameCountAfter = _callFrames?.Count ?? 0;
+                    if (callFrameCountAfter <= callFrameCountBefore ||
+                        instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.PredicateTest))
+                    {
+                        session.RecordLinearDiagnosticsAfter(instructionAddress);
+                    }
+
                     if (returned)
                     {
                         fiber.Complete(returnValue);
@@ -255,6 +272,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         fiber.Halt();
                         return FrameSignal.Paused;
                     }
+                }
+
+                if (!session.RecordLinearHandlerInvokedIfReady(_arguments))
+                {
+                    fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                    return FrameSignal.Completed;
                 }
 
                 fiber.Complete(BytecodeVmValue.Nothing);
@@ -600,7 +623,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     _enteredScope = true;
                     if (session.CanExecuteLinearFiberHandler(handler))
                     {
-                        session.RecordHandlerInvoked(handler.Message, args);
                         _stage = 1;
                         fiber.Push(new LinearRangeFrame(
                             handler.EntryAddress,

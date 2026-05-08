@@ -71,6 +71,7 @@ public static class GameEventScriptBytecodeDumper
     private static void AppendSideTables(StringBuilder builder, GameEventScriptCompiled module)
     {
         AppendOperationLayouts(builder, module);
+        AppendDiagnosticLayouts(builder, module);
         AppendPublishLayouts(builder, module);
         AppendIterationSourceLayouts(builder, module);
         AppendLoopLayouts(builder, module);
@@ -81,6 +82,22 @@ public static class GameEventScriptBytecodeDumper
         AppendPipelineLayouts(builder, module);
         AppendGeneratedCollectionLayouts(builder, module);
         AppendGuardedChoiceLayouts(builder, module);
+    }
+
+    private static void AppendDiagnosticLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("diagnosticLayouts[").Append(module.DiagnosticLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.DiagnosticLayouts.Count; i++)
+        {
+            var layout = module.DiagnosticLayouts[i];
+            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ")
+                .Append(layout.Kind)
+                .Append(" timing=").Append(layout.Timing)
+                .Append(" address=@").Append(layout.Address.ToString("D4", CultureInfo.InvariantCulture));
+            AppendSlot(builder, "slot", layout.Slot);
+            AppendText(builder, "name", layout.Name);
+            builder.AppendLine();
+        }
     }
 
     private static void AppendOperationLayouts(StringBuilder builder, GameEventScriptCompiled module)

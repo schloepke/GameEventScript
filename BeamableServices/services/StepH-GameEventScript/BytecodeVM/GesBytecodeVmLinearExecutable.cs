@@ -12,13 +12,17 @@ internal sealed class GesBytecodeVmLinearExecutable
         int maxFrameSlots,
         GesBytecodeVmLinearHandlerEntry[] handlers,
         GesBytecodeVmLinearCallableEntry[] callables,
-        GesBytecodeVmLinearTypeFieldEntry[] typeFields)
+        GesBytecodeVmLinearTypeFieldEntry[] typeFields,
+        IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsBefore,
+        IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsAfter)
     {
         Code = code;
         MaxFrameSlots = maxFrameSlots;
         Handlers = handlers;
         Callables = callables;
         TypeFields = typeFields;
+        DiagnosticsBefore = diagnosticsBefore;
+        DiagnosticsAfter = diagnosticsAfter;
     }
 
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code { get; }
@@ -30,6 +34,10 @@ internal sealed class GesBytecodeVmLinearExecutable
     public IReadOnlyList<GesBytecodeVmLinearCallableEntry> Callables { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearTypeFieldEntry> TypeFields { get; }
+
+    public IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] DiagnosticsBefore { get; }
+
+    public IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] DiagnosticsAfter { get; }
 
     public static GesBytecodeVmLinearExecutable Build(GameEventScriptCompiled module)
     {
@@ -87,8 +95,39 @@ internal sealed class GesBytecodeVmLinearExecutable
                     field.ComputedEntryAddress);
             }))
             .ToArray();
+        var diagnosticsBefore = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.BeforeInstruction);
+        var diagnosticsAfter = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.AfterInstruction);
 
-        return new GesBytecodeVmLinearExecutable(code, module.MaxFrameSlots, handlers, callables, typeFields);
+        return new GesBytecodeVmLinearExecutable(code, module.MaxFrameSlots, handlers, callables, typeFields, diagnosticsBefore, diagnosticsAfter);
+    }
+
+    private static IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] BuildDiagnosticSites(
+        GameEventScriptCompiled module,
+        IReadOnlyList<GameEventScriptBytecodeInstruction> code,
+        GameEventScriptBytecodeDiagnosticTiming timing)
+    {
+        var sites = new List<GesBytecodeVmLinearDiagnosticEntry>?[code.Count + 1];
+        foreach (var layout in module.DiagnosticLayouts.Where(layout => layout.Timing == timing))
+        {
+            if (layout.Address < 0 || layout.Address > code.Count)
+            {
+                throw InvalidBytecode($"diagnostic layout '{layout.Name}' references address {layout.Address}, outside code range 0..{code.Count}.");
+            }
+
+            if (timing == GameEventScriptBytecodeDiagnosticTiming.AfterInstruction &&
+                layout.Address >= code.Count)
+            {
+                throw InvalidBytecode($"diagnostic layout '{layout.Name}' cannot run after end address {layout.Address}.");
+            }
+
+            ValidateOptionalSlot(module, layout.Slot, $"diagnostic layout '{layout.Name}' slot");
+            sites[layout.Address] ??= [];
+            sites[layout.Address]!.Add(new GesBytecodeVmLinearDiagnosticEntry(layout.Kind, layout.Name, layout.Slot));
+        }
+
+        return sites
+            .Select(site => (IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>)(site ?? []))
+            .ToArray();
     }
 
     private static void ValidateCode(GameEventScriptCompiled module, IReadOnlyList<GameEventScriptBytecodeInstruction> code)
@@ -221,6 +260,7 @@ internal sealed class GesBytecodeVmLinearExecutable
     private static void ValidateSideTables(GameEventScriptCompiled module)
     {
         ValidateOperationLayouts(module);
+        ValidateDiagnosticLayouts(module);
         ValidatePublishLayouts(module);
         ValidateIterationSourceLayouts(module);
         ValidateLoopLayouts(module);
@@ -231,6 +271,27 @@ internal sealed class GesBytecodeVmLinearExecutable
         ValidatePipelineLayouts(module);
         ValidateGeneratedCollectionLayouts(module);
         ValidateGuardedChoiceLayouts(module);
+    }
+
+    private static void ValidateDiagnosticLayouts(GameEventScriptCompiled module)
+    {
+        for (var index = 0; index < module.DiagnosticLayouts.Count; index++)
+        {
+            var layout = module.DiagnosticLayouts[index];
+            var context = $"diagnostic layout #{index}";
+            if (layout.Address < 0 || layout.Address > module.Code.Count)
+            {
+                throw InvalidBytecode($"{context} references address {layout.Address}, outside code range 0..{module.Code.Count}.");
+            }
+
+            if (layout.Timing == GameEventScriptBytecodeDiagnosticTiming.AfterInstruction &&
+                layout.Address >= module.Code.Count)
+            {
+                throw InvalidBytecode($"{context} cannot run after end address {layout.Address}.");
+            }
+
+            ValidateOptionalSlot(module, layout.Slot, $"{context} slot");
+        }
     }
 
     private static void ValidateOperationLayouts(GameEventScriptCompiled module)
@@ -629,4 +690,16 @@ internal sealed class GesBytecodeVmLinearTypeFieldEntry(
     public int MaximumEntryAddress { get; } = maximumEntryAddress;
 
     public int ComputedEntryAddress { get; } = computedEntryAddress;
+}
+
+internal sealed class GesBytecodeVmLinearDiagnosticEntry(
+    GameEventScriptBytecodeDiagnosticKind kind,
+    string name,
+    int slot)
+{
+    public GameEventScriptBytecodeDiagnosticKind Kind { get; } = kind;
+
+    public string Name { get; } = name;
+
+    public int Slot { get; } = slot;
 }

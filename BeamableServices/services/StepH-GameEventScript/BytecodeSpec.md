@@ -113,6 +113,7 @@ GameEventScriptCompiled
   Callables: CallableEntry[]
   TypeDefinitions: TypeDefinitionEntry[]
   OperationLayouts
+  DiagnosticLayouts
   PublishLayouts
   IterationSourceLayouts
   LoopLayouts
@@ -149,6 +150,7 @@ GameEventScriptCompiled
   TypeDefinitions
   MaxFrameSlots
   OperationLayouts
+  DiagnosticLayouts
   PublishLayouts
   IterationSourceLayouts
   LoopLayouts
@@ -305,7 +307,8 @@ avoid per-instruction object graphs. Operands are interpreted by opcode:
 Large structured metadata belongs in side tables, not nested instruction
 objects. Examples: operation layouts, publish layouts, selector/pipeline
 layouts, iteration-source layouts, generated-collection layouts, guarded-choice
-layouts, object match patterns, dice patterns, and loop layouts.
+layouts, diagnostic layouts, object match patterns, dice patterns, and loop
+layouts.
 
 An instruction that produces `nothing` writes it to `Dest`. There is no implicit
 push. There are no `Pop` or `Duplicate` instructions in the portable target
@@ -865,6 +868,31 @@ ObjectMatchEntry
   ExpressionResultSlot?
   NestedPatternLayoutIndex?
 ```
+
+### Diagnostics
+
+Diagnostics are execution instrumentation, not bytecode. The bytecode stream
+does not contain diagnostic-only instructions. Diagnostic metadata is carried by
+side tables linked to instruction addresses, operation layouts, handler
+metadata, and publish layouts.
+If compile diagnostics are disabled, `DiagnosticLayouts` may be empty.
+
+```text
+DiagnosticLayout
+  Kind: LetEvaluated | ExpressionEvaluatedToNothing
+  Timing: BeforeInstruction | AfterInstruction
+  Address
+  Slot
+  Name
+```
+
+The VM records diagnostic events while executing normal instructions:
+
+- Handler and parameter events are derived from handler metadata and
+  `BindParameter`/`CoerceSlot` execution.
+- Function and predicate call events are derived from call operation layouts.
+- Let and expression-to-nothing events are derived from diagnostic layouts.
+- Publish argument events are derived from publish layouts.
 
 ## Debug Symbols
 

@@ -353,6 +353,45 @@ public sealed class GameEventScriptBytecodeOperationLayout
     public bool Flag { get; }
 }
 
+public enum GameEventScriptBytecodeDiagnosticKind
+{
+    LetEvaluated,
+    ExpressionEvaluatedToNothing
+}
+
+public enum GameEventScriptBytecodeDiagnosticTiming
+{
+    BeforeInstruction,
+    AfterInstruction
+}
+
+public sealed class GameEventScriptBytecodeDiagnosticLayout
+{
+    public GameEventScriptBytecodeDiagnosticLayout(
+        GameEventScriptBytecodeDiagnosticKind kind,
+        GameEventScriptBytecodeDiagnosticTiming timing,
+        int address,
+        int slot,
+        string name)
+    {
+        Kind = kind;
+        Timing = timing;
+        Address = address;
+        Slot = slot;
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+    }
+
+    public GameEventScriptBytecodeDiagnosticKind Kind { get; }
+
+    public GameEventScriptBytecodeDiagnosticTiming Timing { get; }
+
+    public int Address { get; }
+
+    public int Slot { get; }
+
+    public string Name { get; }
+}
+
 public sealed class GameEventScriptBytecodePublishLayoutEntry
 {
     public GameEventScriptBytecodePublishLayoutEntry(
@@ -910,16 +949,6 @@ internal sealed class GameEventScriptBytecodeSelectorProgram(
     public GameEventScriptBytecodeDicePattern? DicePattern { get; } = dicePattern;
 
     public GameEventScriptBytecodeObjectMatchPattern? ObjectPattern { get; } = objectPattern;
-
-    internal int ExpressionEntryAddress { get; private set; } = -1;
-
-    internal int SecondaryExpressionEntryAddress { get; private set; } = -1;
-
-    internal void SetLinearEntryAddresses(int expressionEntryAddress, int secondaryExpressionEntryAddress)
-    {
-        ExpressionEntryAddress = expressionEntryAddress;
-        SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
-    }
 }
 
 internal sealed class GameEventScriptBytecodePipelineProgram(

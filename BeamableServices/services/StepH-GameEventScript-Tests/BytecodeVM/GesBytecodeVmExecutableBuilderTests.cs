@@ -5337,6 +5337,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             code?.ToArray() ?? original.Code.ToArray(),
             original.MaxFrameSlots,
             original.OperationLayouts.ToArray(),
+            original.DiagnosticLayouts.ToArray(),
             original.PublishLayouts.ToArray(),
             original.IterationSourceLayouts.ToArray(),
             original.LoopLayouts.ToArray(),

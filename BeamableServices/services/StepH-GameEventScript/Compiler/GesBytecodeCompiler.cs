@@ -54,7 +54,10 @@ internal static class GesBytecodeCompiler
 
             var handlers = BuildHandlers();
             CollectBytecodeMetadata(callables, handlers, typeDefinitions);
-            var linearBuilder = new GesLinearBytecodeBuilder(AddTypeMetadata, AddNamedArgumentLayout);
+            var linearBuilder = new GesLinearBytecodeBuilder(
+                AddTypeMetadata,
+                AddNamedArgumentLayout,
+                options.EnableDiagnostics);
             linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group));
             linearBuilder.AddCallables(callables.Values);
             linearBuilder.AddTypeDefinitions(typeDefinitions.Values);
@@ -74,6 +77,7 @@ internal static class GesBytecodeCompiler
                 linearBuilder.Code.ToArray(),
                 linearBuilder.MaxFrameSlots,
                 linearBuilder.OperationLayouts.ToArray(),
+                linearBuilder.DiagnosticLayouts.ToArray(),
                 linearBuilder.PublishLayouts.ToArray(),
                 linearBuilder.IterationSourceLayouts.ToArray(),
                 linearBuilder.LoopLayouts.ToArray(),

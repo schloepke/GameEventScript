@@ -17,49 +17,37 @@ Implementation note: the current public artifact already exposes the global
 linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
 callables, and computed/clamped type-field helpers, plus public side tables for
 operation, publish, loop, selector/pipeline, generated-collection,
-seeded-random, and guarded-choice metadata. The synchronous VM executes
-supported handler ranges, simple callable/predicate frames, generated-collection
-helpers, guarded-choice and seeded-random expression helper entries, and
-supported type-field helper entries directly from that linear code with a
-VM-owned call-frame stack. The manual stepping Fiber starts from the same
-handler entry addresses and uses the same linear instruction execution state:
-program counter, end address, frame slots, VM call frames, scope marks,
-pausable linear range/collection loops, and seeded-random block frames. It no
-longer has a statement-program or expression-program compatibility dispatcher.
-Pipeline selector helper entry addresses are emitted into `SelectorLayouts`,
-but runtime pipeline execution may keep indexed/streaming hot paths where that
-avoids per-item frame allocation; non-fast selector expressions may evaluate
-through their public linear helper entries while staying inside those optimized
-pipeline paths. Whole pipeline statement
-expressions may use public linear helper entries for supported selector shapes;
-the current linear helper supports `Filter`/`Select` prefixes and terminal
-`Select`, `Filter`, `any`, `all`, `first`, `last`, `single`, `Count`, `Sum`,
-`Average`, `Min`, `Max`, `Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`,
-`Reverse`, `SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`,
-`ObjectMatch`, `TakePattern`, `SeriesTerm`, and `Contains`.
-Generated collections running from compatibility statement or high-level
-operation paths may likewise evaluate their predicate/projection
-helpers through public linear entry addresses, and whole generated-collection
-statement expressions may use public linear helper entries when their nested
-helpers are supported. Guarded choices in compatibility execution may evaluate
-their condition/value/otherwise helpers through public linear entry addresses,
-and whole guarded-choice statement expressions may use public linear helper
-entries when their nested helpers are supported. Seeded-random expression bodies
-use their operation-layout helper entries. Function and predicate calls use
+seeded-random, guarded-choice, dice-pattern, and object-match metadata. The
+synchronous VM executes handlers, callable/predicate frames, helper entries,
+high-level opcodes, and supported type-field helpers directly from that linear
+code with a VM-owned call-frame stack. The manual stepping Fiber starts from
+the same handler entry addresses and uses the same linear instruction execution
+state: program counter, end address, frame slots, VM call frames, scope marks,
+pausable linear range/collection loops, and seeded-random block frames. It has
+no statement-program or expression-program compatibility dispatcher.
+High-level operations such as pipelines, generated collections, guarded
+choices, seeded-random blocks, publish operations, iteration sources,
+dice-pattern matching, and object matching execute from normalized public
+side-table layouts plus helper entry addresses. Runtime pipeline execution may
+keep indexed/streaming hot paths where that avoids per-item frame allocation;
+non-fast selector expressions evaluate through their public linear helper
+entries while staying inside those optimized pipeline paths. The pipeline helper
+supports `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
+`all`, `first`, `last`, `single`, `Count`, `Sum`, `Average`, `Min`, `Max`,
+`Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`, `Reverse`,
+`SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`, `ObjectMatch`,
+`TakePattern`, `SeriesTerm`, and `Contains`. Function and predicate calls use
 their public callable entry addresses in isolated VM frames when the entry is
-supported. Allocation-sensitive pipeline predicate fast paths
-may keep the specialized compatibility evaluator instead of allocating a
-callable frame for every pipeline item. Layout-free statement expressions
-reached through compatibility execution may also use public linear helper
-entries; these helper runs must isolate their temporary slots from handler
-locals and scope-change tracking. Simple operation-layout statement expressions
-are supported for those public linear helper entries when the operation consumes
-only already-lowered slot operands and local metadata; this currently includes
-`Cast`, `TypeCheck`, `MemberAccess`, `Unary`, `Variadic`, `Range`,
-`SeededRandom`, and `TypeConstructor`, plus local builders `BuildList`,
-`BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, handler binding
-through `BindHandler`, and extension calls through `CallExtension`, plus script
-function calls through `Call` and predicate tests through `PredicateTest`.
+supported. Layout-free helper expressions run through public linear helper
+entries and isolate their temporary slots from handler locals and scope-change
+tracking. Simple operation-layout helper expressions are supported when the
+operation consumes only already-lowered slot operands and local metadata; this
+currently includes `Cast`, `TypeCheck`, `MemberAccess`, `Unary`, `Variadic`,
+`Range`, `SeededRandom`, and `TypeConstructor`, plus local builders
+`BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`,
+handler binding through `BindHandler`, extension calls through `CallExtension`,
+script function calls through `Call`, and predicate tests through
+`PredicateTest`.
 Immediate operation-layout value execution should avoid
 per-execution operand-array materialization when possible; operand buffers may
 be reused because the values are consumed before the instruction returns, and
@@ -497,10 +485,9 @@ Implication is right-associative at source level and uses the truth table for
 `not a or b`: false antecedent yields `true`; unknown participates as
 `nothing` unless the consequent resolves the result to `true`.
 
-Compatibility note for the internal executor: public linear code lowers
-short-circuiting to branch instructions. Internal compatibility structures may
-still use `ShortCircuitAnd`, `ShortCircuitOr`, and `ShortCircuitImplies` until
-the executor consumes the linear code segment directly.
+The VM executes these constructs from the linear branch sequence; the
+`ShortCircuitAnd`, `ShortCircuitOr`, and `ShortCircuitImplies` opcodes are only
+lowering metadata and must not be required as runtime fallbacks.
 
 ### Control Flow
 
@@ -729,9 +716,9 @@ Standard intrinsics are non-overridable and do not appear in
 `CallStandard` or an equivalent direct intrinsic id, not as a host extension
 lookup.
 
-Compatibility note for the internal executor: standard intrinsics may still
-execute through the legacy `CallExtension` path with an external reference slot
-of `-1` until dedicated standard-intrinsic side tables land.
+Current implementation note: standard intrinsics may still execute through
+`CallExtension` with an external reference slot of `-1` until dedicated
+standard-intrinsic side tables land.
 
 External type constructors are collected separately in
 `ExternalTypeConstructorReferences` and dynamically bound against the host's
@@ -956,84 +943,25 @@ A grouped view may still be offered, but it must keep global addresses visible.
 
 ## Migration Plan
 
-1. Continue expanding side-table coverage until every high-level operation has
-   all helper entry addresses in the global code segment.
+1. Done: public side tables cover runtime high-level operations, including
+   pipelines, selectors, generated collections, guarded choices, iteration
+   sources, publish operations, seeded-random blocks, dice patterns, and object
+   match patterns.
 2. Done: the BytecodeVM executable builder consumes and validates the public
    linear `Code` segment plus side tables into an internal linear executable
    artifact.
-3. In progress: the VM can execute supported handler instruction ranges, simple
-   callable/predicate frames, generated collections, and guarded choices
-   directly from the linear `Code` segment using frame slots, `pc`, and a
-   VM-owned call-frame stack. Seeded-random expression bodies and supported
-   type-field helper entries also execute from linear helper entry addresses.
-   Compatibility pipeline execution can use public linear helper entries for
-   non-fast selector expressions while preserving the indexed/streaming pipeline
-   hot paths. Whole pipeline statement expressions execute from public linear
-   helper entries for supported selector shapes. Generated collections in
-   compatibility execution can use public linear predicate/projection helpers,
-   while guarded choices can use public linear condition/value/otherwise
-   helpers. Seeded-random expression bodies use their operation-layout helper
-   entries. Function and predicate calls use public linear callable entries in
-   isolated VM frames. Supported layout-free statement expressions reached
-   through compatibility execution can use public linear helper entries with
-   isolated temporary slots, and simple operation-layout statement expressions
-   such as `Cast`, `TypeCheck`, `MemberAccess`, `Unary`, `Variadic`, `Range`,
-   `SeededRandom`, `TypeConstructor`, and local builders such as `BuildList`,
-   `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`,
-   `BindHandler`, and `CallExtension`, plus script function calls through
-   `Call` and predicate tests through `PredicateTest`, can use the same public
-   helper mechanism. The manual stepping Fiber uses the same single-instruction
-   linear executor for simple supported handlers, fiber-safe generated
-   collections, guarded choices, seeded-random expression helpers, layout-free
-   statement expressions, pausable linear range/collection loops, and
-   seeded-random blocks.
-   Pipelines already carry selector helper entry addresses
-   in `SelectorLayouts`, but top-level runtime execution still falls back to the
-   compatibility executor to preserve the existing allocation-sensitive pipeline
-   hot paths until the linear selector executor is optimized. Whole pipeline
-   statement expressions may use public linear helper entries for
-   `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
-   `all`, `first`, `last`, `single`, `Count`, `Sum`, `Average`, `Min`, and
-   `Max`, plus `Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`, `Reverse`,
-   `SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`, `ObjectMatch`,
-   `TakePattern`, `SeriesTerm`, and `Contains`.
+3. Done: synchronous execution and manual Fiber stepping enter handlers through
+   public linear entry addresses and use VM-owned frame state. Runtime
+   high-level opcodes use side-table layouts and helper entry addresses rather
+   than legacy `*Program` execution fallback paths.
 4. Keep conformance behavior unchanged; only bytecode shape and VM internals
    should move.
 
 The current compiler emits the public linear model through an adapter over the
-internal compatibility model, and the VM load path now builds a validated linear
-runtime artifact from that public model. Top-level execution, simple
-callable/predicate frames, generated collections, guarded choices, and supported
-type-field helpers have a linear fast path backed by VM-owned call frames, and
-seeded-random expression bodies use operation-layout helper entries. Manual
-stepping uses the shared
-linear instruction stepper for simple supported handler ranges, fiber-safe
-expression helper calls, pausable range/collection loops, and seeded-random
-blocks. Pipeline selectors now expose helper entry addresses in the public
-linear code, and non-fast selector expressions can execute from those helper
-entries while top-level pipeline runtime execution stays on the compatibility
-executor's optimized selector paths for now. Supported whole pipeline
-statement expressions can also execute from public linear helper entries for
-`Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
-`all`, `first`, `last`, `single`, `Count`, `Sum`, `Average`, `Min`, and
-`Max`, plus `Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`, `Reverse`,
-`SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`, `ObjectMatch`,
-`TakePattern`, `SeriesTerm`, and `Contains`. Generated-collection
-predicate/projection helpers are also used from compatibility statement or
-high-level operation paths when their linear entries are supported, and
-guarded-choice helper expressions follow the same public-helper pattern.
-Seeded-random expression bodies use public operation-layout helper entries.
-Function and predicate calls dispatch into their public linear callable entries;
-pipeline predicate fast paths remain on the compatibility evaluator where that
-avoids per-item frame allocation.
-Layout-free statement expressions in compatibility execution can use public
-linear helper entries, and simple operation-layout statement expressions can use
-the same path when their metadata is local to the instruction. Other complex
-high-level expressions continue through their existing specialized helper paths
-until the full statement executor owns those flows end to end. Manual Fiber
-stepping enters handlers through the same public linear entry addresses as
-synchronous execution and does not dispatch legacy statement or expression
-program frames.
+internal compatibility model, and the VM load path builds a validated linear
+runtime artifact from that public model. The remaining migration work is to
+replace the compiler adapter with direct AST-to-linear lowering and then remove
+legacy program graphs from `GameEventScriptCompiled` entirely.
 
 ## Compatibility Predicates
 

@@ -41,21 +41,17 @@ internal static class GesBytecodeCompiler
         public GameEventScriptCompiled Build()
         {
             CollectSourceMetadata();
+            CollectSourceBytecodeMetadata();
 
             var typeDefinitions = GesBytecodeLowerer.CompileTypeDefinitions(
                 module.Callables,
-                module.TypeDefinitions,
-                AddExternalReference,
-                AddConstant);
+                module.TypeDefinitions);
 
             var callables = GesBytecodeLowerer.CompileCallableDefinitions(
                 module.Callables,
-                module.TypeDefinitions,
-                AddExternalReference,
-                AddConstant);
+                module.TypeDefinitions);
 
             var handlers = BuildHandlers();
-            CollectBytecodeMetadata(callables, handlers, typeDefinitions);
             var linearBuilder = new GesLinearBytecodeBuilder(
                 AddTypeMetadata,
                 AddNamedArgumentLayout,
@@ -118,9 +114,7 @@ internal static class GesBytecodeCompiler
                                 handler.Parameters,
                                 handler.Statements,
                                 module.Callables,
-                                module.TypeDefinitions,
-                                AddExternalReference,
-                                AddConstant),
+                                module.TypeDefinitions),
                             handler.ParameterList.Select(parameter => parameter.DeclaredType).ToArray(),
                             handler.MatchingTags,
                             handler.WithoutTags);
@@ -341,212 +335,496 @@ internal static class GesBytecodeCompiler
             }
         }
 
-        private void CollectBytecodeMetadata(
-            IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
-            IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
-            IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions)
+        private void CollectSourceBytecodeMetadata()
         {
-            foreach (var callable in callables.Values)
+            foreach (var type in module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
             {
-                AddString(callable.Name);
-                AddSignature(callable.SignatureId);
-                CollectExpressionMetadata(callable.ExpressionProgram);
-            }
-
-            foreach (var handler in handlers.Values.SelectMany(group => group))
-            {
-                AddString(handler.Message);
-                AddSignature(handler.SignatureId);
-                foreach (var tag in handler.RequiredTags)
-                {
-                    AddString(tag);
-                }
-
-                foreach (var tag in handler.ExcludedTags)
-                {
-                    AddString(tag);
-                }
-
-                CollectStatementMetadata(handler.ExecutionPlan.StatementProgram);
-            }
-
-            foreach (var type in typeDefinitions.Values)
-            {
-                AddTypeMetadata(type.Name);
                 foreach (var field in type.Fields)
                 {
-                    AddString(field.Name);
-                    AddTypeMetadata(field.TypeName);
-                    CollectExpressionMetadata(field.MinimumProgram);
-                    CollectExpressionMetadata(field.MaximumProgram);
-                    CollectExpressionMetadata(field.ComputedProgram);
+                    CollectSourceExpressionMetadata(field.MinimumExpression);
+                    CollectSourceExpressionMetadata(field.MaximumExpression);
+                    CollectSourceExpressionMetadata(field.ComputedExpression);
                 }
             }
-        }
 
-        private void CollectStatementMetadata(GameEventScriptBytecodeStatementProgram? program)
-        {
-            if (program is null)
+            foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
             {
-                return;
+                CollectSourceExpressionMetadata(callable.Expression);
             }
 
-            foreach (var statement in program.Statements)
+            foreach (var pair in module.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {
-                AddStringIfPresent(statement.Name);
-                AddTypeIfPresent(statement.DeclaredType);
-                AddStringIfPresent(statement.DiagnosticName);
-                if (statement.PublishLayout is { } publishLayout)
+                foreach (var handler in pair.Value)
                 {
-                    AddString(publishLayout.MessageName);
-                    AddSignature(publishLayout.SignatureId);
-                    AddNamedArgumentLayout(publishLayout.ArgumentNames);
-                    foreach (var argumentProgram in publishLayout.ArgumentPrograms)
+                    foreach (var statement in handler.Statements)
                     {
-                        CollectExpressionMetadata(argumentProgram);
+                        CollectSourceStatementMetadata(statement);
                     }
                 }
-
-                CollectExpressionMetadata(statement.ExpressionProgram);
-                foreach (var tagProgram in statement.TagPrograms)
-                {
-                    CollectExpressionMetadata(tagProgram);
-                }
-
-                CollectStatementMetadata(statement.ThenProgram);
-                CollectStatementMetadata(statement.ElseProgram);
-                CollectStatementMetadata(statement.BodyProgram);
-                CollectIterationSourceMetadata(statement.IterationSource);
             }
         }
 
-        private void CollectExpressionMetadata(GameEventScriptBytecodeExpressionProgram? program)
+        private void CollectSourceStatementMetadata(StatementNode statement)
         {
-            if (program is null)
+            switch (statement)
             {
+                case LetStatementNode let:
+                    AddString(let.Identifier);
+                    AddTypeIfPresent(let.DeclaredType);
+                    CollectSourceExpressionMetadata(let.Expression);
+                    break;
+
+                case PublishStatementNode publish:
+                    CollectSourcePublishMetadata(publish);
+                    break;
+
+                case IfStatementNode ifStatement:
+                    CollectSourceExpressionMetadata(ifStatement.Condition);
+                    foreach (var nested in ifStatement.ThenBody.Statements)
+                    {
+                        CollectSourceStatementMetadata(nested);
+                    }
+
+                    if (ifStatement.ElseBody is not null)
+                    {
+                        foreach (var nested in ifStatement.ElseBody.Statements)
+                        {
+                            CollectSourceStatementMetadata(nested);
+                        }
+                    }
+
+                    break;
+
+                case ForStatementNode forStatement:
+                    AddString(forStatement.Identifier);
+                    CollectSourceIterationSourceMetadata(forStatement.Source);
+                    foreach (var nested in forStatement.Body.Statements)
+                    {
+                        CollectSourceStatementMetadata(nested);
+                    }
+
+                    break;
+
+                case SeededRandomStatementNode seededRandom:
+                    CollectSourceExpressionMetadata(seededRandom.SeedExpression);
+                    foreach (var nested in seededRandom.Body.Statements)
+                    {
+                        CollectSourceStatementMetadata(nested);
+                    }
+
+                    break;
+
+                case ExpressionStatementNode expressionStatement:
+                    CollectSourceExpressionMetadata(expressionStatement.Expression);
+                    break;
+            }
+        }
+
+        private void CollectSourcePublishMetadata(PublishStatementNode publish)
+        {
+            foreach (var tagExpression in publish.TagExpressions)
+            {
+                CollectSourceExpressionMetadata(tagExpression);
+            }
+
+            if (publish.MessageExpression is MessageLiteralExpressionNode message)
+            {
+                CollectSourceMessageMetadata(message);
                 return;
             }
 
-            foreach (var instruction in program.Instructions)
+            CollectSourceExpressionMetadata(publish.MessageExpression);
+        }
+
+        private void CollectSourceExpressionMetadata(ExpressionNode? expression)
+        {
+            switch (expression)
             {
-                AddStringIfPresent(instruction.DiagnosticName);
-                AddStringIfPresent(instruction.DiagnosticArgumentName);
-                if (instruction.Names is { } names)
-                {
-                    AddNamedArgumentLayout(names);
-                }
+                case null:
+                case BooleanLiteralExpressionNode:
+                case IntegerLiteralExpressionNode:
+                case UnitIntegerLiteralExpressionNode:
+                case FloatLiteralExpressionNode:
+                case PercentageLiteralExpressionNode:
+                case UnitFloatLiteralExpressionNode:
+                case TextLiteralExpressionNode:
+                case TagLiteralExpressionNode:
+                case IdentifierExpressionNode:
+                case DiceExpressionNode:
+                    return;
 
-                if (instruction.OpCode == GameEventScriptBytecodeOpCode.TypeConstructor &&
-                    instruction.DiagnosticName is { } typeName &&
-                    module.ExternalTypeDefinitions.ContainsKey(typeName))
-                {
-                    AddExternalTypeConstructorReference(new GameEventScriptExternalTypeConstructorReference(typeName, instruction.Names));
-                }
+                case HandlerLiteralExpressionNode handler:
+                    AddString(handler.Message);
+                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels));
+                    foreach (var label in handler.SignatureLabels)
+                    {
+                        AddString(label);
+                    }
 
-                CollectExpressionMetadata(instruction.ExpressionProgram);
-                CollectPipelineMetadata(instruction.PipelineProgram);
-                CollectGeneratedCollectionMetadata(instruction.GeneratedCollectionProgram);
-                CollectGuardedChoiceMetadata(instruction.GuardedChoiceProgram);
+                    return;
+
+                case MessageLiteralExpressionNode message:
+                    CollectSourceMessageMetadata(message);
+                    return;
+
+                case ExtensionCallExpressionNode extensionCall:
+                    AddExternalReference(new GameEventScriptExtensionReference(
+                        extensionCall.ExtensionName,
+                        extensionCall.FunctionName,
+                        extensionCall.Arguments.Select(argument => argument.Name)));
+                    foreach (var argument in extensionCall.Arguments)
+                    {
+                        CollectSourceExpressionMetadata(argument.Expression);
+                    }
+
+                    return;
+
+                case ExtensionPredicateExpressionNode extensionPredicate:
+                    AddExternalReference(new GameEventScriptExtensionReference(
+                        extensionPredicate.ExtensionName,
+                        extensionPredicate.FunctionName,
+                        [GameEventScriptMessageSignature.UnlabeledParameterName]));
+                    CollectSourceExpressionMetadata(extensionPredicate.Value);
+                    return;
+
+                case ListLiteralExpressionNode list:
+                    foreach (var item in list.Items)
+                    {
+                        CollectSourceExpressionMetadata(item);
+                    }
+
+                    return;
+
+                case SequenceLiteralExpressionNode sequence:
+                    foreach (var item in sequence.Items)
+                    {
+                        CollectSourceExpressionMetadata(item);
+                    }
+
+                    return;
+
+                case SetLiteralExpressionNode set:
+                    foreach (var item in set.Items)
+                    {
+                        CollectSourceExpressionMetadata(item);
+                    }
+
+                    return;
+
+                case DictionaryLiteralExpressionNode dictionary:
+                    foreach (var entry in dictionary.Entries)
+                    {
+                        AddString(entry.Key);
+                        CollectSourceExpressionMetadata(entry.Value);
+                    }
+
+                    return;
+
+                case UnaryExpressionNode unary:
+                    AddString(unary.Operator);
+                    CollectSourceExpressionMetadata(unary.Operand);
+                    return;
+
+                case VariadicTaggedExpressionNode variadic:
+                    AddString(variadic.Operator);
+                    foreach (var argument in variadic.Arguments)
+                    {
+                        CollectSourceExpressionMetadata(argument);
+                    }
+
+                    return;
+
+                case ClampExpressionNode clamp:
+                    CollectSourceExpressionMetadata(clamp.Value);
+                    CollectSourceExpressionMetadata(clamp.Minimum);
+                    CollectSourceExpressionMetadata(clamp.Maximum);
+                    return;
+
+                case RandomExpressionNode random:
+                    CollectSourceExpressionMetadata(random.FromExpression);
+                    CollectSourceExpressionMetadata(random.ToExpression);
+                    return;
+
+                case RangeExpressionNode range:
+                    CollectSourceRangeMetadata(range);
+                    return;
+
+                case SeededRandomExpressionNode seededRandom:
+                    CollectSourceExpressionMetadata(seededRandom.SeedExpression);
+                    CollectSourceExpressionMetadata(seededRandom.BodyExpression);
+                    return;
+
+                case GeneratedCollectionExpressionNode generatedCollection:
+                    AddString(generatedCollection.CollectionType);
+                    AddString(generatedCollection.Identifier);
+                    CollectSourceIterationSourceMetadata(generatedCollection.Source);
+                    CollectSourceExpressionMetadata(generatedCollection.Predicate);
+                    CollectSourceExpressionMetadata(generatedCollection.Projection);
+                    return;
+
+                case GuardedChoiceExpressionNode guardedChoice:
+                    foreach (var branch in guardedChoice.Branches)
+                    {
+                        CollectSourceExpressionMetadata(branch.ConditionExpression);
+                        CollectSourceExpressionMetadata(branch.ValueExpression);
+                    }
+
+                    CollectSourceExpressionMetadata(guardedChoice.OtherwiseExpression);
+                    return;
+
+                case BinaryExpressionNode binary:
+                    CollectSourceExpressionMetadata(binary.Left);
+                    CollectSourceExpressionMetadata(binary.Right);
+                    return;
+
+                case PredicateCallExpressionNode predicateCall:
+                    AddString(predicateCall.PredicateName);
+                    CollectSourceExpressionMetadata(predicateCall.Value);
+                    return;
+
+                case CallExpressionNode call:
+                    AddString(call.Name);
+                    if (!module.Callables.ContainsKey(call.Name))
+                    {
+                        AddNamedArgumentLayout(call.ArgumentList.Arguments.Select(argument => argument.Name).ToArray());
+                    }
+
+                    foreach (var argument in call.ArgumentList.Arguments)
+                    {
+                        CollectSourceExpressionMetadata(argument.Expression);
+                    }
+
+                    return;
+
+                case TypeCastExpressionNode typeCast:
+                    AddTypeMetadata(typeCast.TypeName);
+                    CollectSourceExpressionMetadata(typeCast.Value);
+                    return;
+
+                case TypeConstructorExpressionNode typeConstructor:
+                    CollectSourceTypeConstructorMetadata(typeConstructor);
+                    return;
+
+                case TypeCheckExpressionNode typeCheck:
+                    AddTypeMetadata(typeCheck.TypeName);
+                    CollectSourceExpressionMetadata(typeCheck.Value);
+                    return;
+
+                case MemberAccessExpressionNode memberAccess:
+                    AddString(memberAccess.Member);
+                    CollectSourceExpressionMetadata(memberAccess.Target);
+                    return;
+
+                case CollectionAccessExpressionNode collectionAccess:
+                    CollectSourceCollectionAccessMetadata(collectionAccess);
+                    return;
             }
         }
 
-        private void CollectPipelineMetadata(GameEventScriptBytecodePipelineProgram? program)
+        private void CollectSourceMessageMetadata(MessageLiteralExpressionNode message)
         {
-            if (program is null)
+            var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
+            AddString(GameEventScriptMessageSignature.NormalizeMessageName(message.Message));
+            AddSignature(GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames));
+            AddNamedArgumentLayout(argumentNames);
+            foreach (var argument in message.Arguments)
             {
+                CollectSourceExpressionMetadata(argument.Expression);
+            }
+        }
+
+        private void CollectSourceTypeConstructorMetadata(TypeConstructorExpressionNode typeConstructor)
+        {
+            AddTypeMetadata(typeConstructor.TypeName);
+            var argumentNames = typeConstructor.Arguments.Select(argument => argument.Name).ToArray();
+            AddNamedArgumentLayout(argumentNames);
+            if (module.ExternalTypeDefinitions.ContainsKey(typeConstructor.TypeName))
+            {
+                AddExternalTypeConstructorReference(new GameEventScriptExternalTypeConstructorReference(
+                    typeConstructor.TypeName,
+                    argumentNames));
+            }
+
+            foreach (var argument in typeConstructor.Arguments)
+            {
+                CollectSourceExpressionMetadata(argument.Expression);
+            }
+        }
+
+        private void CollectSourceIterationSourceMetadata(IterationSourceNode source)
+        {
+            switch (source)
+            {
+                case CollectionIterationSourceNode collection:
+                    CollectSourceExpressionMetadata(collection.Expression);
+                    break;
+
+                case RangeIterationSourceNode range:
+                    CollectSourceRangeMetadata(range.RangeExpression);
+                    break;
+            }
+        }
+
+        private void CollectSourceRangeMetadata(RangeExpressionNode range)
+        {
+            CollectSourceExpressionMetadata(range.FromExpression);
+            CollectSourceExpressionMetadata(range.ToExpression);
+            CollectSourceExpressionMetadata(range.StepExpression);
+        }
+
+        private void CollectSourceCollectionAccessMetadata(CollectionAccessExpressionNode expression)
+        {
+            if (expression.Selector is ExpressionSelectorNode indexSelector)
+            {
+                CollectSourceExpressionMetadata(expression.Target);
+                CollectSourceExpressionMetadata(indexSelector.Expression);
                 return;
             }
 
-            CollectExpressionMetadata(program.SourceProgram);
-            foreach (var selector in program.PrefixSelectors)
+            var selectors = new List<CollectionSelectorNode>();
+            ExpressionNode source = expression;
+            while (source is CollectionAccessExpressionNode collectionAccess)
             {
-                CollectSelectorMetadata(selector);
+                selectors.Add(collectionAccess.Selector);
+                source = collectionAccess.Target;
             }
 
-            CollectSelectorMetadata(program.TerminalSelector);
-        }
-
-        private void CollectSelectorMetadata(GameEventScriptBytecodeSelectorProgram selector)
-        {
-            AddStringIfPresent(selector.EdgeMode);
-            AddStringIfPresent(selector.SecondaryMode);
-            CollectExpressionMetadata(selector.ExpressionProgram);
-            CollectExpressionMetadata(selector.SecondaryExpressionProgram);
-            CollectDicePatternMetadata(selector.DicePattern);
-            CollectObjectMatchPatternMetadata(selector.ObjectPattern);
-        }
-
-        private void CollectGeneratedCollectionMetadata(GameEventScriptBytecodeGeneratedCollectionProgram? program)
-        {
-            if (program is null)
+            CollectSourceExpressionMetadata(source);
+            selectors.Reverse();
+            foreach (var selector in selectors)
             {
-                return;
-            }
-
-            AddString(program.CollectionType);
-            CollectIterationSourceMetadata(program.Source);
-            CollectExpressionMetadata(program.PredicateProgram);
-            CollectExpressionMetadata(program.ProjectionProgram);
-        }
-
-        private void CollectGuardedChoiceMetadata(GameEventScriptBytecodeGuardedChoiceProgram? program)
-        {
-            if (program is null)
-            {
-                return;
-            }
-
-            foreach (var valueProgram in program.ValuePrograms)
-            {
-                CollectExpressionMetadata(valueProgram);
-            }
-
-            foreach (var conditionProgram in program.ConditionPrograms)
-            {
-                CollectExpressionMetadata(conditionProgram);
-            }
-
-            CollectExpressionMetadata(program.OtherwiseProgram);
-        }
-
-        private void CollectIterationSourceMetadata(GameEventScriptBytecodeIterationSourceProgram? source)
-        {
-            if (source is null)
-            {
-                return;
-            }
-
-            CollectExpressionMetadata(source.CollectionProgram);
-            CollectExpressionMetadata(source.RangeFromProgram);
-            CollectExpressionMetadata(source.RangeToProgram);
-            CollectExpressionMetadata(source.RangeStepProgram);
-        }
-
-        private void CollectDicePatternMetadata(GameEventScriptBytecodeDicePattern? pattern)
-        {
-            if (pattern is GameEventScriptBytecodeDiceCountPattern count)
-            {
-                CollectExpressionMetadata(count.FaceProgram);
+                CollectSourceSelectorMetadata(selector);
             }
         }
 
-        private void CollectObjectMatchPatternMetadata(GameEventScriptBytecodeObjectMatchPattern? pattern)
+        private void CollectSourceSelectorMetadata(CollectionSelectorNode selector)
         {
-            if (pattern is null)
+            switch (selector)
             {
-                return;
-            }
+                case FilterSelectorNode filter:
+                    AddString(filter.Identifier);
+                    CollectSourceExpressionMetadata(filter.Predicate);
+                    break;
 
+                case SelectSelectorNode select:
+                    AddString(select.Identifier);
+                    CollectSourceExpressionMetadata(select.Projection);
+                    break;
+
+                case PredicateSelectorNode predicate:
+                    AddString(predicate.Identifier);
+                    AddString(predicate.Operator);
+                    CollectSourceExpressionMetadata(predicate.Predicate);
+                    break;
+
+                case SumSelectorNode sum:
+                    AddString(sum.Identifier);
+                    CollectSourceExpressionMetadata(sum.Projection);
+                    break;
+
+                case AverageSelectorNode average:
+                    AddString(average.Identifier);
+                    CollectSourceExpressionMetadata(average.Projection);
+                    break;
+
+                case CountSelectorNode count:
+                    AddString(count.Identifier);
+                    CollectSourceExpressionMetadata(count.Predicate);
+                    break;
+
+                case SeriesTermSelectorNode term:
+                    CollectSourceExpressionMetadata(term.IndexExpression);
+                    break;
+
+                case EdgeSelectorNode edge:
+                    AddStringIfPresent(edge.Identifier);
+                    AddString(edge.Mode);
+                    CollectSourceExpressionMetadata(edge.Predicate);
+                    break;
+
+                case PatternSelectorNode pattern:
+                    CollectSourceDicePatternMetadata(pattern.Pattern);
+                    break;
+
+                case ObjectMatchSelectorNode objectMatch:
+                    CollectSourceObjectMatchPatternMetadata(objectMatch.Pattern);
+                    break;
+
+                case TakePatternSelectorNode takePattern:
+                    CollectSourceDicePatternMetadata(takePattern.Pattern);
+                    break;
+
+                case MinSelectorNode min:
+                    AddString(min.Identifier);
+                    CollectSourceExpressionMetadata(min.Projection);
+                    break;
+
+                case MaxSelectorNode max:
+                    AddString(max.Identifier);
+                    CollectSourceExpressionMetadata(max.Projection);
+                    break;
+
+                case DictionarySelectorNode dictionary:
+                    AddString(dictionary.Identifier);
+                    CollectSourceExpressionMetadata(dictionary.KeyProjection);
+                    CollectSourceExpressionMetadata(dictionary.ValueProjection);
+                    break;
+
+                case ContainsSelectorNode contains:
+                    AddString(contains.Mode);
+                    CollectSourceExpressionMetadata(contains.ValueExpression);
+                    break;
+
+                case ChooseSelectorNode choose:
+                    AddStringIfPresent(choose.Identifier);
+                    AddStringIfPresent(choose.WeightIdentifier);
+                    CollectSourceExpressionMetadata(choose.Predicate);
+                    CollectSourceExpressionMetadata(choose.WeightExpression);
+                    break;
+
+                case SortSelectorNode sort:
+                    AddString(sort.Direction);
+                    break;
+
+                case DistinctSelectorNode distinct:
+                    AddStringIfPresent(distinct.Identifier);
+                    CollectSourceExpressionMetadata(distinct.Projection);
+                    break;
+
+                case GroupBySelectorNode groupBy:
+                    AddString(groupBy.Identifier);
+                    CollectSourceExpressionMetadata(groupBy.Projection);
+                    break;
+
+                case OrderBySelectorNode orderBy:
+                    AddString(orderBy.Direction);
+                    AddString(orderBy.Identifier);
+                    CollectSourceExpressionMetadata(orderBy.Projection);
+                    break;
+            }
+        }
+
+        private void CollectSourceDicePatternMetadata(DicePatternNode pattern)
+        {
+            if (pattern is DiceCountPatternNode { Face: { } face })
+            {
+                CollectSourceExpressionMetadata(face);
+            }
+        }
+
+        private void CollectSourceObjectMatchPatternMetadata(ObjectMatchPatternNode pattern)
+        {
             foreach (var entry in pattern.Entries)
             {
                 AddString(entry.Key);
                 switch (entry.Value)
                 {
-                    case GameEventScriptBytecodeObjectMatchExpressionValue expression:
-                        CollectExpressionMetadata(expression.ExpressionProgram);
+                    case ObjectMatchExpressionValueNode expression:
+                        CollectSourceExpressionMetadata(expression.Expression);
                         break;
-                    case GameEventScriptBytecodeObjectMatchNestedValue nested:
-                        CollectObjectMatchPatternMetadata(nested.Pattern);
+
+                    case ObjectMatchNestedValueNode nested:
+                        CollectSourceObjectMatchPatternMetadata(nested.Pattern);
                         break;
                 }
             }

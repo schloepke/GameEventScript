@@ -960,9 +960,9 @@ A grouped view may still be offered, but it must keep global addresses visible.
 The current compiler emits active handler, callable, type-helper, and high-level
 helper bytecode directly from the source AST into the public linear model. The
 VM load path builds a validated linear runtime artifact from that public model.
-The remaining migration work is to stop creating legacy program graphs as
-compile/artifact metadata and remove them from `GameEventScriptCompiled`
-entirely.
+The old legacy program graphs are no longer created. The remaining migration
+work is to normalize construction-time metadata such as execution plans into a
+strictly portable artifact shape.
 
 ## Compatibility Predicates
 

@@ -324,14 +324,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorLayout
   property System.Int32 SecondaryIdentifierSlot { get }
   property System.String EdgeMode { get }
   property System.String SecondaryMode { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeStatementKind
-  enum-field Let = 0
-  enum-field Publish = 1
-  enum-field If = 2
-  enum-field ForRange = 3
-  enum-field ForCollection = 4
-  enum-field Expression = 5
-  enum-field SeededRandom = 6
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }

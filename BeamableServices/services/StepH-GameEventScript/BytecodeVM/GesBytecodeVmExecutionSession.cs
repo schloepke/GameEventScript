@@ -4332,16 +4332,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         builder.Add(value.AsText());
     }
 
-    private bool TryExecuteExpressionProgram(GameEventScriptBytecodeExpressionProgram program, out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        return CanExecuteLinearEntryCached(program.LinearEntryAddress) &&
-               TryEvaluateLinearHelperExpressionWithIsolatedTemporaries(
-                   program.LinearEntryAddress,
-                   program.LinearTemporaryBaseSlot,
-                   out value);
-    }
-
     private BytecodeVmValue LoadConstant(int index)
         => (uint)index < (uint)_compiledScript.Constants.Count
             ? _compiledScript.Constants[index]
@@ -5522,305 +5512,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             ? $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}:{value.Unit.Value.ToTypeName()}"
             : $"point:{value.X.ToString(CultureInfo.InvariantCulture)}:{value.Y.ToString(CultureInfo.InvariantCulture)}:{value.Z.ToString(CultureInfo.InvariantCulture)}";
 
-    private bool TryEvaluatePredicateTest(
-        in GameEventScriptBytecodeStackInstruction instruction,
-        BytecodeVmValue input,
-        out BytecodeVmValue value,
-        string? parameterName = null,
-        bool allowLinearCallableFallback = true)
-    {
-        value = BytecodeVmValue.Nothing;
-        if (instruction.ExpressionProgram is null)
-        {
-            return false;
-        }
-
-        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
-        {
-            return true;
-        }
-
-        if (instruction.A >= 0)
-        {
-            try
-            {
-                if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var predicateInput))
-                {
-                    return false;
-                }
-
-                RecordPredicateCalled(instruction, predicateInput);
-                if (TryEvaluateSimplePredicateTest(instruction.ExpressionProgram, instruction.A, predicateInput, out value))
-                {
-                    return true;
-                }
-
-                if (allowLinearCallableFallback &&
-                    TryGetSupportedLinearCallable(instruction.DiagnosticName, out var linearPredicate))
-                {
-                    return TryEvaluateLinearCallableEntry(
-                        linearPredicate,
-                        [predicateInput],
-                        normalizePredicateResult: true,
-                        out value);
-                }
-
-                if (!TryEvaluateLinearHelperExpressionWithTemporarySlot(
-                        instruction.A,
-                        predicateInput,
-                        instruction.ExpressionProgram.LinearEntryAddress,
-                        out value))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-
-                return true;
-            }
-            finally
-            {
-                _runtimeBudget.ExitCall();
-            }
-        }
-
-        EnterScope();
-        try
-        {
-            if (!TryConvertParameterType(instruction.DeclaredTypes, 0, input, out var predicateInput))
-            {
-                return false;
-            }
-
-            RecordPredicateCalled(instruction, predicateInput);
-            var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, predicateInput);
-            if (!parameterDefined ||
-                !TryExecuteExpressionProgram(instruction.ExpressionProgram, out value))
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            return true;
-        }
-        finally
-        {
-            ExitScope();
-            _runtimeBudget.ExitCall();
-        }
-    }
-
-    private bool TryEvaluateSimplePredicateTest(
-        GameEventScriptBytecodeExpressionProgram program,
-        int parameterSlot,
-        BytecodeVmValue input,
-        out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        var instructions = program.Instructions;
-        if (instructions.Length != 4 ||
-            instructions[0].OpCode != GameEventScriptBytecodeOpCode.LoadSlot ||
-            instructions[0].A != parameterSlot ||
-            instructions[1].OpCode != GameEventScriptBytecodeOpCode.LoadConstant ||
-            instructions[3].OpCode != GameEventScriptBytecodeOpCode.Cast ||
-            instructions[3].CastKind != GameEventScriptBytecodeCastKind.Boolean)
-        {
-            return false;
-        }
-
-        var opCode = instructions[2].OpCode;
-        if (opCode is not (GameEventScriptBytecodeOpCode.Equal or
-            GameEventScriptBytecodeOpCode.NotEqual or
-            GameEventScriptBytecodeOpCode.ApproxEqual or
-            GameEventScriptBytecodeOpCode.Less or
-            GameEventScriptBytecodeOpCode.Greater or
-            GameEventScriptBytecodeOpCode.LessOrEqual or
-            GameEventScriptBytecodeOpCode.GreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual))
-        {
-            return false;
-        }
-
-        if (!TryConsumeExecutionSteps(instructions.Length, "Expression evaluation budget exhausted."))
-        {
-            return true;
-        }
-
-        var right = LoadConstant(instructions[1].ConstantIndex);
-        if (input.IsNothingLike() || right.IsNothingLike())
-        {
-            value = BytecodeVmValue.Boolean(false);
-            return true;
-        }
-
-        value = opCode switch
-        {
-            GameEventScriptBytecodeOpCode.Equal => BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(input, right)),
-            GameEventScriptBytecodeOpCode.NotEqual => BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(input, right)),
-            GameEventScriptBytecodeOpCode.ApproxEqual => BytecodeVmValue.Boolean(BytecodeVmValue.AreApproximatelyEqual(input, right)),
-            GameEventScriptBytecodeOpCode.Less => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison < 0),
-            GameEventScriptBytecodeOpCode.Greater => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison > 0),
-            GameEventScriptBytecodeOpCode.LessOrEqual => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison <= 0),
-            GameEventScriptBytecodeOpCode.GreaterOrEqual => BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var comparison) && comparison >= 0),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
-                ? BytecodeVmValue.Boolean(comparison == 0)
-                : BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(input, right)),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
-                ? BytecodeVmValue.Boolean(comparison != 0)
-                : BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(input, right)),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
-                ? BytecodeVmValue.Boolean(comparison < 0)
-                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison < 0),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
-                ? BytecodeVmValue.Boolean(comparison > 0)
-                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison > 0),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
-                ? BytecodeVmValue.Boolean(comparison <= 0)
-                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison <= 0),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual => BytecodeVmValue.TryComparePrimitiveIntegers(input, right, out var comparison)
-                ? BytecodeVmValue.Boolean(comparison >= 0)
-                : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(input, right, out var numericComparison) && numericComparison >= 0),
-            _ => BytecodeVmValue.Nothing
-        };
-        return true;
-    }
-
-    private bool TryEvaluateCallable(
-        in GameEventScriptBytecodeStackInstruction instruction,
-        BytecodeVmValue[] stack,
-        int start,
-        int count,
-        out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        if (instruction.ExpressionProgram is null ||
-            instruction.Slots is null ||
-            instruction.Names is null ||
-            instruction.Slots.Length != count ||
-            instruction.Names.Length != count)
-        {
-            return false;
-        }
-
-        var callableName = instruction.DiagnosticName ?? string.Empty;
-        if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
-        {
-            return true;
-        }
-
-        EnterScope();
-        try
-        {
-            RecordCallableCalled(instruction, stack, start, count);
-            var arguments = new BytecodeVmValue[count];
-            for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
-            {
-                var argumentValue = stack[start + argumentIndex];
-                if (!TryConvertParameterType(instruction.DeclaredTypes, argumentIndex, argumentValue, out argumentValue))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-
-                arguments[argumentIndex] = argumentValue;
-            }
-
-            if (TryGetSupportedLinearCallable(callableName, out var linearCallable))
-            {
-                return TryEvaluateLinearCallableEntry(
-                    linearCallable,
-                    arguments,
-                    instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
-                    out value);
-            }
-
-            for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
-            {
-                if (!DefineSlot(instruction.Slots[argumentIndex], arguments[argumentIndex]))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-            }
-
-            if (!TryExecuteExpressionProgram(instruction.ExpressionProgram, out value))
-            {
-                return false;
-            }
-
-            return true;
-        }
-        finally
-        {
-            ExitScope();
-            _runtimeBudget.ExitCall();
-        }
-    }
-
-    private bool TryGetSupportedLinearCallable(string? callableName, out GameEventScriptBytecodeCallable callable)
-    {
-        if (!string.IsNullOrEmpty(callableName) &&
-            _compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out callable!) &&
-            CanExecuteLinearEntryCached(callable.EntryAddress))
-        {
-            return true;
-        }
-
-        callable = default!;
-        return false;
-    }
-
-    private bool TryEvaluateLinearCallableEntry(
-        GameEventScriptBytecodeCallable callable,
-        IReadOnlyList<BytecodeVmValue> arguments,
-        bool normalizePredicateResult,
-        out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        var previousLocals = _locals;
-        var previousAssignedSlots = _assignedSlots;
-        var previousChanges = _changes;
-        var previousScopeMarks = _scopeMarks;
-        var previousTrackedLocalSlotCount = _trackedLocalSlotCount;
-
-        _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
-        _assignedSlots = new bool[_locals.Length];
-        _changes = [];
-        _scopeMarks = [];
-        _trackedLocalSlotCount = callable.LocalSlotCount;
-        EnterScope();
-        try
-        {
-            var success = TryExecuteLinearRange(
-                callable.EntryAddress,
-                _compiledScript.LinearExecutable.Code.Count,
-                LinearArgumentSource.ForValues(arguments),
-                out var returned,
-                out value);
-            if (!success || !returned)
-            {
-                value = BytecodeVmValue.Nothing;
-                return false;
-            }
-
-            return !normalizePredicateResult ||
-                   NormalizeExtensionPredicateResult(requirePredicateResult: true, ref value);
-        }
-        finally
-        {
-            ExitScope();
-            _locals = previousLocals;
-            _assignedSlots = previousAssignedSlots;
-            _changes = previousChanges;
-            _scopeMarks = previousScopeMarks;
-            _trackedLocalSlotCount = previousTrackedLocalSlotCount;
-        }
-    }
-
     private BytecodeVmValue EvaluateTypeConstructor(
         string? typeName,
         string[]? labels,
@@ -6612,7 +6303,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             var computedValue = EvaluateCustomTypeExpression(
                 field.ComputedEntryAddress,
-                field.ComputedProgram,
                 sourceValues,
                 materializedValues);
             materializedValues[field.Name] = ConvertValueToDeclaredType(computedValue, field.TypeName);
@@ -6622,7 +6312,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private static bool IsComputedTypeField(GameEventScriptBytecodeTypeFieldDefinition field)
-        => field.ComputedEntryAddress >= 0 || field.ComputedProgram is not null;
+        => field.ComputedEntryAddress >= 0;
 
     private GameEventScriptValue ConvertValueToDeclaredType(GameEventScriptValue value, string declaredType)
         => TryConvertDeclaredType(declaredType, BytecodeVmValue.FromGameEventScriptValue(value), out var converted)
@@ -6637,20 +6327,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
     {
         _ = typeDefinition;
-        if (!HasCustomTypeExpression(field.MinimumEntryAddress, field.MinimumProgram) ||
-            !HasCustomTypeExpression(field.MaximumEntryAddress, field.MaximumProgram))
+        if (!HasCustomTypeExpression(field.MinimumEntryAddress) ||
+            !HasCustomTypeExpression(field.MaximumEntryAddress))
         {
             return fieldValue;
         }
 
         var minimum = EvaluateCustomTypeExpression(
             field.MinimumEntryAddress,
-            field.MinimumProgram,
             sourceValues,
             materializedValues);
         var maximum = EvaluateCustomTypeExpression(
             field.MaximumEntryAddress,
-            field.MaximumProgram,
             sourceValues,
             materializedValues);
         if (!GesValueOperations.HaveCompatibleNumericUnits(fieldValue, minimum) ||
@@ -6683,24 +6371,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GameEventScriptValueFactory.GesFloat(Math.Min(Math.Max(valueNumber.Value, lower), upper), fieldValue.HasNumericUnit() ? unit : null);
     }
 
-    private static bool HasCustomTypeExpression(int entryAddress, GameEventScriptBytecodeExpressionProgram? expressionProgram)
-        => entryAddress >= 0 || expressionProgram is not null;
+    private static bool HasCustomTypeExpression(int entryAddress)
+        => entryAddress >= 0;
 
     private GameEventScriptValue EvaluateCustomTypeExpression(
         int entryAddress,
-        GameEventScriptBytecodeExpressionProgram? expressionProgram,
         IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
         IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
-    {
-        if (TryEvaluateLinearCustomTypeExpression(entryAddress, sourceValues, materializedValues, out var linearValue))
-        {
-            return linearValue;
-        }
-
-        return expressionProgram is null
-            ? GameEventScriptNothingValue.Instance
-            : EvaluateCustomTypeExpression(expressionProgram, sourceValues, materializedValues);
-    }
+        => TryEvaluateLinearCustomTypeExpression(entryAddress, sourceValues, materializedValues, out var linearValue)
+            ? linearValue
+            : GameEventScriptNothingValue.Instance;
 
     private bool TryEvaluateLinearCustomTypeExpression(
         int entryAddress,
@@ -6741,40 +6421,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             value = linearValue.ToGameEventScriptValue();
             return true;
-        }
-        finally
-        {
-            ExitScope();
-        }
-    }
-
-    private GameEventScriptValue EvaluateCustomTypeExpression(
-        GameEventScriptBytecodeExpressionProgram expressionProgram,
-        IReadOnlyDictionary<string, GameEventScriptValue> sourceValues,
-        IReadOnlyDictionary<string, GameEventScriptValue> materializedValues)
-    {
-        EnterScope();
-        try
-        {
-            foreach (var pair in sourceValues)
-            {
-                if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
-                {
-                    return GameEventScriptNothingValue.Instance;
-                }
-            }
-
-            foreach (var pair in materializedValues)
-            {
-                if (!Define(pair.Key, BytecodeVmValue.FromGameEventScriptValue(pair.Value)))
-                {
-                    return GameEventScriptNothingValue.Instance;
-                }
-            }
-
-            return TryExecuteExpressionProgram(expressionProgram, out var value)
-                ? value.ToGameEventScriptValue()
-                : GameEventScriptNothingValue.Instance;
         }
         finally
         {
@@ -7270,22 +6916,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             $"Handler '{message}' invoked");
     }
 
-    private void RecordPredicateCalled(in GameEventScriptBytecodeStackInstruction instruction, BytecodeVmValue input)
-    {
-        if (!_diagnosticsEnabled)
-        {
-            return;
-        }
-
-        var predicateName = instruction.DiagnosticName ?? string.Empty;
-        var argumentName = instruction.DiagnosticArgumentName ?? "value";
-        RecordDiagnostic(
-            GameEventScriptDiagnosticEventKind.PredicateCalled,
-            predicateName,
-            CreateSingleArgument(argumentName, input.ToGameEventScriptValue()),
-            $"predicate '{predicateName}' called");
-    }
-
     private void RecordPredicateCalled(string predicateName, string argumentName, BytecodeVmValue input)
     {
         if (!_diagnosticsEnabled)
@@ -7298,34 +6928,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             predicateName,
             CreateSingleArgument(argumentName, input.ToGameEventScriptValue()),
             $"predicate '{predicateName}' called");
-    }
-
-    private void RecordCallableCalled(in GameEventScriptBytecodeStackInstruction instruction, BytecodeVmValue[] stack, int start, int count)
-    {
-        if (!_diagnosticsEnabled)
-        {
-            return;
-        }
-
-        var callableName = instruction.DiagnosticName ?? string.Empty;
-        var parameters = instruction.Names ?? [];
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[Math.Min(parameters.Length, count)];
-        for (var argumentIndex = 0; argumentIndex < pairs.Length; argumentIndex++)
-        {
-            pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
-                parameters[argumentIndex],
-                stack[start + argumentIndex].ToGameEventScriptValue());
-        }
-
-        var kind = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate
-            ? GameEventScriptDiagnosticEventKind.PredicateCalled
-            : GameEventScriptDiagnosticEventKind.FunctionCalled;
-        var kindText = instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate ? "predicate" : "function";
-        RecordDiagnostic(
-            kind,
-            callableName,
-            GameEventScriptNamedArguments.CreateOrdered(pairs),
-            $"{kindText} '{callableName}' called");
     }
 
     private void RecordCallableCalled(

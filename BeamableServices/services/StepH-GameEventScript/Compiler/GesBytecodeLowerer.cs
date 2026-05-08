@@ -11,7 +11,7 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesBytecodeLowerer
 {
-    public static GameEventScriptBytecodeExecutionPlan CompileHandlerPlan(
+    public static IReadOnlyDictionary<string, int> CollectHandlerSlots(
         string messageName,
         int declarationOrder,
         IReadOnlyList<string> parameters,
@@ -38,7 +38,7 @@ internal static class GesBytecodeLowerer
             slotCollector.CollectStatement(statement);
         }
 
-        return GameEventScriptBytecodeExecutionPlan.Create(slotCollector.Slots);
+        return new Dictionary<string, int>(slotCollector.Slots, StringComparer.Ordinal);
     }
 
     public static IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> CompileTypeDefinitions(

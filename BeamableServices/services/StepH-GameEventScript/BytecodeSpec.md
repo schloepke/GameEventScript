@@ -960,9 +960,13 @@ A grouped view may still be offered, but it must keep global addresses visible.
 The current compiler emits active handler, callable, type-helper, and high-level
 helper bytecode directly from the source AST into the public linear model. The
 VM load path builds a validated linear runtime artifact from that public model.
-The old legacy program graphs are no longer created. The remaining migration
-work is to normalize construction-time metadata such as execution plans into a
-strictly portable artifact shape.
+The old legacy program graphs are no longer created, and construction-time
+execution-plan metadata has been removed from handler bytecode records.
+`GameEventScriptCompiled` defensively copies table inputs and stores
+dictionary-shaped tables in deterministic ordinal order. The next bytecode
+architecture phase is defining the `.gesb` binary file structure, tightening the
+portable VM contract, and then optimizing opcode/side-table encodings against
+that contract.
 
 ## Compatibility Predicates
 

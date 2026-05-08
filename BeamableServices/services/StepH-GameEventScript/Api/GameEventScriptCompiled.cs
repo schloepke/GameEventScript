@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
@@ -36,30 +37,30 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout>? guardedChoiceLayouts = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
-        StringPool = stringPool ?? throw new ArgumentNullException(nameof(stringPool));
-        ConstantPool = constantPool ?? throw new ArgumentNullException(nameof(constantPool));
-        Signatures = signatures ?? throw new ArgumentNullException(nameof(signatures));
-        ExternalReferences = externalReferences ?? throw new ArgumentNullException(nameof(externalReferences));
-        ExternalTypeConstructorReferences = externalTypeConstructorReferences ?? throw new ArgumentNullException(nameof(externalTypeConstructorReferences));
-        NamedArgumentLayouts = namedArgumentLayouts ?? throw new ArgumentNullException(nameof(namedArgumentLayouts));
-        TypeMetadata = typeMetadata ?? throw new ArgumentNullException(nameof(typeMetadata));
-        Callables = callables ?? throw new ArgumentNullException(nameof(callables));
-        Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
-        Code = code ?? [];
+        StringPool = CopyList(stringPool, nameof(stringPool));
+        ConstantPool = CopyList(constantPool, nameof(constantPool));
+        Signatures = CopyList(signatures, nameof(signatures));
+        ExternalReferences = CopyList(externalReferences, nameof(externalReferences));
+        ExternalTypeConstructorReferences = CopyList(externalTypeConstructorReferences, nameof(externalTypeConstructorReferences));
+        NamedArgumentLayouts = CopyNestedStringLayouts(namedArgumentLayouts, nameof(namedArgumentLayouts));
+        TypeMetadata = CopyList(typeMetadata, nameof(typeMetadata));
+        Callables = CopyDictionary(callables, nameof(callables));
+        Handlers = CopyHandlerDictionary(handlers, nameof(handlers));
+        TypeDefinitions = CopyDictionary(typeDefinitions, nameof(typeDefinitions));
+        Code = code?.ToArray() ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
-        OperationLayouts = operationLayouts ?? [];
-        DiagnosticLayouts = diagnosticLayouts ?? [];
-        PublishLayouts = publishLayouts ?? [];
-        IterationSourceLayouts = iterationSourceLayouts ?? [];
-        LoopLayouts = loopLayouts ?? [];
-        SeededRandomBlockLayouts = seededRandomBlockLayouts ?? [];
-        DicePatternLayouts = dicePatternLayouts ?? [];
-        ObjectMatchPatternLayouts = objectMatchPatternLayouts ?? [];
-        SelectorLayouts = selectorLayouts ?? [];
-        PipelineLayouts = pipelineLayouts ?? [];
-        GeneratedCollectionLayouts = generatedCollectionLayouts ?? [];
-        GuardedChoiceLayouts = guardedChoiceLayouts ?? [];
+        OperationLayouts = operationLayouts?.ToArray() ?? [];
+        DiagnosticLayouts = diagnosticLayouts?.ToArray() ?? [];
+        PublishLayouts = publishLayouts?.ToArray() ?? [];
+        IterationSourceLayouts = iterationSourceLayouts?.ToArray() ?? [];
+        LoopLayouts = loopLayouts?.ToArray() ?? [];
+        SeededRandomBlockLayouts = seededRandomBlockLayouts?.ToArray() ?? [];
+        DicePatternLayouts = dicePatternLayouts?.ToArray() ?? [];
+        ObjectMatchPatternLayouts = objectMatchPatternLayouts?.ToArray() ?? [];
+        SelectorLayouts = selectorLayouts?.ToArray() ?? [];
+        PipelineLayouts = pipelineLayouts?.ToArray() ?? [];
+        GeneratedCollectionLayouts = generatedCollectionLayouts?.ToArray() ?? [];
+        GuardedChoiceLayouts = guardedChoiceLayouts?.ToArray() ?? [];
     }
 
     public GameEventScriptCompileOptions Options { get; }
@@ -111,4 +112,52 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get; }
+
+    private static IReadOnlyList<T> CopyList<T>(IReadOnlyList<T> source, string parameterName)
+        => (source ?? throw new ArgumentNullException(parameterName)).ToArray();
+
+    private static IReadOnlyList<IReadOnlyList<string>> CopyNestedStringLayouts(
+        IReadOnlyList<IReadOnlyList<string>> source,
+        string parameterName)
+        => (source ?? throw new ArgumentNullException(parameterName))
+            .Select(layout => (IReadOnlyList<string>)(layout?.ToArray() ?? throw new ArgumentException("Nested string layouts must not be null.", parameterName)))
+            .ToArray();
+
+    private static IReadOnlyDictionary<string, T> CopyDictionary<T>(
+        IReadOnlyDictionary<string, T> source,
+        string parameterName)
+    {
+        _ = source ?? throw new ArgumentNullException(parameterName);
+        var copy = new SortedDictionary<string, T>(StringComparer.Ordinal);
+        foreach (var pair in source)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+            {
+                throw new ArgumentException("Dictionary keys must be non-empty.", parameterName);
+            }
+
+            copy[pair.Key] = pair.Value;
+        }
+
+        return copy;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> CopyHandlerDictionary(
+        IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> source,
+        string parameterName)
+    {
+        _ = source ?? throw new ArgumentNullException(parameterName);
+        var copy = new SortedDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>>(StringComparer.Ordinal);
+        foreach (var pair in source)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+            {
+                throw new ArgumentException("Handler dictionary keys must be non-empty.", parameterName);
+            }
+
+            copy[pair.Key] = pair.Value?.ToArray() ?? throw new ArgumentException("Handler lists must not be null.", parameterName);
+        }
+
+        return copy;
+    }
 }

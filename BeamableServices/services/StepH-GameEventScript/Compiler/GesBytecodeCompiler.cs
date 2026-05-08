@@ -108,7 +108,7 @@ internal static class GesBytecodeCompiler
                             handler.SignatureLabels,
                             signatureId,
                             index,
-                            GesBytecodeLowerer.CompileHandlerPlan(
+                            GesBytecodeLowerer.CollectHandlerSlots(
                                 pair.Key,
                                 index,
                                 handler.Parameters,

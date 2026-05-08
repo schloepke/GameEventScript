@@ -754,27 +754,6 @@ public sealed class GameEventScriptBytecodeTypeFieldDefinition
     public int ComputedEntryAddress { get; internal set; }
 }
 
-internal sealed class GameEventScriptBytecodeExecutionPlan
-{
-    private readonly IReadOnlyDictionary<string, int> _slots;
-
-    private GameEventScriptBytecodeExecutionPlan(IReadOnlyDictionary<string, int> slots)
-    {
-        _slots = slots;
-        SlotCount = slots.Count;
-    }
-
-    public IReadOnlyDictionary<string, int> Slots => _slots;
-
-    public int SlotCount { get; }
-
-    public static GameEventScriptBytecodeExecutionPlan Create(IReadOnlyDictionary<string, int> slots)
-        => new(new Dictionary<string, int>(slots, StringComparer.Ordinal));
-
-    public bool TryGetSlot(string name, out int slot)
-        => _slots.TryGetValue(name, out slot);
-}
-
 public enum GameEventScriptBytecodeHandlerDispatchKind
 {
     ExactSignature,
@@ -790,7 +769,7 @@ public sealed class GameEventScriptBytecodeHandler
         IReadOnlyList<string> signatureLabels,
         string signatureId,
         int declarationOrder,
-        GameEventScriptBytecodeExecutionPlan executionPlan,
+        IReadOnlyDictionary<string, int> slots,
         IReadOnlyList<string?>? parameterTypes = null,
         IReadOnlyList<string>? requiredTags = null,
         IReadOnlyList<string>? excludedTags = null,
@@ -805,10 +784,9 @@ public sealed class GameEventScriptBytecodeHandler
         ExcludedTags = NormalizeTags(excludedTags);
         SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
         DeclarationOrder = declarationOrder;
-        ExecutionPlan = executionPlan ?? throw new ArgumentNullException(nameof(executionPlan));
+        Slots = NormalizeSlots(slots);
         EntryAddress = entryAddress;
-        LocalSlotCount = executionPlan.SlotCount;
-        Slots = executionPlan.Slots;
+        LocalSlotCount = GetLocalSlotCount(Slots);
         Definition = GameEventScriptMessageSignature.Create(message, signatureLabels);
     }
 
@@ -836,8 +814,6 @@ public sealed class GameEventScriptBytecodeHandler
 
     public IReadOnlyDictionary<string, int> Slots { get; }
 
-    internal GameEventScriptBytecodeExecutionPlan ExecutionPlan { get; }
-
     public GameEventScriptMessageSignature Definition { get; }
 
     private static IReadOnlyList<string?> NormalizeParameterTypes(IReadOnlyList<string?>? parameterTypes, IReadOnlyList<string> parameters)
@@ -858,6 +834,33 @@ public sealed class GameEventScriptBytecodeHandler
 
     private static IReadOnlyList<string> NormalizeTags(IReadOnlyList<string>? tags)
         => GameEventScriptMessage.NormalizeTags(tags);
+
+    private static IReadOnlyDictionary<string, int> NormalizeSlots(IReadOnlyDictionary<string, int> slots)
+    {
+        _ = slots ?? throw new ArgumentNullException(nameof(slots));
+        var copy = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var pair in slots)
+        {
+            if (string.IsNullOrWhiteSpace(pair.Key))
+            {
+                throw new ArgumentException("Slot names must be non-empty.", nameof(slots));
+            }
+
+            if (pair.Value < 0)
+            {
+                throw new ArgumentException("Slot indexes must be non-negative.", nameof(slots));
+            }
+
+            copy[pair.Key] = pair.Value;
+        }
+
+        return copy;
+    }
+
+    private static int GetLocalSlotCount(IReadOnlyDictionary<string, int> slots)
+        => slots.Count == 0
+            ? 0
+            : slots.Values.Max() + 1;
 }
 
 public sealed class GameEventScriptBytecodeCallable

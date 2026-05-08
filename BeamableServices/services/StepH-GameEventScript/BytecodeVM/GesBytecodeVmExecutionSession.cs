@@ -4314,7 +4314,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeStatementKind.Let:
                 if (statement.ExpressionProgram is null ||
                     string.IsNullOrEmpty(statement.Name) ||
-                    !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var letValue))
+                    !TryExecuteExpressionProgram(statement.ExpressionProgram, out var letValue))
                 {
                     return false;
                 }
@@ -4343,7 +4343,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeStatementKind.Expression:
                 if (statement.ExpressionProgram is null ||
-                    !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var expressionValue))
+                    !TryExecuteExpressionProgram(statement.ExpressionProgram, out var expressionValue))
                 {
                     return false;
                 }
@@ -4363,7 +4363,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (statement.ExpressionProgram is null ||
             statement.BodyProgram is null ||
-            !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var seed))
+            !TryExecuteExpressionProgram(statement.ExpressionProgram, out var seed))
         {
             return false;
         }
@@ -4383,7 +4383,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (statement.ExpressionProgram is null ||
             statement.ThenProgram is null ||
-            !TryExecuteExpressionProgram(statement.ExpressionProgram, 0, out var condition))
+            !TryExecuteExpressionProgram(statement.ExpressionProgram, out var condition))
         {
             return false;
         }
@@ -4403,8 +4403,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (source is null ||
             source.RangeFromProgram is null ||
             source.RangeToProgram is null ||
-            !TryExecuteExpressionProgram(source.RangeFromProgram, 0, out var fromValue) ||
-            !TryExecuteExpressionProgram(source.RangeToProgram, 0, out var toValue) ||
+            !TryExecuteExpressionProgram(source.RangeFromProgram, out var fromValue) ||
+            !TryExecuteExpressionProgram(source.RangeToProgram, out var toValue) ||
             !fromValue.TryGetRangeInteger(out var from) ||
             !toValue.TryGetRangeInteger(out var to))
         {
@@ -4413,7 +4413,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var step = 1L;
         if (source.RangeStepProgram is not null &&
-            (!TryExecuteExpressionProgram(source.RangeStepProgram, 0, out var stepValue) || !stepValue.TryGetRangeInteger(out step)))
+            (!TryExecuteExpressionProgram(source.RangeStepProgram, out var stepValue) || !stepValue.TryGetRangeInteger(out step)))
         {
             return false;
         }
@@ -4477,7 +4477,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         var source = statement.IterationSource;
         if (source?.CollectionProgram is null ||
-            !TryExecuteExpressionProgram(source.CollectionProgram, 0, out var sourceVmValue))
+            !TryExecuteExpressionProgram(source.CollectionProgram, out var sourceVmValue))
         {
             return false;
         }
@@ -4582,7 +4582,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentNames.Length];
         for (var argumentIndex = 0; argumentIndex < argumentNames.Length; argumentIndex++)
         {
-            if (!TryExecuteExpressionProgram(argumentPrograms[argumentIndex], 0, out var value))
+            if (!TryExecuteExpressionProgram(argumentPrograms[argumentIndex], out var value))
             {
                 message = GameEventScriptMessage.Empty;
                 return false;
@@ -4604,7 +4604,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryCreateMessage(GameEventScriptBytecodeExpressionProgram messageExpression, out GameEventScriptMessage? message)
     {
-        if (!TryExecuteExpressionProgram(messageExpression, 0, out var publishValue))
+        if (!TryExecuteExpressionProgram(messageExpression, out var publishValue))
         {
             message = null;
             return false;
@@ -4629,7 +4629,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var builder = new MessageTagBuilder();
         foreach (var tagProgram in tagPrograms)
         {
-            if (!TryExecuteExpressionProgram(tagProgram, 0, out var tagValue))
+            if (!TryExecuteExpressionProgram(tagProgram, out var tagValue))
             {
                 tags = [];
                 return false;
@@ -4674,442 +4674,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
         builder.Add(value.AsText());
     }
 
-    private bool TryExecuteExpressionProgram(GameEventScriptBytecodeExpressionProgram program, int stackBase, out BytecodeVmValue value)
+    private bool TryExecuteExpressionProgram(GameEventScriptBytecodeExpressionProgram program, out BytecodeVmValue value)
     {
-        if (stackBase == 0 &&
-            CanExecuteLinearEntryCached(program.LinearEntryAddress))
-        {
-            return TryEvaluateLinearHelperExpressionWithIsolatedTemporaries(
-                program.LinearEntryAddress,
-                program.LinearTemporaryBaseSlot,
-                out value);
-        }
-
-        return TryExecuteCompatibilityExpressionProgram(program, stackBase, out value);
-    }
-
-    private bool TryExecuteCompatibilityExpressionProgram(GameEventScriptBytecodeExpressionProgram program, int stackBase, out BytecodeVmValue value)
-    {
-        var linear = GesLinearExpressionProgram.GetOrCreate(program);
-        var slots = ArrayPool<BytecodeVmValue>.Shared.Rent(linear.MaxSlots);
-        Array.Clear(slots, 0, linear.MaxSlots);
-        var operandBuffer = linear.MaxOperandCount > 0
-            ? ArrayPool<BytecodeVmValue>.Shared.Rent(linear.MaxOperandCount)
-            : [];
-        var instructions = linear.Instructions;
-        var pc = 0;
-        try
-        {
-            while (pc < instructions.Length)
-            {
-                if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return true;
-                }
-
-                if (!TryExecuteCompatibilityLinearExpressionInstruction(
-                        in instructions[pc],
-                        slots,
-                        operandBuffer,
-                        stackBase,
-                        ref pc,
-                        instructions.Length))
-                {
-                    value = BytecodeVmValue.Nothing;
-                    return false;
-                }
-            }
-
-            value = linear.ReturnSlot >= 0
-                ? ReadExpressionSlot(slots, linear.ReturnSlot)
-                : BytecodeVmValue.Nothing;
-            return true;
-        }
-        finally
-        {
-            Array.Clear(slots, 0, linear.MaxSlots);
-            ArrayPool<BytecodeVmValue>.Shared.Return(slots);
-            if (linear.MaxOperandCount > 0)
-            {
-                Array.Clear(operandBuffer, 0, linear.MaxOperandCount);
-                ArrayPool<BytecodeVmValue>.Shared.Return(operandBuffer);
-            }
-        }
-    }
-
-    private bool TryExecuteCompatibilityLinearExpressionInstruction(
-        in GesLinearExpressionInstruction linearInstruction,
-        BytecodeVmValue[] slots,
-        BytecodeVmValue[] operandBuffer,
-        int stackBase,
-        ref int pc,
-        int instructionCount)
-    {
-        var instruction = linearInstruction.Instruction;
-        var metadata = linearInstruction.Metadata;
-        switch (instruction.OpCode)
-        {
-            case GameEventScriptBytecodeOpCode.LoadConstant:
-                WriteExpressionSlot(slots, instruction.Dest, LoadConstant(instruction.Data));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.LoadSlot:
-                WriteExpressionSlot(slots, instruction.Dest, ResolveSlot(instruction.A));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.CopySlot:
-                WriteExpressionSlot(slots, instruction.Dest, ReadExpressionSlot(slots, instruction.A));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Jump:
-                return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
-
-            case GameEventScriptBytecodeOpCode.JumpIfTrue:
-                if (ReadExpressionSlot(slots, instruction.A).IsTrue())
-                {
-                    return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
-                }
-
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.JumpIfFalse:
-                if (ReadExpressionSlot(slots, instruction.A).IsFalse())
-                {
-                    return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
-                }
-
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                if (!ReadExpressionSlot(slots, instruction.A).IsTrue())
-                {
-                    return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
-                }
-
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Or:
-            case GameEventScriptBytecodeOpCode.Xor:
-            case GameEventScriptBytecodeOpCode.And:
-            case GameEventScriptBytecodeOpCode.Power:
-            case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
-            case GameEventScriptBytecodeOpCode.Equal:
-            case GameEventScriptBytecodeOpCode.NotEqual:
-            case GameEventScriptBytecodeOpCode.ApproxEqual:
-            case GameEventScriptBytecodeOpCode.Less:
-            case GameEventScriptBytecodeOpCode.Greater:
-            case GameEventScriptBytecodeOpCode.LessOrEqual:
-            case GameEventScriptBytecodeOpCode.GreaterOrEqual:
-            case GameEventScriptBytecodeOpCode.Add:
-            case GameEventScriptBytecodeOpCode.Subtract:
-            case GameEventScriptBytecodeOpCode.Multiply:
-            case GameEventScriptBytecodeOpCode.Divide:
-            case GameEventScriptBytecodeOpCode.IntegerDivide:
-            case GameEventScriptBytecodeOpCode.Modulo:
-            case GameEventScriptBytecodeOpCode.Remainder:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
-            case GameEventScriptBytecodeOpCode.Default:
-            case GameEventScriptBytecodeOpCode.Contains:
-            case GameEventScriptBytecodeOpCode.ContainsValue:
-            case GameEventScriptBytecodeOpCode.StartsWith:
-            case GameEventScriptBytecodeOpCode.EndsWith:
-            case GameEventScriptBytecodeOpCode.Intersect:
-            case GameEventScriptBytecodeOpCode.Combine:
-            case GameEventScriptBytecodeOpCode.Except:
-            case GameEventScriptBytecodeOpCode.Zip:
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    EvaluateProgramBinary(
-                        instruction.OpCode,
-                        ReadExpressionSlot(slots, instruction.A),
-                        ReadExpressionSlot(slots, instruction.B)));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Unary:
-                if (!TryEvaluateUnaryOperation(metadata.DiagnosticName, ReadExpressionSlot(slots, instruction.A), out var unaryValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, unaryValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Variadic:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                if (!TryEvaluateVariadicOperation(metadata.DiagnosticName, operandBuffer, 0, metadata.A, out var variadicValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, variadicValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Clamp:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, EvaluateClamp(operandBuffer[0], operandBuffer[1], operandBuffer[2]));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Random:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, EvaluateRandomExpression(operandBuffer[0], operandBuffer[1]));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Range:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    EvaluateRangeExpression(
-                        operandBuffer[0],
-                        operandBuffer[1],
-                        metadata.A == 3 ? operandBuffer[2] : BytecodeVmValue.Integer(1)));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Dice:
-                WriteExpressionSlot(slots, instruction.Dest, EvaluateDiceExpression(metadata.A, metadata.B));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.SeededRandom:
-                if (metadata.ExpressionProgram is null)
-                {
-                    return false;
-                }
-
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                if (!TryEvaluateSeededRandomExpression(operandBuffer[0], metadata.ExpressionProgram, stackBase, out var seededValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, seededValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Cast:
-                WriteExpressionSlot(slots, instruction.Dest, EvaluateProgramCast(metadata.CastKind, ReadExpressionSlot(slots, instruction.A)));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.TypeConstructor:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    EvaluateTypeConstructor(metadata.DiagnosticName, metadata.Names, operandBuffer, 0, metadata.A));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.TypeCheck:
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    BytecodeVmValue.Boolean(IsValueOfType(ReadExpressionSlot(slots, instruction.A), metadata.DiagnosticName)));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.PredicateTest:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                if (!TryEvaluatePredicateTest(metadata, operandBuffer[0], stackBase, out var predicateValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, predicateValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Call:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                if (!TryEvaluateCallable(metadata, operandBuffer, 0, metadata.A, out var callValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, callValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.MemberAccess:
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    EvaluateMemberAccess(ReadExpressionSlot(slots, instruction.A), metadata.DiagnosticName));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.IndexedAccess:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, EvaluateIndexedAccess(operandBuffer[0], operandBuffer[1]));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BuildList:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, BuildListValue(operandBuffer, 0, metadata.A));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BuildSequence:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, BuildSequenceValue(operandBuffer, 0, metadata.A));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BuildSet:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, BuildSetValue(operandBuffer, 0, metadata.A));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BuildDictionary:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(slots, instruction.Dest, BuildDictionaryValue(operandBuffer, 0, metadata.A, metadata.Names));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BuildMessage:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    BuildMessageValue(
-                        operandBuffer,
-                        0,
-                        metadata.A,
-                        metadata.Names,
-                        metadata.DiagnosticName,
-                        metadata.DiagnosticArgumentName));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BindHandler:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                WriteExpressionSlot(
-                    slots,
-                    instruction.Dest,
-                    BindHandlerValue(operandBuffer[0], operandBuffer, 1, metadata.A, metadata.Names));
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.CallExtension:
-                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                if (!TryCallExtension(
-                        metadata.DiagnosticName,
-                        metadata.DiagnosticArgumentName,
-                        metadata.Names,
-                        metadata.B,
-                        operandBuffer,
-                        0,
-                        metadata.A,
-                        metadata.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
-                        out var extensionValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, extensionValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.Pipeline:
-                if (metadata.PipelineProgram is null ||
-                    !TryExecutePipelineProgram(metadata.PipelineProgram, out var pipelineValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, pipelineValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                if (metadata.GeneratedCollectionProgram is null ||
-                    !TryExecuteGeneratedCollectionProgram(metadata.GeneratedCollectionProgram, out var generatedValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, generatedValue);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
-                if (metadata.GuardedChoiceProgram is null ||
-                    !TryExecuteGuardedChoiceProgram(metadata.GuardedChoiceProgram, out var guardedValue))
-                {
-                    return false;
-                }
-
-                WriteExpressionSlot(slots, instruction.Dest, guardedValue);
-                pc++;
-                return true;
-
-            default:
-                return false;
-        }
-    }
-
-    private static BytecodeVmValue ReadExpressionSlot(BytecodeVmValue[] slots, int slot)
-        => (uint)slot < (uint)slots.Length
-            ? slots[slot]
-            : BytecodeVmValue.Nothing;
-
-    private static void WriteExpressionSlot(BytecodeVmValue[] slots, int slot, BytecodeVmValue value)
-    {
-        if ((uint)slot < (uint)slots.Length)
-        {
-            slots[slot] = value;
-        }
-    }
-
-    private static void CopyExpressionOperands(
-        in GesLinearExpressionInstruction instruction,
-        BytecodeVmValue[] slots,
-        BytecodeVmValue[] operandBuffer)
-    {
-        var operands = instruction.Operands;
-        for (var index = 0; index < operands.Length; index++)
-        {
-            operandBuffer[index] = ReadExpressionSlot(slots, operands[index]);
-        }
-    }
-
-    private static bool TryMoveExpressionPc(int target, int instructionCount, ref int pc)
-    {
-        if ((uint)target > (uint)instructionCount)
-        {
-            return false;
-        }
-
-        pc = target;
-        return true;
+        value = BytecodeVmValue.Nothing;
+        return CanExecuteLinearEntryCached(program.LinearEntryAddress) &&
+               TryEvaluateLinearHelperExpressionWithIsolatedTemporaries(
+                   program.LinearEntryAddress,
+                   program.LinearTemporaryBaseSlot,
+                   out value);
     }
 
     private BytecodeVmValue LoadConstant(int index)
@@ -5435,56 +5007,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryEvaluateShortCircuitLogical(
-        in GameEventScriptBytecodeStackInstruction instruction,
-        BytecodeVmValue left,
-        int stackBase,
-        out BytecodeVmValue value)
-    {
-        if (TryEvaluateLogicalShortCircuit(instruction.OpCode, left, out value))
-        {
-            return true;
-        }
-
-        if (instruction.ExpressionProgram is null ||
-            !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out var right))
-        {
-            value = BytecodeVmValue.Nothing;
-            return false;
-        }
-
-        value = instruction.OpCode switch
-        {
-            GameEventScriptBytecodeOpCode.ShortCircuitOr => EvaluateLogicalOr(left, right),
-            GameEventScriptBytecodeOpCode.ShortCircuitAnd => EvaluateLogicalAnd(left, right),
-            GameEventScriptBytecodeOpCode.ShortCircuitImplies => EvaluateLogicalImplies(left, right),
-            _ => BytecodeVmValue.Nothing
-        };
-        return true;
-    }
-
-    private static bool TryEvaluateLogicalShortCircuit(
-        GameEventScriptBytecodeOpCode opCode,
-        in BytecodeVmValue left,
-        out BytecodeVmValue value)
-    {
-        switch (opCode)
-        {
-            case GameEventScriptBytecodeOpCode.ShortCircuitOr when left.IsTrue():
-                value = BytecodeVmValue.Boolean(true);
-                return true;
-            case GameEventScriptBytecodeOpCode.ShortCircuitAnd when left.IsFalse():
-                value = BytecodeVmValue.Boolean(false);
-                return true;
-            case GameEventScriptBytecodeOpCode.ShortCircuitImplies when left.IsFalse():
-                value = BytecodeVmValue.Boolean(true);
-                return true;
-            default:
-                value = BytecodeVmValue.Nothing;
-                return false;
-        }
-    }
-
     private static BytecodeVmValue EvaluateLogicalAnd(in BytecodeVmValue left, in BytecodeVmValue right)
     {
         if (left.IsFalse() || right.IsFalse())
@@ -5582,28 +5104,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         };
     }
 
-    private bool TryEvaluateSeededRandomExpression(
-        BytecodeVmValue seed,
-        GameEventScriptBytecodeExpressionProgram bodyProgram,
-        int stackBase,
-        out BytecodeVmValue value)
-    {
-        PushSeededRandomScope(seed.ToGameEventScriptValue());
-        try
-        {
-            if (CanExecuteLinearEntryCached(bodyProgram.LinearEntryAddress))
-            {
-                return TryEvaluateLinearHelperExpression(bodyProgram.LinearEntryAddress, out value);
-            }
-
-            return TryExecuteExpressionProgram(bodyProgram, stackBase, out value);
-        }
-        finally
-        {
-            PopSeededRandomScope();
-        }
-    }
-
     private bool TryExecuteGeneratedCollectionProgram(GameEventScriptBytecodeGeneratedCollectionProgram program, out BytecodeVmValue value)
     {
         if (!TryGetIterationSourceItems(program.Source, out var sourceItems))
@@ -5678,7 +5178,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 out value);
         }
 
-        return TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
+        return TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, out value);
     }
 
     private bool TryGetIterationSourceItems(GameEventScriptBytecodeIterationSourceProgram source, out IEnumerable<GameEventScriptValue> items)
@@ -5687,7 +5187,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             case GameEventScriptBytecodeIterationSourceKind.Collection:
                 if (source.CollectionProgram is null ||
-                    !TryExecuteExpressionProgram(source.CollectionProgram, 0, out var collectionValue))
+                    !TryExecuteExpressionProgram(source.CollectionProgram, out var collectionValue))
                 {
                     items = [];
                     return false;
@@ -5706,8 +5206,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeIterationSourceKind.Range:
                 if (source.RangeFromProgram is null ||
                     source.RangeToProgram is null ||
-                    !TryExecuteExpressionProgram(source.RangeFromProgram, 0, out var from) ||
-                    !TryExecuteExpressionProgram(source.RangeToProgram, 0, out var to))
+                    !TryExecuteExpressionProgram(source.RangeFromProgram, out var from) ||
+                    !TryExecuteExpressionProgram(source.RangeToProgram, out var to))
                 {
                     items = [];
                     return false;
@@ -5715,7 +5215,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 var step = BytecodeVmValue.Integer(1);
                 if (source.RangeStepProgram is not null &&
-                    !TryExecuteExpressionProgram(source.RangeStepProgram, 0, out step))
+                    !TryExecuteExpressionProgram(source.RangeStepProgram, out step))
                 {
                     items = [];
                     return false;
@@ -5774,7 +5274,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return TryEvaluateLinearHelperExpression(expressionProgram.LinearEntryAddress, out value);
         }
 
-        return TryExecuteExpressionProgram(expressionProgram, 0, out value);
+        return TryExecuteExpressionProgram(expressionProgram, out value);
     }
 
     private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue)
@@ -6505,7 +6005,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryEvaluatePredicateTest(
         in GameEventScriptBytecodeStackInstruction instruction,
         BytecodeVmValue input,
-        int stackBase,
         out BytecodeVmValue value,
         string? parameterName = null,
         bool allowLinearCallableFallback = true)
@@ -6546,7 +6045,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         out value);
                 }
 
-                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, predicateInput, instruction.ExpressionProgram, stackBase, out value))
+                if (!TryExecuteExpressionProgramWithTemporarySlot(instruction.A, predicateInput, instruction.ExpressionProgram, out value))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -6571,7 +6070,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             RecordPredicateCalled(instruction, predicateInput);
             var parameterDefined = !string.IsNullOrEmpty(parameterName) && Define(parameterName!, predicateInput);
             if (!parameterDefined ||
-                !TryExecuteExpressionProgram(instruction.ExpressionProgram, stackBase, out value))
+                !TryExecuteExpressionProgram(instruction.ExpressionProgram, out value))
             {
                 value = BytecodeVmValue.Nothing;
                 return false;
@@ -6724,7 +6223,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
             }
 
-            if (!TryExecuteExpressionProgram(instruction.ExpressionProgram, start, out value))
+            if (!TryExecuteExpressionProgram(instruction.ExpressionProgram, out value))
             {
                 return false;
             }
@@ -7749,7 +7248,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
             }
 
-            return TryExecuteExpressionProgram(expressionProgram, 0, out var value)
+            return TryExecuteExpressionProgram(expressionProgram, out var value)
                 ? value.ToGameEventScriptValue()
                 : GameEventScriptNothingValue.Instance;
         }
@@ -7761,7 +7260,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecutePipelineProgram(GameEventScriptBytecodePipelineProgram pipeline, out BytecodeVmValue value)
     {
-        if (!TryExecuteExpressionProgram(pipeline.SourceProgram, 0, out var sourceValue))
+        if (!TryExecuteExpressionProgram(pipeline.SourceProgram, out var sourceValue))
         {
             value = BytecodeVmValue.Nothing;
             return false;
@@ -9452,7 +8951,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (pattern.FaceProgram is not null)
         {
-            if (!TryExecuteExpressionProgram(pattern.FaceProgram, 0, out var face))
+            if (!TryExecuteExpressionProgram(pattern.FaceProgram, out var face))
             {
                 matches = false;
                 return false;
@@ -9526,7 +9025,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (pattern.FaceProgram is not null)
         {
-            if (!TryExecuteExpressionProgram(pattern.FaceProgram, 0, out var face))
+            if (!TryExecuteExpressionProgram(pattern.FaceProgram, out var face))
             {
                 takenItems = Array.Empty<GameEventScriptValue>();
                 return false;
@@ -9711,7 +9210,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             switch (entry.Value)
             {
                 case GameEventScriptBytecodeObjectMatchExpressionValue expressionValue:
-                    if (!TryExecuteExpressionProgram(expressionValue.ExpressionProgram, 0, out var expected))
+                    if (!TryExecuteExpressionProgram(expressionValue.ExpressionProgram, out var expected))
                     {
                         matches = false;
                         return false;
@@ -9945,7 +9444,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return TryEvaluateLinearHelperExpression(selector.ExpressionProgram.LinearEntryAddress, out value);
         }
 
-        return TryExecuteExpressionProgram(selector.ExpressionProgram, 0, out value);
+        return TryExecuteExpressionProgram(selector.ExpressionProgram, out value);
     }
 
     private bool TryEvaluateProgramProjection(
@@ -9985,7 +9484,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return handledLinear
             ? false
-            : TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, 0, out value);
+            : TryExecuteExpressionProgramWithTemporarySlot(identifierSlot, item, expressionProgram, out value);
     }
 
     private bool TryEvaluateLinearSelectorProjection(
@@ -10045,7 +9544,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                        TryEvaluatePredicateTest(
                            instructions[1],
                            predicateInput,
-                           0,
                            out value,
                            allowLinearCallableFallback: false);
 
@@ -10157,7 +9655,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     if (!TryEvaluatePredicateTest(
                             instruction,
                             predicateInput,
-                            0,
                             out var predicateValue,
                             allowLinearCallableFallback: false))
                     {
@@ -10420,7 +9917,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         int slot,
         BytecodeVmValue slotValue,
         GameEventScriptBytecodeExpressionProgram expressionProgram,
-        int stackBase,
         out BytecodeVmValue value)
     {
         if ((uint)slot >= (uint)_locals.Length)
@@ -10433,7 +9929,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var previous = _locals[slot];
         _locals[slot] = slotValue;
         _assignedSlots[slot] = true;
-        var success = TryExecuteExpressionProgram(expressionProgram, stackBase, out value);
+        var success = TryExecuteExpressionProgram(expressionProgram, out value);
         RestoreSlot(slot, hadValue, previous);
         return success;
     }

@@ -37,19 +37,17 @@ the current linear helper supports `Filter`/`Select` prefixes and terminal
 `Average`, `Min`, `Max`, `Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`,
 `Reverse`, `SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`,
 `ObjectMatch`, `TakePattern`, `SeriesTerm`, and `Contains`.
-Generated collections running from compatibility
-statement/expression paths may likewise evaluate their predicate/projection
+Generated collections running from compatibility statement or high-level
+operation paths may likewise evaluate their predicate/projection
 helpers through public linear entry addresses, and whole generated-collection
 statement expressions may use public linear helper entries when their nested
 helpers are supported. Guarded choices in compatibility execution may evaluate
 their condition/value/otherwise helpers through public linear entry addresses,
 and whole guarded-choice statement expressions may use public linear helper
 entries when their nested helpers are supported. Seeded-random expression bodies
-may use their operation-layout helper entries
-from compatibility expression execution when supported. Function and predicate
-calls reached through compatibility expression
-execution may use their public callable entry addresses in isolated VM frames
-when the entry is supported. Allocation-sensitive pipeline predicate fast paths
+use their operation-layout helper entries. Function and predicate calls use
+their public callable entry addresses in isolated VM frames when the entry is
+supported. Allocation-sensitive pipeline predicate fast paths
 may keep the specialized compatibility evaluator instead of allocating a
 callable frame for every pipeline item. Layout-free statement expressions
 reached through compatibility execution may also use public linear helper
@@ -970,17 +968,12 @@ A grouped view may still be offered, but it must keep global addresses visible.
    type-field helper entries also execute from linear helper entry addresses.
    Compatibility pipeline execution can use public linear helper entries for
    non-fast selector expressions while preserving the indexed/streaming pipeline
-   hot paths. Supported whole pipeline compatibility expression frames can also
-   execute from public linear code; top-level handlers containing pipelines
-   remain on the compatibility hot path. Generated collections in compatibility
-   execution can use public linear predicate/projection helpers and whole
-   generated-collection compatibility expression frames, while guarded choices
-   can use public linear condition/value/otherwise helpers and whole
-   guarded-choice compatibility expression frames. Seeded-random expression
-   bodies can use their
-   operation-layout helper entries from compatibility expression
-   execution. Supported function and predicate calls reached through
-   compatibility expression execution can use public linear callable entries in
+   hot paths. Whole pipeline statement expressions execute from public linear
+   helper entries for supported selector shapes. Generated collections in
+   compatibility execution can use public linear predicate/projection helpers,
+   while guarded choices can use public linear condition/value/otherwise
+   helpers. Seeded-random expression bodies use their operation-layout helper
+   entries. Function and predicate calls use public linear callable entries in
    isolated VM frames. Supported layout-free statement expressions reached
    through compatibility execution can use public linear helper entries with
    isolated temporary slots, and simple operation-layout statement expressions
@@ -990,17 +983,16 @@ A grouped view may still be offered, but it must keep global addresses visible.
    `BindHandler`, and `CallExtension`, plus script function calls through
    `Call` and predicate tests through `PredicateTest`, can use the same public
    helper mechanism. The manual stepping Fiber uses the same single-instruction
-   linear executor for simple supported handlers and for whole guarded-choice
-   compatibility expression frames, including
-   fiber-safe generated collections, guarded choices, and seeded-random
-   expression helpers, supported layout-free compatibility expression frames,
-   plus pausable linear range/collection loops and seeded-random blocks.
+   linear executor for simple supported handlers, fiber-safe generated
+   collections, guarded choices, seeded-random expression helpers, layout-free
+   statement expressions, pausable linear range/collection loops, and
+   seeded-random blocks.
    Pipelines already carry selector helper entry addresses
    in `SelectorLayouts`, but top-level runtime execution still falls back to the
    compatibility executor to preserve the existing allocation-sensitive pipeline
-   hot paths until the linear selector executor is optimized. Supported whole
-   pipeline compatibility expression frames may use public linear helper entries
-   for `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
+   hot paths until the linear selector executor is optimized. Whole pipeline
+   statement expressions may use public linear helper entries for
+   `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
    `all`, `first`, `last`, `single`, `Count`, `Sum`, `Average`, `Min`, and
    `Max`, plus `Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`, `Reverse`,
    `SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`, `ObjectMatch`,
@@ -1021,20 +1013,19 @@ blocks. Pipeline selectors now expose helper entry addresses in the public
 linear code, and non-fast selector expressions can execute from those helper
 entries while top-level pipeline runtime execution stays on the compatibility
 executor's optimized selector paths for now. Supported whole pipeline
-compatibility expression frames can also execute from public linear helper
-entries for `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
+statement expressions can also execute from public linear helper entries for
+`Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
 `all`, `first`, `last`, `single`, `Count`, `Sum`, `Average`, `Min`, and
 `Max`, plus `Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`, `Reverse`,
 `SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`, `ObjectMatch`,
 `TakePattern`, `SeriesTerm`, and `Contains`. Generated-collection
-predicate/projection helpers are also used from compatibility
-statement/expression paths when their linear entries are supported, and
-guarded-choice helper expressions follow the same compatibility-linear fallback
-pattern. Seeded-random expression bodies use the same public-helper fallback
-inside compatibility expression execution.
-Supported compatibility function and predicate calls can also dispatch into
-their public linear callable entries; pipeline predicate fast paths remain on
-the compatibility evaluator where that avoids per-item frame allocation.
+predicate/projection helpers are also used from compatibility statement or
+high-level operation paths when their linear entries are supported, and
+guarded-choice helper expressions follow the same public-helper pattern.
+Seeded-random expression bodies use public operation-layout helper entries.
+Function and predicate calls dispatch into their public linear callable entries;
+pipeline predicate fast paths remain on the compatibility evaluator where that
+avoids per-item frame allocation.
 Layout-free statement expressions in compatibility execution can use public
 linear helper entries, and simple operation-layout statement expressions can use
 the same path when their metadata is local to the instruction. Other complex

@@ -2401,6 +2401,54 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmStepsPipelineHandlersOnlyFromLinearEntryAddress()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start {
+              let values be [1, 2, 3][:select item => item + 1]
+              emit Done(first: values[1])
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
+
+        var handler = compiled.Handlers["Start"].Single();
+        var handlerEnd = Array.FindIndex(
+            compiled.Code.ToArray(),
+            handler.EntryAddress,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return);
+        Assert.IsGreaterThanOrEqualTo(0, handlerEnd);
+        Assert.IsTrue(compiled.Code
+            .Skip(handler.EntryAddress)
+            .Take(handlerEnd - handler.EntryAddress)
+            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue));
+
+        var code = compiled.Code
+            .Select((instruction, index) => index >= handler.EntryAddress &&
+                                           index < handlerEnd &&
+                                           instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue
+                ? instruction with { OpCode = GameEventScriptBytecodeOpCode.Nop }
+                : instruction)
+            .ToArray();
+        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(rewritten);
+
+        Assert.IsTrue(host.Publish(Create("Start")));
+        DrainHostWithSingleOpcodeBudget(host);
+
+        Assert.IsEmpty(published);
+    }
+
+    [TestMethod]
     public void BytecodeVmExecutesNonFastPipelineSelectorExpressionsFromLinearPublicCode()
     {
         const string script =

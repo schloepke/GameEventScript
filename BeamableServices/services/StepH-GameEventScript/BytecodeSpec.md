@@ -21,17 +21,16 @@ seeded-random, and guarded-choice metadata. The synchronous VM executes
 supported handler ranges, simple callable/predicate frames, generated-collection
 helpers, guarded-choice and seeded-random expression helper entries, and
 supported type-field helper entries directly from that linear code with a
-VM-owned call-frame stack. The manual stepping Fiber also
-uses linear instruction execution for simple supported handlers, including
-fiber-safe generated-collection, guarded-choice, pipeline, and seeded-random
-expression helpers plus pausable linear range/collection loops and
-seeded-random blocks, while top-level pipeline handler cases still use the
-compatibility Fiber path. Pipeline selector helper entry addresses are emitted
-into `SelectorLayouts`, but top-level runtime pipeline execution currently keeps
-the compatibility executor's indexed/streaming hot paths until the linear
-selector executor has equivalent allocation behavior; non-fast selector
-expressions may evaluate through their public linear helper entries while
-staying inside those compatibility pipeline paths. Whole pipeline statement
+VM-owned call-frame stack. The manual stepping Fiber starts from the same
+handler entry addresses and uses the same linear instruction execution state:
+program counter, end address, frame slots, VM call frames, scope marks,
+pausable linear range/collection loops, and seeded-random block frames. It no
+longer has a statement-program or expression-program compatibility dispatcher.
+Pipeline selector helper entry addresses are emitted into `SelectorLayouts`,
+but runtime pipeline execution may keep indexed/streaming hot paths where that
+avoids per-item frame allocation; non-fast selector expressions may evaluate
+through their public linear helper entries while staying inside those optimized
+pipeline paths. Whole pipeline statement
 expressions may use public linear helper entries for supported selector shapes;
 the current linear helper supports `Filter`/`Select` prefixes and terminal
 `Select`, `Filter`, `any`, `all`, `first`, `last`, `single`, `Count`, `Sum`,
@@ -62,9 +61,8 @@ only already-lowered slot operands and local metadata; this currently includes
 `SeededRandom`, and `TypeConstructor`, plus local builders `BuildList`,
 `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, handler binding
 through `BindHandler`, and extension calls through `CallExtension`, plus script
-function calls through `Call` and predicate tests through `PredicateTest`. The
-compatibility Fiber may use the same public helper entries through a slice-aware
-linear helper frame. Immediate operation-layout value execution should avoid
+function calls through `Call` and predicate tests through `PredicateTest`.
+Immediate operation-layout value execution should avoid
 per-execution operand-array materialization when possible; operand buffers may
 be reused because the values are consumed before the instruction returns, and
 fixed operand operations should read directly from their source slots.
@@ -1041,9 +1039,10 @@ Layout-free statement expressions in compatibility execution can use public
 linear helper entries, and simple operation-layout statement expressions can use
 the same path when their metadata is local to the instruction. Other complex
 high-level expressions continue through their existing specialized helper paths
-until the full statement executor owns those flows end to end. The
-compatibility Fiber mirrors this for supported layout-free and simple
-operation-layout expression frames with a pausable linear helper frame.
+until the full statement executor owns those flows end to end. Manual Fiber
+stepping enters handlers through the same public linear entry addresses as
+synchronous execution and does not dispatch legacy statement or expression
+program frames.
 
 ## Compatibility Predicates
 

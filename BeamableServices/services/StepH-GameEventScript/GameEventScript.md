@@ -2111,7 +2111,11 @@ The artifact exposes neutral bytecode data:
 - `Callables`
 - `Handlers`
 - `TypeDefinitions`
-- `MaxStackDepth`
+- `Code`
+- `MaxFrameSlots`
+- Side tables for operation layouts, publish layouts, iteration sources,
+  pipeline selectors, generated collections, guarded choices, and pattern
+  metadata
 
 `ConstantPool` stores `GameEventScriptBytecodeConstant` entries instead of boxed
 runtime values. This preserves the exact constant kind in bytecode. For example,

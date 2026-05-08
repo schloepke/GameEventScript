@@ -15,6 +15,8 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<GameEventScriptBytecodeIterationSourceLayout> _iterationSourceLayouts = [];
     private readonly List<GameEventScriptBytecodeLoopLayout> _loopLayouts = [];
     private readonly List<GameEventScriptBytecodeSeededRandomBlockLayout> _seededRandomBlockLayouts = [];
+    private readonly List<GameEventScriptBytecodeDicePatternLayout> _dicePatternLayouts = [];
+    private readonly List<GameEventScriptBytecodeObjectMatchPatternLayout> _objectMatchPatternLayouts = [];
     private readonly List<GameEventScriptBytecodeSelectorLayout> _selectorLayouts = [];
     private readonly List<GameEventScriptBytecodePipelineLayout> _pipelineLayouts = [];
     private readonly List<GameEventScriptBytecodeGeneratedCollectionLayout> _generatedCollectionLayouts = [];
@@ -45,6 +47,10 @@ internal sealed class GesLinearBytecodeBuilder
 
     public IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts => _seededRandomBlockLayouts;
 
+    public IReadOnlyList<GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts => _dicePatternLayouts;
+
+    public IReadOnlyList<GameEventScriptBytecodeObjectMatchPatternLayout> ObjectMatchPatternLayouts => _objectMatchPatternLayouts;
+
     public IReadOnlyList<GameEventScriptBytecodeSelectorLayout> SelectorLayouts => _selectorLayouts;
 
     public IReadOnlyList<GameEventScriptBytecodePipelineLayout> PipelineLayouts => _pipelineLayouts;
@@ -73,7 +79,9 @@ internal sealed class GesLinearBytecodeBuilder
         foreach (var callable in callables)
         {
             callable.EntryAddress = _code.Count;
-            callable.LocalSlotCount = Math.Max(callable.Parameters.Count + callable.ExpressionProgram.MaxStackDepth + 1, callable.Parameters.Count + 1);
+            callable.LocalSlotCount = Math.Max(
+                callable.Parameters.Count + 1,
+                GetExpressionSlotUpperBound(callable.ExpressionProgram));
             _currentFrameSlotCount = callable.LocalSlotCount;
             _maxFrameSlots = Math.Max(_maxFrameSlots, callable.LocalSlotCount);
             for (var index = 0; index < callable.Parameters.Count; index++)
@@ -595,6 +603,12 @@ internal sealed class GesLinearBytecodeBuilder
     private int AddSelectorLayout(GameEventScriptBytecodeSelectorProgram selector, ExpressionState state)
     {
         var index = _selectorLayouts.Count;
+        var dicePatternLayoutIndex = selector.DicePattern is null
+            ? -1
+            : AddDicePatternLayout(selector.DicePattern, state);
+        var objectMatchPatternLayoutIndex = selector.ObjectPattern is null
+            ? -1
+            : AddObjectMatchPatternLayout(selector.ObjectPattern, state);
         _selectorLayouts.Add(new GameEventScriptBytecodeSelectorLayout(
             selector.Kind,
             selector.IdentifierSlot,
@@ -602,7 +616,9 @@ internal sealed class GesLinearBytecodeBuilder
             selector.SecondaryMode,
             selector.Count,
             selector.SecondaryIdentifierSlot,
-            selector.Flag));
+            selector.Flag,
+            dicePatternLayoutIndex: dicePatternLayoutIndex,
+            objectMatchPatternLayoutIndex: objectMatchPatternLayoutIndex));
         _deferredHelperEmitters.Add(() =>
         {
             var expressionEntryAddress = selector.ExpressionProgram is null
@@ -621,7 +637,100 @@ internal sealed class GesLinearBytecodeBuilder
                 selector.SecondaryIdentifierSlot,
                 selector.Flag,
                 expressionEntryAddress,
-                secondaryExpressionEntryAddress);
+                secondaryExpressionEntryAddress,
+                dicePatternLayoutIndex,
+                objectMatchPatternLayoutIndex);
+        });
+        return index;
+    }
+
+    private int AddDicePatternLayout(GameEventScriptBytecodeDicePattern pattern, ExpressionState state)
+    {
+        var index = _dicePatternLayouts.Count;
+        switch (pattern)
+        {
+            case GameEventScriptBytecodeDiceCountPattern countPattern:
+                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(
+                    GameEventScriptBytecodeDicePatternKind.Count,
+                    countPattern.Count));
+                if (countPattern.FaceProgram is not null)
+                {
+                    _deferredHelperEmitters.Add(() =>
+                    {
+                        var faceEntryAddress = EmitExpressionEntry(countPattern.FaceProgram, state);
+                        _dicePatternLayouts[index] = new GameEventScriptBytecodeDicePatternLayout(
+                            GameEventScriptBytecodeDicePatternKind.Count,
+                            countPattern.Count,
+                            faceEntryAddress);
+                    });
+                }
+
+                break;
+
+            case GameEventScriptBytecodeFullHousePattern:
+                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(GameEventScriptBytecodeDicePatternKind.FullHouse));
+                break;
+
+            case GameEventScriptBytecodeStraightPattern:
+                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(GameEventScriptBytecodeDicePatternKind.Straight));
+                break;
+
+            default:
+                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(GameEventScriptBytecodeDicePatternKind.Count));
+                break;
+        }
+
+        return index;
+    }
+
+    private int AddObjectMatchPatternLayout(GameEventScriptBytecodeObjectMatchPattern pattern, ExpressionState state)
+    {
+        var index = _objectMatchPatternLayouts.Count;
+        _objectMatchPatternLayouts.Add(new GameEventScriptBytecodeObjectMatchPatternLayout([]));
+
+        var entries = new GameEventScriptBytecodeObjectMatchEntryLayout[pattern.Entries.Length];
+        var expressionEntries = new List<(int EntryIndex, GameEventScriptBytecodeObjectMatchExpressionValue Value)>();
+        for (var entryIndex = 0; entryIndex < pattern.Entries.Length; entryIndex++)
+        {
+            var entry = pattern.Entries[entryIndex];
+            switch (entry.Value)
+            {
+                case GameEventScriptBytecodeObjectMatchExpressionValue expression:
+                    entries[entryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                        entry.Key,
+                        GameEventScriptBytecodeObjectMatchValueKind.Expression);
+                    expressionEntries.Add((entryIndex, expression));
+                    break;
+
+                case GameEventScriptBytecodeObjectMatchNestedValue nested:
+                    entries[entryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                        entry.Key,
+                        GameEventScriptBytecodeObjectMatchValueKind.Nested,
+                        nestedPatternLayoutIndex: AddObjectMatchPatternLayout(nested.Pattern, state));
+                    break;
+
+                default:
+                    entries[entryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                        entry.Key,
+                        GameEventScriptBytecodeObjectMatchValueKind.Expression);
+                    break;
+            }
+        }
+
+        _objectMatchPatternLayouts[index] = new GameEventScriptBytecodeObjectMatchPatternLayout(entries);
+        _deferredHelperEmitters.Add(() =>
+        {
+            var updatedEntries = entries.ToArray();
+            foreach (var expressionEntry in expressionEntries)
+            {
+                var original = updatedEntries[expressionEntry.EntryIndex];
+                updatedEntries[expressionEntry.EntryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                    original.Key,
+                    GameEventScriptBytecodeObjectMatchValueKind.Expression,
+                    EmitExpressionEntry(expressionEntry.Value.ExpressionProgram, state));
+            }
+
+            _objectMatchPatternLayouts[index] = new GameEventScriptBytecodeObjectMatchPatternLayout(updatedEntries);
         });
         return index;
     }
@@ -735,13 +844,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         foreach (var instruction in program.Instructions)
         {
-            if (instruction.PipelineProgram is not null ||
-                instruction.GeneratedCollectionProgram is not null ||
-                instruction.GuardedChoiceProgram is not null ||
-                instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom ||
-                instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest ||
-                instruction.OpCode == GameEventScriptBytecodeOpCode.Call ||
-                (NeedsOperationLayout(instruction) && !CanDeferOperationLayoutExpression(instruction.OpCode)) ||
+            if ((NeedsOperationLayout(instruction) && !CanDeferOperationLayoutExpression(instruction.OpCode)) ||
                 ContainsDeferredEntryBlocker(instruction.ExpressionProgram))
             {
                 return true;
@@ -759,12 +862,17 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.Unary or
             GameEventScriptBytecodeOpCode.Variadic or
             GameEventScriptBytecodeOpCode.Range or
+            GameEventScriptBytecodeOpCode.SeededRandom or
             GameEventScriptBytecodeOpCode.TypeConstructor or
             GameEventScriptBytecodeOpCode.BuildList or
             GameEventScriptBytecodeOpCode.BuildSequence or
             GameEventScriptBytecodeOpCode.BuildSet or
             GameEventScriptBytecodeOpCode.BuildDictionary or
-            GameEventScriptBytecodeOpCode.BuildMessage;
+            GameEventScriptBytecodeOpCode.BuildMessage or
+            GameEventScriptBytecodeOpCode.BindHandler or
+            GameEventScriptBytecodeOpCode.CallExtension or
+            GameEventScriptBytecodeOpCode.Call or
+            GameEventScriptBytecodeOpCode.PredicateTest;
 
     private static int GetExpressionSlotUpperBound(GameEventScriptBytecodeExpressionProgram? program)
     {

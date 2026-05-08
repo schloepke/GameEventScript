@@ -69,6 +69,15 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeConstantKind
   enum-field Text = 5
   enum-field Tag = 6
   enum-field Handler = 7
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternKind
+  enum-field Count = 0
+  enum-field FullHouse = 1
+  enum-field Straight = 2
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternLayout
+  ctor GameEventScriptBytecodeDicePatternLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternKind kind, System.Int32 count, System.Int32 faceEntryAddress)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternKind Kind { get }
+  property System.Int32 Count { get }
+  property System.Int32 FaceEntryAddress { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout
   ctor GameEventScriptBytecodeGeneratedCollectionLayout(System.String collectionType, System.Int32 identifierSlot, System.Int32 iterationSourceLayoutIndex, System.Int32 predicateEntryAddress, System.Int32 projectionEntryAddress)
   property System.Int32 IdentifierSlot { get }
@@ -129,6 +138,18 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeLoopLayout
   ctor GameEventScriptBytecodeLoopLayout(System.Int32 identifierSlot, System.Int32 iterationSourceLayoutIndex)
   property System.Int32 IdentifierSlot { get }
   property System.Int32 IterationSourceLayoutIndex { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchEntryLayout
+  ctor GameEventScriptBytecodeObjectMatchEntryLayout(System.String key, StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind valueKind, System.Int32 expressionEntryAddress, System.Int32 nestedPatternLayoutIndex)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind ValueKind { get }
+  property System.Int32 ExpressionEntryAddress { get }
+  property System.Int32 NestedPatternLayoutIndex { get }
+  property System.String Key { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchPatternLayout
+  ctor GameEventScriptBytecodeObjectMatchPatternLayout(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchEntryLayout> entries)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchEntryLayout> Entries { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind
+  enum-field Expression = 0
+  enum-field Nested = 1
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field LoadConstant = 0
   enum-field LoadSlot = 1
@@ -278,12 +299,14 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind
   enum-field Draw = 22
   enum-field Shuffle = 23
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorLayout
-  ctor GameEventScriptBytecodeSelectorLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind kind, System.Int32 identifierSlot, System.String edgeMode, System.String secondaryMode, System.Int32 count, System.Int32 secondaryIdentifierSlot, System.Boolean flag, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress)
+  ctor GameEventScriptBytecodeSelectorLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind kind, System.Int32 identifierSlot, System.String edgeMode, System.String secondaryMode, System.Int32 count, System.Int32 secondaryIdentifierSlot, System.Boolean flag, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 dicePatternLayoutIndex, System.Int32 objectMatchPatternLayoutIndex)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind Kind { get }
   property System.Boolean Flag { get }
   property System.Int32 Count { get }
+  property System.Int32 DicePatternLayoutIndex { get }
   property System.Int32 ExpressionEntryAddress { get }
   property System.Int32 IdentifierSlot { get }
+  property System.Int32 ObjectMatchPatternLayoutIndex { get }
   property System.Int32 SecondaryExpressionEntryAddress { get }
   property System.Int32 SecondaryIdentifierSlot { get }
   property System.String EdgeMode { get }
@@ -353,11 +376,13 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeConstant> ConstantPool { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeLoopLayout> LoopLayouts { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchPatternLayout> ObjectMatchPatternLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout> OperationLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineLayout> PipelineLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePublishLayoutEntry> PublishLayouts { get }

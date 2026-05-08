@@ -75,6 +75,8 @@ public static class GameEventScriptBytecodeDumper
         AppendIterationSourceLayouts(builder, module);
         AppendLoopLayouts(builder, module);
         AppendSeededRandomBlockLayouts(builder, module);
+        AppendDicePatternLayouts(builder, module);
+        AppendObjectMatchPatternLayouts(builder, module);
         AppendSelectorLayouts(builder, module);
         AppendPipelineLayouts(builder, module);
         AppendGeneratedCollectionLayouts(builder, module);
@@ -174,9 +176,44 @@ public static class GameEventScriptBytecodeDumper
             AppendSlot(builder, "secondaryIdentifier", layout.SecondaryIdentifierSlot);
             AppendAddress(builder, "expr", layout.ExpressionEntryAddress);
             AppendAddress(builder, "secondaryExpr", layout.SecondaryExpressionEntryAddress);
+            AppendIndex(builder, "dicePattern", layout.DicePatternLayoutIndex);
+            AppendIndex(builder, "objectPattern", layout.ObjectMatchPatternLayoutIndex);
             if (layout.Flag)
             {
                 builder.Append(" flag=true");
+            }
+
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendDicePatternLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("dicePatternLayouts[").Append(module.DicePatternLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.DicePatternLayouts.Count; i++)
+        {
+            var layout = module.DicePatternLayouts[i];
+            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ").Append(layout.Kind);
+            AppendIndex(builder, "count", layout.Count);
+            AppendAddress(builder, "face", layout.FaceEntryAddress);
+            builder.AppendLine();
+        }
+    }
+
+    private static void AppendObjectMatchPatternLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("objectMatchPatternLayouts[").Append(module.ObjectMatchPatternLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.ObjectMatchPatternLayouts.Count; i++)
+        {
+            var layout = module.ObjectMatchPatternLayouts[i];
+            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(':');
+            for (var entryIndex = 0; entryIndex < layout.Entries.Count; entryIndex++)
+            {
+                var entry = layout.Entries[entryIndex];
+                builder.Append(entryIndex == 0 ? " " : ", ");
+                builder.Append(entry.Key).Append('=').Append(entry.ValueKind);
+                AppendAddress(builder, "expr", entry.ExpressionEntryAddress);
+                AppendIndex(builder, "nested", entry.NestedPatternLayoutIndex);
             }
 
             builder.AppendLine();

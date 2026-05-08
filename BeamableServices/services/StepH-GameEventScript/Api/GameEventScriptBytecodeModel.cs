@@ -438,6 +438,71 @@ public sealed class GameEventScriptBytecodeSeededRandomBlockLayout
     public int SeedSlot { get; }
 }
 
+public enum GameEventScriptBytecodeDicePatternKind
+{
+    Count,
+    FullHouse,
+    Straight
+}
+
+public sealed class GameEventScriptBytecodeDicePatternLayout
+{
+    public GameEventScriptBytecodeDicePatternLayout(
+        GameEventScriptBytecodeDicePatternKind kind,
+        int count = 0,
+        int faceEntryAddress = -1)
+    {
+        Kind = kind;
+        Count = count;
+        FaceEntryAddress = faceEntryAddress;
+    }
+
+    public GameEventScriptBytecodeDicePatternKind Kind { get; }
+
+    public int Count { get; }
+
+    public int FaceEntryAddress { get; }
+}
+
+public enum GameEventScriptBytecodeObjectMatchValueKind
+{
+    Expression,
+    Nested
+}
+
+public sealed class GameEventScriptBytecodeObjectMatchEntryLayout
+{
+    public GameEventScriptBytecodeObjectMatchEntryLayout(
+        string key,
+        GameEventScriptBytecodeObjectMatchValueKind valueKind,
+        int expressionEntryAddress = -1,
+        int nestedPatternLayoutIndex = -1)
+    {
+        Key = key ?? throw new ArgumentNullException(nameof(key));
+        ValueKind = valueKind;
+        ExpressionEntryAddress = expressionEntryAddress;
+        NestedPatternLayoutIndex = nestedPatternLayoutIndex;
+    }
+
+    public string Key { get; }
+
+    public GameEventScriptBytecodeObjectMatchValueKind ValueKind { get; }
+
+    public int ExpressionEntryAddress { get; }
+
+    public int NestedPatternLayoutIndex { get; }
+}
+
+public sealed class GameEventScriptBytecodeObjectMatchPatternLayout
+{
+    public GameEventScriptBytecodeObjectMatchPatternLayout(IReadOnlyList<GameEventScriptBytecodeObjectMatchEntryLayout>? entries)
+    {
+        Entries = entries?.ToArray() ?? [];
+    }
+
+    public IReadOnlyList<GameEventScriptBytecodeObjectMatchEntryLayout> Entries { get; }
+}
+
 public sealed class GameEventScriptBytecodeSelectorLayout
 {
     public GameEventScriptBytecodeSelectorLayout(
@@ -449,7 +514,9 @@ public sealed class GameEventScriptBytecodeSelectorLayout
         int secondaryIdentifierSlot = -1,
         bool flag = false,
         int expressionEntryAddress = -1,
-        int secondaryExpressionEntryAddress = -1)
+        int secondaryExpressionEntryAddress = -1,
+        int dicePatternLayoutIndex = -1,
+        int objectMatchPatternLayoutIndex = -1)
     {
         Kind = kind;
         IdentifierSlot = identifierSlot;
@@ -460,6 +527,8 @@ public sealed class GameEventScriptBytecodeSelectorLayout
         Flag = flag;
         ExpressionEntryAddress = expressionEntryAddress;
         SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
+        DicePatternLayoutIndex = dicePatternLayoutIndex;
+        ObjectMatchPatternLayoutIndex = objectMatchPatternLayoutIndex;
     }
 
     public GameEventScriptBytecodeSelectorKind Kind { get; }
@@ -479,6 +548,10 @@ public sealed class GameEventScriptBytecodeSelectorLayout
     public int ExpressionEntryAddress { get; }
 
     public int SecondaryExpressionEntryAddress { get; }
+
+    public int DicePatternLayoutIndex { get; }
+
+    public int ObjectMatchPatternLayoutIndex { get; }
 }
 
 public sealed class GameEventScriptBytecodePipelineLayout
@@ -575,13 +648,11 @@ internal enum GameEventScriptBytecodeProjectionFastKind
     Stack
 }
 
-internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBytecodeStackInstruction[] instructions, int maxStackDepth)
+internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBytecodeStackInstruction[] instructions)
 {
     public GameEventScriptBytecodeStackInstruction[] Instructions { get; } = instructions ?? throw new ArgumentNullException(nameof(instructions));
 
-    public int MaxStackDepth { get; } = maxStackDepth;
-
-    internal GameEventScriptBytecodeProjectionFastKind ProjectionFastKind { get; } = GetProjectionFastKind(instructions, maxStackDepth);
+    internal GameEventScriptBytecodeProjectionFastKind ProjectionFastKind { get; } = GetProjectionFastKind(instructions);
 
     internal bool CanEvaluateProjectionFast => ProjectionFastKind != GameEventScriptBytecodeProjectionFastKind.None;
 
@@ -595,9 +666,11 @@ internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBy
         LinearTemporaryBaseSlot = temporaryBaseSlot;
     }
 
-    private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeStackInstruction[] instructions, int maxStackDepth)
+    private static GameEventScriptBytecodeProjectionFastKind GetProjectionFastKind(GameEventScriptBytecodeStackInstruction[] instructions)
     {
-        if (instructions.Length is 0 or > 8 || maxStackDepth > 3 || !instructions.All(CanEvaluateProjectionInstructionFast))
+        if (instructions.Length is 0 or > 8 ||
+            !instructions.All(CanEvaluateProjectionInstructionFast) ||
+            GetProjectionEvaluationSlotCount(instructions) > 3)
         {
             return GameEventScriptBytecodeProjectionFastKind.None;
         }
@@ -629,6 +702,72 @@ internal sealed class GameEventScriptBytecodeExpressionProgram(GameEventScriptBy
                    IsProjectionBinaryOp(instructions[6].OpCode) => GameEventScriptBytecodeProjectionFastKind.BinaryThenBinaryThenBinary,
             _ => GameEventScriptBytecodeProjectionFastKind.Stack
         };
+    }
+
+    private static int GetProjectionEvaluationSlotCount(GameEventScriptBytecodeStackInstruction[] instructions)
+        => GetProjectionEvaluationSlotCount(instructions, []);
+
+    private static int GetProjectionEvaluationSlotCount(
+        GameEventScriptBytecodeStackInstruction[] instructions,
+        HashSet<GameEventScriptBytecodeExpressionProgram> visiting)
+    {
+        var depth = 0;
+        var maxDepth = 0;
+        foreach (var instruction in instructions)
+        {
+            if (instruction.ExpressionProgram is not null)
+            {
+                if (!visiting.Add(instruction.ExpressionProgram))
+                {
+                    return int.MaxValue;
+                }
+
+                var argumentCount = instruction.OpCode switch
+                {
+                    GameEventScriptBytecodeOpCode.PredicateTest => 1,
+                    _ => 0
+                };
+                var nestedBaseDepth = Math.Max(0, depth - argumentCount);
+                var nestedDepth = GetProjectionEvaluationSlotCount(instruction.ExpressionProgram.Instructions, visiting);
+                visiting.Remove(instruction.ExpressionProgram);
+                if (nestedDepth == int.MaxValue)
+                {
+                    return int.MaxValue;
+                }
+
+                maxDepth = Math.Max(maxDepth, nestedBaseDepth + nestedDepth);
+            }
+
+            switch (instruction.OpCode)
+            {
+                case GameEventScriptBytecodeOpCode.LoadConstant:
+                case GameEventScriptBytecodeOpCode.LoadSlot:
+                    depth++;
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Cast:
+                case GameEventScriptBytecodeOpCode.PredicateTest:
+                    if (depth < 1)
+                    {
+                        return int.MaxValue;
+                    }
+
+                    break;
+
+                default:
+                    if (!IsProjectionBinaryOp(instruction.OpCode) || depth < 2)
+                    {
+                        return int.MaxValue;
+                    }
+
+                    depth--;
+                    break;
+            }
+
+            maxDepth = Math.Max(maxDepth, depth);
+        }
+
+        return maxDepth;
     }
 
     private static bool IsProjectionOperand(GameEventScriptBytecodeStackInstruction instruction)
@@ -1028,13 +1167,11 @@ internal sealed class GameEventScriptBytecodeExecutionPlan
 
     private GameEventScriptBytecodeExecutionPlan(
         IReadOnlyDictionary<string, int> slots,
-        GameEventScriptBytecodeStatementProgram statementProgram,
-        int maxStackDepth)
+        GameEventScriptBytecodeStatementProgram statementProgram)
     {
         _slots = slots;
         StatementProgram = statementProgram ?? throw new ArgumentNullException(nameof(statementProgram));
         SlotCount = slots.Count;
-        MaxStackDepth = maxStackDepth;
     }
 
     public GameEventScriptBytecodeStatementProgram StatementProgram { get; }
@@ -1043,13 +1180,10 @@ internal sealed class GameEventScriptBytecodeExecutionPlan
 
     public int SlotCount { get; }
 
-    public int MaxStackDepth { get; }
-
     public static GameEventScriptBytecodeExecutionPlan Create(
         IReadOnlyDictionary<string, int> slots,
-        GameEventScriptBytecodeStatementProgram statementProgram,
-        int maxStackDepth)
-        => new(new Dictionary<string, int>(slots, StringComparer.Ordinal), statementProgram, maxStackDepth);
+        GameEventScriptBytecodeStatementProgram statementProgram)
+        => new(new Dictionary<string, int>(slots, StringComparer.Ordinal), statementProgram);
 
     public bool TryGetSlot(string name, out int slot)
         => _slots.TryGetValue(name, out slot);

@@ -1465,8 +1465,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             private readonly GameEventScriptBytecodeExpressionProgram _program;
             private readonly int _stackBase;
-            private int _instructionIndex;
-            private int _top;
+            private GesLinearExpressionProgram? _linear;
+            private BytecodeVmValue[]? _slots;
+            private BytecodeVmValue[]? _operandBuffer;
+            private int _pc;
             private bool _initialized;
 
             public static Frame Create(
@@ -1488,7 +1490,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 _program = program;
                 _stackBase = stackBase;
-                _top = stackBase;
             }
 
             public override FrameSignal Run(Fiber fiber)
@@ -1497,328 +1498,74 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (!_initialized)
                 {
                     _initialized = true;
-                    if (_stackBase + _program.MaxStackDepth > session._evaluationStack.Length)
+                    _linear = GesLinearExpressionProgram.GetOrCreate(_program);
+                    _slots = ArrayPool<BytecodeVmValue>.Shared.Rent(_linear.MaxSlots);
+                    Array.Clear(_slots, 0, _linear.MaxSlots);
+                    _operandBuffer = _linear.MaxOperandCount > 0
+                        ? ArrayPool<BytecodeVmValue>.Shared.Rent(_linear.MaxOperandCount)
+                        : [];
+                }
+
+                if (_linear is null || _slots is null || _operandBuffer is null)
+                {
+                    fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                    return FrameSignal.Completed;
+                }
+
+                var instructions = _linear.Instructions;
+                while (_pc < instructions.Length)
+                {
+                    if (!fiber.TryConsumeInstruction("Expression evaluation budget exhausted."))
+                    {
+                        return FrameSignal.Paused;
+                    }
+
+                    if (!session.TryExecuteCompatibilityLinearExpressionInstruction(
+                            in instructions[_pc],
+                            _slots,
+                            _operandBuffer,
+                            _stackBase,
+                            ref _pc,
+                            instructions.Length))
                     {
                         fiber.Complete(BytecodeVmValue.Nothing, success: false);
                         return FrameSignal.Completed;
                     }
+
+                    if (session._halted)
+                    {
+                        fiber.Halt();
+                        return FrameSignal.Paused;
+                    }
                 }
 
-                if (_instructionIndex >= _program.Instructions.Length)
-                {
-                    fiber.Complete(_top > _stackBase ? session._evaluationStack[_top - 1] : BytecodeVmValue.Nothing);
-                    return FrameSignal.Completed;
-                }
-
-                if (!fiber.TryConsumeInstruction("Expression evaluation budget exhausted."))
-                {
-                    return FrameSignal.Paused;
-                }
-
-                ref readonly var instruction = ref _program.Instructions[_instructionIndex++];
-                if (!ExecuteInstruction(fiber, in instruction))
-                {
-                    return FrameSignal.Completed;
-                }
-
-                if (session._halted)
-                {
-                    fiber.Halt();
-                    return FrameSignal.Paused;
-                }
-
-                return FrameSignal.Running;
+                fiber.Complete(_linear.ReturnSlot >= 0
+                    ? ReadExpressionSlot(_slots, _linear.ReturnSlot)
+                    : BytecodeVmValue.Nothing);
+                return FrameSignal.Completed;
             }
 
-            private bool ExecuteInstruction(Fiber fiber, in GameEventScriptBytecodeStackInstruction instruction)
+            public override void Exit(Fiber fiber)
             {
-                var session = fiber._session;
-                switch (instruction.OpCode)
+                if (_linear is null)
                 {
-                    case GameEventScriptBytecodeOpCode.LoadConstant:
-                        session._evaluationStack[_top++] = session.LoadConstant(instruction.ConstantIndex);
-                        return true;
+                    return;
+                }
 
-                    case GameEventScriptBytecodeOpCode.LoadSlot:
-                        session._evaluationStack[_top++] = session.ResolveSlot(instruction.A);
-                        return true;
+                if (_slots is not null)
+                {
+                    Array.Clear(_slots, 0, _linear.MaxSlots);
+                    ArrayPool<BytecodeVmValue>.Shared.Return(_slots);
+                    _slots = null;
+                }
 
-                    case GameEventScriptBytecodeOpCode.Or:
-                    case GameEventScriptBytecodeOpCode.Xor:
-                    case GameEventScriptBytecodeOpCode.And:
-                    case GameEventScriptBytecodeOpCode.Power:
-                    case GameEventScriptBytecodeOpCode.Equal:
-                    case GameEventScriptBytecodeOpCode.NotEqual:
-                    case GameEventScriptBytecodeOpCode.Less:
-                    case GameEventScriptBytecodeOpCode.Greater:
-                    case GameEventScriptBytecodeOpCode.LessOrEqual:
-                    case GameEventScriptBytecodeOpCode.GreaterOrEqual:
-                    case GameEventScriptBytecodeOpCode.Add:
-                    case GameEventScriptBytecodeOpCode.Subtract:
-                    case GameEventScriptBytecodeOpCode.Multiply:
-                    case GameEventScriptBytecodeOpCode.Divide:
-                    case GameEventScriptBytecodeOpCode.IntegerDivide:
-                    case GameEventScriptBytecodeOpCode.Modulo:
-                    case GameEventScriptBytecodeOpCode.Remainder:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
-                    case GameEventScriptBytecodeOpCode.Default:
-                    case GameEventScriptBytecodeOpCode.Contains:
-                    case GameEventScriptBytecodeOpCode.ContainsValue:
-                    case GameEventScriptBytecodeOpCode.StartsWith:
-                    case GameEventScriptBytecodeOpCode.EndsWith:
-                    case GameEventScriptBytecodeOpCode.Intersect:
-                    case GameEventScriptBytecodeOpCode.Combine:
-                    case GameEventScriptBytecodeOpCode.Except:
-                    case GameEventScriptBytecodeOpCode.Zip:
-                        var right = session._evaluationStack[--_top];
-                        var left = session._evaluationStack[--_top];
-                        session._evaluationStack[_top++] = session.EvaluateProgramBinary(instruction.OpCode, left, right);
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.ShortCircuitOr:
-                    case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
-                    case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
-                        var shortCircuitLeft = session._evaluationStack[--_top];
-                        if (!session.TryEvaluateShortCircuitLogical(in instruction, shortCircuitLeft, _top, out var shortCircuitValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = shortCircuitValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Unary:
-                        if (!session.TryEvaluateUnaryOperation(instruction.DiagnosticName, session._evaluationStack[_top - 1], out var unaryValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top - 1] = unaryValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Variadic:
-                        _top -= instruction.A;
-                        if (!session.TryEvaluateVariadicOperation(instruction.DiagnosticName, session._evaluationStack, _top, instruction.A, out var variadicValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = variadicValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Clamp:
-                        _top -= 3;
-                        session._evaluationStack[_top] = EvaluateClamp(
-                            session._evaluationStack[_top],
-                            session._evaluationStack[_top + 1],
-                            session._evaluationStack[_top + 2]);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Random:
-                        var to = session._evaluationStack[--_top];
-                        var from = session._evaluationStack[--_top];
-                        session._evaluationStack[_top++] = session.EvaluateRandomExpression(from, to);
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Range:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = EvaluateRangeExpression(
-                            session._evaluationStack[_top],
-                            session._evaluationStack[_top + 1],
-                            instruction.A == 3 ? session._evaluationStack[_top + 2] : BytecodeVmValue.Integer(1));
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Dice:
-                        session._evaluationStack[_top++] = session.EvaluateDiceExpression(instruction.A, instruction.B);
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.SeededRandom:
-                        var seed = session._evaluationStack[--_top];
-                        if (instruction.ExpressionProgram is null ||
-                            !session.TryEvaluateSeededRandomExpression(seed, instruction.ExpressionProgram, _top, out var seededValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = seededValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Cast:
-                        session._evaluationStack[_top - 1] = session.EvaluateProgramCast(instruction.CastKind, session._evaluationStack[_top - 1]);
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.TypeConstructor:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = session.EvaluateTypeConstructor(
-                            instruction.DiagnosticName,
-                            instruction.Names,
-                            session._evaluationStack,
-                            _top,
-                            instruction.A);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.TypeCheck:
-                        session._evaluationStack[_top - 1] = BytecodeVmValue.Boolean(IsValueOfType(
-                            session._evaluationStack[_top - 1],
-                            instruction.DiagnosticName));
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.PredicateTest:
-                        var input = session._evaluationStack[--_top];
-                        if (!session.TryEvaluatePredicateTest(in instruction, input, _top, out var predicateValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = predicateValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Call:
-                        _top -= instruction.A;
-                        if (!session.TryEvaluateCallable(in instruction, session._evaluationStack, _top, instruction.A, out var callValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = callValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.MemberAccess:
-                        session._evaluationStack[_top - 1] = EvaluateMemberAccess(session._evaluationStack[_top - 1], instruction.DiagnosticName);
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.IndexedAccess:
-                        var selector = session._evaluationStack[--_top];
-                        var target = session._evaluationStack[--_top];
-                        session._evaluationStack[_top++] = EvaluateIndexedAccess(target, selector);
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.BuildList:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = BuildListValue(session._evaluationStack, _top, instruction.A);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.BuildSequence:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = BuildSequenceValue(session._evaluationStack, _top, instruction.A);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.BuildSet:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = BuildSetValue(session._evaluationStack, _top, instruction.A);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.BuildDictionary:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = BuildDictionaryValue(session._evaluationStack, _top, instruction.A, instruction.Names);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.BuildMessage:
-                        _top -= instruction.A;
-                        session._evaluationStack[_top] = BuildMessageValue(
-                            session._evaluationStack,
-                            _top,
-                            instruction.A,
-                            instruction.Names,
-                            instruction.DiagnosticName,
-                            instruction.DiagnosticArgumentName);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.BindHandler:
-                        _top -= instruction.A + 1;
-                        session._evaluationStack[_top] = BindHandlerValue(
-                            session._evaluationStack[_top],
-                            session._evaluationStack,
-                            _top + 1,
-                            instruction.A,
-                            instruction.Names);
-                        _top++;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.CallExtension:
-                        _top -= instruction.A;
-                        if (!session.TryCallExtension(
-                                instruction.DiagnosticName,
-                                instruction.DiagnosticArgumentName,
-                                instruction.Names,
-                                instruction.B,
-                                session._evaluationStack,
-                                _top,
-                                instruction.A,
-                                instruction.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
-                                out var extensionValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = extensionValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.Pipeline:
-                        if (instruction.PipelineProgram is null ||
-                            !session.TryExecutePipelineProgram(instruction.PipelineProgram, out var pipelineValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = pipelineValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                        if (instruction.GeneratedCollectionProgram is null ||
-                            !session.TryExecuteGeneratedCollectionProgram(instruction.GeneratedCollectionProgram, out var generatedValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = generatedValue;
-                        return true;
-
-                    case GameEventScriptBytecodeOpCode.GuardedChoice:
-                        if (instruction.GuardedChoiceProgram is null ||
-                            !session.TryExecuteGuardedChoiceProgram(instruction.GuardedChoiceProgram, out var guardedValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return false;
-                        }
-
-                        session._evaluationStack[_top++] = guardedValue;
-                        return true;
-
-                    default:
-                        fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                        return false;
+                if (_operandBuffer is not null && _linear.MaxOperandCount > 0)
+                {
+                    Array.Clear(_operandBuffer, 0, _linear.MaxOperandCount);
+                    ArrayPool<BytecodeVmValue>.Shared.Return(_operandBuffer);
+                    _operandBuffer = null;
                 }
             }
         }
-    }
+}
 }

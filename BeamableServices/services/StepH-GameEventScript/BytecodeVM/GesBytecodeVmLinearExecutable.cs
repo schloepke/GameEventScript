@@ -225,6 +225,8 @@ internal sealed class GesBytecodeVmLinearExecutable
         ValidateIterationSourceLayouts(module);
         ValidateLoopLayouts(module);
         ValidateSeededRandomBlockLayouts(module);
+        ValidateDicePatternLayouts(module);
+        ValidateObjectMatchPatternLayouts(module);
         ValidateSelectorLayouts(module);
         ValidatePipelineLayouts(module);
         ValidateGeneratedCollectionLayouts(module);
@@ -306,7 +308,48 @@ internal sealed class GesBytecodeVmLinearExecutable
             ValidateOptionalSlot(module, layout.SecondaryIdentifierSlot, $"{context} secondary identifier slot");
             ValidateOptionalAddress(module, module.Code, layout.ExpressionEntryAddress, $"{context} expression entry");
             ValidateOptionalAddress(module, module.Code, layout.SecondaryExpressionEntryAddress, $"{context} secondary expression entry");
+            ValidateOptionalIndex(module.DicePatternLayouts.Count, layout.DicePatternLayoutIndex, $"{context} dice pattern layout");
+            ValidateOptionalIndex(module.ObjectMatchPatternLayouts.Count, layout.ObjectMatchPatternLayoutIndex, $"{context} object match pattern layout");
             ValidateNonNegative(layout.Count, $"{context} count");
+        }
+    }
+
+    private static void ValidateDicePatternLayouts(GameEventScriptCompiled module)
+    {
+        for (var index = 0; index < module.DicePatternLayouts.Count; index++)
+        {
+            var layout = module.DicePatternLayouts[index];
+            var context = $"dice pattern layout #{index}";
+            ValidateNonNegative(layout.Count, $"{context} count");
+            ValidateOptionalAddress(module, module.Code, layout.FaceEntryAddress, $"{context} face entry");
+        }
+    }
+
+    private static void ValidateObjectMatchPatternLayouts(GameEventScriptCompiled module)
+    {
+        for (var index = 0; index < module.ObjectMatchPatternLayouts.Count; index++)
+        {
+            var layout = module.ObjectMatchPatternLayouts[index];
+            for (var entryIndex = 0; entryIndex < layout.Entries.Count; entryIndex++)
+            {
+                var entry = layout.Entries[entryIndex];
+                var context = $"object match pattern layout #{index} entry #{entryIndex}";
+                if (string.IsNullOrEmpty(entry.Key))
+                {
+                    throw InvalidBytecode($"{context} has no key.");
+                }
+
+                switch (entry.ValueKind)
+                {
+                    case GameEventScriptBytecodeObjectMatchValueKind.Expression:
+                        ValidateOptionalAddress(module, module.Code, entry.ExpressionEntryAddress, $"{context} expression entry");
+                        break;
+
+                    case GameEventScriptBytecodeObjectMatchValueKind.Nested:
+                        ValidateIndex(module.ObjectMatchPatternLayouts.Count, entry.NestedPatternLayoutIndex, $"{context} nested pattern layout");
+                        break;
+                }
+            }
         }
     }
 

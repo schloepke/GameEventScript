@@ -19,6 +19,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private enum PipelineIterationResult
     {
         Completed,
+        Stopped,
         Failed,
         RangeLimitReached
     }
@@ -29,9 +30,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private readonly GameEventScriptBytecodeExecutionPlan _plan;
     private BytecodeVmValue[] _locals;
     private bool[] _assignedSlots;
-    private readonly int _evaluationStackCapacity;
-    private BytecodeVmValue[]? _evaluationStackStorage;
-    private BytecodeVmValue[] _evaluationStack => _evaluationStackStorage ??= new BytecodeVmValue[_evaluationStackCapacity];
     private readonly bool _diagnosticsEnabled;
     private List<LocalChange> _changes = [];
     private List<int> _scopeMarks = [];
@@ -53,7 +51,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var localSlotCount = Math.Max(plan.SlotCount, compiledScript.LinearExecutable.MaxFrameSlots);
         _locals = new BytecodeVmValue[localSlotCount];
         _assignedSlots = new bool[localSlotCount];
-        _evaluationStackCapacity = Math.Max(16, Math.Max(plan.MaxStackDepth, compiledScript.BytecodeModule.MaxStackDepth) + 16);
         _randomScopes.Push(context.Random);
     }
 
@@ -134,7 +131,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         for (var pc = handler.EntryAddress; pc < code.Count; pc++)
         {
             var instruction = code[pc];
-            if (!CanExecuteLinearInstruction(instruction, []))
+            if (!CanExecuteLinearInstruction(instruction, [], allowPipeline: false))
             {
                 return false;
             }
@@ -158,34 +155,37 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return CanExecuteLinearFiberEntry(handler.EntryAddress, []);
     }
 
-    private bool CanExecuteLinearInstruction(GameEventScriptBytecodeInstruction instruction, HashSet<string> visitingCallables)
+    private bool CanExecuteLinearInstruction(
+        GameEventScriptBytecodeInstruction instruction,
+        HashSet<string> visitingCallables,
+        bool allowPipeline)
     {
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Pipeline:
-                return false;
+                return allowPipeline && CanExecuteLinearPipeline(instruction.Data, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.SeededRandom:
-                return CanExecuteLinearSeededRandom(instruction.Data, visitingCallables);
+                return CanExecuteLinearSeededRandom(instruction.Data, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                return CanExecuteLinearGeneratedCollection(instruction.Data, visitingCallables);
+                return CanExecuteLinearGeneratedCollection(instruction.Data, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
-                return CanExecuteLinearGuardedChoice(instruction.Data, visitingCallables);
+                return CanExecuteLinearGuardedChoice(instruction.Data, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.PredicateTest:
                 return TryGetOperationLayout(instruction.Data, out var layout) &&
                        !string.IsNullOrEmpty(layout.Name) &&
-                       CanExecuteLinearCallable(layout.Name, visitingCallables);
+                       CanExecuteLinearCallable(layout.Name, visitingCallables, allowPipeline);
 
             default:
                 return true;
         }
     }
 
-    private bool CanExecuteLinearCallable(string callableName, HashSet<string> visitingCallables)
+    private bool CanExecuteLinearCallable(string callableName, HashSet<string> visitingCallables, bool allowPipeline)
     {
         if (!_compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable))
         {
@@ -199,7 +199,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         try
         {
-            return CanExecuteLinearEntry(callable.EntryAddress, visitingCallables);
+            return CanExecuteLinearEntry(callable.EntryAddress, visitingCallables, allowPipeline);
         }
         finally
         {
@@ -207,7 +207,183 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool CanExecuteLinearGuardedChoice(int layoutIndex, HashSet<string> visitingCallables)
+    private bool CanExecuteLinearPipeline(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
+    {
+        if (!TryGetPipelineLayout(layoutIndex, out var layout) ||
+            !TryGetSelectorLayout(layout.TerminalSelectorLayoutIndex, out var terminal))
+        {
+            return false;
+        }
+
+        foreach (var selectorIndex in layout.PrefixSelectorLayoutIndexes)
+        {
+            if (!CanExecuteLinearPipelineSelector(selectorIndex, isTerminal: false, visitingCallables, allowPipeline))
+            {
+                return false;
+            }
+        }
+
+        return CanExecuteLinearPipelineSelector(layout.TerminalSelectorLayoutIndex, isTerminal: true, visitingCallables, allowPipeline);
+    }
+
+    private bool CanExecuteLinearPipelineSelector(
+        int selectorIndex,
+        bool isTerminal,
+        HashSet<string> visitingCallables,
+        bool allowPipeline)
+    {
+        if (!TryGetSelectorLayout(selectorIndex, out var selector))
+        {
+            return false;
+        }
+
+        return selector.Kind switch
+        {
+            GameEventScriptBytecodeSelectorKind.Filter or GameEventScriptBytecodeSelectorKind.Select =>
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.Edge =>
+                isTerminal &&
+                IsSupportedLinearPipelineEdgeMode(selector.EdgeMode) &&
+                (selector.ExpressionEntryAddress < 0 ||
+                 CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline)),
+            GameEventScriptBytecodeSelectorKind.Predicate =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                (string.Equals(selector.EdgeMode, "any", StringComparison.Ordinal) ||
+                 string.Equals(selector.EdgeMode, "all", StringComparison.Ordinal)) &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.Count =>
+                isTerminal &&
+                (selector.ExpressionEntryAddress < 0 ||
+                 CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline)),
+            GameEventScriptBytecodeSelectorKind.SeriesTerm =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.Sum or GameEventScriptBytecodeSelectorKind.Average =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.Min or GameEventScriptBytecodeSelectorKind.Max =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.Dictionary =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline) &&
+                (selector.SecondaryExpressionEntryAddress < 0 ||
+                 CanExecuteLinearEntry(selector.SecondaryExpressionEntryAddress, visitingCallables, allowPipeline)),
+            GameEventScriptBytecodeSelectorKind.Distinct =>
+                isTerminal &&
+                (selector.ExpressionEntryAddress < 0 ||
+                 (selector.IdentifierSlot >= 0 &&
+                  CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline))),
+            GameEventScriptBytecodeSelectorKind.GroupBy =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.OrderBy =>
+                isTerminal &&
+                selector.IdentifierSlot >= 0 &&
+                selector.ExpressionEntryAddress >= 0 &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.SequenceSlice =>
+                isTerminal &&
+                selector.ExpressionEntryAddress < 0 &&
+                IsSupportedLinearPipelineSequenceSliceMode(selector.EdgeMode, selector.SecondaryMode),
+            GameEventScriptBytecodeSelectorKind.Pattern or GameEventScriptBytecodeSelectorKind.TakePattern =>
+                isTerminal &&
+                selector.DicePatternLayoutIndex >= 0 &&
+                CanExecuteLinearDicePattern(selector.DicePatternLayoutIndex, visitingCallables, allowPipeline),
+            GameEventScriptBytecodeSelectorKind.ObjectMatch =>
+                isTerminal &&
+                selector.ObjectMatchPatternLayoutIndex >= 0 &&
+                CanExecuteLinearObjectMatchPattern(selector.ObjectMatchPatternLayoutIndex, visitingCallables, allowPipeline, []),
+            GameEventScriptBytecodeSelectorKind.Choose =>
+                isTerminal &&
+                (selector.ExpressionEntryAddress < 0 ||
+                 (selector.IdentifierSlot >= 0 &&
+                  CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline))) &&
+                (selector.SecondaryExpressionEntryAddress < 0 ||
+                 (selector.SecondaryIdentifierSlot >= 0 &&
+                  CanExecuteLinearEntry(selector.SecondaryExpressionEntryAddress, visitingCallables, allowPipeline))),
+            GameEventScriptBytecodeSelectorKind.Draw =>
+                isTerminal &&
+                selector.ExpressionEntryAddress < 0,
+            GameEventScriptBytecodeSelectorKind.Shuffle =>
+                isTerminal &&
+                selector.ExpressionEntryAddress < 0,
+            GameEventScriptBytecodeSelectorKind.Sort =>
+                isTerminal &&
+                selector.ExpressionEntryAddress < 0,
+            GameEventScriptBytecodeSelectorKind.Reverse =>
+                isTerminal &&
+                selector.ExpressionEntryAddress < 0,
+            GameEventScriptBytecodeSelectorKind.Contains =>
+                isTerminal &&
+                selector.ExpressionEntryAddress >= 0 &&
+                IsSupportedLinearPipelineContainsMode(selector.EdgeMode) &&
+                CanExecuteLinearEntry(selector.ExpressionEntryAddress, visitingCallables, allowPipeline),
+            _ => false
+        };
+    }
+
+    private bool CanExecuteLinearDicePattern(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
+    {
+        if (!TryGetDicePatternLayout(layoutIndex, out var layout))
+        {
+            return false;
+        }
+
+        return layout.FaceEntryAddress < 0 ||
+               CanExecuteLinearEntry(layout.FaceEntryAddress, visitingCallables, allowPipeline);
+    }
+
+    private bool CanExecuteLinearObjectMatchPattern(
+        int layoutIndex,
+        HashSet<string> visitingCallables,
+        bool allowPipeline,
+        HashSet<int> visitingPatterns)
+    {
+        if (!visitingPatterns.Add(layoutIndex) ||
+            !TryGetObjectMatchPatternLayout(layoutIndex, out var layout))
+        {
+            return false;
+        }
+
+        foreach (var entry in layout.Entries)
+        {
+            switch (entry.ValueKind)
+            {
+                case GameEventScriptBytecodeObjectMatchValueKind.Expression:
+                    if (entry.ExpressionEntryAddress < 0 ||
+                        !CanExecuteLinearEntry(entry.ExpressionEntryAddress, visitingCallables, allowPipeline))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeObjectMatchValueKind.Nested:
+                    if (!CanExecuteLinearObjectMatchPattern(entry.NestedPatternLayoutIndex, visitingCallables, allowPipeline, visitingPatterns))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                default:
+                    return false;
+            }
+        }
+
+        visitingPatterns.Remove(layoutIndex);
+        return true;
+    }
+
+    private bool CanExecuteLinearGuardedChoice(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
     {
         if (!TryGetGuardedChoiceLayout(layoutIndex, out var layout) ||
             layout.ConditionEntryAddresses.Count != layout.ValueEntryAddresses.Count)
@@ -217,34 +393,34 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         for (var branchIndex = 0; branchIndex < layout.ConditionEntryAddresses.Count; branchIndex++)
         {
-            if (!CanExecuteLinearEntry(layout.ConditionEntryAddresses[branchIndex], visitingCallables) ||
-                !CanExecuteLinearEntry(layout.ValueEntryAddresses[branchIndex], visitingCallables))
+            if (!CanExecuteLinearEntry(layout.ConditionEntryAddresses[branchIndex], visitingCallables, allowPipeline) ||
+                !CanExecuteLinearEntry(layout.ValueEntryAddresses[branchIndex], visitingCallables, allowPipeline))
             {
                 return false;
             }
         }
 
-        return CanExecuteLinearEntry(layout.OtherwiseEntryAddress, visitingCallables);
+        return CanExecuteLinearEntry(layout.OtherwiseEntryAddress, visitingCallables, allowPipeline);
     }
 
-    private bool CanExecuteLinearGeneratedCollection(int layoutIndex, HashSet<string> visitingCallables)
+    private bool CanExecuteLinearGeneratedCollection(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
     {
         if (!TryGetGeneratedCollectionLayout(layoutIndex, out var layout) ||
             layout.ProjectionEntryAddress < 0 ||
-            (layout.PredicateEntryAddress >= 0 && !CanExecuteLinearEntry(layout.PredicateEntryAddress, visitingCallables)))
+            (layout.PredicateEntryAddress >= 0 && !CanExecuteLinearEntry(layout.PredicateEntryAddress, visitingCallables, allowPipeline)))
         {
             return false;
         }
 
-        return CanExecuteLinearEntry(layout.ProjectionEntryAddress, visitingCallables);
+        return CanExecuteLinearEntry(layout.ProjectionEntryAddress, visitingCallables, allowPipeline);
     }
 
-    private bool CanExecuteLinearSeededRandom(int layoutIndex, HashSet<string> visitingCallables)
+    private bool CanExecuteLinearSeededRandom(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
         => TryGetOperationLayout(layoutIndex, out var layout) &&
            layout.ExpressionEntryAddress >= 0 &&
-           CanExecuteLinearEntry(layout.ExpressionEntryAddress, visitingCallables);
+           CanExecuteLinearEntry(layout.ExpressionEntryAddress, visitingCallables, allowPipeline);
 
-    private bool CanExecuteLinearEntry(int entryAddress, HashSet<string> visitingCallables)
+    private bool CanExecuteLinearEntry(int entryAddress, HashSet<string> visitingCallables, bool allowPipeline)
     {
         var code = _compiledScript.LinearExecutable.Code;
         if ((uint)entryAddress >= (uint)code.Count)
@@ -255,7 +431,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         for (var pc = entryAddress; pc < code.Count; pc++)
         {
             var instruction = code[pc];
-            if (!CanExecuteLinearInstruction(instruction, visitingCallables))
+            if (!CanExecuteLinearInstruction(instruction, visitingCallables, allowPipeline))
             {
                 return false;
             }
@@ -852,6 +1028,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.IndexedAccess:
                 return DefineSlot(instruction.Dest, EvaluateIndexedAccess(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
 
+            case GameEventScriptBytecodeOpCode.Pipeline:
+                if (!TryEvaluateLinearPipeline(instruction.Data, out var pipelineValue))
+                {
+                    return false;
+                }
+
+                return DefineSlot(instruction.Dest, pipelineValue);
+
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
                 if (!TryEvaluateLinearGeneratedCollection(instruction.Data, out var generatedValue))
                 {
@@ -1014,6 +1198,1464 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
+    private bool TryEvaluateLinearPipeline(int layoutIndex, out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (!TryGetPipelineLayout(layoutIndex, out var layout) ||
+            !TryGetSelectorLayout(layout.TerminalSelectorLayoutIndex, out var terminal))
+        {
+            return false;
+        }
+
+        var sourceTarget = ResolveSlot(layout.SourceSlot).ToGameEventScriptValue();
+        if (TryGetSeriesTarget(sourceTarget, out var seriesTarget))
+        {
+            return TryEvaluateLinearSeriesPipeline(
+                seriesTarget,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value);
+        }
+
+        var checkRangeItemLimit = GesRuntimeLimitUtilities.TryGetRangeLength(sourceTarget, out var sourceRangeLength);
+        if (ShouldCheckLinearPipelineSourceLengthBeforeExecution(terminal, layout.PrefixSelectorLayoutIndexes.Count) &&
+            checkRangeItemLimit &&
+            !_runtimeBudget.TryCheckRangeLength(sourceRangeLength, PipelineRangeLimitDetail))
+        {
+            return true;
+        }
+
+        if (ShouldCheckLinearPipelineSourceLengthBeforeExecution(terminal, layout.PrefixSelectorLayoutIndexes.Count))
+        {
+            checkRangeItemLimit = false;
+        }
+
+        return terminal.Kind switch
+        {
+            GameEventScriptBytecodeSelectorKind.Select => TryEvaluateLinearPipelineSelect(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Filter => TryEvaluateLinearPipelineFilter(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Edge when IsSupportedLinearPipelineEdgeMode(terminal.EdgeMode) =>
+                TryEvaluateLinearPipelineEdge(
+                    EnumerateListLikeValue(sourceTarget),
+                    checkRangeItemLimit,
+                    layout.PrefixSelectorLayoutIndexes,
+                    terminal,
+                    out value),
+            GameEventScriptBytecodeSelectorKind.Count => TryEvaluateLinearPipelineCount(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Predicate => TryEvaluateLinearPipelinePredicate(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Sum => TryEvaluateLinearPipelineSum(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Average => TryEvaluateLinearPipelineAverage(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Min => TryEvaluateLinearPipelineExtrema(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                isMax: false,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Max => TryEvaluateLinearPipelineExtrema(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                isMax: true,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Dictionary => TryEvaluateLinearPipelineDictionary(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Distinct => TryEvaluateLinearPipelineDistinct(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.GroupBy => TryEvaluateLinearPipelineGroupBy(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Reverse => TryEvaluateLinearPipelineReverse(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Sort => TryEvaluateLinearPipelineSort(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.OrderBy => TryEvaluateLinearPipelineOrderBy(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.SequenceSlice => TryEvaluateLinearPipelineSequenceSlice(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Shuffle => TryEvaluateLinearPipelineShuffle(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Draw => TryEvaluateLinearPipelineDraw(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Pattern or GameEventScriptBytecodeSelectorKind.ObjectMatch or GameEventScriptBytecodeSelectorKind.TakePattern =>
+                TryEvaluateLinearPipelinePattern(
+                    sourceTarget,
+                    EnumerateListLikeValue(sourceTarget),
+                    checkRangeItemLimit,
+                    layout.PrefixSelectorLayoutIndexes,
+                    terminal,
+                    out value),
+            GameEventScriptBytecodeSelectorKind.Choose => TryEvaluateLinearPipelineChoose(
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            GameEventScriptBytecodeSelectorKind.Contains => TryEvaluateLinearPipelineContains(
+                sourceTarget,
+                EnumerateListLikeValue(sourceTarget),
+                checkRangeItemLimit,
+                layout.PrefixSelectorLayoutIndexes,
+                terminal,
+                out value),
+            _ => false
+        };
+    }
+
+    private static bool IsSupportedLinearPipelineEdgeMode(string? edgeMode)
+        => string.Equals(edgeMode, "first", StringComparison.Ordinal) ||
+           string.Equals(edgeMode, "last", StringComparison.Ordinal) ||
+           string.Equals(edgeMode, "single", StringComparison.Ordinal);
+
+    private static bool IsSupportedLinearPipelineContainsMode(string? edgeMode)
+        => string.Equals(edgeMode, "single", StringComparison.Ordinal) ||
+           string.Equals(edgeMode, "all", StringComparison.Ordinal) ||
+           string.Equals(edgeMode, "any", StringComparison.Ordinal);
+
+    private bool TryEvaluateLinearSeriesPipeline(
+        GameEventScriptSeriesValue source,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var series = source;
+        foreach (var selectorIndex in prefixSelectorIndexes)
+        {
+            if (!TryGetSelectorLayout(selectorIndex, out var selector) ||
+                !TryApplyLinearSeriesPrefixSelector(series, selector, out series))
+            {
+                value = BytecodeVmValue.Nothing;
+                return true;
+            }
+        }
+
+        switch (terminal.Kind)
+        {
+            case GameEventScriptBytecodeSelectorKind.SeriesTerm:
+                if (!TryEvaluateLinearPipelineSelectorExpression(terminal, BytecodeVmValue.Nothing, out var termIndex))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                if (!termIndex.ToGameEventScriptValue().TryConvertToInteger(out var integerTermIndex))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return true;
+                }
+
+                value = BytecodeVmValue.FromGameEventScriptValue(series.GetTerm(integerTermIndex.AsInteger()));
+                return true;
+
+            case GameEventScriptBytecodeSelectorKind.SequenceSlice:
+                return TryEvaluateLinearSeriesSliceSelector(series, terminal, out value);
+
+            default:
+                value = BytecodeVmValue.Nothing;
+                return true;
+        }
+    }
+
+    private static bool TryApplyLinearSeriesPrefixSelector(
+        GameEventScriptSeriesValue source,
+        GameEventScriptBytecodeSelectorLayout selector,
+        out GameEventScriptSeriesValue series)
+    {
+        if (selector.Kind == GameEventScriptBytecodeSelectorKind.SequenceSlice &&
+            string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal) &&
+            string.Equals(selector.SecondaryMode, "first", StringComparison.Ordinal))
+        {
+            series = source.Drop(selector.Count);
+            return true;
+        }
+
+        series = source;
+        return false;
+    }
+
+    private bool TryEvaluateLinearSeriesSliceSelector(
+        GameEventScriptSeriesValue series,
+        GameEventScriptBytecodeSelectorLayout selector,
+        out BytecodeVmValue value)
+    {
+        if (!string.Equals(selector.SecondaryMode, "first", StringComparison.Ordinal))
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
+        if (string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal))
+        {
+            value = BytecodeVmValue.Reference(series.Drop(selector.Count));
+            return true;
+        }
+
+        if (!string.Equals(selector.EdgeMode, "take", StringComparison.Ordinal))
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
+        if (!_runtimeBudget.TryCheckRangeLength(selector.Count, "Series take would materialize more items than allowed."))
+        {
+            value = BytecodeVmValue.Nothing;
+            return true;
+        }
+
+        value = BytecodeVmValue.Reference(GesList(series.Take(selector.Count)));
+        return true;
+    }
+
+    private static bool IsSupportedLinearPipelineSequenceSliceMode(string? operation, string? scope)
+        => (string.Equals(operation, "take", StringComparison.Ordinal) ||
+            string.Equals(operation, "drop", StringComparison.Ordinal)) &&
+           (string.Equals(scope, "first", StringComparison.Ordinal) ||
+            string.Equals(scope, "last", StringComparison.Ordinal) ||
+            string.Equals(scope, "highest", StringComparison.Ordinal) ||
+            string.Equals(scope, "lowest", StringComparison.Ordinal));
+
+    private static bool ShouldCheckLinearPipelineSourceLengthBeforeExecution(
+        GameEventScriptBytecodeSelectorLayout terminal,
+        int prefixSelectorCount)
+        => terminal.Kind switch
+        {
+            GameEventScriptBytecodeSelectorKind.Edge => !string.Equals(terminal.EdgeMode, "first", StringComparison.Ordinal),
+            GameEventScriptBytecodeSelectorKind.Predicate => false,
+            GameEventScriptBytecodeSelectorKind.Contains => prefixSelectorCount > 0,
+            _ => true
+        };
+
+    private bool TryEvaluateLinearPipelineSelect(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var result = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var selected))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            result.Add(selected.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(result))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineFilter(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var result = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var predicate))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            if (predicate.IsTrue())
+            {
+                result.Add(item.ToGameEventScriptValue());
+            }
+
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(result))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineEdge(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        var first = BytecodeVmValue.Nothing;
+        var last = BytecodeVmValue.Nothing;
+        var count = 0;
+        var stopAfterFirst = string.Equals(terminal.EdgeMode, "first", StringComparison.Ordinal);
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (terminal.ExpressionEntryAddress >= 0)
+            {
+                if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var predicate))
+                {
+                    return PipelineIterationResult.Failed;
+                }
+
+                if (!predicate.IsTrue())
+                {
+                    return PipelineIterationResult.Completed;
+                }
+            }
+
+            first = count == 0 ? item : first;
+            last = item;
+            count++;
+            return stopAfterFirst
+                ? PipelineIterationResult.Stopped
+                : PipelineIterationResult.Completed;
+        });
+
+        if (iterationResult is PipelineIterationResult.Completed or PipelineIterationResult.Stopped)
+        {
+            value = terminal.EdgeMode switch
+            {
+                "first" => count > 0 ? first : BytecodeVmValue.Nothing,
+                "last" => count > 0 ? last : BytecodeVmValue.Nothing,
+                "single" => count == 1 ? first : BytecodeVmValue.Nothing,
+                _ => BytecodeVmValue.Nothing
+            };
+        }
+
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineCount(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        long count = 0;
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (terminal.ExpressionEntryAddress >= 0)
+            {
+                if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var predicate))
+                {
+                    return PipelineIterationResult.Failed;
+                }
+
+                if (!predicate.IsTrue())
+                {
+                    return PipelineIterationResult.Completed;
+                }
+            }
+
+            count++;
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.Integer(count)
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelinePredicate(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        var isAny = string.Equals(terminal.EdgeMode, "any", StringComparison.Ordinal);
+        if (!isAny && !string.Equals(terminal.EdgeMode, "all", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var result = !isAny;
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var predicate))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            if (isAny && predicate.IsTrue())
+            {
+                result = true;
+                return PipelineIterationResult.Stopped;
+            }
+
+            if (!isAny && !predicate.IsTrue())
+            {
+                result = false;
+                return PipelineIterationResult.Stopped;
+            }
+
+            return PipelineIterationResult.Completed;
+        });
+
+        if (iterationResult is PipelineIterationResult.Completed or PipelineIterationResult.Stopped)
+        {
+            value = BytecodeVmValue.Boolean(result);
+        }
+
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineSum(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var hasValue = false;
+        var sum = BytecodeVmValue.Float(0d);
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var projected))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            sum = hasValue ? BytecodeVmValue.Add(sum, projected) : projected;
+            hasValue = true;
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? (hasValue ? sum : BytecodeVmValue.Float(0d))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineAverage(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var count = 0L;
+        var sum = BytecodeVmValue.Float(0d);
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var projected))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            sum = count == 0 ? projected : BytecodeVmValue.Add(sum, projected);
+            count++;
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed &&
+                count > 0 &&
+                sum.TryGetFiniteNumber(out var number)
+            ? BytecodeVmValue.Float(number / count, sum.Unit)
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineExtrema(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        bool isMax,
+        out BytecodeVmValue value)
+    {
+        BytecodeVmValue bestItem = BytecodeVmValue.Nothing;
+        GameEventScriptValue? bestProjection = null;
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var projection))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            var candidateProjection = projection.ToGameEventScriptValue();
+            if (bestProjection is null)
+            {
+                bestProjection = candidateProjection;
+                bestItem = item;
+                return PipelineIterationResult.Completed;
+            }
+
+            int comparison;
+            if (GesValueOperations.TryCoerceNumericForOperation(candidateProjection, out _) &&
+                GesValueOperations.TryCoerceNumericForOperation(bestProjection, out _))
+            {
+                if (!GesValueOperations.TryCompareNumericValues(candidateProjection, bestProjection, out comparison))
+                {
+                    return PipelineIterationResult.Failed;
+                }
+            }
+            else
+            {
+                comparison = GameEventScriptValue.StableComparer.Compare(candidateProjection, bestProjection);
+            }
+
+            if ((isMax && comparison > 0) || (!isMax && comparison < 0))
+            {
+                bestProjection = candidateProjection;
+                bestItem = item;
+            }
+
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed && bestProjection is not null
+            ? bestItem
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineContains(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (!TryEvaluateLinearPipelineSelectorExpression(terminal, BytecodeVmValue.Nothing, out var needle))
+        {
+            return false;
+        }
+
+        var target = sourceTarget;
+        if (prefixSelectorIndexes.Count != 0)
+        {
+            var targetItems = new List<GameEventScriptValue>();
+            var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+            {
+                targetItems.Add(item.ToGameEventScriptValue());
+                return PipelineIterationResult.Completed;
+            });
+            if (iterationResult != PipelineIterationResult.Completed)
+            {
+                value = BytecodeVmValue.Nothing;
+                return iterationResult != PipelineIterationResult.Failed;
+            }
+
+            target = GameEventScriptValueFactory.GesList(targetItems);
+        }
+
+        var boxedNeedle = needle.ToGameEventScriptValue();
+        value = terminal.EdgeMode switch
+        {
+            "single" => BytecodeVmValue.Boolean(target.Contains(boxedNeedle)),
+            "all" => BytecodeVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).All(target.Contains)),
+            "any" => BytecodeVmValue.Boolean(EnumerateListLikeValue(boxedNeedle).Any(target.Contains)),
+            _ => BytecodeVmValue.Boolean(false)
+        };
+        return true;
+    }
+
+    private bool TryEvaluateLinearPipelineDictionary(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var result = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var keyValue))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            var key = keyValue.ToGameEventScriptValue().AsText();
+            if (string.IsNullOrEmpty(key))
+            {
+                return PipelineIterationResult.Completed;
+            }
+
+            if (terminal.SecondaryExpressionEntryAddress < 0)
+            {
+                result[key] = item.ToGameEventScriptValue();
+                return PipelineIterationResult.Completed;
+            }
+
+            if (!TryEvaluateLinearPipelineSecondarySelectorExpression(terminal, item, out var projectedValue))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            result[key] = projectedValue.ToGameEventScriptValue();
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.Reference(GameEventScriptValueFactory.GesDictionary(result))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineDistinct(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var distinctItems = new List<GameEventScriptValue>();
+        var seenKeys = new HashSet<GameEventScriptValue>();
+        var hasProjection = terminal.ExpressionEntryAddress >= 0 && terminal.IdentifierSlot >= 0;
+
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            GameEventScriptValue key;
+            if (hasProjection)
+            {
+                if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var projectedKey))
+                {
+                    return PipelineIterationResult.Failed;
+                }
+
+                key = projectedKey.ToGameEventScriptValue();
+            }
+            else
+            {
+                key = item.ToGameEventScriptValue();
+            }
+
+            if (seenKeys.Add(key))
+            {
+                distinctItems.Add(item.ToGameEventScriptValue());
+            }
+
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.FromGameEventScriptValue(MaterializeDistinctItems(target, distinctItems))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineOrderBy(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var pairs = new List<(GameEventScriptValue Item, GameEventScriptValue Key)>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var key))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            pairs.Add((Item: item.ToGameEventScriptValue(), Key: key.ToGameEventScriptValue()));
+            return PipelineIterationResult.Completed;
+        });
+        if (iterationResult != PipelineIterationResult.Completed)
+        {
+            value = BytecodeVmValue.Nothing;
+            return iterationResult != PipelineIterationResult.Failed;
+        }
+
+        var comparer = string.Equals(terminal.EdgeMode, "descending", StringComparison.Ordinal)
+            ? Comparer<GameEventScriptValue>.Create((left, right) => GameEventScriptValue.StableComparer.Compare(right, left))
+            : GameEventScriptValue.StableComparer;
+        var ordered = pairs.OrderBy(pair => pair.Key, comparer).Select(pair => pair.Item).ToArray();
+        value = BytecodeVmValue.FromGameEventScriptValue(MaterializeOrderedItems(target, ordered));
+        return true;
+    }
+
+    private bool TryEvaluateLinearPipelineSequenceSlice(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var items = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            items.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.FromGameEventScriptValue(EvaluateSequenceSliceSelector(
+                target,
+                items,
+                terminal.EdgeMode,
+                terminal.SecondaryMode,
+                terminal.Count))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineShuffle(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var items = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            items.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(target, items))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineDraw(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var items = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            items.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.FromGameEventScriptValue(EvaluateDrawSelector(target, items, terminal.Count))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelinePattern(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var items = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            items.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+        if (iterationResult != PipelineIterationResult.Completed)
+        {
+            value = BytecodeVmValue.Nothing;
+            return iterationResult != PipelineIterationResult.Failed;
+        }
+
+        switch (terminal.Kind)
+        {
+            case GameEventScriptBytecodeSelectorKind.Pattern:
+                if (!TryEvaluateLinearSequencePattern(target, items, terminal.DicePatternLayoutIndex, out var patternMatches))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.Boolean(patternMatches);
+                return true;
+
+            case GameEventScriptBytecodeSelectorKind.ObjectMatch:
+                if (!TryEvaluateLinearObjectMatchSelector(target, items, terminal.ObjectMatchPatternLayoutIndex, out var objectMatches))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.Boolean(objectMatches);
+                return true;
+
+            case GameEventScriptBytecodeSelectorKind.TakePattern:
+                if (!TryEvaluateLinearTakePattern(target, items, terminal.DicePatternLayoutIndex, out var result))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.FromGameEventScriptValue(result);
+                return true;
+
+            default:
+                value = BytecodeVmValue.Nothing;
+                return false;
+        }
+    }
+
+    private bool TryEvaluateLinearSequencePattern(
+        GameEventScriptValue target,
+        IReadOnlyList<GameEventScriptValue> items,
+        int patternLayoutIndex,
+        out bool matches)
+    {
+        if (!TryGetDicePatternLayout(patternLayoutIndex, out var pattern) ||
+            !IsPatternSequence(target))
+        {
+            matches = false;
+            return patternLayoutIndex >= 0;
+        }
+
+        var counts = items
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        switch (pattern.Kind)
+        {
+            case GameEventScriptBytecodeDicePatternKind.Count:
+                return TryMatchLinearDiceCountPattern(counts, pattern, out matches);
+
+            case GameEventScriptBytecodeDicePatternKind.FullHouse:
+                matches = counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 });
+                return true;
+
+            case GameEventScriptBytecodeDicePatternKind.Straight:
+                matches = MatchStraight(items);
+                return true;
+
+            default:
+                matches = false;
+                return true;
+        }
+    }
+
+    private bool TryMatchLinearDiceCountPattern(
+        IReadOnlyDictionary<GameEventScriptValue, int> counts,
+        GameEventScriptBytecodeDicePatternLayout pattern,
+        out bool matches)
+    {
+        if (pattern.FaceEntryAddress >= 0)
+        {
+            if (!TryEvaluateLinearHelperExpression(pattern.FaceEntryAddress, out var face))
+            {
+                matches = false;
+                return false;
+            }
+
+            matches = counts.TryGetValue(face.ToGameEventScriptValue(), out var count) && count >= pattern.Count;
+            return true;
+        }
+
+        matches = counts.Values.Any(count => count >= pattern.Count);
+        return true;
+    }
+
+    private bool TryEvaluateLinearTakePattern(
+        GameEventScriptValue target,
+        IReadOnlyList<GameEventScriptValue> items,
+        int patternLayoutIndex,
+        out GameEventScriptValue value)
+    {
+        if (!TryGetDicePatternLayout(patternLayoutIndex, out var pattern) ||
+            !IsPatternSequence(target))
+        {
+            value = GameEventScriptNothingValue.Instance;
+            return patternLayoutIndex >= 0;
+        }
+
+        if (!TryTakeLinearSequencePattern(items, pattern, out var takenItems))
+        {
+            value = GameEventScriptNothingValue.Instance;
+            return true;
+        }
+
+        value = target.Kind == GameEventScriptValueKind.Dice
+            ? GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(takenItems.Select(item => (int)item.AsInteger())))
+            : GameEventScriptValueFactory.GesList(takenItems);
+        return true;
+    }
+
+    private bool TryTakeLinearSequencePattern(
+        IReadOnlyList<GameEventScriptValue> items,
+        GameEventScriptBytecodeDicePatternLayout pattern,
+        out IReadOnlyList<GameEventScriptValue> takenItems)
+    {
+        var counts = items
+            .GroupBy(item => item)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        switch (pattern.Kind)
+        {
+            case GameEventScriptBytecodeDicePatternKind.Count:
+                return TryTakeLinearCountPattern(items, counts, pattern, out takenItems);
+
+            case GameEventScriptBytecodeDicePatternKind.FullHouse:
+                return TryTakeFullHouse(items, counts, out takenItems);
+
+            case GameEventScriptBytecodeDicePatternKind.Straight:
+                return TryTakeStraight(items, out takenItems);
+
+            default:
+                takenItems = Array.Empty<GameEventScriptValue>();
+                return false;
+        }
+    }
+
+    private bool TryTakeLinearCountPattern(
+        IReadOnlyList<GameEventScriptValue> items,
+        IReadOnlyDictionary<GameEventScriptValue, int> counts,
+        GameEventScriptBytecodeDicePatternLayout pattern,
+        out IReadOnlyList<GameEventScriptValue> takenItems)
+    {
+        if (pattern.FaceEntryAddress >= 0)
+        {
+            if (!TryEvaluateLinearHelperExpression(pattern.FaceEntryAddress, out var face))
+            {
+                takenItems = Array.Empty<GameEventScriptValue>();
+                return false;
+            }
+
+            var boxedFace = face.ToGameEventScriptValue();
+            if (counts.TryGetValue(boxedFace, out var faceCount) && faceCount >= pattern.Count)
+            {
+                takenItems = TakeItemsByCounts(items, new Dictionary<GameEventScriptValue, int> { [boxedFace] = pattern.Count });
+                return true;
+            }
+
+            takenItems = Array.Empty<GameEventScriptValue>();
+            return false;
+        }
+
+        foreach (var candidate in EnumerateDistinctInSourceOrder(items))
+        {
+            if (counts.TryGetValue(candidate, out var candidateCount) && candidateCount >= pattern.Count)
+            {
+                takenItems = TakeItemsByCounts(items, new Dictionary<GameEventScriptValue, int> { [candidate] = pattern.Count });
+                return true;
+            }
+        }
+
+        takenItems = Array.Empty<GameEventScriptValue>();
+        return false;
+    }
+
+    private bool TryEvaluateLinearObjectMatchSelector(
+        GameEventScriptValue target,
+        IReadOnlyList<GameEventScriptValue> items,
+        int patternLayoutIndex,
+        out bool matches)
+    {
+        if (!TryGetObjectMatchPatternLayout(patternLayoutIndex, out _) ||
+            target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Set or GameEventScriptValueKind.Dice))
+        {
+            matches = false;
+            return patternLayoutIndex >= 0;
+        }
+
+        foreach (var item in items)
+        {
+            if (!TryMatchesLinearObjectPattern(item, patternLayoutIndex, out var itemMatches))
+            {
+                matches = false;
+                return false;
+            }
+
+            if (itemMatches)
+            {
+                matches = true;
+                return true;
+            }
+        }
+
+        matches = false;
+        return true;
+    }
+
+    private bool TryMatchesLinearObjectPattern(
+        GameEventScriptValue value,
+        int patternLayoutIndex,
+        out bool matches)
+    {
+        if (!TryGetObjectMatchPatternLayout(patternLayoutIndex, out var pattern))
+        {
+            matches = false;
+            return false;
+        }
+
+        if (value.Kind != GameEventScriptValueKind.Dictionary)
+        {
+            matches = false;
+            return true;
+        }
+
+        var dictionary = value.AsDictionary();
+        foreach (var entry in pattern.Entries)
+        {
+            if (!dictionary.TryGetValue(entry.Key, out var actual))
+            {
+                matches = false;
+                return true;
+            }
+
+            switch (entry.ValueKind)
+            {
+                case GameEventScriptBytecodeObjectMatchValueKind.Expression:
+                    if (entry.ExpressionEntryAddress < 0 ||
+                        !TryEvaluateLinearHelperExpression(entry.ExpressionEntryAddress, out var expected))
+                    {
+                        matches = false;
+                        return false;
+                    }
+
+                    if (!GesValueOperations.AreEqual(actual, expected.ToGameEventScriptValue()))
+                    {
+                        matches = false;
+                        return true;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeObjectMatchValueKind.Nested:
+                    if (!TryMatchesLinearObjectPattern(actual, entry.NestedPatternLayoutIndex, out var nestedMatches))
+                    {
+                        matches = false;
+                        return false;
+                    }
+
+                    if (!nestedMatches)
+                    {
+                        matches = false;
+                        return true;
+                    }
+
+                    break;
+
+                default:
+                    matches = false;
+                    return false;
+            }
+        }
+
+        matches = true;
+        return true;
+    }
+
+    private bool TryEvaluateLinearPipelineChoose(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var candidates = new List<GameEventScriptValue>();
+        var hasPredicate = terminal.ExpressionEntryAddress >= 0 && terminal.IdentifierSlot >= 0;
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (hasPredicate)
+            {
+                if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var predicate))
+                {
+                    return PipelineIterationResult.Failed;
+                }
+
+                if (!predicate.IsTrue())
+                {
+                    return PipelineIterationResult.Completed;
+                }
+            }
+
+            candidates.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+        if (iterationResult != PipelineIterationResult.Completed)
+        {
+            value = BytecodeVmValue.Nothing;
+            return iterationResult != PipelineIterationResult.Failed;
+        }
+
+        IReadOnlyList<GameEventScriptValue> chosen;
+        if (terminal.SecondaryExpressionEntryAddress >= 0 && terminal.SecondaryIdentifierSlot >= 0)
+        {
+            if (!TryChooseWeightedLinearPipelineItems(candidates, terminal.Count, terminal, out chosen))
+            {
+                value = BytecodeVmValue.Nothing;
+                return false;
+            }
+        }
+        else if (terminal.Flag)
+        {
+            chosen = ChooseRandomItems(candidates, terminal.Count);
+        }
+        else
+        {
+            chosen = candidates.Take(terminal.Count).ToArray();
+        }
+
+        value = terminal.Count == 1
+            ? chosen.Count == 0
+                ? BytecodeVmValue.Nothing
+                : BytecodeVmValue.FromGameEventScriptValue(chosen[0])
+            : BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(chosen));
+        return true;
+    }
+
+    private bool TryChooseWeightedLinearPipelineItems(
+        IReadOnlyList<GameEventScriptValue> candidates,
+        int count,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out IReadOnlyList<GameEventScriptValue> chosen)
+    {
+        var remaining = candidates.ToList();
+        var result = new List<GameEventScriptValue>();
+
+        while (result.Count < count && remaining.Count > 0)
+        {
+            var weightedItems = new List<(GameEventScriptValue Item, double Weight)>();
+            double totalWeight = 0d;
+
+            foreach (var candidate in remaining)
+            {
+                if (!TryEvaluateLinearPipelineSecondarySelectorExpression(
+                        terminal,
+                        BytecodeVmValue.FromGameEventScriptValue(candidate),
+                        out var weightValue))
+                {
+                    chosen = [];
+                    return false;
+                }
+
+                var weight = EvaluatePositiveWeight(weightValue.ToGameEventScriptValue());
+                if (weight <= 0d)
+                {
+                    continue;
+                }
+
+                weightedItems.Add((candidate, weight));
+                totalWeight += weight;
+            }
+
+            if (weightedItems.Count == 0 || totalWeight <= 0d)
+            {
+                break;
+            }
+
+            if (!TryNextInclusiveFloat(0d, totalWeight, out var threshold))
+            {
+                break;
+            }
+
+            double cumulative = 0d;
+            var selected = weightedItems[^1].Item;
+            foreach (var weightedItem in weightedItems)
+            {
+                cumulative += weightedItem.Weight;
+                if (threshold < cumulative)
+                {
+                    selected = weightedItem.Item;
+                    break;
+                }
+            }
+
+            result.Add(selected);
+            remaining.Remove(selected);
+        }
+
+        chosen = result;
+        return true;
+    }
+
+    private bool TryEvaluateLinearPipelineSort(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var items = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            items.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.FromGameEventScriptValue(GesCollectionOperations.Sort(target, items, terminal.EdgeMode ?? "ascending"))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineReverse(
+        GameEventScriptValue sourceTarget,
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        out BytecodeVmValue value)
+    {
+        var target = prefixSelectorIndexes.Count == 0 ? sourceTarget : GameEventScriptListValue.Empty;
+        var items = new List<GameEventScriptValue>();
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            items.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.FromGameEventScriptValue(EvaluateReverseSelector(target, items))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private bool TryEvaluateLinearPipelineGroupBy(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        GameEventScriptBytecodeSelectorLayout terminal,
+        out BytecodeVmValue value)
+    {
+        var groups = new Dictionary<string, List<GameEventScriptValue>>(StringComparer.Ordinal);
+        var iterationResult = TryForEachLinearPipelineItem(sourceItems, checkRangeItemLimit, prefixSelectorIndexes, item =>
+        {
+            if (!TryEvaluateLinearPipelineSelectorExpression(terminal, item, out var keyValue))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            var key = keyValue.ToGameEventScriptValue().AsText();
+            if (!groups.TryGetValue(key, out var bucket))
+            {
+                bucket = [];
+                groups[key] = bucket;
+            }
+
+            bucket.Add(item.ToGameEventScriptValue());
+            return PipelineIterationResult.Completed;
+        });
+
+        value = iterationResult == PipelineIterationResult.Completed
+            ? BytecodeVmValue.Reference(GameEventScriptValueFactory.GesDictionary(groups.ToDictionary(
+                pair => pair.Key,
+                pair => GameEventScriptValueFactory.GesList(pair.Value),
+                StringComparer.Ordinal)))
+            : BytecodeVmValue.Nothing;
+        return iterationResult != PipelineIterationResult.Failed;
+    }
+
+    private PipelineIterationResult TryForEachLinearPipelineItem(
+        IEnumerable<GameEventScriptValue> sourceItems,
+        bool checkRangeItemLimit,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        Func<BytecodeVmValue, PipelineIterationResult> action)
+    {
+        long sourceItemCount = 0;
+        foreach (var sourceItem in sourceItems)
+        {
+            if (checkRangeItemLimit &&
+                !_runtimeBudget.TryCheckRangeLength(++sourceItemCount, PipelineRangeLimitDetail))
+            {
+                return PipelineIterationResult.RangeLimitReached;
+            }
+
+            var item = BytecodeVmValue.FromGameEventScriptValue(sourceItem);
+            if (!TryApplyLinearPipelinePrefixes(item, prefixSelectorIndexes, out item, out var include))
+            {
+                return PipelineIterationResult.Failed;
+            }
+
+            if (!include)
+            {
+                continue;
+            }
+
+            var actionResult = action(item);
+            if (actionResult != PipelineIterationResult.Completed)
+            {
+                return actionResult;
+            }
+        }
+
+        return PipelineIterationResult.Completed;
+    }
+
+    private bool TryApplyLinearPipelinePrefixes(
+        BytecodeVmValue item,
+        IReadOnlyList<int> prefixSelectorIndexes,
+        out BytecodeVmValue value,
+        out bool include)
+    {
+        value = item;
+        include = true;
+        foreach (var selectorIndex in prefixSelectorIndexes)
+        {
+            if (!TryGetSelectorLayout(selectorIndex, out var selector))
+            {
+                return false;
+            }
+
+            switch (selector.Kind)
+            {
+                case GameEventScriptBytecodeSelectorKind.Filter:
+                    if (!TryEvaluateLinearPipelineSelectorExpression(selector, value, out var predicate))
+                    {
+                        return false;
+                    }
+
+                    if (!predicate.IsTrue())
+                    {
+                        include = false;
+                        return true;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeSelectorKind.Select:
+                    if (!TryEvaluateLinearPipelineSelectorExpression(selector, value, out var selected))
+                    {
+                        return false;
+                    }
+
+                    value = selected;
+                    break;
+
+                default:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool TryEvaluateLinearPipelineSelectorExpression(
+        GameEventScriptBytecodeSelectorLayout selector,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (selector.ExpressionEntryAddress < 0)
+        {
+            return false;
+        }
+
+        return selector.IdentifierSlot >= 0
+            ? TryEvaluateLinearHelperExpressionWithTemporarySlot(
+                selector.IdentifierSlot,
+                item,
+                selector.ExpressionEntryAddress,
+                out value)
+            : TryEvaluateLinearHelperExpression(selector.ExpressionEntryAddress, out value);
+    }
+
+    private bool TryEvaluateLinearPipelineSecondarySelectorExpression(
+        GameEventScriptBytecodeSelectorLayout selector,
+        BytecodeVmValue item,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (selector.SecondaryExpressionEntryAddress < 0)
+        {
+            return false;
+        }
+
+        var identifierSlot = selector.SecondaryIdentifierSlot >= 0
+            ? selector.SecondaryIdentifierSlot
+            : selector.IdentifierSlot;
+
+        return identifierSlot >= 0
+            ? TryEvaluateLinearHelperExpressionWithTemporarySlot(
+                identifierSlot,
+                item,
+                selector.SecondaryExpressionEntryAddress,
+                out value)
+            : TryEvaluateLinearHelperExpression(selector.SecondaryExpressionEntryAddress, out value);
+    }
+
     private bool TryEvaluateLinearGeneratedCollection(int layoutIndex, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
@@ -1170,7 +2812,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return supported;
         }
 
-        supported = CanExecuteLinearEntry(entryAddress, []);
+        supported = CanExecuteLinearEntry(entryAddress, [], allowPipeline: true);
         _compiledScript.SetLinearEntrySupport(entryAddress, supported);
         return supported;
     }
@@ -1537,6 +3179,54 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if ((uint)index < (uint)_compiledScript.BytecodeModule.SeededRandomBlockLayouts.Count)
         {
             layout = _compiledScript.BytecodeModule.SeededRandomBlockLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetSelectorLayout(int index, out GameEventScriptBytecodeSelectorLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.SelectorLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.SelectorLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetDicePatternLayout(int index, out GameEventScriptBytecodeDicePatternLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.DicePatternLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.DicePatternLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetObjectMatchPatternLayout(int index, out GameEventScriptBytecodeObjectMatchPatternLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.ObjectMatchPatternLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.ObjectMatchPatternLayouts[index];
+            return true;
+        }
+
+        layout = default!;
+        return false;
+    }
+
+    private bool TryGetPipelineLayout(int index, out GameEventScriptBytecodePipelineLayout layout)
+    {
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.PipelineLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.PipelineLayouts[index];
             return true;
         }
 
@@ -2105,341 +3795,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                ref readonly var linearInstruction = ref instructions[pc];
-                var instruction = linearInstruction.Instruction;
-                var metadata = linearInstruction.Metadata;
-                switch (instruction.OpCode)
+                if (!TryExecuteCompatibilityLinearExpressionInstruction(
+                        in instructions[pc],
+                        slots,
+                        operandBuffer,
+                        stackBase,
+                        ref pc,
+                        instructions.Length))
                 {
-                    case GameEventScriptBytecodeOpCode.LoadConstant:
-                        WriteExpressionSlot(slots, instruction.Dest, LoadConstant(instruction.Data));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.LoadSlot:
-                        WriteExpressionSlot(slots, instruction.Dest, ResolveSlot(instruction.A));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.CopySlot:
-                        WriteExpressionSlot(slots, instruction.Dest, ReadExpressionSlot(slots, instruction.A));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Jump:
-                        if (!TryMoveExpressionPc(instruction.Target, instructions.Length, ref pc))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        continue;
-
-                    case GameEventScriptBytecodeOpCode.JumpIfTrue:
-                        if (ReadExpressionSlot(slots, instruction.A).IsTrue())
-                        {
-                            if (!TryMoveExpressionPc(instruction.Target, instructions.Length, ref pc))
-                            {
-                                value = BytecodeVmValue.Nothing;
-                                return false;
-                            }
-
-                            continue;
-                        }
-
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.JumpIfFalse:
-                        if (ReadExpressionSlot(slots, instruction.A).IsFalse())
-                        {
-                            if (!TryMoveExpressionPc(instruction.Target, instructions.Length, ref pc))
-                            {
-                                value = BytecodeVmValue.Nothing;
-                                return false;
-                            }
-
-                            continue;
-                        }
-
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                        if (!ReadExpressionSlot(slots, instruction.A).IsTrue())
-                        {
-                            if (!TryMoveExpressionPc(instruction.Target, instructions.Length, ref pc))
-                            {
-                                value = BytecodeVmValue.Nothing;
-                                return false;
-                            }
-
-                            continue;
-                        }
-
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Or:
-                    case GameEventScriptBytecodeOpCode.Xor:
-                    case GameEventScriptBytecodeOpCode.And:
-                    case GameEventScriptBytecodeOpCode.Power:
-                    case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
-                    case GameEventScriptBytecodeOpCode.Equal:
-                    case GameEventScriptBytecodeOpCode.NotEqual:
-                    case GameEventScriptBytecodeOpCode.ApproxEqual:
-                    case GameEventScriptBytecodeOpCode.Less:
-                    case GameEventScriptBytecodeOpCode.Greater:
-                    case GameEventScriptBytecodeOpCode.LessOrEqual:
-                    case GameEventScriptBytecodeOpCode.GreaterOrEqual:
-                    case GameEventScriptBytecodeOpCode.Add:
-                    case GameEventScriptBytecodeOpCode.Subtract:
-                    case GameEventScriptBytecodeOpCode.Multiply:
-                    case GameEventScriptBytecodeOpCode.Divide:
-                    case GameEventScriptBytecodeOpCode.IntegerDivide:
-                    case GameEventScriptBytecodeOpCode.Modulo:
-                    case GameEventScriptBytecodeOpCode.Remainder:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
-                    case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
-                    case GameEventScriptBytecodeOpCode.Default:
-                    case GameEventScriptBytecodeOpCode.Contains:
-                    case GameEventScriptBytecodeOpCode.ContainsValue:
-                    case GameEventScriptBytecodeOpCode.StartsWith:
-                    case GameEventScriptBytecodeOpCode.EndsWith:
-                    case GameEventScriptBytecodeOpCode.Intersect:
-                    case GameEventScriptBytecodeOpCode.Combine:
-                    case GameEventScriptBytecodeOpCode.Except:
-                    case GameEventScriptBytecodeOpCode.Zip:
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            EvaluateProgramBinary(
-                                instruction.OpCode,
-                                ReadExpressionSlot(slots, instruction.A),
-                                ReadExpressionSlot(slots, instruction.B)));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Unary:
-                        if (!TryEvaluateUnaryOperation(metadata.DiagnosticName, ReadExpressionSlot(slots, instruction.A), out var unaryValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, unaryValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Variadic:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        if (!TryEvaluateVariadicOperation(metadata.DiagnosticName, operandBuffer, 0, metadata.A, out var variadicValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, variadicValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Clamp:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, EvaluateClamp(operandBuffer[0], operandBuffer[1], operandBuffer[2]));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Random:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, EvaluateRandomExpression(operandBuffer[0], operandBuffer[1]));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Range:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            EvaluateRangeExpression(
-                                operandBuffer[0],
-                                operandBuffer[1],
-                                metadata.A == 3 ? operandBuffer[2] : BytecodeVmValue.Integer(1)));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Dice:
-                        WriteExpressionSlot(slots, instruction.Dest, EvaluateDiceExpression(metadata.A, metadata.B));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.SeededRandom:
-                        if (metadata.ExpressionProgram is null)
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        if (!TryEvaluateSeededRandomExpression(operandBuffer[0], metadata.ExpressionProgram, stackBase, out var seededValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, seededValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Cast:
-                        WriteExpressionSlot(slots, instruction.Dest, EvaluateProgramCast(metadata.CastKind, ReadExpressionSlot(slots, instruction.A)));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.TypeConstructor:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            EvaluateTypeConstructor(metadata.DiagnosticName, metadata.Names, operandBuffer, 0, metadata.A));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.TypeCheck:
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            BytecodeVmValue.Boolean(IsValueOfType(ReadExpressionSlot(slots, instruction.A), metadata.DiagnosticName)));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.PredicateTest:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        if (!TryEvaluatePredicateTest(metadata, operandBuffer[0], stackBase, out var predicateValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, predicateValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Call:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        if (!TryEvaluateCallable(metadata, operandBuffer, 0, metadata.A, out var callValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, callValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.MemberAccess:
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            EvaluateMemberAccess(ReadExpressionSlot(slots, instruction.A), metadata.DiagnosticName));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.IndexedAccess:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, EvaluateIndexedAccess(operandBuffer[0], operandBuffer[1]));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.BuildList:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, BuildListValue(operandBuffer, 0, metadata.A));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.BuildSequence:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, BuildSequenceValue(operandBuffer, 0, metadata.A));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.BuildSet:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, BuildSetValue(operandBuffer, 0, metadata.A));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.BuildDictionary:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(slots, instruction.Dest, BuildDictionaryValue(operandBuffer, 0, metadata.A, metadata.Names));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.BuildMessage:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            BuildMessageValue(
-                                operandBuffer,
-                                0,
-                                metadata.A,
-                                metadata.Names,
-                                metadata.DiagnosticName,
-                                metadata.DiagnosticArgumentName));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.BindHandler:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        WriteExpressionSlot(
-                            slots,
-                            instruction.Dest,
-                            BindHandlerValue(operandBuffer[0], operandBuffer, 1, metadata.A, metadata.Names));
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.CallExtension:
-                        CopyExpressionOperands(linearInstruction, slots, operandBuffer);
-                        if (!TryCallExtension(
-                                metadata.DiagnosticName,
-                                metadata.DiagnosticArgumentName,
-                                metadata.Names,
-                                metadata.B,
-                                operandBuffer,
-                                0,
-                                metadata.A,
-                                metadata.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
-                                out var extensionValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, extensionValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.Pipeline:
-                        if (metadata.PipelineProgram is null ||
-                            !TryExecutePipelineProgram(metadata.PipelineProgram, out var pipelineValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, pipelineValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                        if (metadata.GeneratedCollectionProgram is null ||
-                            !TryExecuteGeneratedCollectionProgram(metadata.GeneratedCollectionProgram, out var generatedValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, generatedValue);
-                        break;
-
-                    case GameEventScriptBytecodeOpCode.GuardedChoice:
-                        if (metadata.GuardedChoiceProgram is null ||
-                            !TryExecuteGuardedChoiceProgram(metadata.GuardedChoiceProgram, out var guardedValue))
-                        {
-                            value = BytecodeVmValue.Nothing;
-                            return false;
-                        }
-
-                        WriteExpressionSlot(slots, instruction.Dest, guardedValue);
-                        break;
-
-                    default:
-                        value = BytecodeVmValue.Nothing;
-                        return false;
+                    value = BytecodeVmValue.Nothing;
+                    return false;
                 }
-
-                pc++;
             }
 
             value = linear.ReturnSlot >= 0
@@ -2456,6 +3822,344 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 Array.Clear(operandBuffer, 0, linear.MaxOperandCount);
                 ArrayPool<BytecodeVmValue>.Shared.Return(operandBuffer);
             }
+        }
+    }
+
+    private bool TryExecuteCompatibilityLinearExpressionInstruction(
+        in GesLinearExpressionInstruction linearInstruction,
+        BytecodeVmValue[] slots,
+        BytecodeVmValue[] operandBuffer,
+        int stackBase,
+        ref int pc,
+        int instructionCount)
+    {
+        var instruction = linearInstruction.Instruction;
+        var metadata = linearInstruction.Metadata;
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.LoadConstant:
+                WriteExpressionSlot(slots, instruction.Dest, LoadConstant(instruction.Data));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadSlot:
+                WriteExpressionSlot(slots, instruction.Dest, ResolveSlot(instruction.A));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CopySlot:
+                WriteExpressionSlot(slots, instruction.Dest, ReadExpressionSlot(slots, instruction.A));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Jump:
+                return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
+
+            case GameEventScriptBytecodeOpCode.JumpIfTrue:
+                if (ReadExpressionSlot(slots, instruction.A).IsTrue())
+                {
+                    return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.JumpIfFalse:
+                if (ReadExpressionSlot(slots, instruction.A).IsFalse())
+                {
+                    return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
+                if (!ReadExpressionSlot(slots, instruction.A).IsTrue())
+                {
+                    return TryMoveExpressionPc(instruction.Target, instructionCount, ref pc);
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Or:
+            case GameEventScriptBytecodeOpCode.Xor:
+            case GameEventScriptBytecodeOpCode.And:
+            case GameEventScriptBytecodeOpCode.Power:
+            case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+            case GameEventScriptBytecodeOpCode.Equal:
+            case GameEventScriptBytecodeOpCode.NotEqual:
+            case GameEventScriptBytecodeOpCode.ApproxEqual:
+            case GameEventScriptBytecodeOpCode.Less:
+            case GameEventScriptBytecodeOpCode.Greater:
+            case GameEventScriptBytecodeOpCode.LessOrEqual:
+            case GameEventScriptBytecodeOpCode.GreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.Add:
+            case GameEventScriptBytecodeOpCode.Subtract:
+            case GameEventScriptBytecodeOpCode.Multiply:
+            case GameEventScriptBytecodeOpCode.Divide:
+            case GameEventScriptBytecodeOpCode.IntegerDivide:
+            case GameEventScriptBytecodeOpCode.Modulo:
+            case GameEventScriptBytecodeOpCode.Remainder:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+            case GameEventScriptBytecodeOpCode.Default:
+            case GameEventScriptBytecodeOpCode.Contains:
+            case GameEventScriptBytecodeOpCode.ContainsValue:
+            case GameEventScriptBytecodeOpCode.StartsWith:
+            case GameEventScriptBytecodeOpCode.EndsWith:
+            case GameEventScriptBytecodeOpCode.Intersect:
+            case GameEventScriptBytecodeOpCode.Combine:
+            case GameEventScriptBytecodeOpCode.Except:
+            case GameEventScriptBytecodeOpCode.Zip:
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    EvaluateProgramBinary(
+                        instruction.OpCode,
+                        ReadExpressionSlot(slots, instruction.A),
+                        ReadExpressionSlot(slots, instruction.B)));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Unary:
+                if (!TryEvaluateUnaryOperation(metadata.DiagnosticName, ReadExpressionSlot(slots, instruction.A), out var unaryValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, unaryValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Variadic:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                if (!TryEvaluateVariadicOperation(metadata.DiagnosticName, operandBuffer, 0, metadata.A, out var variadicValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, variadicValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Clamp:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, EvaluateClamp(operandBuffer[0], operandBuffer[1], operandBuffer[2]));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Random:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, EvaluateRandomExpression(operandBuffer[0], operandBuffer[1]));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Range:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    EvaluateRangeExpression(
+                        operandBuffer[0],
+                        operandBuffer[1],
+                        metadata.A == 3 ? operandBuffer[2] : BytecodeVmValue.Integer(1)));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Dice:
+                WriteExpressionSlot(slots, instruction.Dest, EvaluateDiceExpression(metadata.A, metadata.B));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.SeededRandom:
+                if (metadata.ExpressionProgram is null)
+                {
+                    return false;
+                }
+
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                if (!TryEvaluateSeededRandomExpression(operandBuffer[0], metadata.ExpressionProgram, stackBase, out var seededValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, seededValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Cast:
+                WriteExpressionSlot(slots, instruction.Dest, EvaluateProgramCast(metadata.CastKind, ReadExpressionSlot(slots, instruction.A)));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.TypeConstructor:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    EvaluateTypeConstructor(metadata.DiagnosticName, metadata.Names, operandBuffer, 0, metadata.A));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.TypeCheck:
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    BytecodeVmValue.Boolean(IsValueOfType(ReadExpressionSlot(slots, instruction.A), metadata.DiagnosticName)));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.PredicateTest:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                if (!TryEvaluatePredicateTest(metadata, operandBuffer[0], stackBase, out var predicateValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, predicateValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Call:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                if (!TryEvaluateCallable(metadata, operandBuffer, 0, metadata.A, out var callValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, callValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.MemberAccess:
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    EvaluateMemberAccess(ReadExpressionSlot(slots, instruction.A), metadata.DiagnosticName));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.IndexedAccess:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, EvaluateIndexedAccess(operandBuffer[0], operandBuffer[1]));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.BuildList:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, BuildListValue(operandBuffer, 0, metadata.A));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.BuildSequence:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, BuildSequenceValue(operandBuffer, 0, metadata.A));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.BuildSet:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, BuildSetValue(operandBuffer, 0, metadata.A));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.BuildDictionary:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(slots, instruction.Dest, BuildDictionaryValue(operandBuffer, 0, metadata.A, metadata.Names));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.BuildMessage:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    BuildMessageValue(
+                        operandBuffer,
+                        0,
+                        metadata.A,
+                        metadata.Names,
+                        metadata.DiagnosticName,
+                        metadata.DiagnosticArgumentName));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.BindHandler:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                WriteExpressionSlot(
+                    slots,
+                    instruction.Dest,
+                    BindHandlerValue(operandBuffer[0], operandBuffer, 1, metadata.A, metadata.Names));
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CallExtension:
+                CopyExpressionOperands(linearInstruction, slots, operandBuffer);
+                if (!TryCallExtension(
+                        metadata.DiagnosticName,
+                        metadata.DiagnosticArgumentName,
+                        metadata.Names,
+                        metadata.B,
+                        operandBuffer,
+                        0,
+                        metadata.A,
+                        metadata.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
+                        out var extensionValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, extensionValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.Pipeline:
+                if (metadata.PipelineProgram is null ||
+                    !TryExecutePipelineProgram(metadata.PipelineProgram, out var pipelineValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, pipelineValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.GeneratedCollection:
+                if (metadata.GeneratedCollectionProgram is null ||
+                    !TryExecuteGeneratedCollectionProgram(metadata.GeneratedCollectionProgram, out var generatedValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, generatedValue);
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.GuardedChoice:
+                if (metadata.GuardedChoiceProgram is null ||
+                    !TryExecuteGuardedChoiceProgram(metadata.GuardedChoiceProgram, out var guardedValue))
+                {
+                    return false;
+                }
+
+                WriteExpressionSlot(slots, instruction.Dest, guardedValue);
+                pc++;
+                return true;
+
+            default:
+                return false;
         }
     }
 
@@ -5069,7 +6773,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = GameEventScriptNothingValue.Instance;
         if (entryAddress < 0 ||
             _diagnosticsEnabled ||
-            !CanExecuteLinearEntry(entryAddress, []))
+            !CanExecuteLinearEntry(entryAddress, [], allowPipeline: true))
         {
             return false;
         }
@@ -7132,24 +8836,32 @@ internal sealed partial class GesBytecodeVmExecutionSession
         GameEventScriptValue target,
         IReadOnlyList<GameEventScriptValue> items,
         GameEventScriptBytecodeSelectorProgram selector)
+        => EvaluateSequenceSliceSelector(target, items, selector.EdgeMode, selector.SecondaryMode, selector.Count);
+
+    private static GameEventScriptValue EvaluateSequenceSliceSelector(
+        GameEventScriptValue target,
+        IReadOnlyList<GameEventScriptValue> items,
+        string? operation,
+        string? scope,
+        int count)
     {
-        if (selector.Count <= 0)
+        if (count <= 0)
         {
             return target.Kind == GameEventScriptValueKind.Dice
                 ? GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Empty)
                 : GameEventScriptValueFactory.GesList(Array.Empty<GameEventScriptValue>());
         }
 
-        var selectedItems = selector.SecondaryMode switch
+        var selectedItems = scope switch
         {
-            "first" => TakeFirst(items, selector.Count),
-            "last" => TakeLast(items, selector.Count),
-            "highest" => TakeHighest(items, selector.Count),
-            "lowest" => TakeLowest(items, selector.Count),
+            "first" => TakeFirst(items, count),
+            "last" => TakeLast(items, count),
+            "highest" => TakeHighest(items, count),
+            "lowest" => TakeLowest(items, count),
             _ => Array.Empty<GameEventScriptValue>()
         };
 
-        if (string.Equals(selector.EdgeMode, "drop", StringComparison.Ordinal))
+        if (string.Equals(operation, "drop", StringComparison.Ordinal))
         {
             selectedItems = DropSelection(items, selectedItems);
         }
@@ -7170,6 +8882,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesSet(items),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
+            _ => GameEventScriptNothingValue.Instance
+        };
+    }
+
+    private static GameEventScriptValue MaterializeOrderedItems(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)
+    {
+        return target.Kind switch
+        {
+            GameEventScriptValueKind.Dice or
+            GameEventScriptValueKind.List or
+            GameEventScriptValueKind.Set or
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
             _ => GameEventScriptNothingValue.Instance
         };

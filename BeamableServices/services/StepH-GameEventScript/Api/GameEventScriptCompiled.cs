@@ -20,7 +20,6 @@ public sealed class GameEventScriptCompiled
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
         IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
-        int maxStackDepth,
         IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
         int maxFrameSlots = 0,
         IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
@@ -28,6 +27,8 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout>? iterationSourceLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeLoopLayout>? loopLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout>? seededRandomBlockLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeDicePatternLayout>? dicePatternLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodeObjectMatchPatternLayout>? objectMatchPatternLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeSelectorLayout>? selectorLayouts = null,
         IReadOnlyList<GameEventScriptBytecodePipelineLayout>? pipelineLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout>? generatedCollectionLayouts = null,
@@ -44,7 +45,6 @@ public sealed class GameEventScriptCompiled
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
-        MaxStackDepth = Math.Max(1, maxStackDepth);
         Code = code ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
         OperationLayouts = operationLayouts ?? [];
@@ -52,6 +52,8 @@ public sealed class GameEventScriptCompiled
         IterationSourceLayouts = iterationSourceLayouts ?? [];
         LoopLayouts = loopLayouts ?? [];
         SeededRandomBlockLayouts = seededRandomBlockLayouts ?? [];
+        DicePatternLayouts = dicePatternLayouts ?? [];
+        ObjectMatchPatternLayouts = objectMatchPatternLayouts ?? [];
         SelectorLayouts = selectorLayouts ?? [];
         PipelineLayouts = pipelineLayouts ?? [];
         GeneratedCollectionLayouts = generatedCollectionLayouts ?? [];
@@ -94,6 +96,10 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts { get; }
 
+    public IReadOnlyList<GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts { get; }
+
+    public IReadOnlyList<GameEventScriptBytecodeObjectMatchPatternLayout> ObjectMatchPatternLayouts { get; }
+
     public IReadOnlyList<GameEventScriptBytecodeSelectorLayout> SelectorLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePipelineLayout> PipelineLayouts { get; }
@@ -101,6 +107,4 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get; }
-
-    internal int MaxStackDepth { get; }
 }

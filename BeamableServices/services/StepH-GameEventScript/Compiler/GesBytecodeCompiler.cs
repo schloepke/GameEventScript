@@ -54,9 +54,6 @@ internal static class GesBytecodeCompiler
 
             var handlers = BuildHandlers();
             CollectBytecodeMetadata(callables, handlers, typeDefinitions);
-            var maxStackDepth = Math.Max(
-                GetMaxStackDepth(handlers),
-                Math.Max(GetMaxStackDepth(callables), GetMaxStackDepth(typeDefinitions)));
             var linearBuilder = new GesLinearBytecodeBuilder(AddTypeMetadata, AddNamedArgumentLayout);
             linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group));
             linearBuilder.AddCallables(callables.Values);
@@ -74,7 +71,6 @@ internal static class GesBytecodeCompiler
                 callables,
                 handlers,
                 typeDefinitions,
-                maxStackDepth,
                 linearBuilder.Code.ToArray(),
                 linearBuilder.MaxFrameSlots,
                 linearBuilder.OperationLayouts.ToArray(),
@@ -82,6 +78,8 @@ internal static class GesBytecodeCompiler
                 linearBuilder.IterationSourceLayouts.ToArray(),
                 linearBuilder.LoopLayouts.ToArray(),
                 linearBuilder.SeededRandomBlockLayouts.ToArray(),
+                linearBuilder.DicePatternLayouts.ToArray(),
+                linearBuilder.ObjectMatchPatternLayouts.ToArray(),
                 linearBuilder.SelectorLayouts.ToArray(),
                 linearBuilder.PipelineLayouts.ToArray(),
                 linearBuilder.GeneratedCollectionLayouts.ToArray(),
@@ -246,26 +244,6 @@ internal static class GesBytecodeCompiler
 
             return index;
         }
-
-        private static int GetMaxStackDepth(IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers)
-            => handlers.Count == 0
-                ? 1
-                : handlers.Values.SelectMany(group => group).Select(handler => handler.ExecutionPlan.MaxStackDepth).DefaultIfEmpty(1).Max();
-
-        private static int GetMaxStackDepth(IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables)
-            => callables.Count == 0
-                ? 1
-                : callables.Values.Select(callable => callable.ExpressionProgram.MaxStackDepth).DefaultIfEmpty(1).Max();
-
-        private static int GetMaxStackDepth(IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions)
-            => typeDefinitions.Count == 0
-                ? 1
-                : typeDefinitions.Values.SelectMany(type => type.Fields).SelectMany(field => new[]
-                {
-                    field.MinimumProgram,
-                    field.MaximumProgram,
-                    field.ComputedProgram
-                }).Where(program => program is not null).Select(program => program!.MaxStackDepth).DefaultIfEmpty(1).Max();
 
         private void CollectSourceMetadata()
         {

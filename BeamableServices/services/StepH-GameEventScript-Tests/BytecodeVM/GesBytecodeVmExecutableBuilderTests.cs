@@ -2302,7 +2302,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmKeepsPipelinesOnCompatibilityHotPathUntilLinearSelectorHotPathIsOptimized()
+    public void BytecodeVmExecutesPipelineSelectorExpressionsFromLinearHandlerEntryAddress()
     {
         const string script =
             """
@@ -2349,8 +2349,55 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         host.PublishToCompletion(Create("Start"));
 
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[0].Arguments["first"]);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["first"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[0].Arguments["replacement"]);
+    }
+
+    [TestMethod]
+    public void BytecodeVmExecutesPipelineHandlersOnlyFromLinearEntryAddress()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start {
+              let values be [1, 2, 3][:select item => item + 1]
+              emit Done(first: values[1])
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
+
+        var handler = compiled.Handlers["Start"].Single();
+        var handlerEnd = Array.FindIndex(
+            compiled.Code.ToArray(),
+            handler.EntryAddress,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return);
+        Assert.IsGreaterThanOrEqualTo(0, handlerEnd);
+        Assert.IsTrue(compiled.Code
+            .Skip(handler.EntryAddress)
+            .Take(handlerEnd - handler.EntryAddress)
+            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue));
+
+        var code = compiled.Code
+            .Select((instruction, index) => index >= handler.EntryAddress &&
+                                           index < handlerEnd &&
+                                           instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue
+                ? instruction with { OpCode = GameEventScriptBytecodeOpCode.Nop }
+                : instruction)
+            .ToArray();
+        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(rewritten);
+
+        host.PublishToCompletion(Create("Start"));
+
+        Assert.IsEmpty(published);
     }
 
     [TestMethod]

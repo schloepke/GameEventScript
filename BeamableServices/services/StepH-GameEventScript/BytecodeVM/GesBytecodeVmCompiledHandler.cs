@@ -23,7 +23,6 @@ internal sealed class GesBytecodeVmCompiledHandler
         LocalSlotCount = handler.LocalSlotCount;
         Slots = handler.Slots.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         DiagnosticsEnabled = diagnosticsEnabled;
-        ExecutionPlan = handler.ExecutionPlan;
         Definition = handler.Definition;
     }
 
@@ -54,6 +53,4 @@ internal sealed class GesBytecodeVmCompiledHandler
     public GameEventScriptMessageSignature Definition { get; }
 
     internal bool DiagnosticsEnabled { get; }
-
-    internal GameEventScriptBytecodeExecutionPlan ExecutionPlan { get; }
 }

@@ -16,7 +16,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
-        var session = new GesBytecodeVmExecutionSession(compiledScript, context, handler.ExecutionPlan, handler.DiagnosticsEnabled);
+        var session = new GesBytecodeVmExecutionSession(compiledScript, context, handler.Slots, handler.LocalSlotCount, handler.DiagnosticsEnabled);
         return new Fiber(session, handler, args);
     }
 
@@ -621,49 +621,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 {
                     session.EnterScope();
                     _enteredScope = true;
-                    if (session.CanExecuteLinearFiberHandler(handler))
-                    {
-                        _stage = 1;
-                        fiber.Push(new LinearRangeFrame(
-                            handler.EntryAddress,
-                            session._compiledScript.LinearExecutable.Code.Count,
-                            LinearArgumentSource.ForHandler(handler, args)));
-                        return FrameSignal.Running;
-                    }
-
-                    var parameters = handler.Parameters;
-                    for (var parameterIndex = 0; parameterIndex < parameters.Count; parameterIndex++)
-                    {
-                        var parameter = parameters[parameterIndex];
-                        if (!TryGetArgumentValue(args, parameter, parameterIndex, out var value))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return FrameSignal.Completed;
-                        }
-
-                        var parameterValue = BytecodeVmValue.FromGameEventScriptValue(value);
-                        var hasParameterType = HasParameterType(handler.ParameterTypes, parameterIndex);
-                        if (!session.TryConvertParameterType(handler.ParameterTypes, parameterIndex, parameterValue, out parameterValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return FrameSignal.Completed;
-                        }
-
-                        if (session._diagnosticsEnabled)
-                        {
-                            session.RecordParameterBound(parameter, hasParameterType ? parameterValue.ToGameEventScriptValue() : value);
-                        }
-
-                        if (!session.Define(parameter, parameterValue))
-                        {
-                            fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                            return FrameSignal.Completed;
-                        }
-                    }
-
-                    session.RecordHandlerInvoked(handler.Message, args);
                     _stage = 1;
-                    fiber.Push(new StatementProgramFrame(handler.ExecutionPlan.StatementProgram));
+                    fiber.Push(new LinearRangeFrame(
+                        handler.EntryAddress,
+                        session._compiledScript.LinearExecutable.Code.Count,
+                        LinearArgumentSource.ForHandler(handler, args)));
                     return FrameSignal.Running;
                 }
 

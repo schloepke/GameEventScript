@@ -5,6 +5,16 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.BytecodeVM;
 
+internal enum GesBytecodeVmLinearProjectionFastKind
+{
+    None,
+    Operand,
+    PredicateTest,
+    Binary,
+    BinaryThenBinary,
+    BinaryThenBinaryThenBinary
+}
+
 internal sealed class GesBytecodeVmLinearExecutable
 {
     private GesBytecodeVmLinearExecutable(
@@ -13,6 +23,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         GesBytecodeVmLinearHandlerEntry[] handlers,
         GesBytecodeVmLinearCallableEntry[] callables,
         GesBytecodeVmLinearTypeFieldEntry[] typeFields,
+        GesBytecodeVmLinearProjectionFastKind[] projectionFastKinds,
         IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsBefore,
         IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsAfter)
     {
@@ -21,6 +32,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         Handlers = handlers;
         Callables = callables;
         TypeFields = typeFields;
+        ProjectionFastKinds = projectionFastKinds;
         DiagnosticsBefore = diagnosticsBefore;
         DiagnosticsAfter = diagnosticsAfter;
     }
@@ -34,6 +46,8 @@ internal sealed class GesBytecodeVmLinearExecutable
     public IReadOnlyList<GesBytecodeVmLinearCallableEntry> Callables { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearTypeFieldEntry> TypeFields { get; }
+
+    internal IReadOnlyList<GesBytecodeVmLinearProjectionFastKind> ProjectionFastKinds { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] DiagnosticsBefore { get; }
 
@@ -98,8 +112,150 @@ internal sealed class GesBytecodeVmLinearExecutable
         var diagnosticsBefore = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.BeforeInstruction);
         var diagnosticsAfter = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.AfterInstruction);
 
-        return new GesBytecodeVmLinearExecutable(code, module.MaxFrameSlots, handlers, callables, typeFields, diagnosticsBefore, diagnosticsAfter);
+        var projectionFastKinds = BuildProjectionFastKinds(code);
+
+        return new GesBytecodeVmLinearExecutable(
+            code,
+            module.MaxFrameSlots,
+            handlers,
+            callables,
+            typeFields,
+            projectionFastKinds,
+            diagnosticsBefore,
+            diagnosticsAfter);
     }
+
+    private static GesBytecodeVmLinearProjectionFastKind[] BuildProjectionFastKinds(IReadOnlyList<GameEventScriptBytecodeInstruction> code)
+    {
+        var kinds = new GesBytecodeVmLinearProjectionFastKind[code.Count];
+        for (var entryAddress = 0; entryAddress < code.Count; entryAddress++)
+        {
+            kinds[entryAddress] = IdentifyProjectionFastKind(code, entryAddress);
+        }
+
+        return kinds;
+    }
+
+    private static GesBytecodeVmLinearProjectionFastKind IdentifyProjectionFastKind(
+        IReadOnlyList<GameEventScriptBytecodeInstruction> code,
+        int entryAddress)
+    {
+        if (TryMatchLinearReturn(code, entryAddress, offset: 1, out var returnInstruction) &&
+            returnInstruction.A == code[entryAddress].Dest &&
+            IsLinearProjectionOperandInstruction(code[entryAddress]))
+        {
+            return GesBytecodeVmLinearProjectionFastKind.Operand;
+        }
+
+        if (TryMatchLinearReturn(code, entryAddress, offset: 2, out returnInstruction) &&
+            code[entryAddress + 1].OpCode == GameEventScriptBytecodeOpCode.PredicateTest &&
+            code[entryAddress + 1].A == code[entryAddress].Dest &&
+            returnInstruction.A == code[entryAddress + 1].Dest &&
+            IsLinearProjectionOperandInstruction(code[entryAddress]))
+        {
+            return GesBytecodeVmLinearProjectionFastKind.PredicateTest;
+        }
+
+        if (TryMatchLinearReturn(code, entryAddress, offset: 3, out returnInstruction) &&
+            IsProjectionBinaryOp(code[entryAddress + 2].OpCode) &&
+            returnInstruction.A == code[entryAddress + 2].Dest &&
+            code[entryAddress + 2].A == code[entryAddress].Dest &&
+            code[entryAddress + 2].B == code[entryAddress + 1].Dest &&
+            IsLinearProjectionOperandInstruction(code[entryAddress]) &&
+            IsLinearProjectionOperandInstruction(code[entryAddress + 1]))
+        {
+            return GesBytecodeVmLinearProjectionFastKind.Binary;
+        }
+
+        if (TryMatchLinearReturn(code, entryAddress, offset: 5, out returnInstruction) &&
+            IsProjectionBinaryOp(code[entryAddress + 2].OpCode) &&
+            IsProjectionBinaryOp(code[entryAddress + 4].OpCode) &&
+            returnInstruction.A == code[entryAddress + 4].Dest &&
+            code[entryAddress + 2].A == code[entryAddress].Dest &&
+            code[entryAddress + 2].B == code[entryAddress + 1].Dest &&
+            code[entryAddress + 4].A == code[entryAddress + 2].Dest &&
+            code[entryAddress + 4].B == code[entryAddress + 3].Dest &&
+            IsLinearProjectionOperandInstruction(code[entryAddress]) &&
+            IsLinearProjectionOperandInstruction(code[entryAddress + 1]) &&
+            IsLinearProjectionOperandInstruction(code[entryAddress + 3]))
+        {
+            return GesBytecodeVmLinearProjectionFastKind.BinaryThenBinary;
+        }
+
+        if (TryMatchLinearReturn(code, entryAddress, offset: 7, out returnInstruction) &&
+            IsProjectionBinaryOp(code[entryAddress + 2].OpCode) &&
+            IsProjectionBinaryOp(code[entryAddress + 4].OpCode) &&
+            IsProjectionBinaryOp(code[entryAddress + 6].OpCode) &&
+            returnInstruction.A == code[entryAddress + 6].Dest &&
+            code[entryAddress + 2].A == code[entryAddress].Dest &&
+            code[entryAddress + 2].B == code[entryAddress + 1].Dest &&
+            code[entryAddress + 4].A == code[entryAddress + 2].Dest &&
+            code[entryAddress + 4].B == code[entryAddress + 3].Dest &&
+            code[entryAddress + 6].A == code[entryAddress + 4].Dest &&
+            code[entryAddress + 6].B == code[entryAddress + 5].Dest &&
+            IsLinearProjectionOperandInstruction(code[entryAddress]) &&
+            IsLinearProjectionOperandInstruction(code[entryAddress + 1]) &&
+            IsLinearProjectionOperandInstruction(code[entryAddress + 3]) &&
+            IsLinearProjectionOperandInstruction(code[entryAddress + 5]))
+        {
+            return GesBytecodeVmLinearProjectionFastKind.BinaryThenBinaryThenBinary;
+        }
+
+        return GesBytecodeVmLinearProjectionFastKind.None;
+    }
+
+    private static bool TryMatchLinearReturn(
+        IReadOnlyList<GameEventScriptBytecodeInstruction> code,
+        int entryAddress,
+        int offset,
+        out GameEventScriptBytecodeInstruction returnInstruction)
+    {
+        var returnAddress = entryAddress + offset;
+        if ((uint)returnAddress < (uint)code.Count &&
+            code[returnAddress].OpCode == GameEventScriptBytecodeOpCode.Return)
+        {
+            returnInstruction = code[returnAddress];
+            return true;
+        }
+
+        returnInstruction = default;
+        return false;
+    }
+
+    private static bool IsLinearProjectionOperandInstruction(GameEventScriptBytecodeInstruction instruction)
+        => instruction.OpCode is GameEventScriptBytecodeOpCode.LoadSlot or GameEventScriptBytecodeOpCode.LoadConstant;
+
+    private static bool IsProjectionBinaryOp(GameEventScriptBytecodeOpCode opCode)
+        => opCode is
+            GameEventScriptBytecodeOpCode.Default or
+            GameEventScriptBytecodeOpCode.Add or
+            GameEventScriptBytecodeOpCode.Subtract or
+            GameEventScriptBytecodeOpCode.Multiply or
+            GameEventScriptBytecodeOpCode.Divide or
+            GameEventScriptBytecodeOpCode.IntegerDivide or
+            GameEventScriptBytecodeOpCode.Modulo or
+            GameEventScriptBytecodeOpCode.Remainder or
+            GameEventScriptBytecodeOpCode.Power or
+            GameEventScriptBytecodeOpCode.Equal or
+            GameEventScriptBytecodeOpCode.NotEqual or
+            GameEventScriptBytecodeOpCode.ApproxEqual or
+            GameEventScriptBytecodeOpCode.Less or
+            GameEventScriptBytecodeOpCode.Greater or
+            GameEventScriptBytecodeOpCode.LessOrEqual or
+            GameEventScriptBytecodeOpCode.GreaterOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
+            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder;
 
     private static IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] BuildDiagnosticSites(
         GameEventScriptCompiled module,
@@ -421,8 +577,10 @@ internal sealed class GesBytecodeVmLinearExecutable
             var layout = module.PipelineLayouts[index];
             var context = $"pipeline layout #{index}";
             ValidateSlot(module, layout.SourceSlot, $"{context} source slot");
-            foreach (var selectorIndex in layout.PrefixSelectorLayoutIndexes)
+            var prefixSelectorLayoutIndexes = layout.PrefixSelectorLayoutIndexes;
+            for (var prefixIndex = 0; prefixIndex < prefixSelectorLayoutIndexes.Count; prefixIndex++)
             {
+                var selectorIndex = prefixSelectorLayoutIndexes[prefixIndex];
                 ValidateIndex(module.SelectorLayouts.Count, selectorIndex, $"{context} prefix selector layout");
             }
 

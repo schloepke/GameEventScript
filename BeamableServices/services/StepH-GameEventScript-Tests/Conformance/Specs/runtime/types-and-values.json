@@ -3036,6 +3036,52 @@
     },
     {
       "kind": "scriptApi",
+      "name": "type checks identify primitive custom and first class values",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let setValue be :set[1, 1, 2]\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :integer, intIsFloat: integerValue is :float, percentIsFloat: percentValue is :float, degreeIsFloat: degreeValue is :float, degreeIsDegree: degreeValue is :degree, meterIsMeter: meterValue is :meter, secondIsSecond: secondValue is :second, textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsDictionary: dictValue is :dictionary, setIsSet: setValue is :set, customIsGauge: custom is :gauge, customIsDictionary: custom is :dictionary, msgIsMessage: msg is :message, msgIsDictionary: msg is :dictionary, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "custom": {
+                "type": ":gauge",
+                "entries": {
+                  "current": { "type": ":integer", "value": "5" }
+                }
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "intIsInteger": { "type": ":boolean", "value": true },
+                "intIsFloat": { "type": ":boolean", "value": true },
+                "percentIsFloat": { "type": ":boolean", "value": true },
+                "degreeIsFloat": { "type": ":boolean", "value": true },
+                "degreeIsDegree": { "type": ":boolean", "value": true },
+                "meterIsMeter": { "type": ":boolean", "value": true },
+                "secondIsSecond": { "type": ":boolean", "value": true },
+                "textIsText": { "type": ":boolean", "value": true },
+                "tagIsTag": { "type": ":boolean", "value": true },
+                "boolIsBoolean": { "type": ":boolean", "value": true },
+                "listIsList": { "type": ":boolean", "value": true },
+                "dictIsDictionary": { "type": ":boolean", "value": true },
+                "setIsSet": { "type": ":boolean", "value": true },
+                "customIsGauge": { "type": ":boolean", "value": true },
+                "customIsDictionary": { "type": ":boolean", "value": true },
+                "msgIsMessage": { "type": ":boolean", "value": true },
+                "msgIsDictionary": { "type": ":boolean", "value": false },
+                "handlerIsHandler": { "type": ":boolean", "value": true },
+                "missingIsNothing": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "uuid values are canonical binary ids",
       "script": "record :unit as {\n  id: :uuid,\n  name: :text\n}\n\non Start {\n  let id be :uuid('550e8400-e29b-41d4-a716-446655440000')\n  let same be :uuid('550E8400-E29B-41D4-A716-446655440000')\n  let other be :uuid('00000000-0000-0000-0000-000000000001')\n  let invalid as :uuid be 'not-a-uuid'\n  let units be of :unit(id: id, name: 'Rook') and :unit(id: other, name: 'Mage')\n  let byId be units[:dictionary unit by unit.id]\n  let unitRef be :ref(:unit, id: id)\n  let sameRef be :ref(type: :unit, id: same)\n  emit Done(id: id, text: :text(id), isUuid: id is :uuid, equal: id = same, invalid: invalid, lookup: byId[id].name, refEqual: unitRef = sameRef, refId: unitRef.id, refText: :text(unitRef), addNothing: id + 1, multiplyNothing: id * 2, negNothing: -id, integerCast: id as :integer, booleanCast: id as :boolean)\n}",
       "steps": [

@@ -353,7 +353,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesCallablesFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesCallablesFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -408,7 +408,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPredicateTestsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesPredicateTestsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -461,7 +461,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -508,7 +508,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -564,7 +564,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesTypeConstructorStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesTypeConstructorStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -611,7 +611,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsTypeConstructorStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsTypeConstructorStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -667,7 +667,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesSimpleOperationLayoutStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesSimpleOperationLayoutStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -724,7 +724,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsSimpleOperationLayoutStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsSimpleOperationLayoutStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -790,7 +790,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesRangeStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesRangeStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -840,7 +840,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsRangeStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsRangeStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -899,7 +899,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesVariadicStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesVariadicStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -949,7 +949,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsVariadicStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsVariadicStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1008,7 +1008,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesBuilderStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesBuilderStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1075,7 +1075,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsBuilderStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsBuilderStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1151,7 +1151,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesBindHandlerStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesBindHandlerStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1205,7 +1205,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsBindHandlerStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsBindHandlerStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1268,7 +1268,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesExtensionCallStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesExtensionCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1316,7 +1316,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsExtensionCallStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsExtensionCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1373,7 +1373,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesFunctionCallStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesFunctionCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1423,7 +1423,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsFunctionCallStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsFunctionCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1482,7 +1482,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPredicateTestStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesPredicateTestStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1532,7 +1532,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsPredicateTestStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsPredicateTestStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1746,7 +1746,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesGuardedChoiceHelpersFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesGuardedChoiceHelpersFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1842,7 +1842,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesGuardedChoiceStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesGuardedChoiceStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1890,7 +1890,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsGuardedChoiceStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsGuardedChoiceStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1985,7 +1985,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesGeneratedCollectionHelpersFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesGeneratedCollectionHelpersFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2081,7 +2081,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesGeneratedCollectionStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesGeneratedCollectionStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2129,7 +2129,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsGeneratedCollectionStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsGeneratedCollectionStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2354,101 +2354,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPipelineHandlersOnlyFromLinearEntryAddress()
-    {
-        const string script =
-            """
-            module LinearExecutable
-
-            on Start {
-              let values be [1, 2, 3][:select item => item + 1]
-              emit Done(first: values[1])
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-
-        var handler = compiled.Handlers["Start"].Single();
-        var handlerEnd = Array.FindIndex(
-            compiled.Code.ToArray(),
-            handler.EntryAddress,
-            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return);
-        Assert.IsGreaterThanOrEqualTo(0, handlerEnd);
-        Assert.IsTrue(compiled.Code
-            .Skip(handler.EntryAddress)
-            .Take(handlerEnd - handler.EntryAddress)
-            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue));
-
-        var code = compiled.Code
-            .Select((instruction, index) => index >= handler.EntryAddress &&
-                                           index < handlerEnd &&
-                                           instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue
-                ? instruction with { OpCode = GameEventScriptBytecodeOpCode.Nop }
-                : instruction)
-            .ToArray();
-        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(rewritten);
-
-        host.PublishToCompletion(Create("Start"));
-
-        Assert.IsEmpty(published);
-    }
-
-    [TestMethod]
-    public void BytecodeVmStepsPipelineHandlersOnlyFromLinearEntryAddress()
-    {
-        const string script =
-            """
-            module LinearExecutable
-
-            on Start {
-              let values be [1, 2, 3][:select item => item + 1]
-              emit Done(first: values[1])
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-
-        var handler = compiled.Handlers["Start"].Single();
-        var handlerEnd = Array.FindIndex(
-            compiled.Code.ToArray(),
-            handler.EntryAddress,
-            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return);
-        Assert.IsGreaterThanOrEqualTo(0, handlerEnd);
-        Assert.IsTrue(compiled.Code
-            .Skip(handler.EntryAddress)
-            .Take(handlerEnd - handler.EntryAddress)
-            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue));
-
-        var code = compiled.Code
-            .Select((instruction, index) => index >= handler.EntryAddress &&
-                                           index < handlerEnd &&
-                                           instruction.OpCode is GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue
-                ? instruction with { OpCode = GameEventScriptBytecodeOpCode.Nop }
-                : instruction)
-            .ToArray();
-        var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(rewritten);
-
-        Assert.IsTrue(host.Publish(Create("Start")));
-        DrainHostWithSingleOpcodeBudget(host);
-
-        Assert.IsEmpty(published);
-    }
-
-    [TestMethod]
     public void BytecodeVmExecutesNonFastPipelineSelectorExpressionsFromLinearPublicCode()
     {
         const string script =
@@ -2502,7 +2407,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2549,7 +2454,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2597,7 +2502,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesNumericPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesNumericPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2643,7 +2548,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsNumericPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsNumericPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2690,7 +2595,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPredicatePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesPredicatePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2738,7 +2643,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsPredicatePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsPredicatePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2813,7 +2718,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesEdgePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesEdgePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2861,7 +2766,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsEdgePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsEdgePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2910,7 +2815,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesExtremaPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesExtremaPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -2956,7 +2861,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsExtremaPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsExtremaPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3003,7 +2908,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesContainsPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesContainsPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3053,7 +2958,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsContainsPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsContainsPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3104,7 +3009,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPrefixedContainsPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesPrefixedContainsPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3171,7 +3076,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsPrefixedContainsPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsPrefixedContainsPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3265,7 +3170,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesDictionaryPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesDictionaryPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3314,7 +3219,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsDictionaryPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsDictionaryPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3364,7 +3269,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesDistinctPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesDistinctPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3416,7 +3321,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsDistinctPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsDistinctPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3469,7 +3374,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesGroupByPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesGroupByPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3516,7 +3421,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsGroupByPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsGroupByPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3564,7 +3469,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesReversePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesReversePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3613,7 +3518,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsReversePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsReversePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3663,7 +3568,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesSortPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesSortPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3715,7 +3620,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsSortPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsSortPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3768,7 +3673,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesOrderByPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesOrderByPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3823,7 +3728,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsOrderByPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsOrderByPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3879,7 +3784,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesSequenceSlicePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesSequenceSlicePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3936,7 +3841,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsSequenceSlicePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsSequenceSlicePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -3994,7 +3899,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesShufflePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesShufflePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4043,7 +3948,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsShufflePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsShufflePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4093,7 +3998,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesSeriesPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesSeriesPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4155,7 +4060,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsSeriesPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsSeriesPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4218,7 +4123,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPatternPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesPatternPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4283,7 +4188,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsPatternPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsPatternPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4349,7 +4254,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesChoosePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesChoosePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4411,7 +4316,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsChoosePipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsChoosePipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4474,7 +4379,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesDrawPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesDrawPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4527,7 +4432,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsDrawPipelineStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsDrawPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4634,7 +4539,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesSeededRandomExpressionBodyFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesSeededRandomExpressionBodyFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4697,7 +4602,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesSeededRandomStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmExecutesSeededRandomStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -4745,7 +4650,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsSeededRandomStatementExpressionsFromLinearPublicCodeInCompatibilityStatements()
+    public void BytecodeVmStepsSeededRandomStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -5332,12 +5237,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     private static IReadOnlySet<Type> CollectPublicBytecodeBoundaryTypes(Type rootType)
     {
         var visited = new HashSet<Type>();
-        var stack = new Stack<Type>();
-        stack.Push(rootType);
+        var pending = new Stack<Type>();
+        pending.Push(rootType);
 
-        while (stack.Count > 0)
+        while (pending.Count > 0)
         {
-            var type = stack.Pop();
+            var type = pending.Pop();
             if (!visited.Add(type))
             {
                 continue;
@@ -5345,7 +5250,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             foreach (var nestedType in ExpandType(type))
             {
-                stack.Push(nestedType);
+                pending.Push(nestedType);
             }
 
             if (!IsGameEventScriptPublicModelType(type))
@@ -5355,19 +5260,19 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             foreach (var property in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
             {
-                stack.Push(property.PropertyType);
+                pending.Push(property.PropertyType);
             }
 
             foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
             {
-                stack.Push(field.FieldType);
+                pending.Push(field.FieldType);
             }
 
             foreach (var constructor in type.GetConstructors())
             {
                 foreach (var parameter in constructor.GetParameters())
                 {
-                    stack.Push(parameter.ParameterType);
+                    pending.Push(parameter.ParameterType);
                 }
             }
         }
@@ -5469,535 +5374,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             GameEventScriptBytecodeConstantKind.Handler => GameEventScriptBytecodeConstant.FromHandler(constant.Text ?? string.Empty, constant.Labels.ToArray()),
             _ => throw new ArgumentOutOfRangeException(nameof(constant), constant.Kind, "Unknown bytecode constant kind.")
         };
-
-    [TestMethod]
-    public void BytecodeVmRunsGeneratedCollectionsByDefault()
-    {
-        const string script =
-            """
-            module Collections
-
-            on Start {
-              let values be :list[:select item from 1 to 3 => item]
-              emit Done(count: :len values)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start"));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual("Done", published[0].Name);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[0].Arguments["count"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsIfElse()
-    {
-        const string script =
-            """
-            module Branches
-
-            on Start(first, second) {
-              if first {
-                let branch be 1
-                emit Branch(value: branch)
-              } else if second {
-                let branch be 2
-                emit Branch(value: branch)
-              } else {
-                let branch be 3
-                emit Branch(value: branch)
-              }
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(true)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
-        host.PublishToCompletion(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(true))));
-        host.PublishToCompletion(Create("Start", ("first", GameEventScriptValueFactory.GesBoolean(false)), ("second", GameEventScriptValueFactory.GesBoolean(false))));
-
-        Assert.HasCount(3, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(1), published[0].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[1].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(3), published[2].Arguments["value"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmIfBlockDoesNotLeakLocals()
-    {
-        const string script =
-            """
-            module Branches
-
-            on Start(flag) {
-              if flag {
-                let inner be 7
-              }
-
-              emit Done(inner: inner)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start", ("flag", GameEventScriptValueFactory.GesBoolean(true))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["inner"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsCollectionFor()
-    {
-        const string script =
-            """
-            module Loops
-
-            on Start(items) {
-              for item in items {
-                if item > 1 {
-                  emit Item(value: item * 2)
-                }
-              }
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create(
-            "Start",
-            ("items", GameEventScriptValueFactory.GesList(
-            [
-                GameEventScriptValueFactory.GesInteger(1),
-                GameEventScriptValueFactory.GesInteger(2),
-                GameEventScriptValueFactory.GesInteger(3)
-            ]))));
-
-        Assert.HasCount(2, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(4), published[0].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(6), published[1].Arguments["value"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmCollectionForBlockDoesNotLeakLocals()
-    {
-        const string script =
-            """
-            module Loops
-
-            on Start(items) {
-              for item in items {
-                let inner be item
-              }
-
-              emit Done(item: item, inner: inner)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create(
-            "Start",
-            ("items", GameEventScriptValueFactory.GesList(
-            [
-                GameEventScriptValueFactory.GesInteger(1)
-            ]))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["item"]);
-        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["inner"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsTypedLet()
-    {
-        const string script =
-            """
-            module TypedLets
-
-            on Start {
-              let numberOk as :float be '12.2'
-              let numberFail as :float be 'abc'
-              let integerOk as :integer be '12.7'
-              let percentageOk as :percentage be 5
-              let degreeOk as :degree be 450
-              let textOk as :text be 43.9°
-              let unitErased as :float be 43.9°
-              let listOk as :list be 'ab'
-              let optionalNone as :optional be missing
-              emit Done(numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, percentageOk: percentageOk, degreeOk: degreeOk, textOk: textOk, unitErased: unitErased, listOk: listOk, optionalNone: optionalNone)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start"));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(12.2d), published[0].Arguments["numberOk"]);
-        Assert.IsTrue(published[0].Arguments["numberFail"].IsNaN());
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["integerOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesPercentage(0.05d), published[0].Arguments["percentageOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(450d, GameEventScriptNumericUnit.Degree), published[0].Arguments["degreeOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("43.9°"), published[0].Arguments["textOk"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(43.9d), published[0].Arguments["unitErased"]);
-        Assert.HasCount(2, published[0].Arguments["listOk"].AsList());
-        Assert.IsFalse(published[0].Arguments["optionalNone"].AsOptional().HasValue);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsMemberAndIndexedAccess()
-    {
-        const string script =
-            """
-            module Access
-
-            on Start(player, key, items, index, units) {
-              emit Done(
-                hpByMember: player.hp,
-                hpByTagKey: player[:hp],
-                hpByVariableKey: player[key],
-                itemByIndex: items[index],
-                nestedName: units[2].name,
-                missingMember: player.missing,
-                missingIndex: items[99])
-            }
-            """;
-
-        var unitOne = GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
-        {
-            ["name"] = GameEventScriptValueFactory.GesText("Scout")
-        });
-        var unitTwo = GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
-        {
-            ["name"] = GameEventScriptValueFactory.GesText("Knight")
-        });
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create(
-            "Start",
-            ("player", GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>
-            {
-                ["hp"] = GameEventScriptValueFactory.GesInteger(12)
-            })),
-            ("key", GameEventScriptValueFactory.GesText("hp")),
-            ("items", GameEventScriptValueFactory.GesList(
-            [
-                GameEventScriptValueFactory.GesInteger(10),
-                GameEventScriptValueFactory.GesInteger(20),
-                GameEventScriptValueFactory.GesInteger(30)
-            ])),
-            ("index", GameEventScriptValueFactory.GesInteger(2)),
-            ("units", GameEventScriptValueFactory.GesList([unitOne, unitTwo]))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByMember"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByTagKey"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hpByVariableKey"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(20), published[0].Arguments["itemByIndex"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Knight"), published[0].Arguments["nestedName"]);
-        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["missingMember"]);
-        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["missingIndex"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsCollectionLiterals()
-    {
-        const string script =
-            """
-            module Literals
-
-            on Start(seed) {
-              let doubled be seed * 2
-              let list be [seed, doubled, [label: 'nested']]
-              let setValues be :set[seed, seed, 3]
-              let dict be [hp: seed + 5, name: 'Scout', nested: [values: [1, 2]], tags: setValues]
-              let emptyList be []
-              let emptySet be :set[]
-              let emptyDict be [:]
-
-              emit Done(
-                list: list,
-                listFirst: list[1],
-                listSecond: list[2],
-                nestedLabel: list[3].label,
-                setValues: setValues,
-                dict: dict,
-                hp: dict.hp,
-                nestedSecond: dict.nested.values[2],
-                tagValues: dict.tags,
-                emptyList: emptyList,
-                emptySet: emptySet,
-                emptyDict: emptyDict)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start", ("seed", GameEventScriptValueFactory.GesInteger(7))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["listFirst"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(14), published[0].Arguments["listSecond"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("nested"), published[0].Arguments["nestedLabel"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), published[0].Arguments["hp"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(2), published[0].Arguments["nestedSecond"]);
-
-        var list = published[0].Arguments["list"].AsList();
-        Assert.HasCount(3, list);
-
-        var set = published[0].Arguments["setValues"].AsSet();
-        Assert.HasCount(2, set);
-        CollectionAssert.Contains(set.ToList(), GameEventScriptValueFactory.GesInteger(3));
-        CollectionAssert.Contains(set.ToList(), GameEventScriptValueFactory.GesInteger(7));
-
-        var dictionary = published[0].Arguments["dict"].AsDictionary();
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Scout"), dictionary["name"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(12), dictionary["hp"]);
-
-        var tagValues = published[0].Arguments["tagValues"].AsSet();
-        Assert.HasCount(2, tagValues);
-        Assert.AreEqual(GameEventScriptValueFactory.GesList([]), published[0].Arguments["emptyList"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesSet([]), published[0].Arguments["emptySet"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>()), published[0].Arguments["emptyDict"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsTypeCheck()
-    {
-        const string script =
-            """
-            module TypeChecks
-
-            on Start(custom, msg, handler) {
-              let integerValue be 12
-              let percentValue be 5%
-              let degreeValue be 90°
-              let meterValue be 100m
-              let secondValue be 15s
-              let listValue be [1]
-              let dictValue be [name: 'Ada']
-              let setValue be :set[1, 1, 2]
-
-              emit Done(
-                intIsInteger: integerValue is :integer,
-                intIsFloat: integerValue is :float,
-                percentIsFloat: percentValue is :float,
-                degreeIsFloat: degreeValue is :float,
-                degreeIsDegree: degreeValue is :degree,
-                meterIsMeter: meterValue is :meter,
-                secondIsSecond: secondValue is :second,
-                textIsText: 'x' is :text,
-                tagIsTag: :ready is :tag,
-                boolIsBoolean: true is :boolean,
-                listIsList: listValue is :list,
-                dictIsDictionary: dictValue is :dictionary,
-                setIsSet: setValue is :set,
-                customIsGauge: custom is :gauge,
-                customIsDictionary: custom is :dictionary,
-                msgIsMessage: msg is :message,
-                msgIsDictionary: msg is :dictionary,
-                handlerIsHandler: handler is :handler,
-                missingIsNothing: missing is :nothing)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create(
-            "Start",
-            ("custom", GameEventScriptValueFactory.GesCustomType("gauge", new Dictionary<string, GameEventScriptValue>
-            {
-                ["current"] = GameEventScriptValueFactory.GesInteger(5)
-            })),
-            ("msg", GameEventScriptValueFactory.GesMessage(Create("Ping", ("value", GameEventScriptValueFactory.GesInteger(1))))),
-            ("handler", GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["value"])))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsInteger"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["intIsFloat"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["percentIsFloat"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsFloat"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["degreeIsDegree"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["meterIsMeter"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["secondIsSecond"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["textIsText"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["tagIsTag"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["boolIsBoolean"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["listIsList"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["dictIsDictionary"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["setIsSet"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["customIsGauge"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["customIsDictionary"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["msgIsMessage"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(false), published[0].Arguments["msgIsDictionary"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["handlerIsHandler"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["missingIsNothing"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsDirectMessageLiteralExpression()
-    {
-        const string script =
-            """
-            module MessageExpressions
-
-            on Start(value) {
-              let scaled be value * 2
-              let myMessageDirect be Success(message: 'world', value: scaled)
-
-              emit Done(
-                isMessage: myMessageDirect is :message,
-                name: myMessageDirect.name,
-                signature: myMessageDirect.signatureid,
-                text: myMessageDirect.arguments.message,
-                value: myMessageDirect.arguments.value)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(21))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["isMessage"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["name"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["signature"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("world"), published[0].Arguments["text"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesFloat(42d), published[0].Arguments["value"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmRunsHandlerLiteralAndBind()
-    {
-        const string script =
-            """
-            module HandlerExpressions
-
-            on Start(success) {
-              let myHandler be Success(message, value)
-              let myMessage be myHandler(message: 'hello', value: success)
-              let invalidMessage be myHandler(message: 'hello', other: success)
-
-              emit Done(
-                handlerIsHandler: myHandler is :handler,
-                handlerName: myHandler.name,
-                handlerSignature: myHandler.signatureid,
-                secondParameter: myHandler.parameters[2],
-                messageIsMessage: myMessage is :message,
-                messageName: myMessage.name,
-                messageSignature: myMessage.signatureid,
-                text: myMessage.arguments.message,
-                value: myMessage.arguments.value,
-                invalidIsNothing: invalidMessage is :nothing)
-            }
-            """;
-
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(script));
-
-        host.PublishToCompletion(Create("Start", ("success", GameEventScriptValueFactory.GesBoolean(true))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["handlerIsHandler"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["handlerName"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["handlerSignature"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("value"), published[0].Arguments["secondParameter"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["messageIsMessage"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success"), published[0].Arguments["messageName"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("Success(message,value)"), published[0].Arguments["messageSignature"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("hello"), published[0].Arguments["text"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["value"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["invalidIsNothing"]);
-    }
-
-    [TestMethod]
-    public void BytecodeVmEmitsDiagnosticsWhenEnabled()
-    {
-        const string script =
-            """
-            module Diagnostics
-
-            predicate high(value) means value > 3
-
-            on Start(value) {
-              let score be value + 2
-              let missingValue be missing
-              let isHigh be score is high
-              emit Done(score: score, missingValue: missingValue, isHigh: isHigh)
-            }
-            """;
-
-        var collector = new GameEventScriptDiagnosticTraceCollector();
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithDiagnosticCollector(collector)
-            .WithPublishedMessageObserver(published.Add)
-            .Build()
-            .Load(GameEventScriptManager.Compile(
-                script,
-                new GameEventScriptCompileOptions { EnableDiagnostics = true }));
-
-        host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
-
-        Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["score"]);
-        Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["missingValue"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["isHigh"]);
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.ParameterBound && diagnostic.Name == "value"));
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.HandlerInvoked && diagnostic.Name == "Start"));
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.LetEvaluated && diagnostic.Name == "score"));
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.LetEvaluated && diagnostic.Name == "missingValue"));
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.ExpressionEvaluatedToNothing && diagnostic.Name == "missingValue"));
-        Assert.IsTrue(collector.Events.Any(diagnostic => diagnostic.Kind == GameEventScriptDiagnosticEventKind.PredicateCalled && diagnostic.Name == "high"));
-    }
 
     [TestMethod]
     public void BytecodeVmStandardExtensionsAreIntrinsicAndDoNotRequireDynamicLinking()

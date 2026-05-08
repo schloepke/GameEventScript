@@ -96,7 +96,7 @@ internal sealed class GesLinearBytecodeBuilder
             EmitParameterBindings(handler.Parameters, handler.ParameterTypes, handler.Slots);
             if (sourceHandlers.TryGetValue(handler, out var sourceHandler))
             {
-                EmitSourceStatementProgram(sourceHandler.Statements, createsScope: false, handler.Slots);
+                EmitSourceStatements(sourceHandler.Statements, createsScope: false, handler.Slots);
             }
             else
             {
@@ -254,7 +254,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
     }
 
-    private void EmitSourceStatementProgram(
+    private void EmitSourceStatements(
         IReadOnlyList<StatementNode> statements,
         bool createsScope,
         IReadOnlyDictionary<string, int> slots)
@@ -396,12 +396,12 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var condition = EmitSourceExpression(ifStatement.Condition, context, new ExpressionState(context.SlotCount));
         var jumpToElse = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, A: condition));
-        EmitSourceStatementProgram(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock, context.Slots);
+        EmitSourceStatements(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock, context.Slots);
         var jumpToEnd = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump));
         PatchTarget(jumpToElse, _code.Count);
         if (ifStatement.ElseBody is not null)
         {
-            EmitSourceStatementProgram(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock, context.Slots);
+            EmitSourceStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock, context.Slots);
         }
 
         PatchTarget(jumpToEnd, _code.Count);
@@ -418,7 +418,7 @@ internal sealed class GesLinearBytecodeBuilder
             : GameEventScriptBytecodeOpCode.ForCollection;
         var loopInstruction = Emit(new GameEventScriptBytecodeInstruction(opCode, Data: loopLayoutIndex));
         var bodyAddress = _code.Count;
-        EmitSourceStatementProgram(forStatement.Body.Statements, forStatement.Body.IsBlock, context.Slots);
+        EmitSourceStatements(forStatement.Body.Statements, forStatement.Body.IsBlock, context.Slots);
         PatchTargets(loopInstruction, bodyAddress, _code.Count);
     }
 
@@ -431,7 +431,7 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.SeededRandomBlock,
             Data: layoutIndex));
         var bodyAddress = _code.Count;
-        EmitSourceStatementProgram(seededRandom.Body.Statements, seededRandom.Body.IsBlock, context.Slots);
+        EmitSourceStatements(seededRandom.Body.Statements, seededRandom.Body.IsBlock, context.Slots);
         PatchTargets(blockInstruction, bodyAddress, _code.Count);
     }
 

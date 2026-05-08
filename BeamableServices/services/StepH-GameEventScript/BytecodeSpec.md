@@ -941,26 +941,28 @@ handler DamageTaken(unit, amount)
 
 A grouped view may still be offered, but it must keep global addresses visible.
 
-## Migration Plan
+## Current Status
 
-1. Done: public side tables cover runtime high-level operations, including
-   pipelines, selectors, generated collections, guarded choices, iteration
-   sources, publish operations, seeded-random blocks, dice patterns, and object
-   match patterns.
-2. Done: the BytecodeVM executable builder consumes and validates the public
-   linear `Code` segment plus side tables into an internal linear executable
-   artifact.
-3. Done: synchronous execution and manual Fiber stepping enter handlers through
-   public linear entry addresses and use VM-owned frame state. Runtime
-   high-level opcodes use side-table layouts and helper entry addresses rather
-   than legacy `*Program` execution fallback paths.
-4. Keep conformance behavior unchanged; only bytecode shape and VM internals
-   should move.
+The public bytecode model is normalized around one global linear `Code` segment
+plus side tables for runtime high-level operations, including pipelines,
+selectors, generated collections, guarded choices, iteration sources, publish
+operations, seeded-random blocks, dice patterns, and object-match patterns.
+
+The BytecodeVM executable builder consumes and validates the public linear
+`Code` segment plus side tables into an internal linear executable artifact.
+Synchronous execution and manual Fiber stepping enter handlers through public
+linear entry addresses and use VM-owned frame state. Runtime high-level opcodes
+use side-table layouts and helper entry addresses; old nested program graphs are
+not part of the public artifact or runtime execution.
+
+Conformance behavior remains the semantic baseline. Future changes should move
+bytecode shape, VM internals, and physical encoding forward without changing
+source-level behavior unless a language change is explicitly intended.
 
 The current compiler emits active handler, callable, type-helper, and high-level
 helper bytecode directly from the source AST into the public linear model. The
 VM load path builds a validated linear runtime artifact from that public model.
-The old legacy program graphs are no longer created, and construction-time
+Old nested program graphs are no longer created, and construction-time
 execution-plan metadata has been removed from handler bytecode records.
 `GameEventScriptCompiled` defensively copies table inputs and stores
 dictionary-shaped tables in deterministic ordinal order. The next bytecode

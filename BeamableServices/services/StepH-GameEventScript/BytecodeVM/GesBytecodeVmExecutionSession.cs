@@ -4366,40 +4366,40 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return BytecodeVmValue.FromGameEventScriptValue(target.ToGameEventScriptValue().Lookup(selectorValue));
     }
 
-    private static BytecodeVmValue BuildListValue(BytecodeVmValue[] stack, int start, int count)
+    private static BytecodeVmValue BuildListValue(BytecodeVmValue[] inputs, int start, int count)
     {
         var items = new GameEventScriptValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
         {
-            items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
+            items[itemIndex] = inputs[start + itemIndex].ToGameEventScriptValue();
         }
 
         return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(items));
     }
 
-    private static BytecodeVmValue BuildSequenceValue(BytecodeVmValue[] stack, int start, int count)
+    private static BytecodeVmValue BuildSequenceValue(BytecodeVmValue[] inputs, int start, int count)
     {
         var items = new GameEventScriptValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
         {
-            items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
+            items[itemIndex] = inputs[start + itemIndex].ToGameEventScriptValue();
         }
 
         return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSequence(items));
     }
 
-    private static BytecodeVmValue BuildSetValue(BytecodeVmValue[] stack, int start, int count)
+    private static BytecodeVmValue BuildSetValue(BytecodeVmValue[] inputs, int start, int count)
     {
         var items = new GameEventScriptValue[count];
         for (var itemIndex = 0; itemIndex < count; itemIndex++)
         {
-            items[itemIndex] = stack[start + itemIndex].ToGameEventScriptValue();
+            items[itemIndex] = inputs[start + itemIndex].ToGameEventScriptValue();
         }
 
         return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSet(items));
     }
 
-    private static BytecodeVmValue BuildDictionaryValue(BytecodeVmValue[] stack, int start, int count, string[]? names)
+    private static BytecodeVmValue BuildDictionaryValue(BytecodeVmValue[] inputs, int start, int count, string[]? names)
     {
         if (names is null || names.Length != count)
         {
@@ -4409,14 +4409,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var map = new Dictionary<string, GameEventScriptValue>(count, StringComparer.Ordinal);
         for (var entryIndex = 0; entryIndex < count; entryIndex++)
         {
-            map[names[entryIndex]] = stack[start + entryIndex].ToGameEventScriptValue();
+            map[names[entryIndex]] = inputs[start + entryIndex].ToGameEventScriptValue();
         }
 
         return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesDictionary(map));
     }
 
     private static BytecodeVmValue BuildMessageValue(
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count,
         string[]? names,
@@ -4444,7 +4444,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
                 names[argumentIndex],
-                stack[start + argumentIndex].ToGameEventScriptValue());
+                inputs[start + argumentIndex].ToGameEventScriptValue());
         }
 
         return BytecodeVmValue.Reference(GesMessage(GameEventScriptMessage.CreatePrecomputed(
@@ -4455,7 +4455,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static BytecodeVmValue BindHandlerValue(
         BytecodeVmValue callee,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count,
         string[]? names)
@@ -4470,7 +4470,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
                 names[argumentIndex],
-                stack[start + argumentIndex].ToGameEventScriptValue());
+                inputs[start + argumentIndex].ToGameEventScriptValue());
         }
 
         var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, names);
@@ -4484,7 +4484,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         string? functionName,
         string[]? labels,
         int referenceIndex,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count,
         bool requirePredicateResult,
@@ -4504,7 +4504,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var arguments = new GameEventScriptFastValue[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            arguments[argumentIndex] = ToGameEventScriptFastValue(stack[start + argumentIndex]);
+            arguments[argumentIndex] = ToGameEventScriptFastValue(inputs[start + argumentIndex]);
         }
 
         if (GesStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
@@ -4891,7 +4891,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryEvaluateVariadicOperation(
         string? operation,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count,
         out BytecodeVmValue value)
@@ -4905,7 +4905,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var boxedValues = new GameEventScriptValue[count];
         for (var i = 0; i < count; i++)
         {
-            boxedValues[i] = stack[start + i].ToGameEventScriptValue();
+            boxedValues[i] = inputs[start + i].ToGameEventScriptValue();
         }
 
         value = operation switch
@@ -5515,7 +5515,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private BytecodeVmValue EvaluateTypeConstructor(
         string? typeName,
         string[]? labels,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count)
     {
@@ -5526,15 +5526,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         if (typeName is "vector" or "point")
         {
-            return EvaluateSpatialConstructor(typeName, labels, stack, start, count);
+            return EvaluateSpatialConstructor(typeName, labels, inputs, start, count);
         }
 
         if (typeName == "ref")
         {
-            return EvaluateRefConstructor(labels, stack, start, count);
+            return EvaluateRefConstructor(labels, inputs, start, count);
         }
 
-        if (TryEvaluateExternalTypeConstructor(typeName, labels, stack, start, count, out var externalValue))
+        if (TryEvaluateExternalTypeConstructor(typeName, labels, inputs, start, count, out var externalValue))
         {
             return externalValue;
         }
@@ -5552,7 +5552,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return BytecodeVmValue.Nothing;
                 }
 
-                values[label] = stack[start + index].ToGameEventScriptValue();
+                values[label] = inputs[start + index].ToGameEventScriptValue();
             }
 
             return BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(GesDictionary(values), typeDefinition));
@@ -5563,14 +5563,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Nothing;
         }
 
-        return TryConvertDeclaredType(typeName, stack[start], out var converted)
+        return TryConvertDeclaredType(typeName, inputs[start], out var converted)
             ? converted
             : BytecodeVmValue.Nothing;
     }
 
     private BytecodeVmValue EvaluateRefConstructor(
         string[]? labels,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count)
     {
@@ -5578,7 +5578,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             labels is { Length: > 0 } &&
             string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
-            return TryConvertDeclaredType("ref", stack[start], out var converted)
+            return TryConvertDeclaredType("ref", inputs[start], out var converted)
                 ? converted
                 : BytecodeVmValue.Nothing;
         }
@@ -5593,13 +5593,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Nothing;
         }
 
-        if (!TryReadRefTypeName(stack[start + typeIndex].ToGameEventScriptValue(), out var targetTypeName) ||
+        if (!TryReadRefTypeName(inputs[start + typeIndex].ToGameEventScriptValue(), out var targetTypeName) ||
             !IsReferenceTargetType(targetTypeName))
         {
             return BytecodeVmValue.Nothing;
         }
 
-        var idValue = NormalizeRefIdValue(stack[start + idIndex].ToGameEventScriptValue());
+        var idValue = NormalizeRefIdValue(inputs[start + idIndex].ToGameEventScriptValue());
         return idValue.IsNothing()
             ? BytecodeVmValue.Nothing
             : BytecodeVmValue.Reference(GesRef(targetTypeName, idValue));
@@ -5710,7 +5710,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryEvaluateExternalTypeConstructor(
         string typeName,
         string[]? labels,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count,
         out BytecodeVmValue value)
@@ -5734,7 +5734,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             var argumentIndex = IndexOf(labels, parameter.Name, count);
             if (argumentIndex < 0 ||
                 string.Equals(labels[argumentIndex], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) ||
-                !TryConvertDeclaredType(parameter.TypeName, stack[start + argumentIndex], out var converted))
+                !TryConvertDeclaredType(parameter.TypeName, inputs[start + argumentIndex], out var converted))
             {
                 return true;
             }
@@ -5777,7 +5777,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private BytecodeVmValue EvaluateSpatialConstructor(
         string typeName,
         string[]? labels,
-        BytecodeVmValue[] stack,
+        BytecodeVmValue[] inputs,
         int start,
         int count)
     {
@@ -5785,7 +5785,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             labels is { Length: > 0 } &&
             string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
         {
-            return TryConvertDeclaredType(typeName, stack[start], out var converted)
+            return TryConvertDeclaredType(typeName, inputs[start], out var converted)
                 ? converted
                 : BytecodeVmValue.Nothing;
         }
@@ -5796,8 +5796,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             string.Equals(labels[1], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) &&
             TryCreateSpatialLift(
                 typeName,
-                stack[start].ToGameEventScriptValue(),
-                stack[start + 1].ToGameEventScriptValue(),
+                inputs[start].ToGameEventScriptValue(),
+                inputs[start + 1].ToGameEventScriptValue(),
                 out var lifted))
         {
             return BytecodeVmValue.FromGameEventScriptValue(lifted);
@@ -5810,7 +5810,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             var labeledComponents = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
             for (var index = 0; index < count; index++)
             {
-                labeledComponents[labels![index]] = stack[start + index].ToGameEventScriptValue();
+                labeledComponents[labels![index]] = inputs[start + index].ToGameEventScriptValue();
             }
 
             return TryCreateSpatialFromLabeledComponents(typeName, labeledComponents, out var spatialValue)
@@ -5826,7 +5826,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var components = new GameEventScriptValue[count];
         for (var index = 0; index < components.Length; index++)
         {
-            components[index] = stack[start + index].ToGameEventScriptValue();
+            components[index] = inputs[start + index].ToGameEventScriptValue();
         }
 
         return TryCreateSpatialFromComponents(typeName, components, out var spatial)

@@ -957,11 +957,12 @@ A grouped view may still be offered, but it must keep global addresses visible.
 4. Keep conformance behavior unchanged; only bytecode shape and VM internals
    should move.
 
-The current compiler emits the public linear model through an adapter over the
-internal compatibility model, and the VM load path builds a validated linear
-runtime artifact from that public model. The remaining migration work is to
-replace the compiler adapter with direct AST-to-linear lowering and then remove
-legacy program graphs from `GameEventScriptCompiled` entirely.
+The current compiler emits active handler, callable, type-helper, and high-level
+helper bytecode directly from the source AST into the public linear model. The
+VM load path builds a validated linear runtime artifact from that public model.
+The remaining migration work is to stop creating legacy program graphs as
+compile/artifact metadata and remove them from `GameEventScriptCompiled`
+entirely.
 
 ## Compatibility Predicates
 

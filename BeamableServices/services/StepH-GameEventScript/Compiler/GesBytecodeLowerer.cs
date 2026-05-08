@@ -110,6 +110,31 @@ internal static class GesBytecodeLowerer
         return result;
     }
 
+    public static IReadOnlyDictionary<string, int> CollectCallableSlots(
+        GesCallableDefinition callable,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
+    {
+        var slotCollector = new SlotCollector(callables, typeDefinitions);
+        foreach (var parameter in callable.Parameters)
+        {
+            slotCollector.AddSlot(parameter);
+        }
+
+        slotCollector.CollectTypeDefinitions();
+        slotCollector.CollectExpression(callable.Expression);
+        return new Dictionary<string, int>(slotCollector.Slots, StringComparer.Ordinal);
+    }
+
+    public static IReadOnlyDictionary<string, int> CollectTypeDefinitionSlots(
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
+    {
+        var slotCollector = new SlotCollector(callables, typeDefinitions);
+        slotCollector.CollectTypeDefinitions();
+        return new Dictionary<string, int>(slotCollector.Slots, StringComparer.Ordinal);
+    }
+
     private static bool TryValidateStatements(
         IReadOnlyList<StatementNode> statements,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,

@@ -35,6 +35,8 @@ internal static class GesBytecodeCompiler
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
         private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
         private readonly List<string> _typeMetadata = [];
+        private readonly Dictionary<GameEventScriptBytecodeHandler, EventHandlerNode> _handlerSources =
+            new(ReferenceEqualityComparer<GameEventScriptBytecodeHandler>.Instance);
 
         public GameEventScriptCompiled Build()
         {
@@ -57,10 +59,14 @@ internal static class GesBytecodeCompiler
             var linearBuilder = new GesLinearBytecodeBuilder(
                 AddTypeMetadata,
                 AddNamedArgumentLayout,
+                AddConstant,
+                AddExternalReference,
+                module.Callables,
+                module.TypeDefinitions,
                 options.EnableDiagnostics);
-            linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group));
-            linearBuilder.AddCallables(callables.Values);
-            linearBuilder.AddTypeDefinitions(typeDefinitions.Values);
+            linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group), _handlerSources);
+            linearBuilder.AddCallables(callables.Values, module.Callables);
+            linearBuilder.AddTypeDefinitions(typeDefinitions.Values, module.TypeDefinitions);
 
             return new GameEventScriptCompiled(
                 options,
@@ -97,7 +103,7 @@ internal static class GesBytecodeCompiler
                     .Select((handler, index) =>
                     {
                         var signatureId = GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels);
-                        return new GameEventScriptBytecodeHandler(
+                        var bytecodeHandler = new GameEventScriptBytecodeHandler(
                             pair.Key,
                             handler.DispatchKind == EventHandlerDispatchKind.MessageEnvelope
                                 ? GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
@@ -118,6 +124,8 @@ internal static class GesBytecodeCompiler
                             handler.ParameterList.Select(parameter => parameter.DeclaredType).ToArray(),
                             handler.MatchingTags,
                             handler.WithoutTags);
+                        _handlerSources[bytecodeHandler] = handler;
+                        return bytecodeHandler;
                     })
                     .ToArray(),
                 StringComparer.Ordinal);

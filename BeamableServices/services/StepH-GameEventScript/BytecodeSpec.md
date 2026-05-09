@@ -521,21 +521,19 @@ Implication is right-associative at source level and uses the truth table for
 `not a or b`: false antecedent yields `true`; unknown participates as
 `nothing` unless the consequent resolves the result to `true`.
 
-The VM executes these constructs from the linear branch sequence; the
-`ShortCircuitAnd`, `ShortCircuitOr`, and `ShortCircuitImplies` opcodes are only
-lowering metadata and must not be required as runtime fallbacks.
+The VM executes `and` and `or` laziness from the linear branch sequence;
+`ShortCircuitAnd` and `ShortCircuitOr` are lowering metadata and must not be
+required as runtime fallbacks. `ShortCircuitImplies` can be emitted as the
+binary implication combine inside that branch sequence.
 
 ### Control Flow
 
 - `Jump target`
 - `JumpIfTrue cond target`
 - `JumpIfFalse cond target`
-- `JumpIfNothing cond target`
 - `JumpIfNotTrue cond target`
-- `JumpIfNotFalse cond target`
-- `Call dst callableIndex callLayoutIndex`
+- `Call dst operationLayoutIndex`
 - `Return src`
-- `Halt`
 
 `if` and guarded choices compile to condition code plus jumps. `else` runs when
 the condition is not true, so normal `if` lowering should use `JumpIfNotTrue`,

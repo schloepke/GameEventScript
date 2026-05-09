@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Extensions;
@@ -74,6 +75,8 @@ public sealed class BytecodeVmPerformanceReportTests
         TestContext.WriteLine(diagnosticCollector.ToString());
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
+        TestContext.WriteLine("-----");
+        TestContext.WriteLine("BytecodeVM Diagnostics:\n" + JsonSerializer.Serialize(bytecodeVmCompileDiag.Value.ToGameEventScriptBinary(), new JsonSerializerOptions { WriteIndented = true }));
         TestContext.WriteLine("-----");
     }
 

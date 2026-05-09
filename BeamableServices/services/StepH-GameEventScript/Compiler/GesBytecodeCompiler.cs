@@ -66,6 +66,7 @@ internal static class GesBytecodeCompiler
 
             return new GameEventScriptCompiled(
                 options,
+                module.ModuleName,
                 _stringPool.ToArray(),
                 _constantPool.ToArray(),
                 _signatures.ToArray(),

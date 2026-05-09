@@ -11,6 +11,7 @@ public sealed class GameEventScriptCompiled
 {
     internal GameEventScriptCompiled(
         GameEventScriptCompileOptions options,
+        string moduleName,
         IReadOnlyList<string> stringPool,
         IReadOnlyList<GameEventScriptBytecodeConstant> constantPool,
         IReadOnlyList<string> signatures,
@@ -37,6 +38,9 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout>? guardedChoiceLayouts = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
+        ModuleName = string.IsNullOrWhiteSpace(moduleName)
+            ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
+            : moduleName;
         StringPool = CopyList(stringPool, nameof(stringPool));
         ConstantPool = CopyList(constantPool, nameof(constantPool));
         Signatures = CopyList(signatures, nameof(signatures));
@@ -64,6 +68,8 @@ public sealed class GameEventScriptCompiled
     }
 
     public GameEventScriptCompileOptions Options { get; }
+
+    public string ModuleName { get; }
 
     public IReadOnlyList<string> StringPool { get; }
 

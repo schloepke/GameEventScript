@@ -5152,6 +5152,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     public void BytecodeVmRejectsUnknownStatementNodesAtCompileTime()
     {
         var module = new GesModule(
+            "UnknownStatementModule",
             new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal),
             new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal),
             new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal)
@@ -5320,6 +5321,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 EnableDiagnostics = original.Options.EnableDiagnostics,
                 Optimize = original.Options.Optimize
             },
+            original.ModuleName,
             original.StringPool.ToArray(),
             original.ConstantPool.Select(CloneConstant).ToArray(),
             original.Signatures.ToArray(),

@@ -2065,9 +2065,10 @@ var host = GameEventScriptHost.CreateBuilder()
 ## Host API
 
 Compile GameEventScript source (`.ges`) to GameEventScript bytecode (`.gesb`)
-with `GameEventScriptManager.Compile(...)`. The current `.gesb` representation is
-an in-memory `GameEventScriptCompiled` object; a binary or JSON serializer can be
-built on top of this bytecode model later.
+with `GameEventScriptManager.Compile(...)`. The current executable artifact is an
+in-memory `GameEventScriptCompiled` object. `GameEventScriptBinary` is the
+emerging compact binary container shape that will become the physical `.gesb`
+format.
 
 ```csharp
 var bytecode = GameEventScriptManager.Compile(script);
@@ -2097,11 +2098,12 @@ var bytecode = GameEventScriptBuilder.Create()
 ### Compiled bytecode artifact
 
 `GameEventScriptCompiled` is the portable in-memory bytecode artifact produced by
-the compiler. It does not contain AST nodes, source modules, or BytecodeVM
-execution objects. Loading it into a host builds the VM executable internally.
+the compiler. It does not contain AST nodes or BytecodeVM execution objects.
+Loading it into a host builds the VM executable internally.
 
 The artifact exposes neutral bytecode data:
 
+- `ModuleName`
 - `StringPool`
 - `ConstantPool`
 - `Signatures`
@@ -2125,6 +2127,11 @@ numeric-compatible at runtime but must remain distinct constants in bytecode.
 `GameEventScriptBytecodeDumper.DumpBytecode(...)` can be used to inspect this
 structure during development. The dump is deterministic and diagnostic; it is not
 the future `.gesb` wire format.
+
+`GameEventScriptBinary.FromCompiled(...)` projects the current compiled artifact
+into the first compact binary container shape: a 16-byte `GESB` header, module
+name, zero-based string pool, export table for message handlers/functions/
+predicates, and import table for extension calls and external types.
 
 The host loads bytecode and builds the BytecodeVM executable internally.
 

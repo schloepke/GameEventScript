@@ -14,15 +14,19 @@ internal enum GameEventScriptCallableKind
 
 internal sealed class GesModule
 {
-    internal GesModule(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
+    internal GesModule(string moduleName,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
         IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition>? externalTypeDefinitions = null)
     {
+        ModuleName = string.IsNullOrWhiteSpace(moduleName) ? "UnknownModule" : moduleName;
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         ExternalTypeDefinitions = externalTypeDefinitions ?? new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
     }
+
+    internal string ModuleName { get; }
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 

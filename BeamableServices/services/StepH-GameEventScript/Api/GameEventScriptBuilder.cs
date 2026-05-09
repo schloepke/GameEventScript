@@ -153,11 +153,19 @@ public sealed class GameEventScriptBuilder
 
         errors.ThrowIfAny();
 
-        var moduleResult = new GesModule(typeDefinitions, callables, handlers, externalTypeDefinitions);
+        var moduleResult = new GesModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions);
         return compileOptions.Optimize ? GesOptimizer.Optimize(moduleResult, compileOptions) : moduleResult;
     }
 
     private sealed record SourceInput(string Text, string? SourceName);
+
+    private static string ResolveModuleName(IReadOnlyList<ParsedScript> modules)
+        => modules.Count switch
+        {
+            0 => "EmptyModule",
+            1 => modules[0].ModuleName,
+            _ => string.Join("+", modules.Select(module => module.ModuleName))
+        };
 
     private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedScript> modules)
     {

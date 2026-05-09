@@ -38,6 +38,7 @@ internal static class GesOptimizer
             StringComparer.Ordinal);
 
         return new GesModule(
+            module.ModuleName,
             optimizedTypes,
             optimizedCallables,
             optimizedHandlers,

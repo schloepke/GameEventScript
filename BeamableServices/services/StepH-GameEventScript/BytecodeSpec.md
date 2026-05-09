@@ -1,11 +1,12 @@
 # GameEventScript Bytecode Spec
 
-Status: public bytecode target and current linear artifact shape.
+Status: public bytecode target, current linear artifact shape, and binary
+container direction.
 
 This document defines the intended portable bytecode shape for
-`GameEventScriptCompiled`. The goal is a compact, portable, high-level bytecode
-for the GameEventScript DSL that is naturally executable by a linear
-program-counter VM.
+`GameEventScriptCompiled` and the emerging `GameEventScriptBinary` container.
+The goal is a compact, portable, high-level bytecode for the GameEventScript DSL
+that is naturally executable by a linear program-counter VM.
 
 The public bytecode model is **operand-stack-free**. Normal expression
 evaluation reads from and writes to explicit local slots. A portable call stack
@@ -79,11 +80,48 @@ fixed operand operations should read directly from their source slots.
 
 ## Top-Level Artifact
 
+The target binary container is named `GameEventScriptBinary`. Its header is the
+fixed 16-byte `GameEventScriptBinaryHeader` shape:
+
+```text
+GameEventScriptBinaryHeader
+  Magic:      4 bytes  "GESB"
+  Version:    u16      current 1
+  Flags:      u16      reserved
+  HeaderSize: u32      current 16
+  FileSize:   u32      0 while represented only in memory
+```
+
+The first normalized binary tables are intentionally compact:
+
+```text
+GameEventScriptBinary
+  Header
+  ModuleName
+  StringPool              zero-based UTF-8 strings in the file
+  ExportTable
+    MessageHandler | Function | Predicate
+    Name                  string-pool index
+    ArgumentNames         ordered string-pool indexes
+    EntryAddress          global code address
+  ImportTable
+    ExtensionCall | ExternalType
+    Name                  string-pool index
+    ArgumentNames         ordered string-pool indexes
+```
+
+Imports do not carry local entry addresses. They are linked by table index from
+instructions or side tables; extension and external-type implementation code is
+not serialized into the script binary. Extension-call import names are currently
+stored as `extension.function`; external-type import names are stored as the
+type name.
+
 The public `GameEventScriptCompiled` model is shaped around a single code
 segment and side tables:
 
 ```text
 GameEventScriptCompiled
+  ModuleName
   FormatVersion
   StringPool
   ConstantPool

@@ -1,34 +1,34 @@
 struct StepH.GameEventScript.Api.GameEventScriptBinary
-  property StepH.GameEventScript.Api.GameEventScriptBinaryExportTable ExportTable { get set }
+  property StepH.GameEventScript.Api.GameEventScriptBinaryBindTable BindTable { get set }
   property StepH.GameEventScript.Api.GameEventScriptBinaryHeader Header { get set }
-  property StepH.GameEventScript.Api.GameEventScriptBinaryImportTable ImportTable { get set }
   property System.String ModuleName { get set }
   property System.String[] StringPool { get set }
+struct StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry
+  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt32 entryAddress)
+  property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
+  property System.Collections.Generic.IReadOnlyList<System.UInt16> ArgumentNames { get }
+  property System.UInt16 Name { get }
+  property System.UInt32 EntryAddress { get }
+enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
+  enum-field MessageHandler = 16
+  enum-field Function = 17
+  enum-field Predicate = 18
+  enum-field ExtensionCall = 32
+  enum-field ExternalType = 33
+struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable
+  ctor GameEventScriptBinaryBindTable(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> entries)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> Entries { get }
+  property System.UInt16 EntryCount { get }
 class StepH.GameEventScript.Api.GameEventScriptBinaryBuilder
   ctor GameEventScriptBinaryBuilder()
   method StepH.GameEventScript.Api.GameEventScriptBinary Build()
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddExport(StepH.GameEventScript.Api.GameEventScriptBinaryExportEntry export)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddImport(StepH.GameEventScript.Api.GameEventScriptBinaryImportEntry import)
+  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBind(StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry bind)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElement(System.String stringPoolElement, System.UInt16& index)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElements(System.Collections.Generic.IReadOnlyList<System.String> values, System.UInt16[]& indexes)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFileSize(System.UInt32 fileSize)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFlag(StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinaryFlags flag, System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithModuleName(System.String moduleName)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithVersion(System.UInt16 version)
-struct StepH.GameEventScript.Api.GameEventScriptBinaryExportEntry
-  ctor GameEventScriptBinaryExportEntry(StepH.GameEventScript.Api.GameEventScriptBinaryExportKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt32 entryAddress)
-  property StepH.GameEventScript.Api.GameEventScriptBinaryExportKind Kind { get }
-  property System.Collections.Generic.IReadOnlyList<System.UInt16> ArgumentNames { get }
-  property System.UInt16 Name { get }
-  property System.UInt32 EntryAddress { get }
-enum StepH.GameEventScript.Api.GameEventScriptBinaryExportKind
-  enum-field MessageHandler = 16
-  enum-field Function = 17
-  enum-field Predicate = 18
-struct StepH.GameEventScript.Api.GameEventScriptBinaryExportTable
-  ctor GameEventScriptBinaryExportTable(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryExportEntry> entries)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryExportEntry> Entries { get }
-  property System.UInt16 EntryCount { get }
 static class StepH.GameEventScript.Api.GameEventScriptBinaryExtensions
   method static StepH.GameEventScript.Api.GameEventScriptBinary ToGameEventScriptBinary(StepH.GameEventScript.Api.GameEventScriptCompiled compiled)
 struct StepH.GameEventScript.Api.GameEventScriptBinaryHeader
@@ -41,18 +41,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinary
   enum-field None = 0
   enum-field Optimization = 1
   enum-field Debug = 2
-struct StepH.GameEventScript.Api.GameEventScriptBinaryImportEntry
-  ctor GameEventScriptBinaryImportEntry(StepH.GameEventScript.Api.GameEventScriptBinaryImportKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames)
-  property StepH.GameEventScript.Api.GameEventScriptBinaryImportKind Kind { get }
-  property System.Collections.Generic.IReadOnlyList<System.UInt16> ArgumentNames { get }
-  property System.UInt16 Name { get }
-enum StepH.GameEventScript.Api.GameEventScriptBinaryImportKind
-  enum-field ExtensionCall = 32
-  enum-field ExternalType = 33
-struct StepH.GameEventScript.Api.GameEventScriptBinaryImportTable
-  ctor GameEventScriptBinaryImportTable(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryImportEntry> entries)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryImportEntry> Entries { get }
-  property System.UInt16 EntryCount { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   ctor GameEventScriptBuilder()
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)

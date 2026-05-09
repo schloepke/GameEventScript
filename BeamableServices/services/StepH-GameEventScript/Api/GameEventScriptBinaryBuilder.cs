@@ -15,8 +15,7 @@ public class GameEventScriptBinaryBuilder
     private uint _fileSize = 0;
     private List<string> _stringPool = [];
     private Dictionary<string, ushort> _stringPoolIndexes = [];
-    private List<GameEventScriptBinaryExportEntry> _exports = [];
-    private List<GameEventScriptBinaryImportEntry> _imports = [];
+    private List<GameEventScriptBinaryBindEntry> _binds = [];
 
     public GameEventScriptBinaryBuilder WithVersion(ushort version)
     {
@@ -72,15 +71,9 @@ public class GameEventScriptBinaryBuilder
         return this;
     }
 
-    public GameEventScriptBinaryBuilder AddExport(GameEventScriptBinaryExportEntry export)
+    public GameEventScriptBinaryBuilder AddBind(GameEventScriptBinaryBindEntry bind)
     {
-        _exports.Add(export);
-        return this;
-    }
-
-    public GameEventScriptBinaryBuilder AddImport(GameEventScriptBinaryImportEntry import)
-    {
-        _imports.Add(import);
+        _binds.Add(bind);
         return this;
     }
 
@@ -91,8 +84,7 @@ public class GameEventScriptBinaryBuilder
             Header = new GameEventScriptBinaryHeader { Version = 1, Flags = _flags, FileSize = _fileSize },
             ModuleName = _moduleName,
             StringPool = _stringPool.ToArray(),
-            ExportTable = new GameEventScriptBinaryExportTable(_exports),
-            ImportTable = new GameEventScriptBinaryImportTable(_imports)
+            BindTable = new GameEventScriptBinaryBindTable(_binds)
         };
     }
 }
@@ -111,7 +103,7 @@ public static class GameEventScriptBinaryExtensions
             builder
                 .AddStringPoolElement(handler.Message, out var messageIndex)
                 .AddStringPoolElements(handler.SignatureLabels, out var argumentIndexes)
-                .AddExport(new GameEventScriptBinaryExportEntry(GameEventScriptBinaryExportKind.MessageHandler, messageIndex, argumentIndexes,
+                .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.MessageHandler, messageIndex, argumentIndexes,
                     handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((uint)handler.EntryAddress)));
         }
 
@@ -119,7 +111,7 @@ public static class GameEventScriptBinaryExtensions
         {
             builder.AddStringPoolElement(callable.Name, out var messageIndex);
             builder.AddStringPoolElements(callable.SignatureLabels, out var argumentIndexes);
-            builder.AddExport(new GameEventScriptBinaryExportEntry(callable.Kind == GameEventScriptBytecodeCallableKind.Predicate ? GameEventScriptBinaryExportKind.Predicate : GameEventScriptBinaryExportKind.Function, messageIndex, argumentIndexes,
+            builder.AddBind(new GameEventScriptBinaryBindEntry(callable.Kind == GameEventScriptBytecodeCallableKind.Predicate ? GameEventScriptBinaryBindKind.Predicate : GameEventScriptBinaryBindKind.Function, messageIndex, argumentIndexes,
                 callable.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((uint)callable.EntryAddress)));
         }
 
@@ -127,14 +119,14 @@ public static class GameEventScriptBinaryExtensions
         {
             builder.AddStringPoolElement(reference.ExtensionName + "." + reference.FunctionName, out var functionIndex);
             builder.AddStringPoolElements(reference.ArgumentLabels, out var argumentIndexes);
-            builder.AddImport(new GameEventScriptBinaryImportEntry(GameEventScriptBinaryImportKind.ExtensionCall, functionIndex, argumentIndexes));
+            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExtensionCall, functionIndex, argumentIndexes));
         }
 
         foreach (var reference in compiled.ExternalTypeConstructorReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))
         {
             builder.AddStringPoolElement(reference.TypeName, out var typeNameIndex);
             builder.AddStringPoolElements(reference.ArgumentLabels, out var argumentIndexes);
-            builder.AddImport(new GameEventScriptBinaryImportEntry(GameEventScriptBinaryImportKind.ExternalType, typeNameIndex, argumentIndexes));
+            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExternalType, typeNameIndex, argumentIndexes));
         }
 
         return builder.Build();

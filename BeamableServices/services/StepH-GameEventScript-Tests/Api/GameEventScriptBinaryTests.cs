@@ -7,7 +7,7 @@ namespace StepH_GameEventScript_Tests.Api;
 public sealed class GameEventScriptBinaryTests
 {
     [TestMethod]
-    public void FromCompiledBuildsCompactExportAndImportTables()
+    public void FromCompiledBuildsCompactBindTable()
     {
         const string script =
             """
@@ -30,21 +30,19 @@ public sealed class GameEventScriptBinaryTests
         Assert.AreEqual((ushort)1, binary.Header.Version);
         Assert.AreEqual(16u, GameEventScriptBinaryHeader.HeaderSize);
 
-        var exports = binary.ExportTable.Entries.ToArray();
-        Assert.AreEqual((ushort)3, binary.ExportTable.EntryCount);
-        Assert.IsTrue(exports.Any(entry => entry.Kind == GameEventScriptBinaryExportKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
-        Assert.IsTrue(exports.Any(entry => entry.Kind == GameEventScriptBinaryExportKind.Function && Resolve(binary, entry.Name) == "score"));
-        Assert.IsTrue(exports.Any(entry => entry.Kind == GameEventScriptBinaryExportKind.Predicate && Resolve(binary, entry.Name) == "high"));
-        Assert.IsTrue(exports.All(entry => entry.EntryAddress < compiled.Code.Count));
+        var binds = binary.BindTable.Entries.ToArray();
+        Assert.AreEqual((ushort)4, binary.BindTable.EntryCount);
+        Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
+        Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Function && Resolve(binary, entry.Name) == "score"));
+        Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Predicate && Resolve(binary, entry.Name) == "high"));
+        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < compiled.Code.Count));
 
-        var start = exports.Single(entry => entry.Kind == GameEventScriptBinaryExportKind.MessageHandler);
+        var start = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler);
         CollectionAssert.AreEqual(new[] { "value" }, start.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
 
-        var imports = binary.ImportTable.Entries.ToArray();
-        Assert.AreEqual((ushort)1, binary.ImportTable.EntryCount);
-        Assert.AreEqual(GameEventScriptBinaryImportKind.ExtensionCall, imports[0].Kind);
-        Assert.AreEqual("math.floor", Resolve(binary, imports[0].Name));
-        CollectionAssert.AreEqual(new[] { "_" }, imports[0].ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
+        var import = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.ExtensionCall);
+        Assert.AreEqual("math.floor", Resolve(binary, import.Name));
+        CollectionAssert.AreEqual(new[] { "_" }, import.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
     }
 
     private static string Resolve(GameEventScriptBinary binary, ushort index)

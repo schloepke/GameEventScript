@@ -99,22 +99,20 @@ GameEventScriptBinary
   Header
   ModuleName
   StringPool              zero-based UTF-8 strings in the file
-  ExportTable
-    MessageHandler | Function | Predicate
+  BindTable
+    Kind                  0x10-0x1F export, 0x20-0x2F import
+    MessageHandler | Function | Predicate | ExtensionCall | ExternalType
     Name                  string-pool index
     ArgumentNames         ordered string-pool indexes
-    EntryAddress          global code address
-  ImportTable
-    ExtensionCall | ExternalType
-    Name                  string-pool index
-    ArgumentNames         ordered string-pool indexes
+    EntryAddress          global code address for exports, 0 for imports
 ```
 
-Imports do not carry local entry addresses. They are linked by table index from
+Imports leave `EntryAddress` at `0`. They are linked by table index from
 instructions or side tables; extension and external-type implementation code is
-not serialized into the script binary. Extension-call import names are currently
-stored as `extension.function`; external-type import names are stored as the
-type name.
+not serialized into the script binary. Export bind kinds occupy `0x10` through
+`0x1F`; import bind kinds occupy `0x20` through `0x2F`. Extension-call import
+names are currently stored as `extension.function`; external-type import names
+are stored as the type name.
 
 The public `GameEventScriptCompiled` model is shaped around a single code
 segment and side tables:

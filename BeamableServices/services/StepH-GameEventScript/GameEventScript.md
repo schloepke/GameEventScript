@@ -2128,10 +2128,11 @@ numeric-compatible at runtime but must remain distinct constants in bytecode.
 structure during development. The dump is deterministic and diagnostic; it is not
 the future `.gesb` wire format.
 
-`GameEventScriptBinary.FromCompiled(...)` projects the current compiled artifact
+`ToGameEventScriptBinary(...)` projects the current compiled artifact
 into the first compact binary container shape: a 16-byte `GESB` header, module
-name, zero-based string pool, export table for message handlers/functions/
-predicates, and import table for extension calls and external types.
+name, zero-based string pool, and one public bind table. Bind kinds in the
+`0x10` range export message handlers/functions/predicates; bind kinds in the
+`0x20` range import extension calls and external types.
 
 The host loads bytecode and builds the BytecodeVM executable internally.
 

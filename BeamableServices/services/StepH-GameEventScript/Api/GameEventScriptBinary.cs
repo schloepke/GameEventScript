@@ -14,6 +14,8 @@ public readonly struct GameEventScriptBinary
     public readonly GameEventScriptTextTable StringTable { get; init; }
     public readonly GameEventScriptUInt16Table UInt16SliceTable { get; init; }
     public readonly GameEventScriptBinaryBindTable BindTable { get; init; }
+    
+    public readonly GameEventScriptBytecodeInstruction[] InstructionTable { get; init; }
 }
 
 public readonly struct GameEventScriptBinaryHeader

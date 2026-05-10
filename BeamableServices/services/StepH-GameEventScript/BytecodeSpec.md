@@ -209,6 +209,48 @@ some of them. Larger constants such as `Uuid` or future vector/point literals
 should use a normalized data segment instead of reintroducing an object
 constant pool.
 
+### Numeric Unit Encoding Target
+
+`UnitAndFlags` is a byte. Its target portable layout is:
+
+```text
+bits 0..4  UnitId        0..31
+bits 5..7  Reserved      must be zero in portable bytecode
+```
+
+Reserved bits are intended to be consumed from the most significant bit
+downward. Bit 5 is kept as the last-resort reserved bit so the UnitId field can
+grow to 6 bits later if those opcode flags are never needed.
+
+The target UnitId map keeps the currently implemented ids stable and reserves
+room for likely game-domain units:
+
+| UnitId | Unit | Intended use |
+| --- | --- | --- |
+| `0` | none | Unitless scalar. |
+| `1` | degree | Angles, headings, rotations. |
+| `2` | meter | Positions, distances, ranges, radii. |
+| `3` | second | Durations, cooldowns, tick time. |
+| `4` | ratio / percent | Chances, multipliers, resistance; `%` literals store ratios. |
+| `5` | meter per second | Speed and velocity magnitude. |
+| `6` | meter per second squared | Acceleration. |
+| `7` | kilogram | Mass, load, inertia. |
+| `8` | newton | Force, thrust, recoil. |
+| `9` | joule | Energy, battery charge, heat energy. |
+| `10` | watt | Power, generator output, energy consumption over time. |
+| `11` | volt | Voltage for electrotechnical systems. |
+| `12` | ampere | Current, charge flow, overload/thermal balancing. |
+| `13` | hertz | Frequency, fire rate, polling, radio cadence. |
+| `14` | bit | Information amount. |
+| `15` | byte | Storage amount. |
+| `16` | bit per second | Bandwidth and communication throughput. |
+| `17` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
+| `18..31` | reserved | Future built-in or domain units. |
+
+The compiler must only emit units supported by the current runtime. The extended
+map is a binary-format target so future unit additions do not need to reshape
+the instruction word.
+
 ## Parameter Type Hints
 
 Handlers, predicates, and functions may declare optional parameter type hints
@@ -286,30 +328,46 @@ Predicates:
 
 ## Instruction Shape
 
-The portable instruction should be compact and allocation-free to execute. A
-logical instruction has:
+The portable instruction is compact and allocation-free to execute. The public
+instruction word is a 12-byte explicit-layout value with typed overlapping
+views:
 
 ```text
 Instruction
   OpCode
-  Dest
-  A
-  B
-  C
+  UnitAndFlags
+  Dest_U16
+  A_U16, B_U16, C_U16, D_U16
+  A_I16, B_I16, C_I16, D_I16
+  A_I32, B_I32
+  A_U32, B_U32
+  I64, U64, F64
 ```
 
-The exact public C# type can use clearer property names, but the model should
-avoid per-instruction object graphs. Operands are interpreted by opcode:
+Operands are interpreted by opcode:
 
-- `Dest`: destination slot, or `-1` for instructions that do not produce a value.
-- `A`, `B`, `C`: source slots, counts, pool indices, or small enum values.
-- Branch opcodes use `A` as the target address and conditional jumps use `C` as
-  the condition slot.
-- Loop/block opcodes use `A` as the body target, `B` as the end target, and `C`
-  as the side-table layout index.
-- Side-table-backed value opcodes use `C` as the layout/data index. Their full
-  operand lists live in side tables; `A` and `B` may mirror the first two slots
-  for fast/direct access.
+- `Dest_U16`: destination slot for value-producing instructions.
+- `A_U16`, `B_U16`, `C_U16`, `D_U16`: slots, branch targets, pool indices, or
+  small unsigned immediates.
+- `A_I16`, `B_I16`, `C_I16`, `D_I16`: compact signed immediates for opcodes
+  that explicitly document signed 16-bit operands.
+- `A_I32`/`B_I32` and `A_U32`/`B_U32`: reserved compact 32-bit immediate views.
+- `I64`, `U64`, `F64`: inline literal payloads for integer, unsigned seed, and
+  double/float loads.
+- Branch opcodes use `A_U16` as the target address and conditional jumps use
+  `C_U16` as the condition slot.
+- Loop/block opcodes use `A_U16` as the body target, `B_U16` as the end target,
+  and `C_U16` as the side-table layout index.
+- Side-table-backed value opcodes use `C_U16` as the layout/data index. Their
+  full operand lists live in side tables; `A_U16` and `B_U16` may mirror the
+  first two slots for fast/direct access.
+
+Unused instruction fields are undefined and ignored. The instruction word does
+not use sentinel operands for optional operands. Optional forms are represented
+by distinct opcodes such as `ReturnNothing` and
+`EmitMessageWithTags`, or by concrete empty pool entries. Side-table metadata may
+still define its own optional `-1` fields where the table schema explicitly
+allows them.
 
 Large structured metadata belongs in side tables and pools, not nested
 instruction objects. Examples: operation layouts, `UShortListPool` message
@@ -317,9 +375,10 @@ shapes/slot lists, pipeline pools, iteration-source layouts,
 generated-collection layouts, guarded-choice layouts, diagnostic layouts, and
 loop layouts.
 
-An instruction that produces `nothing` writes it to `Dest`. There is no implicit
-push. There are no `Pop` or `Duplicate` instructions in the portable target
-model.
+An instruction that produces a `nothing` value writes it to `Dest_U16`. Returning
+without a value uses `ReturnNothing`; returning a slot value uses `Return
+A_U16`. There is no implicit push. There are no operand-stack `Pop` or
+`Duplicate` instructions in the portable target model.
 
 ## Execution Model
 
@@ -470,7 +529,7 @@ instead of relying on C# `try/finally`.
 
 ### Arithmetic and Logic
 
-Binary operations read source slots and write `Dest`:
+Binary operations read source slots and write `Dest_U16`:
 
 ```text
 Add dst=s3 left=s1 right=s2
@@ -713,9 +772,11 @@ Handlers may declare static tag filters:
   the message name matches for `MessageEnvelope` handlers.
 
 Publishing and emitting are distinct opcodes. Static message literals use a
-message shape and slot lists from `UShortListPool`; dynamic message values use
-the message slot plus an optional tag slot list. A message shape is encoded as
-`[messageNameStringIndex, argumentNameStringIndex...]`.
+message shape and argument slot lists from `UShortListPool`; dynamic message
+values use the message slot. Tagged forms use distinct `*WithTags` opcodes with
+a concrete tag slot-list index. A message shape is encoded as
+`[messageNameStringIndex, argumentNameStringIndex...]`. Zero-argument messages
+use a concrete empty argument-list entry in `UShortListPool`.
 
 Arguments and tags are evaluated by preceding code into slots:
 
@@ -723,12 +784,13 @@ Arguments and tags are evaluated by preceding code into slots:
 @0400 Move dst=s20 src=sDamage
 @0401 Move dst=s21 src=sTarget
 @0402 LoadTag dst=s22 tag=:radio
-@0403 PublishMessage shape=#0 args=#1 tags=#2
+@0403 PublishMessageWithTags shape=#0 args=#1 tags=#2
 ```
 
-Publishing or emitting a first-class message value uses
-`PublishMessageValue messageSlot tagSlotList` or
-`EmitMessageValue messageSlot tagSlotList`.
+Publishing or emitting a first-class message value uses `PublishMessageValue`
+or `EmitMessageValue`. Tagged dynamic values use
+`PublishMessageValueWithTags messageSlot tagSlotList` or
+`EmitMessageValueWithTags messageSlot tagSlotList`.
 
 ### Extensions, Intrinsics, and External Types
 

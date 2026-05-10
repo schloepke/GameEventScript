@@ -83,17 +83,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Pipeline:
-                return allowPipeline && CanExecuteLinearPipeline(instruction.C, visitingCallables, allowPipeline);
+                return allowPipeline && CanExecuteLinearPipeline(instruction.C_U16, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                return CanExecuteLinearGeneratedCollection(instruction.C, visitingCallables, allowPipeline);
+                return CanExecuteLinearGeneratedCollection(instruction.C_U16, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
-                return CanExecuteLinearGuardedChoice(instruction.C, visitingCallables, allowPipeline);
+                return CanExecuteLinearGuardedChoice(instruction.C_U16, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.PredicateTest:
-                return TryGetOperationLayout(instruction.C, out var layout) &&
+                return TryGetOperationLayout(instruction.C_U16, out var layout) &&
                        !string.IsNullOrEmpty(layout.Name) &&
                        CanExecuteLinearCallable(layout.Name, visitingCallables, allowPipeline);
 
@@ -351,7 +351,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            if (instruction.OpCode == GameEventScriptBytecodeOpCode.Return)
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.Return or GameEventScriptBytecodeOpCode.ReturnNothing)
             {
                 return true;
             }
@@ -486,19 +486,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeOpCode.BindParameter:
                 if (arguments is null ||
-                    !arguments.TryGetValue(instruction.A, out var parameterValue) ||
-                    !DefineSlot(instruction.Dest, parameterValue))
+                    !arguments.TryGetValue(instruction.A_U16, out var parameterValue) ||
+                    !DefineSlot(instruction.Dest_U16, parameterValue))
                 {
                     return false;
                 }
 
-                RecordLinearParameterBoundFromBind(arguments, instruction.A, instruction.Dest);
+                RecordLinearParameterBoundFromBind(arguments, instruction.A_U16, instruction.Dest_U16);
                 pc++;
                 return true;
 
             case var opCode when IsInlineConstantInstruction(opCode):
                 if (!TryLoadInlineConstant(instruction, out var constant) ||
-                    !DefineSlot(instruction.Dest, constant))
+                    !DefineSlot(instruction.Dest_U16, constant))
                 {
                     return false;
                 }
@@ -507,7 +507,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.MoveSlot:
-                if (!DefineSlot(instruction.Dest, ResolveSlot(instruction.A)))
+                if (!DefineSlot(instruction.Dest_U16, ResolveSlot(instruction.A_U16)))
                 {
                     return false;
                 }
@@ -516,71 +516,54 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.Jump:
-                return TryMoveLinearPc(instruction.A, endAddress, ref pc);
+                return TryMoveLinearPc(instruction.A_U16, endAddress, ref pc);
 
             case GameEventScriptBytecodeOpCode.JumpIfTrue:
-                if (ResolveSlot(instruction.C).IsTrue())
+                if (ResolveSlot(instruction.C_U16).IsTrue())
                 {
-                    return TryMoveLinearPc(instruction.A, endAddress, ref pc);
+                    return TryMoveLinearPc(instruction.A_U16, endAddress, ref pc);
                 }
 
                 pc++;
                 return true;
 
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
-                if (ResolveSlot(instruction.C).IsFalse())
+                if (ResolveSlot(instruction.C_U16).IsFalse())
                 {
-                    return TryMoveLinearPc(instruction.A, endAddress, ref pc);
+                    return TryMoveLinearPc(instruction.A_U16, endAddress, ref pc);
                 }
 
                 pc++;
                 return true;
 
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                if (!ResolveSlot(instruction.C).IsTrue())
+                if (!ResolveSlot(instruction.C_U16).IsTrue())
                 {
-                    return TryMoveLinearPc(instruction.A, endAddress, ref pc);
+                    return TryMoveLinearPc(instruction.A_U16, endAddress, ref pc);
                 }
 
                 pc++;
                 return true;
 
+            case GameEventScriptBytecodeOpCode.ReturnNothing:
+                returnValue = BytecodeVmValue.Nothing;
+                return CompleteLinearReturn(ref pc, ref endAddress, ref arguments, ref callFrames, ref returned, ref returnValue);
+
             case GameEventScriptBytecodeOpCode.Return:
-                returnValue = ResolveSlot(instruction.A);
-                if (callFrames is null || callFrames.Count == 0)
-                {
-                    returned = true;
-                    return true;
-                }
-
-                var frame = callFrames[^1];
-                callFrames.RemoveAt(callFrames.Count - 1);
-                ExitScope();
-                _locals = frame.Locals;
-                _assignedSlots = frame.AssignedSlots;
-                _changes = frame.Changes;
-                _scopeMarks = frame.ScopeMarks;
-                arguments = frame.Arguments;
-                endAddress = frame.EndAddress;
-                _runtimeBudget.ExitCall();
-
-                if (frame.NormalizePredicateResult &&
-                    !NormalizeExtensionPredicateResult(requirePredicateResult: true, ref returnValue))
-                {
-                    return false;
-                }
-
-                if (!DefineSlot(frame.ReturnDestinationSlot, returnValue))
-                {
-                    return false;
-                }
-
-                RecordLinearDiagnosticsAfter(frame.CallInstructionAddress);
-                pc = frame.ReturnAddress;
-                return true;
+                returnValue = ResolveSlot(instruction.A_U16);
+                return CompleteLinearReturn(ref pc, ref endAddress, ref arguments, ref callFrames, ref returned, ref returnValue);
 
             case GameEventScriptBytecodeOpCode.EmitMessage:
-                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Emit, instruction.A, instruction.B, instruction.C))
+                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Emit, instruction.A_U16, instruction.B_U16, tagSlotListIndex: -1))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
+                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Emit, instruction.A_U16, instruction.B_U16, instruction.C_U16))
                 {
                     return false;
                 }
@@ -589,7 +572,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessage:
-                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Publish, instruction.A, instruction.B, instruction.C))
+                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Publish, instruction.A_U16, instruction.B_U16, tagSlotListIndex: -1))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
+                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Publish, instruction.A_U16, instruction.B_U16, instruction.C_U16))
                 {
                     return false;
                 }
@@ -598,7 +590,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValue:
-                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Emit, ResolveSlot(instruction.A), instruction.C))
+                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Emit, ResolveSlot(instruction.A_U16), tagSlotListIndex: -1))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
+                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Emit, ResolveSlot(instruction.A_U16), instruction.C_U16))
                 {
                     return false;
                 }
@@ -607,7 +608,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessageValue:
-                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Publish, ResolveSlot(instruction.A), instruction.C))
+                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Publish, ResolveSlot(instruction.A_U16), tagSlotListIndex: -1))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
+                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Publish, ResolveSlot(instruction.A_U16), instruction.C_U16))
                 {
                     return false;
                 }
@@ -621,7 +631,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                pc = instruction.B;
+                pc = instruction.B_U16;
                 return true;
 
             case GameEventScriptBytecodeOpCode.ForCollection:
@@ -630,7 +640,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                pc = instruction.B;
+                pc = instruction.B_U16;
                 return true;
 
             case GameEventScriptBytecodeOpCode.Call:
@@ -654,12 +664,53 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 if (IsCastInstruction(instruction.OpCode))
                 {
-                    RecordLinearParameterBoundFromCoerce(arguments, instruction.Dest, ResolveSlot(instruction.Dest));
+                    RecordLinearParameterBoundFromCoerce(arguments, instruction.Dest_U16, ResolveSlot(instruction.Dest_U16));
                 }
 
                 pc++;
                 return true;
         }
+    }
+
+    private bool CompleteLinearReturn(
+        ref int pc,
+        ref int endAddress,
+        ref LinearArgumentSource? arguments,
+        ref List<LinearCallFrame>? callFrames,
+        ref bool returned,
+        ref BytecodeVmValue returnValue)
+    {
+        if (callFrames is null || callFrames.Count == 0)
+        {
+            returned = true;
+            return true;
+        }
+
+        var frame = callFrames[^1];
+        callFrames.RemoveAt(callFrames.Count - 1);
+        ExitScope();
+        _locals = frame.Locals;
+        _assignedSlots = frame.AssignedSlots;
+        _changes = frame.Changes;
+        _scopeMarks = frame.ScopeMarks;
+        arguments = frame.Arguments;
+        endAddress = frame.EndAddress;
+        _runtimeBudget.ExitCall();
+
+        if (frame.NormalizePredicateResult &&
+            !NormalizeExtensionPredicateResult(requirePredicateResult: true, ref returnValue))
+        {
+            return false;
+        }
+
+        if (!DefineSlot(frame.ReturnDestinationSlot, returnValue))
+        {
+            return false;
+        }
+
+        RecordLinearDiagnosticsAfter(frame.CallInstructionAddress);
+        pc = frame.ReturnAddress;
+        return true;
     }
 
     private bool TryEnterLinearCallFrame(
@@ -677,7 +728,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         nextEndAddress = currentEndAddress;
         nextPc = returnAddress;
 
-        if (!TryGetOperationLayout(instruction.C, out var layout) ||
+        if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
             string.IsNullOrEmpty(layout.Name) ||
             !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
         {
@@ -686,7 +737,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest;
         var callArguments = normalizePredicateResult
-            ? new[] { ResolveSlot(instruction.A) }
+            ? new[] { ResolveSlot(instruction.A_U16) }
             : CopyLinearOperands(layout.ArgumentSlots);
 
         if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
@@ -698,7 +749,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            return DefineSlot(instruction.Dest, value);
+            return DefineSlot(instruction.Dest_U16, value);
         }
 
         if (!RecordLinearCallableCalled(layout, callArguments, normalizePredicateResult))
@@ -717,7 +768,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             currentArguments,
             currentEndAddress,
             returnAddress,
-            instruction.Dest,
+            instruction.Dest_U16,
             callInstructionAddress,
             normalizePredicateResult));
 
@@ -920,8 +971,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Except:
             case GameEventScriptBytecodeOpCode.Zip:
                 return DefineSlot(
-                    instruction.Dest,
-                    EvaluateProgramBinary(instruction.OpCode, ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+                    instruction.Dest_U16,
+                    EvaluateProgramBinary(instruction.OpCode, ResolveSlot(instruction.A_U16), ResolveSlot(instruction.B_U16)));
 
             case GameEventScriptBytecodeOpCode.UnaryNegate:
             case GameEventScriptBytecodeOpCode.UnaryNot:
@@ -935,21 +986,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.UnaryAbs:
             case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
                 return DefineSlot(
-                    instruction.Dest,
-                    EvaluateUnaryOperation(instruction.OpCode, ResolveSlot(instruction.A)));
+                    instruction.Dest_U16,
+                    EvaluateUnaryOperation(instruction.OpCode, ResolveSlot(instruction.A_U16)));
 
             case GameEventScriptBytecodeOpCode.Clamp:
                 return DefineSlot(
-                    instruction.Dest,
-                    EvaluateClamp(ResolveSlot(instruction.A), ResolveSlot(instruction.B), ResolveSlot(instruction.C)));
+                    instruction.Dest_U16,
+                    EvaluateClamp(ResolveSlot(instruction.A_U16), ResolveSlot(instruction.B_U16), ResolveSlot(instruction.C_U16)));
 
             case GameEventScriptBytecodeOpCode.Random:
                 return DefineSlot(
-                    instruction.Dest,
-                    EvaluateRandomExpression(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+                    instruction.Dest_U16,
+                    EvaluateRandomExpression(ResolveSlot(instruction.A_U16), ResolveSlot(instruction.B_U16)));
 
             case GameEventScriptBytecodeOpCode.RandomPush:
-                PushRandomScope(ResolveSlot(instruction.A));
+                PushRandomScope(ResolveSlot(instruction.A_U16));
                 return true;
 
             case GameEventScriptBytecodeOpCode.RandomPushConstant:
@@ -962,66 +1013,66 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeOpCode.Range:
                 return DefineSlot(
-                    instruction.Dest,
-                    EvaluateRangeExpression(ResolveSlot(instruction.A), ResolveSlot(instruction.B), BytecodeVmValue.Integer(1)));
+                    instruction.Dest_U16,
+                    EvaluateRangeExpression(ResolveSlot(instruction.A_U16), ResolveSlot(instruction.B_U16), BytecodeVmValue.Integer(1)));
 
             case GameEventScriptBytecodeOpCode.RangeWithStep:
                 return DefineSlot(
-                    instruction.Dest,
-                    EvaluateRangeExpression(ResolveSlot(instruction.A), ResolveSlot(instruction.B), ResolveSlot(instruction.C)));
+                    instruction.Dest_U16,
+                    EvaluateRangeExpression(ResolveSlot(instruction.A_U16), ResolveSlot(instruction.B_U16), ResolveSlot(instruction.C_U16)));
 
             case GameEventScriptBytecodeOpCode.Dice:
-                return DefineSlot(instruction.Dest, EvaluateDiceExpression(instruction.A, instruction.B));
+                return DefineSlot(instruction.Dest_U16, EvaluateDiceExpression(instruction.A_U16, instruction.B_U16));
 
             case GameEventScriptBytecodeOpCode.IndexedAccess:
-                return DefineSlot(instruction.Dest, EvaluateIndexedAccess(ResolveSlot(instruction.A), ResolveSlot(instruction.B)));
+                return DefineSlot(instruction.Dest_U16, EvaluateIndexedAccess(ResolveSlot(instruction.A_U16), ResolveSlot(instruction.B_U16)));
 
             case GameEventScriptBytecodeOpCode.MemberAccess:
-                if (!TryReadStringPool(instruction.C, out var member))
+                if (!TryReadStringPool(instruction.C_U16, out var member))
                 {
                     return false;
                 }
 
-                return DefineSlot(instruction.Dest, EvaluateMemberAccess(ResolveSlot(instruction.A), member));
+                return DefineSlot(instruction.Dest_U16, EvaluateMemberAccess(ResolveSlot(instruction.A_U16), member));
 
             case GameEventScriptBytecodeOpCode.Pipeline:
-                if (!TryEvaluateLinearPipeline(instruction.C, out var pipelineValue))
+                if (!TryEvaluateLinearPipeline(instruction.C_U16, out var pipelineValue))
                 {
                     return false;
                 }
 
-                return DefineSlot(instruction.Dest, pipelineValue);
+                return DefineSlot(instruction.Dest_U16, pipelineValue);
 
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                if (!TryEvaluateLinearGeneratedCollection(instruction.C, out var generatedValue))
+                if (!TryEvaluateLinearGeneratedCollection(instruction.C_U16, out var generatedValue))
                 {
                     return false;
                 }
 
-                return DefineSlot(instruction.Dest, generatedValue);
+                return DefineSlot(instruction.Dest_U16, generatedValue);
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
-                if (!TryEvaluateLinearGuardedChoice(instruction.C, out var guardedValue))
+                if (!TryEvaluateLinearGuardedChoice(instruction.C_U16, out var guardedValue))
                 {
                     return false;
                 }
 
-                return DefineSlot(instruction.Dest, guardedValue);
+                return DefineSlot(instruction.Dest_U16, guardedValue);
         }
 
         if (IsCastInstruction(instruction.OpCode))
         {
-            return TryEvaluateCastInstruction(instruction, ResolveSlot(instruction.A), out var castValue) &&
-                   DefineSlot(instruction.Dest, castValue);
+            return TryEvaluateCastInstruction(instruction, ResolveSlot(instruction.A_U16), out var castValue) &&
+                   DefineSlot(instruction.Dest_U16, castValue);
         }
 
         if (IsTypeCheckInstruction(instruction.OpCode))
         {
-            return TryEvaluateTypeCheckInstruction(instruction, ResolveSlot(instruction.A), out var typeCheckValue) &&
-                   DefineSlot(instruction.Dest, BytecodeVmValue.Boolean(typeCheckValue));
+            return TryEvaluateTypeCheckInstruction(instruction, ResolveSlot(instruction.A_U16), out var typeCheckValue) &&
+                   DefineSlot(instruction.Dest_U16, BytecodeVmValue.Boolean(typeCheckValue));
         }
 
-        if (!TryGetOperationLayout(instruction.C, out var layout))
+        if (!TryGetOperationLayout(instruction.C_U16, out var layout))
         {
             return false;
         }
@@ -1045,28 +1096,28 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    return DefineSlot(instruction.Dest, variadicValue);
+                    return DefineSlot(instruction.Dest_U16, variadicValue);
 
                 case GameEventScriptBytecodeOpCode.TypeConstructor:
                     return DefineSlot(
-                        instruction.Dest,
+                        instruction.Dest_U16,
                         EvaluateTypeConstructor(layout.Name, AsArray(layout.Names), operands, 0, operandCount));
 
                 case GameEventScriptBytecodeOpCode.BuildList:
-                    return DefineSlot(instruction.Dest, BuildListValue(operands, 0, operandCount));
+                    return DefineSlot(instruction.Dest_U16, BuildListValue(operands, 0, operandCount));
 
                 case GameEventScriptBytecodeOpCode.BuildSequence:
-                    return DefineSlot(instruction.Dest, BuildSequenceValue(operands, 0, operandCount));
+                    return DefineSlot(instruction.Dest_U16, BuildSequenceValue(operands, 0, operandCount));
 
                 case GameEventScriptBytecodeOpCode.BuildSet:
-                    return DefineSlot(instruction.Dest, BuildSetValue(operands, 0, operandCount));
+                    return DefineSlot(instruction.Dest_U16, BuildSetValue(operands, 0, operandCount));
 
                 case GameEventScriptBytecodeOpCode.BuildDictionary:
-                    return DefineSlot(instruction.Dest, BuildDictionaryValue(operands, 0, operandCount, AsArray(layout.Names)));
+                    return DefineSlot(instruction.Dest_U16, BuildDictionaryValue(operands, 0, operandCount, AsArray(layout.Names)));
 
                 case GameEventScriptBytecodeOpCode.BuildMessage:
                     return DefineSlot(
-                        instruction.Dest,
+                        instruction.Dest_U16,
                         BuildMessageValue(
                             operands,
                             0,
@@ -1077,11 +1128,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.BindHandler:
                     if (operandCount == 0)
                     {
-                        return DefineSlot(instruction.Dest, BytecodeVmValue.Nothing);
+                        return DefineSlot(instruction.Dest_U16, BytecodeVmValue.Nothing);
                     }
 
                     return DefineSlot(
-                        instruction.Dest,
+                        instruction.Dest_U16,
                         BindHandlerValue(operands[0], operands, 1, operandCount - 1, AsArray(layout.Names)));
 
                 case GameEventScriptBytecodeOpCode.CallExtension:
@@ -1099,7 +1150,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         return false;
                     }
 
-                    return DefineSlot(instruction.Dest, extensionValue);
+                    return DefineSlot(instruction.Dest_U16, extensionValue);
 
                 default:
                     return false;
@@ -2954,9 +3005,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.MoveSlot:
-                value = instruction.A == identifierSlot
+                value = instruction.A_U16 == identifierSlot
                     ? item
-                    : ResolveSlot(instruction.A);
+                    : ResolveSlot(instruction.A_U16);
                 return true;
 
             case var opCode when IsInlineConstantInstruction(opCode):
@@ -3013,12 +3064,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.Nop:
                     break;
 
+                case GameEventScriptBytecodeOpCode.ReturnNothing:
                 case GameEventScriptBytecodeOpCode.Return:
                     return true;
 
                 case GameEventScriptBytecodeOpCode.MoveSlot:
                 case var opCode when IsInlineConstantInstruction(opCode):
-                    if (!AddTemp(instruction.Dest))
+                    if (!AddTemp(instruction.Dest_U16))
                     {
                         return false;
                     }
@@ -3026,7 +3078,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case var opCode when IsCastInstruction(opCode):
-                    if (!AddTemp(instruction.Dest))
+                    if (!AddTemp(instruction.Dest_U16))
                     {
                         return false;
                     }
@@ -3036,7 +3088,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.PredicateTest:
                     if (!allowPredicateTest ||
                         !CanEvaluateLinearPredicateTestFast(instruction) ||
-                        !AddTemp(instruction.Dest))
+                        !AddTemp(instruction.Dest_U16))
                     {
                         return false;
                     }
@@ -3045,7 +3097,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 default:
                     if (!IsProjectionBinaryOp(instruction.OpCode) ||
-                        !AddTemp(instruction.Dest))
+                        !AddTemp(instruction.Dest_U16))
                     {
                         return false;
                     }
@@ -3124,7 +3176,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool CanEvaluateLinearPredicateTestFast(GameEventScriptBytecodeInstruction instruction)
-        => TryGetOperationLayout(instruction.C, out var layout) &&
+        => TryGetOperationLayout(instruction.C_U16, out var layout) &&
            !string.IsNullOrEmpty(layout.Name) &&
            _compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable) &&
            CanEvaluateLinearPredicateCallableFast(callable);
@@ -3135,17 +3187,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var pc = callable.EntryAddress;
         if ((uint)pc >= (uint)code.Count ||
             code[pc].OpCode != GameEventScriptBytecodeOpCode.BindParameter ||
-            code[pc].A != 0)
+            code[pc].A_U16 != 0)
         {
             return false;
         }
 
-        var parameterSlot = code[pc].Dest;
+        var parameterSlot = code[pc].Dest_U16;
         pc++;
         if ((uint)pc < (uint)code.Count &&
             IsCastInstruction(code[pc].OpCode) &&
-            code[pc].A == parameterSlot &&
-            code[pc].Dest == parameterSlot)
+            code[pc].A_U16 == parameterSlot &&
+            code[pc].Dest_U16 == parameterSlot)
         {
             pc++;
         }
@@ -3197,14 +3249,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.Nop:
                     break;
 
+                case GameEventScriptBytecodeOpCode.ReturnNothing:
+                    value = BytecodeVmValue.Nothing;
+                    return true;
+
                 case GameEventScriptBytecodeOpCode.Return:
-                    value = instruction.A >= 0
-                        ? GetSlot(instruction.A)
-                        : BytecodeVmValue.Nothing;
+                    value = GetSlot(instruction.A_U16);
                     return true;
 
                 case GameEventScriptBytecodeOpCode.MoveSlot:
-                    if (!SetTemp(instruction.Dest, GetSlot(instruction.A)))
+                    if (!SetTemp(instruction.Dest_U16, GetSlot(instruction.A_U16)))
                     {
                         return false;
                     }
@@ -3213,7 +3267,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 case var opCode when IsInlineConstantInstruction(opCode):
                     if (!TryLoadInlineConstant(instruction, out var inlineConstant) ||
-                        !SetTemp(instruction.Dest, inlineConstant))
+                        !SetTemp(instruction.Dest_U16, inlineConstant))
                     {
                         return false;
                     }
@@ -3221,8 +3275,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case var opCode when IsCastInstruction(opCode):
-                    if (!TryEvaluateCastInstruction(instruction, GetSlot(instruction.A), out var castedValue) ||
-                        !SetTemp(instruction.Dest, castedValue))
+                    if (!TryEvaluateCastInstruction(instruction, GetSlot(instruction.A_U16), out var castedValue) ||
+                        !SetTemp(instruction.Dest_U16, castedValue))
                     {
                         return false;
                     }
@@ -3230,8 +3284,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.PredicateTest:
-                    if (!TryEvaluateLinearPredicateTestFast(instruction, GetSlot(instruction.A), out var predicateValue) ||
-                        !SetTemp(instruction.Dest, predicateValue))
+                    if (!TryEvaluateLinearPredicateTestFast(instruction, GetSlot(instruction.A_U16), out var predicateValue) ||
+                        !SetTemp(instruction.Dest_U16, predicateValue))
                     {
                         return false;
                     }
@@ -3240,7 +3294,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 default:
                     if (!IsProjectionBinaryOp(instruction.OpCode) ||
-                        !SetTemp(instruction.Dest, EvaluateProjectionBinary(instruction.OpCode, GetSlot(instruction.A), GetSlot(instruction.B))))
+                        !SetTemp(instruction.Dest_U16, EvaluateProjectionBinary(instruction.OpCode, GetSlot(instruction.A_U16), GetSlot(instruction.B_U16))))
                     {
                         return false;
                     }
@@ -3423,7 +3477,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (!TryGetOperationLayout(instruction.C, out var layout) ||
+        if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
             string.IsNullOrEmpty(layout.Name) ||
             !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
         {
@@ -3472,7 +3526,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var bind = code[pc];
         if (bind.OpCode != GameEventScriptBytecodeOpCode.BindParameter ||
-            bind.A != 0)
+            bind.A_U16 != 0)
         {
             return false;
         }
@@ -3482,13 +3536,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        var parameterSlot = bind.Dest;
+        var parameterSlot = bind.Dest_U16;
         var parameterValue = input;
         pc++;
         if ((uint)pc < (uint)code.Count &&
             IsCastInstruction(code[pc].OpCode) &&
-            code[pc].A == parameterSlot &&
-            code[pc].Dest == parameterSlot)
+            code[pc].A_U16 == parameterSlot &&
+            code[pc].Dest_U16 == parameterSlot)
         {
             if (!TryConsumeExecutionStep("Linear instruction execution budget exhausted."))
             {
@@ -3838,7 +3892,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecuteLinearRangeFor(GameEventScriptBytecodeInstruction instruction)
     {
-        if (!TryGetLoopLayout(instruction.C, out var loopLayout) ||
+        if (!TryGetLoopLayout(instruction.C_U16, out var loopLayout) ||
             !TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout) ||
             !ResolveSlot(sourceLayout.RangeFromSlot).TryGetRangeInteger(out var from) ||
             !ResolveSlot(sourceLayout.RangeToSlot).TryGetRangeInteger(out var to))
@@ -3868,7 +3922,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             for (var item = from; item <= to; item += step)
             {
-                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.A, instruction.B))
+                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.A_U16, instruction.B_U16))
                 {
                     return false;
                 }
@@ -3883,7 +3937,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             for (var item = from; item >= to; item += step)
             {
-                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.A, instruction.B))
+                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.A_U16, instruction.B_U16))
                 {
                     return false;
                 }
@@ -3900,7 +3954,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecuteLinearCollectionFor(GameEventScriptBytecodeInstruction instruction)
     {
-        if (!TryGetLoopLayout(instruction.C, out var loopLayout) ||
+        if (!TryGetLoopLayout(instruction.C_U16, out var loopLayout) ||
             !TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout))
         {
             return false;
@@ -3915,7 +3969,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         foreach (var item in sourceValue.AsEnumerable())
         {
-            if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.FromGameEventScriptValue(item), instruction.A, instruction.B))
+            if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.FromGameEventScriptValue(item), instruction.A_U16, instruction.B_U16))
             {
                 return false;
             }
@@ -4374,7 +4428,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             case GameEventScriptBytecodeOpCode.LoadText:
-                if (!TryReadStringPool(instruction.C, out var text))
+                if (!TryReadStringPool(instruction.C_U16, out var text))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -4384,7 +4438,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.LoadTag:
-                if (!TryReadStringPool(instruction.C, out var tag))
+                if (!TryReadStringPool(instruction.C_U16, out var tag))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -4394,7 +4448,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
-                if (!TryReadMessageShape(instruction.A, out var messageName, out var labels))
+                if (!TryReadMessageShape(instruction.A_U16, out var messageName, out var labels))
                 {
                     value = BytecodeVmValue.Nothing;
                     return false;
@@ -4823,7 +4877,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = BytecodeVmValue.Nothing;
         if (!TryGetCastBuiltinTypeName(instruction.OpCode, out var typeName) &&
             (instruction.OpCode != GameEventScriptBytecodeOpCode.CastCustom ||
-             !TryReadStringPool(instruction.C, out typeName)))
+             !TryReadStringPool(instruction.C_U16, out typeName)))
         {
             return false;
         }
@@ -4839,7 +4893,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = false;
         if (!TryGetTypeCheckBuiltinTypeName(instruction.OpCode, out var typeName) &&
             (instruction.OpCode != GameEventScriptBytecodeOpCode.TypeCheckCustom ||
-             !TryReadStringPool(instruction.C, out typeName)))
+             !TryReadStringPool(instruction.C_U16, out typeName)))
         {
             return false;
         }

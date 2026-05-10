@@ -17,16 +17,21 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(0)]  public GameEventScriptBytecodeOpCode OpCode; // byte-backed
     [FieldOffset(1)]  public byte UnitAndFlags;
 
-    [FieldOffset(2)]  public ushort Dest16;
-    [FieldOffset(4)]  public ushort A16;
-    [FieldOffset(6)]  public ushort B16;
-    [FieldOffset(8)]  public ushort C16;
-    [FieldOffset(10)] public ushort D16;
+    [FieldOffset(2)]  public ushort Dest_U16;
+    [FieldOffset(4)]  public ushort A_U16;
+    [FieldOffset(6)]  public ushort B_U16;
+    [FieldOffset(8)]  public ushort C_U16;
+    [FieldOffset(10)] public ushort D_U16;
 
-    [FieldOffset(4)]  public int AI32;
-    [FieldOffset(8)]  public int BI32;
-    [FieldOffset(4)]  public uint AU32;
-    [FieldOffset(8)]  public uint BU32;
+    [FieldOffset(4)]  public short A_I16;
+    [FieldOffset(6)]  public short B_I16;
+    [FieldOffset(8)]  public short C_I16;
+    [FieldOffset(10)] public short D_I16;
+
+    [FieldOffset(4)]  public int A_I32;
+    [FieldOffset(8)]  public int B_I32;
+    [FieldOffset(4)]  public uint A_U32;
+    [FieldOffset(8)]  public uint B_U32;
 
     [FieldOffset(4)]  public long I64;
     [FieldOffset(4)]  public ulong U64;
@@ -39,24 +44,26 @@ The byte layout is:
 | Byte range | 16-bit view | 32-bit view | 64-bit view | Typical use |
 | --- | --- | --- | --- | --- |
 | `0` | `OpCode` | `OpCode` | `OpCode` | Opcode tag, backed by `byte`. |
-| `1` | `UnitAndFlags` | `UnitAndFlags` | `UnitAndFlags` | Numeric units and small opcode flags. |
-| `2..3` | `Dest16` | `Dest16` | `Dest16` | Destination slot, or `0xffff` when unused. |
-| `4..5` | `A16` | `AI32`/`AU32` low half | `I64`/`U64`/`F64` bytes `0..1` | First operand, or payload bytes. |
-| `6..7` | `B16` | `AI32`/`AU32` high half | `I64`/`U64`/`F64` bytes `2..3` | Second operand, or payload bytes. |
-| `8..9` | `C16` | `BI32`/`BU32` low half | `I64`/`U64`/`F64` bytes `4..5` | Third operand/layout index, or payload bytes. |
-| `10..11` | `D16` | `BI32`/`BU32` high half | `I64`/`U64`/`F64` bytes `6..7` | Fourth operand when needed, or payload bytes. |
+| `1` | `UnitAndFlags` | `UnitAndFlags` | `UnitAndFlags` | Low 5 bits carry the numeric unit id; high 3 bits are reserved flags. |
+| `2..3` | `Dest_U16` | `Dest_U16` | `Dest_U16` | Destination slot for value-producing instructions. |
+| `4..5` | `A_U16` / `A_I16` | `A_I32` / `A_U32` low half | `I64`/`U64`/`F64` bytes `0..1` | First operand, or payload bytes. |
+| `6..7` | `B_U16` / `B_I16` | `A_I32` / `A_U32` high half | `I64`/`U64`/`F64` bytes `2..3` | Second operand, or payload bytes. |
+| `8..9` | `C_U16` / `C_I16` | `B_I32` / `B_U32` low half | `I64`/`U64`/`F64` bytes `4..5` | Third operand/layout index, or payload bytes. |
+| `10..11` | `D_U16` / `D_I16` | `B_I32` / `B_U32` high half | `I64`/`U64`/`F64` bytes `6..7` | Fourth operand when needed, or payload bytes. |
 
-The public `Dest`, `A`, `B`, `C`, and `D` properties are compatibility helpers
-over `Dest16`, `A16`, `B16`, `C16`, and `D16`. They expose unused operands as
-`-1`; internally `0xffff` is reserved as the unused sentinel. That means all
-slot indexes, table indexes, and instruction addresses stored in the compact
-operand view must fit in `0..65534`.
+There are no compatibility helper operands and no instruction-word sentinel for
+"unused". Unused fields are undefined/ignored. Only the fields documented for a
+specific opcode may be read or validated. Optional instruction forms are encoded
+with dedicated opcodes or concrete empty pool entries, not with sentinel
+operands.
 
 ## Operand Views
 
-- **16-bit operand view:** most instructions use `Dest16`, `A16`, `B16`, and
-  `C16` through the `Dest/A/B/C` helper properties. Examples: slots, branch
-  targets, side-table indexes, dice immediates, and publish kinds.
+- **Unsigned 16-bit operand view:** most instructions use `Dest_U16`, `A_U16`,
+  `B_U16`, and `C_U16`. Examples: slots, branch targets, side-table indexes,
+  dice immediates, and message-shape/list indexes.
+- **Signed 16-bit operand view:** `A_I16`, `B_I16`, `C_I16`, and `D_I16` are
+  reserved for compact signed immediates such as short range bounds.
 - **64-bit integer view:** `LoadInteger` reads `I64` directly. Negative integer
   values are stored as their normal two's-complement bit pattern.
 - **64-bit float view:** `LoadFloat` reads `F64` directly. This keeps IEEE-754
@@ -64,30 +71,73 @@ operand view must fit in `0..65534`.
 - **Unsigned payload view:** `RandomPushConstant` reads `U64` directly as the
   portable seeded-random seed. Signed integer seeds are mapped to `U64` by their
   normal two's-complement bit pattern.
-- **32-bit views:** `AI32/BI32` and `AU32/BU32` are available for future compact
-  immediates. Current bytecode does not need a dedicated 32-bit immediate load.
+- **32-bit views:** `A_I32/B_I32` and `A_U32/B_U32` are available for future
+  compact immediates. Current bytecode does not need a dedicated 32-bit
+  immediate load.
+
+## Unit And Flags Byte
+
+`UnitAndFlags` is byte-sized and is interpreted as:
+
+```text
+bits 0..4  UnitId        0..31
+bits 5..7  Reserved      must be zero in portable bytecode
+```
+
+The reserved bits are intentionally allocated from the most significant bit
+downward if they are ever needed. Bit 5 should remain the last reserved bit to
+consume, so the low field can grow from 5 to 6 unit bits later if opcode flags
+never need the full reserved range.
+
+The target UnitId map is:
+
+| UnitId | Unit | Meaning |
+| --- | --- | --- |
+| `0` | none | Unitless scalar. |
+| `1` | degree | Angle, heading, field of view, rotation. |
+| `2` | meter | Position, distance, range, radius. |
+| `3` | second | Duration, cooldown, cast time, tick time. |
+| `4` | ratio / percent | Chance, multiplier, resistance; `%` literals store ratios. |
+| `5` | meter per second | Speed and velocity magnitude. |
+| `6` | meter per second squared | Acceleration. |
+| `7` | kilogram | Mass, inventory load, inertia. |
+| `8` | newton | Force, thrust, recoil. |
+| `9` | joule | Energy, battery charge, heat energy. |
+| `10` | watt | Power, generator output, consumption over time. |
+| `11` | volt | Voltage for electrotechnical systems. |
+| `12` | ampere | Current, charge flow, overload/thermal balancing. |
+| `13` | hertz | Frequency, fire rate, sensor polling, radio rate. |
+| `14` | bit | Information amount. |
+| `15` | byte | Storage amount. |
+| `16` | bit per second | Bandwidth and communication throughput. |
+| `17` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
+| `18..31` | reserved | Reserved for future built-in or domain units. |
+
+Only the units implemented by the current runtime may be emitted by the
+compiler. The full map above is the portable binary target, not a promise that
+every unit has DSL syntax today.
 
 ## Conventions
 
-- `Dest` is the destination frame slot for value-producing instructions.
-- `A`, `B`, `C`, and `D` in the opcode table refer to the 16-bit helper
-  properties over `A16`, `B16`, `C16`, and `D16`.
-- `-1` in the helper-property view means unused/no value.
-- Branch opcodes use `A` as the target address.
-- Conditional branches use `C` as the condition slot.
-- Loop/block opcodes use `A` as body target, `B` as end target, and `C` as
+- `Dest_U16` is the destination frame slot for value-producing instructions.
+- `A_U16`, `B_U16`, `C_U16`, and `D_U16` in the opcode table are unsigned
+  16-bit typed fields.
+- Unused instruction fields are intentionally not specified.
+- Branch opcodes use `A_U16` as the target address.
+- Conditional branches use `C_U16` as the condition slot.
+- Loop/block opcodes use `A_U16` as body target, `B_U16` as end target, and `C_U16` as
   layout index.
 - `LoadInteger` uses the overlapped `I64` payload and may use `UnitAndFlags`
   for numeric units.
 - `LoadFloat` uses the overlapped `F64` payload. `UnitAndFlags` carries `None`,
   numeric units, or `Percentage`.
-- Side-table-backed opcodes use `C` as the data/layout index. Their complete
-  operand list lives in the side table; `A` and `B` only mirror the first one or
-  two slots when that is useful.
+- Side-table-backed opcodes use `C_U16` as the data/layout index. Their complete
+  operand list lives in the side table; `A_U16` and `B_U16` only mirror the
+  first one or two slots when that is useful.
 
 ## Opcode Table
 
-| Hex | Opcode | UnitAndFlags | Dest16 | A16 | B16 | C16 | D16 | I64/U64 | F64 | Notes |
+| Hex | Opcode | UnitAndFlags | Dest_U16 | A_U16 | B_U16 | C_U16 | D_U16 | I64/U64 | F64 | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0x00 | `LoadNothing` | - | result slot | - | - | - | - | - | - | Loads `nothing`. |
 | 0x01 | `LoadTrue` | - | result slot | - | - | - | - | - | - | Loads boolean `true`. |
@@ -153,7 +203,7 @@ operand view must fit in `0..65534`.
 | 0x3D | `Random` | - | result slot | from slot | to slot | - | - | - | - | Uses current random scope. |
 | 0x3E | `Range` | - | result slot | from slot | to slot | - | - | - | - | Builds a range with implicit step `1`. |
 | 0x3F | `RangeWithStep` | - | result slot | from slot | to slot | step slot | - | - | - | Builds a range with explicit step. |
-| 0x40 | `Dice` | - | result slot | dice count immediate | side count immediate | - | - | - | - | `A16` and `B16` are not slots. |
+| 0x40 | `Dice` | - | result slot | dice count immediate | side count immediate | - | - | - | - | `A_U16` and `B_U16` are not slots. |
 | 0x41 | `RandomPush` | - | - | seed slot | - | - | - | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
 | 0x42 | `RandomPushConstant` | - | - | n/a | n/a | n/a | n/a | unsigned seed | - | Pushes a nested random scope from inline `U64`. |
 | 0x43 | `RandomPop` | - | - | - | - | - | - | - | - | Restores the previous random scope. |
@@ -181,27 +231,32 @@ operand view must fit in `0..65534`.
 | 0x8A | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
 | 0x8B | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
 | 0x8C | `Nop` | - | - | - | - | - | - | - | - | No operation. |
-| 0x8D | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A16` and writes it to `Dest16`. |
+| 0x8D | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A_U16` and writes it to `Dest_U16`. |
 | 0x8E | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
-| 0x8F | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C16.IsTrue()`. |
-| 0x90 | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C16.IsFalse()`. |
-| 0x91 | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C16.IsTrue()`, including `nothing`. |
+| 0x8F | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
+| 0x90 | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
+| 0x91 | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C_U16.IsTrue()`, including `nothing`. |
 | 0x92 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
 | 0x93 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
-| 0x94 | `Return` | - | - | optional return slot | - | - | - | - | - | `A16 = -1` returns `nothing`. |
-| 0x95 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message. |
-| 0x96 | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Publishes a statically shaped message. |
-| 0x97 | `EmitMessageValue` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value. |
-| 0x98 | `PublishMessageValue` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value. |
-| 0x99 | `ForRange` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and range iteration source. |
-| 0x9A | `ForCollection` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and collection source. |
+| 0x94 | `ReturnNothing` | - | - | - | - | - | - | - | - | Returns `nothing` from the current frame. |
+| 0x95 | `Return` | - | - | return slot | - | - | - | - | - | Returns the value in `A_U16` from the current frame. |
+| 0x96 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
+| 0x97 | `EmitMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message with tags. |
+| 0x98 | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Publishes a statically shaped message without tags. |
+| 0x99 | `PublishMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Publishes a statically shaped message with tags. |
+| 0x9A | `EmitMessageValue` | - | - | message slot | - | - | - | - | - | Emits a dynamic message value without tags. |
+| 0x9B | `EmitMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value with tags. |
+| 0x9C | `PublishMessageValue` | - | - | message slot | - | - | - | - | - | Publishes a dynamic message value without tags. |
+| 0x9D | `PublishMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value with tags. |
+| 0x9E | `ForRange` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and range iteration source. |
+| 0x9F | `ForCollection` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and collection source. |
 
 ## Side-Table Summary
 
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage`, `PublishMessage`, `EmitMessageValue`, `PublishMessageValue`, operation name lists |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, operation name lists |
 | `OperationLayouts` | `Variadic`, `TypeConstructor`, `PredicateTest`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call` |
 | `LoopLayouts` | `ForRange`, `ForCollection` |
 | `PipelinePool` | `Pipeline` |

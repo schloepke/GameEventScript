@@ -217,7 +217,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     var callFrameCountBefore = _callFrames?.Count ?? 0;
                     if (TryStartLinearChildFrame(session, instruction, out var childFrame))
                     {
-                        _pc = instruction.B;
+                        _pc = instruction.B_U16;
                         session.RecordLinearDiagnosticsAfter(instructionAddress);
                         if (childFrame is not null)
                         {
@@ -303,7 +303,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 out Frame? frame)
             {
                 frame = null;
-                if (!session.TryGetLoopLayout(instruction.C, out var loopLayout) ||
+                if (!session.TryGetLoopLayout(instruction.C_U16, out var loopLayout) ||
                     !session.TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout) ||
                     !session.ResolveSlot(sourceLayout.RangeFromSlot).TryGetRangeInteger(out var from) ||
                     !session.ResolveSlot(sourceLayout.RangeToSlot).TryGetRangeInteger(out var to))
@@ -329,7 +329,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                frame = new LinearRangeLoopFrame(loopLayout.IdentifierSlot, from, to, step, instruction.A, instruction.B);
+                frame = new LinearRangeLoopFrame(loopLayout.IdentifierSlot, from, to, step, instruction.A_U16, instruction.B_U16);
                 return true;
             }
 
@@ -339,7 +339,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 out Frame? frame)
             {
                 frame = null;
-                if (!session.TryGetLoopLayout(instruction.C, out var loopLayout) ||
+                if (!session.TryGetLoopLayout(instruction.C_U16, out var loopLayout) ||
                     !session.TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout))
                 {
                     return false;
@@ -352,7 +352,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                frame = new LinearCollectionLoopFrame(loopLayout.IdentifierSlot, sourceValue.AsEnumerable().GetEnumerator(), instruction.A, instruction.B);
+                frame = new LinearCollectionLoopFrame(loopLayout.IdentifierSlot, sourceValue.AsEnumerable().GetEnumerator(), instruction.A_U16, instruction.B_U16);
                 return true;
             }
 

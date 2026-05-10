@@ -157,11 +157,16 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfNotTrue,
     EnterScope,
     ExitScope,
+    ReturnNothing,
     Return,
     EmitMessage,
+    EmitMessageWithTags,
     PublishMessage,
+    PublishMessageWithTags,
     EmitMessageValue,
+    EmitMessageValueWithTags,
     PublishMessageValue,
+    PublishMessageValueWithTags,
     ForRange,
     ForCollection
 }
@@ -182,42 +187,52 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 12)]
-public struct GameEventScriptBytecodeInstruction
+public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort a = 0, ushort b = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
 {
-    public const ushort Unused16 = ushort.MaxValue;
-
     [FieldOffset(0)]
-    public GameEventScriptBytecodeOpCode OpCode;
+    public GameEventScriptBytecodeOpCode OpCode = opCode;
 
     [FieldOffset(1)]
-    public byte UnitAndFlags;
+    public readonly byte UnitAndFlags = unitAndFlags;
 
     [FieldOffset(2)]
-    public ushort Dest16;
+    public readonly ushort Dest_U16 = dest;
 
     [FieldOffset(4)]
-    public ushort A16;
+    public ushort A_U16 = a;
 
     [FieldOffset(6)]
-    public ushort B16;
+    public ushort B_U16 = b;
 
     [FieldOffset(8)]
-    public ushort C16;
+    public ushort C_U16 = c;
 
     [FieldOffset(10)]
-    public ushort D16;
+    public ushort D_U16 = d;
 
     [FieldOffset(4)]
-    public int AI32;
+    public short A_I16;
+
+    [FieldOffset(6)]
+    public short B_I16;
 
     [FieldOffset(8)]
-    public int BI32;
+    public short C_I16;
+
+    [FieldOffset(10)]
+    public short D_I16;
 
     [FieldOffset(4)]
-    public uint AU32;
+    public int A_I32;
 
     [FieldOffset(8)]
-    public uint BU32;
+    public int B_I32;
+
+    [FieldOffset(4)]
+    public uint A_U32;
+
+    [FieldOffset(8)]
+    public uint B_U32;
 
     [FieldOffset(4)]
     public long I64;
@@ -227,73 +242,6 @@ public struct GameEventScriptBytecodeInstruction
 
     [FieldOffset(4)]
     public double F64;
-
-    public GameEventScriptBytecodeInstruction(
-        GameEventScriptBytecodeOpCode opCode,
-        int Dest = -1,
-        int A = -1,
-        int B = -1,
-        int C = -1,
-        int D = -1,
-        byte UnitAndFlags = 0)
-        : this()
-    {
-        OpCode = opCode;
-        this.UnitAndFlags = UnitAndFlags;
-        this.Dest = Dest;
-        this.A = A;
-        this.B = B;
-        this.C = C;
-        this.D = D;
-    }
-
-    public int Dest
-    {
-        readonly get => Decode16(Dest16);
-        set => Dest16 = Encode16(value);
-    }
-
-    public int A
-    {
-        readonly get => Decode16(A16);
-        set => A16 = Encode16(value);
-    }
-
-    public int B
-    {
-        readonly get => Decode16(B16);
-        set => B16 = Encode16(value);
-    }
-
-    public int C
-    {
-        readonly get => Decode16(C16);
-        set => C16 = Encode16(value);
-    }
-
-    public int D
-    {
-        readonly get => Decode16(D16);
-        set => D16 = Encode16(value);
-    }
-
-    private static int Decode16(ushort value)
-        => value == Unused16 ? -1 : value;
-
-    private static ushort Encode16(int value)
-    {
-        if (value < 0)
-        {
-            return Unused16;
-        }
-
-        if (value >= Unused16)
-        {
-            throw new ArgumentOutOfRangeException(nameof(value), value, "Instruction operands must fit into 16 bits; 0xffff is reserved as unused sentinel.");
-        }
-
-        return (ushort)value;
-    }
 }
 
 

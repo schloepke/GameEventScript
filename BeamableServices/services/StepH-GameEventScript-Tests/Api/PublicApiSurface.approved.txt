@@ -1,6 +1,7 @@
 struct StepH.GameEventScript.Api.GameEventScriptBinary
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindTable BindTable { get set }
   property StepH.GameEventScript.Api.GameEventScriptBinaryHeader Header { get set }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction[] InstructionTable { get set }
   property StepH.GameEventScript.Api.GameEventScriptTextTable StringTable { get set }
   property StepH.GameEventScript.Api.GameEventScriptUInt16Table UInt16SliceTable { get set }
   property System.String ModuleName { get set }
@@ -107,27 +108,25 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
   enum-field MessageEnvelope = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
-  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.Int32 Dest, System.Int32 A, System.Int32 B, System.Int32 C, System.Int32 D, System.Byte UnitAndFlags)
+  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.UInt16 dest, System.UInt16 a, System.UInt16 b, System.UInt16 c, System.UInt16 d, System.Byte unitAndFlags)
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
   field System.Byte UnitAndFlags
   field System.Double F64
-  field System.Int32 AI32
-  field System.Int32 BI32
+  field System.Int16 A_I16
+  field System.Int16 B_I16
+  field System.Int16 C_I16
+  field System.Int16 D_I16
+  field System.Int32 A_I32
+  field System.Int32 B_I32
   field System.Int64 I64
-  field System.UInt16 A16
-  field System.UInt16 B16
-  field System.UInt16 C16
-  field System.UInt16 D16
-  field System.UInt16 Dest16
-  field System.UInt32 AU32
-  field System.UInt32 BU32
+  field System.UInt16 A_U16
+  field System.UInt16 B_U16
+  field System.UInt16 C_U16
+  field System.UInt16 D_U16
+  field System.UInt16 Dest_U16
+  field System.UInt32 A_U32
+  field System.UInt32 B_U32
   field System.UInt64 U64
-  field static System.UInt16 Unused16
-  property System.Int32 A { get set }
-  property System.Int32 B { get set }
-  property System.Int32 C { get set }
-  property System.Int32 D { get set }
-  property System.Int32 Dest { get set }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field None = 0
   enum-field Degree = 1
@@ -297,13 +296,18 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field JumpIfNotTrue = 145
   enum-field EnterScope = 146
   enum-field ExitScope = 147
-  enum-field Return = 148
-  enum-field EmitMessage = 149
-  enum-field PublishMessage = 150
-  enum-field EmitMessageValue = 151
-  enum-field PublishMessageValue = 152
-  enum-field ForRange = 153
-  enum-field ForCollection = 154
+  enum-field ReturnNothing = 148
+  enum-field Return = 149
+  enum-field EmitMessage = 150
+  enum-field EmitMessageWithTags = 151
+  enum-field PublishMessage = 152
+  enum-field PublishMessageWithTags = 153
+  enum-field EmitMessageValue = 154
+  enum-field EmitMessageValueWithTags = 155
+  enum-field PublishMessageValue = 156
+  enum-field PublishMessageValueWithTags = 157
+  enum-field ForRange = 158
+  enum-field ForCollection = 159
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
   ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 nameListIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }

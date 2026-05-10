@@ -70,12 +70,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.JumpIfFalse));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies &&
-            instruction.Dest >= 0 &&
-            instruction.A == instruction.B));
+            instruction.Dest_U16 >= 0 &&
+            instruction.A_U16 == instruction.B_U16));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies &&
-            instruction.Dest >= 0 &&
-            instruction.A != instruction.B));
+            instruction.Dest_U16 >= 0 &&
+            instruction.A_U16 != instruction.B_U16));
     }
 
     [TestMethod]
@@ -94,21 +94,17 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
 
-        var direct = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessage);
-        Assert.IsGreaterThanOrEqualTo(0, direct.A);
-        Assert.IsGreaterThanOrEqualTo(0, direct.B);
-        Assert.IsGreaterThanOrEqualTo(0, direct.C);
-        Assert.IsLessThan(compiled.UShortListPool.Count, direct.A);
-        Assert.IsLessThan(compiled.UShortListPool.Count, direct.B);
-        Assert.IsLessThan(compiled.UShortListPool.Count, direct.C);
-        var shape = compiled.UShortListPool[direct.A].Select(index => compiled.StringPool[index]).ToArray();
+        var direct = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageWithTags);
+        Assert.IsLessThan(compiled.UShortListPool.Count, direct.A_U16);
+        Assert.IsLessThan(compiled.UShortListPool.Count, direct.B_U16);
+        Assert.IsLessThan(compiled.UShortListPool.Count, direct.C_U16);
+        var shape = compiled.UShortListPool[direct.A_U16].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, shape);
-        Assert.HasCount(1, compiled.UShortListPool[direct.B]);
-        Assert.HasCount(1, compiled.UShortListPool[direct.C]);
+        Assert.HasCount(1, compiled.UShortListPool[direct.B_U16]);
+        Assert.HasCount(1, compiled.UShortListPool[direct.C_U16]);
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageValue &&
-            instruction.C >= 0 &&
-            instruction.C < compiled.UShortListPool.Count));
+            instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageValueWithTags &&
+            instruction.C_U16 < compiled.UShortListPool.Count));
         Assert.IsTrue(compiled.OperationLayouts.Any(layout =>
             layout.OpCode == GameEventScriptBytecodeOpCode.BuildMessage &&
             layout.Name == "Done" &&
@@ -139,8 +135,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             layout.RangeToSlot >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.ForRange &&
-            instruction.C >= 0 &&
-            instruction.C < compiled.LoopLayouts.Count));
+            instruction.C_U16 >= 0 &&
+            instruction.C_U16 < compiled.LoopLayouts.Count));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPop));
     }
@@ -244,8 +240,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             layout.ExpressionEntryAddress >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline &&
-            instruction.C >= 0 &&
-            instruction.C < compiled.PipelinePool.Count));
+            instruction.C_U16 >= 0 &&
+            instruction.C_U16 < compiled.PipelinePool.Count));
         Assert.IsGreaterThanOrEqualTo(0, compiled.PipelinePool[0].SourceSlot);
     }
 
@@ -280,9 +276,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(callable.EntryAddress, linearCallable.EntryAddress);
         Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
         Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessage &&
-            instruction.A >= 0 &&
-            instruction.A < compiled.UShortListPool.Count));
+            instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessage or GameEventScriptBytecodeOpCode.EmitMessageWithTags &&
+            instruction.A_U16 < compiled.UShortListPool.Count));
     }
 
     [TestMethod]
@@ -2019,8 +2014,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var originalConstant = 1L;
         var replacementConstant = 2L;
         var code = compiled.Code
-            .Select((instruction, index) => index >= loopInstruction.instruction.A &&
-                                           index < loopInstruction.instruction.B &&
+            .Select((instruction, index) => index >= loopInstruction.instruction.A_U16 &&
+                                           index < loopInstruction.instruction.B_U16 &&
                                            IsIntegerLoad(instruction, originalConstant)
                 ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
@@ -2063,8 +2058,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var originalConstant = 1L;
         var replacementConstant = 2L;
         var code = compiled.Code
-            .Select((instruction, index) => index >= loopInstruction.instruction.A &&
-                                           index < loopInstruction.instruction.B &&
+            .Select((instruction, index) => index >= loopInstruction.instruction.A_U16 &&
+                                           index < loopInstruction.instruction.B_U16 &&
                                            IsIntegerLoad(instruction, originalConstant)
                 ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
@@ -3721,8 +3716,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
-                                   replacements.TryGetValue(instruction.C, out var replacement)
-                ? instruction with { C = replacement }
+                                   replacements.TryGetValue(instruction.C_U16, out var replacement)
+                ? instruction with { C_U16 = (ushort)replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3786,8 +3781,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
-                                   replacements.TryGetValue(instruction.C, out var replacement)
-                ? instruction with { C = replacement }
+                                   replacements.TryGetValue(instruction.C_U16, out var replacement)
+                ? instruction with { C_U16 = (ushort)replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4377,7 +4372,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             code,
             instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessage);
         Assert.IsGreaterThanOrEqualTo(0, publishInstructionIndex);
-        code[publishInstructionIndex] = code[publishInstructionIndex] with { A = compiled.UShortListPool.Count };
+        code[publishInstructionIndex] = code[publishInstructionIndex] with { A_U16 = (ushort)compiled.UShortListPool.Count };
         var invalid = RebuildCompiledArtifactFromPublicData(compiled, code);
 
         var exception = Assert.ThrowsExactly<InvalidOperationException>(() => GesBytecodeVmExecutableBuilder.Build(invalid));

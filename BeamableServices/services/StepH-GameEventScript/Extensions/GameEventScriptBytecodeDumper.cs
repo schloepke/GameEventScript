@@ -322,11 +322,22 @@ public static class GameEventScriptBytecodeDumper
 
     private static void AppendLinearInstructionOperands(StringBuilder builder, GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
     {
-        AppendSlot(builder, "dst", instruction.Dest);
+        if (HasDestination(instruction.OpCode))
+        {
+            AppendSlot(builder, "dst", instruction.Dest_U16);
+        }
+
         switch (instruction.OpCode)
         {
+            case GameEventScriptBytecodeOpCode.Nop:
+            case GameEventScriptBytecodeOpCode.EnterScope:
+            case GameEventScriptBytecodeOpCode.ExitScope:
+            case GameEventScriptBytecodeOpCode.ShortCircuitOr:
+            case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                break;
+
             case GameEventScriptBytecodeOpCode.BindParameter:
-                AppendIndex(builder, "parameter", instruction.A);
+                AppendIndex(builder, "parameter", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadNothing:
@@ -354,36 +365,36 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadText:
-                AppendPoolIndex(builder, "text", module.StringPool, instruction.C);
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadTag:
-                AppendPoolIndex(builder, "tag", module.StringPool, instruction.C);
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
-                AppendIndex(builder, "shape", instruction.A);
+                AppendIndex(builder, "shape", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
-                AppendAddress(builder, "target", instruction.A);
+                AppendAddress(builder, "target", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.JumpIfTrue:
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                AppendAddress(builder, "target", instruction.A);
-                AppendSlot(builder, "cond", instruction.C);
+                AppendAddress(builder, "target", instruction.A_U16);
+                AppendSlot(builder, "cond", instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.ForRange:
             case GameEventScriptBytecodeOpCode.ForCollection:
-                AppendAddress(builder, "target", instruction.A);
-                AppendAddress(builder, "target2", instruction.B);
+                AppendAddress(builder, "target", instruction.A_U16);
+                AppendAddress(builder, "target2", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPush:
-                AppendSlot(builder, "seed", instruction.A);
+                AppendSlot(builder, "seed", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPushConstant:
@@ -407,44 +418,58 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.UnaryAbs:
             case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
             case GameEventScriptBytecodeOpCode.PredicateTest:
-                AppendSlot(builder, "src", instruction.A);
+                AppendSlot(builder, "src", instruction.A_U16);
                 break;
 
             case var opCode when IsCastInstruction(opCode) || IsTypeCheckInstruction(opCode):
-                AppendSlot(builder, "src", instruction.A);
+                AppendSlot(builder, "src", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.ReturnNothing:
                 break;
 
             case GameEventScriptBytecodeOpCode.Return:
-                AppendSlot(builder, "src", instruction.A);
+                AppendSlot(builder, "src", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Dice:
-                AppendIndex(builder, "dice", instruction.A);
-                AppendIndex(builder, "sides", instruction.B);
+                AppendIndex(builder, "dice", instruction.A_U16);
+                AppendIndex(builder, "sides", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessage:
             case GameEventScriptBytecodeOpCode.PublishMessage:
-                AppendIndex(builder, "shape", instruction.A);
-                AppendIndex(builder, "args", instruction.B);
-                AppendIndex(builder, "tags", instruction.C);
+                AppendIndex(builder, "shape", instruction.A_U16);
+                AppendIndex(builder, "args", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
+            case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
+                AppendIndex(builder, "shape", instruction.A_U16);
+                AppendIndex(builder, "args", instruction.B_U16);
+                AppendIndex(builder, "tags", instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValue:
             case GameEventScriptBytecodeOpCode.PublishMessageValue:
-                AppendSlot(builder, "src", instruction.A);
-                AppendIndex(builder, "tags", instruction.C);
+                AppendSlot(builder, "src", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
+            case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
+                AppendSlot(builder, "src", instruction.A_U16);
+                AppendIndex(builder, "tags", instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Range:
-                AppendSlot(builder, "from", instruction.A);
-                AppendSlot(builder, "to", instruction.B);
+                AppendSlot(builder, "from", instruction.A_U16);
+                AppendSlot(builder, "to", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.RangeWithStep:
-                AppendSlot(builder, "from", instruction.A);
-                AppendSlot(builder, "to", instruction.B);
-                AppendSlot(builder, "step", instruction.C);
+                AppendSlot(builder, "from", instruction.A_U16);
+                AppendSlot(builder, "to", instruction.B_U16);
+                AppendSlot(builder, "step", instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Variadic:
@@ -457,42 +482,42 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.BindHandler:
             case GameEventScriptBytecodeOpCode.CallExtension:
             case GameEventScriptBytecodeOpCode.Call:
-                AppendSlot(builder, "a", instruction.A);
-                AppendSlot(builder, "b", instruction.B);
+                AppendSlot(builder, "a", instruction.A_U16);
+                AppendSlot(builder, "b", instruction.B_U16);
                 break;
 
             default:
-                AppendSlot(builder, "a", instruction.A);
-                AppendSlot(builder, "b", instruction.B);
-                AppendSlot(builder, "c", instruction.C);
+                AppendSlot(builder, "a", instruction.A_U16);
+                AppendSlot(builder, "b", instruction.B_U16);
+                AppendSlot(builder, "c", instruction.C_U16);
                 break;
         }
 
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.ForRange or GameEventScriptBytecodeOpCode.ForCollection:
-                AppendIndex(builder, "loopLayout", instruction.C);
+                AppendIndex(builder, "loopLayout", instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.Pipeline:
-                AppendIndex(builder, "pipeline", instruction.C);
+                AppendIndex(builder, "pipeline", instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                AppendIndex(builder, "generatedCollectionLayout", instruction.C);
+                AppendIndex(builder, "generatedCollectionLayout", instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.GuardedChoice:
-                AppendIndex(builder, "guardedChoiceLayout", instruction.C);
+                AppendIndex(builder, "guardedChoiceLayout", instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.MemberAccess:
-                AppendPoolIndex(builder, "member", module.StringPool, instruction.C);
+                AppendPoolIndex(builder, "member", module.StringPool, instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.TypeCheckCustom:
-                AppendPoolIndex(builder, "type", module.StringPool, instruction.C);
+                AppendPoolIndex(builder, "type", module.StringPool, instruction.C_U16);
                 break;
             default:
             {
                 if (IsOperationLayoutInstruction(instruction.OpCode))
                 {
-                    AppendIndex(builder, "operationLayout", instruction.C);
+                    AppendIndex(builder, "operationLayout", instruction.C_U16);
                 }
 
                 break;
@@ -551,6 +576,33 @@ public static class GameEventScriptBytecodeDumper
                 break;
         }
     }
+
+    private static bool HasDestination(GameEventScriptBytecodeOpCode opCode)
+        => opCode is not (
+            GameEventScriptBytecodeOpCode.Nop or
+            GameEventScriptBytecodeOpCode.ShortCircuitOr or
+            GameEventScriptBytecodeOpCode.ShortCircuitAnd or
+            GameEventScriptBytecodeOpCode.Jump or
+            GameEventScriptBytecodeOpCode.JumpIfTrue or
+            GameEventScriptBytecodeOpCode.JumpIfFalse or
+            GameEventScriptBytecodeOpCode.JumpIfNotTrue or
+            GameEventScriptBytecodeOpCode.EnterScope or
+            GameEventScriptBytecodeOpCode.ExitScope or
+            GameEventScriptBytecodeOpCode.ReturnNothing or
+            GameEventScriptBytecodeOpCode.Return or
+            GameEventScriptBytecodeOpCode.EmitMessage or
+            GameEventScriptBytecodeOpCode.EmitMessageWithTags or
+            GameEventScriptBytecodeOpCode.PublishMessage or
+            GameEventScriptBytecodeOpCode.PublishMessageWithTags or
+            GameEventScriptBytecodeOpCode.EmitMessageValue or
+            GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
+            GameEventScriptBytecodeOpCode.PublishMessageValue or
+            GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
+            GameEventScriptBytecodeOpCode.ForRange or
+            GameEventScriptBytecodeOpCode.ForCollection or
+            GameEventScriptBytecodeOpCode.RandomPush or
+            GameEventScriptBytecodeOpCode.RandomPushConstant or
+            GameEventScriptBytecodeOpCode.RandomPop);
 
     private static void AppendPoolIndex(StringBuilder builder, string name, IReadOnlyList<string> pool, int index)
     {

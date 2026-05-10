@@ -122,8 +122,7 @@ GameEventScriptCompiled
   ModuleName
   FormatVersion
   StringPool
-  SignaturePool
-  NamedArgumentLayouts
+  UShortListPool
   ExternalReferences
   ExternalTypeConstructorReferences
   Code: Instruction[]
@@ -132,14 +131,12 @@ GameEventScriptCompiled
   TypeDefinitions: TypeDefinitionEntry[]
   OperationLayouts
   DiagnosticLayouts
-  PublishLayouts
   IterationSourceLayouts
   LoopLayouts
-  SeededRandomBlockLayouts
-  DicePatternLayouts
-  ObjectMatchPatternLayouts
-  SelectorLayouts
-  PipelineLayouts
+  PipelinePatternPool
+  PipelineObjectPatternPool
+  PipelineSelectorPool
+  PipelinePool
   GeneratedCollectionLayouts
   GuardedChoiceLayouts
   DebugSymbols
@@ -147,7 +144,7 @@ GameEventScriptCompiled
   MaxCallStackDepth
 ```
 
-Existing string/signature/layout pools remain important. Constants that fit the
+Existing string and compact list pools remain important. Constants that fit the
 linear instruction shape are encoded directly in typed load instructions:
 booleans and `nothing` have dedicated opcodes; integer and float payloads use
 raw 64-bit bits split over `A`/`B`; text, tags, and handler message names point
@@ -158,10 +155,9 @@ Current C# public surface:
 ```text
 GameEventScriptCompiled
   StringPool
-  Signatures
+  UShortListPool
   ExternalReferences
   ExternalTypeConstructorReferences
-  NamedArgumentLayouts
   Code: IReadOnlyList<GameEventScriptBytecodeInstruction>
   Handlers
   Callables
@@ -169,14 +165,12 @@ GameEventScriptCompiled
   MaxFrameSlots
   OperationLayouts
   DiagnosticLayouts
-  PublishLayouts
   IterationSourceLayouts
   LoopLayouts
-  SeededRandomBlockLayouts
-  DicePatternLayouts
-  ObjectMatchPatternLayouts
-  SelectorLayouts
-  PipelineLayouts
+  PipelinePatternPool
+  PipelineObjectPatternPool
+  PipelineSelectorPool
+  PipelinePool
   GeneratedCollectionLayouts
   GuardedChoiceLayouts
 
@@ -206,8 +200,8 @@ instruction word are encoded by typed load opcodes:
   are represented by their IEEE bit patterns. `UnitAndFlags=Percentage` makes
   the same opcode load a percentage ratio.
 - `LoadText` and `LoadTag` store a `StringPool` index in `C`.
-- `LoadHandler` stores the message-name `StringPool` index in `A` and an
-  optional `NamedArgumentLayouts` index in `C`.
+- `LoadHandler` stores a `UShortListPool` message-shape index in `A`. The shape
+  list is `[messageNameStringIndex, argumentNameStringIndex...]`.
 
 Constants are concrete. For example `:integer 1`, `:float 1`, `1m`, and `1s`
 must remain distinct loads even if runtime operations can compare or coerce
@@ -317,11 +311,11 @@ avoid per-instruction object graphs. Operands are interpreted by opcode:
   operand lists live in side tables; `A` and `B` may mirror the first two slots
   for fast/direct access.
 
-Large structured metadata belongs in side tables, not nested instruction
-objects. Examples: operation layouts, publish layouts, selector/pipeline
-layouts, iteration-source layouts, generated-collection layouts, guarded-choice
-layouts, diagnostic layouts, object match patterns, dice patterns, and loop
-layouts.
+Large structured metadata belongs in side tables and pools, not nested
+instruction objects. Examples: operation layouts, `UShortListPool` message
+shapes/slot lists, pipeline pools, iteration-source layouts,
+generated-collection layouts, guarded-choice layouts, diagnostic layouts, and
+loop layouts.
 
 An instruction that produces `nothing` writes it to `Dest`. There is no implicit
 push. There are no `Pop` or `Duplicate` instructions in the portable target
@@ -637,11 +631,18 @@ compiler-assigned loop temporary slot.
 - `RangeWithStep dst fromSlot toSlot stepSlot`
 - `Dice dst count sides`
 - `Random dst fromSlot toSlot`
-- `SeededRandom dst seedSlot expressionEntryAddress`
+- `RandomPush seedSlot`
+- `RandomPushConstant seedU64`
+- `RandomPop`
 - `TypeConstructor dst typeIndex callLayoutIndex`
 
 These remain high-level because they map directly to public value semantics.
-For `SeededRandom`, `C` stores the body helper entry directly.
+Seeded random no longer has a side table or helper expression opcode. The
+lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
+Constant seeds are unitless `U64`; signed integer literals are mapped by their
+two's-complement bit pattern. Dynamic seeds must be statically visible as
+unitless `:integer`, usually by declaring the value as `:integer` or writing an
+explicit `as :integer` cast.
 
 Required portable value families:
 
@@ -711,18 +712,10 @@ Handlers may declare static tag filters:
 - no filter: any tag set matches as long as the message signature matches, or
   the message name matches for `MessageEnvelope` handlers.
 
-The instruction uses a side-table layout:
-
-```text
-PublishLayout
-  Kind
-  MessageName
-  SignatureId
-  ArgumentNames[]
-  ArgumentSlots[]
-  MessageSlot?
-  TagSlots[]
-```
+Publishing and emitting are distinct opcodes. Static message literals use a
+message shape and slot lists from `UShortListPool`; dynamic message values use
+the message slot plus an optional tag slot list. A message shape is encoded as
+`[messageNameStringIndex, argumentNameStringIndex...]`.
 
 Arguments and tags are evaluated by preceding code into slots:
 
@@ -730,11 +723,12 @@ Arguments and tags are evaluated by preceding code into slots:
 @0400 Move dst=s20 src=sDamage
 @0401 Move dst=s21 src=sTarget
 @0402 LoadTag dst=s22 tag=:radio
-@0403 Publish kind=Publish layout=#0
+@0403 PublishMessage shape=#0 args=#1 tags=#2
 ```
 
-Publishing or emitting a first-class message value can use a separate
-`PublishMessageValue kind messageSlot tagSlotsLayout` instruction.
+Publishing or emitting a first-class message value uses
+`PublishMessageValue messageSlot tagSlotList` or
+`EmitMessageValue messageSlot tagSlotList`.
 
 ### Extensions, Intrinsics, and External Types
 
@@ -768,20 +762,23 @@ and losing optimized paths.
 Recommended shape:
 
 ```text
-Pipeline dst sourceSlot planIndex
+Pipeline dst pipelineIndex
 GenerateCollection dst planIndex
 MaterializeIterationSource dst planIndex
 ```
 
-`PipelinePlan` is portable metadata, not nested code. It references selector
-plans and expression entry addresses:
+`PipelinePool` is portable metadata, not nested code. It references pipeline
+selector entries and expression entry addresses through `PipelineSelectorPool`.
+Pipeline-owned pattern pools are named together so they are easy to identify in
+the binary surface.
 
 ```text
-PipelinePlan
-  PrefixSelectorPlanIndexes[]
-  TerminalSelectorPlanIndex
+Pipeline
+  SourceSlot
+  PrefixSelectorIndexes[]
+  TerminalSelectorIndex
 
-SelectorPlan
+PipelineSelector
   Kind
   IdentifierSlot
   PredicateAddress?
@@ -795,8 +792,22 @@ SelectorPlan
   Mode
   SecondaryMode
   Flag
-  DicePatternLayoutIndex?
-  ObjectMatchPatternLayoutIndex?
+  PipelinePatternIndex?
+  ObjectPatternIndex?
+
+PipelinePattern
+  Kind: FullHouse | Straight | Count
+  Count?
+  FaceAddress?
+
+PipelineObjectPattern
+  Entries[]
+
+PipelineObjectPatternEntry
+  Key
+  ValueKind: Expression | Nested
+  ExpressionAddress?
+  NestedPatternIndex?
 ```
 
 Required selector kinds:
@@ -867,32 +878,16 @@ materializing the result.
 
 ### Patterns
 
-Dice and object-match patterns are side-table data.
-
-```text
-DicePattern
-  Kind: FullHouse | Straight | Count
-  Count?
-  FaceAddress?
-  FaceResultSlot?
-
-ObjectMatchPattern
-  Entries[]
-
-ObjectMatchEntry
-  Key
-  ValueKind: Expression | NestedPattern
-  ExpressionAddress?
-  ExpressionResultSlot?
-  NestedPatternLayoutIndex?
-```
+Pipeline pattern metadata lives in `PipelinePatternPool` and
+`PipelineObjectPatternPool`. Pattern helper expressions are entry addresses in
+the global code segment and write their result into normal frame slots.
 
 ### Diagnostics
 
 Diagnostics are execution instrumentation, not bytecode. The bytecode stream
 does not contain diagnostic-only instructions. Diagnostic metadata is carried by
 side tables linked to instruction addresses, operation layouts, handler
-metadata, and publish layouts.
+metadata, and message shape/slot-list pools.
 If compile diagnostics are disabled, `DiagnosticLayouts` may be empty.
 
 ```text
@@ -910,7 +905,7 @@ The VM records diagnostic events while executing normal instructions:
   `BindParameter`/cast execution.
 - Function and predicate call events are derived from call operation layouts.
 - Let and expression-to-nothing events are derived from diagnostic layouts.
-- Publish argument events are derived from publish layouts.
+- Publish argument events are derived from message shape and slot-list metadata.
 
 ## Debug Symbols
 

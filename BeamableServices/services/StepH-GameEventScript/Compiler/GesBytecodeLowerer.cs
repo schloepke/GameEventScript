@@ -83,7 +83,6 @@ internal static class GesBytecodeLowerer
                 callable.Kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptBytecodeCallableKind.Predicate : GameEventScriptBytecodeCallableKind.Function,
                 callable.Parameters,
                 callable.SignatureLabels,
-                GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels),
                 parameterTypes: callable.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
         }
 

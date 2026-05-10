@@ -166,6 +166,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             private LinearArgumentSource? _arguments = arguments;
             private int _pc = startAddress;
             private int _endAddress = endAddress;
+            private int _randomScopeMark;
             private bool _initialized;
             private bool _waitingForChild;
 
@@ -176,6 +177,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (!_initialized)
                 {
                     _initialized = true;
+                    _randomScopeMark = session._randomScopes.Count;
                     if ((uint)_pc > (uint)code.Count ||
                         (uint)_endAddress > (uint)code.Count ||
                         _pc > _endAddress)
@@ -271,7 +273,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             public override void Exit(Fiber fiber)
-                => fiber._session.UnwindLinearCallFrames(_callFrames);
+            {
+                fiber._session.UnwindLinearCallFrames(_callFrames);
+                fiber._session.UnwindRandomScopes(_randomScopeMark);
+            }
 
             private static bool TryStartLinearChildFrame(
                 GesBytecodeVmExecutionSession session,
@@ -286,9 +291,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     case GameEventScriptBytecodeOpCode.ForCollection:
                         return TryCreateLinearCollectionLoopFrame(session, instruction, out frame);
-
-                    case GameEventScriptBytecodeOpCode.SeededRandomBlock:
-                        return TryCreateLinearSeededRandomBlockFrame(session, instruction, out frame);
 
                     default:
                         return false;
@@ -354,20 +356,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
             }
 
-            private static bool TryCreateLinearSeededRandomBlockFrame(
-                GesBytecodeVmExecutionSession session,
-                GameEventScriptBytecodeInstruction instruction,
-                out Frame? frame)
-            {
-                frame = null;
-                if (!session.TryGetSeededRandomBlockLayout(instruction.C, out var layout))
-                {
-                    return false;
-                }
-
-                frame = new LinearSeededRandomBlockFrame(session.ResolveSlot(layout.SeedSlot).ToGameEventScriptValue(), instruction.A, instruction.B);
-                return true;
-            }
         }
 
         private abstract class LinearLoopFrame(int identifierSlot, int bodyStart, int bodyEnd) : Frame
@@ -543,52 +531,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 {
                     fiber._session.ExitScope();
                     _enteredScope = false;
-                }
-            }
-        }
-
-        private sealed class LinearSeededRandomBlockFrame(
-            GameEventScriptValue seed,
-            int bodyStart,
-            int bodyEnd) : Frame
-        {
-            private bool _pushed;
-            private bool _waiting;
-            private bool _scopePushed;
-
-            public override FrameSignal Run(Fiber fiber)
-            {
-                if (!_pushed)
-                {
-                    fiber._session.PushSeededRandomScope(seed);
-                    _scopePushed = true;
-                    _pushed = true;
-                    _waiting = true;
-                    fiber.Push(new LinearRangeFrame(bodyStart, bodyEnd, null));
-                    return FrameSignal.Running;
-                }
-
-                if (_waiting)
-                {
-                    if (!fiber.TryTakeResult(out _, out var success) || !success)
-                    {
-                        fiber.Complete(BytecodeVmValue.Nothing, success: false);
-                        return FrameSignal.Completed;
-                    }
-
-                    _waiting = false;
-                }
-
-                fiber.Complete(BytecodeVmValue.Nothing);
-                return FrameSignal.Completed;
-            }
-
-            public override void Exit(Fiber fiber)
-            {
-                if (_scopePushed)
-                {
-                    fiber._session.PopSeededRandomScope();
-                    _scopePushed = false;
                 }
             }
         }

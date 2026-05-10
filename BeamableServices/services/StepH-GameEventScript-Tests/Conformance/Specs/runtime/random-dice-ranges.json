@@ -191,7 +191,7 @@
     {
       "kind": "scriptApi",
       "name": "shuffle draw choose and seeded random scopes are deterministic",
-      "script": "on Start(enemies, seed) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
+      "script": "on Start(enemies, seed as :integer) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
       "randomSequence": [
         "1",
         "0",

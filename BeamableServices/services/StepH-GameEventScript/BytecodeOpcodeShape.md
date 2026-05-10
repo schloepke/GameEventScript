@@ -61,9 +61,9 @@ operand view must fit in `0..65534`.
   values are stored as their normal two's-complement bit pattern.
 - **64-bit float view:** `LoadFloat` reads `F64` directly. This keeps IEEE-754
   `NaN`, `Infinity`, and `-Infinity` portable as raw double bits.
-- **Unsigned payload view:** `U64` is available for future payloads such as
-  compact ids or binary data indexes. It is not currently needed by a runtime
-  opcode.
+- **Unsigned payload view:** `RandomPushConstant` reads `U64` directly as the
+  portable seeded-random seed. Signed integer seeds are mapped to `U64` by their
+  normal two's-complement bit pattern.
 - **32-bit views:** `AI32/BI32` and `AU32/BU32` are available for future compact
   immediates. Current bytecode does not need a dedicated 32-bit immediate load.
 
@@ -87,7 +87,7 @@ operand view must fit in `0..65534`.
 
 ## Opcode Table
 
-| Hex | Opcode | UnitAndFlags | Dest16 | A16 | B16 | C16 | D16 | I64 | F64 | Notes |
+| Hex | Opcode | UnitAndFlags | Dest16 | A16 | B16 | C16 | D16 | I64/U64 | F64 | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0x00 | `LoadNothing` | - | result slot | - | - | - | - | - | - | Loads `nothing`. |
 | 0x01 | `LoadTrue` | - | result slot | - | - | - | - | - | - | Loads boolean `true`. |
@@ -96,7 +96,7 @@ operand view must fit in `0..65534`.
 | 0x04 | `LoadFloat` | numeric unit / `Percentage` | result slot | n/a | n/a | n/a | n/a | - | float / ratio | Loads an inline IEEE-754 `Float64`; `Percentage` makes the value a percentage ratio. |
 | 0x05 | `LoadText` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a text literal. |
 | 0x06 | `LoadTag` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a tag literal. |
-| 0x07 | `LoadHandler` | - | result slot | message-name `StringPool` index | - | optional `NamedArgumentLayouts` index | - | - | - | Loads a handler literal. |
+| 0x07 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x08 | `MoveSlot` | - | result slot | source slot | - | - | - | - | - | Copies a slot value/reference; the source slot remains unchanged. |
 | 0x09 | `Or` | - | result slot | left slot | right slot | - | - | - | - | Tri-state boolean combine. |
 | 0x0A | `Xor` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
@@ -154,55 +154,59 @@ operand view must fit in `0..65534`.
 | 0x3E | `Range` | - | result slot | from slot | to slot | - | - | - | - | Builds a range with implicit step `1`. |
 | 0x3F | `RangeWithStep` | - | result slot | from slot | to slot | step slot | - | - | - | Builds a range with explicit step. |
 | 0x40 | `Dice` | - | result slot | dice count immediate | side count immediate | - | - | - | - | `A16` and `B16` are not slots. |
-| 0x41 | `SeededRandom` | - | result slot | seed slot | - | helper entry address | - | - | - | Executes helper expression under a seeded random scope. |
-| 0x42..0x5B | `CastNothing`..`CastOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x5C | `CastCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Declared-type conversion for custom record/external types. |
-| 0x5D | `TypeConstructor` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Full argument list and names are in layout. |
-| 0x5E | `PredicateTest` | - | result slot | tested value slot | - | `OperationLayouts` index | - | - | - | Enters a predicate frame or fast path. |
-| 0x5F | `MemberAccess` | - | result slot | target slot | - | `StringPool` index | - | - | - | Reads a named member. |
-| 0x60 | `IndexedAccess` | - | result slot | target slot | index slot | - | - | - | - | Direct indexed lookup. |
-| 0x61 | `BuildList` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
-| 0x62 | `BuildSequence` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
-| 0x63 | `BuildSet` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
-| 0x64 | `BuildDictionary` | - | result slot | first value slot | second value slot | `OperationLayouts` index | - | - | - | Keys and full value list are in layout. |
-| 0x65 | `BuildMessage` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Message name, signature, names, and slots are in layout. |
-| 0x66 | `BindHandler` | - | result slot | handler slot | first bound argument slot | `OperationLayouts` index | - | - | - | Full operand list is in layout. |
-| 0x67 | `CallExtension` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Extension reference and argument metadata are in layout. |
-| 0x68 | `Call` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Enters a VM-owned call frame. |
-| 0x69..0x81 | `TypeCheckNothing`..`TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x82 | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
-| 0x83 | `Pipeline` | - | result slot | - | - | `PipelineLayouts` index | - | - | - | Layout stores source slot and selector indexes. |
-| 0x84 | `GeneratedCollection` | - | result slot | - | - | `GeneratedCollectionLayouts` index | - | - | - | Layout stores iteration source and helper entries. |
-| 0x85 | `GuardedChoice` | - | result slot | - | - | `GuardedChoiceLayouts` index | - | - | - | Layout stores value/condition helper entries. |
-| 0x86 | `Power` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
-| 0x87 | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
-| 0x88 | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
-| 0x89 | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
-| 0x8A | `Nop` | - | - | - | - | - | - | - | - | No operation. |
-| 0x8B | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A16` and writes it to `Dest16`. |
-| 0x8C | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
-| 0x8D | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C16.IsTrue()`. |
-| 0x8E | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C16.IsFalse()`. |
-| 0x8F | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C16.IsTrue()`, including `nothing`. |
-| 0x90 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
-| 0x91 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
-| 0x92 | `Return` | - | - | optional return slot | - | - | - | - | - | `A16 = -1` returns `nothing`. |
-| 0x93 | `PublishValue` | - | - | publish kind immediate | - | `PublishLayouts` index | - | - | - | Publishes from a layout. |
-| 0x94 | `PublishMessageValue` | - | - | message slot | publish kind immediate | `PublishLayouts` index | - | - | - | Publishes a dynamic message value. |
-| 0x95 | `ForRange` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and range iteration source. |
-| 0x96 | `ForCollection` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and collection source. |
-| 0x97 | `SeededRandomBlock` | - | - | body target address | end target address | `SeededRandomBlockLayouts` index | - | - | - | Layout stores seed slot. |
+| 0x41 | `RandomPush` | - | - | seed slot | - | - | - | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
+| 0x42 | `RandomPushConstant` | - | - | n/a | n/a | n/a | n/a | unsigned seed | - | Pushes a nested random scope from inline `U64`. |
+| 0x43 | `RandomPop` | - | - | - | - | - | - | - | - | Restores the previous random scope. |
+| 0x44..0x5D | `CastNothing`..`CastOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x5E | `CastCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Declared-type conversion for custom record/external types. |
+| 0x5F | `TypeConstructor` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Full argument list and names are in layout. |
+| 0x60 | `PredicateTest` | - | result slot | tested value slot | - | `OperationLayouts` index | - | - | - | Enters a predicate frame or fast path. |
+| 0x61 | `MemberAccess` | - | result slot | target slot | - | `StringPool` index | - | - | - | Reads a named member. |
+| 0x62 | `IndexedAccess` | - | result slot | target slot | index slot | - | - | - | - | Direct indexed lookup. |
+| 0x63 | `BuildList` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
+| 0x64 | `BuildSequence` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
+| 0x65 | `BuildSet` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
+| 0x66 | `BuildDictionary` | - | result slot | first value slot | second value slot | `OperationLayouts` index | - | - | - | Keys and full value list are in layout. |
+| 0x67 | `BuildMessage` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Message name, signature, names, and slots are in layout. |
+| 0x68 | `BindHandler` | - | result slot | handler slot | first bound argument slot | `OperationLayouts` index | - | - | - | Full operand list is in layout. |
+| 0x69 | `CallExtension` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Extension reference and argument metadata are in layout. |
+| 0x6A | `Call` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Enters a VM-owned call frame. |
+| 0x6B..0x83 | `TypeCheckNothing`..`TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x84 | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
+| 0x85 | `Pipeline` | - | result slot | - | - | `PipelinePool` index | - | - | - | Pipeline entry stores source slot and selector indexes. |
+| 0x86 | `GeneratedCollection` | - | result slot | - | - | `GeneratedCollectionLayouts` index | - | - | - | Layout stores iteration source and helper entries. |
+| 0x87 | `GuardedChoice` | - | result slot | - | - | `GuardedChoiceLayouts` index | - | - | - | Layout stores value/condition helper entries. |
+| 0x88 | `Power` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
+| 0x89 | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
+| 0x8A | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
+| 0x8B | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
+| 0x8C | `Nop` | - | - | - | - | - | - | - | - | No operation. |
+| 0x8D | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A16` and writes it to `Dest16`. |
+| 0x8E | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
+| 0x8F | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C16.IsTrue()`. |
+| 0x90 | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C16.IsFalse()`. |
+| 0x91 | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C16.IsTrue()`, including `nothing`. |
+| 0x92 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
+| 0x93 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
+| 0x94 | `Return` | - | - | optional return slot | - | - | - | - | - | `A16 = -1` returns `nothing`. |
+| 0x95 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message. |
+| 0x96 | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Publishes a statically shaped message. |
+| 0x97 | `EmitMessageValue` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value. |
+| 0x98 | `PublishMessageValue` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value. |
+| 0x99 | `ForRange` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and range iteration source. |
+| 0x9A | `ForCollection` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and collection source. |
 
 ## Side-Table Summary
 
-| C16 target | Used by |
+| Pool / table | Used by |
 | --- | --- |
-| `StringPool` | `LoadText`, `LoadTag`, `LoadHandler`, `MemberAccess` |
-| `NamedArgumentLayouts` | `LoadHandler` |
+| `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage`, `PublishMessage`, `EmitMessageValue`, `PublishMessageValue`, operation name lists |
 | `OperationLayouts` | `Variadic`, `TypeConstructor`, `PredicateTest`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call` |
-| `PublishLayouts` | `PublishValue`, `PublishMessageValue` |
 | `LoopLayouts` | `ForRange`, `ForCollection` |
-| `SeededRandomBlockLayouts` | `SeededRandomBlock` |
-| `PipelineLayouts` | `Pipeline` |
+| `PipelinePool` | `Pipeline` |
+| `PipelineSelectorPool` | Referenced by `PipelinePool` |
+| `PipelinePatternPool` | Referenced by `PipelineSelectorPool` |
+| `PipelineObjectPatternPool` | Referenced by `PipelineSelectorPool` |
 | `GeneratedCollectionLayouts` | `GeneratedCollection` |
 | `GuardedChoiceLayouts` | `GuardedChoice` |

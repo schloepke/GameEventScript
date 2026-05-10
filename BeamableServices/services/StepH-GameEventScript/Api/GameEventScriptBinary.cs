@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
@@ -10,7 +11,8 @@ public readonly struct GameEventScriptBinary
 {
     public readonly GameEventScriptBinaryHeader Header { get; init; }
     public readonly string ModuleName { get; init; }
-    public readonly string[] StringPool { get; init; }
+    public readonly GameEventScriptTextTable StringTable { get; init; }
+    public readonly GameEventScriptUInt16Table UInt16SliceTable { get; init; }
     public readonly GameEventScriptBinaryBindTable BindTable { get; init; }
 }
 
@@ -31,6 +33,36 @@ public readonly struct GameEventScriptBinaryHeader
     public const uint HeaderSize = 16;
     public uint FileSize { get; init; } 
 }
+
+public readonly struct GameEventScriptTextTable
+{
+    public readonly struct SliceEntry
+    {
+        public ushort Start { get; init; }
+        public ushort Length { get; init; }
+    }
+    
+    public SliceEntry[] Slices { get; init; }
+    public byte[] Data { get; init; }
+    
+    public string Resolve(ushort index) => Encoding.UTF8.GetString(Data.AsSpan(Slices[index].Start, Slices[index].Length));
+}
+
+
+public readonly struct GameEventScriptUInt16Table
+{
+    public readonly struct SliceEntry
+    {
+        public ushort Start { get; init; }
+        public ushort Length { get; init; }
+    }
+    
+    public SliceEntry[] Slices { get; init; }
+    public ushort[] Data { get; init; }
+    
+    public ReadOnlySpan<ushort> Resolve(ushort index) => Data.AsSpan(Slices[index].Start, Slices[index].Length);
+}
+
 
 
 

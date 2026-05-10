@@ -23,14 +23,12 @@ internal static class GesBytecodeCompiler
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
-        private readonly Dictionary<string, int> _signatureIndex = new(StringComparer.Ordinal);
-        private readonly List<string> _signatures = [];
         private readonly Dictionary<string, int> _externalReferenceIndex = new(StringComparer.Ordinal);
         private readonly List<GameEventScriptExtensionReference> _externalReferences = [];
         private readonly Dictionary<string, int> _externalTypeConstructorReferenceIndex = new(StringComparer.Ordinal);
         private readonly List<GameEventScriptExternalTypeConstructorReference> _externalTypeConstructorReferences = [];
-        private readonly Dictionary<string, int> _namedArgumentLayoutIndex = new(StringComparer.Ordinal);
-        private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
+        private readonly Dictionary<string, int> _uShortListIndex = new(StringComparer.Ordinal);
+        private readonly List<IReadOnlyList<ushort>> _uShortListPool = [];
         private readonly Dictionary<GameEventScriptBytecodeHandler, EventHandlerNode> _handlerSources =
             new(ReferenceEqualityComparer<GameEventScriptBytecodeHandler>.Instance);
 
@@ -50,7 +48,7 @@ internal static class GesBytecodeCompiler
             var handlers = BuildHandlers();
             var linearBuilder = new GesLinearBytecodeBuilder(
                 AddString,
-                AddNamedArgumentLayout,
+                AddUShortList,
                 AddExternalReference,
                 module.Callables,
                 module.TypeDefinitions,
@@ -63,10 +61,9 @@ internal static class GesBytecodeCompiler
                 options,
                 module.ModuleName,
                 _stringPool.ToArray(),
-                _signatures.ToArray(),
+                _uShortListPool.ToArray(),
                 _externalReferences.ToArray(),
                 _externalTypeConstructorReferences.ToArray(),
-                _namedArgumentLayouts.ToArray(),
                 callables,
                 handlers,
                 typeDefinitions,
@@ -74,14 +71,12 @@ internal static class GesBytecodeCompiler
                 linearBuilder.MaxFrameSlots,
                 linearBuilder.OperationLayouts.ToArray(),
                 linearBuilder.DiagnosticLayouts.ToArray(),
-                linearBuilder.PublishLayouts.ToArray(),
                 linearBuilder.IterationSourceLayouts.ToArray(),
                 linearBuilder.LoopLayouts.ToArray(),
-                linearBuilder.SeededRandomBlockLayouts.ToArray(),
-                linearBuilder.DicePatternLayouts.ToArray(),
-                linearBuilder.ObjectMatchPatternLayouts.ToArray(),
-                linearBuilder.SelectorLayouts.ToArray(),
-                linearBuilder.PipelineLayouts.ToArray(),
+                linearBuilder.PipelinePatternPool.ToArray(),
+                linearBuilder.PipelineObjectPatternPool.ToArray(),
+                linearBuilder.PipelineSelectorPool.ToArray(),
+                linearBuilder.PipelinePool.ToArray(),
                 linearBuilder.GeneratedCollectionLayouts.ToArray(),
                 linearBuilder.GuardedChoiceLayouts.ToArray());
         }
@@ -92,7 +87,6 @@ internal static class GesBytecodeCompiler
                 pair => (IReadOnlyList<GameEventScriptBytecodeHandler>)pair.Value
                     .Select((handler, index) =>
                     {
-                        var signatureId = GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels);
                         var bytecodeHandler = new GameEventScriptBytecodeHandler(
                             pair.Key,
                             handler.DispatchKind == EventHandlerDispatchKind.MessageEnvelope
@@ -100,7 +94,6 @@ internal static class GesBytecodeCompiler
                                 : GameEventScriptBytecodeHandlerDispatchKind.ExactSignature,
                             handler.Parameters,
                             handler.SignatureLabels,
-                            signatureId,
                             index,
                             GesBytecodeLowerer.CollectHandlerSlots(
                                 pair.Key,
@@ -185,35 +178,17 @@ internal static class GesBytecodeCompiler
             return index;
         }
 
-        private int AddSignature(string value)
+        private int AddUShortList(IReadOnlyList<ushort> values)
         {
-            if (_signatureIndex.TryGetValue(value, out var index))
+            var key = string.Join("\u001f", values.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            if (_uShortListIndex.TryGetValue(key, out var index))
             {
                 return index;
             }
 
-            index = _signatures.Count;
-            _signatures.Add(value);
-            _signatureIndex[value] = index;
-            return index;
-        }
-
-        private int AddNamedArgumentLayout(IReadOnlyList<string> orderedNames)
-        {
-            var key = string.Join("\u001f", orderedNames);
-            if (_namedArgumentLayoutIndex.TryGetValue(key, out var index))
-            {
-                return index;
-            }
-
-            index = _namedArgumentLayouts.Count;
-            _namedArgumentLayouts.Add(orderedNames.ToArray());
-            _namedArgumentLayoutIndex[key] = index;
-            foreach (var name in orderedNames)
-            {
-                AddString(name);
-            }
-
+            index = _uShortListPool.Count;
+            _uShortListPool.Add(values.ToArray());
+            _uShortListIndex[key] = index;
             return index;
         }
 
@@ -250,7 +225,6 @@ internal static class GesBytecodeCompiler
                     }
                 }
 
-                AddSignature(GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
             }
 
             foreach (var pair in module.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal))
@@ -286,7 +260,6 @@ internal static class GesBytecodeCompiler
                         AddString(tag);
                     }
 
-                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(pair.Key, handler.SignatureLabels));
                 }
             }
 
@@ -427,11 +400,11 @@ internal static class GesBytecodeCompiler
 
                 case HandlerLiteralExpressionNode handler:
                     AddString(GameEventScriptMessageSignature.NormalizeMessageName(handler.Message));
-                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels));
-                    if (handler.SignatureLabels.Count > 0)
+                    foreach (var label in handler.SignatureLabels)
                     {
-                        AddNamedArgumentLayout(handler.SignatureLabels);
+                        AddString(label);
                     }
+
                     return;
 
                 case MessageLiteralExpressionNode message:
@@ -557,7 +530,10 @@ internal static class GesBytecodeCompiler
                     AddString(call.Name);
                     if (!module.Callables.ContainsKey(call.Name))
                     {
-                        AddNamedArgumentLayout(call.ArgumentList.Arguments.Select(argument => argument.Name).ToArray());
+                        foreach (var argumentName in call.ArgumentList.Arguments.Select(argument => argument.Name))
+                        {
+                            AddString(argumentName);
+                        }
                     }
 
                     foreach (var argument in call.ArgumentList.Arguments)
@@ -596,8 +572,11 @@ internal static class GesBytecodeCompiler
         {
             var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
             AddString(GameEventScriptMessageSignature.NormalizeMessageName(message.Message));
-            AddSignature(GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames));
-            AddNamedArgumentLayout(argumentNames);
+            foreach (var argumentName in argumentNames)
+            {
+                AddString(argumentName);
+            }
+
             foreach (var argument in message.Arguments)
             {
                 CollectSourceExpressionMetadata(argument.Expression);
@@ -608,7 +587,11 @@ internal static class GesBytecodeCompiler
         {
             AddString(typeConstructor.TypeName);
             var argumentNames = typeConstructor.Arguments.Select(argument => argument.Name).ToArray();
-            AddNamedArgumentLayout(argumentNames);
+            foreach (var argumentName in argumentNames)
+            {
+                AddString(argumentName);
+            }
+
             if (module.ExternalTypeDefinitions.ContainsKey(typeConstructor.TypeName))
             {
                 AddExternalTypeConstructorReference(new GameEventScriptExternalTypeConstructorReference(

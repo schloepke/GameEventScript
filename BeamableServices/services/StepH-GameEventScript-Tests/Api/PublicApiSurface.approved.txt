@@ -1,8 +1,9 @@
 struct StepH.GameEventScript.Api.GameEventScriptBinary
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindTable BindTable { get set }
   property StepH.GameEventScript.Api.GameEventScriptBinaryHeader Header { get set }
+  property StepH.GameEventScript.Api.GameEventScriptTextTable StringTable { get set }
+  property StepH.GameEventScript.Api.GameEventScriptUInt16Table UInt16SliceTable { get set }
   property System.String ModuleName { get set }
-  property System.String[] StringPool { get set }
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry
   ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt32 entryAddress)
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
@@ -25,6 +26,8 @@ class StepH.GameEventScript.Api.GameEventScriptBinaryBuilder
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBind(StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry bind)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElement(System.String stringPoolElement, System.UInt16& index)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElements(System.Collections.Generic.IReadOnlyList<System.String> values, System.UInt16[]& indexes)
+  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddUint16TableEntries(System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> values, System.UInt16[]& indexes)
+  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddUint16TableEntry(System.Collections.Generic.IReadOnlyList<System.UInt16> value, System.UInt16& index)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFileSize(System.UInt32 fileSize)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFlag(StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinaryFlags flag, System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithModuleName(System.String moduleName)
@@ -60,7 +63,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
   property System.Int32 LocalSlotCount { get set }
   property System.Int32 ReturnSlot { get set }
   property System.String Name { get }
-  property System.String SignatureId { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind
   enum-field Predicate = 0
   enum-field Function = 1
@@ -77,15 +79,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming
   enum-field BeforeInstruction = 0
   enum-field AfterInstruction = 1
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternKind
-  enum-field Count = 0
-  enum-field FullHouse = 1
-  enum-field Straight = 2
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternLayout
-  ctor GameEventScriptBytecodeDicePatternLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternKind kind, System.Int32 count, System.Int32 faceEntryAddress)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternKind Kind { get }
-  property System.Int32 Count { get }
-  property System.Int32 FaceEntryAddress { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout
   ctor GameEventScriptBytecodeGeneratedCollectionLayout(System.String collectionType, System.Int32 identifierSlot, System.Int32 iterationSourceLayoutIndex, System.Int32 predicateEntryAddress, System.Int32 projectionEntryAddress)
   property System.Int32 IdentifierSlot { get }
@@ -100,7 +93,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceLayou
   property System.Int32 OtherwiseEntryAddress { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
   property StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind DispatchKind { get }
-  property StepH.GameEventScript.Api.GameEventScriptMessageSignature Definition { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Int32> Slots { get }
   property System.Collections.Generic.IReadOnlyList<System.String> ExcludedTags { get }
   property System.Collections.Generic.IReadOnlyList<System.String> ParameterTypes { get }
@@ -111,7 +103,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
   property System.Int32 EntryAddress { get set }
   property System.Int32 LocalSlotCount { get }
   property System.String Message { get }
-  property System.String SignatureId { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
   enum-field MessageEnvelope = 1
@@ -157,18 +148,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeLoopLayout
   ctor GameEventScriptBytecodeLoopLayout(System.Int32 identifierSlot, System.Int32 iterationSourceLayoutIndex)
   property System.Int32 IdentifierSlot { get }
   property System.Int32 IterationSourceLayoutIndex { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchEntryLayout
-  ctor GameEventScriptBytecodeObjectMatchEntryLayout(System.String key, StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind valueKind, System.Int32 expressionEntryAddress, System.Int32 nestedPatternLayoutIndex)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind ValueKind { get }
-  property System.Int32 ExpressionEntryAddress { get }
-  property System.Int32 NestedPatternLayoutIndex { get }
-  property System.String Key { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchPatternLayout
-  ctor GameEventScriptBytecodeObjectMatchPatternLayout(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchEntryLayout> entries)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchEntryLayout> Entries { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind
-  enum-field Expression = 0
-  enum-field Nested = 1
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field LoadNothing = 0
   enum-field LoadTrue = 1
@@ -235,95 +214,98 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Range = 62
   enum-field RangeWithStep = 63
   enum-field Dice = 64
-  enum-field SeededRandom = 65
-  enum-field CastNothing = 66
-  enum-field CastBoolean = 67
-  enum-field CastInteger = 68
-  enum-field CastFloat = 69
-  enum-field CastNumber = 70
-  enum-field CastPercentage = 71
-  enum-field CastDegree = 72
-  enum-field CastMeter = 73
-  enum-field CastSecond = 74
-  enum-field CastVector = 75
-  enum-field CastPoint = 76
-  enum-field CastUuid = 77
-  enum-field CastSequence = 78
-  enum-field CastSeries = 79
-  enum-field CastEnvelope = 80
-  enum-field CastRef = 81
-  enum-field CastTag = 82
-  enum-field CastText = 83
-  enum-field CastList = 84
-  enum-field CastRange = 85
-  enum-field CastMessage = 86
-  enum-field CastHandler = 87
-  enum-field CastDictionary = 88
-  enum-field CastSet = 89
-  enum-field CastDice = 90
-  enum-field CastOptional = 91
-  enum-field CastCustom = 92
-  enum-field TypeConstructor = 93
-  enum-field PredicateTest = 94
-  enum-field MemberAccess = 95
-  enum-field IndexedAccess = 96
-  enum-field BuildList = 97
-  enum-field BuildSequence = 98
-  enum-field BuildSet = 99
-  enum-field BuildDictionary = 100
-  enum-field BuildMessage = 101
-  enum-field BindHandler = 102
-  enum-field CallExtension = 103
-  enum-field Call = 104
-  enum-field TypeCheckNothing = 105
-  enum-field TypeCheckTag = 106
-  enum-field TypeCheckText = 107
-  enum-field TypeCheckPercentage = 108
-  enum-field TypeCheckDegree = 109
-  enum-field TypeCheckMeter = 110
-  enum-field TypeCheckSecond = 111
-  enum-field TypeCheckVector = 112
-  enum-field TypeCheckPoint = 113
-  enum-field TypeCheckFloat = 114
-  enum-field TypeCheckInteger = 115
-  enum-field TypeCheckBoolean = 116
-  enum-field TypeCheckUuid = 117
-  enum-field TypeCheckOptional = 118
-  enum-field TypeCheckSequence = 119
-  enum-field TypeCheckSeries = 120
-  enum-field TypeCheckEnvelope = 121
-  enum-field TypeCheckList = 122
-  enum-field TypeCheckRange = 123
-  enum-field TypeCheckMessage = 124
-  enum-field TypeCheckHandler = 125
-  enum-field TypeCheckRef = 126
-  enum-field TypeCheckDictionary = 127
-  enum-field TypeCheckSet = 128
-  enum-field TypeCheckDice = 129
-  enum-field TypeCheckCustom = 130
-  enum-field Pipeline = 131
-  enum-field GeneratedCollection = 132
-  enum-field GuardedChoice = 133
-  enum-field Power = 134
-  enum-field ShortCircuitOr = 135
-  enum-field ShortCircuitAnd = 136
-  enum-field ShortCircuitImplies = 137
-  enum-field Nop = 138
-  enum-field BindParameter = 139
-  enum-field Jump = 140
-  enum-field JumpIfTrue = 141
-  enum-field JumpIfFalse = 142
-  enum-field JumpIfNotTrue = 143
-  enum-field EnterScope = 144
-  enum-field ExitScope = 145
-  enum-field Return = 146
-  enum-field PublishValue = 147
-  enum-field PublishMessageValue = 148
-  enum-field ForRange = 149
-  enum-field ForCollection = 150
-  enum-field SeededRandomBlock = 151
+  enum-field RandomPush = 65
+  enum-field RandomPushConstant = 66
+  enum-field RandomPop = 67
+  enum-field CastNothing = 68
+  enum-field CastBoolean = 69
+  enum-field CastInteger = 70
+  enum-field CastFloat = 71
+  enum-field CastNumber = 72
+  enum-field CastPercentage = 73
+  enum-field CastDegree = 74
+  enum-field CastMeter = 75
+  enum-field CastSecond = 76
+  enum-field CastVector = 77
+  enum-field CastPoint = 78
+  enum-field CastUuid = 79
+  enum-field CastSequence = 80
+  enum-field CastSeries = 81
+  enum-field CastEnvelope = 82
+  enum-field CastRef = 83
+  enum-field CastTag = 84
+  enum-field CastText = 85
+  enum-field CastList = 86
+  enum-field CastRange = 87
+  enum-field CastMessage = 88
+  enum-field CastHandler = 89
+  enum-field CastDictionary = 90
+  enum-field CastSet = 91
+  enum-field CastDice = 92
+  enum-field CastOptional = 93
+  enum-field CastCustom = 94
+  enum-field TypeConstructor = 95
+  enum-field PredicateTest = 96
+  enum-field MemberAccess = 97
+  enum-field IndexedAccess = 98
+  enum-field BuildList = 99
+  enum-field BuildSequence = 100
+  enum-field BuildSet = 101
+  enum-field BuildDictionary = 102
+  enum-field BuildMessage = 103
+  enum-field BindHandler = 104
+  enum-field CallExtension = 105
+  enum-field Call = 106
+  enum-field TypeCheckNothing = 107
+  enum-field TypeCheckTag = 108
+  enum-field TypeCheckText = 109
+  enum-field TypeCheckPercentage = 110
+  enum-field TypeCheckDegree = 111
+  enum-field TypeCheckMeter = 112
+  enum-field TypeCheckSecond = 113
+  enum-field TypeCheckVector = 114
+  enum-field TypeCheckPoint = 115
+  enum-field TypeCheckFloat = 116
+  enum-field TypeCheckInteger = 117
+  enum-field TypeCheckBoolean = 118
+  enum-field TypeCheckUuid = 119
+  enum-field TypeCheckOptional = 120
+  enum-field TypeCheckSequence = 121
+  enum-field TypeCheckSeries = 122
+  enum-field TypeCheckEnvelope = 123
+  enum-field TypeCheckList = 124
+  enum-field TypeCheckRange = 125
+  enum-field TypeCheckMessage = 126
+  enum-field TypeCheckHandler = 127
+  enum-field TypeCheckRef = 128
+  enum-field TypeCheckDictionary = 129
+  enum-field TypeCheckSet = 130
+  enum-field TypeCheckDice = 131
+  enum-field TypeCheckCustom = 132
+  enum-field Pipeline = 133
+  enum-field GeneratedCollection = 134
+  enum-field GuardedChoice = 135
+  enum-field Power = 136
+  enum-field ShortCircuitOr = 137
+  enum-field ShortCircuitAnd = 138
+  enum-field ShortCircuitImplies = 139
+  enum-field Nop = 140
+  enum-field BindParameter = 141
+  enum-field Jump = 142
+  enum-field JumpIfTrue = 143
+  enum-field JumpIfFalse = 144
+  enum-field JumpIfNotTrue = 145
+  enum-field EnterScope = 146
+  enum-field ExitScope = 147
+  enum-field Return = 148
+  enum-field EmitMessage = 149
+  enum-field PublishMessage = 150
+  enum-field EmitMessageValue = 151
+  enum-field PublishMessageValue = 152
+  enum-field ForRange = 153
+  enum-field ForCollection = 154
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
-  ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 namedArgumentLayoutIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
+  ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 nameListIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode { get }
   property System.Boolean Flag { get }
@@ -334,31 +316,50 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
   property System.Int32 Count { get }
   property System.Int32 ExpressionEntryAddress { get }
   property System.Int32 ExternalReferenceIndex { get }
-  property System.Int32 NamedArgumentLayoutIndex { get }
+  property System.Int32 NameListIndex { get }
   property System.Int32 SecondaryExpressionEntryAddress { get }
   property System.String ArgumentName { get }
   property System.String Name { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineLayout
-  ctor GameEventScriptBytecodePipelineLayout(System.Int32 sourceSlot, System.Collections.Generic.IReadOnlyList<System.Int32> prefixSelectorLayoutIndexes, System.Int32 terminalSelectorLayoutIndex)
-  property System.Collections.Generic.IReadOnlyList<System.Int32> PrefixSelectorLayoutIndexes { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipeline
+  ctor GameEventScriptBytecodePipeline(System.Int32 sourceSlot, System.Collections.Generic.IReadOnlyList<System.Int32> prefixSelectorIndexes, System.Int32 terminalSelectorIndex)
+  property System.Collections.Generic.IReadOnlyList<System.Int32> PrefixSelectorIndexes { get }
   property System.Int32 SourceSlot { get }
-  property System.Int32 TerminalSelectorLayoutIndex { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodePublishKind
-  enum-field Emit = 0
-  enum-field Publish = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePublishLayoutEntry
-  ctor GameEventScriptBytecodePublishLayoutEntry(StepH.GameEventScript.Api.GameEventScriptBytecodePublishKind kind, System.String messageName, System.String signatureId, System.Collections.Generic.IReadOnlyList<System.String> argumentNames, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Int32 messageSlot, System.Collections.Generic.IReadOnlyList<System.Int32> tagSlots)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodePublishKind Kind { get }
-  property System.Collections.Generic.IReadOnlyList<System.Int32> ArgumentSlots { get }
-  property System.Collections.Generic.IReadOnlyList<System.Int32> TagSlots { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentNames { get }
-  property System.Int32 MessageSlot { get }
-  property System.String MessageName { get }
-  property System.String SignatureId { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeSeededRandomBlockLayout
-  ctor GameEventScriptBytecodeSeededRandomBlockLayout(System.Int32 seedSlot)
-  property System.Int32 SeedSlot { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind
+  property System.Int32 TerminalSelectorIndex { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern
+  ctor GameEventScriptBytecodePipelineObjectPattern(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternEntry> entries)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternEntry> Entries { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternEntry
+  ctor GameEventScriptBytecodePipelineObjectPatternEntry(System.String key, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternValueKind valueKind, System.Int32 expressionEntryAddress, System.Int32 nestedPatternIndex)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternValueKind ValueKind { get }
+  property System.Int32 ExpressionEntryAddress { get }
+  property System.Int32 NestedPatternIndex { get }
+  property System.String Key { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternValueKind
+  enum-field Expression = 0
+  enum-field Nested = 1
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePattern
+  ctor GameEventScriptBytecodePipelinePattern(StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePatternKind kind, System.Int32 count, System.Int32 faceEntryAddress)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePatternKind Kind { get }
+  property System.Int32 Count { get }
+  property System.Int32 FaceEntryAddress { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePatternKind
+  enum-field Count = 0
+  enum-field FullHouse = 1
+  enum-field Straight = 2
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelector
+  ctor GameEventScriptBytecodePipelineSelector(StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelectorKind kind, System.Int32 identifierSlot, System.String edgeMode, System.String secondaryMode, System.Int32 count, System.Int32 secondaryIdentifierSlot, System.Boolean flag, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 pipelinePatternIndex, System.Int32 objectPatternIndex)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelectorKind Kind { get }
+  property System.Boolean Flag { get }
+  property System.Int32 Count { get }
+  property System.Int32 ExpressionEntryAddress { get }
+  property System.Int32 IdentifierSlot { get }
+  property System.Int32 ObjectPatternIndex { get }
+  property System.Int32 PipelinePatternIndex { get }
+  property System.Int32 SecondaryExpressionEntryAddress { get }
+  property System.Int32 SecondaryIdentifierSlot { get }
+  property System.String EdgeMode { get }
+  property System.String SecondaryMode { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelectorKind
   enum-field Filter = 0
   enum-field Select = 1
   enum-field Predicate = 2
@@ -383,19 +384,9 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind
   enum-field Choose = 21
   enum-field Draw = 22
   enum-field Shuffle = 23
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorLayout
-  ctor GameEventScriptBytecodeSelectorLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind kind, System.Int32 identifierSlot, System.String edgeMode, System.String secondaryMode, System.Int32 count, System.Int32 secondaryIdentifierSlot, System.Boolean flag, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 dicePatternLayoutIndex, System.Int32 objectMatchPatternLayoutIndex)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorKind Kind { get }
-  property System.Boolean Flag { get }
-  property System.Int32 Count { get }
-  property System.Int32 DicePatternLayoutIndex { get }
-  property System.Int32 ExpressionEntryAddress { get }
-  property System.Int32 IdentifierSlot { get }
-  property System.Int32 ObjectMatchPatternLayoutIndex { get }
-  property System.Int32 SecondaryExpressionEntryAddress { get }
-  property System.Int32 SecondaryIdentifierSlot { get }
-  property System.String EdgeMode { get }
-  property System.String SecondaryMode { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodePublishKind
+  enum-field Emit = 0
+  enum-field Publish = 1
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }
@@ -453,22 +444,19 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeLoopLayout> LoopLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchPatternLayout> ObjectMatchPatternLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout> OperationLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineLayout> PipelineLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePublishLayoutEntry> PublishLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeSelectorLayout> SelectorLayouts { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipeline> PipelinePool { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelector> PipelineSelectorPool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExtensionReference> ExternalReferences { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get }
-  property System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.String>> NamedArgumentLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> Signatures { get }
+  property System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> UShortListPool { get }
   property System.Collections.Generic.IReadOnlyList<System.String> StringPool { get }
   property System.Int32 MaxFrameSlots { get }
   property System.String ModuleName { get }
@@ -587,6 +575,20 @@ enum StepH.GameEventScript.Api.GameEventScriptSymbolKind
   enum-field Message = 5
   enum-field Variable = 6
   enum-field GlobalDefinition = 7
+struct StepH.GameEventScript.Api.GameEventScriptTextTable
+  method System.String Resolve(System.UInt16 index)
+  property StepH.GameEventScript.Api.GameEventScriptTextTable.SliceEntry[] Slices { get set }
+  property System.Byte[] Data { get set }
+struct StepH.GameEventScript.Api.GameEventScriptTextTable.SliceEntry
+  property System.UInt16 Length { get set }
+  property System.UInt16 Start { get set }
+struct StepH.GameEventScript.Api.GameEventScriptUInt16Table
+  method System.ReadOnlySpan<System.UInt16> Resolve(System.UInt16 index)
+  property StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry[] Slices { get set }
+  property System.UInt16[] Data { get set }
+struct StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry
+  property System.UInt16 Length { get set }
+  property System.UInt16 Start { get set }
 static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesBoolean(System.Boolean value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesCustomType(System.String typeName, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> values)

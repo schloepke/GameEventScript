@@ -13,10 +13,9 @@ public sealed class GameEventScriptCompiled
         GameEventScriptCompileOptions options,
         string moduleName,
         IReadOnlyList<string> stringPool,
-        IReadOnlyList<string> signatures,
+        IReadOnlyList<IReadOnlyList<ushort>> uShortListPool,
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<GameEventScriptExternalTypeConstructorReference> externalTypeConstructorReferences,
-        IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
         IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
@@ -24,14 +23,12 @@ public sealed class GameEventScriptCompiled
         int maxFrameSlots = 0,
         IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout>? diagnosticLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry>? publishLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout>? iterationSourceLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeLoopLayout>? loopLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout>? seededRandomBlockLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeDicePatternLayout>? dicePatternLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeObjectMatchPatternLayout>? objectMatchPatternLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeSelectorLayout>? selectorLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodePipelineLayout>? pipelineLayouts = null,
+        IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
+        IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
+        IReadOnlyList<GameEventScriptBytecodePipelineSelector>? pipelineSelectorPool = null,
+        IReadOnlyList<GameEventScriptBytecodePipeline>? pipelinePool = null,
         IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout>? generatedCollectionLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout>? guardedChoiceLayouts = null)
     {
@@ -40,10 +37,9 @@ public sealed class GameEventScriptCompiled
             ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
             : moduleName;
         StringPool = CopyList(stringPool, nameof(stringPool));
-        Signatures = CopyList(signatures, nameof(signatures));
+        UShortListPool = CopyNestedUShortLayouts(uShortListPool, nameof(uShortListPool));
         ExternalReferences = CopyList(externalReferences, nameof(externalReferences));
         ExternalTypeConstructorReferences = CopyList(externalTypeConstructorReferences, nameof(externalTypeConstructorReferences));
-        NamedArgumentLayouts = CopyNestedStringLayouts(namedArgumentLayouts, nameof(namedArgumentLayouts));
         Callables = CopyDictionary(callables, nameof(callables));
         Handlers = CopyHandlerDictionary(handlers, nameof(handlers));
         TypeDefinitions = CopyDictionary(typeDefinitions, nameof(typeDefinitions));
@@ -51,14 +47,12 @@ public sealed class GameEventScriptCompiled
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
         OperationLayouts = operationLayouts?.ToArray() ?? [];
         DiagnosticLayouts = diagnosticLayouts?.ToArray() ?? [];
-        PublishLayouts = publishLayouts?.ToArray() ?? [];
         IterationSourceLayouts = iterationSourceLayouts?.ToArray() ?? [];
         LoopLayouts = loopLayouts?.ToArray() ?? [];
-        SeededRandomBlockLayouts = seededRandomBlockLayouts?.ToArray() ?? [];
-        DicePatternLayouts = dicePatternLayouts?.ToArray() ?? [];
-        ObjectMatchPatternLayouts = objectMatchPatternLayouts?.ToArray() ?? [];
-        SelectorLayouts = selectorLayouts?.ToArray() ?? [];
-        PipelineLayouts = pipelineLayouts?.ToArray() ?? [];
+        PipelinePatternPool = pipelinePatternPool?.ToArray() ?? [];
+        PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
+        PipelineSelectorPool = pipelineSelectorPool?.ToArray() ?? [];
+        PipelinePool = pipelinePool?.ToArray() ?? [];
         GeneratedCollectionLayouts = generatedCollectionLayouts?.ToArray() ?? [];
         GuardedChoiceLayouts = guardedChoiceLayouts?.ToArray() ?? [];
     }
@@ -69,13 +63,11 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<string> StringPool { get; }
 
-    public IReadOnlyList<string> Signatures { get; }
+    public IReadOnlyList<IReadOnlyList<ushort>> UShortListPool { get; }
 
     public IReadOnlyList<GameEventScriptExtensionReference> ExternalReferences { get; }
 
     public IReadOnlyList<GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get; }
-
-    public IReadOnlyList<IReadOnlyList<string>> NamedArgumentLayouts { get; }
 
     public IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> Callables { get; }
 
@@ -91,21 +83,17 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry> PublishLayouts { get; }
-
     public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeLoopLayout> LoopLayouts { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts { get; }
+    public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts { get; }
+    public IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeObjectMatchPatternLayout> ObjectMatchPatternLayouts { get; }
+    public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeSelectorLayout> SelectorLayouts { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodePipelineLayout> PipelineLayouts { get; }
+    public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get; }
 
@@ -114,11 +102,11 @@ public sealed class GameEventScriptCompiled
     private static IReadOnlyList<T> CopyList<T>(IReadOnlyList<T> source, string parameterName)
         => (source ?? throw new ArgumentNullException(parameterName)).ToArray();
 
-    private static IReadOnlyList<IReadOnlyList<string>> CopyNestedStringLayouts(
-        IReadOnlyList<IReadOnlyList<string>> source,
+    private static IReadOnlyList<IReadOnlyList<ushort>> CopyNestedUShortLayouts(
+        IReadOnlyList<IReadOnlyList<ushort>> source,
         string parameterName)
         => (source ?? throw new ArgumentNullException(parameterName))
-            .Select(layout => (IReadOnlyList<string>)(layout?.ToArray() ?? throw new ArgumentException("Nested string layouts must not be null.", parameterName)))
+            .Select(layout => (IReadOnlyList<ushort>)(layout?.ToArray() ?? throw new ArgumentException("Nested ushort layouts must not be null.", parameterName)))
             .ToArray();
 
     private static IReadOnlyDictionary<string, T> CopyDictionary<T>(

@@ -74,7 +74,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     Range,
     RangeWithStep,
     Dice,
-    SeededRandom,
+    RandomPush,
+    RandomPushConstant,
+    RandomPop,
     CastNothing,
     CastBoolean,
     CastInteger,
@@ -156,11 +158,12 @@ public enum GameEventScriptBytecodeOpCode : byte
     EnterScope,
     ExitScope,
     Return,
-    PublishValue,
+    EmitMessage,
+    PublishMessage,
+    EmitMessageValue,
     PublishMessageValue,
     ForRange,
-    ForCollection,
-    SeededRandomBlock
+    ForCollection
 }
 
 public enum GameEventScriptBytecodeCallableKind
@@ -306,7 +309,7 @@ public sealed class GameEventScriptBytecodeOperationLayout
         IReadOnlyList<string?>? declaredTypes = null,
         GameEventScriptBytecodeCallableKind callableKind = GameEventScriptBytecodeCallableKind.Function,
         int externalReferenceIndex = -1,
-        int namedArgumentLayoutIndex = -1,
+        int nameListIndex = -1,
         int expressionEntryAddress = -1,
         int secondaryExpressionEntryAddress = -1,
         int count = 0,
@@ -321,7 +324,7 @@ public sealed class GameEventScriptBytecodeOperationLayout
         DeclaredTypes = declaredTypes?.ToArray() ?? [];
         CallableKind = callableKind;
         ExternalReferenceIndex = externalReferenceIndex;
-        NamedArgumentLayoutIndex = namedArgumentLayoutIndex;
+        NameListIndex = nameListIndex;
         ExpressionEntryAddress = expressionEntryAddress;
         SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
         Count = count;
@@ -346,7 +349,7 @@ public sealed class GameEventScriptBytecodeOperationLayout
 
     public int ExternalReferenceIndex { get; }
 
-    public int NamedArgumentLayoutIndex { get; }
+    public int NameListIndex { get; }
 
     public int ExpressionEntryAddress { get; }
 
@@ -396,41 +399,6 @@ public sealed class GameEventScriptBytecodeDiagnosticLayout
     public string Name { get; }
 }
 
-public sealed class GameEventScriptBytecodePublishLayoutEntry
-{
-    public GameEventScriptBytecodePublishLayoutEntry(
-        GameEventScriptBytecodePublishKind kind,
-        string? messageName = null,
-        string? signatureId = null,
-        IReadOnlyList<string>? argumentNames = null,
-        IReadOnlyList<int>? argumentSlots = null,
-        int messageSlot = -1,
-        IReadOnlyList<int>? tagSlots = null)
-    {
-        Kind = kind;
-        MessageName = messageName;
-        SignatureId = signatureId;
-        ArgumentNames = argumentNames?.ToArray() ?? [];
-        ArgumentSlots = argumentSlots?.ToArray() ?? [];
-        MessageSlot = messageSlot;
-        TagSlots = tagSlots?.ToArray() ?? [];
-    }
-
-    public GameEventScriptBytecodePublishKind Kind { get; }
-
-    public string? MessageName { get; }
-
-    public string? SignatureId { get; }
-
-    public IReadOnlyList<string> ArgumentNames { get; }
-
-    public IReadOnlyList<int> ArgumentSlots { get; }
-
-    public int MessageSlot { get; }
-
-    public IReadOnlyList<int> TagSlots { get; }
-}
-
 public sealed class GameEventScriptBytecodeIterationSourceLayout
 {
     public GameEventScriptBytecodeIterationSourceLayout(
@@ -471,27 +439,17 @@ public sealed class GameEventScriptBytecodeLoopLayout
     public int IterationSourceLayoutIndex { get; }
 }
 
-public sealed class GameEventScriptBytecodeSeededRandomBlockLayout
-{
-    public GameEventScriptBytecodeSeededRandomBlockLayout(int seedSlot)
-    {
-        SeedSlot = seedSlot;
-    }
-
-    public int SeedSlot { get; }
-}
-
-public enum GameEventScriptBytecodeDicePatternKind
+public enum GameEventScriptBytecodePipelinePatternKind
 {
     Count,
     FullHouse,
     Straight
 }
 
-public sealed class GameEventScriptBytecodeDicePatternLayout
+public sealed class GameEventScriptBytecodePipelinePattern
 {
-    public GameEventScriptBytecodeDicePatternLayout(
-        GameEventScriptBytecodeDicePatternKind kind,
+    public GameEventScriptBytecodePipelinePattern(
+        GameEventScriptBytecodePipelinePatternKind kind,
         int count = 0,
         int faceEntryAddress = -1)
     {
@@ -500,53 +458,53 @@ public sealed class GameEventScriptBytecodeDicePatternLayout
         FaceEntryAddress = faceEntryAddress;
     }
 
-    public GameEventScriptBytecodeDicePatternKind Kind { get; }
+    public GameEventScriptBytecodePipelinePatternKind Kind { get; }
 
     public int Count { get; }
 
     public int FaceEntryAddress { get; }
 }
 
-public enum GameEventScriptBytecodeObjectMatchValueKind
+public enum GameEventScriptBytecodePipelineObjectPatternValueKind
 {
     Expression,
     Nested
 }
 
-public sealed class GameEventScriptBytecodeObjectMatchEntryLayout
+public sealed class GameEventScriptBytecodePipelineObjectPatternEntry
 {
-    public GameEventScriptBytecodeObjectMatchEntryLayout(
+    public GameEventScriptBytecodePipelineObjectPatternEntry(
         string key,
-        GameEventScriptBytecodeObjectMatchValueKind valueKind,
+        GameEventScriptBytecodePipelineObjectPatternValueKind valueKind,
         int expressionEntryAddress = -1,
-        int nestedPatternLayoutIndex = -1)
+        int nestedPatternIndex = -1)
     {
         Key = key ?? throw new ArgumentNullException(nameof(key));
         ValueKind = valueKind;
         ExpressionEntryAddress = expressionEntryAddress;
-        NestedPatternLayoutIndex = nestedPatternLayoutIndex;
+        NestedPatternIndex = nestedPatternIndex;
     }
 
     public string Key { get; }
 
-    public GameEventScriptBytecodeObjectMatchValueKind ValueKind { get; }
+    public GameEventScriptBytecodePipelineObjectPatternValueKind ValueKind { get; }
 
     public int ExpressionEntryAddress { get; }
 
-    public int NestedPatternLayoutIndex { get; }
+    public int NestedPatternIndex { get; }
 }
 
-public sealed class GameEventScriptBytecodeObjectMatchPatternLayout
+public sealed class GameEventScriptBytecodePipelineObjectPattern
 {
-    public GameEventScriptBytecodeObjectMatchPatternLayout(IReadOnlyList<GameEventScriptBytecodeObjectMatchEntryLayout>? entries)
+    public GameEventScriptBytecodePipelineObjectPattern(IReadOnlyList<GameEventScriptBytecodePipelineObjectPatternEntry>? entries)
     {
         Entries = entries?.ToArray() ?? [];
     }
 
-    public IReadOnlyList<GameEventScriptBytecodeObjectMatchEntryLayout> Entries { get; }
+    public IReadOnlyList<GameEventScriptBytecodePipelineObjectPatternEntry> Entries { get; }
 }
 
-public enum GameEventScriptBytecodeSelectorKind
+public enum GameEventScriptBytecodePipelineSelectorKind
 {
     Filter,
     Select,
@@ -574,10 +532,10 @@ public enum GameEventScriptBytecodeSelectorKind
     Shuffle
 }
 
-public sealed class GameEventScriptBytecodeSelectorLayout
+public sealed class GameEventScriptBytecodePipelineSelector
 {
-    public GameEventScriptBytecodeSelectorLayout(
-        GameEventScriptBytecodeSelectorKind kind,
+    public GameEventScriptBytecodePipelineSelector(
+        GameEventScriptBytecodePipelineSelectorKind kind,
         int identifierSlot = -1,
         string? edgeMode = null,
         string? secondaryMode = null,
@@ -586,8 +544,8 @@ public sealed class GameEventScriptBytecodeSelectorLayout
         bool flag = false,
         int expressionEntryAddress = -1,
         int secondaryExpressionEntryAddress = -1,
-        int dicePatternLayoutIndex = -1,
-        int objectMatchPatternLayoutIndex = -1)
+        int pipelinePatternIndex = -1,
+        int objectPatternIndex = -1)
     {
         Kind = kind;
         IdentifierSlot = identifierSlot;
@@ -598,11 +556,11 @@ public sealed class GameEventScriptBytecodeSelectorLayout
         Flag = flag;
         ExpressionEntryAddress = expressionEntryAddress;
         SecondaryExpressionEntryAddress = secondaryExpressionEntryAddress;
-        DicePatternLayoutIndex = dicePatternLayoutIndex;
-        ObjectMatchPatternLayoutIndex = objectMatchPatternLayoutIndex;
+        PipelinePatternIndex = pipelinePatternIndex;
+        ObjectPatternIndex = objectPatternIndex;
     }
 
-    public GameEventScriptBytecodeSelectorKind Kind { get; }
+    public GameEventScriptBytecodePipelineSelectorKind Kind { get; }
 
     public int IdentifierSlot { get; }
 
@@ -620,28 +578,28 @@ public sealed class GameEventScriptBytecodeSelectorLayout
 
     public int SecondaryExpressionEntryAddress { get; }
 
-    public int DicePatternLayoutIndex { get; }
+    public int PipelinePatternIndex { get; }
 
-    public int ObjectMatchPatternLayoutIndex { get; }
+    public int ObjectPatternIndex { get; }
 }
 
-public sealed class GameEventScriptBytecodePipelineLayout
+public sealed class GameEventScriptBytecodePipeline
 {
-    public GameEventScriptBytecodePipelineLayout(
+    public GameEventScriptBytecodePipeline(
         int sourceSlot,
-        IReadOnlyList<int>? prefixSelectorLayoutIndexes,
-        int terminalSelectorLayoutIndex)
+        IReadOnlyList<int>? prefixSelectorIndexes,
+        int terminalSelectorIndex)
     {
         SourceSlot = sourceSlot;
-        PrefixSelectorLayoutIndexes = prefixSelectorLayoutIndexes?.ToArray() ?? [];
-        TerminalSelectorLayoutIndex = terminalSelectorLayoutIndex;
+        PrefixSelectorIndexes = prefixSelectorIndexes?.ToArray() ?? [];
+        TerminalSelectorIndex = terminalSelectorIndex;
     }
 
     public int SourceSlot { get; }
 
-    public IReadOnlyList<int> PrefixSelectorLayoutIndexes { get; }
+    public IReadOnlyList<int> PrefixSelectorIndexes { get; }
 
-    public int TerminalSelectorLayoutIndex { get; }
+    public int TerminalSelectorIndex { get; }
 }
 
 public sealed class GameEventScriptBytecodeGeneratedCollectionLayout
@@ -770,7 +728,6 @@ public sealed class GameEventScriptBytecodeHandler
         GameEventScriptBytecodeHandlerDispatchKind dispatchKind,
         IReadOnlyList<string> parameters,
         IReadOnlyList<string> signatureLabels,
-        string signatureId,
         int declarationOrder,
         IReadOnlyDictionary<string, int> slots,
         IReadOnlyList<string?>? parameterTypes = null,
@@ -785,12 +742,10 @@ public sealed class GameEventScriptBytecodeHandler
         ParameterTypes = NormalizeParameterTypes(parameterTypes, parameters);
         RequiredTags = NormalizeTags(requiredTags);
         ExcludedTags = NormalizeTags(excludedTags);
-        SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
         DeclarationOrder = declarationOrder;
         Slots = NormalizeSlots(slots);
         EntryAddress = entryAddress;
         LocalSlotCount = GetLocalSlotCount(Slots);
-        Definition = GameEventScriptMessageSignature.Create(message, signatureLabels);
     }
 
     public string Message { get; }
@@ -807,8 +762,6 @@ public sealed class GameEventScriptBytecodeHandler
 
     public IReadOnlyList<string> ExcludedTags { get; }
 
-    public string SignatureId { get; }
-
     public int DeclarationOrder { get; }
 
     public int EntryAddress { get; internal set; }
@@ -816,8 +769,6 @@ public sealed class GameEventScriptBytecodeHandler
     public int LocalSlotCount { get; }
 
     public IReadOnlyDictionary<string, int> Slots { get; }
-
-    public GameEventScriptMessageSignature Definition { get; }
 
     private static IReadOnlyList<string?> NormalizeParameterTypes(IReadOnlyList<string?>? parameterTypes, IReadOnlyList<string> parameters)
     {
@@ -873,7 +824,6 @@ public sealed class GameEventScriptBytecodeCallable
         GameEventScriptBytecodeCallableKind kind,
         IReadOnlyList<string> parameters,
         IReadOnlyList<string> signatureLabels,
-        string signatureId,
         IReadOnlyList<string?>? parameterTypes = null,
         int entryAddress = -1,
         int localSlotCount = 0,
@@ -884,7 +834,6 @@ public sealed class GameEventScriptBytecodeCallable
         Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
         SignatureLabels = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
         ParameterTypes = NormalizeParameterTypes(parameterTypes, parameters);
-        SignatureId = signatureId ?? throw new ArgumentNullException(nameof(signatureId));
         EntryAddress = entryAddress;
         LocalSlotCount = localSlotCount;
         ReturnSlot = returnSlot;
@@ -899,8 +848,6 @@ public sealed class GameEventScriptBytecodeCallable
     public IReadOnlyList<string> SignatureLabels { get; }
 
     public IReadOnlyList<string?> ParameterTypes { get; }
-
-    public string SignatureId { get; }
 
     public int EntryAddress { get; internal set; }
 

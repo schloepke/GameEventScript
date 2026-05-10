@@ -297,7 +297,7 @@
     {
       "kind": "scriptApi",
       "name": "block scopes do not leak variables",
-      "script": "on Start(items, seed) {\n  if true {\n    let fromIf be 10\n  }\n\n  for item in items {\n    let fromLoop be item\n  }\n\n  :random with seed {\n    let fromRandom be :random from 1 to 6\n    emit Inner(valuePresent: fromRandom has value)\n  }\n\n  if fromIf has value emit IfLeak\n  if fromLoop has value emit LoopLeak\n  if fromRandom has value emit RandomLeak\n}",
+      "script": "on Start(items, seed as :integer) {\n  if true {\n    let fromIf be 10\n  }\n\n  for item in items {\n    let fromLoop be item\n  }\n\n  :random with seed {\n    let fromRandom be :random from 1 to 6\n    emit Inner(valuePresent: fromRandom has value)\n  }\n\n  if fromIf has value emit IfLeak\n  if fromLoop has value emit LoopLeak\n  if fromRandom has value emit RandomLeak\n}",
       "steps": [
         {
           "input": {

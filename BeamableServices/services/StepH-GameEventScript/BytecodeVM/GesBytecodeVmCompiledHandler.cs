@@ -17,13 +17,13 @@ internal sealed class GesBytecodeVmCompiledHandler
         ParameterTypes = handler.ParameterTypes.ToArray();
         RequiredTags = handler.RequiredTags.ToArray();
         ExcludedTags = handler.ExcludedTags.ToArray();
-        SignatureId = handler.SignatureId;
+        SignatureId = GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels);
         DeclarationOrder = handler.DeclarationOrder;
         EntryAddress = handler.EntryAddress;
         LocalSlotCount = handler.LocalSlotCount;
         Slots = handler.Slots.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         DiagnosticsEnabled = diagnosticsEnabled;
-        Definition = handler.Definition;
+        Definition = GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels);
     }
 
     public string Message { get; }

@@ -63,11 +63,12 @@ internal sealed class GesBytecodeVmLinearExecutable
             .SelectMany(group => group)
             .Select(handler =>
             {
-                ValidateAddress(module, code, handler.EntryAddress, $"handler '{handler.SignatureId}' entry");
-                ValidateFrameSlotCount(module, handler.LocalSlotCount, $"handler '{handler.SignatureId}' local slot count");
+                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels);
+                ValidateAddress(module, code, handler.EntryAddress, $"handler '{signatureId}' entry");
+                ValidateFrameSlotCount(module, handler.LocalSlotCount, $"handler '{signatureId}' local slot count");
                 return new GesBytecodeVmLinearHandlerEntry(
                     handler.Message,
-                    handler.SignatureId,
+                    signatureId,
                     handler.DispatchKind,
                     handler.DeclarationOrder,
                     handler.EntryAddress,
@@ -80,12 +81,13 @@ internal sealed class GesBytecodeVmLinearExecutable
         var callables = module.Callables.Values
             .Select(callable =>
             {
-                ValidateAddress(module, code, callable.EntryAddress, $"callable '{callable.SignatureId}' entry");
-                ValidateFrameSlotCount(module, callable.LocalSlotCount, $"callable '{callable.SignatureId}' local slot count");
-                ValidateOptionalSlot(module, callable.ReturnSlot, $"callable '{callable.SignatureId}' return slot");
+                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels);
+                ValidateAddress(module, code, callable.EntryAddress, $"callable '{signatureId}' entry");
+                ValidateFrameSlotCount(module, callable.LocalSlotCount, $"callable '{signatureId}' local slot count");
+                ValidateOptionalSlot(module, callable.ReturnSlot, $"callable '{signatureId}' return slot");
                 return new GesBytecodeVmLinearCallableEntry(
                     callable.Name,
-                    callable.SignatureId,
+                    signatureId,
                     callable.Kind,
                     callable.EntryAddress,
                     callable.LocalSlotCount,
@@ -332,8 +334,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
-                ValidateIndex(module.StringPool.Count, instruction.A, $"{context} handler message");
-                ValidateOptionalIndex(module.NamedArgumentLayouts.Count, instruction.C, $"{context} handler argument layout");
+                ValidateMessageShape(module, instruction.A, $"{context} handler shape");
                 break;
 
             case GameEventScriptBytecodeOpCode.MoveSlot:
@@ -359,13 +360,17 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateOptionalSlot(module, instruction.A, $"{context} return slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PublishValue:
-                ValidateIndex(module.PublishLayouts.Count, instruction.C, $"{context} publish layout");
+            case GameEventScriptBytecodeOpCode.EmitMessage:
+            case GameEventScriptBytecodeOpCode.PublishMessage:
+                ValidateMessageShape(module, instruction.A, $"{context} message shape");
+                ValidateMessageArgumentSlotList(module, instruction.A, instruction.B, $"{context} argument slots");
+                ValidateOptionalSlotList(module, instruction.C, $"{context} tag slot list");
                 break;
 
+            case GameEventScriptBytecodeOpCode.EmitMessageValue:
             case GameEventScriptBytecodeOpCode.PublishMessageValue:
                 ValidateSlot(module, instruction.A, $"{context} message slot");
-                ValidateIndex(module.PublishLayouts.Count, instruction.C, $"{context} publish layout");
+                ValidateOptionalSlotList(module, instruction.C, $"{context} tag slot list");
                 break;
 
             case GameEventScriptBytecodeOpCode.ForRange:
@@ -375,15 +380,12 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateAddress(module, code, instruction.B, $"{context} end target");
                 break;
 
-            case GameEventScriptBytecodeOpCode.SeededRandomBlock:
-                ValidateIndex(module.SeededRandomBlockLayouts.Count, instruction.C, $"{context} seeded random block layout");
-                ValidateAddress(module, code, instruction.A, $"{context} body target");
-                ValidateAddress(module, code, instruction.B, $"{context} end target");
+            case GameEventScriptBytecodeOpCode.RandomPush:
+                ValidateSlot(module, instruction.A, $"{context} seed slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.SeededRandom:
-                ValidateSlot(module, instruction.A, $"{context} seed slot");
-                ValidateAddress(module, code, instruction.C, $"{context} expression entry");
+            case GameEventScriptBytecodeOpCode.RandomPushConstant:
+            case GameEventScriptBytecodeOpCode.RandomPop:
                 break;
 
             case GameEventScriptBytecodeOpCode.MemberAccess:
@@ -392,7 +394,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.Pipeline:
-                ValidateIndex(module.PipelineLayouts.Count, instruction.C, $"{context} pipeline layout");
+                ValidateIndex(module.PipelinePool.Count, instruction.C, $"{context} pipeline");
                 break;
 
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
@@ -491,14 +493,12 @@ internal sealed class GesBytecodeVmLinearExecutable
     {
         ValidateOperationLayouts(module);
         ValidateDiagnosticLayouts(module);
-        ValidatePublishLayouts(module);
         ValidateIterationSourceLayouts(module);
         ValidateLoopLayouts(module);
-        ValidateSeededRandomBlockLayouts(module);
-        ValidateDicePatternLayouts(module);
-        ValidateObjectMatchPatternLayouts(module);
-        ValidateSelectorLayouts(module);
-        ValidatePipelineLayouts(module);
+        ValidatePipelinePatternPool(module);
+        ValidatePipelineObjectPatternPool(module);
+        ValidatePipelineSelectorPool(module);
+        ValidatePipelinePool(module);
         ValidateGeneratedCollectionLayouts(module);
         ValidateGuardedChoiceLayouts(module);
     }
@@ -536,24 +536,12 @@ internal sealed class GesBytecodeVmLinearExecutable
             }
 
             ValidateOptionalIndex(module.ExternalReferences.Count, layout.ExternalReferenceIndex, $"{context} external reference");
-            ValidateOptionalIndex(module.NamedArgumentLayouts.Count, layout.NamedArgumentLayoutIndex, $"{context} named argument layout");
+            ValidateOptionalStringList(module, layout.NameListIndex, $"{context} name list");
             ValidateOptionalAddress(module, module.Code, layout.ExpressionEntryAddress, $"{context} expression entry");
             ValidateOptionalAddress(module, module.Code, layout.SecondaryExpressionEntryAddress, $"{context} secondary expression entry");
             ValidateNonNegative(layout.Count, $"{context} count");
             ValidateSlots(module, layout.ArgumentSlots, $"{context} argument slot");
             ValidateSlots(module, layout.ParameterSlots, $"{context} parameter slot");
-        }
-    }
-
-    private static void ValidatePublishLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.PublishLayouts.Count; index++)
-        {
-            var layout = module.PublishLayouts[index];
-            var context = $"publish layout #{index}";
-            ValidateOptionalSlot(module, layout.MessageSlot, $"{context} message slot");
-            ValidateSlots(module, layout.ArgumentSlots, $"{context} argument slot");
-            ValidateSlots(module, layout.TagSlots, $"{context} tag slot");
         }
     }
 
@@ -581,50 +569,42 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
     }
 
-    private static void ValidateSeededRandomBlockLayouts(GameEventScriptCompiled module)
+    private static void ValidatePipelineSelectorPool(GameEventScriptCompiled module)
     {
-        for (var index = 0; index < module.SeededRandomBlockLayouts.Count; index++)
+        for (var index = 0; index < module.PipelineSelectorPool.Count; index++)
         {
-            ValidateOptionalSlot(module, module.SeededRandomBlockLayouts[index].SeedSlot, $"seeded random block layout #{index} seed slot");
-        }
-    }
-
-    private static void ValidateSelectorLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.SelectorLayouts.Count; index++)
-        {
-            var layout = module.SelectorLayouts[index];
-            var context = $"selector layout #{index}";
+            var layout = module.PipelineSelectorPool[index];
+            var context = $"pipeline selector #{index}";
             ValidateOptionalSlot(module, layout.IdentifierSlot, $"{context} identifier slot");
             ValidateOptionalSlot(module, layout.SecondaryIdentifierSlot, $"{context} secondary identifier slot");
             ValidateOptionalAddress(module, module.Code, layout.ExpressionEntryAddress, $"{context} expression entry");
             ValidateOptionalAddress(module, module.Code, layout.SecondaryExpressionEntryAddress, $"{context} secondary expression entry");
-            ValidateOptionalIndex(module.DicePatternLayouts.Count, layout.DicePatternLayoutIndex, $"{context} dice pattern layout");
-            ValidateOptionalIndex(module.ObjectMatchPatternLayouts.Count, layout.ObjectMatchPatternLayoutIndex, $"{context} object match pattern layout");
+            ValidateOptionalIndex(module.PipelinePatternPool.Count, layout.PipelinePatternIndex, $"{context} pattern");
+            ValidateOptionalIndex(module.PipelineObjectPatternPool.Count, layout.ObjectPatternIndex, $"{context} object pattern");
             ValidateNonNegative(layout.Count, $"{context} count");
         }
     }
 
-    private static void ValidateDicePatternLayouts(GameEventScriptCompiled module)
+    private static void ValidatePipelinePatternPool(GameEventScriptCompiled module)
     {
-        for (var index = 0; index < module.DicePatternLayouts.Count; index++)
+        for (var index = 0; index < module.PipelinePatternPool.Count; index++)
         {
-            var layout = module.DicePatternLayouts[index];
-            var context = $"dice pattern layout #{index}";
+            var layout = module.PipelinePatternPool[index];
+            var context = $"pipeline pattern #{index}";
             ValidateNonNegative(layout.Count, $"{context} count");
             ValidateOptionalAddress(module, module.Code, layout.FaceEntryAddress, $"{context} face entry");
         }
     }
 
-    private static void ValidateObjectMatchPatternLayouts(GameEventScriptCompiled module)
+    private static void ValidatePipelineObjectPatternPool(GameEventScriptCompiled module)
     {
-        for (var index = 0; index < module.ObjectMatchPatternLayouts.Count; index++)
+        for (var index = 0; index < module.PipelineObjectPatternPool.Count; index++)
         {
-            var layout = module.ObjectMatchPatternLayouts[index];
+            var layout = module.PipelineObjectPatternPool[index];
             for (var entryIndex = 0; entryIndex < layout.Entries.Count; entryIndex++)
             {
                 var entry = layout.Entries[entryIndex];
-                var context = $"object match pattern layout #{index} entry #{entryIndex}";
+                var context = $"pipeline object pattern #{index} entry #{entryIndex}";
                 if (string.IsNullOrEmpty(entry.Key))
                 {
                     throw InvalidBytecode($"{context} has no key.");
@@ -632,33 +612,33 @@ internal sealed class GesBytecodeVmLinearExecutable
 
                 switch (entry.ValueKind)
                 {
-                    case GameEventScriptBytecodeObjectMatchValueKind.Expression:
+                    case GameEventScriptBytecodePipelineObjectPatternValueKind.Expression:
                         ValidateOptionalAddress(module, module.Code, entry.ExpressionEntryAddress, $"{context} expression entry");
                         break;
 
-                    case GameEventScriptBytecodeObjectMatchValueKind.Nested:
-                        ValidateIndex(module.ObjectMatchPatternLayouts.Count, entry.NestedPatternLayoutIndex, $"{context} nested pattern layout");
+                    case GameEventScriptBytecodePipelineObjectPatternValueKind.Nested:
+                        ValidateIndex(module.PipelineObjectPatternPool.Count, entry.NestedPatternIndex, $"{context} nested object pattern");
                         break;
                 }
             }
         }
     }
 
-    private static void ValidatePipelineLayouts(GameEventScriptCompiled module)
+    private static void ValidatePipelinePool(GameEventScriptCompiled module)
     {
-        for (var index = 0; index < module.PipelineLayouts.Count; index++)
+        for (var index = 0; index < module.PipelinePool.Count; index++)
         {
-            var layout = module.PipelineLayouts[index];
-            var context = $"pipeline layout #{index}";
+            var layout = module.PipelinePool[index];
+            var context = $"pipeline #{index}";
             ValidateSlot(module, layout.SourceSlot, $"{context} source slot");
-            var prefixSelectorLayoutIndexes = layout.PrefixSelectorLayoutIndexes;
-            for (var prefixIndex = 0; prefixIndex < prefixSelectorLayoutIndexes.Count; prefixIndex++)
+            var prefixSelectorIndexes = layout.PrefixSelectorIndexes;
+            for (var prefixIndex = 0; prefixIndex < prefixSelectorIndexes.Count; prefixIndex++)
             {
-                var selectorIndex = prefixSelectorLayoutIndexes[prefixIndex];
-                ValidateIndex(module.SelectorLayouts.Count, selectorIndex, $"{context} prefix selector layout");
+                var selectorIndex = prefixSelectorIndexes[prefixIndex];
+                ValidateIndex(module.PipelineSelectorPool.Count, selectorIndex, $"{context} prefix selector");
             }
 
-            ValidateIndex(module.SelectorLayouts.Count, layout.TerminalSelectorLayoutIndex, $"{context} terminal selector layout");
+            ValidateIndex(module.PipelineSelectorPool.Count, layout.TerminalSelectorIndex, $"{context} terminal selector");
         }
     }
 
@@ -696,6 +676,79 @@ internal sealed class GesBytecodeVmLinearExecutable
             }
 
             ValidateOptionalAddress(module, module.Code, layout.OtherwiseEntryAddress, $"guarded choice layout #{index} otherwise entry");
+        }
+    }
+
+    private static void ValidateMessageShape(GameEventScriptCompiled module, int index, string context)
+    {
+        ValidateIndex(module.UShortListPool.Count, index, context);
+        var shape = module.UShortListPool[index];
+        if (shape.Count == 0)
+        {
+            throw InvalidBytecode($"{context} must contain a message name string-pool index.");
+        }
+
+        for (var partIndex = 0; partIndex < shape.Count; partIndex++)
+        {
+            ValidateIndex(module.StringPool.Count, shape[partIndex], $"{context} string #{partIndex}");
+        }
+    }
+
+    private static void ValidateMessageArgumentSlotList(GameEventScriptCompiled module, int shapeIndex, int slotListIndex, string context)
+    {
+        var argumentCount = module.UShortListPool[shapeIndex].Count - 1;
+        if (argumentCount == 0)
+        {
+            ValidateOptionalIndex(module.UShortListPool.Count, slotListIndex, context);
+            if (slotListIndex >= 0 && module.UShortListPool[slotListIndex].Count != 0)
+            {
+                throw InvalidBytecode($"{context} must be empty for a message shape without arguments.");
+            }
+
+            return;
+        }
+
+        ValidateIndex(module.UShortListPool.Count, slotListIndex, context);
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != argumentCount)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match message shape argument count {argumentCount}.");
+        }
+
+        ValidateSlotList(module, slots, context);
+    }
+
+    private static void ValidateOptionalStringList(GameEventScriptCompiled module, int index, string context)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        ValidateIndex(module.UShortListPool.Count, index, context);
+        var values = module.UShortListPool[index];
+        for (var itemIndex = 0; itemIndex < values.Count; itemIndex++)
+        {
+            ValidateIndex(module.StringPool.Count, values[itemIndex], $"{context} string #{itemIndex}");
+        }
+    }
+
+    private static void ValidateOptionalSlotList(GameEventScriptCompiled module, int index, string context)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        ValidateIndex(module.UShortListPool.Count, index, context);
+        ValidateSlotList(module, module.UShortListPool[index], context);
+    }
+
+    private static void ValidateSlotList(GameEventScriptCompiled module, IReadOnlyList<ushort> slots, string context)
+    {
+        foreach (var slot in slots)
+        {
+            ValidateSlot(module, slot, context);
         }
     }
 

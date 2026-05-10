@@ -11,12 +11,47 @@ internal static class GesValidator
     private sealed class ValidationScope(IEnumerable<string>? names = null)
     {
         private readonly HashSet<string> _variables = names is null ? new HashSet<string>(StringComparer.Ordinal) : new HashSet<string>(names, StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _declaredTypes = new(StringComparer.Ordinal);
 
-        public static ValidationScope CreateChild() => new();
+        public static ValidationScope Create(IEnumerable<ParameterNode> parameters)
+        {
+            var scope = new ValidationScope(parameters.Select(parameter => parameter.LocalName));
+            foreach (var parameter in parameters)
+            {
+                scope.DeclareType(parameter.LocalName, parameter.DeclaredType);
+            }
+
+            return scope;
+        }
+
+        public static ValidationScope CreateChild(ValidationScope parent)
+        {
+            var scope = new ValidationScope();
+            foreach (var pair in parent._declaredTypes)
+            {
+                scope._declaredTypes[pair.Key] = pair.Value;
+            }
+
+            return scope;
+        }
+
+        public IReadOnlyDictionary<string, string> DeclaredTypes => _declaredTypes;
 
         public bool ContainsInCurrentScope(string name) => _variables.Contains(name);
 
-        public void Declare(string name) => _variables.Add(name);
+        public void Declare(string name, string? declaredType = null)
+        {
+            _variables.Add(name);
+            DeclareType(name, declaredType);
+        }
+
+        private void DeclareType(string name, string? declaredType)
+        {
+            if (!string.IsNullOrWhiteSpace(declaredType))
+            {
+                _declaredTypes[name] = declaredType!;
+            }
+        }
     }
 
     internal static void ValidateModule(ParsedScript parsedScript, IReadOnlyDictionary<string, GesCallableDefinition> callables,
@@ -92,7 +127,13 @@ internal static class GesValidator
                     duplicateParameterNode);
             }
 
-            ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors);
+            ValidateExpressionReferences(
+                parsedScript,
+                predicateDefinition.Expression,
+                callables,
+                typeDefinitions,
+                errors,
+                BuildDeclaredTypeMap(predicateDefinition.ParameterList));
             ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors);
         }
 
@@ -136,7 +177,13 @@ internal static class GesValidator
                     duplicateParameterNode);
             }
 
-            ValidateExpressionReferences(parsedScript, functionDefinition.Expression, callables, typeDefinitions, errors);
+            ValidateExpressionReferences(
+                parsedScript,
+                functionDefinition.Expression,
+                callables,
+                typeDefinitions,
+                errors,
+                BuildDeclaredTypeMap(functionDefinition.ParameterList));
         }
 
         foreach (var handler in parsedScript.Handlers)
@@ -187,7 +234,7 @@ internal static class GesValidator
                     duplicateParameterNode);
             }
 
-            var handlerScope = new ValidationScope(handler.Parameters);
+            var handlerScope = ValidationScope.Create(handler.ParameterList);
             foreach (var statement in handler.Statements)
             {
                 ValidateStatementReferences(parsedScript, statement, callables, typeDefinitions, errors, handlerScope);
@@ -273,16 +320,16 @@ internal static class GesValidator
         switch (statement)
         {
             case PublishStatementNode publish:
-                ValidateExpressionReferences(parsedScriptContext, publish.MessageExpression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, publish.MessageExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 foreach (var tagExpression in publish.TagExpressions)
                 {
-                    ValidateExpressionReferences(parsedScriptContext, tagExpression, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, tagExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 }
 
                 return;
 
             case LetStatementNode let:
-                ValidateExpressionReferences(parsedScriptContext, let.Expression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, let.Expression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 ValidateIdentifierCase(
                     parsedScriptContext,
                     let.Identifier,
@@ -302,11 +349,11 @@ internal static class GesValidator
                     return;
                 }
 
-                scope.Declare(let.Identifier);
+                scope.Declare(let.Identifier, let.DeclaredType);
                 return;
 
             case IfStatementNode ifStatement:
-                ValidateExpressionReferences(parsedScriptContext, ifStatement.Condition, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, ifStatement.Condition, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 ValidateStatementBodyReferences(parsedScriptContext, ifStatement.ThenBody, callables, typeDefinitions, errors, scope);
 
                 if (ifStatement.ElseBody is null)
@@ -319,7 +366,7 @@ internal static class GesValidator
                 return;
 
             case ForStatementNode forStatement:
-                ValidateIterationSourceReferences(parsedScriptContext, forStatement.Source, callables, typeDefinitions, errors);
+                ValidateIterationSourceReferences(parsedScriptContext, forStatement.Source, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 ValidateIdentifierCase(
                     parsedScriptContext,
                     forStatement.Identifier,
@@ -327,20 +374,21 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Loop variable '{forStatement.Identifier}' must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
-                var loopScope = ValidationScope.CreateChild();
+                var loopScope = ValidationScope.CreateChild(scope);
                 loopScope.Declare(forStatement.Identifier);
                 ValidateStatementBodyReferences(parsedScriptContext, forStatement.Body, callables, typeDefinitions, errors, loopScope);
 
                 return;
 
             case SeededRandomStatementNode seededRandom:
-                ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
+                ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, scope.DeclaredTypes, errors);
                 ValidateStatementBodyReferences(parsedScriptContext, seededRandom.Body, callables, typeDefinitions, errors, scope);
 
                 return;
 
             case ExpressionStatementNode expressionStatement:
-                ValidateExpressionReferences(parsedScriptContext, expressionStatement.Expression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, expressionStatement.Expression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 return;
         }
     }
@@ -380,7 +428,7 @@ internal static class GesValidator
         GesValidationErrors errors,
         ValidationScope parentScope)
     {
-        var bodyScope = body.IsBlock ? ValidationScope.CreateChild() : parentScope;
+        var bodyScope = body.IsBlock ? ValidationScope.CreateChild(parentScope) : parentScope;
         foreach (var nested in body.Statements)
         {
             ValidateStatementReferences(parsedScriptContext, nested, callables, typeDefinitions, errors, bodyScope);
@@ -447,6 +495,35 @@ internal static class GesValidator
             predicateDefinition.Expression);
     }
 
+    private static void ValidateSeedExpression(
+        ParsedScript parsedScriptContext,
+        ExpressionNode seedExpression,
+        IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
+        IReadOnlyDictionary<string, string> declaredTypes,
+        GesValidationErrors errors)
+    {
+        var seedType = ClassifyExpression(
+            seedExpression,
+            callables,
+            typeDefinitions,
+            declaredTypes,
+            new HashSet<string>(StringComparer.Ordinal));
+        if (seedType.Kind == StaticExpressionKind.Other &&
+            string.Equals(seedType.TypeName, "integer", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        errors.Add(
+            parsedScriptContext,
+            "Seeded random seed must statically resolve to unitless :integer; cast dynamic seeds explicitly with 'as :integer'.",
+            "random",
+            GameEventScriptSymbolKind.Type,
+            GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+            seedExpression);
+    }
+
     private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<ParameterNode> parameters)
     {
         var types = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -472,6 +549,27 @@ internal static class GesValidator
         {
             case BooleanLiteralExpressionNode:
                 return StaticExpressionInfo.Boolean;
+
+            case IntegerLiteralExpressionNode:
+                return StaticExpressionInfo.Other("integer");
+
+            case UnitIntegerLiteralExpressionNode unitInteger:
+                return StaticExpressionInfo.Other(unitInteger.UnitName);
+
+            case FloatLiteralExpressionNode:
+                return StaticExpressionInfo.Other("float");
+
+            case UnitFloatLiteralExpressionNode unitFloat:
+                return StaticExpressionInfo.Other(unitFloat.UnitName);
+
+            case PercentageLiteralExpressionNode:
+                return StaticExpressionInfo.Other("percentage");
+
+            case TextLiteralExpressionNode:
+                return StaticExpressionInfo.Other("text");
+
+            case TagLiteralExpressionNode:
+                return StaticExpressionInfo.Other("tag");
 
             case TypeCheckExpressionNode:
             case PredicateCallExpressionNode:
@@ -506,6 +604,9 @@ internal static class GesValidator
 
             case GuardedChoiceExpressionNode guardedChoice:
                 return ClassifyGuardedChoice(guardedChoice, callables, typeDefinitions, declaredTypes, visitedCallables);
+
+            case SeededRandomExpressionNode seededRandom:
+                return ClassifyExpression(seededRandom.BodyExpression, callables, typeDefinitions, declaredTypes, visitedCallables);
 
             default:
                 return StaticExpressionInfo.Other();
@@ -666,8 +767,10 @@ internal static class GesValidator
         ExpressionNode expression,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, string>? declaredTypes = null)
     {
+        declaredTypes ??= new Dictionary<string, string>(StringComparer.Ordinal);
         while (true)
         {
             switch (expression)
@@ -705,7 +808,7 @@ internal static class GesValidator
                                 errors);
                         }
 
-                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
@@ -754,7 +857,7 @@ internal static class GesValidator
                                 errors);
                         }
 
-                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
@@ -762,13 +865,13 @@ internal static class GesValidator
                 case ExtensionCallExpressionNode extensionCall:
                     foreach (var argument in extensionCall.Arguments)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
 
                 case TypeConstructorExpressionNode typeConstructor:
-                    ValidateTypeConstructorExpression(parsedScriptContext, typeConstructor, callables, typeDefinitions, errors);
+                    ValidateTypeConstructorExpression(parsedScriptContext, typeConstructor, callables, typeDefinitions, errors, declaredTypes);
                     return;
 
                 case PredicateCallExpressionNode predicateCall:
@@ -805,20 +908,20 @@ internal static class GesValidator
                 case VariadicTaggedExpressionNode variadic:
                     foreach (var argument in variadic.Arguments)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, argument, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, argument, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
 
                 case ClampExpressionNode clamp:
-                    ValidateExpressionReferences(parsedScriptContext, clamp.Value, callables, typeDefinitions, errors);
-                    ValidateExpressionReferences(parsedScriptContext, clamp.Minimum, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, clamp.Value, callables, typeDefinitions, errors, declaredTypes);
+                    ValidateExpressionReferences(parsedScriptContext, clamp.Minimum, callables, typeDefinitions, errors, declaredTypes);
                     expression = clamp.Maximum;
                     continue;
 
                 case RangeExpressionNode rangeExpression:
-                    ValidateExpressionReferences(parsedScriptContext, rangeExpression.FromExpression, callables, typeDefinitions, errors);
-                    ValidateExpressionReferences(parsedScriptContext, rangeExpression.ToExpression, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, rangeExpression.FromExpression, callables, typeDefinitions, errors, declaredTypes);
+                    ValidateExpressionReferences(parsedScriptContext, rangeExpression.ToExpression, callables, typeDefinitions, errors, declaredTypes);
                     if (rangeExpression.StepExpression is not null)
                     {
                         expression = rangeExpression.StepExpression;
@@ -828,12 +931,13 @@ internal static class GesValidator
                     return;
 
                 case RandomExpressionNode random:
-                    ValidateExpressionReferences(parsedScriptContext, random.FromExpression, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, random.FromExpression, callables, typeDefinitions, errors, declaredTypes);
                     expression = random.ToExpression;
                     continue;
 
                 case SeededRandomExpressionNode seededRandom:
-                    ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, errors, declaredTypes);
+                    ValidateSeedExpression(parsedScriptContext, seededRandom.SeedExpression, callables, typeDefinitions, declaredTypes, errors);
                     expression = seededRandom.BodyExpression;
                     continue;
 
@@ -845,10 +949,10 @@ internal static class GesValidator
                         GameEventScriptSymbolKind.Variable,
                         $"Generated collection identifier '{generatedCollection.Identifier}' must use identifier casing (start lowercase)",
                         errors);
-                    ValidateIterationSourceReferences(parsedScriptContext, generatedCollection.Source, callables, typeDefinitions, errors);
+                    ValidateIterationSourceReferences(parsedScriptContext, generatedCollection.Source, callables, typeDefinitions, errors, declaredTypes);
                     if (generatedCollection.Predicate is not null)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, generatedCollection.Predicate, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, generatedCollection.Predicate, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     expression = generatedCollection.Projection;
@@ -857,15 +961,15 @@ internal static class GesValidator
                 case GuardedChoiceExpressionNode guardedChoice:
                     foreach (var branch in guardedChoice.Branches)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, branch.ValueExpression, callables, typeDefinitions, errors);
-                        ValidateExpressionReferences(parsedScriptContext, branch.ConditionExpression, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, branch.ValueExpression, callables, typeDefinitions, errors, declaredTypes);
+                        ValidateExpressionReferences(parsedScriptContext, branch.ConditionExpression, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     expression = guardedChoice.OtherwiseExpression;
                     continue;
 
                 case BinaryExpressionNode binary:
-                    ValidateExpressionReferences(parsedScriptContext, binary.Left, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, binary.Left, callables, typeDefinitions, errors, declaredTypes);
                     expression = binary.Right;
                     continue;
 
@@ -882,14 +986,14 @@ internal static class GesValidator
                     continue;
 
                 case CollectionAccessExpressionNode collectionAccess:
-                    ValidateExpressionReferences(parsedScriptContext, collectionAccess.Target, callables, typeDefinitions, errors);
-                    ValidateCollectionSelectorReferences(parsedScriptContext, collectionAccess.Selector, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, collectionAccess.Target, callables, typeDefinitions, errors, declaredTypes);
+                    ValidateCollectionSelectorReferences(parsedScriptContext, collectionAccess.Selector, callables, typeDefinitions, errors, declaredTypes);
                     return;
 
                 case ListLiteralExpressionNode list:
                     foreach (var item in list.Items)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
@@ -897,7 +1001,7 @@ internal static class GesValidator
                 case SetLiteralExpressionNode set:
                     foreach (var item in set.Items)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
@@ -905,7 +1009,7 @@ internal static class GesValidator
                 case SequenceLiteralExpressionNode sequence:
                     foreach (var item in sequence.Items)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
@@ -913,7 +1017,7 @@ internal static class GesValidator
                 case DictionaryLiteralExpressionNode dictionary:
                     foreach (var entry in dictionary.Entries)
                     {
-                        ValidateExpressionReferences(parsedScriptContext, entry.Value, callables, typeDefinitions, errors);
+                        ValidateExpressionReferences(parsedScriptContext, entry.Value, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
@@ -928,15 +1032,16 @@ internal static class GesValidator
         IterationSourceNode source,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, string>? declaredTypes = null)
     {
         switch (source)
         {
             case CollectionIterationSourceNode collectionSource:
-                ValidateExpressionReferences(parsedScriptContext, collectionSource.Expression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, collectionSource.Expression, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case RangeIterationSourceNode rangeSource:
-                ValidateExpressionReferences(parsedScriptContext, rangeSource.RangeExpression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, rangeSource.RangeExpression, callables, typeDefinitions, errors, declaredTypes);
                 return;
         }
     }
@@ -946,15 +1051,16 @@ internal static class GesValidator
         CollectionSelectorNode selector,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, string>? declaredTypes = null)
     {
         switch (selector)
         {
             case ExpressionSelectorNode expressionSelector:
-                ValidateExpressionReferences(parsedScriptContext, expressionSelector.Expression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, expressionSelector.Expression, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case SeriesTermSelectorNode seriesTermSelector:
-                ValidateExpressionReferences(parsedScriptContext, seriesTermSelector.IndexExpression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, seriesTermSelector.IndexExpression, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case PredicateSelectorNode predicateSelector:
                 ValidateIdentifierCase(
@@ -964,7 +1070,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{predicateSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, predicateSelector.Predicate, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, predicateSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case CountSelectorNode countSelector:
                 ValidateIdentifierCase(
@@ -974,7 +1080,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{countSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, countSelector.Predicate, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, countSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case ChooseSelectorNode chooseSelector:
                 if (chooseSelector.Identifier is not null)
@@ -990,7 +1096,7 @@ internal static class GesValidator
 
                 if (chooseSelector.Predicate is not null)
                 {
-                    ValidateExpressionReferences(parsedScriptContext, chooseSelector.Predicate, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, chooseSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
                 }
 
                 if (chooseSelector.WeightIdentifier is not null)
@@ -1006,7 +1112,7 @@ internal static class GesValidator
 
                 if (chooseSelector.WeightExpression is not null)
                 {
-                    ValidateExpressionReferences(parsedScriptContext, chooseSelector.WeightExpression, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, chooseSelector.WeightExpression, callables, typeDefinitions, errors, declaredTypes);
                 }
 
                 return;
@@ -1022,7 +1128,7 @@ internal static class GesValidator
                         errors);
                 }
 
-                ValidateExpressionReferences(parsedScriptContext, edgeSelector.Predicate, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, edgeSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case FilterSelectorNode filterSelector:
                 ValidateIdentifierCase(
@@ -1032,7 +1138,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{filterSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, filterSelector.Predicate, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, filterSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case SumSelectorNode sumSelector:
                 ValidateIdentifierCase(
@@ -1042,7 +1148,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{sumSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, sumSelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, sumSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case AverageSelectorNode averageSelector:
                 ValidateIdentifierCase(
@@ -1052,7 +1158,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{averageSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, averageSelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, averageSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case SelectSelectorNode selectSelector:
                 ValidateIdentifierCase(
@@ -1062,7 +1168,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{selectSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, selectSelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, selectSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case DictionarySelectorNode dictionarySelector:
                 ValidateIdentifierCase(
@@ -1072,10 +1178,10 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{dictionarySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, dictionarySelector.KeyProjection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, dictionarySelector.KeyProjection, callables, typeDefinitions, errors, declaredTypes);
                 if (dictionarySelector.ValueProjection is not null)
                 {
-                    ValidateExpressionReferences(parsedScriptContext, dictionarySelector.ValueProjection, callables, typeDefinitions, errors);
+                    ValidateExpressionReferences(parsedScriptContext, dictionarySelector.ValueProjection, callables, typeDefinitions, errors, declaredTypes);
                 }
 
                 return;
@@ -1087,7 +1193,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{minSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, minSelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, minSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case MaxSelectorNode maxSelector:
                 ValidateIdentifierCase(
@@ -1097,10 +1203,10 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{maxSelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, maxSelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, maxSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case ContainsSelectorNode containsSelector:
-                ValidateExpressionReferences(parsedScriptContext, containsSelector.ValueExpression, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, containsSelector.ValueExpression, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case DistinctSelectorNode { Projection: not null } distinctSelector:
                 if (distinctSelector.Identifier is not null)
@@ -1114,7 +1220,7 @@ internal static class GesValidator
                         errors);
                 }
 
-                ValidateExpressionReferences(parsedScriptContext, distinctSelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, distinctSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case GroupBySelectorNode groupBySelector:
                 ValidateIdentifierCase(
@@ -1124,7 +1230,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{groupBySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, groupBySelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, groupBySelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
             case OrderBySelectorNode orderBySelector:
                 ValidateIdentifierCase(
@@ -1134,7 +1240,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Variable,
                     $"Selector identifier '{orderBySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
-                ValidateExpressionReferences(parsedScriptContext, orderBySelector.Projection, callables, typeDefinitions, errors);
+                ValidateExpressionReferences(parsedScriptContext, orderBySelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
         }
     }
@@ -1197,7 +1303,8 @@ internal static class GesValidator
         TypeConstructorExpressionNode constructor,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
+        GesValidationErrors errors,
+        IReadOnlyDictionary<string, string>? declaredTypes = null)
     {
         ValidateDuplicateNamedArguments(parsedScriptContext, constructor.TypeName, constructor.Arguments, errors);
         foreach (var argument in constructor.Arguments)
@@ -1213,7 +1320,7 @@ internal static class GesValidator
                     errors);
             }
 
-            ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors);
+            ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
         }
 
         if (IsBuiltinConstructorType(constructor.TypeName))

@@ -10,7 +10,7 @@ namespace StepH.GameEventScript.Compiler;
 internal sealed class GesLinearBytecodeBuilder
 {
     private readonly Func<string, int> _resolveStringIndex;
-    private readonly Func<IReadOnlyList<string>, int> _resolveNamedArgumentLayoutIndex;
+    private readonly Func<IReadOnlyList<ushort>, int> _resolveUShortListIndex;
     private readonly Func<GameEventScriptExtensionReference, int> _resolveExternalReferenceIndex;
     private readonly IReadOnlyDictionary<string, GesCallableDefinition> _sourceCallables;
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _sourceTypeDefinitions;
@@ -18,14 +18,12 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
     private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
     private readonly List<GameEventScriptBytecodeDiagnosticLayout> _diagnosticLayouts = [];
-    private readonly List<GameEventScriptBytecodePublishLayoutEntry> _publishLayouts = [];
     private readonly List<GameEventScriptBytecodeIterationSourceLayout> _iterationSourceLayouts = [];
     private readonly List<GameEventScriptBytecodeLoopLayout> _loopLayouts = [];
-    private readonly List<GameEventScriptBytecodeSeededRandomBlockLayout> _seededRandomBlockLayouts = [];
-    private readonly List<GameEventScriptBytecodeDicePatternLayout> _dicePatternLayouts = [];
-    private readonly List<GameEventScriptBytecodeObjectMatchPatternLayout> _objectMatchPatternLayouts = [];
-    private readonly List<GameEventScriptBytecodeSelectorLayout> _selectorLayouts = [];
-    private readonly List<GameEventScriptBytecodePipelineLayout> _pipelineLayouts = [];
+    private readonly List<GameEventScriptBytecodePipelinePattern> _pipelinePatternPool = [];
+    private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
+    private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
+    private readonly List<GameEventScriptBytecodePipeline> _pipelinePool = [];
     private readonly List<GameEventScriptBytecodeGeneratedCollectionLayout> _generatedCollectionLayouts = [];
     private readonly List<GameEventScriptBytecodeGuardedChoiceLayout> _guardedChoiceLayouts = [];
     private readonly List<Action> _deferredHelperEmitters = [];
@@ -34,14 +32,14 @@ internal sealed class GesLinearBytecodeBuilder
 
     public GesLinearBytecodeBuilder(
         Func<string, int>? resolveStringIndex = null,
-        Func<IReadOnlyList<string>, int>? resolveNamedArgumentLayoutIndex = null,
+        Func<IReadOnlyList<ushort>, int>? resolveUShortListIndex = null,
         Func<GameEventScriptExtensionReference, int>? resolveExternalReferenceIndex = null,
         IReadOnlyDictionary<string, GesCallableDefinition>? sourceCallables = null,
         IReadOnlyDictionary<string, TypeDefinitionNode>? sourceTypeDefinitions = null,
         bool emitDiagnosticLayouts = false)
     {
         _resolveStringIndex = resolveStringIndex ?? (_ => -1);
-        _resolveNamedArgumentLayoutIndex = resolveNamedArgumentLayoutIndex ?? (_ => -1);
+        _resolveUShortListIndex = resolveUShortListIndex ?? (_ => -1);
         _resolveExternalReferenceIndex = resolveExternalReferenceIndex ?? (_ => -1);
         _sourceCallables = sourceCallables ?? new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
         _sourceTypeDefinitions = sourceTypeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
@@ -56,21 +54,17 @@ internal sealed class GesLinearBytecodeBuilder
 
     public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts => _diagnosticLayouts;
 
-    public IReadOnlyList<GameEventScriptBytecodePublishLayoutEntry> PublishLayouts => _publishLayouts;
-
     public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts => _iterationSourceLayouts;
 
     public IReadOnlyList<GameEventScriptBytecodeLoopLayout> LoopLayouts => _loopLayouts;
 
-    public IReadOnlyList<GameEventScriptBytecodeSeededRandomBlockLayout> SeededRandomBlockLayouts => _seededRandomBlockLayouts;
+    public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool => _pipelinePatternPool;
 
-    public IReadOnlyList<GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts => _dicePatternLayouts;
+    public IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool => _pipelineObjectPatternPool;
 
-    public IReadOnlyList<GameEventScriptBytecodeObjectMatchPatternLayout> ObjectMatchPatternLayouts => _objectMatchPatternLayouts;
+    public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool => _pipelineSelectorPool;
 
-    public IReadOnlyList<GameEventScriptBytecodeSelectorLayout> SelectorLayouts => _selectorLayouts;
-
-    public IReadOnlyList<GameEventScriptBytecodePipelineLayout> PipelineLayouts => _pipelineLayouts;
+    public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool => _pipelinePool;
 
     public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts => _generatedCollectionLayouts;
 
@@ -98,7 +92,7 @@ internal sealed class GesLinearBytecodeBuilder
             else
             {
                 throw new GameEventScriptCompileException(
-                    $"GameEventScript linear bytecode builder requires source statements for handler '{handler.SignatureId}'.");
+                    $"GameEventScript linear bytecode builder requires source statements for handler '{FormatSignature(handler.Message, handler.SignatureLabels)}'.");
             }
 
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Return));
@@ -125,7 +119,7 @@ internal sealed class GesLinearBytecodeBuilder
             }
 
             throw new GameEventScriptCompileException(
-                $"GameEventScript linear bytecode builder requires source callable body for '{callable.SignatureId}'.");
+                $"GameEventScript linear bytecode builder requires source callable body for '{FormatSignature(callable.Name, callable.SignatureLabels)}'.");
         }
     }
 
@@ -337,9 +331,7 @@ internal sealed class GesLinearBytecodeBuilder
             tagSlots.Add(EmitSourceExpression(tagExpression, context, state));
         }
 
-        var publishKind = publish.Kind == PublishStatementKind.Publish
-            ? GameEventScriptBytecodePublishKind.Publish
-            : GameEventScriptBytecodePublishKind.Emit;
+        var tagSlotListIndex = ResolveSlotListIndex(tagSlots);
         if (publish.MessageExpression is MessageLiteralExpressionNode message)
         {
             var argumentNames = new string[message.Arguments.Count];
@@ -351,30 +343,25 @@ internal sealed class GesLinearBytecodeBuilder
                 argumentSlots.Add(EmitSourceExpression(argument.Expression, context, state));
             }
 
-            var publishLayoutIndex = AddPublishLayout(new GameEventScriptBytecodePublishLayoutEntry(
-                publishKind,
-                GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
-                GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
-                argumentNames,
-                argumentSlots,
-                tagSlots: tagSlots));
+            var opCode = publish.Kind == PublishStatementKind.Publish
+                ? GameEventScriptBytecodeOpCode.PublishMessage
+                : GameEventScriptBytecodeOpCode.EmitMessage;
             Emit(new GameEventScriptBytecodeInstruction(
-                GameEventScriptBytecodeOpCode.PublishValue,
-                A: (int)publishKind,
-                C: publishLayoutIndex));
+                opCode,
+                A: ResolveMessageShapeIndex(message.Message, argumentNames),
+                B: ResolveSlotListIndex(argumentSlots),
+                C: tagSlotListIndex));
             return;
         }
 
         var messageSlot = EmitSourceExpression(publish.MessageExpression, context, state);
-        var messagePublishLayoutIndex = AddPublishLayout(new GameEventScriptBytecodePublishLayoutEntry(
-            publishKind,
-            messageSlot: messageSlot,
-            tagSlots: tagSlots));
+        var messageValueOpCode = publish.Kind == PublishStatementKind.Publish
+            ? GameEventScriptBytecodeOpCode.PublishMessageValue
+            : GameEventScriptBytecodeOpCode.EmitMessageValue;
         Emit(new GameEventScriptBytecodeInstruction(
-            GameEventScriptBytecodeOpCode.PublishMessageValue,
+            messageValueOpCode,
             A: messageSlot,
-            B: (int)publishKind,
-            C: messagePublishLayoutIndex));
+            C: tagSlotListIndex));
     }
 
     private void EmitSourceIf(IfStatementNode ifStatement, SourceContext context)
@@ -410,14 +397,9 @@ internal sealed class GesLinearBytecodeBuilder
     private void EmitSourceSeededRandom(SeededRandomStatementNode seededRandom, SourceContext context)
     {
         var state = new ExpressionState(context.SlotCount);
-        var seedSlot = EmitSourceExpression(seededRandom.SeedExpression, context, state);
-        var layoutIndex = AddSeededRandomBlockLayout(new GameEventScriptBytecodeSeededRandomBlockLayout(seedSlot));
-        var blockInstruction = Emit(new GameEventScriptBytecodeInstruction(
-            GameEventScriptBytecodeOpCode.SeededRandomBlock,
-            C: layoutIndex));
-        var bodyAddress = _code.Count;
+        EmitRandomPush(seededRandom.SeedExpression, context, state);
         EmitSourceStatements(seededRandom.Body.Statements, seededRandom.Body.IsBlock, context.Slots);
-        PatchTargets(blockInstruction, bodyAddress, _code.Count);
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.RandomPop));
     }
 
     private int EmitSourceExpression(ExpressionNode expression, SourceContext context, ExpressionState state)
@@ -617,8 +599,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitValueInstruction(
                     state,
                     GameEventScriptBytecodeOpCode.LoadHandler,
-                    a: ResolveStringIndex(handler.Signature.Name),
-                    c: labels.Count == 0 ? -1 : _resolveNamedArgumentLayoutIndex(labels));
+                    a: ResolveMessageShapeIndex(handler.Signature.Name, labels));
             }
 
             default:
@@ -744,19 +725,36 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourceSeededRandomExpression(SeededRandomExpressionNode seededRandom, SourceContext context, ExpressionState state)
     {
-        var seed = EmitSourceExpression(seededRandom.SeedExpression, context, state);
-        var destination = AllocateSlot(state);
-        var instructionAddress = Emit(new GameEventScriptBytecodeInstruction(
-            GameEventScriptBytecodeOpCode.SeededRandom,
-            Dest: destination,
-            A: seed));
-        _deferredHelperEmitters.Add(() =>
-        {
-            var expressionEntryAddress = EmitSourceExpressionEntry(seededRandom.BodyExpression, context, state);
-            PatchC(instructionAddress, expressionEntryAddress);
-        });
+        EmitRandomPush(seededRandom.SeedExpression, context, state);
+        var result = EmitSourceExpression(seededRandom.BodyExpression, context, state);
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.RandomPop));
+        return result;
+    }
 
-        return destination;
+    private void EmitRandomPush(ExpressionNode seedExpression, SourceContext context, ExpressionState state)
+    {
+        if (TryReadUnitlessIntegerLiteralSeed(seedExpression, out var seed))
+        {
+            var instruction = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.RandomPushConstant);
+            instruction.U64 = seed;
+            Emit(instruction);
+            return;
+        }
+
+        var seedSlot = EmitSourceExpression(seedExpression, context, state);
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.RandomPush, A: seedSlot));
+    }
+
+    private static bool TryReadUnitlessIntegerLiteralSeed(ExpressionNode expression, out ulong seed)
+    {
+        if (expression is IntegerLiteralExpressionNode integer)
+        {
+            seed = unchecked((ulong)integer.Value);
+            return true;
+        }
+
+        seed = default;
+        return false;
     }
 
     private int EmitSourceBinary(BinaryExpressionNode binary, SourceContext context, ExpressionState state)
@@ -957,7 +955,7 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourcePipeline(CollectionAccessExpressionNode collectionAccess, SourceContext context, ExpressionState state)
     {
-        var layoutIndex = AddSourcePipelineLayout(collectionAccess, context, state);
+        var layoutIndex = AddSourcePipeline(collectionAccess, context, state);
         return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Pipeline, c: layoutIndex);
     }
 
@@ -985,7 +983,7 @@ internal sealed class GesLinearBytecodeBuilder
                 ? [instruction.A]
                 : null);
         var layoutIndex = _operationLayouts.Count;
-        var namedArgumentLayoutIndex = names.Length == 0 ? -1 : _resolveNamedArgumentLayoutIndex(names);
+        var nameListIndex = ResolveStringListIndex(names);
         _operationLayouts.Add(CreateOperationLayout(expressionEntryAddress: -1));
 
         return layoutIndex;
@@ -1001,7 +999,7 @@ internal sealed class GesLinearBytecodeBuilder
                 instruction.DeclaredTypes,
                 instruction.CallableKind,
                 instruction.B,
-                namedArgumentLayoutIndex,
+                nameListIndex,
                 expressionEntryAddress: expressionEntryAddress,
                 count: count);
     }
@@ -1020,7 +1018,7 @@ internal sealed class GesLinearBytecodeBuilder
                 ? [instruction.A]
                 : null);
         var layoutIndex = _operationLayouts.Count;
-        var namedArgumentLayoutIndex = names.Length == 0 ? -1 : _resolveNamedArgumentLayoutIndex(names);
+        var nameListIndex = ResolveStringListIndex(names);
         _operationLayouts.Add(CreateOperationLayout(expressionEntryAddress: -1));
         if (expressionEntry is not null)
         {
@@ -1044,29 +1042,15 @@ internal sealed class GesLinearBytecodeBuilder
                 instruction.DeclaredTypes,
                 instruction.CallableKind,
                 instruction.B,
-                namedArgumentLayoutIndex,
+                nameListIndex,
                 expressionEntryAddress: expressionEntryAddress,
                 count: count);
-    }
-
-    private int AddPublishLayout(GameEventScriptBytecodePublishLayoutEntry layout)
-    {
-        var index = _publishLayouts.Count;
-        _publishLayouts.Add(layout);
-        return index;
     }
 
     private int AddLoopLayout(GameEventScriptBytecodeLoopLayout layout)
     {
         var index = _loopLayouts.Count;
         _loopLayouts.Add(layout);
-        return index;
-    }
-
-    private int AddSeededRandomBlockLayout(GameEventScriptBytecodeSeededRandomBlockLayout layout)
-    {
-        var index = _seededRandomBlockLayouts.Count;
-        _seededRandomBlockLayouts.Add(layout);
         return index;
     }
 
@@ -1121,17 +1105,17 @@ internal sealed class GesLinearBytecodeBuilder
         return index;
     }
 
-    private int AddSourceSelectorLayout(CollectionSelectorNode selector, bool isTerminal, SourceContext context, ExpressionState state)
+    private int AddSourcePipelineSelector(CollectionSelectorNode selector, bool isTerminal, SourceContext context, ExpressionState state)
     {
-        var index = _selectorLayouts.Count;
+        var index = _pipelineSelectorPool.Count;
         var selectorData = CreateSourceSelectorData(selector, isTerminal, context);
-        var dicePatternLayoutIndex = selectorData.DicePattern is null
+        var pipelinePatternIndex = selectorData.DicePattern is null
             ? -1
-            : AddSourceDicePatternLayout(selectorData.DicePattern, context, state);
-        var objectMatchPatternLayoutIndex = selectorData.ObjectPattern is null
+            : AddSourcePipelinePattern(selectorData.DicePattern, context, state);
+        var objectPatternIndex = selectorData.ObjectPattern is null
             ? -1
-            : AddSourceObjectMatchPatternLayout(selectorData.ObjectPattern, context, state);
-        _selectorLayouts.Add(new GameEventScriptBytecodeSelectorLayout(
+            : AddSourcePipelineObjectPattern(selectorData.ObjectPattern, context, state);
+        _pipelineSelectorPool.Add(new GameEventScriptBytecodePipelineSelector(
             selectorData.Kind,
             selectorData.IdentifierSlot,
             selectorData.EdgeMode,
@@ -1139,8 +1123,8 @@ internal sealed class GesLinearBytecodeBuilder
             selectorData.Count,
             selectorData.SecondaryIdentifierSlot,
             selectorData.Flag,
-            dicePatternLayoutIndex: dicePatternLayoutIndex,
-            objectMatchPatternLayoutIndex: objectMatchPatternLayoutIndex));
+            pipelinePatternIndex: pipelinePatternIndex,
+            objectPatternIndex: objectPatternIndex));
         _deferredHelperEmitters.Add(() =>
         {
             var expressionEntryAddress = selectorData.Expression is null
@@ -1149,7 +1133,7 @@ internal sealed class GesLinearBytecodeBuilder
             var secondaryExpressionEntryAddress = selectorData.SecondaryExpression is null
                 ? -1
                 : EmitSourceExpressionEntry(selectorData.SecondaryExpression, context, state);
-            _selectorLayouts[index] = new GameEventScriptBytecodeSelectorLayout(
+            _pipelineSelectorPool[index] = new GameEventScriptBytecodePipelineSelector(
                 selectorData.Kind,
                 selectorData.IdentifierSlot,
                 selectorData.EdgeMode,
@@ -1159,8 +1143,8 @@ internal sealed class GesLinearBytecodeBuilder
                 selectorData.Flag,
                 expressionEntryAddress,
                 secondaryExpressionEntryAddress,
-                dicePatternLayoutIndex,
-                objectMatchPatternLayoutIndex);
+                pipelinePatternIndex,
+                objectPatternIndex);
         });
         return index;
     }
@@ -1169,89 +1153,89 @@ internal sealed class GesLinearBytecodeBuilder
         => selector switch
         {
             FilterSelectorNode filter => new(
-                GameEventScriptBytecodeSelectorKind.Filter,
+                GameEventScriptBytecodePipelineSelectorKind.Filter,
                 context.RequireSlot(filter.Identifier),
                 filter.Predicate),
 
             SelectSelectorNode select => new(
-                GameEventScriptBytecodeSelectorKind.Select,
+                GameEventScriptBytecodePipelineSelectorKind.Select,
                 context.RequireSlot(select.Identifier),
                 select.Projection),
 
             PredicateSelectorNode predicate when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Predicate,
+                GameEventScriptBytecodePipelineSelectorKind.Predicate,
                 context.RequireSlot(predicate.Identifier),
                 predicate.Predicate,
                 predicate.Operator),
 
             SumSelectorNode sum when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Sum,
+                GameEventScriptBytecodePipelineSelectorKind.Sum,
                 context.RequireSlot(sum.Identifier),
                 sum.Projection),
 
             AverageSelectorNode average when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Average,
+                GameEventScriptBytecodePipelineSelectorKind.Average,
                 context.RequireSlot(average.Identifier),
                 average.Projection),
 
             CountSelectorNode count when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Count,
+                GameEventScriptBytecodePipelineSelectorKind.Count,
                 context.RequireSlot(count.Identifier),
                 count.Predicate),
 
             SeriesTermSelectorNode term when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.SeriesTerm,
+                GameEventScriptBytecodePipelineSelectorKind.SeriesTerm,
                 -1,
                 term.IndexExpression),
 
             EdgeSelectorNode edge when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Edge,
+                GameEventScriptBytecodePipelineSelectorKind.Edge,
                 string.IsNullOrEmpty(edge.Identifier) ? -1 : context.RequireSlot(edge.Identifier!),
                 edge.Predicate,
                 edge.Mode),
 
             PatternSelectorNode pattern when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Pattern,
+                GameEventScriptBytecodePipelineSelectorKind.Pattern,
                 -1,
                 null,
                 DicePattern: pattern.Pattern),
 
             ObjectMatchSelectorNode objectMatch when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.ObjectMatch,
+                GameEventScriptBytecodePipelineSelectorKind.ObjectMatch,
                 -1,
                 null,
                 ObjectPattern: objectMatch.Pattern),
 
             TakePatternSelectorNode takePattern when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.TakePattern,
+                GameEventScriptBytecodePipelineSelectorKind.TakePattern,
                 -1,
                 null,
                 DicePattern: takePattern.Pattern),
 
             MinSelectorNode min when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Min,
+                GameEventScriptBytecodePipelineSelectorKind.Min,
                 context.RequireSlot(min.Identifier),
                 min.Projection),
 
             MaxSelectorNode max when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Max,
+                GameEventScriptBytecodePipelineSelectorKind.Max,
                 context.RequireSlot(max.Identifier),
                 max.Projection),
 
             DictionarySelectorNode dictionary when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Dictionary,
+                GameEventScriptBytecodePipelineSelectorKind.Dictionary,
                 context.RequireSlot(dictionary.Identifier),
                 dictionary.KeyProjection,
                 SecondaryExpression: dictionary.ValueProjection),
 
             ContainsSelectorNode contains when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Contains,
+                GameEventScriptBytecodePipelineSelectorKind.Contains,
                 -1,
                 contains.ValueExpression,
                 contains.Mode),
 
             ChooseSelectorNode choose when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Choose,
+                GameEventScriptBytecodePipelineSelectorKind.Choose,
                 string.IsNullOrEmpty(choose.Identifier) ? -1 : context.RequireSlot(choose.Identifier!),
                 choose.Predicate,
                 Count: choose.Count,
@@ -1260,39 +1244,39 @@ internal sealed class GesLinearBytecodeBuilder
                 Flag: choose.AtRandom),
 
             DrawSelectorNode draw when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Draw,
+                GameEventScriptBytecodePipelineSelectorKind.Draw,
                 -1,
                 null,
                 Count: draw.Count),
 
-            ShuffleSelectorNode when isTerminal => new(GameEventScriptBytecodeSelectorKind.Shuffle, -1, null),
+            ShuffleSelectorNode when isTerminal => new(GameEventScriptBytecodePipelineSelectorKind.Shuffle, -1, null),
 
             SortSelectorNode sort when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Sort,
+                GameEventScriptBytecodePipelineSelectorKind.Sort,
                 -1,
                 null,
                 sort.Direction),
 
             DistinctSelectorNode distinct when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.Distinct,
+                GameEventScriptBytecodePipelineSelectorKind.Distinct,
                 string.IsNullOrEmpty(distinct.Identifier) ? -1 : context.RequireSlot(distinct.Identifier!),
                 distinct.Projection),
 
             GroupBySelectorNode groupBy when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.GroupBy,
+                GameEventScriptBytecodePipelineSelectorKind.GroupBy,
                 context.RequireSlot(groupBy.Identifier),
                 groupBy.Projection),
 
             OrderBySelectorNode orderBy when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.OrderBy,
+                GameEventScriptBytecodePipelineSelectorKind.OrderBy,
                 context.RequireSlot(orderBy.Identifier),
                 orderBy.Projection,
                 orderBy.Direction),
 
-            ReverseSelectorNode when isTerminal => new(GameEventScriptBytecodeSelectorKind.Reverse, -1, null),
+            ReverseSelectorNode when isTerminal => new(GameEventScriptBytecodePipelineSelectorKind.Reverse, -1, null),
 
             SequenceSliceSelectorNode slice when isTerminal => new(
-                GameEventScriptBytecodeSelectorKind.SequenceSlice,
+                GameEventScriptBytecodePipelineSelectorKind.SequenceSlice,
                 -1,
                 null,
                 slice.Operation,
@@ -1302,22 +1286,22 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support selector node '{selector.GetType().Name}'.")
         };
 
-    private int AddSourceDicePatternLayout(DicePatternNode pattern, SourceContext context, ExpressionState state)
+    private int AddSourcePipelinePattern(DicePatternNode pattern, SourceContext context, ExpressionState state)
     {
-        var index = _dicePatternLayouts.Count;
+        var index = _pipelinePatternPool.Count;
         switch (pattern)
         {
             case DiceCountPatternNode count:
-                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(
-                    GameEventScriptBytecodeDicePatternKind.Count,
+                _pipelinePatternPool.Add(new GameEventScriptBytecodePipelinePattern(
+                    GameEventScriptBytecodePipelinePatternKind.Count,
                     count.Count));
                 if (count.Face is not null)
                 {
                     _deferredHelperEmitters.Add(() =>
                     {
                         var faceEntryAddress = EmitSourceExpressionEntry(count.Face, context, state);
-                        _dicePatternLayouts[index] = new GameEventScriptBytecodeDicePatternLayout(
-                            GameEventScriptBytecodeDicePatternKind.Count,
+                        _pipelinePatternPool[index] = new GameEventScriptBytecodePipelinePattern(
+                            GameEventScriptBytecodePipelinePatternKind.Count,
                             count.Count,
                             faceEntryAddress);
                     });
@@ -1326,11 +1310,11 @@ internal sealed class GesLinearBytecodeBuilder
                 break;
 
             case DiceFullHousePatternNode:
-                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(GameEventScriptBytecodeDicePatternKind.FullHouse));
+                _pipelinePatternPool.Add(new GameEventScriptBytecodePipelinePattern(GameEventScriptBytecodePipelinePatternKind.FullHouse));
                 break;
 
             case DiceStraightPatternNode:
-                _dicePatternLayouts.Add(new GameEventScriptBytecodeDicePatternLayout(GameEventScriptBytecodeDicePatternKind.Straight));
+                _pipelinePatternPool.Add(new GameEventScriptBytecodePipelinePattern(GameEventScriptBytecodePipelinePatternKind.Straight));
                 break;
 
             default:
@@ -1340,12 +1324,12 @@ internal sealed class GesLinearBytecodeBuilder
         return index;
     }
 
-    private int AddSourceObjectMatchPatternLayout(ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
+    private int AddSourcePipelineObjectPattern(ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
     {
-        var index = _objectMatchPatternLayouts.Count;
-        _objectMatchPatternLayouts.Add(new GameEventScriptBytecodeObjectMatchPatternLayout([]));
+        var index = _pipelineObjectPatternPool.Count;
+        _pipelineObjectPatternPool.Add(new GameEventScriptBytecodePipelineObjectPattern([]));
 
-        var entries = new GameEventScriptBytecodeObjectMatchEntryLayout[pattern.Entries.Count];
+        var entries = new GameEventScriptBytecodePipelineObjectPatternEntry[pattern.Entries.Count];
         var expressionEntries = new List<(int EntryIndex, ObjectMatchExpressionValueNode Value)>();
         for (var entryIndex = 0; entryIndex < pattern.Entries.Count; entryIndex++)
         {
@@ -1353,40 +1337,40 @@ internal sealed class GesLinearBytecodeBuilder
             switch (entry.Value)
             {
                 case ObjectMatchExpressionValueNode expression:
-                    entries[entryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                    entries[entryIndex] = new GameEventScriptBytecodePipelineObjectPatternEntry(
                         entry.Key,
-                        GameEventScriptBytecodeObjectMatchValueKind.Expression);
+                        GameEventScriptBytecodePipelineObjectPatternValueKind.Expression);
                     expressionEntries.Add((entryIndex, expression));
                     break;
 
                 case ObjectMatchNestedValueNode nested:
-                    entries[entryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                    entries[entryIndex] = new GameEventScriptBytecodePipelineObjectPatternEntry(
                         entry.Key,
-                        GameEventScriptBytecodeObjectMatchValueKind.Nested,
-                        nestedPatternLayoutIndex: AddSourceObjectMatchPatternLayout(nested.Pattern, context, state));
+                        GameEventScriptBytecodePipelineObjectPatternValueKind.Nested,
+                        nestedPatternIndex: AddSourcePipelineObjectPattern(nested.Pattern, context, state));
                     break;
             }
         }
 
-        _objectMatchPatternLayouts[index] = new GameEventScriptBytecodeObjectMatchPatternLayout(entries);
+        _pipelineObjectPatternPool[index] = new GameEventScriptBytecodePipelineObjectPattern(entries);
         _deferredHelperEmitters.Add(() =>
         {
             var updatedEntries = entries.ToArray();
             foreach (var expressionEntry in expressionEntries)
             {
                 var original = updatedEntries[expressionEntry.EntryIndex];
-                updatedEntries[expressionEntry.EntryIndex] = new GameEventScriptBytecodeObjectMatchEntryLayout(
+                updatedEntries[expressionEntry.EntryIndex] = new GameEventScriptBytecodePipelineObjectPatternEntry(
                     original.Key,
-                    GameEventScriptBytecodeObjectMatchValueKind.Expression,
+                    GameEventScriptBytecodePipelineObjectPatternValueKind.Expression,
                     EmitSourceExpressionEntry(expressionEntry.Value.Expression, context, state));
             }
 
-            _objectMatchPatternLayouts[index] = new GameEventScriptBytecodeObjectMatchPatternLayout(updatedEntries);
+            _pipelineObjectPatternPool[index] = new GameEventScriptBytecodePipelineObjectPattern(updatedEntries);
         });
         return index;
     }
 
-    private int AddSourcePipelineLayout(CollectionAccessExpressionNode expression, SourceContext context, ExpressionState state)
+    private int AddSourcePipeline(CollectionAccessExpressionNode expression, SourceContext context, ExpressionState state)
     {
         var selectors = new List<CollectionSelectorNode>();
         ExpressionNode source = expression;
@@ -1401,12 +1385,12 @@ internal sealed class GesLinearBytecodeBuilder
         var prefixSelectorIndexes = new int[Math.Max(0, selectors.Count - 1)];
         for (var index = 0; index < prefixSelectorIndexes.Length; index++)
         {
-            prefixSelectorIndexes[index] = AddSourceSelectorLayout(selectors[index], isTerminal: false, context, state);
+            prefixSelectorIndexes[index] = AddSourcePipelineSelector(selectors[index], isTerminal: false, context, state);
         }
 
-        var terminalSelectorIndex = AddSourceSelectorLayout(selectors[^1], isTerminal: true, context, state);
-        var layoutIndex = _pipelineLayouts.Count;
-        _pipelineLayouts.Add(new GameEventScriptBytecodePipelineLayout(
+        var terminalSelectorIndex = AddSourcePipelineSelector(selectors[^1], isTerminal: true, context, state);
+        var layoutIndex = _pipelinePool.Count;
+        _pipelinePool.Add(new GameEventScriptBytecodePipeline(
             sourceSlot,
             prefixSelectorIndexes,
             terminalSelectorIndex));
@@ -1519,6 +1503,63 @@ internal sealed class GesLinearBytecodeBuilder
         => value is null
             ? -1
             : _resolveStringIndex(value);
+
+    private int ResolveStringListIndex(IReadOnlyList<string> values)
+    {
+        if (values.Count == 0)
+        {
+            return -1;
+        }
+
+        var indexes = new ushort[values.Count];
+        for (var index = 0; index < values.Count; index++)
+        {
+            indexes[index] = ToUShortOperand(ResolveStringIndex(values[index]), "string pool index");
+        }
+
+        return _resolveUShortListIndex(indexes);
+    }
+
+    private int ResolveSlotListIndex(IReadOnlyList<int> slots)
+    {
+        if (slots.Count == 0)
+        {
+            return -1;
+        }
+
+        var indexes = new ushort[slots.Count];
+        for (var index = 0; index < slots.Count; index++)
+        {
+            indexes[index] = ToUShortOperand(slots[index], "slot index");
+        }
+
+        return _resolveUShortListIndex(indexes);
+    }
+
+    private int ResolveMessageShapeIndex(string messageName, IReadOnlyList<string> argumentNames)
+    {
+        var shape = new ushort[argumentNames.Count + 1];
+        shape[0] = ToUShortOperand(ResolveStringIndex(GameEventScriptMessageSignature.NormalizeMessageName(messageName)), "message name string pool index");
+        for (var index = 0; index < argumentNames.Count; index++)
+        {
+            shape[index + 1] = ToUShortOperand(ResolveStringIndex(argumentNames[index]), "message argument string pool index");
+        }
+
+        return _resolveUShortListIndex(shape);
+    }
+
+    private static ushort ToUShortOperand(int value, string name)
+    {
+        if (value < 0 || value >= GameEventScriptBytecodeInstruction.Unused16)
+        {
+            throw new GameEventScriptCompileException($"GameEventScript bytecode {name} must fit into an unsigned 16-bit operand.");
+        }
+
+        return (ushort)value;
+    }
+
+    private static string FormatSignature(string name, IReadOnlyList<string> labels)
+        => GameEventScriptMessageSignature.CreateSignatureId(name, labels);
 
     private int EmitLoadInteger(
         ExpressionState state,
@@ -1829,7 +1870,7 @@ internal sealed class GesLinearBytecodeBuilder
         };
 
     private sealed record SourceSelectorData(
-        GameEventScriptBytecodeSelectorKind Kind,
+        GameEventScriptBytecodePipelineSelectorKind Kind,
         int IdentifierSlot,
         ExpressionNode? Expression,
         string? EdgeMode = null,

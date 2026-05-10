@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -16,6 +17,9 @@ public class GameEventScriptBinaryBuilder
     private List<string> _stringPool = [];
     private Dictionary<string, ushort> _stringPoolIndexes = [];
     private List<GameEventScriptBinaryBindEntry> _binds = [];
+
+    private List<IReadOnlyList<ushort>> _uint16Table = [];
+
 
     public GameEventScriptBinaryBuilder WithVersion(ushort version)
     {
@@ -71,6 +75,23 @@ public class GameEventScriptBinaryBuilder
         return this;
     }
 
+    public GameEventScriptBinaryBuilder AddUint16TableEntry(IReadOnlyList<ushort> value, out ushort index)
+    {
+        index = (ushort)_uint16Table.Count;
+        _uint16Table.Add(value);
+        return this;
+    }
+
+    public GameEventScriptBinaryBuilder AddUint16TableEntries(IReadOnlyList<IReadOnlyList<ushort>> values, out ushort[] indexes)
+    {
+        indexes = new ushort[values.Count];
+        for (var index = 0; index < values.Count; index++)
+        {
+            AddUint16TableEntry(values[index], out indexes[index]);
+        }
+        return this;
+    }
+
     public GameEventScriptBinaryBuilder AddBind(GameEventScriptBinaryBindEntry bind)
     {
         _binds.Add(bind);
@@ -83,9 +104,35 @@ public class GameEventScriptBinaryBuilder
         {
             Header = new GameEventScriptBinaryHeader { Version = 1, Flags = _flags, FileSize = _fileSize },
             ModuleName = _moduleName,
-            StringPool = _stringPool.ToArray(),
+            StringTable = BuildTextTable(_stringPool),
+            UInt16SliceTable = BuildUInt16SliceTable(_uint16Table),
             BindTable = new GameEventScriptBinaryBindTable(_binds)
         };
+    }
+
+    private static GameEventScriptUInt16Table BuildUInt16SliceTable(IReadOnlyList<IReadOnlyList<ushort>> uint16Table)
+    {
+        List<ushort> data = [];
+        List<GameEventScriptUInt16Table.SliceEntry> slices = [];
+        foreach (var slice in uint16Table)
+        {
+            slices.Add(new GameEventScriptUInt16Table.SliceEntry { Start = (ushort)data.Count, Length = (ushort)slice.Count });
+            data.AddRange(slice);
+        }
+        return new GameEventScriptUInt16Table { Slices = slices.ToArray(), Data = data.ToArray() };
+    }
+
+    private static GameEventScriptTextTable BuildTextTable(List<string> stringTable)
+    {
+        List<byte> stringData = [];
+        List<GameEventScriptTextTable.SliceEntry> stringIndexes = [];
+        foreach (var byteSpan in stringTable.Select(stringPoolElement => Encoding.UTF8.GetBytes(stringPoolElement)))
+        {
+            stringIndexes.Add(new GameEventScriptTextTable.SliceEntry { Start = (ushort)stringData.Count, Length = (ushort)byteSpan.Length });
+            stringData.AddRange(byteSpan);
+        }
+
+        return new GameEventScriptTextTable() { Slices = stringIndexes.ToArray(), Data = stringData.ToArray() };
     }
 }
 
@@ -96,7 +143,11 @@ public static class GameEventScriptBinaryExtensions
         _ = compiled ?? throw new ArgumentNullException(nameof(compiled));
         var builder = new GameEventScriptBinaryBuilder();
 
-        builder.WithVersion(1).WithModuleName(compiled.ModuleName).AddStringPoolElements(compiled.StringPool, out _);
+        builder
+            .WithVersion(1)
+            .WithModuleName(compiled.ModuleName)
+            .AddStringPoolElements(compiled.StringPool, out _)
+            .AddUint16TableEntries(compiled.UShortListPool, out _);
 
         foreach (var handler in compiled.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal).SelectMany(pair => pair.Value.OrderBy(handler => handler.DeclarationOrder)))
         {

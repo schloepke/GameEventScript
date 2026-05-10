@@ -955,12 +955,15 @@ if :chance 25% {
 }
 ```
 
-Seeded random scopes derive a deterministic local random stream from a seed.
+Seeded random scopes derive a deterministic local random stream from a
+unitless integer seed. Dynamic seeds must be declared as `:integer` or cast
+explicitly with `as :integer`; units belong on generated random values via
+normal casts, not on the seed.
 
 Expression form:
 
 ```eventscript
-let rolls be :random with seed :list[:select item from 1 to 3 => :random from 1 to 6]
+let rolls be :random with (seed as :integer) :list[:select item from 1 to 3 => :random from 1 to 6]
 ```
 
 Statement form:
@@ -972,7 +975,7 @@ Statement form:
 }
 ```
 
-The seeded random block does not disturb the outer random stream.
+The seeded random scope does not disturb the outer random stream.
 
 ## Types and Conversions
 
@@ -2105,17 +2108,15 @@ The artifact exposes neutral bytecode data:
 
 - `ModuleName`
 - `StringPool`
-- `Signatures`
+- `UShortListPool`
 - `ExternalReferences`
-- `NamedArgumentLayouts`
 - `Callables`
 - `Handlers`
 - `TypeDefinitions`
 - `Code`
 - `MaxFrameSlots`
-- Side tables for operation layouts, publish layouts, iteration sources,
-  pipeline selectors, generated collections, guarded choices, and pattern
-  metadata
+- Side tables for operation layouts, iteration sources, pipeline pools,
+  generated collections, guarded choices, and pattern metadata
 
 Literal constants are encoded by typed linear load instructions instead of an
 object-shaped constant pool. `LoadInteger` uses the overlapped `I64` payload plus

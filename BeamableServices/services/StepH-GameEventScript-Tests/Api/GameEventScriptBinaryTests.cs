@@ -45,6 +45,5 @@ public sealed class GameEventScriptBinaryTests
         CollectionAssert.AreEqual(new[] { "_" }, import.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
     }
 
-    private static string Resolve(GameEventScriptBinary binary, ushort index)
-        => binary.StringPool[index];
+    private static string Resolve(GameEventScriptBinary binary, ushort index) => binary.StringTable.Resolve(index);
 }

@@ -2109,7 +2109,6 @@ The artifact exposes neutral bytecode data:
 - `Signatures`
 - `ExternalReferences`
 - `NamedArgumentLayouts`
-- `TypeMetadata`
 - `Callables`
 - `Handlers`
 - `TypeDefinitions`

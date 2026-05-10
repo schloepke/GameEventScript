@@ -96,12 +96,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(2, compiled.PublishLayouts);
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.PublishValue &&
-            instruction.Data >= 0 &&
-            instruction.Data < compiled.PublishLayouts.Count));
+            instruction.C >= 0 &&
+            instruction.C < compiled.PublishLayouts.Count));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.PublishMessageValue &&
-            instruction.Data >= 0 &&
-            instruction.Data < compiled.PublishLayouts.Count));
+            instruction.C >= 0 &&
+            instruction.C < compiled.PublishLayouts.Count));
 
         var direct = compiled.PublishLayouts.First(layout => layout.MessageName == "Done");
         Assert.AreEqual("Done(value)", direct.SignatureId);
@@ -139,12 +139,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             layout.RangeToSlot >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.ForRange &&
-            instruction.Data >= 0 &&
-            instruction.Data < compiled.LoopLayouts.Count));
+            instruction.C >= 0 &&
+            instruction.C < compiled.LoopLayouts.Count));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandomBlock &&
-            instruction.Data >= 0 &&
-            instruction.Data < compiled.SeededRandomBlockLayouts.Count));
+            instruction.C >= 0 &&
+            instruction.C < compiled.SeededRandomBlockLayouts.Count));
         Assert.IsGreaterThanOrEqualTo(0, compiled.SeededRandomBlockLayouts[0].SeedSlot);
     }
 
@@ -170,8 +170,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             layout.ExpressionEntryAddress >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline &&
-            instruction.Data >= 0 &&
-            instruction.Data < compiled.PipelineLayouts.Count));
+            instruction.C >= 0 &&
+            instruction.C < compiled.PipelineLayouts.Count));
         Assert.IsGreaterThanOrEqualTo(0, compiled.PipelineLayouts[0].SourceSlot);
     }
 
@@ -205,8 +205,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
         Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.PublishValue &&
-            instruction.Data >= 0 &&
-            instruction.Data < compiled.PublishLayouts.Count));
+            instruction.C >= 0 &&
+            instruction.C < compiled.PublishLayouts.Count));
     }
 
     [TestMethod]
@@ -232,8 +232,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -274,8 +274,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -334,8 +334,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -387,8 +387,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -442,7 +442,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select((instruction, index) => index == rewrittenConstantInstructionIndex
-                ? instruction with { Data = replacementConstant }
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -487,8 +487,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -534,8 +534,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -590,8 +590,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -637,8 +637,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -685,10 +685,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Unary));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Cast));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.UnaryNegate));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CastFloat));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.MemberAccess));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheck));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckInteger));
 
         var originalConstant = compiled.ConstantPool
             .Select((constant, index) => (constant, index))
@@ -700,8 +700,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -742,10 +742,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Unary));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Cast));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.UnaryNegate));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CastFloat));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.MemberAccess));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheck));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckInteger));
 
         var originalConstant = compiled.ConstantPool
             .Select((constant, index) => (constant, index))
@@ -757,8 +757,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -805,7 +805,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Range));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeWithStep));
 
         var originalConstant = compiled.ConstantPool
             .Select((constant, index) => (constant, index))
@@ -817,8 +817,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -855,7 +855,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Range));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeWithStep));
 
         var originalConstant = compiled.ConstantPool
             .Select((constant, index) => (constant, index))
@@ -867,8 +867,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -927,8 +927,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -977,8 +977,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1050,8 +1050,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1117,8 +1117,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1183,8 +1183,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1237,8 +1237,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1295,8 +1295,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1343,8 +1343,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1402,8 +1402,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1452,8 +1452,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1511,8 +1511,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1561,8 +1561,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1622,8 +1622,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1680,8 +1680,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1726,8 +1726,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => otherwiseRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1774,8 +1774,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => otherwiseRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1821,8 +1821,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => otherwiseRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1869,8 +1869,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1917,8 +1917,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1965,8 +1965,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => projectionRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2013,8 +2013,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => projectionRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2060,8 +2060,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => projectionRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2108,8 +2108,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2156,8 +2156,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2204,11 +2204,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
             .index;
         var code = compiled.Code
-            .Select((instruction, index) => index >= loopInstruction.instruction.Target &&
-                                           index < loopInstruction.instruction.Target2 &&
+            .Select((instruction, index) => index >= loopInstruction.instruction.A &&
+                                           index < loopInstruction.instruction.B &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2255,11 +2255,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
             .index;
         var code = compiled.Code
-            .Select((instruction, index) => index >= loopInstruction.instruction.Target &&
-                                           index < loopInstruction.instruction.Target2 &&
+            .Select((instruction, index) => index >= loopInstruction.instruction.A &&
+                                           index < loopInstruction.instruction.B &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2334,8 +2334,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= selector.ExpressionEntryAddress &&
                                            index < selectorEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2387,8 +2387,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= selector.ExpressionEntryAddress &&
                                            index < selectorEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2433,8 +2433,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2480,8 +2480,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2528,8 +2528,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2574,8 +2574,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2623,8 +2623,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2671,8 +2671,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2746,8 +2746,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2794,8 +2794,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2841,8 +2841,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2887,8 +2887,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2938,8 +2938,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2988,8 +2988,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3053,11 +3053,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalNeedle
-                ? instruction with { Data = replacementNeedle }
+                                   instruction.C == originalNeedle
+                ? instruction with { C = replacementNeedle }
                 : instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                  instruction.Data == originalAddend
-                    ? instruction with { Data = replacementAddend }
+                  instruction.C == originalAddend
+                    ? instruction with { C = replacementAddend }
                     : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3120,11 +3120,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalNeedle
-                ? instruction with { Data = replacementNeedle }
+                                   instruction.C == originalNeedle
+                ? instruction with { C = replacementNeedle }
                 : instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                  instruction.Data == originalAddend
-                    ? instruction with { Data = replacementAddend }
+                  instruction.C == originalAddend
+                    ? instruction with { C = replacementAddend }
                     : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3199,8 +3199,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3248,8 +3248,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3301,8 +3301,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3353,8 +3353,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3401,8 +3401,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3448,8 +3448,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3497,8 +3497,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3546,8 +3546,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3600,8 +3600,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3652,8 +3652,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3708,8 +3708,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3763,8 +3763,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3821,8 +3821,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3878,8 +3878,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3927,8 +3927,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3976,8 +3976,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4037,8 +4037,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4099,8 +4099,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4166,8 +4166,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   replacements.TryGetValue(instruction.Data, out var replacement)
-                ? instruction with { Data = replacement }
+                                   replacements.TryGetValue(instruction.C, out var replacement)
+                ? instruction with { C = replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4231,8 +4231,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   replacements.TryGetValue(instruction.Data, out var replacement)
-                ? instruction with { Data = replacement }
+                                   replacements.TryGetValue(instruction.C, out var replacement)
+                ? instruction with { C = replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4295,8 +4295,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4357,8 +4357,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4411,8 +4411,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4464,8 +4464,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4500,8 +4500,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var seededRandomInstruction = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom);
-        var layout = compiled.OperationLayouts[seededRandomInstruction.Data];
-        Assert.IsGreaterThanOrEqualTo(0, layout.ExpressionEntryAddress);
+        var expressionEntryAddress = seededRandomInstruction.C;
+        Assert.IsGreaterThanOrEqualTo(0, expressionEntryAddress);
 
         var originalConstant = compiled.ConstantPool
             .Select((constant, index) => (constant, index))
@@ -4513,14 +4513,14 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var bodyEnd = Array.FindIndex(
             compiled.Code.ToArray(),
-            layout.ExpressionEntryAddress,
+            expressionEntryAddress,
             instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
         var code = compiled.Code
-            .Select((instruction, index) => index >= layout.ExpressionEntryAddress &&
+            .Select((instruction, index) => index >= expressionEntryAddress &&
                                            index < bodyEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4553,11 +4553,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var seededRandomLayouts = compiled.OperationLayouts
+        var seededRandomEntries = compiled.Code
             .Where(entry => entry.OpCode == GameEventScriptBytecodeOpCode.SeededRandom)
+            .Select(entry => entry.C)
             .ToArray();
-        Assert.IsNotEmpty(seededRandomLayouts);
-        Assert.IsTrue(seededRandomLayouts.All(layout => layout.ExpressionEntryAddress >= 0));
+        Assert.IsNotEmpty(seededRandomEntries);
+        Assert.IsTrue(seededRandomEntries.All(entry => entry >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
         var originalConstant = compiled.ConstantPool
@@ -4569,20 +4570,20 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
             .index;
         var compiledCode = compiled.Code.ToArray();
-        var bodyRanges = seededRandomLayouts
-            .Select(layout => (
-                Start: layout.ExpressionEntryAddress,
+        var bodyRanges = seededRandomEntries
+            .Select(entryAddress => (
+                Start: entryAddress,
                 End: Array.FindIndex(
                     compiledCode,
-                    layout.ExpressionEntryAddress,
+                    entryAddress,
                     instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1))
             .ToArray();
         Assert.IsTrue(bodyRanges.All(range => range.End > range.Start));
         var code = compiled.Code
             .Select((instruction, index) => bodyRanges.Any(range => index >= range.Start && index < range.End) &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4629,8 +4630,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4677,8 +4678,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                   instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4713,8 +4714,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var seededRandomInstruction = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom);
-        var layout = compiled.OperationLayouts[seededRandomInstruction.Data];
-        Assert.IsGreaterThanOrEqualTo(0, layout.ExpressionEntryAddress);
+        var expressionEntryAddress = seededRandomInstruction.C;
+        Assert.IsGreaterThanOrEqualTo(0, expressionEntryAddress);
 
         var originalConstant = compiled.ConstantPool
             .Select((constant, index) => (constant, index))
@@ -4726,14 +4727,14 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .index;
         var bodyEnd = Array.FindIndex(
             compiled.Code.ToArray(),
-            layout.ExpressionEntryAddress,
+            expressionEntryAddress,
             instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
         var code = compiled.Code
-            .Select((instruction, index) => index >= layout.ExpressionEntryAddress &&
+            .Select((instruction, index) => index >= expressionEntryAddress &&
                                            index < bodyEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4779,11 +4780,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
             .index;
         var code = compiled.Code
-            .Select((instruction, index) => index >= blockInstruction.instruction.Target &&
-                                           index < blockInstruction.instruction.Target2 &&
+            .Select((instruction, index) => index >= blockInstruction.instruction.A &&
+                                           index < blockInstruction.instruction.B &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4840,8 +4841,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= field.ComputedEntryAddress &&
                                            index < computedEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4896,8 +4897,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => index >= field.MinimumEntryAddress &&
                                            index < minimumEnd &&
                                            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.Data == originalConstant
-                ? instruction with { Data = replacementConstant }
+                                           instruction.C == originalConstant
+                ? instruction with { C = replacementConstant }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4933,7 +4934,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             code,
             instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PublishValue);
         Assert.IsGreaterThanOrEqualTo(0, publishInstructionIndex);
-        code[publishInstructionIndex] = code[publishInstructionIndex] with { Data = compiled.PublishLayouts.Count };
+        code[publishInstructionIndex] = code[publishInstructionIndex] with { C = compiled.PublishLayouts.Count };
         var invalid = RebuildCompiledArtifactFromPublicData(compiled, code);
 
         var exception = Assert.ThrowsExactly<InvalidOperationException>(() => GesBytecodeVmExecutableBuilder.Build(invalid));
@@ -5332,7 +5333,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 .Select(reference => new GameEventScriptExternalTypeConstructorReference(reference.TypeName, reference.ArgumentLabels.ToArray()))
                 .ToArray(),
             original.NamedArgumentLayouts.Select(layout => (IReadOnlyList<string>)layout.ToArray()).ToArray(),
-            original.TypeMetadata.ToArray(),
             original.Callables.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             original.Handlers.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<GameEventScriptBytecodeHandler>)pair.Value.ToArray(), StringComparer.Ordinal),
             original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),

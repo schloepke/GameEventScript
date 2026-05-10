@@ -1,7 +1,7 @@
 # Bytecode Opcode Instruction Shape
 
 This document lists the current `GameEventScriptBytecodeOpCode` values and how
-each opcode uses the linear instruction shape.
+each opcode uses the compact linear instruction shape.
 
 ```csharp
 GameEventScriptBytecodeInstruction(
@@ -9,125 +9,134 @@ GameEventScriptBytecodeInstruction(
     Dest = -1,
     A = -1,
     B = -1,
-    C = -1,
-    Target = -1,
-    Target2 = -1,
-    Data = -1)
+    C = -1)
 ```
 
 Conventions:
 
 - `Dest` is the destination frame slot for value-producing instructions.
-- `A`, `B`, and `C` are usually source slots. Rows call out immediates or
-  indexes when a field is not a slot.
-- `Target` and `Target2` are absolute instruction addresses.
-- `Data` is either unused or an index into a side table.
+- `A`, `B`, and `C` are opcode-specific operands.
 - `-1` means unused/no value.
-- For operation-layout opcodes, `A`/`B`/`C` may mirror the first three argument
-  slots, but the authoritative full operand list is
-  `OperationLayouts[Data].ArgumentSlots`.
+- Branch opcodes use `A` as the target address.
+- Conditional branches use `C` as the condition slot.
+- Loop/block opcodes use `A` as body target, `B` as end target, and `C` as
+  layout index.
+- Side-table-backed opcodes use `C` as the data/layout index. Their complete
+  operand list lives in the side table; `A` and `B` only mirror the first one or
+  two slots when that is useful.
 
 ## Opcode Table
 
-| Opcode | Dest | A/B/C usage | Targets | Data | Notes |
+| Opcode | Dest | A | B | C | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `LoadConstant` | result slot | unused | unused | `ConstantPool` index | Loads a portable bytecode constant. |
-| `LoadSlot` | result slot | `A` = source slot | unused | unused | Reads an existing frame slot. |
-| `Or` | result slot | `A` = left slot, `B` = right slot | unused | unused | Tri-state boolean combine; short-circuit is handled by surrounding jumps. |
-| `Xor` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `And` | result slot | `A` = left slot, `B` = right slot | unused | unused | Tri-state boolean combine; short-circuit is handled by surrounding jumps. |
-| `Equal` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `NotEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `ApproxEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Approximate equality operation. |
-| `Less` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary comparison. |
-| `Greater` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary comparison. |
-| `LessOrEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary comparison. |
-| `GreaterOrEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary comparison. |
-| `Add` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `Subtract` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `Multiply` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `Divide` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `IntegerDivide` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `Modulo` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `Remainder` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `PrimitiveIntegerEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path comparison. |
-| `PrimitiveIntegerNotEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path comparison. |
-| `PrimitiveIntegerLess` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path comparison. |
-| `PrimitiveIntegerGreater` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path comparison. |
-| `PrimitiveIntegerLessOrEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path comparison. |
-| `PrimitiveIntegerGreaterOrEqual` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path comparison. |
-| `PrimitiveIntegerAdd` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `PrimitiveIntegerSubtract` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `PrimitiveIntegerMultiply` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `PrimitiveIntegerDivide` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `PrimitiveIntegerFloorDivide` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `PrimitiveIntegerModulo` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `PrimitiveIntegerRemainder` | result slot | `A` = left slot, `B` = right slot | unused | unused | Integer fast-path arithmetic. |
-| `Default` | result slot | `A` = left slot, `B` = right slot | unused | unused | Null/nothing default operator. |
-| `Contains` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary collection/text operation. |
-| `ContainsValue` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary collection/text operation. |
-| `StartsWith` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary text operation. |
-| `EndsWith` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary text operation. |
-| `Intersect` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary collection operation. |
-| `Combine` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary collection operation. |
-| `Except` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary collection operation. |
-| `Zip` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary collection operation. |
-| `Unary` | result slot | `A` = operand slot | unused | `OperationLayouts` index | Layout stores unary operator name and argument slots. |
-| `Variadic` | result slot | `A`/`B`/`C` = first argument slots, full list in layout | unused | `OperationLayouts` index | Layout stores operator name and all argument slots. |
-| `Clamp` | result slot | `A` = value slot, `B` = minimum slot, `C` = maximum slot | unused | unused | Three-slot value operation. |
-| `Random` | result slot | `A` = from slot, `B` = to slot | unused | unused | Uses current random scope. |
-| `Range` | result slot | `A` = from slot, `B` = to slot, `C` = optional step slot | unused | `OperationLayouts` index | Layout keeps operand metadata/count. |
-| `Dice` | result slot | `A` = dice count immediate, `B` = side count immediate | unused | unused | `A` and `B` are not slots. |
-| `SeededRandom` | result slot | `A` = seed slot | unused | `OperationLayouts` index | Layout stores helper expression entry address. |
-| `Cast` | result slot | `A` = source slot | unused | `OperationLayouts` index | Layout stores `CastKind`. |
-| `TypeConstructor` | result slot | `A`/`B`/`C` = first argument slots, full list in layout | unused | `OperationLayouts` index | Layout stores type name, argument names, and slots. |
-| `PredicateTest` | result slot | `A` = tested value slot | unused | `OperationLayouts` index | Enters a predicate frame or uses predicate fast paths. |
-| `MemberAccess` | result slot | `A` = target slot | unused | `OperationLayouts` index | Layout stores member name. |
-| `IndexedAccess` | result slot | `A` = target slot, `B` = index slot | unused | unused | Direct indexed lookup. |
-| `BuildList` | result slot | `A`/`B`/`C` = first item slots, full list in layout | unused | `OperationLayouts` index | Layout stores all item slots. |
-| `BuildSequence` | result slot | `A`/`B`/`C` = first item slots, full list in layout | unused | `OperationLayouts` index | Layout stores all item slots. |
-| `BuildSet` | result slot | `A`/`B`/`C` = first item slots, full list in layout | unused | `OperationLayouts` index | Layout stores all item slots. |
-| `BuildDictionary` | result slot | `A`/`B`/`C` = first value slots, full list in layout | unused | `OperationLayouts` index | Layout stores keys in `Names` and value slots in `ArgumentSlots`. |
-| `BuildMessage` | result slot | `A`/`B`/`C` = first argument slots, full list in layout | unused | `OperationLayouts` index | Layout stores message name, signature, argument names, and slots. |
-| `BindHandler` | result slot | `A`/`B`/`C` = handler plus first bound argument slots, full list in layout | unused | `OperationLayouts` index | First operand is the handler value; remaining operands are bound arguments. |
-| `CallExtension` | result slot | `A`/`B`/`C` = first argument slots, full list in layout | unused | `OperationLayouts` index | Layout stores extension name, function name, import reference, argument names, and callable kind. |
-| `Call` | result slot | `A`/`B`/`C` = first argument slots, full list in layout | unused | `OperationLayouts` index | Enters a VM-owned call frame for a function/predicate. |
-| `TypeCheck` | result slot | `A` = source slot | unused | `OperationLayouts` index | Layout stores type name. |
-| `Pipeline` | result slot | unused | unused | `PipelineLayouts` index | Layout stores source slot, prefix selector indexes, and terminal selector index. |
-| `GeneratedCollection` | result slot | unused | unused | `GeneratedCollectionLayouts` index | Layout stores collection type, iteration source, identifier slot, and helper entry addresses. |
-| `GuardedChoice` | result slot | unused | unused | `GuardedChoiceLayouts` index | Layout stores value/condition helper entry addresses and optional otherwise entry. |
-| `Power` | result slot | `A` = left slot, `B` = right slot | unused | unused | Binary operation. |
-| `ShortCircuitOr` | unused | unused | unused | unused | Lowering marker only; current runtime uses `JumpIfTrue` plus `Or` instead. |
-| `ShortCircuitAnd` | unused | unused | unused | unused | Lowering marker only; current runtime uses `JumpIfFalse` plus `And` instead. |
-| `ShortCircuitImplies` | result slot | `A` = antecedent slot, `B` = consequent slot | unused | unused | Runtime binary helper used by implication lowering. |
+| `LoadSlot` | result slot | source slot | unused | unused | Reads an existing frame slot. |
+| `Or` | result slot | left slot | right slot | unused | Tri-state boolean combine. |
+| `Xor` | result slot | left slot | right slot | unused | Binary operation. |
+| `And` | result slot | left slot | right slot | unused | Tri-state boolean combine. |
+| `Equal` | result slot | left slot | right slot | unused | Binary comparison. |
+| `NotEqual` | result slot | left slot | right slot | unused | Binary comparison. |
+| `ApproxEqual` | result slot | left slot | right slot | unused | Approximate equality. |
+| `Less` | result slot | left slot | right slot | unused | Binary comparison. |
+| `Greater` | result slot | left slot | right slot | unused | Binary comparison. |
+| `LessOrEqual` | result slot | left slot | right slot | unused | Binary comparison. |
+| `GreaterOrEqual` | result slot | left slot | right slot | unused | Binary comparison. |
+| `Add` | result slot | left slot | right slot | unused | Binary operation. |
+| `Subtract` | result slot | left slot | right slot | unused | Binary operation. |
+| `Multiply` | result slot | left slot | right slot | unused | Binary operation. |
+| `Divide` | result slot | left slot | right slot | unused | Binary operation. |
+| `IntegerDivide` | result slot | left slot | right slot | unused | Binary operation. |
+| `Modulo` | result slot | left slot | right slot | unused | Binary operation. |
+| `Remainder` | result slot | left slot | right slot | unused | Binary operation. |
+| `PrimitiveIntegerEqual` | result slot | left slot | right slot | unused | Integer fast-path comparison. |
+| `PrimitiveIntegerNotEqual` | result slot | left slot | right slot | unused | Integer fast-path comparison. |
+| `PrimitiveIntegerLess` | result slot | left slot | right slot | unused | Integer fast-path comparison. |
+| `PrimitiveIntegerGreater` | result slot | left slot | right slot | unused | Integer fast-path comparison. |
+| `PrimitiveIntegerLessOrEqual` | result slot | left slot | right slot | unused | Integer fast-path comparison. |
+| `PrimitiveIntegerGreaterOrEqual` | result slot | left slot | right slot | unused | Integer fast-path comparison. |
+| `PrimitiveIntegerAdd` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `PrimitiveIntegerSubtract` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `PrimitiveIntegerMultiply` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `PrimitiveIntegerDivide` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `PrimitiveIntegerFloorDivide` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `PrimitiveIntegerModulo` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `PrimitiveIntegerRemainder` | result slot | left slot | right slot | unused | Integer fast-path arithmetic. |
+| `Default` | result slot | left slot | right slot | unused | Nothing/default operator. |
+| `Contains` | result slot | left slot | right slot | unused | Collection/text operation. |
+| `ContainsValue` | result slot | left slot | right slot | unused | Collection/text operation. |
+| `StartsWith` | result slot | left slot | right slot | unused | Text operation. |
+| `EndsWith` | result slot | left slot | right slot | unused | Text operation. |
+| `Intersect` | result slot | left slot | right slot | unused | Collection operation. |
+| `Combine` | result slot | left slot | right slot | unused | Collection operation. |
+| `Except` | result slot | left slot | right slot | unused | Collection operation. |
+| `Zip` | result slot | left slot | right slot | unused | Collection operation. |
+| `UnaryNegate` | result slot | operand slot | unused | unused | Numeric negation. |
+| `UnaryNot` | result slot | operand slot | unused | unused | Logical negation. |
+| `UnaryHasValue` | result slot | operand slot | unused | unused | Semantic value check. |
+| `UnaryEmpty` | result slot | operand slot | unused | unused | Semantic emptiness check. |
+| `UnaryLength` | result slot | operand slot | unused | unused | Length operation. |
+| `UnaryChance` | result slot | operand slot | unused | unused | Chance evaluation. |
+| `UnaryKeys` | result slot | operand slot | unused | unused | Dictionary/record keys projection. |
+| `UnaryValues` | result slot | operand slot | unused | unused | Dictionary/record values projection. |
+| `UnaryEntries` | result slot | operand slot | unused | unused | Dictionary/record entries projection. |
+| `UnaryAbs` | result slot | operand slot | unused | unused | Absolute value. |
+| `UnaryNaturalLog` | result slot | operand slot | unused | unused | Natural logarithm. |
+| `Variadic` | result slot | first argument slot | second argument slot | `OperationLayouts` index | Full argument list is in layout. |
+| `Clamp` | result slot | value slot | minimum slot | maximum slot | The only opcode with three direct source slots. |
+| `Random` | result slot | from slot | to slot | unused | Uses current random scope. |
+| `Range` | result slot | from slot | to slot | unused | Builds a range with implicit step `1`. |
+| `RangeWithStep` | result slot | from slot | to slot | step slot | Builds a range with explicit step. |
+| `Dice` | result slot | dice count immediate | side count immediate | unused | `A` and `B` are not slots. |
+| `SeededRandom` | result slot | seed slot | unused | helper entry address | Executes helper expression under a seeded random scope. |
+| `CastNothing`..`CastOptional` | result slot | source slot | unused | unused | Direct built-in declared-type conversion. |
+| `CastCustom` | result slot | source slot | unused | `StringPool` index | Declared-type conversion for custom record/external types. |
+| `TypeConstructor` | result slot | first argument slot | second argument slot | `OperationLayouts` index | Full argument list and names are in layout. |
+| `PredicateTest` | result slot | tested value slot | unused | `OperationLayouts` index | Enters a predicate frame or fast path. |
+| `MemberAccess` | result slot | target slot | unused | `StringPool` index | Reads a named member. |
+| `IndexedAccess` | result slot | target slot | index slot | unused | Direct indexed lookup. |
+| `BuildList` | result slot | first item slot | second item slot | `OperationLayouts` index | Full item list is in layout. |
+| `BuildSequence` | result slot | first item slot | second item slot | `OperationLayouts` index | Full item list is in layout. |
+| `BuildSet` | result slot | first item slot | second item slot | `OperationLayouts` index | Full item list is in layout. |
+| `BuildDictionary` | result slot | first value slot | second value slot | `OperationLayouts` index | Keys and full value list are in layout. |
+| `BuildMessage` | result slot | first argument slot | second argument slot | `OperationLayouts` index | Message name, signature, names, and slots are in layout. |
+| `BindHandler` | result slot | handler slot | first bound argument slot | `OperationLayouts` index | Full operand list is in layout. |
+| `CallExtension` | result slot | first argument slot | second argument slot | `OperationLayouts` index | Extension reference and argument metadata are in layout. |
+| `Call` | result slot | first argument slot | second argument slot | `OperationLayouts` index | Enters a VM-owned call frame. |
+| `TypeCheckNothing`..`TypeCheckDice` | result slot | source slot | unused | unused | Direct built-in type predicate. |
+| `TypeCheckCustom` | result slot | source slot | unused | `StringPool` index | Type predicate for custom record/external types. |
+| `Pipeline` | result slot | unused | unused | `PipelineLayouts` index | Layout stores source slot and selector indexes. |
+| `GeneratedCollection` | result slot | unused | unused | `GeneratedCollectionLayouts` index | Layout stores iteration source and helper entries. |
+| `GuardedChoice` | result slot | unused | unused | `GuardedChoiceLayouts` index | Layout stores value/condition helper entries. |
+| `Power` | result slot | left slot | right slot | unused | Binary operation. |
+| `ShortCircuitOr` | unused | unused | unused | unused | Lowering marker only; runtime uses jumps plus `Or`. |
+| `ShortCircuitAnd` | unused | unused | unused | unused | Lowering marker only; runtime uses jumps plus `And`. |
+| `ShortCircuitImplies` | result slot | antecedent slot | consequent slot | unused | Binary implication combine. |
 | `Nop` | unused | unused | unused | unused | No operation. |
-| `BindParameter` | parameter slot | `A` = parameter index immediate | unused | unused | Reads invocation argument `A` and writes it to `Dest`. |
-| `CoerceSlot` | result slot | `A` = source slot | unused | `TypeMetadata` index | Coerces a slot to a declared type. |
-| `CopySlot` | result slot | `A` = source slot | unused | unused | Defines/copies a slot value. |
-| `Jump` | unused | unused | `Target` = next pc | unused | Unconditional branch. |
-| `JumpIfTrue` | unused | `A` = condition slot | `Target` = branch pc | unused | Branches when `A.IsTrue()`. |
-| `JumpIfFalse` | unused | `A` = condition slot | `Target` = branch pc | unused | Branches when `A.IsFalse()`. |
-| `JumpIfNotTrue` | unused | `A` = condition slot | `Target` = branch pc | unused | Branches when `!A.IsTrue()`, including `nothing`. |
+| `BindParameter` | parameter slot | parameter index immediate | unused | unused | Reads invocation argument `A` and writes it to `Dest`. |
+| `CopySlot` | result slot | source slot | unused | unused | Defines/copies a slot value. |
+| `Jump` | unused | target address | unused | unused | Unconditional branch. |
+| `JumpIfTrue` | unused | target address | unused | condition slot | Branches when `C.IsTrue()`. |
+| `JumpIfFalse` | unused | target address | unused | condition slot | Branches when `C.IsFalse()`. |
+| `JumpIfNotTrue` | unused | target address | unused | condition slot | Branches when `!C.IsTrue()`, including `nothing`. |
 | `EnterScope` | unused | unused | unused | unused | Pushes a scope mark for local-slot cleanup. |
 | `ExitScope` | unused | unused | unused | unused | Pops a scope and restores changed slots. |
-| `Return` | unused | `A` = optional return slot | unused | unused | Returns from current handler/helper/callable frame; `A = -1` returns `nothing`. |
-| `PublishValue` | unused | unused | unused | `PublishLayouts` index | Publishes from a precomputed publish layout. |
-| `PublishMessageValue` | unused | `A` = message slot | unused | `PublishLayouts` index | Publishes a dynamic message value with layout metadata. |
-| `ForRange` | unused | unused | `Target` = body entry, `Target2` = end address | `LoopLayouts` index | Layout links identifier slot and range iteration source slots. |
-| `ForCollection` | unused | unused | `Target` = body entry, `Target2` = end address | `LoopLayouts` index | Layout links identifier slot and collection source slot. |
-| `SeededRandomBlock` | unused | unused | `Target` = body entry, `Target2` = end address | `SeededRandomBlockLayouts` index | Layout stores seed slot. |
+| `Return` | unused | optional return slot | unused | unused | `A = -1` returns `nothing`. |
+| `PublishValue` | unused | publish kind immediate | unused | `PublishLayouts` index | Publishes from a layout. |
+| `PublishMessageValue` | unused | message slot | publish kind immediate | `PublishLayouts` index | Publishes a dynamic message value. |
+| `ForRange` | unused | body target address | end target address | `LoopLayouts` index | Layout links identifier slot and range iteration source. |
+| `ForCollection` | unused | body target address | end target address | `LoopLayouts` index | Layout links identifier slot and collection source. |
+| `SeededRandomBlock` | unused | body target address | end target address | `SeededRandomBlockLayouts` index | Layout stores seed slot. |
 
 ## Side-Table Summary
 
-| Data target | Used by |
+| C target | Used by |
 | --- | --- |
 | `ConstantPool` | `LoadConstant` |
-| `TypeMetadata` | `CoerceSlot` |
-| `OperationLayouts` | `Unary`, `Variadic`, `Range`, `SeededRandom`, `Cast`, `TypeConstructor`, `PredicateTest`, `MemberAccess`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call`, `TypeCheck` |
+| `StringPool` | `MemberAccess` |
+| `OperationLayouts` | `Variadic`, `TypeConstructor`, `PredicateTest`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call` |
 | `PublishLayouts` | `PublishValue`, `PublishMessageValue` |
 | `LoopLayouts` | `ForRange`, `ForCollection` |
 | `SeededRandomBlockLayouts` | `SeededRandomBlock` |
 | `PipelineLayouts` | `Pipeline` |
 | `GeneratedCollectionLayouts` | `GeneratedCollection` |
 | `GuardedChoiceLayouts` | `GuardedChoice` |
-

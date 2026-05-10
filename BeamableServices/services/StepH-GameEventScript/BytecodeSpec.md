@@ -43,12 +43,12 @@ supported. Layout-free helper expressions run through public linear helper
 entries and isolate their temporary slots from handler locals and scope-change
 tracking. Simple operation-layout helper expressions are supported when the
 operation consumes only already-lowered slot operands and local metadata; this
-currently includes `Cast`, `TypeCheck`, `MemberAccess`, `Unary`, `Variadic`,
-`Range`, `SeededRandom`, and `TypeConstructor`, plus local builders
+currently includes `Variadic` and `TypeConstructor`, plus local builders
 `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`,
 handler binding through `BindHandler`, extension calls through `CallExtension`,
 script function calls through `Call`, and predicate tests through
-`PredicateTest`.
+`PredicateTest`. Casts, type checks, member access, and seeded-random
+expressions are layout-free direct instructions.
 Immediate operation-layout value execution should avoid
 per-execution operand-array materialization when possible; operand buffers may
 be reused because the values are consumed before the instruction returns, and
@@ -127,7 +127,6 @@ GameEventScriptCompiled
   NamedArgumentLayouts
   ExternalReferences
   ExternalTypeConstructorReferences
-  TypeMetadata
   Code: Instruction[]
   Handlers: HandlerEntry[]
   Callables: CallableEntry[]
@@ -163,7 +162,6 @@ GameEventScriptCompiled
   ExternalReferences
   ExternalTypeConstructorReferences
   NamedArgumentLayouts
-  TypeMetadata
   Code: IReadOnlyList<GameEventScriptBytecodeInstruction>
   Handlers
   Callables
@@ -188,9 +186,6 @@ GameEventScriptBytecodeInstruction
   A
   B
   C
-  Target
-  Target2
-  Data
 ```
 
 `MaxFrameSlots` is the maximum local slot count needed by any handler or
@@ -271,9 +266,9 @@ counter and dump show where normalization happens:
 
 ```text
 @0000 BindParameter dst=s0 arg=unit
-@0001 CoerceSlot dst=s0 src=s0 type=:unit
+@0001 CastCustom dst=s0 src=s0 type=:unit
 @0002 BindParameter dst=s1 arg=amount
-@0003 CoerceSlot dst=s1 src=s1 type=:integer
+@0003 CastInteger dst=s1 src=s1
 ```
 
 For untyped parameters the compiler emits only `BindParameter`.
@@ -311,9 +306,6 @@ Instruction
   A
   B
   C
-  Target
-  Target2
-  Data
 ```
 
 The exact public C# type can use clearer property names, but the model should
@@ -321,8 +313,13 @@ avoid per-instruction object graphs. Operands are interpreted by opcode:
 
 - `Dest`: destination slot, or `-1` for instructions that do not produce a value.
 - `A`, `B`, `C`: source slots, counts, pool indices, or small enum values.
-- `Target`, `Target2`: instruction addresses.
-- `Data`: index into a side table for larger DSL-specific metadata.
+- Branch opcodes use `A` as the target address and conditional jumps use `C` as
+  the condition slot.
+- Loop/block opcodes use `A` as the body target, `B` as the end target, and `C`
+  as the side-table layout index.
+- Side-table-backed value opcodes use `C` as the layout/data index. Their full
+  operand lists live in side tables; `A` and `B` may mirror the first two slots
+  for fast/direct access.
 
 Large structured metadata belongs in side tables, not nested instruction
 objects. Examples: operation layouts, publish layouts, selector/pipeline
@@ -457,14 +454,15 @@ for `pc`-based execution.
 - `LoadNothing dst`
 - `Move dst src`
 - `BindParameter dst parameterIndex`
-- `CoerceSlot dst src typeIndex`
-- `Cast dst src castKind`
-- `TypeCheck dst src typeIndex`
+- `CastBoolean`/`CastInteger`/`CastFloat`/etc. `dst src`
+- `CastCustom dst src nameIndex`
+- `TypeCheckBoolean`/`TypeCheckInteger`/etc. `dst src`
+- `TypeCheckCustom dst src nameIndex`
 
 `let` lowers to expression code that writes into a temporary or final slot,
-followed by optional `Cast`/`CoerceSlot` and `Move` into the declared local slot.
-Parameter type hints lower to `BindParameter` plus optional `CoerceSlot` in the
-entry prologue.
+followed by an optional direct cast and `Move` into the declared local slot.
+Parameter type hints lower to `BindParameter` plus an optional direct cast in
+the entry prologue.
 
 ### Scopes
 
@@ -495,7 +493,8 @@ Required operations:
 - `Contains`, `ContainsValue`
 - `StartsWith`, `EndsWith`
 - `Intersect`, `Combine`, `Except`, `Zip`
-- `Unary`
+- direct unary opcodes such as `UnaryNegate`, `UnaryNot`, `UnaryLength`,
+  `UnaryAbs`, and `UnaryNaturalLog`
 - `Variadic`
 - `Clamp`
 
@@ -632,15 +631,15 @@ compiler-assigned loop temporary slot.
 - `BindHandler dst calleeSlot callLayoutIndex`
 - `MemberAccess dst targetSlot nameIndex`
 - `IndexedAccess dst targetSlot selectorSlot`
-- `Range dst fromSlot toSlot stepSlot`
+- `Range dst fromSlot toSlot`
+- `RangeWithStep dst fromSlot toSlot stepSlot`
 - `Dice dst count sides`
 - `Random dst fromSlot toSlot`
-- `SeededRandom dst seedSlot operationLayoutIndex`
+- `SeededRandom dst seedSlot expressionEntryAddress`
 - `TypeConstructor dst typeIndex callLayoutIndex`
 
 These remain high-level because they map directly to public value semantics.
-For `SeededRandom`, the operation layout stores the body helper entry in
-`ExpressionEntryAddress`.
+For `SeededRandom`, `C` stores the body helper entry directly.
 
 Required portable value families:
 
@@ -906,7 +905,7 @@ DiagnosticLayout
 The VM records diagnostic events while executing normal instructions:
 
 - Handler and parameter events are derived from handler metadata and
-  `BindParameter`/`CoerceSlot` execution.
+  `BindParameter`/cast execution.
 - Function and predicate call events are derived from call operation layouts.
 - Let and expression-to-nothing events are derived from diagnostic layouts.
 - Publish argument events are derived from publish layouts.
@@ -967,9 +966,9 @@ handler DamageTaken(unit, amount)
 
 @0000 L_handler_DamageTaken:
 @0000 BindParameter dst=s0 arg=unit
-@0001 CoerceSlot dst=s0 src=s0 type=:unit
+@0001 CastCustom dst=s0 src=s0 type=:unit
 @0002 BindParameter dst=s1 arg=amount
-@0003 CoerceSlot dst=s1 src=s1 type=:integer
+@0003 CastInteger dst=s1 src=s1
 @0004 ...
 ```
 

@@ -33,8 +33,6 @@ internal static class GesBytecodeCompiler
         private readonly List<GameEventScriptExternalTypeConstructorReference> _externalTypeConstructorReferences = [];
         private readonly Dictionary<string, int> _namedArgumentLayoutIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<string>> _namedArgumentLayouts = [];
-        private readonly Dictionary<string, int> _typeMetadataIndex = new(StringComparer.Ordinal);
-        private readonly List<string> _typeMetadata = [];
         private readonly Dictionary<GameEventScriptBytecodeHandler, EventHandlerNode> _handlerSources =
             new(ReferenceEqualityComparer<GameEventScriptBytecodeHandler>.Instance);
 
@@ -53,7 +51,7 @@ internal static class GesBytecodeCompiler
 
             var handlers = BuildHandlers();
             var linearBuilder = new GesLinearBytecodeBuilder(
-                AddTypeMetadata,
+                AddString,
                 AddNamedArgumentLayout,
                 AddConstant,
                 AddExternalReference,
@@ -73,7 +71,6 @@ internal static class GesBytecodeCompiler
                 _externalReferences.ToArray(),
                 _externalTypeConstructorReferences.ToArray(),
                 _namedArgumentLayouts.ToArray(),
-                _typeMetadata.ToArray(),
                 callables,
                 handlers,
                 typeDefinitions,
@@ -170,7 +167,7 @@ internal static class GesBytecodeCompiler
             var index = _externalTypeConstructorReferences.Count;
             _externalTypeConstructorReferences.Add(reference);
             _externalTypeConstructorReferenceIndex[reference.SignatureId] = index;
-            AddTypeMetadata(reference.TypeName);
+            AddString(reference.TypeName);
             foreach (var label in reference.ArgumentLabels)
             {
                 AddString(label);
@@ -219,20 +216,6 @@ internal static class GesBytecodeCompiler
             return index;
         }
 
-        private int AddTypeMetadata(string value)
-        {
-            if (_typeMetadataIndex.TryGetValue(value, out var index))
-            {
-                return index;
-            }
-
-            index = _typeMetadata.Count;
-            _typeMetadata.Add(value);
-            _typeMetadataIndex[value] = index;
-            AddString(value);
-            return index;
-        }
-
         private int AddNamedArgumentLayout(IReadOnlyList<string> orderedNames)
         {
             var key = string.Join("\u001f", orderedNames);
@@ -256,11 +239,11 @@ internal static class GesBytecodeCompiler
         {
             foreach (var type in module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
             {
-                AddTypeMetadata(type.Name);
+                AddString(type.Name);
                 foreach (var field in type.Fields)
                 {
                     AddString(field.Name);
-                    AddTypeMetadata(field.TypeName);
+                    AddString(field.TypeName);
                 }
             }
 
@@ -281,7 +264,7 @@ internal static class GesBytecodeCompiler
                 {
                     if (!string.IsNullOrEmpty(parameter.DeclaredType))
                     {
-                        AddTypeMetadata(parameter.DeclaredType!);
+                        AddString(parameter.DeclaredType!);
                     }
                 }
 
@@ -307,7 +290,7 @@ internal static class GesBytecodeCompiler
                     {
                         if (!string.IsNullOrEmpty(parameter.DeclaredType))
                         {
-                            AddTypeMetadata(parameter.DeclaredType!);
+                            AddString(parameter.DeclaredType!);
                         }
                     }
 
@@ -327,11 +310,11 @@ internal static class GesBytecodeCompiler
 
             foreach (var type in module.ExternalTypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
             {
-                AddTypeMetadata(type.Name);
+                AddString(type.Name);
                 foreach (var field in type.Fields)
                 {
                     AddString(field.Name);
-                    AddTypeMetadata(field.TypeName);
+                    AddString(field.TypeName);
                 }
             }
         }
@@ -598,7 +581,7 @@ internal static class GesBytecodeCompiler
                     return;
 
                 case TypeCastExpressionNode typeCast:
-                    AddTypeMetadata(typeCast.TypeName);
+                    AddString(typeCast.TypeName);
                     CollectSourceExpressionMetadata(typeCast.Value);
                     return;
 
@@ -607,7 +590,7 @@ internal static class GesBytecodeCompiler
                     return;
 
                 case TypeCheckExpressionNode typeCheck:
-                    AddTypeMetadata(typeCheck.TypeName);
+                    AddString(typeCheck.TypeName);
                     CollectSourceExpressionMetadata(typeCheck.Value);
                     return;
 
@@ -636,7 +619,7 @@ internal static class GesBytecodeCompiler
 
         private void CollectSourceTypeConstructorMetadata(TypeConstructorExpressionNode typeConstructor)
         {
-            AddTypeMetadata(typeConstructor.TypeName);
+            AddString(typeConstructor.TypeName);
             var argumentNames = typeConstructor.Arguments.Select(argument => argument.Name).ToArray();
             AddNamedArgumentLayout(argumentNames);
             if (module.ExternalTypeDefinitions.ContainsKey(typeConstructor.TypeName))
@@ -843,7 +826,7 @@ internal static class GesBytecodeCompiler
         {
             if (!string.IsNullOrEmpty(value))
             {
-                AddTypeMetadata(value);
+                AddString(value);
             }
         }
 

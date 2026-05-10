@@ -146,14 +146,10 @@ public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScript
         {
             GameEventScriptBytecodeConstantKind.Nothing => "nothing",
             GameEventScriptBytecodeConstantKind.Boolean => Boolean ? "True" : "False",
-            GameEventScriptBytecodeConstantKind.Integer => Unit is { } unit
-                ? $"{Integer.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
-                : Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            GameEventScriptBytecodeConstantKind.Integer => Unit is { } unit ? $"{Integer.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}" : Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
             GameEventScriptBytecodeConstantKind.Float when IsNaN => "NaN",
             GameEventScriptBytecodeConstantKind.Float when IsInfinity => IsNegativeInfinity ? "-Infinity" : "Infinity",
-            GameEventScriptBytecodeConstantKind.Float => Unit is { } unit
-                ? $"{Number.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
-                : Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            GameEventScriptBytecodeConstantKind.Float => Unit is { } unit ? $"{Number.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}" : Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
             GameEventScriptBytecodeConstantKind.Percentage => $"{(Number * 100d).ToString(System.Globalization.CultureInfo.InvariantCulture)}%",
             GameEventScriptBytecodeConstantKind.Text => Text ?? string.Empty,
             GameEventScriptBytecodeConstantKind.Tag => $":{Text}",
@@ -205,14 +201,51 @@ public enum GameEventScriptBytecodeOpCode
     Combine,
     Except,
     Zip,
-    Unary,
+    UnaryNegate,
+    UnaryNot,
+    UnaryHasValue,
+    UnaryEmpty,
+    UnaryLength,
+    UnaryChance,
+    UnaryKeys,
+    UnaryValues,
+    UnaryEntries,
+    UnaryAbs,
+    UnaryNaturalLog,
     Variadic,
     Clamp,
     Random,
     Range,
+    RangeWithStep,
     Dice,
     SeededRandom,
-    Cast,
+    CastNothing,
+    CastBoolean,
+    CastInteger,
+    CastFloat,
+    CastNumber,
+    CastPercentage,
+    CastDegree,
+    CastMeter,
+    CastSecond,
+    CastVector,
+    CastPoint,
+    CastUuid,
+    CastSequence,
+    CastSeries,
+    CastEnvelope,
+    CastRef,
+    CastTag,
+    CastText,
+    CastList,
+    CastRange,
+    CastMessage,
+    CastHandler,
+    CastDictionary,
+    CastSet,
+    CastDice,
+    CastOptional,
+    CastCustom,
     TypeConstructor,
     PredicateTest,
     MemberAccess,
@@ -225,7 +258,32 @@ public enum GameEventScriptBytecodeOpCode
     BindHandler,
     CallExtension,
     Call,
-    TypeCheck,
+    TypeCheckNothing,
+    TypeCheckTag,
+    TypeCheckText,
+    TypeCheckPercentage,
+    TypeCheckDegree,
+    TypeCheckMeter,
+    TypeCheckSecond,
+    TypeCheckVector,
+    TypeCheckPoint,
+    TypeCheckFloat,
+    TypeCheckInteger,
+    TypeCheckBoolean,
+    TypeCheckUuid,
+    TypeCheckOptional,
+    TypeCheckSequence,
+    TypeCheckSeries,
+    TypeCheckEnvelope,
+    TypeCheckList,
+    TypeCheckRange,
+    TypeCheckMessage,
+    TypeCheckHandler,
+    TypeCheckRef,
+    TypeCheckDictionary,
+    TypeCheckSet,
+    TypeCheckDice,
+    TypeCheckCustom,
     Pipeline,
     GeneratedCollection,
     GuardedChoice,
@@ -235,7 +293,6 @@ public enum GameEventScriptBytecodeOpCode
     ShortCircuitImplies,
     Nop,
     BindParameter,
-    CoerceSlot,
     CopySlot,
     Jump,
     JumpIfTrue,
@@ -257,34 +314,12 @@ public enum GameEventScriptBytecodeCallableKind
     Function
 }
 
-public enum GameEventScriptBytecodeCastKind
-{
-    Boolean,
-    Integer,
-    Float,
-    Number,
-    Percentage,
-    Degree,
-    Meter,
-    Second,
-    Vector,
-    Point,
-    Uuid,
-    Sequence,
-    Series,
-    Envelope,
-    Ref
-}
-
 public readonly record struct GameEventScriptBytecodeInstruction(
     GameEventScriptBytecodeOpCode OpCode,
     int Dest = -1,
     int A = -1,
     int B = -1,
-    int C = -1,
-    int Target = -1,
-    int Target2 = -1,
-    int Data = -1);
+    int C = -1);
 
 public sealed class GameEventScriptBytecodeOperationLayout
 {
@@ -297,7 +332,6 @@ public sealed class GameEventScriptBytecodeOperationLayout
         IReadOnlyList<int>? parameterSlots = null,
         IReadOnlyList<string?>? declaredTypes = null,
         GameEventScriptBytecodeCallableKind callableKind = GameEventScriptBytecodeCallableKind.Function,
-        GameEventScriptBytecodeCastKind castKind = default,
         int externalReferenceIndex = -1,
         int namedArgumentLayoutIndex = -1,
         int expressionEntryAddress = -1,
@@ -313,7 +347,6 @@ public sealed class GameEventScriptBytecodeOperationLayout
         ParameterSlots = parameterSlots?.ToArray() ?? [];
         DeclaredTypes = declaredTypes?.ToArray() ?? [];
         CallableKind = callableKind;
-        CastKind = castKind;
         ExternalReferenceIndex = externalReferenceIndex;
         NamedArgumentLayoutIndex = namedArgumentLayoutIndex;
         ExpressionEntryAddress = expressionEntryAddress;
@@ -337,8 +370,6 @@ public sealed class GameEventScriptBytecodeOperationLayout
     public IReadOnlyList<string?> DeclaredTypes { get; }
 
     public GameEventScriptBytecodeCallableKind CallableKind { get; }
-
-    public GameEventScriptBytecodeCastKind CastKind { get; }
 
     public int ExternalReferenceIndex { get; }
 
@@ -691,7 +722,6 @@ internal sealed record class GameEventScriptBytecodeStackInstruction(
     int A = -1,
     int B = -1,
     int ConstantIndex = -1,
-    GameEventScriptBytecodeCastKind CastKind = default,
     GameEventScriptBytecodeCallableKind CallableKind = GameEventScriptBytecodeCallableKind.Function,
     string? DiagnosticName = null,
     string? DiagnosticArgumentName = null,

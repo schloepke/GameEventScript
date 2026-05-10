@@ -18,7 +18,6 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<GameEventScriptExternalTypeConstructorReference> externalTypeConstructorReferences,
         IReadOnlyList<IReadOnlyList<string>> namedArgumentLayouts,
-        IReadOnlyList<string> typeMetadata,
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
         IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> handlers,
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
@@ -47,7 +46,6 @@ public sealed class GameEventScriptCompiled
         ExternalReferences = CopyList(externalReferences, nameof(externalReferences));
         ExternalTypeConstructorReferences = CopyList(externalTypeConstructorReferences, nameof(externalTypeConstructorReferences));
         NamedArgumentLayouts = CopyNestedStringLayouts(namedArgumentLayouts, nameof(namedArgumentLayouts));
-        TypeMetadata = CopyList(typeMetadata, nameof(typeMetadata));
         Callables = CopyDictionary(callables, nameof(callables));
         Handlers = CopyHandlerDictionary(handlers, nameof(handlers));
         TypeDefinitions = CopyDictionary(typeDefinitions, nameof(typeDefinitions));
@@ -82,8 +80,6 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get; }
 
     public IReadOnlyList<IReadOnlyList<string>> NamedArgumentLayouts { get; }
-
-    public IReadOnlyList<string> TypeMetadata { get; }
 
     public IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> Callables { get; }
 

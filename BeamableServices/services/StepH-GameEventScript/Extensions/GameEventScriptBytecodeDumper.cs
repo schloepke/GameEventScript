@@ -26,7 +26,6 @@ public static class GameEventScriptBytecodeDumper
         builder.Append("maxFrameSlots: ").AppendLine(module.MaxFrameSlots.ToString(CultureInfo.InvariantCulture));
         AppendPool(builder, "strings", module.StringPool);
         AppendPool(builder, "signatures", module.Signatures);
-        AppendPool(builder, "types", module.TypeMetadata);
         AppendExternalReferences(builder, module);
         AppendConstants(builder, module);
         AppendNamedArgumentLayouts(builder, module);
@@ -119,7 +118,7 @@ public static class GameEventScriptBytecodeDumper
             AppendSlotList(builder, "params", layout.ParameterSlots);
             AppendStringList(builder, "names", layout.Names);
             AppendNullableStringList(builder, "types", layout.DeclaredTypes);
-            builder.Append(" callable=").Append(layout.CallableKind).Append(" cast=").AppendLine(layout.CastKind.ToString());
+            builder.Append(" callable=").AppendLine(layout.CallableKind.ToString());
         }
     }
 
@@ -366,25 +365,97 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.BindParameter:
                 AppendIndex(builder, "parameter", instruction.A);
                 break;
+
             case GameEventScriptBytecodeOpCode.LoadConstant:
                 break;
-            case GameEventScriptBytecodeOpCode.LoadSlot:
-            case GameEventScriptBytecodeOpCode.CoerceSlot:
-            case GameEventScriptBytecodeOpCode.CopySlot:
-            case GameEventScriptBytecodeOpCode.Cast:
-            case GameEventScriptBytecodeOpCode.TypeCheck:
-            case GameEventScriptBytecodeOpCode.MemberAccess:
-            case GameEventScriptBytecodeOpCode.Unary:
-            case GameEventScriptBytecodeOpCode.PredicateTest:
+
+            case GameEventScriptBytecodeOpCode.Jump:
+                AppendAddress(builder, "target", instruction.A);
+                break;
+
             case GameEventScriptBytecodeOpCode.JumpIfTrue:
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-            case GameEventScriptBytecodeOpCode.PublishMessageValue:
+                AppendAddress(builder, "target", instruction.A);
+                AppendSlot(builder, "cond", instruction.C);
+                break;
+
+            case GameEventScriptBytecodeOpCode.ForRange:
+            case GameEventScriptBytecodeOpCode.ForCollection:
+            case GameEventScriptBytecodeOpCode.SeededRandomBlock:
+                AppendAddress(builder, "target", instruction.A);
+                AppendAddress(builder, "target2", instruction.B);
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadSlot:
+            case GameEventScriptBytecodeOpCode.CopySlot:
+            case GameEventScriptBytecodeOpCode.MemberAccess:
+            case GameEventScriptBytecodeOpCode.UnaryNegate:
+            case GameEventScriptBytecodeOpCode.UnaryNot:
+            case GameEventScriptBytecodeOpCode.UnaryHasValue:
+            case GameEventScriptBytecodeOpCode.UnaryEmpty:
+            case GameEventScriptBytecodeOpCode.UnaryLength:
+            case GameEventScriptBytecodeOpCode.UnaryChance:
+            case GameEventScriptBytecodeOpCode.UnaryKeys:
+            case GameEventScriptBytecodeOpCode.UnaryValues:
+            case GameEventScriptBytecodeOpCode.UnaryEntries:
+            case GameEventScriptBytecodeOpCode.UnaryAbs:
+            case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
+            case GameEventScriptBytecodeOpCode.PredicateTest:
                 AppendSlot(builder, "src", instruction.A);
                 break;
+
+            case var opCode when IsCastInstruction(opCode) || IsTypeCheckInstruction(opCode):
+                AppendSlot(builder, "src", instruction.A);
+                break;
+
             case GameEventScriptBytecodeOpCode.Return:
                 AppendSlot(builder, "src", instruction.A);
                 break;
+
+            case GameEventScriptBytecodeOpCode.Dice:
+                AppendIndex(builder, "dice", instruction.A);
+                AppendIndex(builder, "sides", instruction.B);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PublishValue:
+                AppendIndex(builder, "publishKind", instruction.A);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PublishMessageValue:
+                AppendSlot(builder, "src", instruction.A);
+                AppendIndex(builder, "publishKind", instruction.B);
+                break;
+
+            case GameEventScriptBytecodeOpCode.Range:
+                AppendSlot(builder, "from", instruction.A);
+                AppendSlot(builder, "to", instruction.B);
+                break;
+
+            case GameEventScriptBytecodeOpCode.RangeWithStep:
+                AppendSlot(builder, "from", instruction.A);
+                AppendSlot(builder, "to", instruction.B);
+                AppendSlot(builder, "step", instruction.C);
+                break;
+
+            case GameEventScriptBytecodeOpCode.Variadic:
+            case GameEventScriptBytecodeOpCode.TypeConstructor:
+            case GameEventScriptBytecodeOpCode.BuildList:
+            case GameEventScriptBytecodeOpCode.BuildSequence:
+            case GameEventScriptBytecodeOpCode.BuildSet:
+            case GameEventScriptBytecodeOpCode.BuildDictionary:
+            case GameEventScriptBytecodeOpCode.BuildMessage:
+            case GameEventScriptBytecodeOpCode.BindHandler:
+            case GameEventScriptBytecodeOpCode.CallExtension:
+            case GameEventScriptBytecodeOpCode.Call:
+                AppendSlot(builder, "a", instruction.A);
+                AppendSlot(builder, "b", instruction.B);
+                break;
+
+            case GameEventScriptBytecodeOpCode.SeededRandom:
+                AppendSlot(builder, "seed", instruction.A);
+                break;
+
             default:
                 AppendSlot(builder, "a", instruction.A);
                 AppendSlot(builder, "b", instruction.B);
@@ -392,44 +463,43 @@ public static class GameEventScriptBytecodeDumper
                 break;
         }
 
-        AppendAddress(builder, "target", instruction.Target);
-        AppendAddress(builder, "target2", instruction.Target2);
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.LoadConstant:
-                AppendConstant(builder, module, instruction.Data);
+                AppendConstant(builder, module, instruction.C);
                 break;
             case GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue:
-                AppendIndex(builder, "publishLayout", instruction.Data);
+                AppendIndex(builder, "publishLayout", instruction.C);
                 break;
             case GameEventScriptBytecodeOpCode.ForRange or GameEventScriptBytecodeOpCode.ForCollection:
-                AppendIndex(builder, "loopLayout", instruction.Data);
+                AppendIndex(builder, "loopLayout", instruction.C);
                 break;
             case GameEventScriptBytecodeOpCode.SeededRandomBlock:
-                AppendIndex(builder, "seededRandomBlockLayout", instruction.Data);
+                AppendIndex(builder, "seededRandomBlockLayout", instruction.C);
                 break;
             case GameEventScriptBytecodeOpCode.Pipeline:
-                AppendIndex(builder, "pipelineLayout", instruction.Data);
+                AppendIndex(builder, "pipelineLayout", instruction.C);
                 break;
             case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                AppendIndex(builder, "generatedCollectionLayout", instruction.Data);
+                AppendIndex(builder, "generatedCollectionLayout", instruction.C);
                 break;
             case GameEventScriptBytecodeOpCode.GuardedChoice:
-                AppendIndex(builder, "guardedChoiceLayout", instruction.Data);
+                AppendIndex(builder, "guardedChoiceLayout", instruction.C);
+                break;
+            case GameEventScriptBytecodeOpCode.SeededRandom:
+                AppendAddress(builder, "entry", instruction.C);
+                break;
+            case GameEventScriptBytecodeOpCode.MemberAccess:
+                AppendPoolIndex(builder, "member", module.StringPool, instruction.C);
+                break;
+            case GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.TypeCheckCustom:
+                AppendPoolIndex(builder, "type", module.StringPool, instruction.C);
                 break;
             default:
             {
                 if (IsOperationLayoutInstruction(instruction.OpCode))
                 {
-                    AppendIndex(builder, "operationLayout", instruction.Data);
-                }
-                else if (instruction.OpCode == GameEventScriptBytecodeOpCode.CoerceSlot)
-                {
-                    AppendIndex(builder, "type", instruction.Data);
-                }
-                else
-                {
-                    AppendIndex(builder, "data", instruction.Data);
+                    AppendIndex(builder, "operationLayout", instruction.C);
                 }
 
                 break;
@@ -466,6 +536,20 @@ public static class GameEventScriptBytecodeDumper
         if ((uint)index < (uint)module.ConstantPool.Count)
         {
             builder.Append('(').Append(module.ConstantPool[index]).Append(')');
+        }
+    }
+
+    private static void AppendPoolIndex(StringBuilder builder, string name, IReadOnlyList<string> pool, int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
+        if ((uint)index < (uint)pool.Count)
+        {
+            builder.Append('(').Append(pool[index]).Append(')');
         }
     }
 
@@ -545,13 +629,7 @@ public static class GameEventScriptBytecodeDumper
 
     private static bool IsOperationLayoutInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is
-            GameEventScriptBytecodeOpCode.Cast or
-            GameEventScriptBytecodeOpCode.TypeCheck or
-            GameEventScriptBytecodeOpCode.MemberAccess or
-            GameEventScriptBytecodeOpCode.Unary or
             GameEventScriptBytecodeOpCode.Variadic or
-            GameEventScriptBytecodeOpCode.Range or
-            GameEventScriptBytecodeOpCode.SeededRandom or
             GameEventScriptBytecodeOpCode.TypeConstructor or
             GameEventScriptBytecodeOpCode.BuildList or
             GameEventScriptBytecodeOpCode.BuildSequence or
@@ -562,6 +640,63 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CallExtension or
             GameEventScriptBytecodeOpCode.Call or
             GameEventScriptBytecodeOpCode.PredicateTest;
+
+    private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.CastNothing or
+            GameEventScriptBytecodeOpCode.CastBoolean or
+            GameEventScriptBytecodeOpCode.CastInteger or
+            GameEventScriptBytecodeOpCode.CastFloat or
+            GameEventScriptBytecodeOpCode.CastNumber or
+            GameEventScriptBytecodeOpCode.CastPercentage or
+            GameEventScriptBytecodeOpCode.CastDegree or
+            GameEventScriptBytecodeOpCode.CastMeter or
+            GameEventScriptBytecodeOpCode.CastSecond or
+            GameEventScriptBytecodeOpCode.CastVector or
+            GameEventScriptBytecodeOpCode.CastPoint or
+            GameEventScriptBytecodeOpCode.CastUuid or
+            GameEventScriptBytecodeOpCode.CastSequence or
+            GameEventScriptBytecodeOpCode.CastSeries or
+            GameEventScriptBytecodeOpCode.CastEnvelope or
+            GameEventScriptBytecodeOpCode.CastRef or
+            GameEventScriptBytecodeOpCode.CastTag or
+            GameEventScriptBytecodeOpCode.CastText or
+            GameEventScriptBytecodeOpCode.CastList or
+            GameEventScriptBytecodeOpCode.CastRange or
+            GameEventScriptBytecodeOpCode.CastMessage or
+            GameEventScriptBytecodeOpCode.CastHandler or
+            GameEventScriptBytecodeOpCode.CastDictionary or
+            GameEventScriptBytecodeOpCode.CastSet or
+            GameEventScriptBytecodeOpCode.CastDice or
+            GameEventScriptBytecodeOpCode.CastOptional or
+            GameEventScriptBytecodeOpCode.CastCustom;
+
+    private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.TypeCheckNothing or
+            GameEventScriptBytecodeOpCode.TypeCheckTag or
+            GameEventScriptBytecodeOpCode.TypeCheckText or
+            GameEventScriptBytecodeOpCode.TypeCheckPercentage or
+            GameEventScriptBytecodeOpCode.TypeCheckDegree or
+            GameEventScriptBytecodeOpCode.TypeCheckMeter or
+            GameEventScriptBytecodeOpCode.TypeCheckSecond or
+            GameEventScriptBytecodeOpCode.TypeCheckVector or
+            GameEventScriptBytecodeOpCode.TypeCheckPoint or
+            GameEventScriptBytecodeOpCode.TypeCheckFloat or
+            GameEventScriptBytecodeOpCode.TypeCheckInteger or
+            GameEventScriptBytecodeOpCode.TypeCheckBoolean or
+            GameEventScriptBytecodeOpCode.TypeCheckUuid or
+            GameEventScriptBytecodeOpCode.TypeCheckOptional or
+            GameEventScriptBytecodeOpCode.TypeCheckSequence or
+            GameEventScriptBytecodeOpCode.TypeCheckSeries or
+            GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
+            GameEventScriptBytecodeOpCode.TypeCheckList or
+            GameEventScriptBytecodeOpCode.TypeCheckRange or
+            GameEventScriptBytecodeOpCode.TypeCheckMessage or
+            GameEventScriptBytecodeOpCode.TypeCheckHandler or
+            GameEventScriptBytecodeOpCode.TypeCheckRef or
+            GameEventScriptBytecodeOpCode.TypeCheckDictionary or
+            GameEventScriptBytecodeOpCode.TypeCheckSet or
+            GameEventScriptBytecodeOpCode.TypeCheckDice or
+            GameEventScriptBytecodeOpCode.TypeCheckCustom;
 
     private static void AppendPool(StringBuilder builder, string name, IReadOnlyList<string> values)
     {

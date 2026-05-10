@@ -215,7 +215,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     var callFrameCountBefore = _callFrames?.Count ?? 0;
                     if (TryStartLinearChildFrame(session, instruction, out var childFrame))
                     {
-                        _pc = instruction.Target2;
+                        _pc = instruction.B;
                         session.RecordLinearDiagnosticsAfter(instructionAddress);
                         if (childFrame is not null)
                         {
@@ -301,7 +301,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 out Frame? frame)
             {
                 frame = null;
-                if (!session.TryGetLoopLayout(instruction.Data, out var loopLayout) ||
+                if (!session.TryGetLoopLayout(instruction.C, out var loopLayout) ||
                     !session.TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout) ||
                     !session.ResolveSlot(sourceLayout.RangeFromSlot).TryGetRangeInteger(out var from) ||
                     !session.ResolveSlot(sourceLayout.RangeToSlot).TryGetRangeInteger(out var to))
@@ -327,7 +327,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                frame = new LinearRangeLoopFrame(loopLayout.IdentifierSlot, from, to, step, instruction.Target, instruction.Target2);
+                frame = new LinearRangeLoopFrame(loopLayout.IdentifierSlot, from, to, step, instruction.A, instruction.B);
                 return true;
             }
 
@@ -337,7 +337,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 out Frame? frame)
             {
                 frame = null;
-                if (!session.TryGetLoopLayout(instruction.Data, out var loopLayout) ||
+                if (!session.TryGetLoopLayout(instruction.C, out var loopLayout) ||
                     !session.TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout))
                 {
                     return false;
@@ -350,7 +350,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return true;
                 }
 
-                frame = new LinearCollectionLoopFrame(loopLayout.IdentifierSlot, sourceValue.AsEnumerable().GetEnumerator(), instruction.Target, instruction.Target2);
+                frame = new LinearCollectionLoopFrame(loopLayout.IdentifierSlot, sourceValue.AsEnumerable().GetEnumerator(), instruction.A, instruction.B);
                 return true;
             }
 
@@ -360,12 +360,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 out Frame? frame)
             {
                 frame = null;
-                if (!session.TryGetSeededRandomBlockLayout(instruction.Data, out var layout))
+                if (!session.TryGetSeededRandomBlockLayout(instruction.C, out var layout))
                 {
                     return false;
                 }
 
-                frame = new LinearSeededRandomBlockFrame(session.ResolveSlot(layout.SeedSlot).ToGameEventScriptValue(), instruction.Target, instruction.Target2);
+                frame = new LinearSeededRandomBlockFrame(session.ResolveSlot(layout.SeedSlot).ToGameEventScriptValue(), instruction.A, instruction.B);
                 return true;
             }
         }

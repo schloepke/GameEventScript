@@ -83,13 +83,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming
   enum-field BeforeInstruction = 0
   enum-field AfterInstruction = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout
-  ctor GameEventScriptBytecodeGeneratedCollectionLayout(System.String collectionType, System.Int32 identifierSlot, System.Int32 iterationSourceLayoutIndex, System.Int32 predicateEntryAddress, System.Int32 projectionEntryAddress)
-  property System.Int32 IdentifierSlot { get }
-  property System.Int32 IterationSourceLayoutIndex { get }
-  property System.Int32 PredicateEntryAddress { get }
-  property System.Int32 ProjectionEntryAddress { get }
-  property System.String CollectionType { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceLayout
   ctor GameEventScriptBytecodeGuardedChoiceLayout(System.Collections.Generic.IReadOnlyList<System.Int32> valueEntryAddresses, System.Collections.Generic.IReadOnlyList<System.Int32> conditionEntryAddresses, System.Int32 otherwiseEntryAddress)
   property System.Collections.Generic.IReadOnlyList<System.Int32> ConditionEntryAddresses { get }
@@ -136,16 +129,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field Meter = 2
   enum-field Second = 3
   enum-field Percentage = 4
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceKind
-  enum-field Collection = 0
-  enum-field Range = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceLayout
-  ctor GameEventScriptBytecodeIterationSourceLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceKind kind, System.Int32 collectionSlot, System.Int32 rangeFromSlot, System.Int32 rangeToSlot, System.Int32 rangeStepSlot)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceKind Kind { get }
-  property System.Int32 CollectionSlot { get }
-  property System.Int32 RangeFromSlot { get }
-  property System.Int32 RangeStepSlot { get }
-  property System.Int32 RangeToSlot { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field LoadNothing = 0
   enum-field LoadTrue = 1
@@ -281,36 +264,39 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field TypeCheckDice = 131
   enum-field TypeCheckCustom = 132
   enum-field Pipeline = 133
-  enum-field GeneratedCollection = 134
-  enum-field GuardedChoice = 135
-  enum-field Power = 136
-  enum-field ShortCircuitOr = 137
-  enum-field ShortCircuitAnd = 138
-  enum-field ShortCircuitImplies = 139
-  enum-field Nop = 140
-  enum-field BindParameter = 141
-  enum-field Jump = 142
-  enum-field JumpIfTrue = 143
-  enum-field JumpIfFalse = 144
-  enum-field JumpIfNotTrue = 145
-  enum-field EnterScope = 146
-  enum-field ExitScope = 147
-  enum-field ReturnNothing = 148
-  enum-field Return = 149
-  enum-field EmitMessage = 150
-  enum-field EmitMessageWithTags = 151
-  enum-field PublishMessage = 152
-  enum-field PublishMessageWithTags = 153
-  enum-field EmitMessageValue = 154
-  enum-field EmitMessageValueWithTags = 155
-  enum-field PublishMessageValue = 156
-  enum-field PublishMessageValueWithTags = 157
-  enum-field RangeIterator = 158
-  enum-field RangeIteratorWithStep = 159
-  enum-field RangeIteratorShort = 160
-  enum-field CollectionIterator = 161
-  enum-field IteratorNext = 162
-  enum-field IteratorClose = 163
+  enum-field CollectionBuilderList = 134
+  enum-field CollectionBuilderSet = 135
+  enum-field CollectionBuilderAdd = 136
+  enum-field CollectionBuilderFinish = 137
+  enum-field GuardedChoice = 138
+  enum-field Power = 139
+  enum-field ShortCircuitOr = 140
+  enum-field ShortCircuitAnd = 141
+  enum-field ShortCircuitImplies = 142
+  enum-field Nop = 143
+  enum-field BindParameter = 144
+  enum-field Jump = 145
+  enum-field JumpIfTrue = 146
+  enum-field JumpIfFalse = 147
+  enum-field JumpIfNotTrue = 148
+  enum-field EnterScope = 149
+  enum-field ExitScope = 150
+  enum-field ReturnNothing = 151
+  enum-field Return = 152
+  enum-field EmitMessage = 153
+  enum-field EmitMessageWithTags = 154
+  enum-field PublishMessage = 155
+  enum-field PublishMessageWithTags = 156
+  enum-field EmitMessageValue = 157
+  enum-field EmitMessageValueWithTags = 158
+  enum-field PublishMessageValue = 159
+  enum-field PublishMessageValueWithTags = 160
+  enum-field RangeIterator = 161
+  enum-field RangeIteratorWithStep = 162
+  enum-field RangeIteratorShort = 163
+  enum-field CollectionIterator = 164
+  enum-field IteratorNext = 165
+  enum-field IteratorClose = 166
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
   ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 nameListIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }
@@ -451,10 +437,8 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout> OperationLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipeline> PipelinePool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get }

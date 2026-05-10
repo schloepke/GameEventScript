@@ -71,12 +71,10 @@ internal static class GesBytecodeCompiler
                 linearBuilder.MaxFrameSlots,
                 linearBuilder.OperationLayouts.ToArray(),
                 linearBuilder.DiagnosticLayouts.ToArray(),
-                linearBuilder.IterationSourceLayouts.ToArray(),
                 linearBuilder.PipelinePatternPool.ToArray(),
                 linearBuilder.PipelineObjectPatternPool.ToArray(),
                 linearBuilder.PipelineSelectorPool.ToArray(),
                 linearBuilder.PipelinePool.ToArray(),
-                linearBuilder.GeneratedCollectionLayouts.ToArray(),
                 linearBuilder.GuardedChoiceLayouts.ToArray());
         }
 

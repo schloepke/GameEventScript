@@ -60,12 +60,10 @@ public static class GameEventScriptBytecodeDumper
     {
         AppendOperationLayouts(builder, module);
         AppendDiagnosticLayouts(builder, module);
-        AppendIterationSourceLayouts(builder, module);
         AppendPipelinePatternPool(builder, module);
         AppendPipelineObjectPatternPool(builder, module);
         AppendPipelineSelectorPool(builder, module);
         AppendPipelinePool(builder, module);
-        AppendGeneratedCollectionLayouts(builder, module);
         AppendGuardedChoiceLayouts(builder, module);
     }
 
@@ -105,21 +103,6 @@ public static class GameEventScriptBytecodeDumper
             AppendStringList(builder, "names", layout.Names);
             AppendNullableStringList(builder, "types", layout.DeclaredTypes);
             builder.Append(" callable=").AppendLine(layout.CallableKind.ToString());
-        }
-    }
-
-    private static void AppendIterationSourceLayouts(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("iterationSourceLayouts[").Append(module.IterationSourceLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.IterationSourceLayouts.Count; i++)
-        {
-            var layout = module.IterationSourceLayouts[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": kind=").Append(layout.Kind);
-            AppendSlot(builder, "collection", layout.CollectionSlot);
-            AppendSlot(builder, "from", layout.RangeFromSlot);
-            AppendSlot(builder, "to", layout.RangeToSlot);
-            AppendSlot(builder, "step", layout.RangeStepSlot);
-            builder.AppendLine();
         }
     }
 
@@ -191,21 +174,6 @@ public static class GameEventScriptBytecodeDumper
             AppendSlot(builder, "source", layout.SourceSlot);
             AppendIndexList(builder, "prefixSelectors", layout.PrefixSelectorIndexes);
             AppendIndex(builder, "terminalSelector", layout.TerminalSelectorIndex);
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendGeneratedCollectionLayouts(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("generatedCollectionLayouts[").Append(module.GeneratedCollectionLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.GeneratedCollectionLayouts.Count; i++)
-        {
-            var layout = module.GeneratedCollectionLayouts[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": collection=").Append(layout.CollectionType);
-            AppendSlot(builder, "identifier", layout.IdentifierSlot);
-            AppendIndex(builder, "source", layout.IterationSourceLayoutIndex);
-            AppendAddress(builder, "predicate", layout.PredicateEntryAddress);
-            AppendAddress(builder, "projection", layout.ProjectionEntryAddress);
             builder.AppendLine();
         }
     }
@@ -414,6 +382,19 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "iterator", instruction.A_U16);
                 break;
 
+            case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+            case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
+                break;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
+                AppendSlot(builder, "builder", instruction.A_U16);
+                AppendSlot(builder, "item", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
+                AppendSlot(builder, "builder", instruction.A_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.MoveSlot:
             case GameEventScriptBytecodeOpCode.MemberAccess:
             case GameEventScriptBytecodeOpCode.UnaryNegate:
@@ -507,9 +488,6 @@ public static class GameEventScriptBytecodeDumper
         {
             case GameEventScriptBytecodeOpCode.Pipeline:
                 AppendIndex(builder, "pipeline", instruction.C_U16);
-                break;
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                AppendIndex(builder, "generatedCollectionLayout", instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.GuardedChoice:
                 AppendIndex(builder, "guardedChoiceLayout", instruction.C_U16);
@@ -605,6 +583,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
+            GameEventScriptBytecodeOpCode.CollectionBuilderAdd or
             GameEventScriptBytecodeOpCode.IteratorClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or

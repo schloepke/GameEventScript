@@ -18,12 +18,10 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
     private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
     private readonly List<GameEventScriptBytecodeDiagnosticLayout> _diagnosticLayouts = [];
-    private readonly List<GameEventScriptBytecodeIterationSourceLayout> _iterationSourceLayouts = [];
     private readonly List<GameEventScriptBytecodePipelinePattern> _pipelinePatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
     private readonly List<GameEventScriptBytecodePipeline> _pipelinePool = [];
-    private readonly List<GameEventScriptBytecodeGeneratedCollectionLayout> _generatedCollectionLayouts = [];
     private readonly List<GameEventScriptBytecodeGuardedChoiceLayout> _guardedChoiceLayouts = [];
     private readonly List<Action> _deferredHelperEmitters = [];
     private int _currentFrameSlotCount;
@@ -53,8 +51,6 @@ internal sealed class GesLinearBytecodeBuilder
 
     public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts => _diagnosticLayouts;
 
-    public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts => _iterationSourceLayouts;
-
     public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool => _pipelinePatternPool;
 
     public IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool => _pipelineObjectPatternPool;
@@ -62,8 +58,6 @@ internal sealed class GesLinearBytecodeBuilder
     public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool => _pipelineSelectorPool;
 
     public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool => _pipelinePool;
-
-    public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts => _generatedCollectionLayouts;
 
     public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts => _guardedChoiceLayouts;
 
@@ -412,6 +406,58 @@ internal sealed class GesLinearBytecodeBuilder
         Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
     }
 
+    private int EmitSourceGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection, SourceContext context, ExpressionState state)
+    {
+        var builderOpCode = generatedCollection.CollectionType switch
+        {
+            "list" => GameEventScriptBytecodeOpCode.CollectionBuilderList,
+            "set" => GameEventScriptBytecodeOpCode.CollectionBuilderSet,
+            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support generated collection type '{generatedCollection.CollectionType}'.")
+        };
+
+        var identifierSlot = context.RequireSlot(generatedCollection.Identifier);
+        var builderSlot = AllocateSlot(state);
+        Emit(CreateInstruction(builderOpCode, dest: builderSlot));
+
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        var iteratorSlot = EmitSourceIterator(generatedCollection.Source, context, state);
+        var itemSlot = AllocateSlot(state);
+
+        var loopAddress = _code.Count;
+        var nextInstruction = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.IteratorNext,
+            dest: itemSlot,
+            a: iteratorSlot));
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: itemSlot));
+
+        var skipProjectionJump = -1;
+        if (generatedCollection.Predicate is not null)
+        {
+            var predicateSlot = EmitSourceExpression(generatedCollection.Predicate, context, state);
+            skipProjectionJump = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: predicateSlot));
+        }
+
+        var projectionSlot = EmitSourceExpression(generatedCollection.Projection, context, state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionBuilderAdd, a: builderSlot, b: projectionSlot));
+        if (skipProjectionJump >= 0)
+        {
+            PatchTarget(skipProjectionJump, _code.Count);
+        }
+
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Jump, a: loopAddress));
+
+        var endAddress = _code.Count;
+        PatchB(nextInstruction, endAddress);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.IteratorClose, a: iteratorSlot));
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+
+        var resultSlot = AllocateSlot(state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionBuilderFinish, dest: resultSlot, a: builderSlot));
+        return resultSlot;
+    }
+
     private void EmitSourceSeededRandom(SeededRandomStatementNode seededRandom, SourceContext context)
     {
         var state = new ExpressionState(context.SlotCount);
@@ -516,10 +562,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitSourceSeededRandomExpression(seededRandom, context, state);
 
             case GeneratedCollectionExpressionNode generatedCollection:
-            {
-                var layoutIndex = AddSourceGeneratedCollectionLayout(generatedCollection, context, state);
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.GeneratedCollection, c: layoutIndex);
-            }
+                return EmitSourceGeneratedCollection(generatedCollection, context, state);
 
             case GuardedChoiceExpressionNode guardedChoice:
             {
@@ -1158,42 +1201,6 @@ internal sealed class GesLinearBytecodeBuilder
         _diagnosticLayouts.Add(new GameEventScriptBytecodeDiagnosticLayout(kind, timing, address, slot, name));
     }
 
-    private int AddSourceIterationSourceLayout(IterationSourceNode source, SourceContext context, ExpressionState state)
-    {
-        var collectionSlot = -1;
-        var rangeFromSlot = -1;
-        var rangeToSlot = -1;
-        var rangeStepSlot = -1;
-        var kind = GameEventScriptBytecodeIterationSourceKind.Collection;
-        switch (source)
-        {
-            case CollectionIterationSourceNode collection:
-                collectionSlot = EmitSourceExpression(collection.Expression, context, state);
-                break;
-
-            case RangeIterationSourceNode range:
-                kind = GameEventScriptBytecodeIterationSourceKind.Range;
-                rangeFromSlot = EmitSourceExpression(range.RangeExpression.FromExpression, context, state);
-                rangeToSlot = EmitSourceExpression(range.RangeExpression.ToExpression, context, state);
-                rangeStepSlot = range.RangeExpression.StepExpression is null
-                    ? -1
-                    : EmitSourceExpression(range.RangeExpression.StepExpression, context, state);
-                break;
-
-            default:
-                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support iteration source '{source.GetType().Name}'.");
-        }
-
-        var index = _iterationSourceLayouts.Count;
-        _iterationSourceLayouts.Add(new GameEventScriptBytecodeIterationSourceLayout(
-            kind,
-            collectionSlot,
-            rangeFromSlot,
-            rangeToSlot,
-            rangeStepSlot));
-        return index;
-    }
-
     private int AddSourcePipelineSelector(CollectionSelectorNode selector, bool isTerminal, SourceContext context, ExpressionState state)
     {
         var index = _pipelineSelectorPool.Count;
@@ -1484,30 +1491,6 @@ internal sealed class GesLinearBytecodeBuilder
             prefixSelectorIndexes,
             terminalSelectorIndex));
         return layoutIndex;
-    }
-
-    private int AddSourceGeneratedCollectionLayout(GeneratedCollectionExpressionNode generatedCollection, SourceContext context, ExpressionState state)
-    {
-        var sourceLayoutIndex = AddSourceIterationSourceLayout(generatedCollection.Source, context, state);
-        var index = _generatedCollectionLayouts.Count;
-        _generatedCollectionLayouts.Add(new GameEventScriptBytecodeGeneratedCollectionLayout(
-            generatedCollection.CollectionType,
-            context.RequireSlot(generatedCollection.Identifier),
-            sourceLayoutIndex));
-        _deferredHelperEmitters.Add(() =>
-        {
-            var predicateEntryAddress = generatedCollection.Predicate is null
-                ? -1
-                : EmitSourceExpressionEntry(generatedCollection.Predicate, context, state);
-            var projectionEntryAddress = EmitSourceExpressionEntry(generatedCollection.Projection, context, state);
-            _generatedCollectionLayouts[index] = new GameEventScriptBytecodeGeneratedCollectionLayout(
-                generatedCollection.CollectionType,
-                context.RequireSlot(generatedCollection.Identifier),
-                sourceLayoutIndex,
-                predicateEntryAddress,
-                projectionEntryAddress);
-        });
-        return index;
     }
 
     private int AddSourceGuardedChoiceLayout(GuardedChoiceExpressionNode guardedChoice, SourceContext context, ExpressionState state)

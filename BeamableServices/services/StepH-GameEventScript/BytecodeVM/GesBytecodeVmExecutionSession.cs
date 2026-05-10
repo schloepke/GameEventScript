@@ -85,9 +85,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Pipeline:
                 return allowPipeline && CanExecuteLinearPipeline(instruction.C_U16, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                return CanExecuteLinearGeneratedCollection(instruction.C_U16, visitingCallables, allowPipeline);
-
             case GameEventScriptBytecodeOpCode.GuardedChoice:
                 return CanExecuteLinearGuardedChoice(instruction.C_U16, visitingCallables, allowPipeline);
 
@@ -321,18 +318,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return CanExecuteLinearEntry(layout.OtherwiseEntryAddress, visitingCallables, allowPipeline);
-    }
-
-    private bool CanExecuteLinearGeneratedCollection(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
-    {
-        if (!TryGetGeneratedCollectionLayout(layoutIndex, out var layout) ||
-            layout.ProjectionEntryAddress < 0 ||
-            (layout.PredicateEntryAddress >= 0 && !CanExecuteLinearEntry(layout.PredicateEntryAddress, visitingCallables, allowPipeline)))
-        {
-            return false;
-        }
-
-        return CanExecuteLinearEntry(layout.ProjectionEntryAddress, visitingCallables, allowPipeline);
     }
 
     private bool CanExecuteLinearEntry(int entryAddress, HashSet<string> visitingCallables, bool allowPipeline)
@@ -695,6 +680,42 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.IteratorClose:
                 CloseIterator(ResolveSlot(instruction.A_U16));
                 if (!DefineSlot(instruction.A_U16, BytecodeVmValue.Nothing))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+                if (!DefineSlot(instruction.Dest_U16, BytecodeVmValue.CollectionBuilder(BytecodeVmCollectionBuilder.List())))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
+                if (!DefineSlot(instruction.Dest_U16, BytecodeVmValue.CollectionBuilder(BytecodeVmCollectionBuilder.Set())))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
+                if (!TryExecuteCollectionBuilderAdd(instruction))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
+                if (!TryExecuteCollectionBuilderFinish(instruction))
                 {
                     return false;
                 }
@@ -1101,14 +1122,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
 
                 return DefineSlot(instruction.Dest_U16, pipelineValue);
-
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                if (!TryEvaluateLinearGeneratedCollection(instruction.C_U16, out var generatedValue))
-                {
-                    return false;
-                }
-
-                return DefineSlot(instruction.Dest_U16, generatedValue);
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
                 if (!TryEvaluateLinearGuardedChoice(instruction.C_U16, out var guardedValue))
@@ -3619,65 +3632,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryEvaluateLinearProjectionFastRange(parameterSlot, parameterValue, pc, out value);
     }
 
-    private bool TryEvaluateLinearGeneratedCollection(int layoutIndex, out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        if (!TryGetGeneratedCollectionLayout(layoutIndex, out var layout) ||
-            layout.ProjectionEntryAddress < 0 ||
-            !TryGetLinearIterationSourceItems(layout.IterationSourceLayoutIndex, out var sourceItems))
-        {
-            return false;
-        }
-
-        var values = new List<GameEventScriptValue>();
-        foreach (var item in sourceItems)
-        {
-            if (!_runtimeBudget.TryConsumeLoopIteration("Generated collection iteration budget exhausted."))
-            {
-                break;
-            }
-
-            var fastItem = BytecodeVmValue.FromGameEventScriptValue(item);
-            if (layout.PredicateEntryAddress >= 0)
-            {
-                if (!TryEvaluateLinearHelperExpressionWithTemporarySlot(
-                        layout.IdentifierSlot,
-                        fastItem,
-                        layout.PredicateEntryAddress,
-                        out var predicate))
-                {
-                    return false;
-                }
-
-                if (!predicate.IsTrue())
-                {
-                    continue;
-                }
-            }
-
-            if (!_runtimeBudget.TryCheckGeneratedCollectionItemCount(values.Count + 1, "Generated collection item count exceeds the configured limit."))
-            {
-                break;
-            }
-
-            if (!TryEvaluateLinearHelperExpressionWithTemporarySlot(
-                    layout.IdentifierSlot,
-                    fastItem,
-                    layout.ProjectionEntryAddress,
-                    out var projected))
-            {
-                return false;
-            }
-
-            values.Add(projected.ToGameEventScriptValue());
-        }
-
-        value = BytecodeVmValue.Reference(layout.CollectionType == "set"
-            ? GameEventScriptValueFactory.GesSet(values)
-            : GameEventScriptValueFactory.GesList(values));
-        return true;
-    }
-
     private bool TryEvaluateLinearGuardedChoice(int layoutIndex, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
@@ -3799,55 +3753,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var success = TryEvaluateLinearHelperExpression(entryAddress, out value);
         RestoreSlot(slot, hadValue, previous);
         return success;
-    }
-
-    private bool TryGetLinearIterationSourceItems(int layoutIndex, out IEnumerable<GameEventScriptValue> items)
-    {
-        if (!TryGetIterationSourceLayout(layoutIndex, out var source))
-        {
-            items = [];
-            return false;
-        }
-
-        switch (source.Kind)
-        {
-            case GameEventScriptBytecodeIterationSourceKind.Collection:
-            {
-                var boxedCollection = ResolveSlot(source.CollectionSlot).ToGameEventScriptValue();
-                if (!TryCheckMaterializedValue(boxedCollection, "Iteration source would enumerate more range items than allowed."))
-                {
-                    items = [];
-                    return true;
-                }
-
-                items = boxedCollection.AsEnumerable();
-                return true;
-            }
-
-            case GameEventScriptBytecodeIterationSourceKind.Range:
-            {
-                var step = source.RangeStepSlot >= 0
-                    ? ResolveSlot(source.RangeStepSlot)
-                    : BytecodeVmValue.Integer(1);
-                var rangeValue = EvaluateRangeExpression(
-                    ResolveSlot(source.RangeFromSlot),
-                    ResolveSlot(source.RangeToSlot),
-                    step);
-                var boxedRange = rangeValue.ToGameEventScriptValue();
-                if (!TryCheckMaterializedValue(boxedRange, "Range item count exceeds the configured limit."))
-                {
-                    items = [];
-                    return true;
-                }
-
-                items = boxedRange.AsEnumerable();
-                return true;
-            }
-
-            default:
-                items = [];
-                return false;
-        }
     }
 
     private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<int> slots)
@@ -4026,6 +3931,38 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
+    private bool TryExecuteCollectionBuilderAdd(GameEventScriptBytecodeInstruction instruction)
+    {
+        var builderValue = ResolveSlot(instruction.A_U16);
+        if (builderValue.Kind != BytecodeVmValueKind.CollectionBuilder ||
+            builderValue.CollectionBuilderValue is not { } builder)
+        {
+            return false;
+        }
+
+        if (!_runtimeBudget.TryCheckGeneratedCollectionItemCount(
+                builder.Count + 1,
+                "Generated collection item count exceeds the configured limit."))
+        {
+            return true;
+        }
+
+        builder.Add(ResolveSlot(instruction.B_U16));
+        return true;
+    }
+
+    private bool TryExecuteCollectionBuilderFinish(GameEventScriptBytecodeInstruction instruction)
+    {
+        var builderValue = ResolveSlot(instruction.A_U16);
+        if (builderValue.Kind != BytecodeVmValueKind.CollectionBuilder ||
+            builderValue.CollectionBuilderValue is not { } builder)
+        {
+            return false;
+        }
+
+        return DefineSlot(instruction.Dest_U16, builder.Finish());
+    }
+
     private static void CloseIterator(BytecodeVmValue value)
     {
         if (value.Kind == BytecodeVmValueKind.Iterator)
@@ -4109,18 +4046,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    private bool TryGetIterationSourceLayout(int index, out GameEventScriptBytecodeIterationSourceLayout layout)
-    {
-        if ((uint)index < (uint)_compiledScript.BytecodeModule.IterationSourceLayouts.Count)
-        {
-            layout = _compiledScript.BytecodeModule.IterationSourceLayouts[index];
-            return true;
-        }
-
-        layout = default!;
-        return false;
-    }
-
     private bool TryGetPipelineSelector(int index, out GameEventScriptBytecodePipelineSelector layout)
     {
         if ((uint)index < (uint)_compiledScript.BytecodeModule.PipelineSelectorPool.Count)
@@ -4162,18 +4087,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if ((uint)index < (uint)_compiledScript.BytecodeModule.PipelinePool.Count)
         {
             layout = _compiledScript.BytecodeModule.PipelinePool[index];
-            return true;
-        }
-
-        layout = default!;
-        return false;
-    }
-
-    private bool TryGetGeneratedCollectionLayout(int index, out GameEventScriptBytecodeGeneratedCollectionLayout layout)
-    {
-        if ((uint)index < (uint)_compiledScript.BytecodeModule.GeneratedCollectionLayouts.Count)
-        {
-            layout = _compiledScript.BytecodeModule.GeneratedCollectionLayouts[index];
             return true;
         }
 
@@ -7358,7 +7271,8 @@ internal enum BytecodeVmValueKind
     Float,
     Percentage,
     Reference,
-    Iterator
+    Iterator,
+    CollectionBuilder
 }
 
 internal readonly record struct BytecodeVmValue(
@@ -7368,27 +7282,31 @@ internal readonly record struct BytecodeVmValue(
     bool BooleanValue,
     GameEventScriptNumericUnit? Unit,
     GameEventScriptValue? ReferenceValue,
-    BytecodeVmIterator? IteratorValue)
+    BytecodeVmIterator? IteratorValue,
+    BytecodeVmCollectionBuilder? CollectionBuilderValue)
 {
-    public static BytecodeVmValue Nothing { get; } = new(BytecodeVmValueKind.Nothing, 0d, 0, false, null, null, null);
+    public static BytecodeVmValue Nothing { get; } = new(BytecodeVmValueKind.Nothing, 0d, 0, false, null, null, null, null);
 
     public static BytecodeVmValue Boolean(bool value)
-        => new(BytecodeVmValueKind.Boolean, value ? 1d : 0d, value ? 1 : 0, value, null, null, null);
+        => new(BytecodeVmValueKind.Boolean, value ? 1d : 0d, value ? 1 : 0, value, null, null, null, null);
 
     public static BytecodeVmValue Integer(long value, GameEventScriptNumericUnit? unit = null)
-        => new(BytecodeVmValueKind.Integer, value, value, value != 0, unit, null, null);
+        => new(BytecodeVmValueKind.Integer, value, value, value != 0, unit, null, null, null);
 
     public static BytecodeVmValue Float(double value, GameEventScriptNumericUnit? unit = null)
-        => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, unit, null, null);
+        => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, unit, null, null, null);
 
     public static BytecodeVmValue Percentage(double ratio)
-        => new(BytecodeVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100d), ratio != 0d, null, null, null);
+        => new(BytecodeVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100d), ratio != 0d, null, null, null, null);
 
     public static BytecodeVmValue Reference(GameEventScriptValue value)
-        => new(BytecodeVmValueKind.Reference, 0d, 0, value.AsBoolean(), null, value, null);
+        => new(BytecodeVmValueKind.Reference, 0d, 0, value.AsBoolean(), null, value, null, null);
 
     public static BytecodeVmValue Iterator(BytecodeVmIterator iterator)
-        => new(BytecodeVmValueKind.Iterator, 0d, 0, false, null, null, iterator);
+        => new(BytecodeVmValueKind.Iterator, 0d, 0, false, null, null, iterator, null);
+
+    public static BytecodeVmValue CollectionBuilder(BytecodeVmCollectionBuilder builder)
+        => new(BytecodeVmValueKind.CollectionBuilder, 0d, 0, false, null, null, null, builder);
 
     public static BytecodeVmValue NaN()
         => Reference(GesFloatNaN());
@@ -7494,6 +7412,7 @@ internal readonly record struct BytecodeVmValue(
             BytecodeVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(Number),
             BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptNothingValue.Instance,
             BytecodeVmValueKind.Iterator => GameEventScriptNothingValue.Instance,
+            BytecodeVmValueKind.CollectionBuilder => GameEventScriptNothingValue.Instance,
             _ => GameEventScriptNothingValue.Instance
         };
 
@@ -8853,4 +8772,23 @@ internal sealed class BytecodeVmCollectionIterator(IEnumerator<GameEventScriptVa
         items.Dispose();
         _disposed = true;
     }
+}
+
+internal sealed class BytecodeVmCollectionBuilder(bool isSet)
+{
+    private readonly List<GameEventScriptValue> _items = [];
+
+    public static BytecodeVmCollectionBuilder List() => new(isSet: false);
+
+    public static BytecodeVmCollectionBuilder Set() => new(isSet: true);
+
+    public int Count => _items.Count;
+
+    public void Add(BytecodeVmValue value)
+        => _items.Add(value.ToGameEventScriptValue());
+
+    public BytecodeVmValue Finish()
+        => BytecodeVmValue.Reference(isSet
+            ? GameEventScriptValueFactory.GesSet(_items)
+            : GameEventScriptValueFactory.GesList(_items));
 }

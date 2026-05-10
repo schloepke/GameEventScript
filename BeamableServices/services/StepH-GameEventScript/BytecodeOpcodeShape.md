@@ -248,36 +248,39 @@ every unit has DSL syntax today.
 | 0x6B..0x83 | `TypeCheckNothing`..`TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x84 | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
 | 0x85 | `Pipeline` | - | result slot | - | - | `PipelinePool` index | - | - | - | Pipeline entry stores source slot and selector indexes. |
-| 0x86 | `GeneratedCollection` | - | result slot | - | - | `GeneratedCollectionLayouts` index | - | - | - | Layout stores iteration source and helper entries. |
-| 0x87 | `GuardedChoice` | - | result slot | - | - | `GuardedChoiceLayouts` index | - | - | - | Layout stores value/condition helper entries. |
-| 0x88 | `Power` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
-| 0x89 | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
-| 0x8A | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
-| 0x8B | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
-| 0x8C | `Nop` | - | - | - | - | - | - | - | - | No operation. |
-| 0x8D | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A_U16` and writes it to `Dest_U16`. |
-| 0x8E | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
-| 0x8F | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
-| 0x90 | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
-| 0x91 | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C_U16.IsTrue()`, including `nothing`. |
-| 0x92 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
-| 0x93 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
-| 0x94 | `ReturnNothing` | - | - | - | - | - | - | - | - | Returns `nothing` from the current frame. |
-| 0x95 | `Return` | - | - | return slot | - | - | - | - | - | Returns the value in `A_U16` from the current frame. |
-| 0x96 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
-| 0x97 | `EmitMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message with tags. |
-| 0x98 | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Publishes a statically shaped message without tags. |
-| 0x99 | `PublishMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Publishes a statically shaped message with tags. |
-| 0x9A | `EmitMessageValue` | - | - | message slot | - | - | - | - | - | Emits a dynamic message value without tags. |
-| 0x9B | `EmitMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value with tags. |
-| 0x9C | `PublishMessageValue` | - | - | message slot | - | - | - | - | - | Publishes a dynamic message value without tags. |
-| 0x9D | `PublishMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value with tags. |
-| 0x9E | `RangeIterator` | - | iterator slot | from slot | to slot | - | - | - | - | Creates a VM-internal range iterator with default step `+1`. |
-| 0x9F | `RangeIteratorWithStep` | - | iterator slot | from slot | to slot | step slot | - | - | - | Creates a VM-internal range iterator with an explicit step. |
-| 0xA0 | `RangeIteratorShort` | - | iterator slot | from I16 | to I16 | step I16 | - | - | - | Creates a compact literal range iterator. |
-| 0xA1 | `CollectionIterator` | - | iterator slot | collection slot | - | - | - | - | - | Creates a VM-internal iterator over a collection/range/sequence value. |
-| 0xA2 | `IteratorNext` | - | item slot | iterator slot | no-more target address | - | - | - | - | Writes the next item and continues, or jumps to `B_U16` when exhausted. |
-| 0xA3 | `IteratorClose` | - | - | iterator slot | - | - | - | - | - | Disposes/closes a VM-internal iterator. |
+| 0x86 | `CollectionBuilderList` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal list builder. |
+| 0x87 | `CollectionBuilderSet` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal set builder. |
+| 0x88 | `CollectionBuilderAdd` | - | - | builder slot | item slot | - | - | - | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0x89 | `CollectionBuilderFinish` | - | result slot | builder slot | - | - | - | - | - | Materializes the builder as a list or set. |
+| 0x8A | `GuardedChoice` | - | result slot | - | - | `GuardedChoiceLayouts` index | - | - | - | Layout stores value/condition helper entries. |
+| 0x8B | `Power` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
+| 0x8C | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
+| 0x8D | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
+| 0x8E | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
+| 0x8F | `Nop` | - | - | - | - | - | - | - | - | No operation. |
+| 0x90 | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A_U16` and writes it to `Dest_U16`. |
+| 0x91 | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
+| 0x92 | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
+| 0x93 | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
+| 0x94 | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C_U16.IsTrue()`, including `nothing`. |
+| 0x95 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
+| 0x96 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
+| 0x97 | `ReturnNothing` | - | - | - | - | - | - | - | - | Returns `nothing` from the current frame. |
+| 0x98 | `Return` | - | - | return slot | - | - | - | - | - | Returns the value in `A_U16` from the current frame. |
+| 0x99 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
+| 0x9A | `EmitMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message with tags. |
+| 0x9B | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Publishes a statically shaped message without tags. |
+| 0x9C | `PublishMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Publishes a statically shaped message with tags. |
+| 0x9D | `EmitMessageValue` | - | - | message slot | - | - | - | - | - | Emits a dynamic message value without tags. |
+| 0x9E | `EmitMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value with tags. |
+| 0x9F | `PublishMessageValue` | - | - | message slot | - | - | - | - | - | Publishes a dynamic message value without tags. |
+| 0xA0 | `PublishMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value with tags. |
+| 0xA1 | `RangeIterator` | - | iterator slot | from slot | to slot | - | - | - | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0xA2 | `RangeIteratorWithStep` | - | iterator slot | from slot | to slot | step slot | - | - | - | Creates a VM-internal range iterator with an explicit step. |
+| 0xA3 | `RangeIteratorShort` | - | iterator slot | from I16 | to I16 | step I16 | - | - | - | Creates a compact literal range iterator. |
+| 0xA4 | `CollectionIterator` | - | iterator slot | collection slot | - | - | - | - | - | Creates a VM-internal iterator over a collection/range/sequence value. |
+| 0xA5 | `IteratorNext` | - | item slot | iterator slot | no-more target address | - | - | - | - | Writes the next item and continues, or jumps to `B_U16` when exhausted. |
+| 0xA6 | `IteratorClose` | - | - | iterator slot | - | - | - | - | - | Disposes/closes a VM-internal iterator. |
 
 ## Side-Table Summary
 
@@ -286,10 +289,8 @@ every unit has DSL syntax today.
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
 | `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, operation name lists |
 | `OperationLayouts` | `Variadic`, `TypeConstructor`, `PredicateTest`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call` |
-| `IterationSourceLayouts` | Referenced by `GeneratedCollectionLayouts` |
 | `PipelinePool` | `Pipeline` |
 | `PipelineSelectorPool` | Referenced by `PipelinePool` |
 | `PipelinePatternPool` | Referenced by `PipelineSelectorPool` |
 | `PipelineObjectPatternPool` | Referenced by `PipelineSelectorPool` |
-| `GeneratedCollectionLayouts` | `GeneratedCollection` |
 | `GuardedChoiceLayouts` | `GuardedChoice` |

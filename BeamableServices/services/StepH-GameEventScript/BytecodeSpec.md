@@ -26,10 +26,10 @@ the same handler entry addresses and uses the same linear instruction execution
 state: program counter, end address, frame slots, VM call frames, scope marks,
 pausable linear range/collection loops, and seeded-random block frames. It has
 no statement-program or expression-program compatibility dispatcher.
-High-level operations such as pipelines, generated collections, guarded
-choices, seeded-random blocks, publish operations, iteration sources,
-dice-pattern matching, and object matching execute from normalized public
-side-table layouts plus helper entry addresses. Runtime pipeline execution may
+High-level operations such as pipelines, guarded choices, seeded-random blocks,
+publish operations, dice-pattern matching, and object matching execute from
+normalized public side-table layouts plus helper entry addresses. Generated
+collections use normal iterator and collection-builder opcodes. Runtime pipeline execution may
 keep indexed/streaming hot paths where that avoids per-item frame allocation;
 non-fast selector expressions evaluate through their public linear helper
 entries while staying inside those optimized pipeline paths. The pipeline helper
@@ -131,12 +131,10 @@ GameEventScriptCompiled
   TypeDefinitions: TypeDefinitionEntry[]
   OperationLayouts
   DiagnosticLayouts
-  IterationSourceLayouts
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
   PipelinePool
-  GeneratedCollectionLayouts
   GuardedChoiceLayouts
   DebugSymbols
   MaxFrameSlots
@@ -164,12 +162,10 @@ GameEventScriptCompiled
   MaxFrameSlots
   OperationLayouts
   DiagnosticLayouts
-  IterationSourceLayouts
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
   PipelinePool
-  GeneratedCollectionLayouts
   GuardedChoiceLayouts
 
 GameEventScriptBytecodeInstruction
@@ -634,8 +630,8 @@ evaluated once, an iterator is stored in a temporary slot, `IteratorNext` writes
 each item into an item slot and jumps to the close block when exhausted, and the
 body runs inside an iteration scope. Literal I16 ranges should use
 `RangeIteratorShort`; dynamic ranges and collection sources use the slot-based
-iterator opcodes. Generated collections still use `IterationSourceLayouts` until
-they are migrated separately.
+iterator opcodes. Generated collections use the same iterator opcodes plus
+VM-internal collection builder opcodes.
 
 ### Calls and Returns
 
@@ -850,8 +846,10 @@ Recommended shape:
 
 ```text
 Pipeline dst pipelineIndex
-GenerateCollection dst planIndex
-MaterializeIterationSource dst planIndex
+CollectionBuilderList builder
+CollectionBuilderSet builder
+CollectionBuilderAdd builder item
+CollectionBuilderFinish dst builder
 ```
 
 `PipelinePool` is portable metadata, not nested code. It references pipeline
@@ -930,37 +928,32 @@ instruction; debug state can identify selector/item progress when needed.
 
 ### Generated Collections
 
-Generated collection expressions lower to a high-level plan:
+Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
-GeneratedCollectionPlan
-  CollectionType: list | set
-  IdentifierSlot
-  IterationSourcePlanIndex
-  PredicateAddress?
-  PredicateResultSlot?
-  ProjectionAddress
-  ProjectionResultSlot
-```
-
-Iteration sources:
-
-```text
-IterationSourcePlan
-  Kind: Collection | Range
-  CollectionSlot?
-  RangeFromSlot?
-  RangeToSlot?
-  RangeStepSlot?
+CollectionBuilderList/Set builder
+EnterScope
+RangeIterator* / CollectionIterator iterator
+loop:
+  IteratorNext item iterator noMore
+  EnterScope
+  MoveSlot identifier item
+  optional predicate + JumpIfNotTrue skipProjection
+  projection expression
+  CollectionBuilderAdd builder projected
+  ExitScope
+  Jump loop
+noMore:
+IteratorClose iterator
+ExitScope
+CollectionBuilderFinish dst builder
 ```
 
 Direct ranges after `in` remain invalid at source level. Range iteration should
-use the explicit range source fields.
+use explicit range-source syntax.
 
-At runtime, the generated-collection opcode evaluates the source slots from its
-iteration-source layout, binds `IdentifierSlot` temporarily for each item,
-evaluates the optional predicate helper, then evaluates only the projection
-helper for included items. `MaxGeneratedCollectionItems` applies while
+At runtime, collection builders are VM-internal values and are not visible as DSL
+values. `CollectionBuilderAdd` applies `MaxGeneratedCollectionItems` while
 materializing the result.
 
 ### Patterns
@@ -1062,15 +1055,15 @@ A grouped view may still be offered, but it must keep global addresses visible.
 
 The public bytecode model is normalized around one global linear `Code` segment
 plus side tables for runtime high-level operations, including pipelines,
-selectors, generated collections, guarded choices, iteration sources, publish
+selectors, guarded choices, publish
 operations, seeded-random blocks, dice patterns, and object-match patterns.
 
 The BytecodeVM executable builder consumes and validates the public linear
 `Code` segment plus side tables into an internal linear executable artifact.
 Synchronous execution and manual Fiber stepping enter handlers through public
-linear entry addresses and use VM-owned frame state. Runtime high-level opcodes
-use side-table layouts and helper entry addresses; old nested program graphs are
-not part of the public artifact or runtime execution.
+linear entry addresses and use VM-owned frame state. Remaining runtime high-level
+opcodes use side-table layouts and helper entry addresses; old nested program
+graphs are not part of the public artifact or runtime execution.
 
 Conformance behavior remains the semantic baseline. Future changes should move
 bytecode shape, VM internals, and physical encoding forward without changing

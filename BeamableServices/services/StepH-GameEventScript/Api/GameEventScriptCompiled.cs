@@ -23,12 +23,10 @@ public sealed class GameEventScriptCompiled
         int maxFrameSlots = 0,
         IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout>? diagnosticLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout>? iterationSourceLayouts = null,
         IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineSelector>? pipelineSelectorPool = null,
         IReadOnlyList<GameEventScriptBytecodePipeline>? pipelinePool = null,
-        IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout>? generatedCollectionLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout>? guardedChoiceLayouts = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -46,12 +44,10 @@ public sealed class GameEventScriptCompiled
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
         OperationLayouts = operationLayouts?.ToArray() ?? [];
         DiagnosticLayouts = diagnosticLayouts?.ToArray() ?? [];
-        IterationSourceLayouts = iterationSourceLayouts?.ToArray() ?? [];
         PipelinePatternPool = pipelinePatternPool?.ToArray() ?? [];
         PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
         PipelineSelectorPool = pipelineSelectorPool?.ToArray() ?? [];
         PipelinePool = pipelinePool?.ToArray() ?? [];
-        GeneratedCollectionLayouts = generatedCollectionLayouts?.ToArray() ?? [];
         GuardedChoiceLayouts = guardedChoiceLayouts?.ToArray() ?? [];
     }
 
@@ -81,8 +77,6 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get; }
-
     public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get; }
@@ -90,8 +84,6 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get; }
 

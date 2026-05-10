@@ -128,7 +128,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
 
-        Assert.HasCount(0, compiled.IterationSourceLayouts);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIteratorShort));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose));
@@ -1822,7 +1821,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var projectionRanges = GetGeneratedCollectionProjectionRanges(compiled);
+        var projectionRanges = GetGeneratedCollectionLinearRanges(compiled);
 
         var originalConstant = 1L;
         var replacementConstant = 2L;
@@ -1862,7 +1861,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var projectionRanges = GetGeneratedCollectionProjectionRanges(compiled);
+        var projectionRanges = GetGeneratedCollectionLinearRanges(compiled);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
         var originalConstant = 1L;
@@ -1903,7 +1902,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var projectionRanges = GetGeneratedCollectionProjectionRanges(compiled);
+        var projectionRanges = GetGeneratedCollectionLinearRanges(compiled);
 
         var originalConstant = 1L;
         var replacementConstant = 2L;
@@ -1945,7 +1944,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GeneratedCollection));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CollectionBuilderList));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1986,7 +1985,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GeneratedCollection));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CollectionBuilderList));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -4670,22 +4669,28 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         return ranges;
     }
 
-    private static (int Start, int End)[] GetGeneratedCollectionProjectionRanges(GameEventScriptCompiled compiled)
+    private static (int Start, int End)[] GetGeneratedCollectionLinearRanges(GameEventScriptCompiled compiled)
     {
-        Assert.IsNotEmpty(compiled.GeneratedCollectionLayouts);
-        Assert.IsTrue(compiled.GeneratedCollectionLayouts.All(layout => layout.ProjectionEntryAddress >= 0));
-
         var compiledCode = compiled.Code.ToArray();
-        var ranges = compiled.GeneratedCollectionLayouts
-            .Select(layout => (
-                Start: layout.ProjectionEntryAddress,
-                End: Array.FindIndex(
-                    compiledCode,
-                    layout.ProjectionEntryAddress,
-                    instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1))
-            .ToArray();
+        var starts = new Stack<int>();
+        var ranges = new List<(int Start, int End)>();
+        for (var index = 0; index < compiledCode.Length; index++)
+        {
+            switch (compiledCode[index].OpCode)
+            {
+                case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+                case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
+                    starts.Push(index);
+                    break;
+                case GameEventScriptBytecodeOpCode.CollectionBuilderFinish when starts.Count > 0:
+                    ranges.Add((starts.Pop(), index + 1));
+                    break;
+            }
+        }
+
+        Assert.IsNotEmpty(ranges);
         Assert.IsTrue(ranges.All(range => range.End > range.Start));
-        return ranges;
+        return ranges.ToArray();
     }
 
     private static bool ContainsBytecodeVmType(Type type)
@@ -4805,12 +4810,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.MaxFrameSlots,
             original.OperationLayouts.ToArray(),
             original.DiagnosticLayouts.ToArray(),
-            original.IterationSourceLayouts.ToArray(),
             original.PipelinePatternPool.ToArray(),
             original.PipelineObjectPatternPool.ToArray(),
             original.PipelineSelectorPool.ToArray(),
             original.PipelinePool.ToArray(),
-            original.GeneratedCollectionLayouts.ToArray(),
             original.GuardedChoiceLayouts.ToArray());
 
     private static IReadOnlyList<(int Start, int End)> FindRandomScopeRanges(IReadOnlyList<GameEventScriptBytecodeInstruction> code)

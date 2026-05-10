@@ -144,7 +144,10 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckDice,
     TypeCheckCustom,
     Pipeline,
-    GeneratedCollection,
+    CollectionBuilderList,
+    CollectionBuilderSet,
+    CollectionBuilderAdd,
+    CollectionBuilderFinish,
     GuardedChoice,
     Power,
     ShortCircuitOr,
@@ -353,33 +356,6 @@ public sealed class GameEventScriptBytecodeDiagnosticLayout
     public string Name { get; }
 }
 
-public sealed class GameEventScriptBytecodeIterationSourceLayout
-{
-    public GameEventScriptBytecodeIterationSourceLayout(
-        GameEventScriptBytecodeIterationSourceKind kind,
-        int collectionSlot = -1,
-        int rangeFromSlot = -1,
-        int rangeToSlot = -1,
-        int rangeStepSlot = -1)
-    {
-        Kind = kind;
-        CollectionSlot = collectionSlot;
-        RangeFromSlot = rangeFromSlot;
-        RangeToSlot = rangeToSlot;
-        RangeStepSlot = rangeStepSlot;
-    }
-
-    public GameEventScriptBytecodeIterationSourceKind Kind { get; }
-
-    public int CollectionSlot { get; }
-
-    public int RangeFromSlot { get; }
-
-    public int RangeToSlot { get; }
-
-    public int RangeStepSlot { get; }
-}
-
 public enum GameEventScriptBytecodePipelinePatternKind
 {
     Count,
@@ -543,33 +519,6 @@ public sealed class GameEventScriptBytecodePipeline
     public int TerminalSelectorIndex { get; }
 }
 
-public sealed class GameEventScriptBytecodeGeneratedCollectionLayout
-{
-    public GameEventScriptBytecodeGeneratedCollectionLayout(
-        string collectionType,
-        int identifierSlot,
-        int iterationSourceLayoutIndex,
-        int predicateEntryAddress = -1,
-        int projectionEntryAddress = -1)
-    {
-        CollectionType = collectionType ?? throw new ArgumentNullException(nameof(collectionType));
-        IdentifierSlot = identifierSlot;
-        IterationSourceLayoutIndex = iterationSourceLayoutIndex;
-        PredicateEntryAddress = predicateEntryAddress;
-        ProjectionEntryAddress = projectionEntryAddress;
-    }
-
-    public string CollectionType { get; }
-
-    public int IdentifierSlot { get; }
-
-    public int IterationSourceLayoutIndex { get; }
-
-    public int PredicateEntryAddress { get; }
-
-    public int ProjectionEntryAddress { get; }
-}
-
 public sealed class GameEventScriptBytecodeGuardedChoiceLayout
 {
     public GameEventScriptBytecodeGuardedChoiceLayout(
@@ -600,12 +549,6 @@ internal sealed record class GameEventScriptBytecodeStackInstruction(
     string[]? Names = null,
     int[]? Slots = null,
     string?[]? DeclaredTypes = null);
-
-public enum GameEventScriptBytecodeIterationSourceKind
-{
-    Collection,
-    Range
-}
 
 public enum GameEventScriptBytecodePublishKind
 {

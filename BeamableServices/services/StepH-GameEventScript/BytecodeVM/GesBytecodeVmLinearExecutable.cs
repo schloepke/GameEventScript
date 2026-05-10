@@ -442,8 +442,17 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateIndex(module.PipelinePool.Count, instruction.C_U16, $"{context} pipeline");
                 break;
 
-            case GameEventScriptBytecodeOpCode.GeneratedCollection:
-                ValidateIndex(module.GeneratedCollectionLayouts.Count, instruction.C_U16, $"{context} generated collection layout");
+            case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+            case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
+                break;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
+                ValidateSlot(module, instruction.A_U16, $"{context} collection builder slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} collection item slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
+                ValidateSlot(module, instruction.A_U16, $"{context} collection builder slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.GuardedChoice:
@@ -540,12 +549,10 @@ internal sealed class GesBytecodeVmLinearExecutable
     {
         ValidateOperationLayouts(module);
         ValidateDiagnosticLayouts(module);
-        ValidateIterationSourceLayouts(module);
         ValidatePipelinePatternPool(module);
         ValidatePipelineObjectPatternPool(module);
         ValidatePipelineSelectorPool(module);
         ValidatePipelinePool(module);
-        ValidateGeneratedCollectionLayouts(module);
         ValidateGuardedChoiceLayouts(module);
     }
 
@@ -588,19 +595,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             ValidateNonNegative(layout.Count, $"{context} count");
             ValidateSlots(module, layout.ArgumentSlots, $"{context} argument slot");
             ValidateSlots(module, layout.ParameterSlots, $"{context} parameter slot");
-        }
-    }
-
-    private static void ValidateIterationSourceLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.IterationSourceLayouts.Count; index++)
-        {
-            var layout = module.IterationSourceLayouts[index];
-            var context = $"iteration source layout #{index}";
-            ValidateOptionalSlot(module, layout.CollectionSlot, $"{context} collection slot");
-            ValidateOptionalSlot(module, layout.RangeFromSlot, $"{context} range from slot");
-            ValidateOptionalSlot(module, layout.RangeToSlot, $"{context} range to slot");
-            ValidateOptionalSlot(module, layout.RangeStepSlot, $"{context} range step slot");
         }
     }
 
@@ -674,24 +668,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             }
 
             ValidateIndex(module.PipelineSelectorPool.Count, layout.TerminalSelectorIndex, $"{context} terminal selector");
-        }
-    }
-
-    private static void ValidateGeneratedCollectionLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.GeneratedCollectionLayouts.Count; index++)
-        {
-            var layout = module.GeneratedCollectionLayouts[index];
-            var context = $"generated collection layout #{index}";
-            if (string.IsNullOrEmpty(layout.CollectionType))
-            {
-                throw InvalidBytecode($"{context} has no collection type.");
-            }
-
-            ValidateOptionalSlot(module, layout.IdentifierSlot, $"{context} identifier slot");
-            ValidateIndex(module.IterationSourceLayouts.Count, layout.IterationSourceLayoutIndex, $"{context} iteration source layout");
-            ValidateOptionalAddress(module, module.Code, layout.PredicateEntryAddress, $"{context} predicate entry");
-            ValidateOptionalAddress(module, module.Code, layout.ProjectionEntryAddress, $"{context} projection entry");
         }
     }
 
@@ -921,6 +897,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
+            GameEventScriptBytecodeOpCode.CollectionBuilderAdd or
             GameEventScriptBytecodeOpCode.IteratorClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or

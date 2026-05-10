@@ -72,7 +72,6 @@ internal static class GesBytecodeCompiler
                 linearBuilder.OperationLayouts.ToArray(),
                 linearBuilder.DiagnosticLayouts.ToArray(),
                 linearBuilder.IterationSourceLayouts.ToArray(),
-                linearBuilder.LoopLayouts.ToArray(),
                 linearBuilder.PipelinePatternPool.ToArray(),
                 linearBuilder.PipelineObjectPatternPool.ToArray(),
                 linearBuilder.PipelineSelectorPool.ToArray(),

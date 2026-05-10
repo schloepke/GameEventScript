@@ -61,7 +61,6 @@ public static class GameEventScriptBytecodeDumper
         AppendOperationLayouts(builder, module);
         AppendDiagnosticLayouts(builder, module);
         AppendIterationSourceLayouts(builder, module);
-        AppendLoopLayouts(builder, module);
         AppendPipelinePatternPool(builder, module);
         AppendPipelineObjectPatternPool(builder, module);
         AppendPipelineSelectorPool(builder, module);
@@ -120,19 +119,6 @@ public static class GameEventScriptBytecodeDumper
             AppendSlot(builder, "from", layout.RangeFromSlot);
             AppendSlot(builder, "to", layout.RangeToSlot);
             AppendSlot(builder, "step", layout.RangeStepSlot);
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendLoopLayouts(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("loopLayouts[").Append(module.LoopLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.LoopLayouts.Count; i++)
-        {
-            var layout = module.LoopLayouts[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(':');
-            AppendSlot(builder, "identifier", layout.IdentifierSlot);
-            AppendIndex(builder, "source", layout.IterationSourceLayoutIndex);
             builder.AppendLine();
         }
     }
@@ -387,12 +373,6 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "cond", instruction.C_U16);
                 break;
 
-            case GameEventScriptBytecodeOpCode.ForRange:
-            case GameEventScriptBytecodeOpCode.ForCollection:
-                AppendAddress(builder, "target", instruction.A_U16);
-                AppendAddress(builder, "target2", instruction.B_U16);
-                break;
-
             case GameEventScriptBytecodeOpCode.RandomPush:
                 AppendSlot(builder, "seed", instruction.A_U16);
                 break;
@@ -402,6 +382,36 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPop:
+                break;
+
+            case GameEventScriptBytecodeOpCode.RangeIterator:
+                AppendSlot(builder, "from", instruction.A_U16);
+                AppendSlot(builder, "to", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+                AppendSlot(builder, "from", instruction.A_U16);
+                AppendSlot(builder, "to", instruction.B_U16);
+                AppendSlot(builder, "step", instruction.C_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+                AppendSignedImmediate(builder, "from", instruction.A_I16);
+                AppendSignedImmediate(builder, "to", instruction.B_I16);
+                AppendSignedImmediate(builder, "step", instruction.C_I16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.CollectionIterator:
+                AppendSlot(builder, "collection", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorNext:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendAddress(builder, "noMore", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorClose:
+                AppendSlot(builder, "iterator", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.MoveSlot:
@@ -495,9 +505,6 @@ public static class GameEventScriptBytecodeDumper
 
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.ForRange or GameEventScriptBytecodeOpCode.ForCollection:
-                AppendIndex(builder, "loopLayout", instruction.C_U16);
-                break;
             case GameEventScriptBytecodeOpCode.Pipeline:
                 AppendIndex(builder, "pipeline", instruction.C_U16);
                 break;
@@ -598,8 +605,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-            GameEventScriptBytecodeOpCode.ForRange or
-            GameEventScriptBytecodeOpCode.ForCollection or
+            GameEventScriptBytecodeOpCode.IteratorClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
             GameEventScriptBytecodeOpCode.RandomPop);
@@ -625,6 +631,9 @@ public static class GameEventScriptBytecodeDumper
             builder.Append(' ').Append(name).Append('=').Append(value.ToString(CultureInfo.InvariantCulture));
         }
     }
+
+    private static void AppendSignedImmediate(StringBuilder builder, string name, int value)
+        => builder.Append(' ').Append(name).Append('=').Append(value.ToString(CultureInfo.InvariantCulture));
 
     private static void AppendText(StringBuilder builder, string name, string? value)
     {

@@ -26,6 +26,7 @@ public readonly struct GameEventScriptBinaryHeader
         None = 0,
         Optimization = 1 << 0,
         Debug = 1 << 1,
+        CompactInstruction = 1 << 2,
     }
     
     public const uint Magic = 0x42534547; // "GESB"

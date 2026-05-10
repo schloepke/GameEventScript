@@ -24,7 +24,6 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout>? diagnosticLayouts = null,
         IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout>? iterationSourceLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeLoopLayout>? loopLayouts = null,
         IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineSelector>? pipelineSelectorPool = null,
@@ -48,7 +47,6 @@ public sealed class GameEventScriptCompiled
         OperationLayouts = operationLayouts?.ToArray() ?? [];
         DiagnosticLayouts = diagnosticLayouts?.ToArray() ?? [];
         IterationSourceLayouts = iterationSourceLayouts?.ToArray() ?? [];
-        LoopLayouts = loopLayouts?.ToArray() ?? [];
         PipelinePatternPool = pipelinePatternPool?.ToArray() ?? [];
         PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
         PipelineSelectorPool = pipelineSelectorPool?.ToArray() ?? [];
@@ -84,8 +82,6 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodeLoopLayout> LoopLayouts { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get; }
 

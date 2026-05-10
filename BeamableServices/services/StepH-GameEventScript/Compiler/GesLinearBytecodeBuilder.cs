@@ -19,7 +19,6 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
     private readonly List<GameEventScriptBytecodeDiagnosticLayout> _diagnosticLayouts = [];
     private readonly List<GameEventScriptBytecodeIterationSourceLayout> _iterationSourceLayouts = [];
-    private readonly List<GameEventScriptBytecodeLoopLayout> _loopLayouts = [];
     private readonly List<GameEventScriptBytecodePipelinePattern> _pipelinePatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
@@ -55,8 +54,6 @@ internal sealed class GesLinearBytecodeBuilder
     public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts => _diagnosticLayouts;
 
     public IReadOnlyList<GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts => _iterationSourceLayouts;
-
-    public IReadOnlyList<GameEventScriptBytecodeLoopLayout> LoopLayouts => _loopLayouts;
 
     public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool => _pipelinePatternPool;
 
@@ -240,14 +237,15 @@ internal sealed class GesLinearBytecodeBuilder
     private void EmitSourceStatements(
         IReadOnlyList<StatementNode> statements,
         bool createsScope,
-        IReadOnlyDictionary<string, int> slots)
+        IReadOnlyDictionary<string, int> slots,
+        int? temporaryBaseSlot = null)
     {
         if (createsScope)
         {
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
         }
 
-        var context = new SourceContext(slots);
+        var context = new SourceContext(slots, temporaryBaseSlot);
         foreach (var statement in statements)
         {
             EmitSourceStatement(statement, context);
@@ -391,16 +389,27 @@ internal sealed class GesLinearBytecodeBuilder
     private void EmitSourceLoop(ForStatementNode forStatement, SourceContext context)
     {
         var state = new ExpressionState(context.SlotCount);
-        var sourceLayoutIndex = AddSourceIterationSourceLayout(forStatement.Source, context, state);
         var identifierSlot = context.RequireSlot(forStatement.Identifier);
-        var loopLayoutIndex = AddLoopLayout(new GameEventScriptBytecodeLoopLayout(identifierSlot, sourceLayoutIndex));
-        var opCode = forStatement.Source is RangeIterationSourceNode
-            ? GameEventScriptBytecodeOpCode.ForRange
-            : GameEventScriptBytecodeOpCode.ForCollection;
-        var loopInstruction = Emit(CreateInstruction(opCode, c: loopLayoutIndex));
-        var bodyAddress = _code.Count;
-        EmitSourceStatements(forStatement.Body.Statements, forStatement.Body.IsBlock, context.Slots);
-        PatchTargets(loopInstruction, bodyAddress, _code.Count);
+
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        var iteratorSlot = EmitSourceIterator(forStatement.Source, context, state);
+        var itemSlot = AllocateSlot(state);
+
+        var loopAddress = _code.Count;
+        var nextInstruction = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.IteratorNext,
+            dest: itemSlot,
+            a: iteratorSlot));
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: itemSlot));
+        EmitSourceStatements(forStatement.Body.Statements, forStatement.Body.IsBlock, context.Slots, state.NextSlot);
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Jump, a: loopAddress));
+
+        var endAddress = _code.Count;
+        PatchB(nextInstruction, endAddress);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.IteratorClose, a: iteratorSlot));
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
     }
 
     private void EmitSourceSeededRandom(SeededRandomStatementNode seededRandom, SourceContext context)
@@ -1056,11 +1065,82 @@ internal sealed class GesLinearBytecodeBuilder
                 count: count);
     }
 
-    private int AddLoopLayout(GameEventScriptBytecodeLoopLayout layout)
+    private int EmitSourceIterator(IterationSourceNode source, SourceContext context, ExpressionState state)
     {
-        var index = _loopLayouts.Count;
-        _loopLayouts.Add(layout);
-        return index;
+        switch (source)
+        {
+            case RangeIterationSourceNode range when TryGetRangeIteratorShort(range.RangeExpression, out var from, out var to, out var step):
+            {
+                var iteratorSlot = AllocateSlot(state);
+                var instruction = new GameEventScriptBytecodeInstruction(
+                    GameEventScriptBytecodeOpCode.RangeIteratorShort,
+                    dest: ToUShortOperand(iteratorSlot, "iterator slot"));
+                instruction.A_I16 = from;
+                instruction.B_I16 = to;
+                instruction.C_I16 = step;
+                Emit(instruction);
+                return iteratorSlot;
+            }
+
+            case RangeIterationSourceNode range:
+            {
+                var fromSlot = EmitSourceExpression(range.RangeExpression.FromExpression, context, state);
+                var toSlot = EmitSourceExpression(range.RangeExpression.ToExpression, context, state);
+                var stepSlot = range.RangeExpression.StepExpression is null
+                    ? -1
+                    : EmitSourceExpression(range.RangeExpression.StepExpression, context, state);
+                var iteratorSlot = AllocateSlot(state);
+                Emit(stepSlot >= 0
+                    ? CreateInstruction(GameEventScriptBytecodeOpCode.RangeIteratorWithStep, dest: iteratorSlot, a: fromSlot, b: toSlot, c: stepSlot)
+                    : CreateInstruction(GameEventScriptBytecodeOpCode.RangeIterator, dest: iteratorSlot, a: fromSlot, b: toSlot));
+                return iteratorSlot;
+            }
+
+            case CollectionIterationSourceNode collection:
+            {
+                var collectionSlot = EmitSourceExpression(collection.Expression, context, state);
+                var iteratorSlot = AllocateSlot(state);
+                Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionIterator, dest: iteratorSlot, a: collectionSlot));
+                return iteratorSlot;
+            }
+
+            default:
+                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support iteration source '{source.GetType().Name}'.");
+        }
+    }
+
+    private static bool TryGetRangeIteratorShort(RangeExpressionNode range, out short from, out short to, out short step)
+    {
+        step = 0;
+        if (TryGetShortIntegerLiteral(range.FromExpression, out from) &&
+            TryGetShortIntegerLiteral(range.ToExpression, out to) &&
+            (range.StepExpression is null || TryGetShortIntegerLiteral(range.StepExpression, out step)))
+        {
+            if (range.StepExpression is null)
+            {
+                step = 1;
+            }
+
+            return true;
+        }
+
+        from = 0;
+        to = 0;
+        return false;
+    }
+
+    private static bool TryGetShortIntegerLiteral(ExpressionNode expression, out short value)
+    {
+        if (expression is IntegerLiteralExpressionNode integer &&
+            integer.Value >= short.MinValue &&
+            integer.Value <= short.MaxValue)
+        {
+            value = (short)integer.Value;
+            return true;
+        }
+
+        value = 0;
+        return false;
     }
 
     private void AddDiagnosticLayout(
@@ -1509,6 +1589,9 @@ internal sealed class GesLinearBytecodeBuilder
             B_U16 = ToUShortOperand(target2, "target address")
         };
 
+    private void PatchB(int address, int value)
+        => _code[address] = _code[address] with { B_U16 = ToUShortOperand(value, "operand") };
+
     private void PatchC(int address, int value)
         => _code[address] = _code[address] with { C_U16 = ToUShortOperand(value, "operand") };
 
@@ -1917,13 +2000,13 @@ internal sealed class GesLinearBytecodeBuilder
         DicePatternNode? DicePattern = null,
         ObjectMatchPatternNode? ObjectPattern = null);
 
-    private sealed class SourceContext(IReadOnlyDictionary<string, int> slots)
+    private sealed class SourceContext(IReadOnlyDictionary<string, int> slots, int? temporaryBaseSlot = null)
     {
         private readonly IReadOnlyDictionary<string, int> _slots = slots;
 
         public IReadOnlyDictionary<string, int> Slots => _slots;
 
-        public int SlotCount => _slots.Count;
+        public int SlotCount { get; } = Math.Max(slots.Count, temporaryBaseSlot ?? 0);
 
         public int RequireSlot(string name)
         {

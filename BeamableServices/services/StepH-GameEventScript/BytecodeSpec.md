@@ -132,7 +132,6 @@ GameEventScriptCompiled
   OperationLayouts
   DiagnosticLayouts
   IterationSourceLayouts
-  LoopLayouts
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
@@ -166,7 +165,6 @@ GameEventScriptCompiled
   OperationLayouts
   DiagnosticLayouts
   IterationSourceLayouts
-  LoopLayouts
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
@@ -586,8 +584,15 @@ binary implication combine inside that branch sequence.
 - `JumpIfTrue cond target`
 - `JumpIfFalse cond target`
 - `JumpIfNotTrue cond target`
+- `RangeIterator dst from to`
+- `RangeIteratorWithStep dst from to step`
+- `RangeIteratorShort dst fromI16 toI16 stepI16`
+- `CollectionIterator dst collection`
+- `IteratorNext dst iterator noMoreTarget`
+- `IteratorClose iterator`
 - `Call dst operationLayoutIndex`
 - `Return src`
+- `ReturnNothing`
 
 `if` and guarded choices compile to condition code plus jumps. `else` runs when
 the condition is not true, so normal `if` lowering should use `JumpIfNotTrue`,
@@ -611,6 +616,14 @@ writes to a shared destination slot, or to a high-level `GuardedChoice`
 instruction whose side-table layout stores condition, value, and otherwise
 helper entry addresses. In the high-level form, condition helpers are evaluated
 in order and only the selected value helper is evaluated.
+
+`for` statements lower to normal linear iterator control flow. The source is
+evaluated once, an iterator is stored in a temporary slot, `IteratorNext` writes
+each item into an item slot and jumps to the close block when exhausted, and the
+body runs inside an iteration scope. Literal I16 ranges should use
+`RangeIteratorShort`; dynamic ranges and collection sources use the slot-based
+iterator opcodes. Generated collections still use `IterationSourceLayouts` until
+they are migrated separately.
 
 ### Calls and Returns
 

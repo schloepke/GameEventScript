@@ -167,8 +167,12 @@ public enum GameEventScriptBytecodeOpCode : byte
     EmitMessageValueWithTags,
     PublishMessageValue,
     PublishMessageValueWithTags,
-    ForRange,
-    ForCollection
+    RangeIterator,
+    RangeIteratorWithStep,
+    RangeIteratorShort,
+    CollectionIterator,
+    IteratorNext,
+    IteratorClose
 }
 
 public enum GameEventScriptBytecodeCallableKind
@@ -372,19 +376,6 @@ public sealed class GameEventScriptBytecodeIterationSourceLayout
     public int RangeToSlot { get; }
 
     public int RangeStepSlot { get; }
-}
-
-public sealed class GameEventScriptBytecodeLoopLayout
-{
-    public GameEventScriptBytecodeLoopLayout(int identifierSlot, int iterationSourceLayoutIndex)
-    {
-        IdentifierSlot = identifierSlot;
-        IterationSourceLayoutIndex = iterationSourceLayoutIndex;
-    }
-
-    public int IdentifierSlot { get; }
-
-    public int IterationSourceLayoutIndex { get; }
 }
 
 public enum GameEventScriptBytecodePipelinePatternKind

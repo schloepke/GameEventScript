@@ -625,22 +625,81 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.ForRange:
-                if (!TryExecuteLinearRangeFor(instruction))
+            case GameEventScriptBytecodeOpCode.RangeIterator:
+                if (!TryCreateRangeIterator(
+                        ResolveSlot(instruction.A_U16),
+                        ResolveSlot(instruction.B_U16),
+                        BytecodeVmValue.Integer(1),
+                        out var rangeIterator))
                 {
                     return false;
                 }
 
-                pc = instruction.B_U16;
+                if (!DefineSlot(instruction.Dest_U16, BytecodeVmValue.Iterator(rangeIterator)))
+                {
+                    return false;
+                }
+
+                pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.ForCollection:
-                if (!TryExecuteLinearCollectionFor(instruction))
+            case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+                if (!TryCreateRangeIterator(
+                        ResolveSlot(instruction.A_U16),
+                        ResolveSlot(instruction.B_U16),
+                        ResolveSlot(instruction.C_U16),
+                        out var rangeIteratorWithStep))
                 {
                     return false;
                 }
 
-                pc = instruction.B_U16;
+                if (!DefineSlot(instruction.Dest_U16, BytecodeVmValue.Iterator(rangeIteratorWithStep)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+                if (!TryCreateRangeIterator(
+                        instruction.A_I16,
+                        instruction.B_I16,
+                        instruction.C_I16,
+                        out var rangeIteratorShort))
+                {
+                    return false;
+                }
+
+                if (!DefineSlot(instruction.Dest_U16, BytecodeVmValue.Iterator(rangeIteratorShort)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.CollectionIterator:
+                if (!TryCreateCollectionIterator(ResolveSlot(instruction.A_U16), out var collectionIterator) ||
+                    !DefineSlot(instruction.Dest_U16, BytecodeVmValue.Iterator(collectionIterator)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.IteratorNext:
+                return TryExecuteIteratorNext(instruction, ref pc);
+
+            case GameEventScriptBytecodeOpCode.IteratorClose:
+                CloseIterator(ResolveSlot(instruction.A_U16));
+                if (!DefineSlot(instruction.A_U16, BytecodeVmValue.Nothing))
+                {
+                    return false;
+                }
+
+                pc++;
                 return true;
 
             case GameEventScriptBytecodeOpCode.Call:
@@ -3890,120 +3949,88 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return tags.Count == 0 ? message : message.WithTags(tags);
     }
 
-    private bool TryExecuteLinearRangeFor(GameEventScriptBytecodeInstruction instruction)
+    private bool TryCreateRangeIterator(BytecodeVmValue fromValue, BytecodeVmValue toValue, BytecodeVmValue stepValue, out BytecodeVmIterator iterator)
     {
-        if (!TryGetLoopLayout(instruction.C_U16, out var loopLayout) ||
-            !TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout) ||
-            !ResolveSlot(sourceLayout.RangeFromSlot).TryGetRangeInteger(out var from) ||
-            !ResolveSlot(sourceLayout.RangeToSlot).TryGetRangeInteger(out var to))
+        if (!fromValue.TryGetRangeInteger(out var from) ||
+            !toValue.TryGetRangeInteger(out var to) ||
+            !stepValue.TryGetRangeInteger(out var step))
         {
+            iterator = BytecodeVmIterator.Empty;
             return false;
         }
 
-        var step = 1L;
-        if (sourceLayout.RangeStepSlot >= 0 &&
-            !ResolveSlot(sourceLayout.RangeStepSlot).TryGetRangeInteger(out step))
-        {
-            return false;
-        }
+        return TryCreateRangeIterator(from, to, step, out iterator);
+    }
 
+    private bool TryCreateRangeIterator(long from, long to, long step, out BytecodeVmIterator iterator)
+    {
         if (step == 0)
         {
+            iterator = BytecodeVmIterator.Empty;
             return true;
         }
 
         var length = GesRuntimeLimitUtilities.GetRangeLength(from, to, step);
         if (!_runtimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
         {
+            iterator = BytecodeVmIterator.Empty;
             return true;
         }
 
-        if (step > 0)
-        {
-            for (var item = from; item <= to; item += step)
-            {
-                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.A_U16, instruction.B_U16))
-                {
-                    return false;
-                }
-
-                if (_halted || long.MaxValue - item < step)
-                {
-                    break;
-                }
-            }
-        }
-        else
-        {
-            for (var item = from; item >= to; item += step)
-            {
-                if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.Integer(item), instruction.A_U16, instruction.B_U16))
-                {
-                    return false;
-                }
-
-                if (_halted || long.MinValue - item > step)
-                {
-                    break;
-                }
-            }
-        }
-
+        iterator = new BytecodeVmRangeIterator(from, to, step);
         return true;
     }
 
-    private bool TryExecuteLinearCollectionFor(GameEventScriptBytecodeInstruction instruction)
+    private bool TryCreateCollectionIterator(BytecodeVmValue source, out BytecodeVmIterator iterator)
     {
-        if (!TryGetLoopLayout(instruction.C_U16, out var loopLayout) ||
-            !TryGetIterationSourceLayout(loopLayout.IterationSourceLayoutIndex, out var sourceLayout))
+        var sourceValue = source.ToGameEventScriptValue();
+        if (GesRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
+            !_runtimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
+        {
+            iterator = BytecodeVmIterator.Empty;
+            return true;
+        }
+
+        iterator = new BytecodeVmCollectionIterator(sourceValue.AsEnumerable().GetEnumerator());
+        return true;
+    }
+
+    private bool TryExecuteIteratorNext(GameEventScriptBytecodeInstruction instruction, ref int pc)
+    {
+        var iteratorValue = ResolveSlot(instruction.A_U16);
+        if (iteratorValue.Kind != BytecodeVmValueKind.Iterator ||
+            iteratorValue.IteratorValue is not { } iterator)
         {
             return false;
         }
 
-        var sourceValue = ResolveSlot(sourceLayout.CollectionSlot).ToGameEventScriptValue();
-        if (GesRuntimeLimitUtilities.TryGetRangeLength(sourceValue, out var length) &&
-            !_runtimeBudget.TryCheckRangeLength(length, "Iteration source would enumerate more range items than allowed."))
+        if (!iterator.TryMoveNext(out var item))
         {
+            pc = instruction.B_U16;
             return true;
         }
 
-        foreach (var item in sourceValue.AsEnumerable())
-        {
-            if (!TryExecuteLinearLoopIteration(loopLayout.IdentifierSlot, BytecodeVmValue.FromGameEventScriptValue(item), instruction.A_U16, instruction.B_U16))
-            {
-                return false;
-            }
-
-            if (_halted)
-            {
-                break;
-            }
-        }
-
-        return true;
-    }
-
-    private bool TryExecuteLinearLoopIteration(int identifierSlot, BytecodeVmValue item, int bodyStart, int bodyEnd)
-    {
         if (!_runtimeBudget.TryConsumeLoopIteration("Loop iteration budget exhausted."))
         {
             _halted = true;
+            pc = instruction.B_U16;
             return true;
         }
 
-        EnterScope();
-        try
+        if (!DefineSlot(instruction.Dest_U16, item))
         {
-            if (!DefineSlot(identifierSlot, item))
-            {
-                return false;
-            }
-
-            return TryExecuteLinearRange(bodyStart, bodyEnd, null, out _, out _);
+            return false;
         }
-        finally
+
+        pc++;
+        return true;
+    }
+
+    private static void CloseIterator(BytecodeVmValue value)
+    {
+        if (value.Kind == BytecodeVmValueKind.Iterator)
         {
-            ExitScope();
+            value.IteratorValue?.Dispose();
         }
     }
 
@@ -4087,18 +4114,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if ((uint)index < (uint)_compiledScript.BytecodeModule.IterationSourceLayouts.Count)
         {
             layout = _compiledScript.BytecodeModule.IterationSourceLayouts[index];
-            return true;
-        }
-
-        layout = default!;
-        return false;
-    }
-
-    private bool TryGetLoopLayout(int index, out GameEventScriptBytecodeLoopLayout layout)
-    {
-        if ((uint)index < (uint)_compiledScript.BytecodeModule.LoopLayouts.Count)
-        {
-            layout = _compiledScript.BytecodeModule.LoopLayouts[index];
             return true;
         }
 
@@ -7342,7 +7357,8 @@ internal enum BytecodeVmValueKind
     Integer,
     Float,
     Percentage,
-    Reference
+    Reference,
+    Iterator
 }
 
 internal readonly record struct BytecodeVmValue(
@@ -7351,24 +7367,28 @@ internal readonly record struct BytecodeVmValue(
     long IntegerValue,
     bool BooleanValue,
     GameEventScriptNumericUnit? Unit,
-    GameEventScriptValue? ReferenceValue)
+    GameEventScriptValue? ReferenceValue,
+    BytecodeVmIterator? IteratorValue)
 {
-    public static BytecodeVmValue Nothing { get; } = new(BytecodeVmValueKind.Nothing, 0d, 0, false, null, null);
+    public static BytecodeVmValue Nothing { get; } = new(BytecodeVmValueKind.Nothing, 0d, 0, false, null, null, null);
 
     public static BytecodeVmValue Boolean(bool value)
-        => new(BytecodeVmValueKind.Boolean, value ? 1d : 0d, value ? 1 : 0, value, null, null);
+        => new(BytecodeVmValueKind.Boolean, value ? 1d : 0d, value ? 1 : 0, value, null, null, null);
 
     public static BytecodeVmValue Integer(long value, GameEventScriptNumericUnit? unit = null)
-        => new(BytecodeVmValueKind.Integer, value, value, value != 0, unit, null);
+        => new(BytecodeVmValueKind.Integer, value, value, value != 0, unit, null, null);
 
     public static BytecodeVmValue Float(double value, GameEventScriptNumericUnit? unit = null)
-        => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, unit, null);
+        => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, unit, null, null);
 
     public static BytecodeVmValue Percentage(double ratio)
-        => new(BytecodeVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100d), ratio != 0d, null, null);
+        => new(BytecodeVmValueKind.Percentage, ratio, ToLongSaturated(ratio * 100d), ratio != 0d, null, null, null);
 
     public static BytecodeVmValue Reference(GameEventScriptValue value)
-        => new(BytecodeVmValueKind.Reference, 0d, 0, value.AsBoolean(), null, value);
+        => new(BytecodeVmValueKind.Reference, 0d, 0, value.AsBoolean(), null, value, null);
+
+    public static BytecodeVmValue Iterator(BytecodeVmIterator iterator)
+        => new(BytecodeVmValueKind.Iterator, 0d, 0, false, null, null, iterator);
 
     public static BytecodeVmValue NaN()
         => Reference(GesFloatNaN());
@@ -7473,6 +7493,7 @@ internal readonly record struct BytecodeVmValue(
             BytecodeVmValueKind.Float => GameEventScriptValueFactory.GesFloat(Number, Unit),
             BytecodeVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(Number),
             BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptNothingValue.Instance,
+            BytecodeVmValueKind.Iterator => GameEventScriptNothingValue.Instance,
             _ => GameEventScriptNothingValue.Instance
         };
 
@@ -8744,5 +8765,92 @@ internal readonly record struct BytecodeVmValue(
 
         value = ToLongSaturated(input);
         return true;
+    }
+}
+
+internal abstract class BytecodeVmIterator : IDisposable
+{
+    public static BytecodeVmIterator Empty { get; } = new EmptyIterator();
+
+    public abstract bool TryMoveNext(out BytecodeVmValue value);
+
+    public virtual void Dispose()
+    {
+    }
+
+    private sealed class EmptyIterator : BytecodeVmIterator
+    {
+        public override bool TryMoveNext(out BytecodeVmValue value)
+        {
+            value = BytecodeVmValue.Nothing;
+            return false;
+        }
+    }
+}
+
+internal sealed class BytecodeVmRangeIterator(long from, long to, long step) : BytecodeVmIterator
+{
+    private long _current = from;
+    private bool _completed;
+
+    public override bool TryMoveNext(out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (_completed || (step > 0 ? _current > to : _current < to))
+        {
+            return false;
+        }
+
+        value = BytecodeVmValue.Integer(_current);
+        Advance();
+        return true;
+    }
+
+    private void Advance()
+    {
+        if (step > 0)
+        {
+            if (long.MaxValue - _current < step)
+            {
+                _completed = true;
+                return;
+            }
+        }
+        else if (long.MinValue - _current > step)
+        {
+            _completed = true;
+            return;
+        }
+
+        _current += step;
+    }
+}
+
+internal sealed class BytecodeVmCollectionIterator(IEnumerator<GameEventScriptValue> items) : BytecodeVmIterator
+{
+    private bool _disposed;
+
+    public override bool TryMoveNext(out BytecodeVmValue value)
+    {
+        if (_disposed || !items.MoveNext())
+        {
+            value = BytecodeVmValue.Nothing;
+            Dispose();
+            return false;
+        }
+
+        value = BytecodeVmValue.FromGameEventScriptValue(items.Current);
+        return true;
+    }
+
+    public override void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        items.Dispose();
+        _disposed = true;
     }
 }

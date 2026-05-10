@@ -248,8 +248,12 @@ every unit has DSL syntax today.
 | 0x9B | `EmitMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value with tags. |
 | 0x9C | `PublishMessageValue` | - | - | message slot | - | - | - | - | - | Publishes a dynamic message value without tags. |
 | 0x9D | `PublishMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value with tags. |
-| 0x9E | `ForRange` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and range iteration source. |
-| 0x9F | `ForCollection` | - | - | body target address | end target address | `LoopLayouts` index | - | - | - | Layout links identifier slot and collection source. |
+| 0x9E | `RangeIterator` | - | iterator slot | from slot | to slot | - | - | - | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0x9F | `RangeIteratorWithStep` | - | iterator slot | from slot | to slot | step slot | - | - | - | Creates a VM-internal range iterator with an explicit step. |
+| 0xA0 | `RangeIteratorShort` | - | iterator slot | from I16 | to I16 | step I16 | - | - | - | Creates a compact literal range iterator. |
+| 0xA1 | `CollectionIterator` | - | iterator slot | collection slot | - | - | - | - | - | Creates a VM-internal iterator over a collection/range/sequence value. |
+| 0xA2 | `IteratorNext` | - | item slot | iterator slot | no-more target address | - | - | - | - | Writes the next item and continues, or jumps to `B_U16` when exhausted. |
+| 0xA3 | `IteratorClose` | - | - | iterator slot | - | - | - | - | - | Disposes/closes a VM-internal iterator. |
 
 ## Side-Table Summary
 
@@ -258,7 +262,7 @@ every unit has DSL syntax today.
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
 | `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, operation name lists |
 | `OperationLayouts` | `Variadic`, `TypeConstructor`, `PredicateTest`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call` |
-| `LoopLayouts` | `ForRange`, `ForCollection` |
+| `IterationSourceLayouts` | Referenced by `GeneratedCollectionLayouts` |
 | `PipelinePool` | `Pipeline` |
 | `PipelineSelectorPool` | Referenced by `PipelinePool` |
 | `PipelinePatternPool` | Referenced by `PipelineSelectorPool` |

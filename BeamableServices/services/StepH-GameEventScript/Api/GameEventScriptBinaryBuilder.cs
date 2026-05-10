@@ -1,10 +1,10 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace StepH.GameEventScript.Api;
 
@@ -19,6 +19,7 @@ public class GameEventScriptBinaryBuilder
     private List<GameEventScriptBinaryBindEntry> _binds = [];
 
     private List<IReadOnlyList<ushort>> _uint16Table = [];
+    private List<GameEventScriptBytecodeInstruction> _bytecodeInstructions = [];
 
 
     public GameEventScriptBinaryBuilder WithVersion(ushort version)
@@ -30,7 +31,6 @@ public class GameEventScriptBinaryBuilder
     public GameEventScriptBinaryBuilder WithModuleName(string moduleName)
     {
         _moduleName = string.IsNullOrWhiteSpace(moduleName) ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName)) : moduleName;
-        ;
         return this;
     }
 
@@ -97,6 +97,18 @@ public class GameEventScriptBinaryBuilder
         _binds.Add(bind);
         return this;
     }
+    
+    public GameEventScriptBinaryBuilder AddBytecodeInstruction(GameEventScriptBytecodeInstruction instruction)
+    {
+        _bytecodeInstructions.Add(instruction);
+        return this;
+    }
+    
+    public GameEventScriptBinaryBuilder AddBytecodeInstructions(IReadOnlyList<GameEventScriptBytecodeInstruction> instructions)
+    {
+        _bytecodeInstructions.AddRange(instructions);
+        return this;
+    }
 
     public GameEventScriptBinary Build()
     {
@@ -106,7 +118,8 @@ public class GameEventScriptBinaryBuilder
             ModuleName = _moduleName,
             StringTable = BuildTextTable(_stringPool),
             UInt16SliceTable = BuildUInt16SliceTable(_uint16Table),
-            BindTable = new GameEventScriptBinaryBindTable(_binds)
+            BindTable = new GameEventScriptBinaryBindTable(_binds),
+            InstructionTable = _bytecodeInstructions.ToArray()
         };
     }
 
@@ -147,7 +160,8 @@ public static class GameEventScriptBinaryExtensions
             .WithVersion(1)
             .WithModuleName(compiled.ModuleName)
             .AddStringPoolElements(compiled.StringPool, out _)
-            .AddUint16TableEntries(compiled.UShortListPool, out _);
+            .AddUint16TableEntries(compiled.UShortListPool, out _)
+            .AddBytecodeInstructions(compiled.Code);
 
         foreach (var handler in compiled.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal).SelectMany(pair => pair.Value.OrderBy(handler => handler.DeclarationOrder)))
         {

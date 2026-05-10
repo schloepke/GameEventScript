@@ -25,6 +25,8 @@ class StepH.GameEventScript.Api.GameEventScriptBinaryBuilder
   ctor GameEventScriptBinaryBuilder()
   method StepH.GameEventScript.Api.GameEventScriptBinary Build()
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBind(StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry bind)
+  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction instruction)
+  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBytecodeInstructions(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> instructions)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElement(System.String stringPoolElement, System.UInt16& index)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElements(System.Collections.Generic.IReadOnlyList<System.String> values, System.UInt16[]& indexes)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddUint16TableEntries(System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> values, System.UInt16[]& indexes)
@@ -143,10 +145,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceLay
   property System.Int32 RangeFromSlot { get }
   property System.Int32 RangeStepSlot { get }
   property System.Int32 RangeToSlot { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeLoopLayout
-  ctor GameEventScriptBytecodeLoopLayout(System.Int32 identifierSlot, System.Int32 iterationSourceLayoutIndex)
-  property System.Int32 IdentifierSlot { get }
-  property System.Int32 IterationSourceLayoutIndex { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field LoadNothing = 0
   enum-field LoadTrue = 1
@@ -306,8 +304,12 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field EmitMessageValueWithTags = 155
   enum-field PublishMessageValue = 156
   enum-field PublishMessageValueWithTags = 157
-  enum-field ForRange = 158
-  enum-field ForCollection = 159
+  enum-field RangeIterator = 158
+  enum-field RangeIteratorWithStep = 159
+  enum-field RangeIteratorShort = 160
+  enum-field CollectionIterator = 161
+  enum-field IteratorNext = 162
+  enum-field IteratorClose = 163
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
   ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 nameListIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }
@@ -452,7 +454,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceLayout> IterationSourceLayouts { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeLoopLayout> LoopLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout> OperationLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipeline> PipelinePool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get }

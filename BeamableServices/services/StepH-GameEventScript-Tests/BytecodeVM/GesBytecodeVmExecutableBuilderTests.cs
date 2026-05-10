@@ -112,7 +112,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeStoresLoopMetadataAndLinearRandomScopes()
+    public void PublicLinearBytecodeStoresLoopIteratorsAndLinearRandomScopes()
     {
         const string script =
             """
@@ -128,17 +128,36 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
 
-        Assert.HasCount(1, compiled.LoopLayouts);
-        Assert.IsTrue(compiled.IterationSourceLayouts.Any(layout =>
-            layout.Kind == GameEventScriptBytecodeIterationSourceKind.Range &&
-            layout.RangeFromSlot >= 0 &&
-            layout.RangeToSlot >= 0));
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.ForRange &&
-            instruction.C_U16 >= 0 &&
-            instruction.C_U16 < compiled.LoopLayouts.Count));
+        Assert.HasCount(0, compiled.IterationSourceLayouts);
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIteratorShort));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPop));
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeUsesIteratorOpcodesForDynamicForSources()
+    {
+        const string script =
+            """
+            module LoopIterators
+
+            on Start(begin, finish, step) {
+              for item from begin to finish emit RangeItem(value: item)
+              for item from begin to finish step step emit StepItem(value: item)
+              let items be [1, 2, 3]
+              for item in items emit CollectionItem(value: item)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIterator));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIteratorWithStep));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CollectionIterator));
+        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext));
+        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose));
     }
 
     [TestMethod]
@@ -2008,14 +2027,17 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var loopInstruction = compiled.Code
+        var nextInstruction = compiled.Code
             .Select((instruction, index) => (instruction, index))
-            .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.ForRange);
+            .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext);
+        var closeInstruction = compiled.Code
+            .Select((instruction, index) => (instruction, index))
+            .Single(pair => pair.index > nextInstruction.index && pair.instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose);
         var originalConstant = 1L;
         var replacementConstant = 2L;
         var code = compiled.Code
-            .Select((instruction, index) => index >= loopInstruction.instruction.A_U16 &&
-                                           index < loopInstruction.instruction.B_U16 &&
+            .Select((instruction, index) => index > nextInstruction.index &&
+                                           index < closeInstruction.index &&
                                            IsIntegerLoad(instruction, originalConstant)
                 ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
@@ -2052,14 +2074,17 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var loopInstruction = compiled.Code
+        var nextInstruction = compiled.Code
             .Select((instruction, index) => (instruction, index))
-            .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.ForCollection);
+            .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext);
+        var closeInstruction = compiled.Code
+            .Select((instruction, index) => (instruction, index))
+            .Single(pair => pair.index > nextInstruction.index && pair.instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose);
         var originalConstant = 1L;
         var replacementConstant = 2L;
         var code = compiled.Code
-            .Select((instruction, index) => index >= loopInstruction.instruction.A_U16 &&
-                                           index < loopInstruction.instruction.B_U16 &&
+            .Select((instruction, index) => index > nextInstruction.index &&
+                                           index < closeInstruction.index &&
                                            IsIntegerLoad(instruction, originalConstant)
                 ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
@@ -4781,7 +4806,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.OperationLayouts.ToArray(),
             original.DiagnosticLayouts.ToArray(),
             original.IterationSourceLayouts.ToArray(),
-            original.LoopLayouts.ToArray(),
             original.PipelinePatternPool.ToArray(),
             original.PipelineObjectPatternPool.ToArray(),
             original.PipelineSelectorPool.ToArray(),

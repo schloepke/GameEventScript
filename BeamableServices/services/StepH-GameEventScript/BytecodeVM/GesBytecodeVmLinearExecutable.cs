@@ -398,11 +398,31 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlotListIndex(module, instruction.C_U16, $"{context} tag slot list");
                 break;
 
-            case GameEventScriptBytecodeOpCode.ForRange:
-            case GameEventScriptBytecodeOpCode.ForCollection:
-                ValidateIndex(module.LoopLayouts.Count, instruction.C_U16, $"{context} loop layout");
-                ValidateAddress(module, code, instruction.A_U16, $"{context} body target");
-                ValidateAddress(module, code, instruction.B_U16, $"{context} end target");
+            case GameEventScriptBytecodeOpCode.RangeIterator:
+                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                ValidateSlot(module, instruction.C_U16, $"{context} step slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+                break;
+
+            case GameEventScriptBytecodeOpCode.CollectionIterator:
+                ValidateSlot(module, instruction.A_U16, $"{context} collection slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorNext:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateAddress(module, code, instruction.B_U16, $"{context} no-more target");
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorClose:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPush:
@@ -521,7 +541,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         ValidateOperationLayouts(module);
         ValidateDiagnosticLayouts(module);
         ValidateIterationSourceLayouts(module);
-        ValidateLoopLayouts(module);
         ValidatePipelinePatternPool(module);
         ValidatePipelineObjectPatternPool(module);
         ValidatePipelineSelectorPool(module);
@@ -582,17 +601,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             ValidateOptionalSlot(module, layout.RangeFromSlot, $"{context} range from slot");
             ValidateOptionalSlot(module, layout.RangeToSlot, $"{context} range to slot");
             ValidateOptionalSlot(module, layout.RangeStepSlot, $"{context} range step slot");
-        }
-    }
-
-    private static void ValidateLoopLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.LoopLayouts.Count; index++)
-        {
-            var layout = module.LoopLayouts[index];
-            var context = $"loop layout #{index}";
-            ValidateOptionalSlot(module, layout.IdentifierSlot, $"{context} identifier slot");
-            ValidateIndex(module.IterationSourceLayouts.Count, layout.IterationSourceLayoutIndex, $"{context} iteration source layout");
         }
     }
 
@@ -913,8 +921,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-            GameEventScriptBytecodeOpCode.ForRange or
-            GameEventScriptBytecodeOpCode.ForCollection or
+            GameEventScriptBytecodeOpCode.IteratorClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
             GameEventScriptBytecodeOpCode.RandomPop);

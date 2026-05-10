@@ -57,6 +57,30 @@ specific opcode may be read or validated. Optional instruction forms are encoded
 with dedicated opcodes or concrete empty pool entries, not with sentinel
 operands.
 
+## JSON Shape
+
+`System.Text.Json` serializes a bytecode instruction through a stable transport
+view instead of exposing the overlapping runtime fields:
+
+```json
+{
+  "Opcode": "LoadInteger",
+  "Flags": "0x04",
+  "Dst": "0x0007",
+  "Parameter": "0x000000000000002A"
+}
+```
+
+- `Opcode` is the enum name. Numeric byte values and hex byte strings are also
+  accepted while reading.
+- `Flags` is the raw `UnitAndFlags` byte as hex.
+- `Dst` is the raw `Dest_U16` slot as hex.
+- `Parameter` is the raw unsigned 64-bit payload at bytes `4..11` as hex. For
+  16-bit operand opcodes, bits `0..15` are `A`, `16..31` are `B`, `32..47` are
+  `C`, and `48..63` are `D`. Signed operand views use the same bits as
+  two's-complement values. `LoadFloat` stores the IEEE-754 double bit pattern in
+  the same payload.
+
 ## Operand Views
 
 - **Unsigned 16-bit operand view:** most instructions use `Dest_U16`, `A_U16`,

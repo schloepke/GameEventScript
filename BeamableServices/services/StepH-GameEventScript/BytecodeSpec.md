@@ -367,6 +367,18 @@ by distinct opcodes such as `ReturnNothing` and
 still define its own optional `-1` fields where the table schema explicitly
 allows them.
 
+For JSON transport, instructions serialize as a normalized four-field object:
+
+```json
+{ "Opcode": "LoadInteger", "Flags": "0x04", "Dst": "0x0007", "Parameter": "0x000000000000002A" }
+```
+
+`Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot, and
+`Parameter` is the raw unsigned 64-bit payload covering bytes `4..11`. For
+slot/index/target instructions the payload packs `A`, `B`, `C`, and `D` into
+successive 16-bit lanes. For literal instructions the same payload carries
+`I64`, `U64`, or the IEEE-754 `F64` bit pattern.
+
 Large structured metadata belongs in side tables and pools, not nested
 instruction objects. Examples: operation layouts, `UShortListPool` message
 shapes/slot lists, pipeline pools, iteration-source layouts,

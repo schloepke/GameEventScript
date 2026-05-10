@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 
 namespace StepH.GameEventScript.Api;
 
@@ -190,6 +191,7 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
     Percentage = 4
 }
 
+[JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
 [StructLayout(LayoutKind.Explicit, Size = 12)]
 public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort a = 0, ushort b = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
 {

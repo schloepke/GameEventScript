@@ -47,6 +47,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinary
   enum-field None = 0
   enum-field Optimization = 1
   enum-field Debug = 2
+  enum-field CompactInstruction = 4
 sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   ctor GameEventScriptBuilder()
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Extensions;
 
@@ -27,7 +28,6 @@ public static class GameEventScriptBytecodeDumper
         AppendPool(builder, "strings", module.StringPool);
         AppendPool(builder, "signatures", module.Signatures);
         AppendExternalReferences(builder, module);
-        AppendConstants(builder, module);
         AppendNamedArgumentLayouts(builder, module);
         AppendSideTables(builder, module);
         AppendCode(builder, module);
@@ -44,16 +44,6 @@ public static class GameEventScriptBytecodeDumper
         {
             builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ")
                 .AppendLine(module.ExternalReferences[i].SignatureId);
-        }
-    }
-
-    private static void AppendConstants(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("constants[").Append(module.ConstantPool.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.ConstantPool.Count; i++)
-        {
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ")
-                .AppendLine(module.ConstantPool[i].ToString());
         }
     }
 
@@ -366,7 +356,41 @@ public static class GameEventScriptBytecodeDumper
                 AppendIndex(builder, "parameter", instruction.A);
                 break;
 
-            case GameEventScriptBytecodeOpCode.LoadConstant:
+            case GameEventScriptBytecodeOpCode.LoadNothing:
+                builder.Append(" value=nothing");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadTrue:
+                builder.Append(" value=true");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadFalse:
+                builder.Append(" value=false");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadInteger:
+                AppendInt64Constant(builder, instruction);
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadFloat:
+                AppendDoubleConstant(
+                    builder,
+                    instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage ? "ratio" : "value",
+                    instruction);
+                AppendNumericUnit(builder, instruction.UnitAndFlags);
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadText:
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.C);
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadTag:
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.C);
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadHandler:
+                AppendPoolIndex(builder, "message", module.StringPool, instruction.A);
+                AppendIndex(builder, "args", instruction.C);
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
@@ -387,8 +411,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "target2", instruction.B);
                 break;
 
-            case GameEventScriptBytecodeOpCode.LoadSlot:
-            case GameEventScriptBytecodeOpCode.CopySlot:
+            case GameEventScriptBytecodeOpCode.MoveSlot:
             case GameEventScriptBytecodeOpCode.MemberAccess:
             case GameEventScriptBytecodeOpCode.UnaryNegate:
             case GameEventScriptBytecodeOpCode.UnaryNot:
@@ -465,9 +488,6 @@ public static class GameEventScriptBytecodeDumper
 
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.LoadConstant:
-                AppendConstant(builder, module, instruction.C);
-                break;
             case GameEventScriptBytecodeOpCode.PublishValue or GameEventScriptBytecodeOpCode.PublishMessageValue:
                 AppendIndex(builder, "publishLayout", instruction.C);
                 break;
@@ -525,17 +545,34 @@ public static class GameEventScriptBytecodeDumper
     private static string FormatTags(IReadOnlyList<string> tags)
         => string.Join(", ", tags.Select(tag => $":{tag}"));
 
-    private static void AppendConstant(StringBuilder builder, GameEventScriptCompiled module, int index)
+    private static void AppendInt64Constant(StringBuilder builder, GameEventScriptBytecodeInstruction instruction)
     {
-        if (index < 0)
-        {
-            return;
-        }
+        builder.Append(" value=").Append(instruction.I64.ToString(CultureInfo.InvariantCulture));
+        AppendNumericUnit(builder, instruction.UnitAndFlags);
+    }
 
-        builder.Append(" constant=#").Append(index.ToString(CultureInfo.InvariantCulture));
-        if ((uint)index < (uint)module.ConstantPool.Count)
+    private static void AppendDoubleConstant(StringBuilder builder, string name, GameEventScriptBytecodeInstruction instruction)
+        => builder.Append(' ')
+            .Append(name)
+            .Append('=')
+            .Append(instruction.F64.ToString(CultureInfo.InvariantCulture));
+
+    private static void AppendNumericUnit(StringBuilder builder, byte value)
+    {
+        switch ((GameEventScriptBytecodeInstructionUnit)value)
         {
-            builder.Append('(').Append(module.ConstantPool[index]).Append(')');
+            case GameEventScriptBytecodeInstructionUnit.Degree:
+                builder.Append(" unit=").Append(GameEventScriptNumericUnit.Degree.ToTypeName());
+                break;
+            case GameEventScriptBytecodeInstructionUnit.Meter:
+                builder.Append(" unit=").Append(GameEventScriptNumericUnit.Meter.ToTypeName());
+                break;
+            case GameEventScriptBytecodeInstructionUnit.Second:
+                builder.Append(" unit=").Append(GameEventScriptNumericUnit.Second.ToTypeName());
+                break;
+            case GameEventScriptBytecodeInstructionUnit.Percentage:
+                builder.Append(" unit=percentage");
+                break;
         }
     }
 

@@ -23,8 +23,6 @@ internal static class GesBytecodeCompiler
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];
-        private readonly Dictionary<GameEventScriptBytecodeConstant, int> _constantIndex = new();
-        private readonly List<GameEventScriptBytecodeConstant> _constantPool = [];
         private readonly Dictionary<string, int> _signatureIndex = new(StringComparer.Ordinal);
         private readonly List<string> _signatures = [];
         private readonly Dictionary<string, int> _externalReferenceIndex = new(StringComparer.Ordinal);
@@ -53,7 +51,6 @@ internal static class GesBytecodeCompiler
             var linearBuilder = new GesLinearBytecodeBuilder(
                 AddString,
                 AddNamedArgumentLayout,
-                AddConstant,
                 AddExternalReference,
                 module.Callables,
                 module.TypeDefinitions,
@@ -66,7 +63,6 @@ internal static class GesBytecodeCompiler
                 options,
                 module.ModuleName,
                 _stringPool.ToArray(),
-                _constantPool.ToArray(),
                 _signatures.ToArray(),
                 _externalReferences.ToArray(),
                 _externalTypeConstructorReferences.ToArray(),
@@ -186,20 +182,6 @@ internal static class GesBytecodeCompiler
             index = _stringPool.Count;
             _stringPool.Add(value);
             _stringIndex[value] = index;
-            return index;
-        }
-
-        private int AddConstant(GameEventScriptValue value)
-        {
-            var constant = ToBytecodeConstant(value);
-            if (_constantIndex.TryGetValue(constant, out var index))
-            {
-                return index;
-            }
-
-            index = _constantPool.Count;
-            _constantPool.Add(constant);
-            _constantIndex[constant] = index;
             return index;
         }
 
@@ -431,20 +413,25 @@ internal static class GesBytecodeCompiler
                 case FloatLiteralExpressionNode:
                 case PercentageLiteralExpressionNode:
                 case UnitFloatLiteralExpressionNode:
-                case TextLiteralExpressionNode:
-                case TagLiteralExpressionNode:
                 case IdentifierExpressionNode:
                 case DiceExpressionNode:
                     return;
 
-                case HandlerLiteralExpressionNode handler:
-                    AddString(handler.Message);
-                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels));
-                    foreach (var label in handler.SignatureLabels)
-                    {
-                        AddString(label);
-                    }
+                case TextLiteralExpressionNode text:
+                    AddString(text.Value);
+                    return;
 
+                case TagLiteralExpressionNode tag:
+                    AddString(tag.Name);
+                    return;
+
+                case HandlerLiteralExpressionNode handler:
+                    AddString(GameEventScriptMessageSignature.NormalizeMessageName(handler.Message));
+                    AddSignature(GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels));
+                    if (handler.SignatureLabels.Count > 0)
+                    {
+                        AddNamedArgumentLayout(handler.SignatureLabels);
+                    }
                     return;
 
                 case MessageLiteralExpressionNode message:
@@ -830,29 +817,5 @@ internal static class GesBytecodeCompiler
             }
         }
 
-        private static GameEventScriptBytecodeConstant ToBytecodeConstant(GameEventScriptValue value)
-        {
-            if (value is null || value.IsNothing())
-            {
-                return GameEventScriptBytecodeConstant.Nothing();
-            }
-
-            return value switch
-            {
-                GameEventScriptBooleanValue boolean => GameEventScriptBytecodeConstant.FromBoolean(boolean.Value),
-                GameEventScriptIntegerValue integer => GameEventScriptBytecodeConstant.FromInteger(integer.Value, integer.Unit),
-                GameEventScriptFloatValue floatValue => GameEventScriptBytecodeConstant.FromFloat(
-                    floatValue.Value,
-                    floatValue.Unit,
-                    floatValue.IsNaNValue,
-                    floatValue.IsInfinityValue,
-                    floatValue.IsNegativeInfinityValue),
-                GameEventScriptPercentageValue percentage => GameEventScriptBytecodeConstant.FromPercentage(percentage.Ratio),
-                GameEventScriptTextValue text => GameEventScriptBytecodeConstant.FromText(text.Value),
-                GameEventScriptTagValue tag => GameEventScriptBytecodeConstant.FromTag(tag.Value),
-                GameEventScriptHandlerValue handler => GameEventScriptBytecodeConstant.FromHandler(handler.Signature.Name, handler.Signature.Parameters),
-                _ => throw new GameEventScriptCompileException($"GameEventScript bytecode constant pool does not support value kind '{value.Kind}'.")
-            };
-        }
     }
 }

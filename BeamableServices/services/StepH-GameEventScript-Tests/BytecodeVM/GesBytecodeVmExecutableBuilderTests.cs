@@ -5,6 +5,7 @@ using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
+using System.Runtime.InteropServices;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests.BytecodeVM;
@@ -38,8 +39,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         StringAssert.Contains(first, "code[");
         StringAssert.Contains(first, "@0000");
         StringAssert.Contains(first, "handlers[1]");
-        StringAssert.Contains(first, "LoadConstant");
-        StringAssert.Contains(first, "LoadSlot");
+        StringAssert.Contains(first, "LoadInteger");
+        StringAssert.Contains(first, "MoveSlot");
         StringAssert.Contains(first, "BuildMessage");
         StringAssert.Contains(first, "Publish");
         Assert.IsFalse(first.Contains("maxStackDepth", StringComparison.Ordinal));
@@ -222,18 +223,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -264,18 +258,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -317,14 +304,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var callableEntry = compiled.Callables["boosted"].EntryAddress;
         var callableEnd = Array.FindIndex(
             compiled.Code.ToArray(),
@@ -333,9 +314,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -370,14 +350,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var callableEntry = compiled.Callables["boosted"].EntryAddress;
         var callableEnd = Array.FindIndex(
             compiled.Code.ToArray(),
@@ -386,9 +360,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -425,10 +398,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var replacementConstant = 2L;
         var callableEntry = compiled.Callables["high"].EntryAddress;
         var callableEnd = Array.FindIndex(
             compiled.Code.ToArray(),
@@ -438,11 +408,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .Select((instruction, index) => (instruction, index))
             .First(pair => pair.index >= callableEntry &&
                            pair.index < callableEnd &&
-                           pair.instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant)
+                           pair.instruction.OpCode == GameEventScriptBytecodeOpCode.LoadInteger)
             .index;
         var code = compiled.Code
             .Select((instruction, index) => index == rewrittenConstantInstructionIndex
-                ? instruction with { C = replacementConstant }
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -477,18 +447,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -524,18 +487,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -580,18 +536,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 3L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -627,18 +576,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 3L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -690,18 +632,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.MemberAccess));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckInteger));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 3L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -747,18 +682,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.MemberAccess));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckInteger));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 3L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -807,18 +735,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeWithStep));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -857,18 +778,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeWithStep));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -917,18 +831,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Variadic));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -967,18 +874,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Variadic));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1040,18 +940,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildDictionary));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildMessage));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1107,18 +1000,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildDictionary));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildMessage));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1173,18 +1059,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BindHandler));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1227,18 +1106,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BindHandler));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1285,18 +1157,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExtension));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1333,18 +1198,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExtension));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1392,18 +1250,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1442,18 +1293,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1501,18 +1345,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1551,18 +1388,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1605,14 +1435,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var callableEntry = compiled.Callables["boosted"].EntryAddress;
         var callableEnd = Array.FindIndex(
             compiled.Code.ToArray(),
@@ -1621,9 +1445,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1663,14 +1486,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var callableEntry = compiled.Callables["addOne"].EntryAddress;
         var callableEnd = Array.FindIndex(
             compiled.Code.ToArray(),
@@ -1679,9 +1496,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= callableEntry &&
                                            index < callableEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1715,19 +1531,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var otherwiseRanges = GetGuardedChoiceOtherwiseRanges(compiled);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 2L;
+        var replacementConstant = 3L;
         var code = compiled.Code
             .Select((instruction, index) => otherwiseRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1763,19 +1572,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var otherwiseRanges = GetGuardedChoiceOtherwiseRanges(compiled);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 2L;
+        var replacementConstant = 3L;
         var code = compiled.Code
             .Select((instruction, index) => otherwiseRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1810,19 +1612,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var otherwiseRanges = GetGuardedChoiceOtherwiseRanges(compiled);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 3)
-            .index;
+        var originalConstant = 2L;
+        var replacementConstant = 3L;
         var code = compiled.Code
             .Select((instruction, index) => otherwiseRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1859,18 +1654,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GuardedChoice));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1907,18 +1695,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GuardedChoice));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -1954,19 +1735,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var projectionRanges = GetGeneratedCollectionProjectionRanges(compiled);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .First(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
             .Select((instruction, index) => projectionRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2002,19 +1776,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var projectionRanges = GetGeneratedCollectionProjectionRanges(compiled);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .First(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
             .Select((instruction, index) => projectionRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2049,19 +1816,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var projectionRanges = GetGeneratedCollectionProjectionRanges(compiled);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .First(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
             .Select((instruction, index) => projectionRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2098,18 +1858,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GeneratedCollection));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2146,18 +1899,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GeneratedCollection));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2195,20 +1941,13 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var loopInstruction = compiled.Code
             .Select((instruction, index) => (instruction, index))
             .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.ForRange);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
             .Select((instruction, index) => index >= loopInstruction.instruction.A &&
                                            index < loopInstruction.instruction.B &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2246,20 +1985,13 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var loopInstruction = compiled.Code
             .Select((instruction, index) => (instruction, index))
             .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.ForCollection);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
             .Select((instruction, index) => index >= loopInstruction.instruction.A &&
                                            index < loopInstruction.instruction.B &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2318,14 +2050,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var selector = compiled.SelectorLayouts[compiled.PipelineLayouts.Single().TerminalSelectorLayoutIndex];
         Assert.IsGreaterThanOrEqualTo(0, selector.ExpressionEntryAddress);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var selectorEnd = Array.FindIndex(
             compiled.Code.ToArray(),
             selector.ExpressionEntryAddress,
@@ -2333,9 +2059,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= selector.ExpressionEntryAddress &&
                                            index < selectorEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2371,14 +2096,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(GameEventScriptBytecodeSelectorKind.Select, selector.Kind);
         Assert.IsGreaterThanOrEqualTo(0, selector.ExpressionEntryAddress);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var selectorEnd = Array.FindIndex(
             compiled.Code.ToArray(),
             selector.ExpressionEntryAddress,
@@ -2386,9 +2105,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= selector.ExpressionEntryAddress &&
                                            index < selectorEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2423,18 +2141,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2470,18 +2181,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2518,18 +2222,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Sum));
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Average));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 7)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 9)
-            .index;
+        var originalConstant = 7L;
+        var replacementConstant = 9L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2564,18 +2261,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Sum));
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Average));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 7)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 9)
-            .index;
+        var originalConstant = 7L;
+        var replacementConstant = 9L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2613,18 +2303,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Predicate &&
                                                                selector.EdgeMode == "all"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2661,18 +2344,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Predicate &&
                                                                selector.EdgeMode == "all"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2736,18 +2412,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Edge &&
                                                                selector.EdgeMode == "single"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2784,18 +2453,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Edge &&
                                                                selector.EdgeMode == "single"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2831,18 +2493,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Min));
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Max));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2877,18 +2532,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Min));
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Max));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2928,18 +2576,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Contains &&
                                                                selector.EdgeMode == "any"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2978,18 +2619,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Contains &&
                                                                selector.EdgeMode == "any"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3035,29 +2669,15 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Contains &&
                                                                selector.EdgeMode == "any"));
 
-        var originalNeedle = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 99)
-            .index;
-        var replacementNeedle = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 13)
-            .index;
-        var originalAddend = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementAddend = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalNeedle = 99L;
+        var replacementNeedle = 13L;
+        var originalAddend = 5L;
+        var replacementAddend = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalNeedle
-                ? instruction with { C = replacementNeedle }
-                : instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                  instruction.C == originalAddend
-                    ? instruction with { C = replacementAddend }
+            .Select(instruction => IsIntegerLoad(instruction, originalNeedle)
+                ? WithIntegerLoad(instruction, replacementNeedle)
+                : IsIntegerLoad(instruction, originalAddend)
+                    ? WithIntegerLoad(instruction, replacementAddend)
                     : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3102,29 +2722,15 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Contains &&
                                                                selector.EdgeMode == "any"));
 
-        var originalNeedle = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 99)
-            .index;
-        var replacementNeedle = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 13)
-            .index;
-        var originalAddend = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementAddend = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalNeedle = 99L;
+        var replacementNeedle = 13L;
+        var originalAddend = 5L;
+        var replacementAddend = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalNeedle
-                ? instruction with { C = replacementNeedle }
-                : instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                  instruction.C == originalAddend
-                    ? instruction with { C = replacementAddend }
+            .Select(instruction => IsIntegerLoad(instruction, originalNeedle)
+                ? WithIntegerLoad(instruction, replacementNeedle)
+                : IsIntegerLoad(instruction, originalAddend)
+                    ? WithIntegerLoad(instruction, replacementAddend)
                     : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3189,18 +2795,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Dictionary &&
                                                                selector.SecondaryExpressionEntryAddress >= 0));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3238,18 +2837,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Dictionary &&
                                                                selector.SecondaryExpressionEntryAddress >= 0));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3291,18 +2883,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Distinct &&
                                                                selector.ExpressionEntryAddress >= 0));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3343,18 +2928,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Distinct &&
                                                                selector.ExpressionEntryAddress >= 0));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3391,18 +2969,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.GroupBy));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3438,18 +3009,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.GroupBy));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3487,18 +3051,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Reverse));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3536,18 +3093,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Reverse));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3590,18 +3140,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Sort &&
                                                                selector.EdgeMode == "descending"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3642,18 +3185,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Sort &&
                                                                selector.EdgeMode == "descending"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3698,18 +3234,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.EdgeMode == "descending" &&
                                                                selector.ExpressionEntryAddress >= 0));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3753,18 +3282,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.EdgeMode == "descending" &&
                                                                selector.ExpressionEntryAddress >= 0));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3811,18 +3333,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.EdgeMode == "drop" &&
                                                                selector.SecondaryMode == "lowest"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3868,18 +3383,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.EdgeMode == "drop" &&
                                                                selector.SecondaryMode == "lowest"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3917,18 +3425,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Shuffle));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -3966,18 +3467,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Shuffle));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4027,18 +3521,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.EdgeMode == "drop" &&
                                                                selector.SecondaryMode == "first"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 7)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 8)
-            .index;
+        var originalConstant = 7L;
+        var replacementConstant = 8L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4089,18 +3576,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.EdgeMode == "drop" &&
                                                                selector.SecondaryMode == "first"));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 7)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 8)
-            .index;
+        var originalConstant = 7L;
+        var replacementConstant = 8L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4165,7 +3645,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             [FindTextConstant(compiled, "green")] = FindTextConstant(compiled, "red")
         };
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
+            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
                                    replacements.TryGetValue(instruction.C, out var replacement)
                 ? instruction with { C = replacement }
                 : instruction)
@@ -4230,7 +3710,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             [FindTextConstant(compiled, "green")] = FindTextConstant(compiled, "red")
         };
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
+            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
                                    replacements.TryGetValue(instruction.C, out var replacement)
                 ? instruction with { C = replacement }
                 : instruction)
@@ -4285,18 +3765,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.Count == 2 &&
                                                                selector.Flag));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4347,18 +3820,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                                                                selector.Count == 2 &&
                                                                selector.Flag));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4401,18 +3867,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Draw &&
                                                                selector.Count == 3));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4454,18 +3913,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.SelectorLayouts.Any(selector => selector.Kind == GameEventScriptBytecodeSelectorKind.Draw &&
                                                                selector.Count == 3));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 5)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 5L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4503,14 +3955,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var expressionEntryAddress = seededRandomInstruction.C;
         Assert.IsGreaterThanOrEqualTo(0, expressionEntryAddress);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var bodyEnd = Array.FindIndex(
             compiled.Code.ToArray(),
             expressionEntryAddress,
@@ -4518,9 +3964,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= expressionEntryAddress &&
                                            index < bodyEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4561,14 +4006,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(seededRandomEntries.All(entry => entry >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var compiledCode = compiled.Code.ToArray();
         var bodyRanges = seededRandomEntries
             .Select(entryAddress => (
@@ -4581,9 +4020,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(bodyRanges.All(range => range.End > range.Start));
         var code = compiled.Code
             .Select((instruction, index) => bodyRanges.Any(range => index >= range.Start && index < range.End) &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4620,18 +4058,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4668,18 +4099,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandom));
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 4)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 6)
-            .index;
+        var originalConstant = 4L;
+        var replacementConstant = 6L;
         var code = compiled.Code
-            .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                   instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+            .Select(instruction => IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4717,14 +4141,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var expressionEntryAddress = seededRandomInstruction.C;
         Assert.IsGreaterThanOrEqualTo(0, expressionEntryAddress);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var bodyEnd = Array.FindIndex(
             compiled.Code.ToArray(),
             expressionEntryAddress,
@@ -4732,9 +4150,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= expressionEntryAddress &&
                                            index < bodyEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4771,20 +4188,13 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var blockInstruction = compiled.Code
             .Select((instruction, index) => (instruction, index))
             .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.SeededRandomBlock);
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var code = compiled.Code
             .Select((instruction, index) => index >= blockInstruction.instruction.A &&
                                            index < blockInstruction.instruction.B &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4825,14 +4235,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var field = compiled.TypeDefinitions["gauge"].Fields.Single(field => field.Name == "doubled");
         Assert.IsGreaterThanOrEqualTo(0, field.ComputedEntryAddress);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var computedEnd = Array.FindIndex(
             compiled.Code.ToArray(),
             field.ComputedEntryAddress,
@@ -4840,9 +4244,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= field.ComputedEntryAddress &&
                                            index < computedEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4881,14 +4284,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var field = compiled.TypeDefinitions["bounded"].Fields.Single(field => field.Name == "value");
         Assert.IsGreaterThanOrEqualTo(0, field.MinimumEntryAddress);
 
-        var originalConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 1)
-            .index;
-        var replacementConstant = compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Integer && pair.constant.Integer == 2)
-            .index;
+        var originalConstant = 1L;
+        var replacementConstant = 2L;
         var minimumEnd = Array.FindIndex(
             compiled.Code.ToArray(),
             field.MinimumEntryAddress,
@@ -4896,9 +4293,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var code = compiled.Code
             .Select((instruction, index) => index >= field.MinimumEntryAddress &&
                                            index < minimumEnd &&
-                                           instruction.OpCode == GameEventScriptBytecodeOpCode.LoadConstant &&
-                                           instruction.C == originalConstant
-                ? instruction with { C = replacementConstant }
+                                           IsIntegerLoad(instruction, originalConstant)
+                ? WithIntegerLoad(instruction, replacementConstant)
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -4962,10 +4358,14 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 .Select(field => field.FieldType)
                 .Any(ContainsBytecodeVmType),
             "GameEventScriptCompiled stores BytecodeVM state internally.");
+        Assert.IsNull(
+            compiledType.GetProperty("ConstantPool"),
+            "GameEventScriptCompiled should encode constants in linear load instructions instead of exposing a constant pool.");
+        Assert.AreEqual(typeof(byte), Enum.GetUnderlyingType(typeof(GameEventScriptBytecodeOpCode)));
+        Assert.AreEqual(12, Marshal.SizeOf<GameEventScriptBytecodeInstruction>());
         Assert.AreEqual(
-            typeof(IReadOnlyList<GameEventScriptBytecodeConstant>),
-            compiledType.GetProperty(nameof(GameEventScriptCompiled.ConstantPool))!.PropertyType,
-            "GameEventScriptCompiled constants should use portable bytecode constants, not runtime values.");
+            LayoutKind.Explicit,
+            typeof(GameEventScriptBytecodeInstruction).StructLayoutAttribute!.Value);
 
         var disallowedPortableTypes = CollectPublicBytecodeBoundaryTypes(compiledType)
             .Where(IsDisallowedPortableBytecodeType)
@@ -5324,7 +4724,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             },
             original.ModuleName,
             original.StringPool.ToArray(),
-            original.ConstantPool.Select(CloneConstant).ToArray(),
             original.Signatures.ToArray(),
             original.ExternalReferences
                 .Select(reference => new GameEventScriptExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels.ToArray()))
@@ -5352,29 +4751,22 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.GuardedChoiceLayouts.ToArray());
 
     private static int FindTextConstant(GameEventScriptCompiled compiled, string value)
-        => compiled.ConstantPool
-            .Select((constant, index) => (constant, index))
-            .Single(pair => pair.constant.Kind == GameEventScriptBytecodeConstantKind.Text &&
-                            string.Equals(pair.constant.Text, value, StringComparison.Ordinal))
+        => compiled.StringPool
+            .Select((text, index) => (text, index))
+            .Single(pair => string.Equals(pair.text, value, StringComparison.Ordinal))
             .index;
 
-    private static GameEventScriptBytecodeConstant CloneConstant(GameEventScriptBytecodeConstant constant)
-        => constant.Kind switch
+    private static bool IsIntegerLoad(GameEventScriptBytecodeInstruction instruction, long value)
+        => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadInteger &&
+           instruction.I64 == value;
+
+    private static GameEventScriptBytecodeInstruction WithIntegerLoad(
+        GameEventScriptBytecodeInstruction instruction,
+        long value)
+        => instruction with
         {
-            GameEventScriptBytecodeConstantKind.Nothing => GameEventScriptBytecodeConstant.Nothing(),
-            GameEventScriptBytecodeConstantKind.Boolean => GameEventScriptBytecodeConstant.FromBoolean(constant.Boolean),
-            GameEventScriptBytecodeConstantKind.Integer => GameEventScriptBytecodeConstant.FromInteger(constant.Integer),
-            GameEventScriptBytecodeConstantKind.Float => GameEventScriptBytecodeConstant.FromFloat(
-                constant.Number,
-                constant.Unit,
-                constant.IsNaN,
-                constant.IsInfinity,
-                constant.IsNegativeInfinity),
-            GameEventScriptBytecodeConstantKind.Percentage => GameEventScriptBytecodeConstant.FromPercentage(constant.Number),
-            GameEventScriptBytecodeConstantKind.Text => GameEventScriptBytecodeConstant.FromText(constant.Text ?? string.Empty),
-            GameEventScriptBytecodeConstantKind.Tag => GameEventScriptBytecodeConstant.FromTag(constant.Text ?? string.Empty),
-            GameEventScriptBytecodeConstantKind.Handler => GameEventScriptBytecodeConstant.FromHandler(constant.Text ?? string.Empty, constant.Labels.ToArray()),
-            _ => throw new ArgumentOutOfRangeException(nameof(constant), constant.Kind, "Unknown bytecode constant kind.")
+            OpCode = GameEventScriptBytecodeOpCode.LoadInteger,
+            I64 = value
         };
 
     [TestMethod]

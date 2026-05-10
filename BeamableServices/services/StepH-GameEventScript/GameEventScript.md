@@ -2105,7 +2105,6 @@ The artifact exposes neutral bytecode data:
 
 - `ModuleName`
 - `StringPool`
-- `ConstantPool`
 - `Signatures`
 - `ExternalReferences`
 - `NamedArgumentLayouts`
@@ -2118,10 +2117,12 @@ The artifact exposes neutral bytecode data:
   pipeline selectors, generated collections, guarded choices, and pattern
   metadata
 
-`ConstantPool` stores `GameEventScriptBytecodeConstant` entries instead of boxed
-runtime values. This preserves the exact constant kind in bytecode. For example,
-`:integer -12`, `:float -12`, and `:percentage -1200%` can be semantically
-numeric-compatible at runtime but must remain distinct constants in bytecode.
+Literal constants are encoded by typed linear load instructions instead of an
+object-shaped constant pool. `LoadInteger` uses the overlapped `I64` payload plus
+`UnitAndFlags`, `LoadFloat` uses the overlapped IEEE-754 `F64` payload plus
+`UnitAndFlags`, `LoadText`/`LoadTag` reference the `StringPool`, and
+booleans/nothing use dedicated opcodes. This preserves the exact constant kind
+in bytecode without storing runtime values.
 
 `GameEventScriptBytecodeDumper.DumpBytecode(...)` can be used to inspect this
 structure during development. The dump is deterministic and diagnostic; it is not

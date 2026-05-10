@@ -32,7 +32,6 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         LinearExecutable = linearExecutable ?? throw new ArgumentNullException(nameof(linearExecutable));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
-        Constants = BytecodeModule.ConstantPool.Select(BytecodeVmValue.FromBytecodeConstant).ToArray();
 
         CompiledHandlers = Handlers.Values.SelectMany(handlerGroup => handlerGroup).ToArray();
         _dispatchIndex = GesInvocationKernel.BuildDispatchIndex(
@@ -60,8 +59,6 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     internal GameEventScriptCompiled BytecodeModule { get; }
 
     internal GesBytecodeVmLinearExecutable LinearExecutable { get; }
-
-    internal IReadOnlyList<BytecodeVmValue> Constants { get; }
 
     internal IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get; }
 

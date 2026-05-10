@@ -223,7 +223,8 @@ internal sealed class GesBytecodeVmLinearExecutable
     }
 
     private static bool IsLinearProjectionOperandInstruction(GameEventScriptBytecodeInstruction instruction)
-        => instruction.OpCode is GameEventScriptBytecodeOpCode.LoadSlot or GameEventScriptBytecodeOpCode.LoadConstant;
+        => instruction.OpCode == GameEventScriptBytecodeOpCode.MoveSlot ||
+           IsInlineConstantInstruction(instruction.OpCode);
 
     private static bool IsProjectionBinaryOp(GameEventScriptBytecodeOpCode opCode)
         => opCode is
@@ -309,12 +310,33 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.ExitScope:
                 break;
 
-            case GameEventScriptBytecodeOpCode.LoadConstant:
-                ValidateIndex(module.ConstantPool.Count, instruction.C, $"{context} constant");
+            case GameEventScriptBytecodeOpCode.LoadNothing:
+            case GameEventScriptBytecodeOpCode.LoadTrue:
+            case GameEventScriptBytecodeOpCode.LoadFalse:
                 break;
 
-            case GameEventScriptBytecodeOpCode.LoadSlot:
-            case GameEventScriptBytecodeOpCode.CopySlot:
+            case GameEventScriptBytecodeOpCode.LoadInteger:
+                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: false, $"{context} numeric unit");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadFloat:
+                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: true, $"{context} numeric unit");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadText:
+                ValidateIndex(module.StringPool.Count, instruction.C, $"{context} text");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadTag:
+                ValidateIndex(module.StringPool.Count, instruction.C, $"{context} tag");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadHandler:
+                ValidateIndex(module.StringPool.Count, instruction.A, $"{context} handler message");
+                ValidateOptionalIndex(module.NamedArgumentLayouts.Count, instruction.C, $"{context} handler argument layout");
+                break;
+
+            case GameEventScriptBytecodeOpCode.MoveSlot:
                 ValidateSlot(module, instruction.A, $"{context} source slot");
                 break;
 
@@ -757,6 +779,30 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
     }
 
+    private static void ValidateNumericUnit(byte value, bool allowPercentage, string context)
+    {
+        var unit = (GameEventScriptBytecodeInstructionUnit)value;
+        if (unit is GameEventScriptBytecodeInstructionUnit.None or
+            GameEventScriptBytecodeInstructionUnit.Degree or
+            GameEventScriptBytecodeInstructionUnit.Meter or
+            GameEventScriptBytecodeInstructionUnit.Second)
+        {
+            return;
+        }
+
+        if (allowPercentage && unit == GameEventScriptBytecodeInstructionUnit.Percentage)
+        {
+            return;
+        }
+
+        if (!Enum.IsDefined(typeof(GameEventScriptBytecodeInstructionUnit), value))
+        {
+            throw InvalidBytecode($"{context} references unknown unit {value}.");
+        }
+
+        throw InvalidBytecode($"{context} cannot use unit '{unit}'.");
+    }
+
     private static InvalidOperationException InvalidBytecode(string message)
         => new($"Invalid GameEventScript linear bytecode: {message}");
 
@@ -802,6 +848,16 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastOptional or
             GameEventScriptBytecodeOpCode.CastCustom;
+
+    private static bool IsInlineConstantInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.LoadNothing or
+            GameEventScriptBytecodeOpCode.LoadTrue or
+            GameEventScriptBytecodeOpCode.LoadFalse or
+            GameEventScriptBytecodeOpCode.LoadInteger or
+            GameEventScriptBytecodeOpCode.LoadFloat or
+            GameEventScriptBytecodeOpCode.LoadText or
+            GameEventScriptBytecodeOpCode.LoadTag or
+            GameEventScriptBytecodeOpCode.LoadHandler;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.TypeCheckNothing or

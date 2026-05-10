@@ -3,165 +3,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Types;
+using System.Runtime.InteropServices;
 
 namespace StepH.GameEventScript.Api;
 
-public enum GameEventScriptBytecodeConstantKind
+public enum GameEventScriptBytecodeOpCode : byte
 {
-    Nothing,
-    Boolean,
-    Integer,
-    Float,
-    Percentage,
-    Text,
-    Tag,
-    Handler
-}
-
-public sealed class GameEventScriptBytecodeConstant : IEquatable<GameEventScriptBytecodeConstant>
-{
-    private GameEventScriptBytecodeConstant(
-        GameEventScriptBytecodeConstantKind kind,
-        string? text = null,
-        long integer = 0,
-        double number = 0d,
-        bool boolean = false,
-        GameEventScriptNumericUnit? unit = null,
-        bool isNaN = false,
-        bool isInfinity = false,
-        bool isNegativeInfinity = false,
-        IReadOnlyList<string>? labels = null)
-    {
-        Kind = kind;
-        Text = text;
-        Integer = integer;
-        Number = number;
-        Boolean = boolean;
-        Unit = unit;
-        IsNaN = isNaN;
-        IsInfinity = isInfinity;
-        IsNegativeInfinity = isNegativeInfinity;
-        Labels = labels?.Select(GameEventScriptMessageSignature.NormalizeParameterName).ToArray() ?? [];
-    }
-
-    public GameEventScriptBytecodeConstantKind Kind { get; }
-
-    public string? Text { get; }
-
-    public long Integer { get; }
-
-    public double Number { get; }
-
-    public bool Boolean { get; }
-
-    public GameEventScriptNumericUnit? Unit { get; }
-
-    public bool IsNaN { get; }
-
-    public bool IsInfinity { get; }
-
-    public bool IsNegativeInfinity { get; }
-
-    public IReadOnlyList<string> Labels { get; }
-
-    public static GameEventScriptBytecodeConstant Nothing()
-        => new(GameEventScriptBytecodeConstantKind.Nothing);
-
-    public static GameEventScriptBytecodeConstant FromBoolean(bool value)
-        => new(GameEventScriptBytecodeConstantKind.Boolean, boolean: value);
-
-    public static GameEventScriptBytecodeConstant FromInteger(long value, GameEventScriptNumericUnit? unit = null)
-        => new(GameEventScriptBytecodeConstantKind.Integer, integer: value, unit: unit);
-
-    public static GameEventScriptBytecodeConstant FromFloat(
-        double value,
-        GameEventScriptNumericUnit? unit = null,
-        bool isNaN = false,
-        bool isInfinity = false,
-        bool isNegativeInfinity = false)
-        => new(GameEventScriptBytecodeConstantKind.Float, number: value, unit: unit, isNaN: isNaN, isInfinity: isInfinity, isNegativeInfinity: isNegativeInfinity);
-
-    public static GameEventScriptBytecodeConstant FromPercentage(double ratio)
-        => new(GameEventScriptBytecodeConstantKind.Percentage, number: ratio);
-
-    public static GameEventScriptBytecodeConstant FromText(string value)
-        => new(GameEventScriptBytecodeConstantKind.Text, text: value ?? string.Empty);
-
-    public static GameEventScriptBytecodeConstant FromTag(string value)
-        => new(GameEventScriptBytecodeConstantKind.Tag, text: value ?? string.Empty);
-
-    public static GameEventScriptBytecodeConstant FromHandler(string messageName, IReadOnlyList<string> labels)
-        => new(GameEventScriptBytecodeConstantKind.Handler, text: GameEventScriptMessageSignature.NormalizeMessageName(messageName), labels: labels);
-
-    public bool Equals(GameEventScriptBytecodeConstant? other)
-    {
-        if (ReferenceEquals(null, other))
-        {
-            return false;
-        }
-
-        if (ReferenceEquals(this, other))
-        {
-            return true;
-        }
-
-        return Kind == other.Kind &&
-               string.Equals(Text, other.Text, StringComparison.Ordinal) &&
-               Integer == other.Integer &&
-               Number == other.Number &&
-               Boolean == other.Boolean &&
-               Unit == other.Unit &&
-               IsNaN == other.IsNaN &&
-               IsInfinity == other.IsInfinity &&
-               IsNegativeInfinity == other.IsNegativeInfinity &&
-               Labels.SequenceEqual(other.Labels, StringComparer.Ordinal);
-    }
-
-    public override bool Equals(object? obj)
-        => obj is GameEventScriptBytecodeConstant other && Equals(other);
-
-    public override int GetHashCode()
-    {
-        var hash = new HashCode();
-        hash.Add(Kind);
-        hash.Add(Text, StringComparer.Ordinal);
-        hash.Add(Integer);
-        hash.Add(Number);
-        hash.Add(Boolean);
-        hash.Add(Unit);
-        hash.Add(IsNaN);
-        hash.Add(IsInfinity);
-        hash.Add(IsNegativeInfinity);
-        foreach (var label in Labels)
-        {
-            hash.Add(label, StringComparer.Ordinal);
-        }
-
-        return hash.ToHashCode();
-    }
-
-    public override string ToString()
-        => Kind switch
-        {
-            GameEventScriptBytecodeConstantKind.Nothing => "nothing",
-            GameEventScriptBytecodeConstantKind.Boolean => Boolean ? "True" : "False",
-            GameEventScriptBytecodeConstantKind.Integer => Unit is { } unit ? $"{Integer.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}" : Integer.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            GameEventScriptBytecodeConstantKind.Float when IsNaN => "NaN",
-            GameEventScriptBytecodeConstantKind.Float when IsInfinity => IsNegativeInfinity ? "-Infinity" : "Infinity",
-            GameEventScriptBytecodeConstantKind.Float => Unit is { } unit ? $"{Number.ToString(System.Globalization.CultureInfo.InvariantCulture)}{unit.ToSuffix()}" : Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            GameEventScriptBytecodeConstantKind.Percentage => $"{(Number * 100d).ToString(System.Globalization.CultureInfo.InvariantCulture)}%",
-            GameEventScriptBytecodeConstantKind.Text => Text ?? string.Empty,
-            GameEventScriptBytecodeConstantKind.Tag => $":{Text}",
-            GameEventScriptBytecodeConstantKind.Handler => $"{Text}({string.Join(",", Labels)})",
-            _ => Kind.ToString()
-        };
-}
-
-public enum GameEventScriptBytecodeOpCode
-{
-    LoadConstant,
-    LoadSlot,
+    LoadNothing,
+    LoadTrue,
+    LoadFalse,
+    LoadInteger,
+    LoadFloat,
+    LoadText,
+    LoadTag,
+    LoadHandler,
+    MoveSlot,
     Or,
     Xor,
     And,
@@ -293,7 +149,6 @@ public enum GameEventScriptBytecodeOpCode
     ShortCircuitImplies,
     Nop,
     BindParameter,
-    CopySlot,
     Jump,
     JumpIfTrue,
     JumpIfFalse,
@@ -314,12 +169,130 @@ public enum GameEventScriptBytecodeCallableKind
     Function
 }
 
-public readonly record struct GameEventScriptBytecodeInstruction(
-    GameEventScriptBytecodeOpCode OpCode,
-    int Dest = -1,
-    int A = -1,
-    int B = -1,
-    int C = -1);
+public enum GameEventScriptBytecodeInstructionUnit : byte
+{
+    None = 0,
+    Degree = 1,
+    Meter = 2,
+    Second = 3,
+    Percentage = 4
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 12)]
+public struct GameEventScriptBytecodeInstruction
+{
+    public const ushort Unused16 = ushort.MaxValue;
+
+    [FieldOffset(0)]
+    public GameEventScriptBytecodeOpCode OpCode;
+
+    [FieldOffset(1)]
+    public byte UnitAndFlags;
+
+    [FieldOffset(2)]
+    public ushort Dest16;
+
+    [FieldOffset(4)]
+    public ushort A16;
+
+    [FieldOffset(6)]
+    public ushort B16;
+
+    [FieldOffset(8)]
+    public ushort C16;
+
+    [FieldOffset(10)]
+    public ushort D16;
+
+    [FieldOffset(4)]
+    public int AI32;
+
+    [FieldOffset(8)]
+    public int BI32;
+
+    [FieldOffset(4)]
+    public uint AU32;
+
+    [FieldOffset(8)]
+    public uint BU32;
+
+    [FieldOffset(4)]
+    public long I64;
+
+    [FieldOffset(4)]
+    public ulong U64;
+
+    [FieldOffset(4)]
+    public double F64;
+
+    public GameEventScriptBytecodeInstruction(
+        GameEventScriptBytecodeOpCode opCode,
+        int Dest = -1,
+        int A = -1,
+        int B = -1,
+        int C = -1,
+        int D = -1,
+        byte UnitAndFlags = 0)
+        : this()
+    {
+        OpCode = opCode;
+        this.UnitAndFlags = UnitAndFlags;
+        this.Dest = Dest;
+        this.A = A;
+        this.B = B;
+        this.C = C;
+        this.D = D;
+    }
+
+    public int Dest
+    {
+        readonly get => Decode16(Dest16);
+        set => Dest16 = Encode16(value);
+    }
+
+    public int A
+    {
+        readonly get => Decode16(A16);
+        set => A16 = Encode16(value);
+    }
+
+    public int B
+    {
+        readonly get => Decode16(B16);
+        set => B16 = Encode16(value);
+    }
+
+    public int C
+    {
+        readonly get => Decode16(C16);
+        set => C16 = Encode16(value);
+    }
+
+    public int D
+    {
+        readonly get => Decode16(D16);
+        set => D16 = Encode16(value);
+    }
+
+    private static int Decode16(ushort value)
+        => value == Unused16 ? -1 : value;
+
+    private static ushort Encode16(int value)
+    {
+        if (value < 0)
+        {
+            return Unused16;
+        }
+
+        if (value >= Unused16)
+        {
+            throw new ArgumentOutOfRangeException(nameof(value), value, "Instruction operands must fit into 16 bits; 0xffff is reserved as unused sentinel.");
+        }
+
+        return (ushort)value;
+    }
+}
+
 
 public sealed class GameEventScriptBytecodeOperationLayout
 {

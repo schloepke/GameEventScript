@@ -13,7 +13,6 @@ public sealed class GameEventScriptCompiled
         GameEventScriptCompileOptions options,
         string moduleName,
         IReadOnlyList<string> stringPool,
-        IReadOnlyList<GameEventScriptBytecodeConstant> constantPool,
         IReadOnlyList<string> signatures,
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<GameEventScriptExternalTypeConstructorReference> externalTypeConstructorReferences,
@@ -41,7 +40,6 @@ public sealed class GameEventScriptCompiled
             ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
             : moduleName;
         StringPool = CopyList(stringPool, nameof(stringPool));
-        ConstantPool = CopyList(constantPool, nameof(constantPool));
         Signatures = CopyList(signatures, nameof(signatures));
         ExternalReferences = CopyList(externalReferences, nameof(externalReferences));
         ExternalTypeConstructorReferences = CopyList(externalTypeConstructorReferences, nameof(externalTypeConstructorReferences));
@@ -70,8 +68,6 @@ public sealed class GameEventScriptCompiled
     public string ModuleName { get; }
 
     public IReadOnlyList<string> StringPool { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodeConstant> ConstantPool { get; }
 
     public IReadOnlyList<string> Signatures { get; }
 

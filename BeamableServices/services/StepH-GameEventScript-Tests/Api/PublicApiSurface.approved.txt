@@ -64,38 +64,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind
   enum-field Predicate = 0
   enum-field Function = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeConstant
-  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeConstant other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromBoolean(System.Boolean value)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromFloat(System.Double value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit, System.Boolean isNaN, System.Boolean isInfinity, System.Boolean isNegativeInfinity)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromHandler(System.String messageName, System.Collections.Generic.IReadOnlyList<System.String> labels)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromInteger(System.Int64 value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromPercentage(System.Double ratio)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromTag(System.String value)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant FromText(System.String value)
-  method static StepH.GameEventScript.Api.GameEventScriptBytecodeConstant Nothing()
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeConstantKind Kind { get }
-  property StepH.GameEventScript.Types.GameEventScriptNumericUnit? Unit { get }
-  property System.Boolean Boolean { get }
-  property System.Boolean IsInfinity { get }
-  property System.Boolean IsNaN { get }
-  property System.Boolean IsNegativeInfinity { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> Labels { get }
-  property System.Double Number { get }
-  property System.Int64 Integer { get }
-  property System.String Text { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeConstantKind
-  enum-field Nothing = 0
-  enum-field Boolean = 1
-  enum-field Integer = 2
-  enum-field Float = 3
-  enum-field Percentage = 4
-  enum-field Text = 5
-  enum-field Tag = 6
-  enum-field Handler = 7
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind
   enum-field LetEvaluated = 0
   enum-field ExpressionEvaluatedToNothing = 1
@@ -148,19 +116,33 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
   enum-field MessageEnvelope = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
-  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode, System.Int32 Dest, System.Int32 A, System.Int32 B, System.Int32 C)
-  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode& OpCode, System.Int32& Dest, System.Int32& A, System.Int32& B, System.Int32& C)
-  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction left, StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction right)
-  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction left, StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction right)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode { get set }
+  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.Int32 Dest, System.Int32 A, System.Int32 B, System.Int32 C, System.Int32 D, System.Byte UnitAndFlags)
+  field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
+  field System.Byte UnitAndFlags
+  field System.Double F64
+  field System.Int32 AI32
+  field System.Int32 BI32
+  field System.Int64 I64
+  field System.UInt16 A16
+  field System.UInt16 B16
+  field System.UInt16 C16
+  field System.UInt16 D16
+  field System.UInt16 Dest16
+  field System.UInt32 AU32
+  field System.UInt32 BU32
+  field System.UInt64 U64
+  field static System.UInt16 Unused16
   property System.Int32 A { get set }
   property System.Int32 B { get set }
   property System.Int32 C { get set }
+  property System.Int32 D { get set }
   property System.Int32 Dest { get set }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
+  enum-field None = 0
+  enum-field Degree = 1
+  enum-field Meter = 2
+  enum-field Second = 3
+  enum-field Percentage = 4
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeIterationSourceKind
   enum-field Collection = 0
   enum-field Range = 1
@@ -188,152 +170,158 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeObjectMatchValueKind
   enum-field Expression = 0
   enum-field Nested = 1
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
-  enum-field LoadConstant = 0
-  enum-field LoadSlot = 1
-  enum-field Or = 2
-  enum-field Xor = 3
-  enum-field And = 4
-  enum-field Equal = 5
-  enum-field NotEqual = 6
-  enum-field ApproxEqual = 7
-  enum-field Less = 8
-  enum-field Greater = 9
-  enum-field LessOrEqual = 10
-  enum-field GreaterOrEqual = 11
-  enum-field Add = 12
-  enum-field Subtract = 13
-  enum-field Multiply = 14
-  enum-field Divide = 15
-  enum-field IntegerDivide = 16
-  enum-field Modulo = 17
-  enum-field Remainder = 18
-  enum-field PrimitiveIntegerEqual = 19
-  enum-field PrimitiveIntegerNotEqual = 20
-  enum-field PrimitiveIntegerLess = 21
-  enum-field PrimitiveIntegerGreater = 22
-  enum-field PrimitiveIntegerLessOrEqual = 23
-  enum-field PrimitiveIntegerGreaterOrEqual = 24
-  enum-field PrimitiveIntegerAdd = 25
-  enum-field PrimitiveIntegerSubtract = 26
-  enum-field PrimitiveIntegerMultiply = 27
-  enum-field PrimitiveIntegerDivide = 28
-  enum-field PrimitiveIntegerFloorDivide = 29
-  enum-field PrimitiveIntegerModulo = 30
-  enum-field PrimitiveIntegerRemainder = 31
-  enum-field Default = 32
-  enum-field Contains = 33
-  enum-field ContainsValue = 34
-  enum-field StartsWith = 35
-  enum-field EndsWith = 36
-  enum-field Intersect = 37
-  enum-field Combine = 38
-  enum-field Except = 39
-  enum-field Zip = 40
-  enum-field UnaryNegate = 41
-  enum-field UnaryNot = 42
-  enum-field UnaryHasValue = 43
-  enum-field UnaryEmpty = 44
-  enum-field UnaryLength = 45
-  enum-field UnaryChance = 46
-  enum-field UnaryKeys = 47
-  enum-field UnaryValues = 48
-  enum-field UnaryEntries = 49
-  enum-field UnaryAbs = 50
-  enum-field UnaryNaturalLog = 51
-  enum-field Variadic = 52
-  enum-field Clamp = 53
-  enum-field Random = 54
-  enum-field Range = 55
-  enum-field RangeWithStep = 56
-  enum-field Dice = 57
-  enum-field SeededRandom = 58
-  enum-field CastNothing = 59
-  enum-field CastBoolean = 60
-  enum-field CastInteger = 61
-  enum-field CastFloat = 62
-  enum-field CastNumber = 63
-  enum-field CastPercentage = 64
-  enum-field CastDegree = 65
-  enum-field CastMeter = 66
-  enum-field CastSecond = 67
-  enum-field CastVector = 68
-  enum-field CastPoint = 69
-  enum-field CastUuid = 70
-  enum-field CastSequence = 71
-  enum-field CastSeries = 72
-  enum-field CastEnvelope = 73
-  enum-field CastRef = 74
-  enum-field CastTag = 75
-  enum-field CastText = 76
-  enum-field CastList = 77
-  enum-field CastRange = 78
-  enum-field CastMessage = 79
-  enum-field CastHandler = 80
-  enum-field CastDictionary = 81
-  enum-field CastSet = 82
-  enum-field CastDice = 83
-  enum-field CastOptional = 84
-  enum-field CastCustom = 85
-  enum-field TypeConstructor = 86
-  enum-field PredicateTest = 87
-  enum-field MemberAccess = 88
-  enum-field IndexedAccess = 89
-  enum-field BuildList = 90
-  enum-field BuildSequence = 91
-  enum-field BuildSet = 92
-  enum-field BuildDictionary = 93
-  enum-field BuildMessage = 94
-  enum-field BindHandler = 95
-  enum-field CallExtension = 96
-  enum-field Call = 97
-  enum-field TypeCheckNothing = 98
-  enum-field TypeCheckTag = 99
-  enum-field TypeCheckText = 100
-  enum-field TypeCheckPercentage = 101
-  enum-field TypeCheckDegree = 102
-  enum-field TypeCheckMeter = 103
-  enum-field TypeCheckSecond = 104
-  enum-field TypeCheckVector = 105
-  enum-field TypeCheckPoint = 106
-  enum-field TypeCheckFloat = 107
-  enum-field TypeCheckInteger = 108
-  enum-field TypeCheckBoolean = 109
-  enum-field TypeCheckUuid = 110
-  enum-field TypeCheckOptional = 111
-  enum-field TypeCheckSequence = 112
-  enum-field TypeCheckSeries = 113
-  enum-field TypeCheckEnvelope = 114
-  enum-field TypeCheckList = 115
-  enum-field TypeCheckRange = 116
-  enum-field TypeCheckMessage = 117
-  enum-field TypeCheckHandler = 118
-  enum-field TypeCheckRef = 119
-  enum-field TypeCheckDictionary = 120
-  enum-field TypeCheckSet = 121
-  enum-field TypeCheckDice = 122
-  enum-field TypeCheckCustom = 123
-  enum-field Pipeline = 124
-  enum-field GeneratedCollection = 125
-  enum-field GuardedChoice = 126
-  enum-field Power = 127
-  enum-field ShortCircuitOr = 128
-  enum-field ShortCircuitAnd = 129
-  enum-field ShortCircuitImplies = 130
-  enum-field Nop = 131
-  enum-field BindParameter = 132
-  enum-field CopySlot = 133
-  enum-field Jump = 134
-  enum-field JumpIfTrue = 135
-  enum-field JumpIfFalse = 136
-  enum-field JumpIfNotTrue = 137
-  enum-field EnterScope = 138
-  enum-field ExitScope = 139
-  enum-field Return = 140
-  enum-field PublishValue = 141
-  enum-field PublishMessageValue = 142
-  enum-field ForRange = 143
-  enum-field ForCollection = 144
-  enum-field SeededRandomBlock = 145
+  enum-field LoadNothing = 0
+  enum-field LoadTrue = 1
+  enum-field LoadFalse = 2
+  enum-field LoadInteger = 3
+  enum-field LoadFloat = 4
+  enum-field LoadText = 5
+  enum-field LoadTag = 6
+  enum-field LoadHandler = 7
+  enum-field MoveSlot = 8
+  enum-field Or = 9
+  enum-field Xor = 10
+  enum-field And = 11
+  enum-field Equal = 12
+  enum-field NotEqual = 13
+  enum-field ApproxEqual = 14
+  enum-field Less = 15
+  enum-field Greater = 16
+  enum-field LessOrEqual = 17
+  enum-field GreaterOrEqual = 18
+  enum-field Add = 19
+  enum-field Subtract = 20
+  enum-field Multiply = 21
+  enum-field Divide = 22
+  enum-field IntegerDivide = 23
+  enum-field Modulo = 24
+  enum-field Remainder = 25
+  enum-field PrimitiveIntegerEqual = 26
+  enum-field PrimitiveIntegerNotEqual = 27
+  enum-field PrimitiveIntegerLess = 28
+  enum-field PrimitiveIntegerGreater = 29
+  enum-field PrimitiveIntegerLessOrEqual = 30
+  enum-field PrimitiveIntegerGreaterOrEqual = 31
+  enum-field PrimitiveIntegerAdd = 32
+  enum-field PrimitiveIntegerSubtract = 33
+  enum-field PrimitiveIntegerMultiply = 34
+  enum-field PrimitiveIntegerDivide = 35
+  enum-field PrimitiveIntegerFloorDivide = 36
+  enum-field PrimitiveIntegerModulo = 37
+  enum-field PrimitiveIntegerRemainder = 38
+  enum-field Default = 39
+  enum-field Contains = 40
+  enum-field ContainsValue = 41
+  enum-field StartsWith = 42
+  enum-field EndsWith = 43
+  enum-field Intersect = 44
+  enum-field Combine = 45
+  enum-field Except = 46
+  enum-field Zip = 47
+  enum-field UnaryNegate = 48
+  enum-field UnaryNot = 49
+  enum-field UnaryHasValue = 50
+  enum-field UnaryEmpty = 51
+  enum-field UnaryLength = 52
+  enum-field UnaryChance = 53
+  enum-field UnaryKeys = 54
+  enum-field UnaryValues = 55
+  enum-field UnaryEntries = 56
+  enum-field UnaryAbs = 57
+  enum-field UnaryNaturalLog = 58
+  enum-field Variadic = 59
+  enum-field Clamp = 60
+  enum-field Random = 61
+  enum-field Range = 62
+  enum-field RangeWithStep = 63
+  enum-field Dice = 64
+  enum-field SeededRandom = 65
+  enum-field CastNothing = 66
+  enum-field CastBoolean = 67
+  enum-field CastInteger = 68
+  enum-field CastFloat = 69
+  enum-field CastNumber = 70
+  enum-field CastPercentage = 71
+  enum-field CastDegree = 72
+  enum-field CastMeter = 73
+  enum-field CastSecond = 74
+  enum-field CastVector = 75
+  enum-field CastPoint = 76
+  enum-field CastUuid = 77
+  enum-field CastSequence = 78
+  enum-field CastSeries = 79
+  enum-field CastEnvelope = 80
+  enum-field CastRef = 81
+  enum-field CastTag = 82
+  enum-field CastText = 83
+  enum-field CastList = 84
+  enum-field CastRange = 85
+  enum-field CastMessage = 86
+  enum-field CastHandler = 87
+  enum-field CastDictionary = 88
+  enum-field CastSet = 89
+  enum-field CastDice = 90
+  enum-field CastOptional = 91
+  enum-field CastCustom = 92
+  enum-field TypeConstructor = 93
+  enum-field PredicateTest = 94
+  enum-field MemberAccess = 95
+  enum-field IndexedAccess = 96
+  enum-field BuildList = 97
+  enum-field BuildSequence = 98
+  enum-field BuildSet = 99
+  enum-field BuildDictionary = 100
+  enum-field BuildMessage = 101
+  enum-field BindHandler = 102
+  enum-field CallExtension = 103
+  enum-field Call = 104
+  enum-field TypeCheckNothing = 105
+  enum-field TypeCheckTag = 106
+  enum-field TypeCheckText = 107
+  enum-field TypeCheckPercentage = 108
+  enum-field TypeCheckDegree = 109
+  enum-field TypeCheckMeter = 110
+  enum-field TypeCheckSecond = 111
+  enum-field TypeCheckVector = 112
+  enum-field TypeCheckPoint = 113
+  enum-field TypeCheckFloat = 114
+  enum-field TypeCheckInteger = 115
+  enum-field TypeCheckBoolean = 116
+  enum-field TypeCheckUuid = 117
+  enum-field TypeCheckOptional = 118
+  enum-field TypeCheckSequence = 119
+  enum-field TypeCheckSeries = 120
+  enum-field TypeCheckEnvelope = 121
+  enum-field TypeCheckList = 122
+  enum-field TypeCheckRange = 123
+  enum-field TypeCheckMessage = 124
+  enum-field TypeCheckHandler = 125
+  enum-field TypeCheckRef = 126
+  enum-field TypeCheckDictionary = 127
+  enum-field TypeCheckSet = 128
+  enum-field TypeCheckDice = 129
+  enum-field TypeCheckCustom = 130
+  enum-field Pipeline = 131
+  enum-field GeneratedCollection = 132
+  enum-field GuardedChoice = 133
+  enum-field Power = 134
+  enum-field ShortCircuitOr = 135
+  enum-field ShortCircuitAnd = 136
+  enum-field ShortCircuitImplies = 137
+  enum-field Nop = 138
+  enum-field BindParameter = 139
+  enum-field Jump = 140
+  enum-field JumpIfTrue = 141
+  enum-field JumpIfFalse = 142
+  enum-field JumpIfNotTrue = 143
+  enum-field EnterScope = 144
+  enum-field ExitScope = 145
+  enum-field Return = 146
+  enum-field PublishValue = 147
+  enum-field PublishMessageValue = 148
+  enum-field ForRange = 149
+  enum-field ForCollection = 150
+  enum-field SeededRandomBlock = 151
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
   ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 namedArgumentLayoutIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }
@@ -464,7 +452,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeCallable> Callables { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeConstant> ConstantPool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDicePatternLayout> DicePatternLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeGeneratedCollectionLayout> GeneratedCollectionLayouts { get }

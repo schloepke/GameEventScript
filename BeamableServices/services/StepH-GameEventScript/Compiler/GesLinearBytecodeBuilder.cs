@@ -11,7 +11,6 @@ internal sealed class GesLinearBytecodeBuilder
 {
     private readonly Func<string, int> _resolveStringIndex;
     private readonly Func<IReadOnlyList<string>, int> _resolveNamedArgumentLayoutIndex;
-    private readonly Func<GameEventScriptValue, int> _resolveConstantIndex;
     private readonly Func<GameEventScriptExtensionReference, int> _resolveExternalReferenceIndex;
     private readonly IReadOnlyDictionary<string, GesCallableDefinition> _sourceCallables;
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _sourceTypeDefinitions;
@@ -36,7 +35,6 @@ internal sealed class GesLinearBytecodeBuilder
     public GesLinearBytecodeBuilder(
         Func<string, int>? resolveStringIndex = null,
         Func<IReadOnlyList<string>, int>? resolveNamedArgumentLayoutIndex = null,
-        Func<GameEventScriptValue, int>? resolveConstantIndex = null,
         Func<GameEventScriptExtensionReference, int>? resolveExternalReferenceIndex = null,
         IReadOnlyDictionary<string, GesCallableDefinition>? sourceCallables = null,
         IReadOnlyDictionary<string, TypeDefinitionNode>? sourceTypeDefinitions = null,
@@ -44,7 +42,6 @@ internal sealed class GesLinearBytecodeBuilder
     {
         _resolveStringIndex = resolveStringIndex ?? (_ => -1);
         _resolveNamedArgumentLayoutIndex = resolveNamedArgumentLayoutIndex ?? (_ => -1);
-        _resolveConstantIndex = resolveConstantIndex ?? (_ => -1);
         _resolveExternalReferenceIndex = resolveExternalReferenceIndex ?? (_ => -1);
         _sourceCallables = sourceCallables ?? new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
         _sourceTypeDefinitions = sourceTypeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
@@ -276,7 +273,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var result = EmitSourceExpression(let.Expression, context, new ExpressionState(context.SlotCount));
                 var letSlot = context.RequireSlot(let.Identifier);
-                var diagnosticAddress = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: letSlot, A: result));
+                var diagnosticAddress = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.MoveSlot, Dest: letSlot, A: result));
                 if (!string.IsNullOrEmpty(let.DeclaredType))
                 {
                     diagnosticAddress = EmitCastSlot(letSlot, letSlot, let.DeclaredType);
@@ -465,7 +462,7 @@ internal sealed class GesLinearBytecodeBuilder
                     GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels)));
 
             case IdentifierExpressionNode identifier:
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadSlot, a: context.RequireSlot(identifier.Name));
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MoveSlot, a: context.RequireSlot(identifier.Name));
 
             case MessageLiteralExpressionNode message:
                 return EmitSourceMessage(message, context, state);
@@ -577,7 +574,57 @@ internal sealed class GesLinearBytecodeBuilder
     }
 
     private int EmitSourceConstant(ExpressionState state, GameEventScriptValue value)
-        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadConstant, c: _resolveConstantIndex(value));
+    {
+        if (value is null || value.IsNothing())
+        {
+            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadNothing);
+        }
+
+        switch (value)
+        {
+            case GameEventScriptBooleanValue boolean:
+                return EmitValueInstruction(state, boolean.Value
+                    ? GameEventScriptBytecodeOpCode.LoadTrue
+                    : GameEventScriptBytecodeOpCode.LoadFalse);
+
+            case GameEventScriptIntegerValue integer:
+                return EmitLoadInteger(
+                    state,
+                    integer.Value,
+                    EncodeNumericUnitAndFlags(integer.Unit));
+
+            case GameEventScriptFloatValue floatValue:
+                return EmitLoadFloat(
+                    state,
+                    EncodeFloatPayload(floatValue),
+                    EncodeNumericUnitAndFlags(floatValue.Unit));
+
+            case GameEventScriptPercentageValue percentage:
+                return EmitLoadFloat(
+                    state,
+                    percentage.Ratio,
+                    (byte)GameEventScriptBytecodeInstructionUnit.Percentage);
+
+            case GameEventScriptTextValue text:
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadText, c: ResolveStringIndex(text.Value));
+
+            case GameEventScriptTagValue tag:
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadTag, c: ResolveStringIndex(tag.Value));
+
+            case GameEventScriptHandlerValue handler:
+            {
+                var labels = handler.Signature.Parameters;
+                return EmitValueInstruction(
+                    state,
+                    GameEventScriptBytecodeOpCode.LoadHandler,
+                    a: ResolveStringIndex(handler.Signature.Name),
+                    c: labels.Count == 0 ? -1 : _resolveNamedArgumentLayoutIndex(labels));
+            }
+
+            default:
+                throw new GameEventScriptCompileException($"GameEventScript bytecode inline constants do not support value kind '{value.Kind}'.");
+        }
+    }
 
     private int EmitSourceMessage(MessageLiteralExpressionNode message, SourceContext context, ExpressionState state)
     {
@@ -751,7 +798,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
         else
         {
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.CopySlot, Dest: resultSlot, A: left));
+            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.MoveSlot, Dest: resultSlot, A: left));
         }
 
         var branch = opCode switch
@@ -824,7 +871,7 @@ internal sealed class GesLinearBytecodeBuilder
             var handlerSlot = context.RequireSlot(call.Name);
             var argumentNames = new string[call.ArgumentList.Count];
             var operandSlots = new int[call.ArgumentList.Count + 1];
-            operandSlots[0] = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadSlot, a: handlerSlot);
+            operandSlots[0] = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MoveSlot, a: handlerSlot);
             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
             {
                 var argument = call.ArgumentList.Arguments[argumentIndex];
@@ -1469,9 +1516,68 @@ internal sealed class GesLinearBytecodeBuilder
         => _code[address] = _code[address] with { C = value };
 
     private int ResolveStringIndex(string? value)
-        => string.IsNullOrEmpty(value)
+        => value is null
             ? -1
             : _resolveStringIndex(value);
+
+    private int EmitLoadInteger(
+        ExpressionState state,
+        long value,
+        byte unitAndFlags)
+    {
+        var dest = AllocateSlot(state);
+        Emit(new GameEventScriptBytecodeInstruction(
+            GameEventScriptBytecodeOpCode.LoadInteger,
+            Dest: dest,
+            UnitAndFlags: unitAndFlags)
+        {
+            I64 = value
+        });
+        return dest;
+    }
+
+    private int EmitLoadFloat(
+        ExpressionState state,
+        double value,
+        byte unitAndFlags)
+    {
+        var dest = AllocateSlot(state);
+        Emit(new GameEventScriptBytecodeInstruction(
+            GameEventScriptBytecodeOpCode.LoadFloat,
+            Dest: dest,
+            UnitAndFlags: unitAndFlags)
+        {
+            F64 = value
+        });
+        return dest;
+    }
+
+    private static double EncodeFloatPayload(GameEventScriptFloatValue value)
+    {
+        if (value.IsNaNValue)
+        {
+            return double.NaN;
+        }
+
+        if (value.IsInfinityValue)
+        {
+            return value.IsNegativeInfinityValue
+                ? double.NegativeInfinity
+                : double.PositiveInfinity;
+        }
+
+        return value.Value;
+    }
+
+    private static byte EncodeNumericUnitAndFlags(GameEventScriptNumericUnit? unit)
+        => unit switch
+        {
+            null => (byte)GameEventScriptBytecodeInstructionUnit.None,
+            GameEventScriptNumericUnit.Degree => (byte)GameEventScriptBytecodeInstructionUnit.Degree,
+            GameEventScriptNumericUnit.Meter => (byte)GameEventScriptBytecodeInstructionUnit.Meter,
+            GameEventScriptNumericUnit.Second => (byte)GameEventScriptBytecodeInstructionUnit.Second,
+            _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
+        };
 
     private GameEventScriptBytecodeOpCode ResolveCastOpCode(string? typeName, out int nameIndex)
     {

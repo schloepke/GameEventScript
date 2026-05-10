@@ -122,7 +122,6 @@ GameEventScriptCompiled
   ModuleName
   FormatVersion
   StringPool
-  ConstantPool
   SignaturePool
   NamedArgumentLayouts
   ExternalReferences
@@ -148,16 +147,17 @@ GameEventScriptCompiled
   MaxCallStackDepth
 ```
 
-Existing pools remain important. They keep instructions small and preserve
-portable data identity. Runtime values are decoded from bytecode constants only
-when executing.
+Existing string/signature/layout pools remain important. Constants that fit the
+linear instruction shape are encoded directly in typed load instructions:
+booleans and `nothing` have dedicated opcodes; integer and float payloads use
+raw 64-bit bits split over `A`/`B`; text, tags, and handler message names point
+into `StringPool`.
 
 Current C# public surface:
 
 ```text
 GameEventScriptCompiled
   StringPool
-  ConstantPool
   Signatures
   ExternalReferences
   ExternalTypeConstructorReferences
@@ -195,29 +195,25 @@ operand-stack-depth concept.
 
 ## Portable Constants
 
-The constant pool stores portable bytecode constants, not runtime
-`GameEventScriptValue` instances.
+The linear bytecode has no object-shaped constant pool. Constants that fit the
+instruction word are encoded by typed load opcodes:
 
-Required constant kinds:
-
-- `Nothing`
-- `Boolean`
-- `Integer`: signed 64-bit integer plus optional numeric unit
-- `Float`: IEEE 754 double plus optional numeric unit, preserving `NaN`,
-  `Infinity`, and `-Infinity`
-- `Percentage`: double ratio
-- `Text`
-- `Tag`
-- `Uuid`: two signed 64-bit words representing the canonical RFC 128-bit value
-- `Handler`: message name plus signature labels
-
-`Ref` values may be represented either as a typed constructor plan or as a
-portable constant containing target type plus id value. If encoded as constants,
-the id must be a portable scalar value such as `Text` or `Uuid`.
+- `LoadNothing`, `LoadTrue`, and `LoadFalse` have no payload.
+- `LoadInteger` stores a signed 64-bit integer in the overlapped `I64` payload,
+  plus optional numeric unit in `UnitAndFlags`.
+- `LoadFloat` stores IEEE 754 double bits in the overlapped `F64` payload, plus
+  optional numeric unit in `UnitAndFlags`. `NaN`, `Infinity`, and `-Infinity`
+  are represented by their IEEE bit patterns. `UnitAndFlags=Percentage` makes
+  the same opcode load a percentage ratio.
+- `LoadText` and `LoadTag` store a `StringPool` index in `C`.
+- `LoadHandler` stores the message-name `StringPool` index in `A` and an
+  optional `NamedArgumentLayouts` index in `C`.
 
 Constants are concrete. For example `:integer 1`, `:float 1`, `1m`, and `1s`
-must remain distinct constants even if runtime operations can compare or coerce
-some of them.
+must remain distinct loads even if runtime operations can compare or coerce
+some of them. Larger constants such as `Uuid` or future vector/point literals
+should use a normalized data segment instead of reintroducing an object
+constant pool.
 
 ## Parameter Type Hints
 
@@ -278,7 +274,7 @@ For untyped parameters the compiler emits only `BindParameter`.
 An instruction address is the zero-based index into `Code`.
 
 ```text
-@0000 LoadConstant dst=s3 constant=#3
+@0000 LoadInteger dst=s3 value=3
 @0001 Add dst=s4 left=s1 right=s2
 @0002 JumpIfNotTrue cond=s4 target=@0010
 ```
@@ -450,8 +446,14 @@ for `pc`-based execution.
 
 ### Slots and Coercion
 
-- `LoadConstant dst constantIndex`
 - `LoadNothing dst`
+- `LoadTrue dst`
+- `LoadFalse dst`
+- `LoadInteger dst i64 unitAndFlags`
+- `LoadFloat dst f64 unitAndFlags`
+- `LoadText dst stringIndex`
+- `LoadTag dst stringIndex`
+- `LoadHandler dst messageNameIndex namedArgumentLayoutIndex`
 - `Move dst src`
 - `BindParameter dst parameterIndex`
 - `CastBoolean`/`CastInteger`/`CastFloat`/etc. `dst src`
@@ -510,7 +512,7 @@ behavior matters:
 @0101 ... evaluate b into sB ...
 @0102 And dst=sDst left=sA right=sB
 @0103 Jump @0106
-@0105 LoadConstant dst=sDst constant=false
+@0105 LoadFalse dst=sDst
 @0106 ...
 ```
 
@@ -542,12 +544,12 @@ Example:
 
 ```text
 @0100 Move dst=s10 src=s0
-@0101 LoadConstant dst=s11 constant=#0
+@0101 LoadInteger dst=s11 value=0
 @0102 Greater dst=s12 left=s10 right=s11
 @0103 JumpIfNotTrue cond=s12 target=@0108
-@0104 LoadConstant dst=s1 constant=#1
+@0104 LoadInteger dst=s1 value=1
 @0105 Jump @0110
-@0108 LoadConstant dst=s1 constant=#2
+@0108 LoadInteger dst=s1 value=2
 @0110 ...
 ```
 
@@ -727,7 +729,7 @@ Arguments and tags are evaluated by preceding code into slots:
 ```text
 @0400 Move dst=s20 src=sDamage
 @0401 Move dst=s21 src=sTarget
-@0402 LoadConstant dst=s22 constant=:radio
+@0402 LoadTag dst=s22 tag=:radio
 @0403 Publish kind=Publish layout=#0
 ```
 
@@ -947,7 +949,7 @@ code[26]
 @0000 EnterScope data=#0
 @0001 BindParameter dst=s0 arg=values
 @0002 Pipeline dst=s2 source=s0 data=#0
-@0003 LoadConstant dst=s3 constant=#0
+@0003 LoadInteger dst=s3 value=0
 @0004 Greater dst=s4 left=s2 right=s3
 @0005 JumpIfNotTrue cond=s4 target=@0010 ; L_if_0_else
 @0006 ...

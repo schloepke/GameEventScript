@@ -500,8 +500,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.LoadConstant:
-                if (!DefineSlot(instruction.Dest, LoadConstant(instruction.C)))
+            case var opCode when IsInlineConstantInstruction(opCode):
+                if (!TryLoadInlineConstant(instruction, out var constant) ||
+                    !DefineSlot(instruction.Dest, constant))
                 {
                     return false;
                 }
@@ -509,8 +510,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.LoadSlot:
-            case GameEventScriptBytecodeOpCode.CopySlot:
+            case GameEventScriptBytecodeOpCode.MoveSlot:
                 if (!DefineSlot(instruction.Dest, ResolveSlot(instruction.A)))
                 {
                     return false;
@@ -2964,15 +2964,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.LoadSlot:
+            case GameEventScriptBytecodeOpCode.MoveSlot:
                 value = instruction.A == identifierSlot
                     ? item
                     : ResolveSlot(instruction.A);
                 return true;
 
-            case GameEventScriptBytecodeOpCode.LoadConstant:
-                value = LoadConstant(instruction.C);
-                return true;
+            case var opCode when IsInlineConstantInstruction(opCode):
+                return TryLoadInlineConstant(instruction, out value);
 
             default:
                 value = BytecodeVmValue.Nothing;
@@ -3028,8 +3027,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.Return:
                     return true;
 
-                case GameEventScriptBytecodeOpCode.LoadSlot:
-                case GameEventScriptBytecodeOpCode.LoadConstant:
+                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case var opCode when IsInlineConstantInstruction(opCode):
                     if (!AddTemp(instruction.Dest))
                     {
                         return false;
@@ -3215,7 +3214,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         : BytecodeVmValue.Nothing;
                     return true;
 
-                case GameEventScriptBytecodeOpCode.LoadSlot:
+                case GameEventScriptBytecodeOpCode.MoveSlot:
                     if (!SetTemp(instruction.Dest, GetSlot(instruction.A)))
                     {
                         return false;
@@ -3223,8 +3222,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
-                case GameEventScriptBytecodeOpCode.LoadConstant:
-                    if (!SetTemp(instruction.Dest, LoadConstant(instruction.C)))
+                case var opCode when IsInlineConstantInstruction(opCode):
+                    if (!TryLoadInlineConstant(instruction, out var inlineConstant) ||
+                        !SetTemp(instruction.Dest, inlineConstant))
                     {
                         return false;
                     }
@@ -3987,6 +3987,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
+    private bool TryGetNamedArgumentLayoutOrEmpty(int index, out IReadOnlyList<string> layout)
+    {
+        if (index < 0)
+        {
+            layout = [];
+            return true;
+        }
+
+        if ((uint)index < (uint)_compiledScript.BytecodeModule.NamedArgumentLayouts.Count)
+        {
+            layout = _compiledScript.BytecodeModule.NamedArgumentLayouts[index];
+            return true;
+        }
+
+        layout = [];
+        return false;
+    }
+
     private bool TryGetOperationLayout(int index, out GameEventScriptBytecodeOperationLayout layout)
     {
         if ((uint)index < (uint)_compiledScript.BytecodeModule.OperationLayouts.Count)
@@ -4333,10 +4351,86 @@ internal sealed partial class GesBytecodeVmExecutionSession
         builder.Add(value.AsText());
     }
 
-    private BytecodeVmValue LoadConstant(int index)
-        => (uint)index < (uint)_compiledScript.Constants.Count
-            ? _compiledScript.Constants[index]
-            : BytecodeVmValue.Nothing;
+    private bool TryLoadInlineConstant(GameEventScriptBytecodeInstruction instruction, out BytecodeVmValue value)
+    {
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.LoadNothing:
+                value = BytecodeVmValue.Nothing;
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadTrue:
+                value = BytecodeVmValue.Boolean(true);
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadFalse:
+                value = BytecodeVmValue.Boolean(false);
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadInteger:
+                value = BytecodeVmValue.Integer(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadFloat:
+            {
+                var number = instruction.F64;
+                value = instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage
+                    ? BytecodeVmValue.Percentage(number)
+                    : double.IsNaN(number)
+                    ? BytecodeVmValue.Reference(GesFloatNaN())
+                    : double.IsPositiveInfinity(number)
+                        ? BytecodeVmValue.Reference(GesFloatInfinity())
+                        : double.IsNegativeInfinity(number)
+                            ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
+                            : BytecodeVmValue.Float(number, DecodeNumericUnit(instruction.UnitAndFlags));
+                return true;
+            }
+
+            case GameEventScriptBytecodeOpCode.LoadText:
+                if (!TryReadStringPool(instruction.C, out var text))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.Reference(GesText(text));
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadTag:
+                if (!TryReadStringPool(instruction.C, out var tag))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.Reference(GesTag(tag));
+                return true;
+
+            case GameEventScriptBytecodeOpCode.LoadHandler:
+                if (!TryReadStringPool(instruction.A, out var messageName) ||
+                    !TryGetNamedArgumentLayoutOrEmpty(instruction.C, out var labels))
+                {
+                    value = BytecodeVmValue.Nothing;
+                    return false;
+                }
+
+                value = BytecodeVmValue.Reference(GesHandler(GameEventScriptMessageSignature.Create(messageName, labels)));
+                return true;
+
+            default:
+                value = BytecodeVmValue.Nothing;
+                return false;
+        }
+    }
+
+    private static GameEventScriptNumericUnit? DecodeNumericUnit(byte value)
+        => (GameEventScriptBytecodeInstructionUnit)value switch
+        {
+            GameEventScriptBytecodeInstructionUnit.Degree => GameEventScriptNumericUnit.Degree,
+            GameEventScriptBytecodeInstructionUnit.Meter => GameEventScriptNumericUnit.Meter,
+            GameEventScriptBytecodeInstructionUnit.Second => GameEventScriptNumericUnit.Second,
+            _ => null
+        };
 
     private static BytecodeVmValue EvaluateMemberAccess(BytecodeVmValue target, string? member)
     {
@@ -6192,6 +6286,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastOptional or
             GameEventScriptBytecodeOpCode.CastCustom;
 
+    private static bool IsInlineConstantInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.LoadNothing or
+            GameEventScriptBytecodeOpCode.LoadTrue or
+            GameEventScriptBytecodeOpCode.LoadFalse or
+            GameEventScriptBytecodeOpCode.LoadInteger or
+            GameEventScriptBytecodeOpCode.LoadFloat or
+            GameEventScriptBytecodeOpCode.LoadText or
+            GameEventScriptBytecodeOpCode.LoadTag or
+            GameEventScriptBytecodeOpCode.LoadHandler;
+
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.TypeCheckNothing or
             GameEventScriptBytecodeOpCode.TypeCheckTag or
@@ -7259,24 +7363,6 @@ internal readonly record struct BytecodeVmValue(
             GameEventScriptValueKind.Float when !value.IsReferenceBacked => Float(value.Number, value.Unit),
             GameEventScriptValueKind.Percentage when !value.IsReferenceBacked => Percentage(value.Number),
             _ => FromGameEventScriptValue(value.ToGameEventScriptValue())
-        };
-
-    public static BytecodeVmValue FromBytecodeConstant(GameEventScriptBytecodeConstant constant)
-        => constant.Kind switch
-        {
-            GameEventScriptBytecodeConstantKind.Nothing => Nothing,
-            GameEventScriptBytecodeConstantKind.Boolean => Boolean(constant.Boolean),
-            GameEventScriptBytecodeConstantKind.Integer => Integer(constant.Integer, constant.Unit),
-            GameEventScriptBytecodeConstantKind.Float when constant.IsNaN => Reference(GesFloatNaN()),
-            GameEventScriptBytecodeConstantKind.Float when constant.IsInfinity => Reference(constant.IsNegativeInfinity
-                ? GesFloatNegativeInfinity()
-                : GesFloatInfinity()),
-            GameEventScriptBytecodeConstantKind.Float => Float(constant.Number, constant.Unit),
-            GameEventScriptBytecodeConstantKind.Percentage => Percentage(constant.Number),
-            GameEventScriptBytecodeConstantKind.Text => Reference(GesText(constant.Text ?? string.Empty)),
-            GameEventScriptBytecodeConstantKind.Tag => Reference(GesTag(constant.Text ?? string.Empty)),
-            GameEventScriptBytecodeConstantKind.Handler => Reference(GesHandler(GameEventScriptMessageSignature.Create(constant.Text ?? string.Empty, constant.Labels))),
-            _ => Nothing
         };
 
     public bool AsBoolean()

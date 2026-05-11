@@ -190,6 +190,8 @@ internal static class GesBytecodeCompiler
 
         private void CollectSourceMetadata()
         {
+            AddUShortList([]);
+
             foreach (var type in module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
             {
                 AddString(type.Name);

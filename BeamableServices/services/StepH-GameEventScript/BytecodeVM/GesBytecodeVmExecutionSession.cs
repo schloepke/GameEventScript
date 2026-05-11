@@ -88,8 +88,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.PredicateTest:
                 return TryGetOperationLayout(instruction.C_U16, out var layout) &&
-                       !string.IsNullOrEmpty(layout.Name) &&
-                       CanExecuteLinearCallable(layout.Name, visitingCallables, allowPipeline);
+                       TryReadOperationName(layout, out var callableName) &&
+                       !string.IsNullOrEmpty(callableName) &&
+                       CanExecuteLinearCallable(callableName, visitingCallables, allowPipeline);
 
             default:
                 return true;
@@ -786,16 +787,28 @@ internal sealed partial class GesBytecodeVmExecutionSession
         nextPc = returnAddress;
 
         if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
-            string.IsNullOrEmpty(layout.Name) ||
-            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
+            !TryReadOperationName(layout, out var callableName) ||
+            string.IsNullOrEmpty(callableName) ||
+            !_compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable))
         {
             return false;
         }
 
         var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest;
-        var callArguments = normalizePredicateResult
-            ? new[] { ResolveSlot(instruction.A_U16) }
-            : CopyLinearOperands(layout.ArgumentSlots);
+        BytecodeVmValue[] callArguments;
+        if (normalizePredicateResult)
+        {
+            callArguments = [ResolveSlot(instruction.A_U16)];
+        }
+        else
+        {
+            if (!TryReadOperationArgumentSlots(layout, out var argumentSlots))
+            {
+                return false;
+            }
+
+            callArguments = CopyLinearOperands(argumentSlots);
+        }
 
         if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
         {
@@ -937,11 +950,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            RecordPredicateCalled(layout.Name ?? string.Empty, layout.ArgumentName ?? "value", predicateInput);
+            if (!TryReadOperationName(layout, out var predicateName) ||
+                !TryReadOperationArgumentName(layout, out var predicateArgumentName))
+            {
+                return false;
+            }
+
+            RecordPredicateCalled(predicateName ?? string.Empty, predicateArgumentName ?? "value", predicateInput);
             return true;
         }
 
-        RecordCallableCalled(layout.Name ?? string.Empty, layout.CallableKind, layout.Names, arguments);
+        if (!TryReadOperationName(layout, out var callableName) ||
+            !TryReadOperationNameList(layout, out var callableArgumentNames))
+        {
+            return false;
+        }
+
+        RecordCallableCalled(callableName ?? string.Empty, layout.CallableKind, callableArgumentNames, arguments);
         return true;
     }
 
@@ -1113,18 +1138,22 @@ internal sealed partial class GesBytecodeVmExecutionSession
                    DefineSlot(instruction.Dest_U16, BytecodeVmValue.Boolean(typeCheckValue));
         }
 
-        if (!TryGetOperationLayout(instruction.C_U16, out var layout))
+        if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
+            !TryReadOperationName(layout, out var operationName) ||
+            !TryReadOperationArgumentName(layout, out var operationArgumentName) ||
+            !TryReadOperationNameList(layout, out var operationNames) ||
+            !TryReadOperationArgumentSlots(layout, out var operationArgumentSlots))
         {
             return false;
         }
 
-        var operandCount = layout.ArgumentSlots.Count;
+        var operandCount = operationArgumentSlots.Count;
         var operands = operandCount == 0
             ? Array.Empty<BytecodeVmValue>()
             : ArrayPool<BytecodeVmValue>.Shared.Rent(operandCount);
         if (operandCount > 0)
         {
-            CopyLinearOperands(layout.ArgumentSlots, operands);
+            CopyLinearOperands(operationArgumentSlots, operands);
         }
 
         try
@@ -1132,7 +1161,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.Variadic:
-                    if (!TryEvaluateVariadicOperation(layout.Name, operands, 0, operandCount, out var variadicValue))
+                    if (!TryEvaluateVariadicOperation(operationName, operands, 0, operandCount, out var variadicValue))
                     {
                         return false;
                     }
@@ -1142,7 +1171,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.TypeConstructor:
                     return DefineSlot(
                         instruction.Dest_U16,
-                        EvaluateTypeConstructor(layout.Name, AsArray(layout.Names), operands, 0, operandCount));
+                        EvaluateTypeConstructor(operationName, operationNames, operands, 0, operandCount));
 
                 case GameEventScriptBytecodeOpCode.BuildList:
                     return DefineSlot(instruction.Dest_U16, BuildListValue(operands, 0, operandCount));
@@ -1154,7 +1183,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return DefineSlot(instruction.Dest_U16, BuildSetValue(operands, 0, operandCount));
 
                 case GameEventScriptBytecodeOpCode.BuildDictionary:
-                    return DefineSlot(instruction.Dest_U16, BuildDictionaryValue(operands, 0, operandCount, AsArray(layout.Names)));
+                    return DefineSlot(instruction.Dest_U16, BuildDictionaryValue(operands, 0, operandCount, operationNames));
 
                 case GameEventScriptBytecodeOpCode.BuildMessage:
                     return DefineSlot(
@@ -1163,8 +1192,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             operands,
                             0,
                             operandCount,
-                            AsArray(layout.Names),
-                            layout.Name));
+                            operationNames,
+                            operationName));
 
                 case GameEventScriptBytecodeOpCode.BindHandler:
                     if (operandCount == 0)
@@ -1174,13 +1203,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     return DefineSlot(
                         instruction.Dest_U16,
-                        BindHandlerValue(operands[0], operands, 1, operandCount - 1, AsArray(layout.Names)));
+                        BindHandlerValue(operands[0], operands, 1, operandCount - 1, operationNames));
 
                 case GameEventScriptBytecodeOpCode.CallExtension:
                     if (!TryCallExtension(
-                            layout.Name,
-                            layout.ArgumentName,
-                            AsArray(layout.Names),
+                            operationName,
+                            operationArgumentName,
+                            operationNames,
                             layout.ExternalReferenceIndex,
                             operands,
                             0,
@@ -3218,8 +3247,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool CanEvaluateLinearPredicateTestFast(GameEventScriptBytecodeInstruction instruction)
         => TryGetOperationLayout(instruction.C_U16, out var layout) &&
-           !string.IsNullOrEmpty(layout.Name) &&
-           _compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable) &&
+           TryReadOperationName(layout, out var callableName) &&
+           !string.IsNullOrEmpty(callableName) &&
+           _compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable) &&
            CanEvaluateLinearPredicateCallableFast(callable);
 
     private bool CanEvaluateLinearPredicateCallableFast(GameEventScriptBytecodeCallable callable)
@@ -3519,8 +3549,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         value = BytecodeVmValue.Nothing;
         if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
-            string.IsNullOrEmpty(layout.Name) ||
-            !_compiledScript.BytecodeModule.Callables.TryGetValue(layout.Name, out var callable))
+            !TryReadOperationName(layout, out var callableName) ||
+            !TryReadOperationArgumentName(layout, out var argumentName) ||
+            string.IsNullOrEmpty(callableName) ||
+            !_compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable))
         {
             return false;
         }
@@ -3538,7 +3570,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
 
-            RecordPredicateCalled(layout.Name, layout.ArgumentName ?? "value", diagnosticInput);
+            RecordPredicateCalled(callableName, argumentName ?? "value", diagnosticInput);
             if (!TryEvaluateLinearPredicateCallableBodyFast(callable, input, out value))
             {
                 return false;
@@ -3699,7 +3731,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return success;
     }
 
-    private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<int> slots)
+    private BytecodeVmValue[] CopyLinearOperands(IReadOnlyList<ushort> slots)
     {
         if (slots.Count == 0)
         {
@@ -3715,16 +3747,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return operands;
     }
 
-    private void CopyLinearOperands(IReadOnlyList<int> slots, BytecodeVmValue[] operands)
+    private void CopyLinearOperands(IReadOnlyList<ushort> slots, BytecodeVmValue[] operands)
     {
         for (var index = 0; index < slots.Count; index++)
         {
             operands[index] = ResolveSlot(slots[index]);
         }
     }
-
-    private static string[] AsArray(IReadOnlyList<string> values)
-        => values as string[] ?? values.ToArray();
 
     private bool TryPublishLinearMessage(
         GameEventScriptBytecodePublishKind publishKind,
@@ -3927,14 +3956,67 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    private bool TryGetUShortListOrEmpty(int index, out IReadOnlyList<ushort> layout)
+    private bool TryReadOptionalStringPool(int index, out string? value)
     {
         if (index < 0)
         {
-            layout = [];
+            value = null;
             return true;
         }
 
+        if (TryReadStringPool(index, out var resolved))
+        {
+            value = resolved;
+            return true;
+        }
+
+        value = null;
+        return false;
+    }
+
+    private bool TryReadOperationName(GameEventScriptBytecodeOperationLayout layout, out string? value)
+        => TryReadOptionalStringPool(layout.NameIndex, out value);
+
+    private bool TryReadOperationArgumentName(GameEventScriptBytecodeOperationLayout layout, out string? value)
+        => TryReadOptionalStringPool(layout.ArgumentNameIndex, out value);
+
+    private bool TryReadOperationNameList(GameEventScriptBytecodeOperationLayout layout, out string[] values)
+        => TryReadStringList(layout.NameListIndex, out values);
+
+    private bool TryReadOperationArgumentSlots(GameEventScriptBytecodeOperationLayout layout, out IReadOnlyList<ushort> slots)
+        => TryGetUShortList(layout.ArgumentSlotListIndex, out slots);
+
+    private bool TryReadStringList(int index, out string[] values)
+    {
+        if (!TryGetUShortList(index, out var indexes))
+        {
+            values = [];
+            return false;
+        }
+
+        if (indexes.Count == 0)
+        {
+            values = [];
+            return true;
+        }
+
+        values = new string[indexes.Count];
+        for (var itemIndex = 0; itemIndex < indexes.Count; itemIndex++)
+        {
+            if (!TryReadStringPool(indexes[itemIndex], out var value))
+            {
+                values = [];
+                return false;
+            }
+
+            values[itemIndex] = value;
+        }
+
+        return true;
+    }
+
+    private bool TryGetUShortList(int index, out IReadOnlyList<ushort> layout)
+    {
         if ((uint)index < (uint)_compiledScript.BytecodeModule.UShortListPool.Count)
         {
             layout = _compiledScript.BytecodeModule.UShortListPool[index];
@@ -3943,6 +4025,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         layout = [];
         return false;
+    }
+
+    private bool TryGetUShortListOrEmpty(int index, out IReadOnlyList<ushort> layout)
+    {
+        if (index < 0)
+        {
+            layout = [];
+            return true;
+        }
+
+        return TryGetUShortList(index, out layout);
     }
 
     private bool TryReadMessageShape(int index, out string messageName, out string[] argumentNames)

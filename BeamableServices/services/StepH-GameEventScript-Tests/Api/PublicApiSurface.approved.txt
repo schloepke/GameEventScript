@@ -298,21 +298,15 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CollectionBuilderFinish = 185
   enum-field Pipeline = 208
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
-  ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.String name, System.String argumentName, System.Collections.Generic.IReadOnlyList<System.String> names, System.Collections.Generic.IReadOnlyList<System.Int32> argumentSlots, System.Collections.Generic.IReadOnlyList<System.Int32> parameterSlots, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex, System.Int32 nameListIndex, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 count, System.Boolean flag)
+  ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.Int32 nameIndex, System.Int32 argumentNameIndex, System.Int32 nameListIndex, System.Int32 argumentSlotListIndex, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode { get }
-  property System.Boolean Flag { get }
-  property System.Collections.Generic.IReadOnlyList<System.Int32> ArgumentSlots { get }
-  property System.Collections.Generic.IReadOnlyList<System.Int32> ParameterSlots { get }
   property System.Collections.Generic.IReadOnlyList<System.String> DeclaredTypes { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> Names { get }
-  property System.Int32 Count { get }
-  property System.Int32 ExpressionEntryAddress { get }
+  property System.Int32 ArgumentNameIndex { get }
+  property System.Int32 ArgumentSlotListIndex { get }
   property System.Int32 ExternalReferenceIndex { get }
+  property System.Int32 NameIndex { get }
   property System.Int32 NameListIndex { get }
-  property System.Int32 SecondaryExpressionEntryAddress { get }
-  property System.String ArgumentName { get }
-  property System.String Name { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipeline
   ctor GameEventScriptBytecodePipeline(System.Int32 sourceSlot, System.Collections.Generic.IReadOnlyList<System.Int32> prefixSelectorIndexes, System.Int32 terminalSelectorIndex)
   property System.Collections.Generic.IReadOnlyList<System.Int32> PrefixSelectorIndexes { get }

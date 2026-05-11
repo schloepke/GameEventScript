@@ -260,19 +260,19 @@ runtime dispatch step.
 | 0x7E | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
 | 0x80..0x8A | `TypeCheckSequence`..`TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x90 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x91 | `TypeConstructor` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Full argument list and names are in layout. |
-| 0x92 | `PredicateTest` | - | result slot | tested value slot | - | `OperationLayouts` index | - | - | - | Enters a predicate frame or fast path. |
+| 0x91 | `TypeConstructor` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Full argument slots and names are referenced through layout pool indexes. |
+| 0x92 | `PredicateTest` | - | result slot | tested value slot | - | `OperationLayouts` index | - | - | - | Enters a predicate frame or fast path; predicate metadata is referenced through layout pool indexes. |
 | 0x93 | `MemberAccess` | - | result slot | target slot | - | `StringPool` index | - | - | - | Reads a named member. |
 | 0x94 | `IndexedAccess` | - | result slot | target slot | index slot | - | - | - | - | Direct indexed lookup. |
-| 0x95 | `BuildList` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
-| 0x96 | `BuildSequence` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
-| 0x97 | `BuildSet` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item list is in layout. |
-| 0x98 | `BuildDictionary` | - | result slot | first value slot | second value slot | `OperationLayouts` index | - | - | - | Keys and full value list are in layout. |
-| 0x99 | `BuildMessage` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Message name, signature, names, and slots are in layout. |
-| 0x9A | `BindHandler` | - | result slot | handler slot | first bound argument slot | `OperationLayouts` index | - | - | - | Full operand list is in layout. |
-| 0x9B | `CallExtension` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Extension reference and argument metadata are in layout. |
-| 0x9C | `Call` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Enters a VM-owned call frame. |
-| 0x9D | `Variadic` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Full argument list is in layout. |
+| 0x95 | `BuildList` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item slot list is referenced through layout pool indexes. |
+| 0x96 | `BuildSequence` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item slot list is referenced through layout pool indexes. |
+| 0x97 | `BuildSet` | - | result slot | first item slot | second item slot | `OperationLayouts` index | - | - | - | Full item slot list is referenced through layout pool indexes. |
+| 0x98 | `BuildDictionary` | - | result slot | first value slot | second value slot | `OperationLayouts` index | - | - | - | Key names and value slots are referenced through layout pool indexes. |
+| 0x99 | `BuildMessage` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Message name, argument names, and argument slots are referenced through layout pool indexes. |
+| 0x9A | `BindHandler` | - | result slot | handler slot | first bound argument slot | `OperationLayouts` index | - | - | - | Full operand slot list is referenced through layout pool indexes. |
+| 0x9B | `CallExtension` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Extension reference and argument metadata are referenced through layout pool indexes. |
+| 0x9C | `Call` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Enters a VM-owned call frame; argument names and slots are referenced through layout pool indexes. |
+| 0x9D | `Variadic` | - | result slot | first argument slot | second argument slot | `OperationLayouts` index | - | - | - | Full argument slot list is referenced through layout pool indexes. |
 | 0xA0 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
 | 0xA1 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
 | 0xA2 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
@@ -301,9 +301,15 @@ runtime dispatch step.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, operation name lists |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, operation name lists, operation argument slot lists |
 | `OperationLayouts` | `Variadic`, `TypeConstructor`, `PredicateTest`, `BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`, `BindHandler`, `CallExtension`, `Call` |
 | `PipelinePool` | `Pipeline` |
 | `PipelineSelectorPool` | Referenced by `PipelinePool` |
 | `PipelinePatternPool` | Referenced by `PipelineSelectorPool` |
 | `PipelineObjectPatternPool` | Referenced by `PipelineSelectorPool` |
+
+`OperationLayouts` are transitional metadata records. They do not carry direct
+`string[]` or slot-array payloads anymore: `NameIndex` and `ArgumentNameIndex`
+point into `StringPool`, while `NameListIndex` and `ArgumentSlotListIndex`
+point into `UShortListPool`. `NameListIndex` stores string-pool indexes;
+`ArgumentSlotListIndex` stores frame slot indexes.

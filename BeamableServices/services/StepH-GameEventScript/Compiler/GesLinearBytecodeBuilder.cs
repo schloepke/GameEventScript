@@ -675,11 +675,10 @@ internal sealed class GesLinearBytecodeBuilder
 
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.BuildMessage,
-            A: message.Arguments.Count,
             DiagnosticName: GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
             DiagnosticArgumentName: GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
             Names: argumentNames);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots, state, argumentSlots.Length);
+        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
         return EmitValueInstruction(
             state,
             GameEventScriptBytecodeOpCode.BuildMessage,
@@ -705,13 +704,12 @@ internal sealed class GesLinearBytecodeBuilder
             argumentNames));
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.CallExtension,
-            A: argumentSlots.Length,
             B: referenceIndex,
             CallableKind: GameEventScriptBytecodeCallableKind.Function,
             DiagnosticName: extensionCall.ExtensionName,
             DiagnosticArgumentName: extensionCall.FunctionName,
             Names: argumentNames);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots, state, argumentSlots.Length);
+        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
         return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.CallExtension, argumentSlots, state, layoutIndex);
     }
 
@@ -728,8 +726,8 @@ internal sealed class GesLinearBytecodeBuilder
             itemSlots[index] = EmitSourceExpression(items[index], context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(opCode, A: itemSlots.Length, Names: names);
-        var layoutIndex = AddOperationLayout(instruction, itemSlots, state, itemSlots.Length);
+        var instruction = new GameEventScriptBytecodeStackInstruction(opCode, Names: names);
+        var layoutIndex = AddOperationLayout(instruction, itemSlots);
         return EmitSourceValueInstruction(opCode, itemSlots, state, layoutIndex);
     }
 
@@ -746,9 +744,8 @@ internal sealed class GesLinearBytecodeBuilder
 
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.BuildDictionary,
-            A: valueSlots.Length,
             Names: names);
-        var layoutIndex = AddOperationLayout(instruction, valueSlots, state, valueSlots.Length);
+        var layoutIndex = AddOperationLayout(instruction, valueSlots);
         return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.BuildDictionary, valueSlots, state, layoutIndex);
     }
 
@@ -762,9 +759,8 @@ internal sealed class GesLinearBytecodeBuilder
 
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.Variadic,
-            A: argumentSlots.Length,
             DiagnosticName: variadic.Operator);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots, state, argumentSlots.Length);
+        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
         return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.Variadic, argumentSlots, state, layoutIndex);
     }
 
@@ -911,18 +907,13 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var input = EmitSourceExpression(predicateCall.Value, context, state);
-        var parameterSlot = GesBytecodeLowerer.CollectCallableSlots(callable, _sourceCallables, _sourceTypeDefinitions)
-            .TryGetValue(callable.Parameters[0], out var slot)
-            ? slot
-            : 0;
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.PredicateTest,
-            parameterSlot,
             CallableKind: GameEventScriptBytecodeCallableKind.Predicate,
             DiagnosticName: callable.Name,
             DiagnosticArgumentName: callable.Parameters[0],
             DeclaredTypes: new string?[] { callable.ParameterList[0].DeclaredType });
-        var layoutIndex = AddOperationLayout(instruction, [input], state, count: 1);
+        var layoutIndex = AddOperationLayout(instruction, [input]);
         return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PredicateTest, a: input, c: layoutIndex);
     }
 
@@ -936,13 +927,12 @@ internal sealed class GesLinearBytecodeBuilder
             labels));
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.CallExtension,
-            A: 1,
             B: referenceIndex,
             CallableKind: GameEventScriptBytecodeCallableKind.Predicate,
             DiagnosticName: extensionPredicate.ExtensionName,
             DiagnosticArgumentName: extensionPredicate.FunctionName,
             Names: labels);
-        var layoutIndex = AddOperationLayout(instruction, [input], state, count: 1);
+        var layoutIndex = AddOperationLayout(instruction, [input]);
         return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.CallExtension, a: input, c: layoutIndex);
     }
 
@@ -963,9 +953,8 @@ internal sealed class GesLinearBytecodeBuilder
 
             var bindInstruction = new GameEventScriptBytecodeStackInstruction(
                 GameEventScriptBytecodeOpCode.BindHandler,
-                A: call.ArgumentList.Count,
                 Names: argumentNames);
-            var bindLayoutIndex = AddOperationLayout(bindInstruction, operandSlots, state, operandSlots.Length);
+            var bindLayoutIndex = AddOperationLayout(bindInstruction, operandSlots);
             return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.BindHandler, operandSlots, state, bindLayoutIndex);
         }
 
@@ -975,26 +964,15 @@ internal sealed class GesLinearBytecodeBuilder
             argumentSlots[argumentIndex] = EmitSourceExpression(call.Arguments[argumentIndex], context, state);
         }
 
-        var calledSlots = GesBytecodeLowerer.CollectCallableSlots(called, _sourceCallables, _sourceTypeDefinitions);
-        var parameterSlots = new int[called.Parameters.Count];
-        for (var parameterIndex = 0; parameterIndex < called.Parameters.Count; parameterIndex++)
-        {
-            parameterSlots[parameterIndex] = calledSlots.TryGetValue(called.Parameters[parameterIndex], out var parameterSlot)
-                ? parameterSlot
-                : parameterIndex;
-        }
-
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.Call,
-            A: argumentSlots.Length,
             CallableKind: called.Kind == GameEventScriptCallableKind.PredicateCall
                 ? GameEventScriptBytecodeCallableKind.Predicate
                 : GameEventScriptBytecodeCallableKind.Function,
             DiagnosticName: called.Name,
             Names: called.Parameters.ToArray(),
-            Slots: parameterSlots,
             DeclaredTypes: called.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots, state, argumentSlots.Length);
+        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
         return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.Call, argumentSlots, state, layoutIndex);
     }
 
@@ -1030,10 +1008,9 @@ internal sealed class GesLinearBytecodeBuilder
 
         var instruction = new GameEventScriptBytecodeStackInstruction(
             GameEventScriptBytecodeOpCode.TypeConstructor,
-            A: argumentSlots.Length,
             DiagnosticName: typeConstructor.TypeName,
             Names: argumentNames);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots, state, argumentSlots.Length);
+        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
         return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.TypeConstructor, argumentSlots, state, layoutIndex);
     }
 
@@ -1057,78 +1034,25 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int AddOperationLayout(
         GameEventScriptBytecodeStackInstruction instruction,
-        IReadOnlyList<int> argumentSlots,
-        ExpressionState state,
-        int count = 0)
+        IReadOnlyList<int> argumentSlots)
     {
         var names = instruction.Names ?? [];
-        var parameterSlots = instruction.Slots ??
-            (instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest && instruction.A >= 0
-                ? [instruction.A]
-                : null);
         var layoutIndex = _operationLayouts.Count;
+        var nameIndex = ResolveStringIndex(instruction.DiagnosticName);
+        var argumentNameIndex = ResolveStringIndex(instruction.DiagnosticArgumentName);
         var nameListIndex = ResolveStringListIndex(names);
-        _operationLayouts.Add(CreateOperationLayout(expressionEntryAddress: -1));
+        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
+        _operationLayouts.Add(new GameEventScriptBytecodeOperationLayout(
+            instruction.OpCode,
+            nameIndex: nameIndex,
+            argumentNameIndex: argumentNameIndex,
+            nameListIndex: nameListIndex,
+            argumentSlotListIndex: argumentSlotListIndex,
+            declaredTypes: instruction.DeclaredTypes,
+            callableKind: instruction.CallableKind,
+            externalReferenceIndex: instruction.B));
 
         return layoutIndex;
-
-        GameEventScriptBytecodeOperationLayout CreateOperationLayout(int expressionEntryAddress)
-            => new(
-                instruction.OpCode,
-                instruction.DiagnosticName,
-                instruction.DiagnosticArgumentName,
-                names,
-                argumentSlots,
-                parameterSlots,
-                instruction.DeclaredTypes,
-                instruction.CallableKind,
-                instruction.B,
-                nameListIndex,
-                expressionEntryAddress: expressionEntryAddress,
-                count: count);
-    }
-
-    private int AddSourceOperationLayout(
-        GameEventScriptBytecodeStackInstruction instruction,
-        IReadOnlyList<int> argumentSlots,
-        ExpressionState state,
-        int count,
-        ExpressionNode? expressionEntry,
-        SourceContext context)
-    {
-        var names = instruction.Names ?? [];
-        var parameterSlots = instruction.Slots ??
-            (instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest && instruction.A >= 0
-                ? [instruction.A]
-                : null);
-        var layoutIndex = _operationLayouts.Count;
-        var nameListIndex = ResolveStringListIndex(names);
-        _operationLayouts.Add(CreateOperationLayout(expressionEntryAddress: -1));
-        if (expressionEntry is not null)
-        {
-            _deferredHelperEmitters.Add(() =>
-            {
-                var expressionEntryAddress = EmitSourceExpressionEntry(expressionEntry, context, state);
-                _operationLayouts[layoutIndex] = CreateOperationLayout(expressionEntryAddress);
-            });
-        }
-
-        return layoutIndex;
-
-        GameEventScriptBytecodeOperationLayout CreateOperationLayout(int expressionEntryAddress)
-            => new(
-                instruction.OpCode,
-                instruction.DiagnosticName,
-                instruction.DiagnosticArgumentName,
-                names,
-                argumentSlots,
-                parameterSlots,
-                instruction.DeclaredTypes,
-                instruction.CallableKind,
-                instruction.B,
-                nameListIndex,
-                expressionEntryAddress: expressionEntryAddress,
-                count: count);
     }
 
     private int EmitSourceIterator(IterationSourceNode source, SourceContext context, ExpressionState state)
@@ -1584,7 +1508,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         if (values.Count == 0)
         {
-            return -1;
+            return _resolveUShortListIndex([]);
         }
 
         var indexes = new ushort[values.Count];
@@ -1600,7 +1524,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         if (slots.Count == 0)
         {
-            return -1;
+            return _resolveUShortListIndex([]);
         }
 
         return ResolveRequiredSlotListIndex(slots);

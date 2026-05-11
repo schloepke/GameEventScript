@@ -583,13 +583,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 throw InvalidBytecode($"{context} references unsupported opcode '{layout.OpCode}'.");
             }
 
+            ValidateOptionalIndex(module.StringPool.Count, layout.NameIndex, $"{context} name");
+            ValidateOptionalIndex(module.StringPool.Count, layout.ArgumentNameIndex, $"{context} argument name");
+            ValidateStringListIndex(module, layout.NameListIndex, $"{context} name list");
+            ValidateSlotListIndex(module, layout.ArgumentSlotListIndex, $"{context} argument slots");
             ValidateOptionalIndex(module.ExternalReferences.Count, layout.ExternalReferenceIndex, $"{context} external reference");
-            ValidateOptionalStringList(module, layout.NameListIndex, $"{context} name list");
-            ValidateOptionalAddress(module, module.Code, layout.ExpressionEntryAddress, $"{context} expression entry");
-            ValidateOptionalAddress(module, module.Code, layout.SecondaryExpressionEntryAddress, $"{context} secondary expression entry");
-            ValidateNonNegative(layout.Count, $"{context} count");
-            ValidateSlots(module, layout.ArgumentSlots, $"{context} argument slot");
-            ValidateSlots(module, layout.ParameterSlots, $"{context} parameter slot");
         }
     }
 
@@ -705,30 +703,14 @@ internal sealed class GesBytecodeVmLinearExecutable
         ValidateSlotList(module, slots, context);
     }
 
-    private static void ValidateOptionalStringList(GameEventScriptCompiled module, int index, string context)
+    private static void ValidateStringListIndex(GameEventScriptCompiled module, int index, string context)
     {
-        if (index < 0)
-        {
-            return;
-        }
-
         ValidateIndex(module.UShortListPool.Count, index, context);
         var values = module.UShortListPool[index];
         for (var itemIndex = 0; itemIndex < values.Count; itemIndex++)
         {
             ValidateIndex(module.StringPool.Count, values[itemIndex], $"{context} string #{itemIndex}");
         }
-    }
-
-    private static void ValidateOptionalSlotList(GameEventScriptCompiled module, int index, string context)
-    {
-        if (index < 0)
-        {
-            return;
-        }
-
-        ValidateIndex(module.UShortListPool.Count, index, context);
-        ValidateSlotList(module, module.UShortListPool[index], context);
     }
 
     private static void ValidateSlotListIndex(GameEventScriptCompiled module, int index, string context)
@@ -738,14 +720,6 @@ internal sealed class GesBytecodeVmLinearExecutable
     }
 
     private static void ValidateSlotList(GameEventScriptCompiled module, IReadOnlyList<ushort> slots, string context)
-    {
-        foreach (var slot in slots)
-        {
-            ValidateSlot(module, slot, context);
-        }
-    }
-
-    private static void ValidateSlots(GameEventScriptCompiled module, IReadOnlyList<int> slots, string context)
     {
         foreach (var slot in slots)
         {

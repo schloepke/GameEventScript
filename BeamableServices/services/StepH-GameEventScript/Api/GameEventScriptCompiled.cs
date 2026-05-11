@@ -29,9 +29,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodePipeline>? pipelinePool = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
-        ModuleName = string.IsNullOrWhiteSpace(moduleName)
-            ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
-            : moduleName;
+        ModuleName = string.IsNullOrWhiteSpace(moduleName) ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName)) : moduleName;
         StringPool = CopyList(stringPool, nameof(stringPool));
         UShortListPool = CopyNestedUShortLayouts(uShortListPool, nameof(uShortListPool));
         ExternalReferences = CopyList(externalReferences, nameof(externalReferences));

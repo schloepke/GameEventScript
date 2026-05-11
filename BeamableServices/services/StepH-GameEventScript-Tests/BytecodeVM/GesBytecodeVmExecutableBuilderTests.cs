@@ -107,8 +107,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             instruction.C_U16 < compiled.UShortListPool.Count));
         Assert.IsTrue(compiled.OperationLayouts.Any(layout =>
             layout.OpCode == GameEventScriptBytecodeOpCode.BuildMessage &&
-            layout.Name == "Done" &&
-            layout.Names.SequenceEqual(new[] { "value" })));
+            layout.NameIndex >= 0 &&
+            compiled.StringPool[layout.NameIndex] == "Done" &&
+            compiled.UShortListPool[layout.NameListIndex].Select(index => compiled.StringPool[index]).SequenceEqual(new[] { "value" })));
     }
 
     [TestMethod]

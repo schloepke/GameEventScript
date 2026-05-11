@@ -90,17 +90,11 @@ public static class GameEventScriptBytecodeDumper
         {
             var layout = module.OperationLayouts[i];
             builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ").Append(layout.OpCode);
-            AppendText(builder, "name", layout.Name);
-            AppendText(builder, "argument", layout.ArgumentName);
+            AppendPoolIndex(builder, "name", module.StringPool, layout.NameIndex);
+            AppendPoolIndex(builder, "argument", module.StringPool, layout.ArgumentNameIndex);
+            AppendStringListPoolIndex(builder, "nameList", module, layout.NameListIndex);
+            AppendSlotListPoolIndex(builder, "args", module, layout.ArgumentSlotListIndex);
             AppendIndex(builder, "external", layout.ExternalReferenceIndex);
-            AppendIndex(builder, "nameList", layout.NameListIndex);
-            AppendAddress(builder, "expr", layout.ExpressionEntryAddress);
-            AppendAddress(builder, "secondaryExpr", layout.SecondaryExpressionEntryAddress);
-            if (layout.Count != 0) AppendIndex(builder, "count", layout.Count);
-            if (layout.Flag) builder.Append(" flag=true");
-            AppendSlotList(builder, "args", layout.ArgumentSlots);
-            AppendSlotList(builder, "params", layout.ParameterSlots);
-            AppendStringList(builder, "names", layout.Names);
             AppendNullableStringList(builder, "types", layout.DeclaredTypes);
             builder.Append(" callable=").AppendLine(layout.CallableKind.ToString());
         }
@@ -583,6 +577,50 @@ public static class GameEventScriptBytecodeDumper
         if ((uint)index < (uint)pool.Count)
         {
             builder.Append('(').Append(pool[index]).Append(')');
+        }
+    }
+
+    private static void AppendStringListPoolIndex(StringBuilder builder, string name, GameEventScriptCompiled module, int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
+        if ((uint)index >= (uint)module.UShortListPool.Count)
+        {
+            return;
+        }
+
+        var values = module.UShortListPool[index]
+            .Select(value => (uint)value < (uint)module.StringPool.Count ? module.StringPool[value] : "#" + value.ToString(CultureInfo.InvariantCulture))
+            .ToArray();
+        if (values.Length > 0)
+        {
+            builder.Append('(').Append(string.Join(", ", values)).Append(')');
+        }
+    }
+
+    private static void AppendSlotListPoolIndex(StringBuilder builder, string name, GameEventScriptCompiled module, int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
+        if ((uint)index >= (uint)module.UShortListPool.Count)
+        {
+            return;
+        }
+
+        var values = module.UShortListPool[index]
+            .Select(value => "s" + value.ToString(CultureInfo.InvariantCulture))
+            .ToArray();
+        if (values.Length > 0)
+        {
+            builder.Append('(').Append(string.Join(", ", values)).Append(')');
         }
     }
 

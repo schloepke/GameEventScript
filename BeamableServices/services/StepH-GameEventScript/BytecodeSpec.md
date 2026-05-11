@@ -664,13 +664,22 @@ transfers control to the callable entry and returns to the next instruction.
 @0501 JumpIfNotTrue cond=s3 target=@0510
 ```
 
-`CallLayout` describes the source argument slots and their labels:
+The current transitional `OperationLayout` describes source argument slots and
+metadata for calls, extension calls, type constructors, and collection/message
+builders. Names and slot lists are stored through `StringPool` and
+`UShortListPool` indexes, not direct object arrays. It intentionally no longer
+carries helper entry addresses or diagnostic-only parameter-slot metadata.
 
 ```text
-CallLayout
-  ArgumentCount
-  ArgumentSlots[]
-  ArgumentLabelsLayoutIndex
+OperationLayout
+  OpCode
+  NameIndex
+  ArgumentNameIndex
+  NameListIndex
+  ArgumentSlotListIndex
+  DeclaredTypes[]
+  CallableKind
+  ExternalReferenceIndex
 ```
 
 Call frame state:

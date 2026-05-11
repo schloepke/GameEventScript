@@ -154,9 +154,8 @@ every unit has DSL syntax today.
   for numeric units.
 - `LoadFloat` uses the overlapped `F64` payload. `UnitAndFlags` carries `None`,
   numeric units, or `Percentage`.
-- Side-table-backed opcodes use `C_U16` as the data/layout index. Their complete
-  operand list lives in the side table; `A_U16` and `B_U16` only mirror the
-  first one or two slots when that is useful.
+- Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
+  indices directly in `A_U16`, `B_U16`, `C_U16`, or `D_U16`.
 
 ## Opcode Table
 
@@ -177,11 +176,11 @@ runtime dispatch step.
 | `0x80` | Collection/message/reference type checks |
 | `0x90` | Construction, access, handlers, predicates, calls |
 | `0xA0` | Scopes and message emit/publish operations |
-| `0xB0` | Iterators and collection builders |
-| `0xC0` | Reserved |
-| `0xD0` | Pipeline operations and future pipeline expansion |
-| `0xE0` | Reserved |
-| `0xF0` | Reserved |
+| `0xB0` | Iterators, collection builders, reduction, and series operations |
+| `0xC0` | Calls |
+| `0xD0` | Pipeline iterator, materializer, and collection terminals |
+| `0xE0` | Pipeline materializing, ordering, and slicing terminals |
+| `0xF0` | Pipeline random and pattern terminals |
 
 | Hex | Opcode | UnitAndFlags | Dest_U16 | A_U16 | B_U16 | C_U16 | D_U16 | I64/U64 | F64 | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -199,8 +198,8 @@ runtime dispatch step.
 | 0x0B | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
 | 0x0C | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
 | 0x0D | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C_U16.IsTrue()`, including `nothing`. |
-| 0x0E | `ReturnNothing` | - | - | - | - | - | - | - | - | Returns `nothing` from the current frame. |
-| 0x0F | `Return` | - | - | return slot | - | - | - | - | - | Returns the value in `A_U16` from the current frame. |
+| 0x0E | `ReturnVoid` | - | - | - | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
+| 0x0F | `ReturnValue` | - | - | return slot | - | - | - | - | - | Returns the value in `A_U16` from the current frame. |
 | 0x10 | `Or` | - | result slot | left slot | right slot | - | - | - | - | Tri-state boolean combine. |
 | 0x11 | `And` | - | result slot | left slot | right slot | - | - | - | - | Tri-state boolean combine. |
 | 0x12 | `Xor` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
@@ -217,8 +216,19 @@ runtime dispatch step.
 | 0x1D | `Divide` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
 | 0x1E | `Power` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
 | 0x1F | `Default` | - | result slot | left slot | right slot | - | - | - | - | Nothing/default operator. |
-| 0x20..0x25 | `PrimitiveIntegerEqual`..`PrimitiveIntegerGreaterOrEqual` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path comparisons. |
-| 0x26..0x2C | `PrimitiveIntegerAdd`..`PrimitiveIntegerRemainder` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path arithmetic. |
+| 0x20 | `PrimitiveIntegerEqual` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path equality comparison. |
+| 0x21 | `PrimitiveIntegerNotEqual` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path inequality comparison. |
+| 0x22 | `PrimitiveIntegerLess` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path less-than comparison. |
+| 0x23 | `PrimitiveIntegerGreater` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path greater-than comparison. |
+| 0x24 | `PrimitiveIntegerLessOrEqual` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path less-or-equal comparison. |
+| 0x25 | `PrimitiveIntegerGreaterOrEqual` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path greater-or-equal comparison. |
+| 0x26 | `PrimitiveIntegerAdd` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path addition. |
+| 0x27 | `PrimitiveIntegerSubtract` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path subtraction. |
+| 0x28 | `PrimitiveIntegerMultiply` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path multiplication. |
+| 0x29 | `PrimitiveIntegerDivide` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path division. |
+| 0x2A | `PrimitiveIntegerFloorDivide` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path floor division. |
+| 0x2B | `PrimitiveIntegerModulo` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path modulo. |
+| 0x2C | `PrimitiveIntegerRemainder` | - | result slot | left slot | right slot | - | - | - | - | Integer fast-path remainder. |
 | 0x2D | `IntegerDivide` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
 | 0x2E | `Modulo` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
 | 0x2F | `Remainder` | - | result slot | left slot | right slot | - | - | - | - | Binary operation. |
@@ -252,12 +262,64 @@ runtime dispatch step.
 | 0x4B | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
 | 0x4C | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
 | 0x4D | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
-| 0x50..0x5C | `CastNothing`..`CastOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x4E..0x4F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text or short-circuit operations. |
+| 0x50 | `CastNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x51 | `CastBoolean` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x52 | `CastInteger` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x53 | `CastFloat` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x54 | `CastNumber` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x55 | `CastPercentage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x56 | `CastDegree` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x57 | `CastMeter` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x58 | `CastSecond` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x59 | `CastVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x5A | `CastPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x5B | `CastUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x5C | `CastOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x5D | `CastCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Declared-type conversion for custom record/external types. |
-| 0x60..0x6C | `CastSequence`..`CastDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x70..0x7D | `TypeCheckNothing`..`TypeCheckText` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x5E..0x5F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain casts. |
+| 0x60 | `CastSequence` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x61 | `CastSeries` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x62 | `CastEnvelope` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x63 | `CastRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x64 | `CastTag` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x65 | `CastText` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x66 | `CastList` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x67 | `CastRange` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x68 | `CastMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x69 | `CastHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x6A | `CastDictionary` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x6B | `CastSet` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x6C | `CastDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x6D..0x6F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
+| 0x70 | `TypeCheckNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x71 | `TypeCheckBoolean` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x72 | `TypeCheckInteger` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x73 | `TypeCheckFloat` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x74 | `TypeCheckPercentage` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x75 | `TypeCheckDegree` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x76 | `TypeCheckMeter` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x77 | `TypeCheckSecond` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x78 | `TypeCheckVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x79 | `TypeCheckPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x7A | `TypeCheckUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x7B | `TypeCheckOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x7C | `TypeCheckTag` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x7D | `TypeCheckText` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x7E | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
-| 0x80..0x8A | `TypeCheckSequence`..`TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x7F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain type checks. |
+| 0x80 | `TypeCheckSequence` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x81 | `TypeCheckSeries` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x82 | `TypeCheckEnvelope` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x83 | `TypeCheckList` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x84 | `TypeCheckRange` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x85 | `TypeCheckMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x86 | `TypeCheckHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x87 | `TypeCheckRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x88 | `TypeCheckDictionary` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x89 | `TypeCheckSet` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x8A | `TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x8B..0x8F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference type checks. |
 | 0x90 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x91 | `TypeConstructor` | - | result slot | type name `StringPool` index | argument name-list `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | Constructs a record/external value from named argument slots. |
 | 0x92 | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access expansion. |
@@ -270,6 +332,7 @@ runtime dispatch step.
 | 0x99 | `BuildMessage` | - | result slot | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Builds a message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x9A | `BindHandler` | - | result slot | operand slot-list `UShortListPool` index | argument name-list `UShortListPool` index | - | - | - | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
 | 0x9B | `Variadic` | - | result slot | operation name `StringPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Evaluates a variadic operator over slot-list operands. |
+| 0x9C..0x9F | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access operations. |
 | 0xA0 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
 | 0xA1 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
 | 0xA2 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
@@ -280,6 +343,7 @@ runtime dispatch step.
 | 0xA7 | `EmitMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Emits a dynamic message value with tags. |
 | 0xA8 | `PublishMessageValue` | - | - | message slot | - | - | - | - | - | Publishes a dynamic message value without tags. |
 | 0xA9 | `PublishMessageValueWithTags` | - | - | message slot | - | tag slot-list `UShortListPool` index | - | - | - | Publishes a dynamic message value with tags. |
+| 0xAA..0xAF | reserved | - | - | - | - | - | - | - | - | Reserved for future scope or message operations. |
 | 0xB0 | `RangeIterator` | - | iterator slot | from slot | to slot | - | - | - | - | Creates a VM-internal range iterator with default step `+1`. |
 | 0xB1 | `RangeIteratorWithStep` | - | iterator slot | from slot | to slot | step slot | - | - | - | Creates a VM-internal range iterator with an explicit step. |
 | 0xB2 | `RangeIteratorShort` | - | iterator slot | from I16 | to I16 | step I16 | - | - | - | Creates a compact literal range iterator. |
@@ -290,6 +354,12 @@ runtime dispatch step.
 | 0xB7 | `CollectionBuilderSet` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal set builder. |
 | 0xB8 | `CollectionBuilderAdd` | - | - | builder slot | item slot | - | - | - | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
 | 0xB9 | `CollectionBuilderFinish` | - | result slot | builder slot | - | - | - | - | - | Materializes the builder as a list or set. |
+| 0xBA | `IteratorReduce` | - | accumulator/result slot | iterator slot | item binding slot | reducer entry address | - | - | - | Empty -> `nothing`; one item -> item; otherwise reducer combines accumulator and item. |
+| 0xBB | `IteratorReduceOrDefault` | - | accumulator/result slot | iterator slot | default slot | item binding slot | reducer entry address | - | - | Empty -> default; one item -> item; otherwise reducer combines accumulator and item. |
+| 0xBC | `IteratorFold` | - | accumulator/result slot | iterator slot | seed slot | item binding slot | reducer entry address | - | - | Starts with seed and runs reducer for every item. |
+| 0xBD | `SeriesTerm` | - | result slot | series slot | index slot | - | - | - | - | Reads a series term. |
+| 0xBE | `SeriesTake` | - | result slot | source slot | count immediate | - | - | - | - | Takes the first `B_U16` values from a series or list-like source. |
+| 0xBF | `SeriesDrop` | - | result slot | source slot | count immediate | - | - | - | - | Drops the first `B_U16` values from a series or list-like source. |
 | 0xC0 | `Call` | - | result slot | callable entry address | argument slot-list `UShortListPool` index | - | - | - | - | Enters a VM-owned local call frame at a known code address. |
 | 0xC1 | `CallPredicate` | - | result slot | predicate entry address | argument slot-list `UShortListPool` index | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. |
 | 0xC2 | `CallStandard` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
@@ -297,8 +367,49 @@ runtime dispatch step.
 | 0xC4 | `CallExternal` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension. |
 | 0xC5 | `CallExternalPredicate` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension and normalizes the result to `boolean | nothing`. |
 | 0xC6..0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
-| 0xD0 | `Pipeline` | - | result slot | - | - | `PipelinePool` index | - | - | - | Pipeline entry stores source slot and selector indexes. `0xD1..0xDF` is reserved for future pipeline opcodes. |
-| 0xE0..0xFF | reserved | - | - | - | - | - | - | - | - | Reserved for future opcode groups. |
+| 0xD0 | `PipelineIterator` | - | iterator slot | source iterator slot | next-entry address | source item binding slot | - | - | - | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
+| 0xD1 | `PipelineCollectList` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a list. |
+| 0xD2 | `PipelineCollectSet` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a set. |
+| 0xD3 | `PipelineFirst` | - | result slot | iterator slot | - | - | - | - | - | Returns the first element or `nothing`. |
+| 0xD4 | `PipelineLast` | - | result slot | iterator slot | - | - | - | - | - | Returns the last element or `nothing`. |
+| 0xD5 | `PipelineSingle` | - | result slot | iterator slot | - | - | - | - | - | Returns the only element or `nothing`. |
+| 0xD6 | `PipelineHasAny` | - | result slot | iterator slot | - | - | - | - | - | Tri-state `any` over projected predicate values. |
+| 0xD7 | `PipelineHasAll` | - | result slot | iterator slot | - | - | - | - | - | Tri-state `all` over projected predicate values. |
+| 0xD8 | `PipelineContainsSingle` | - | result slot | iterator slot | needle slot | - | - | - | - | Tests whether the pipeline target contains one value. |
+| 0xD9 | `PipelineContainsAny` | - | result slot | iterator slot | needle slot | - | - | - | - | Tests whether the pipeline target contains any values from the needle collection. |
+| 0xDA | `PipelineContainsAll` | - | result slot | iterator slot | needle slot | - | - | - | - | Tests whether the pipeline target contains all values from the needle collection. |
+| 0xDB | `PipelineDictionary` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Builds a dictionary with each source item as the value. |
+| 0xDC | `PipelineDictionaryValue` | - | result slot | iterator slot | item binding slot | key entry address | value entry address | - | - | Builds a dictionary from key and value helper entries. |
+| 0xDD | `PipelineDistinct` | - | result slot | iterator slot | - | - | - | - | - | Materializes distinct source items in source order. |
+| 0xDE | `PipelineDistinctBy` | - | result slot | iterator slot | item binding slot | projection entry address | - | - | - | Materializes source items distinct by projected key. |
+| 0xDF | `PipelineGroupBy` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Groups source items by projected key. |
+| 0xE0 | `PipelineReverse` | - | result slot | iterator slot | - | - | - | - | - | Materializes source items in reverse order. |
+| 0xE1 | `PipelineSortAscending` | - | result slot | iterator slot | - | - | - | - | - | Sorts source items ascending. |
+| 0xE2 | `PipelineSortDescending` | - | result slot | iterator slot | - | - | - | - | - | Sorts source items descending. |
+| 0xE3 | `PipelineOrderByAscending` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Orders source items by projected key ascending. |
+| 0xE4 | `PipelineOrderByDescending` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Orders source items by projected key descending. |
+| 0xE5 | `PipelineTakeFirst` | - | result slot | iterator slot | count immediate | - | - | - | - | Takes the first `B_U16` items. |
+| 0xE6 | `PipelineTakeLast` | - | result slot | iterator slot | count immediate | - | - | - | - | Takes the last `B_U16` items. |
+| 0xE7 | `PipelineTakeHighest` | - | result slot | iterator slot | count immediate | - | - | - | - | Takes the highest `B_U16` items. |
+| 0xE8 | `PipelineTakeLowest` | - | result slot | iterator slot | count immediate | - | - | - | - | Takes the lowest `B_U16` items. |
+| 0xE9 | `PipelineDropFirst` | - | result slot | iterator slot | count immediate | - | - | - | - | Drops the first `B_U16` items. |
+| 0xEA | `PipelineDropLast` | - | result slot | iterator slot | count immediate | - | - | - | - | Drops the last `B_U16` items. |
+| 0xEB | `PipelineDropHighest` | - | result slot | iterator slot | count immediate | - | - | - | - | Drops the highest `B_U16` items. |
+| 0xEC | `PipelineDropLowest` | - | result slot | iterator slot | count immediate | - | - | - | - | Drops the lowest `B_U16` items. |
+| 0xED | `PipelineShuffle` | - | result slot | iterator slot | - | - | - | - | - | Shuffles source items. |
+| 0xEE | `PipelineDraw` | - | result slot | iterator slot | count immediate | - | - | - | - | Draws `B_U16` source items. |
+| 0xEF | `PipelineChoose` | - | result slot | iterator slot | count immediate | - | - | - | - | Chooses up to `B_U16` source items. |
+| 0xF0 | `PipelineChooseRandom` | - | result slot | iterator slot | count immediate | - | - | - | - | Randomly chooses up to `B_U16` source items. |
+| 0xF1 | `PipelineChooseWeighted` | - | result slot | iterator slot | count immediate | item binding slot | weight entry address | - | - | Randomly chooses using projected positive weights. |
+| 0xF2 | `PipelineDicePatternCountAny` | - | result slot | iterator slot | count immediate | - | - | - | - | Tests whether any dice face count reaches `B_U16`. |
+| 0xF3 | `PipelineDicePatternCountFace` | - | result slot | iterator slot | count immediate | face entry address | - | - | - | Tests whether a projected face count reaches `B_U16`. |
+| 0xF4 | `PipelineDicePatternFullHouse` | - | result slot | iterator slot | - | - | - | - | - | Tests the full-house dice pattern. |
+| 0xF5 | `PipelineDicePatternStraight` | - | result slot | iterator slot | - | - | - | - | - | Tests the straight dice pattern. |
+| 0xF6 | `PipelineTakePatternCountAny` | - | result slot | iterator slot | count immediate | - | - | - | - | Takes dice matching any-face count pattern. |
+| 0xF7 | `PipelineTakePatternCountFace` | - | result slot | iterator slot | count immediate | face entry address | - | - | - | Takes dice matching projected-face count pattern. |
+| 0xF8 | `PipelineTakePatternFullHouse` | - | result slot | iterator slot | - | - | - | - | - | Takes dice matching full-house pattern. |
+| 0xF9 | `PipelineTakePatternStraight` | - | result slot | iterator slot | - | - | - | - | - | Takes dice matching straight pattern. |
+| 0xFA..0xFF | reserved | - | - | - | - | - | - | - | - | Reserved for future pipeline or extension opcodes. |
 
 ## Side-Table Summary
 
@@ -306,11 +417,9 @@ runtime dispatch step.
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
 | `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `Call`, `CallStandard*`, `CallExternal*` |
-| `PipelinePool` | `Pipeline` |
-| `PipelineSelectorPool` | Referenced by `PipelinePool` |
-| `PipelinePatternPool` | Referenced by `PipelineSelectorPool` |
-| `PipelineObjectPatternPool` | Referenced by `PipelineSelectorPool` |
 
 Local calls, predicate calls, construction, extension calls, and collection/message
 builder opcodes now reference entry addresses or `StringPool`/`UShortListPool`
 directly from the instruction word.
+Pipeline selectors are lowered into linear helper entries and fixed iterator or
+terminal opcodes; there are no pipeline selector or pattern pools.

@@ -210,7 +210,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             ref _arguments,
                             ref _callFrames,
                             out var returned,
-                            out var returnValue))
+                            out var returnValue,
+                            out _))
                     {
                         fiber.Complete(BytecodeVmValue.Nothing, success: false);
                         return FrameSignal.Completed;

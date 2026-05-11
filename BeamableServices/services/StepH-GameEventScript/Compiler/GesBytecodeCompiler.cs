@@ -70,11 +70,7 @@ internal static class GesBytecodeCompiler
                 typeDefinitions,
                 linearBuilder.Code.ToArray(),
                 linearBuilder.MaxFrameSlots,
-                linearBuilder.DebugSegment,
-                linearBuilder.PipelinePatternPool.ToArray(),
-                linearBuilder.PipelineObjectPatternPool.ToArray(),
-                linearBuilder.PipelineSelectorPool.ToArray(),
-                linearBuilder.PipelinePool.ToArray());
+                linearBuilder.DebugSegment);
         }
 
         private IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> BuildHandlers()

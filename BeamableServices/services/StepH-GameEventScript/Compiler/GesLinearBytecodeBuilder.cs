@@ -17,10 +17,6 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly bool _emitDebugInfo;
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
     private readonly List<GameEventScriptBytecodeDebugDiagnosticSite> _debugDiagnosticSites = [];
-    private readonly List<GameEventScriptBytecodePipelinePattern> _pipelinePatternPool = [];
-    private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
-    private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
-    private readonly List<GameEventScriptBytecodePipeline> _pipelinePool = [];
     private readonly List<Action> _deferredHelperEmitters = [];
     private readonly Dictionary<string, GameEventScriptBytecodeCallable> _bytecodeCallables = new(StringComparer.Ordinal);
     private readonly List<(int Address, string CallableName)> _deferredCallableAddressPatches = [];
@@ -49,14 +45,6 @@ internal sealed class GesLinearBytecodeBuilder
 
     public GameEventScriptBytecodeDebugSegment DebugSegment => new(_debugDiagnosticSites);
 
-    public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool => _pipelinePatternPool;
-
-    public IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool => _pipelineObjectPatternPool;
-
-    public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool => _pipelineSelectorPool;
-
-    public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool => _pipelinePool;
-
     public void AddHandlers(
         IEnumerable<GameEventScriptBytecodeHandler> handlers,
         IReadOnlyDictionary<GameEventScriptBytecodeHandler, EventHandlerNode>? sourceHandlers = null)
@@ -82,7 +70,7 @@ internal sealed class GesLinearBytecodeBuilder
                     $"GameEventScript linear bytecode builder requires source statements for handler '{FormatSignature(handler.Message, handler.SignatureLabels)}'.");
             }
 
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnNothing));
+            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
             FlushDeferredHelpers();
             _maxFrameSlots = Math.Max(_maxFrameSlots, _currentFrameSlotCount);
         }
@@ -169,7 +157,7 @@ internal sealed class GesLinearBytecodeBuilder
         var state = new ExpressionState(slots.Count);
         var result = EmitSourceExpression(sourceCallable.Expression, context, state);
         callable.ReturnSlot = result;
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Return, a: result));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: result));
         FlushDeferredHelpers();
         callable.LocalSlotCount = Math.Max(callable.LocalSlotCount, _currentFrameSlotCount);
         _maxFrameSlots = Math.Max(_maxFrameSlots, callable.LocalSlotCount);
@@ -225,7 +213,7 @@ internal sealed class GesLinearBytecodeBuilder
         var result = EmitSourceExpression(expression, context, state);
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Return, a: result));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: result));
         return entry;
     }
 
@@ -1069,8 +1057,676 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourcePipeline(CollectionAccessExpressionNode collectionAccess, SourceContext context, ExpressionState state)
     {
-        var layoutIndex = AddSourcePipeline(collectionAccess, context, state);
-        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Pipeline, c: layoutIndex);
+        var selectors = new List<CollectionSelectorNode>();
+        ExpressionNode source = collectionAccess;
+        while (source is CollectionAccessExpressionNode access)
+        {
+            selectors.Add(access.Selector);
+            source = access.Target;
+        }
+
+        selectors.Reverse();
+        if (selectors.Count == 0)
+        {
+            return EmitSourceExpression(source, context, state);
+        }
+
+        var sourceSlot = EmitSourceExpression(source, context, state);
+        var terminal = selectors[^1];
+        var prefixCount = selectors.Count - 1;
+
+        if (prefixCount == 0)
+        {
+            switch (terminal)
+            {
+                case SeriesTermSelectorNode term:
+                {
+                    var indexSlot = EmitSourceExpression(term.IndexExpression, context, state);
+                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.SeriesTerm, a: sourceSlot, b: indexSlot);
+                }
+
+                case SequenceSliceSelectorNode { Scope: "first" } slice when
+                    string.Equals(slice.Operation, "take", StringComparison.Ordinal) ||
+                    string.Equals(slice.Operation, "drop", StringComparison.Ordinal):
+                {
+                    return EmitValueInstruction(
+                        state,
+                        string.Equals(slice.Operation, "take", StringComparison.Ordinal)
+                            ? GameEventScriptBytecodeOpCode.SeriesTake
+                            : GameEventScriptBytecodeOpCode.SeriesDrop,
+                        a: sourceSlot,
+                        b: slice.Count);
+                }
+            }
+        }
+
+        var iteratorSlot = AllocateSlot(state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionIterator, dest: iteratorSlot, a: sourceSlot));
+        for (var index = 0; index < prefixCount; index++)
+        {
+            iteratorSlot = EmitPipelinePrefixIterator(iteratorSlot, selectors[index], context, state);
+        }
+
+        return EmitPipelineTerminal(iteratorSlot, terminal, context, state);
+    }
+
+    private int EmitPipelinePrefixIterator(
+        int sourceIteratorSlot,
+        CollectionSelectorNode selector,
+        SourceContext context,
+        ExpressionState state)
+        => selector switch
+        {
+            FilterSelectorNode filter => EmitPipelineIterator(
+                sourceIteratorSlot,
+                context.RequireSlot(filter.Identifier),
+                filter.Predicate,
+                PipelineIteratorEntryKind.Filter,
+                context,
+                state),
+            SelectSelectorNode select => EmitPipelineIterator(
+                sourceIteratorSlot,
+                context.RequireSlot(select.Identifier),
+                select.Projection,
+                PipelineIteratorEntryKind.Select,
+                context,
+                state),
+            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support non-terminal selector node '{selector.GetType().Name}'.")
+        };
+
+    private int EmitPipelineIterator(
+        int sourceIteratorSlot,
+        int itemSlot,
+        ExpressionNode expression,
+        PipelineIteratorEntryKind kind,
+        SourceContext context,
+        ExpressionState state)
+    {
+        var iteratorSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.PipelineIterator,
+            dest: iteratorSlot,
+            a: sourceIteratorSlot,
+            c: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = kind == PipelineIteratorEntryKind.Filter
+                ? EmitPipelineFilterEntry(itemSlot, expression, context, state)
+                : EmitSourceExpressionEntry(expression, context, state);
+            PatchB(instructionAddress, entryAddress);
+        });
+        return iteratorSlot;
+    }
+
+    private int EmitPipelineFilterEntry(int itemSlot, ExpressionNode predicate, SourceContext context, ExpressionState state)
+    {
+        var entry = _code.Count;
+        var predicateSlot = EmitSourceExpression(predicate, context, state);
+        var skipYield = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: predicateSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: itemSlot));
+        PatchTarget(skipYield, _code.Count);
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
+        _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
+        _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
+        return entry;
+    }
+
+    private int EmitPipelineTerminal(
+        int iteratorSlot,
+        CollectionSelectorNode terminal,
+        SourceContext context,
+        ExpressionState state)
+    {
+        switch (terminal)
+        {
+            case SelectSelectorNode select:
+                return EmitPipelineCollect(
+                    EmitPipelineIterator(iteratorSlot, context.RequireSlot(select.Identifier), select.Projection, PipelineIteratorEntryKind.Select, context, state),
+                    isSet: false,
+                    state);
+
+            case FilterSelectorNode filter:
+                return EmitPipelineCollect(
+                    EmitPipelineIterator(iteratorSlot, context.RequireSlot(filter.Identifier), filter.Predicate, PipelineIteratorEntryKind.Filter, context, state),
+                    isSet: false,
+                    state);
+
+            case PredicateSelectorNode predicate:
+            {
+                var predicateIterator = EmitPipelineIterator(
+                    iteratorSlot,
+                    context.RequireSlot(predicate.Identifier),
+                    predicate.Predicate,
+                    PipelineIteratorEntryKind.Select,
+                    context,
+                    state);
+                return EmitValueInstruction(
+                    state,
+                    string.Equals(predicate.Operator, "all", StringComparison.Ordinal)
+                        ? GameEventScriptBytecodeOpCode.PipelineHasAll
+                        : GameEventScriptBytecodeOpCode.PipelineHasAny,
+                    a: predicateIterator);
+            }
+
+            case EdgeSelectorNode edge:
+            {
+                if (edge.Predicate is not null && !string.IsNullOrEmpty(edge.Identifier))
+                {
+                    iteratorSlot = EmitPipelineIterator(
+                        iteratorSlot,
+                        context.RequireSlot(edge.Identifier!),
+                        edge.Predicate,
+                        PipelineIteratorEntryKind.Filter,
+                        context,
+                        state);
+                }
+
+                return EmitValueInstruction(
+                    state,
+                    edge.Mode switch
+                    {
+                        "last" => GameEventScriptBytecodeOpCode.PipelineLast,
+                        "single" => GameEventScriptBytecodeOpCode.PipelineSingle,
+                        _ => GameEventScriptBytecodeOpCode.PipelineFirst
+                    },
+                    a: iteratorSlot);
+            }
+
+            case CountSelectorNode count:
+            {
+                var filteredIterator = EmitPipelineIterator(
+                    iteratorSlot,
+                    context.RequireSlot(count.Identifier),
+                    count.Predicate,
+                    PipelineIteratorEntryKind.Filter,
+                    context,
+                    state);
+                return EmitPipelineCount(filteredIterator, state);
+            }
+
+            case SumSelectorNode sum:
+            {
+                var projectedIterator = EmitPipelineIterator(
+                    iteratorSlot,
+                    context.RequireSlot(sum.Identifier),
+                    sum.Projection,
+                    PipelineIteratorEntryKind.Select,
+                    context,
+                    state);
+                return EmitPipelineSum(projectedIterator, state);
+            }
+
+            case AverageSelectorNode average:
+            {
+                var projectedIterator = EmitPipelineIterator(
+                    iteratorSlot,
+                    context.RequireSlot(average.Identifier),
+                    average.Projection,
+                    PipelineIteratorEntryKind.Select,
+                    context,
+                    state);
+                return EmitPipelineAverage(projectedIterator, state);
+            }
+
+            case MinSelectorNode min:
+                return EmitPipelineExtrema(iteratorSlot, context.RequireSlot(min.Identifier), min.Projection, isMax: false, context, state);
+
+            case MaxSelectorNode max:
+                return EmitPipelineExtrema(iteratorSlot, context.RequireSlot(max.Identifier), max.Projection, isMax: true, context, state);
+
+            case DictionarySelectorNode dictionary:
+                return EmitPipelineDictionary(
+                    iteratorSlot,
+                    context.RequireSlot(dictionary.Identifier),
+                    dictionary.KeyProjection,
+                    dictionary.ValueProjection,
+                    context,
+                    state);
+
+            case ContainsSelectorNode contains:
+            {
+                var needleSlot = EmitSourceExpression(contains.ValueExpression, context, state);
+                return EmitValueInstruction(
+                    state,
+                    contains.Mode switch
+                    {
+                        "all" => GameEventScriptBytecodeOpCode.PipelineContainsAll,
+                        "any" => GameEventScriptBytecodeOpCode.PipelineContainsAny,
+                        _ => GameEventScriptBytecodeOpCode.PipelineContainsSingle
+                    },
+                    a: iteratorSlot,
+                    b: needleSlot);
+            }
+
+            case DistinctSelectorNode distinct:
+                return EmitPipelineDistinct(iteratorSlot, distinct, context, state);
+
+            case GroupBySelectorNode groupBy:
+                return EmitPipelineEntryTerminal(
+                    GameEventScriptBytecodeOpCode.PipelineGroupBy,
+                    iteratorSlot,
+                    context.RequireSlot(groupBy.Identifier),
+                    groupBy.Projection,
+                    context,
+                    state);
+
+            case OrderBySelectorNode orderBy:
+                return EmitPipelineEntryTerminal(
+                    string.Equals(orderBy.Direction, "descending", StringComparison.Ordinal)
+                        ? GameEventScriptBytecodeOpCode.PipelineOrderByDescending
+                        : GameEventScriptBytecodeOpCode.PipelineOrderByAscending,
+                    iteratorSlot,
+                    context.RequireSlot(orderBy.Identifier),
+                    orderBy.Projection,
+                    context,
+                    state);
+
+            case SortSelectorNode sort:
+                return EmitValueInstruction(
+                    state,
+                    string.Equals(sort.Direction, "descending", StringComparison.Ordinal)
+                        ? GameEventScriptBytecodeOpCode.PipelineSortDescending
+                        : GameEventScriptBytecodeOpCode.PipelineSortAscending,
+                    a: iteratorSlot);
+
+            case ReverseSelectorNode:
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineReverse, a: iteratorSlot);
+
+            case SequenceSliceSelectorNode slice:
+                return EmitPipelineSequenceSlice(iteratorSlot, slice, state);
+
+            case ShuffleSelectorNode:
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineShuffle, a: iteratorSlot);
+
+            case DrawSelectorNode draw:
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineDraw, a: iteratorSlot, b: draw.Count);
+
+            case ChooseSelectorNode choose:
+                return EmitPipelineChoose(iteratorSlot, choose, context, state);
+
+            case PatternSelectorNode pattern:
+                return EmitPipelineDicePattern(iteratorSlot, pattern.Pattern, take: false, context, state);
+
+            case TakePatternSelectorNode takePattern:
+                return EmitPipelineDicePattern(iteratorSlot, takePattern.Pattern, take: true, context, state);
+
+            case ObjectMatchSelectorNode objectMatch:
+                return EmitPipelineObjectMatch(iteratorSlot, objectMatch.Pattern, context, state);
+
+            default:
+                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support terminal selector node '{terminal.GetType().Name}'.");
+        }
+    }
+
+    private int EmitPipelineCollect(int iteratorSlot, bool isSet, ExpressionState state)
+        => EmitValueInstruction(
+            state,
+            isSet ? GameEventScriptBytecodeOpCode.PipelineCollectSet : GameEventScriptBytecodeOpCode.PipelineCollectList,
+            a: iteratorSlot);
+
+    private int EmitPipelineEntryTerminal(
+        GameEventScriptBytecodeOpCode opCode,
+        int iteratorSlot,
+        int itemSlot,
+        ExpressionNode expression,
+        SourceContext context,
+        ExpressionState state)
+    {
+        var resultSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot, b: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitSourceExpressionEntry(expression, context, state);
+            PatchC(instructionAddress, entryAddress);
+        });
+        return resultSlot;
+    }
+
+    private int EmitPipelineDictionary(
+        int iteratorSlot,
+        int itemSlot,
+        ExpressionNode keyProjection,
+        ExpressionNode? valueProjection,
+        SourceContext context,
+        ExpressionState state)
+    {
+        var resultSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            valueProjection is null ? GameEventScriptBytecodeOpCode.PipelineDictionary : GameEventScriptBytecodeOpCode.PipelineDictionaryValue,
+            dest: resultSlot,
+            a: iteratorSlot,
+            b: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var keyEntryAddress = EmitSourceExpressionEntry(keyProjection, context, state);
+            PatchC(instructionAddress, keyEntryAddress);
+            if (valueProjection is not null)
+            {
+                var valueEntryAddress = EmitSourceExpressionEntry(valueProjection, context, state);
+                PatchD(instructionAddress, valueEntryAddress);
+            }
+        });
+        return resultSlot;
+    }
+
+    private int EmitPipelineDistinct(int iteratorSlot, DistinctSelectorNode distinct, SourceContext context, ExpressionState state)
+    {
+        if (distinct.Projection is null || string.IsNullOrEmpty(distinct.Identifier))
+        {
+            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineDistinct, a: iteratorSlot);
+        }
+
+        return EmitPipelineEntryTerminal(
+            GameEventScriptBytecodeOpCode.PipelineDistinctBy,
+            iteratorSlot,
+            context.RequireSlot(distinct.Identifier!),
+            distinct.Projection,
+            context,
+            state);
+    }
+
+    private int EmitPipelineSequenceSlice(int iteratorSlot, SequenceSliceSelectorNode slice, ExpressionState state)
+    {
+        var opCode = (slice.Operation, slice.Scope) switch
+        {
+            ("take", "last") => GameEventScriptBytecodeOpCode.PipelineTakeLast,
+            ("take", "highest") => GameEventScriptBytecodeOpCode.PipelineTakeHighest,
+            ("take", "lowest") => GameEventScriptBytecodeOpCode.PipelineTakeLowest,
+            ("drop", "first") => GameEventScriptBytecodeOpCode.PipelineDropFirst,
+            ("drop", "last") => GameEventScriptBytecodeOpCode.PipelineDropLast,
+            ("drop", "highest") => GameEventScriptBytecodeOpCode.PipelineDropHighest,
+            ("drop", "lowest") => GameEventScriptBytecodeOpCode.PipelineDropLowest,
+            _ => GameEventScriptBytecodeOpCode.PipelineTakeFirst
+        };
+        return EmitValueInstruction(state, opCode, a: iteratorSlot, b: slice.Count);
+    }
+
+    private int EmitPipelineChoose(int iteratorSlot, ChooseSelectorNode choose, SourceContext context, ExpressionState state)
+    {
+        if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
+        {
+            iteratorSlot = EmitPipelineIterator(
+                iteratorSlot,
+                context.RequireSlot(choose.Identifier!),
+                choose.Predicate,
+                PipelineIteratorEntryKind.Filter,
+                context,
+                state);
+        }
+
+        if (choose.WeightExpression is null || string.IsNullOrEmpty(choose.WeightIdentifier))
+        {
+            return EmitValueInstruction(
+                state,
+                choose.AtRandom ? GameEventScriptBytecodeOpCode.PipelineChooseRandom : GameEventScriptBytecodeOpCode.PipelineChoose,
+                a: iteratorSlot,
+                b: choose.Count);
+        }
+
+        var resultSlot = AllocateSlot(state);
+        var itemSlot = context.RequireSlot(choose.WeightIdentifier!);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.PipelineChooseWeighted,
+            dest: resultSlot,
+            a: iteratorSlot,
+            b: choose.Count,
+            c: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, context, state);
+            PatchD(instructionAddress, entryAddress);
+        });
+        return resultSlot;
+    }
+
+    private int EmitPipelineCount(int iteratorSlot, ExpressionState state)
+    {
+        var seedSlot = EmitLoadInteger(state, 0L, unitAndFlags: 0);
+        var itemSlot = AllocateSlot(state);
+        var resultSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.IteratorFold,
+            dest: resultSlot,
+            a: iteratorSlot,
+            b: seedSlot,
+            c: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitPipelineCountReducerEntry(resultSlot, state);
+            PatchD(instructionAddress, entryAddress);
+        });
+        return resultSlot;
+    }
+
+    private int EmitPipelineSum(int iteratorSlot, ExpressionState state)
+    {
+        var defaultSlot = EmitLoadFloat(state, 0d, unitAndFlags: 0);
+        var itemSlot = AllocateSlot(state);
+        var resultSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.IteratorReduceOrDefault,
+            dest: resultSlot,
+            a: iteratorSlot,
+            b: defaultSlot,
+            c: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitPipelineAddReducerEntry(resultSlot, itemSlot, state);
+            PatchD(instructionAddress, entryAddress);
+        });
+        return resultSlot;
+    }
+
+    private int EmitPipelineAverage(int iteratorSlot, ExpressionState state)
+    {
+        var zeroSlot = EmitLoadFloat(state, 0d, unitAndFlags: 0);
+        var countSlot = EmitLoadInteger(state, 0L, unitAndFlags: 0);
+        var itemSlot = AllocateSlot(state);
+        var resultSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.IteratorFold,
+            dest: resultSlot,
+            a: iteratorSlot,
+            b: zeroSlot,
+            c: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitPipelineAverageReducerEntry(resultSlot, itemSlot, countSlot, state);
+            PatchD(instructionAddress, entryAddress);
+        });
+
+        var hasNoItems = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Equal, countSlot, zeroSlot);
+        var jumpToDivide = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfFalse, c: hasNoItems));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.LoadNothing, dest: resultSlot));
+        var jumpToEnd = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump));
+        PatchTarget(jumpToDivide, _code.Count);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Divide, dest: resultSlot, a: resultSlot, b: countSlot));
+        PatchTarget(jumpToEnd, _code.Count);
+        return resultSlot;
+    }
+
+    private int EmitPipelineExtrema(
+        int iteratorSlot,
+        int identifierSlot,
+        ExpressionNode projection,
+        bool isMax,
+        SourceContext context,
+        ExpressionState state)
+    {
+        var itemSlot = identifierSlot;
+        var resultSlot = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.IteratorReduce,
+            dest: resultSlot,
+            a: iteratorSlot,
+            b: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitPipelineExtremaReducerEntry(resultSlot, itemSlot, identifierSlot, projection, isMax, context, state);
+            PatchC(instructionAddress, entryAddress);
+        });
+        return resultSlot;
+    }
+
+    private int EmitPipelineAddReducerEntry(int accumulatorSlot, int itemSlot, ExpressionState state)
+    {
+        var entry = _code.Count;
+        var sumSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, itemSlot);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: sumSlot));
+        return entry;
+    }
+
+    private int EmitPipelineCountReducerEntry(int accumulatorSlot, ExpressionState state)
+    {
+        var entry = _code.Count;
+        var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
+        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd, accumulatorSlot, oneSlot);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: nextCountSlot));
+        return entry;
+    }
+
+    private int EmitPipelineAverageReducerEntry(int accumulatorSlot, int itemSlot, int countSlot, ExpressionState state)
+    {
+        var entry = _code.Count;
+        var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
+        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd, countSlot, oneSlot);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: countSlot, a: nextCountSlot));
+        var sumSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, itemSlot);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: sumSlot));
+        return entry;
+    }
+
+    private int EmitPipelineExtremaReducerEntry(
+        int accumulatorSlot,
+        int itemSlot,
+        int identifierSlot,
+        ExpressionNode projection,
+        bool isMax,
+        SourceContext context,
+        ExpressionState state)
+    {
+        var entry = _code.Count;
+        var currentItemSlot = AllocateSlot(state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: currentItemSlot, a: itemSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: accumulatorSlot));
+        var accumulatorProjectionSlot = EmitSourceExpression(projection, context, state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: currentItemSlot));
+        var currentProjectionSlot = EmitSourceExpression(projection, context, state);
+        var comparisonSlot = EmitValueInstruction(
+            state,
+            isMax ? GameEventScriptBytecodeOpCode.Greater : GameEventScriptBytecodeOpCode.Less,
+            currentProjectionSlot,
+            accumulatorProjectionSlot);
+        var keepAccumulatorJump = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: comparisonSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: currentItemSlot));
+        PatchTarget(keepAccumulatorJump, _code.Count);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: accumulatorSlot));
+        return entry;
+    }
+
+    private int EmitPipelineDicePattern(
+        int iteratorSlot,
+        DicePatternNode pattern,
+        bool take,
+        SourceContext context,
+        ExpressionState state)
+    {
+        var resultSlot = AllocateSlot(state);
+        switch (pattern)
+        {
+            case DiceCountPatternNode count:
+            {
+                var opCode = take
+                    ? count.Face is null ? GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny : GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace
+                    : count.Face is null ? GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny : GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace;
+                var instructionAddress = Emit(CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot, b: count.Count));
+                if (count.Face is not null)
+                {
+                    _deferredHelperEmitters.Add(() =>
+                    {
+                        var entryAddress = EmitSourceExpressionEntry(count.Face, context, state);
+                        PatchC(instructionAddress, entryAddress);
+                    });
+                }
+
+                return resultSlot;
+            }
+
+            case DiceFullHousePatternNode:
+                Emit(CreateInstruction(
+                    take ? GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse : GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse,
+                    dest: resultSlot,
+                    a: iteratorSlot));
+                return resultSlot;
+
+            case DiceStraightPatternNode:
+                Emit(CreateInstruction(
+                    take ? GameEventScriptBytecodeOpCode.PipelineTakePatternStraight : GameEventScriptBytecodeOpCode.PipelineDicePatternStraight,
+                    dest: resultSlot,
+                    a: iteratorSlot));
+                return resultSlot;
+
+            default:
+                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support dice pattern '{pattern.GetType().Name}'.");
+        }
+    }
+
+    private int EmitPipelineObjectMatch(int iteratorSlot, ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
+    {
+        var itemSlot = AllocateSlot(state);
+        var matchIterator = AllocateSlot(state);
+        var instructionAddress = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.PipelineIterator,
+            dest: matchIterator,
+            a: iteratorSlot,
+            c: itemSlot));
+        _deferredHelperEmitters.Add(() =>
+        {
+            var entryAddress = EmitPipelineObjectMatchEntry(itemSlot, pattern, context, state);
+            PatchB(instructionAddress, entryAddress);
+        });
+        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineHasAny, a: matchIterator);
+    }
+
+    private int EmitPipelineObjectMatchEntry(int itemSlot, ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
+    {
+        var entry = _code.Count;
+        var matchSlot = EmitObjectPatternPredicate(itemSlot, pattern, context, state);
+        var skipYield = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: matchSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: matchSlot));
+        PatchTarget(skipYield, _code.Count);
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
+        return entry;
+    }
+
+    private int EmitObjectPatternPredicate(int targetSlot, ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
+    {
+        var resultSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadTrue);
+        foreach (var entry in pattern.Entries)
+        {
+            var memberSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MemberAccess, a: targetSlot, c: ResolveStringIndex(entry.Key));
+            int entryMatchSlot;
+            switch (entry.Value)
+            {
+                case ObjectMatchExpressionValueNode expression:
+                {
+                    var expectedSlot = EmitSourceExpression(expression.Expression, context, state);
+                    entryMatchSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Equal, memberSlot, expectedSlot);
+                    break;
+                }
+
+                case ObjectMatchNestedValueNode nested:
+                    entryMatchSlot = EmitObjectPatternPredicate(memberSlot, nested.Pattern, context, state);
+                    break;
+
+                default:
+                    throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support object match value '{entry.Value.GetType().Name}'.");
+            }
+
+            resultSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.And, resultSlot, entryMatchSlot);
+        }
+
+        return resultSlot;
     }
 
     private int EmitSourceIterator(IterationSourceNode source, SourceContext context, ExpressionState state)
@@ -1166,298 +1822,6 @@ internal sealed class GesLinearBytecodeBuilder
         _debugDiagnosticSites.Add(new GameEventScriptBytecodeDebugDiagnosticSite(kind, timing, address, slot, name));
     }
 
-    private int AddSourcePipelineSelector(CollectionSelectorNode selector, bool isTerminal, SourceContext context, ExpressionState state)
-    {
-        var index = _pipelineSelectorPool.Count;
-        var selectorData = CreateSourceSelectorData(selector, isTerminal, context);
-        var pipelinePatternIndex = selectorData.DicePattern is null
-            ? -1
-            : AddSourcePipelinePattern(selectorData.DicePattern, context, state);
-        var objectPatternIndex = selectorData.ObjectPattern is null
-            ? -1
-            : AddSourcePipelineObjectPattern(selectorData.ObjectPattern, context, state);
-        _pipelineSelectorPool.Add(new GameEventScriptBytecodePipelineSelector(
-            selectorData.Kind,
-            selectorData.IdentifierSlot,
-            selectorData.EdgeMode,
-            selectorData.SecondaryMode,
-            selectorData.Count,
-            selectorData.SecondaryIdentifierSlot,
-            selectorData.Flag,
-            pipelinePatternIndex: pipelinePatternIndex,
-            objectPatternIndex: objectPatternIndex));
-        _deferredHelperEmitters.Add(() =>
-        {
-            var expressionEntryAddress = selectorData.Expression is null
-                ? -1
-                : EmitSourceExpressionEntry(selectorData.Expression, context, state);
-            var secondaryExpressionEntryAddress = selectorData.SecondaryExpression is null
-                ? -1
-                : EmitSourceExpressionEntry(selectorData.SecondaryExpression, context, state);
-            _pipelineSelectorPool[index] = new GameEventScriptBytecodePipelineSelector(
-                selectorData.Kind,
-                selectorData.IdentifierSlot,
-                selectorData.EdgeMode,
-                selectorData.SecondaryMode,
-                selectorData.Count,
-                selectorData.SecondaryIdentifierSlot,
-                selectorData.Flag,
-                expressionEntryAddress,
-                secondaryExpressionEntryAddress,
-                pipelinePatternIndex,
-                objectPatternIndex);
-        });
-        return index;
-    }
-
-    private SourceSelectorData CreateSourceSelectorData(CollectionSelectorNode selector, bool isTerminal, SourceContext context)
-        => selector switch
-        {
-            FilterSelectorNode filter => new(
-                GameEventScriptBytecodePipelineSelectorKind.Filter,
-                context.RequireSlot(filter.Identifier),
-                filter.Predicate),
-
-            SelectSelectorNode select => new(
-                GameEventScriptBytecodePipelineSelectorKind.Select,
-                context.RequireSlot(select.Identifier),
-                select.Projection),
-
-            PredicateSelectorNode predicate when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Predicate,
-                context.RequireSlot(predicate.Identifier),
-                predicate.Predicate,
-                predicate.Operator),
-
-            SumSelectorNode sum when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Sum,
-                context.RequireSlot(sum.Identifier),
-                sum.Projection),
-
-            AverageSelectorNode average when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Average,
-                context.RequireSlot(average.Identifier),
-                average.Projection),
-
-            CountSelectorNode count when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Count,
-                context.RequireSlot(count.Identifier),
-                count.Predicate),
-
-            SeriesTermSelectorNode term when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.SeriesTerm,
-                -1,
-                term.IndexExpression),
-
-            EdgeSelectorNode edge when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Edge,
-                string.IsNullOrEmpty(edge.Identifier) ? -1 : context.RequireSlot(edge.Identifier!),
-                edge.Predicate,
-                edge.Mode),
-
-            PatternSelectorNode pattern when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Pattern,
-                -1,
-                null,
-                DicePattern: pattern.Pattern),
-
-            ObjectMatchSelectorNode objectMatch when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.ObjectMatch,
-                -1,
-                null,
-                ObjectPattern: objectMatch.Pattern),
-
-            TakePatternSelectorNode takePattern when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.TakePattern,
-                -1,
-                null,
-                DicePattern: takePattern.Pattern),
-
-            MinSelectorNode min when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Min,
-                context.RequireSlot(min.Identifier),
-                min.Projection),
-
-            MaxSelectorNode max when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Max,
-                context.RequireSlot(max.Identifier),
-                max.Projection),
-
-            DictionarySelectorNode dictionary when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Dictionary,
-                context.RequireSlot(dictionary.Identifier),
-                dictionary.KeyProjection,
-                SecondaryExpression: dictionary.ValueProjection),
-
-            ContainsSelectorNode contains when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Contains,
-                -1,
-                contains.ValueExpression,
-                contains.Mode),
-
-            ChooseSelectorNode choose when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Choose,
-                string.IsNullOrEmpty(choose.Identifier) ? -1 : context.RequireSlot(choose.Identifier!),
-                choose.Predicate,
-                Count: choose.Count,
-                SecondaryIdentifierSlot: string.IsNullOrEmpty(choose.WeightIdentifier) ? -1 : context.RequireSlot(choose.WeightIdentifier!),
-                SecondaryExpression: choose.WeightExpression,
-                Flag: choose.AtRandom),
-
-            DrawSelectorNode draw when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Draw,
-                -1,
-                null,
-                Count: draw.Count),
-
-            ShuffleSelectorNode when isTerminal => new(GameEventScriptBytecodePipelineSelectorKind.Shuffle, -1, null),
-
-            SortSelectorNode sort when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Sort,
-                -1,
-                null,
-                sort.Direction),
-
-            DistinctSelectorNode distinct when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.Distinct,
-                string.IsNullOrEmpty(distinct.Identifier) ? -1 : context.RequireSlot(distinct.Identifier!),
-                distinct.Projection),
-
-            GroupBySelectorNode groupBy when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.GroupBy,
-                context.RequireSlot(groupBy.Identifier),
-                groupBy.Projection),
-
-            OrderBySelectorNode orderBy when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.OrderBy,
-                context.RequireSlot(orderBy.Identifier),
-                orderBy.Projection,
-                orderBy.Direction),
-
-            ReverseSelectorNode when isTerminal => new(GameEventScriptBytecodePipelineSelectorKind.Reverse, -1, null),
-
-            SequenceSliceSelectorNode slice when isTerminal => new(
-                GameEventScriptBytecodePipelineSelectorKind.SequenceSlice,
-                -1,
-                null,
-                slice.Operation,
-                SecondaryMode: slice.Scope,
-                Count: slice.Count),
-
-            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support selector node '{selector.GetType().Name}'.")
-        };
-
-    private int AddSourcePipelinePattern(DicePatternNode pattern, SourceContext context, ExpressionState state)
-    {
-        var index = _pipelinePatternPool.Count;
-        switch (pattern)
-        {
-            case DiceCountPatternNode count:
-                _pipelinePatternPool.Add(new GameEventScriptBytecodePipelinePattern(
-                    GameEventScriptBytecodePipelinePatternKind.Count,
-                    count.Count));
-                if (count.Face is not null)
-                {
-                    _deferredHelperEmitters.Add(() =>
-                    {
-                        var faceEntryAddress = EmitSourceExpressionEntry(count.Face, context, state);
-                        _pipelinePatternPool[index] = new GameEventScriptBytecodePipelinePattern(
-                            GameEventScriptBytecodePipelinePatternKind.Count,
-                            count.Count,
-                            faceEntryAddress);
-                    });
-                }
-
-                break;
-
-            case DiceFullHousePatternNode:
-                _pipelinePatternPool.Add(new GameEventScriptBytecodePipelinePattern(GameEventScriptBytecodePipelinePatternKind.FullHouse));
-                break;
-
-            case DiceStraightPatternNode:
-                _pipelinePatternPool.Add(new GameEventScriptBytecodePipelinePattern(GameEventScriptBytecodePipelinePatternKind.Straight));
-                break;
-
-            default:
-                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support dice pattern '{pattern.GetType().Name}'.");
-        }
-
-        return index;
-    }
-
-    private int AddSourcePipelineObjectPattern(ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
-    {
-        var index = _pipelineObjectPatternPool.Count;
-        _pipelineObjectPatternPool.Add(new GameEventScriptBytecodePipelineObjectPattern([]));
-
-        var entries = new GameEventScriptBytecodePipelineObjectPatternEntry[pattern.Entries.Count];
-        var expressionEntries = new List<(int EntryIndex, ObjectMatchExpressionValueNode Value)>();
-        for (var entryIndex = 0; entryIndex < pattern.Entries.Count; entryIndex++)
-        {
-            var entry = pattern.Entries[entryIndex];
-            switch (entry.Value)
-            {
-                case ObjectMatchExpressionValueNode expression:
-                    entries[entryIndex] = new GameEventScriptBytecodePipelineObjectPatternEntry(
-                        entry.Key,
-                        GameEventScriptBytecodePipelineObjectPatternValueKind.Expression);
-                    expressionEntries.Add((entryIndex, expression));
-                    break;
-
-                case ObjectMatchNestedValueNode nested:
-                    entries[entryIndex] = new GameEventScriptBytecodePipelineObjectPatternEntry(
-                        entry.Key,
-                        GameEventScriptBytecodePipelineObjectPatternValueKind.Nested,
-                        nestedPatternIndex: AddSourcePipelineObjectPattern(nested.Pattern, context, state));
-                    break;
-            }
-        }
-
-        _pipelineObjectPatternPool[index] = new GameEventScriptBytecodePipelineObjectPattern(entries);
-        _deferredHelperEmitters.Add(() =>
-        {
-            var updatedEntries = entries.ToArray();
-            foreach (var expressionEntry in expressionEntries)
-            {
-                var original = updatedEntries[expressionEntry.EntryIndex];
-                updatedEntries[expressionEntry.EntryIndex] = new GameEventScriptBytecodePipelineObjectPatternEntry(
-                    original.Key,
-                    GameEventScriptBytecodePipelineObjectPatternValueKind.Expression,
-                    EmitSourceExpressionEntry(expressionEntry.Value.Expression, context, state));
-            }
-
-            _pipelineObjectPatternPool[index] = new GameEventScriptBytecodePipelineObjectPattern(updatedEntries);
-        });
-        return index;
-    }
-
-    private int AddSourcePipeline(CollectionAccessExpressionNode expression, SourceContext context, ExpressionState state)
-    {
-        var selectors = new List<CollectionSelectorNode>();
-        ExpressionNode source = expression;
-        while (source is CollectionAccessExpressionNode collectionAccess)
-        {
-            selectors.Add(collectionAccess.Selector);
-            source = collectionAccess.Target;
-        }
-
-        selectors.Reverse();
-        var sourceSlot = EmitSourceExpression(source, context, state);
-        var prefixSelectorIndexes = new int[Math.Max(0, selectors.Count - 1)];
-        for (var index = 0; index < prefixSelectorIndexes.Length; index++)
-        {
-            prefixSelectorIndexes[index] = AddSourcePipelineSelector(selectors[index], isTerminal: false, context, state);
-        }
-
-        var terminalSelectorIndex = AddSourcePipelineSelector(selectors[^1], isTerminal: true, context, state);
-        var layoutIndex = _pipelinePool.Count;
-        _pipelinePool.Add(new GameEventScriptBytecodePipeline(
-            sourceSlot,
-            prefixSelectorIndexes,
-            terminalSelectorIndex));
-        return layoutIndex;
-    }
-
     private void FlushDeferredHelpers()
     {
         for (var index = 0; index < _deferredHelperEmitters.Count; index++)
@@ -1516,6 +1880,9 @@ internal sealed class GesLinearBytecodeBuilder
 
     private void PatchC(int address, int value)
         => _code[address] = _code[address] with { C_U16 = ToUShortOperand(value, "operand") };
+
+    private void PatchD(int address, int value)
+        => _code[address] = _code[address] with { D_U16 = ToUShortOperand(value, "operand") };
 
     private int ResolveStringIndex(string? value)
         => value is null
@@ -1922,18 +2289,11 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support binary operator '{operation}'.")
         };
 
-    private sealed record SourceSelectorData(
-        GameEventScriptBytecodePipelineSelectorKind Kind,
-        int IdentifierSlot,
-        ExpressionNode? Expression,
-        string? EdgeMode = null,
-        string? SecondaryMode = null,
-        int Count = 0,
-        int SecondaryIdentifierSlot = -1,
-        ExpressionNode? SecondaryExpression = null,
-        bool Flag = false,
-        DicePatternNode? DicePattern = null,
-        ObjectMatchPatternNode? ObjectPattern = null);
+    private enum PipelineIteratorEntryKind
+    {
+        Filter,
+        Select
+    }
 
     private sealed class SourceContext(IReadOnlyDictionary<string, int> slots, int? temporaryBaseSlot = null)
     {

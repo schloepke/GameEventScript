@@ -21,11 +21,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
         IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
         int maxFrameSlots = 0,
-        GameEventScriptBytecodeDebugSegment? debugSegment = null,
-        IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
-        IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
-        IReadOnlyList<GameEventScriptBytecodePipelineSelector>? pipelineSelectorPool = null,
-        IReadOnlyList<GameEventScriptBytecodePipeline>? pipelinePool = null)
+        GameEventScriptBytecodeDebugSegment? debugSegment = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         ModuleName = string.IsNullOrWhiteSpace(moduleName) ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName)) : moduleName;
@@ -39,10 +35,6 @@ public sealed class GameEventScriptCompiled
         Code = code?.ToArray() ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
         DebugSegment = debugSegment ?? GameEventScriptBytecodeDebugSegment.Empty;
-        PipelinePatternPool = pipelinePatternPool?.ToArray() ?? [];
-        PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
-        PipelineSelectorPool = pipelineSelectorPool?.ToArray() ?? [];
-        PipelinePool = pipelinePool?.ToArray() ?? [];
     }
 
     public GameEventScriptCompileOptions Options { get; }
@@ -68,14 +60,6 @@ public sealed class GameEventScriptCompiled
     public int MaxFrameSlots { get; }
 
     public GameEventScriptBytecodeDebugSegment DebugSegment { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool { get; }
 
     private static IReadOnlyList<T> CopyList<T>(IReadOnlyList<T> source, string parameterName)
         => (source ?? throw new ArgumentNullException(parameterName)).ToArray();

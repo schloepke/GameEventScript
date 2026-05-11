@@ -103,10 +103,6 @@ GameEventScriptCompiled
   Handlers: HandlerEntry[]
   Callables: CallableEntry[]
   TypeDefinitions: TypeDefinitionEntry[]
-  PipelinePatternPool
-  PipelineObjectPatternPool
-  PipelineSelectorPool
-  PipelinePool
   DebugSegment
   MaxFrameSlots
   MaxCallStackDepth
@@ -132,17 +128,16 @@ GameEventScriptCompiled
   TypeDefinitions
   MaxFrameSlots
   DebugSegment
-  PipelinePatternPool
-  PipelineObjectPatternPool
-  PipelineSelectorPool
-  PipelinePool
 
 GameEventScriptBytecodeInstruction
   OpCode
-  Dest
-  A
-  B
-  C
+  UnitAndFlags
+  Dest_U16
+  A_U16/B_U16/C_U16/D_U16
+  A_I16/B_I16/C_I16/D_I16
+  A_I32/B_I32
+  A_U32/B_U32
+  I64/U64/F64
 ```
 
 `MaxFrameSlots` is the maximum local slot count needed by any handler or
@@ -318,15 +313,15 @@ Operands are interpreted by opcode:
   double/float loads.
 - Branch opcodes use `A_U16` as the target address and conditional jumps use
   `C_U16` as the condition slot.
-- Loop/block opcodes use `A_U16` as the body target, `B_U16` as the end target,
-  and `C_U16` as the side-table layout index.
-- Side-table-backed value opcodes use `C_U16` as the layout/data index. Their
-  full operand lists live in side tables; `A_U16` and `B_U16` may mirror the
-  first two slots for fast/direct access.
+- Iterator and pipeline terminal opcodes document their own slot, immediate, and
+  helper-entry fields explicitly. They do not use sentinel operands for absent
+  parameters.
+- Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
+  indices directly in `A_U16`, `B_U16`, `C_U16`, or `D_U16`.
 
 Unused instruction fields are undefined and ignored. The instruction word does
 not use sentinel operands for optional operands. Optional forms are represented
-by distinct opcodes such as `ReturnNothing` and
+by distinct opcodes such as `ReturnVoid` and
 `EmitMessageWithTags`, or by concrete empty pool entries. Side-table metadata may
 still define its own optional `-1` fields where the table schema explicitly
 allows them.
@@ -348,12 +343,16 @@ The current groups are:
 0x80 collection/message/reference type checks
 0x90 construction, access, handlers, predicates, calls
 0xA0 scopes and message emit/publish operations
-0xB0 iterators and collection builders
-0xC0 reserved
-0xD0 pipeline operations; 0xD1..0xDF reserved for pipeline expansion
-0xE0 reserved
-0xF0 reserved
+0xB0 iterators, collection builders, reduction, and series operations
+0xC0 calls
+0xD0 pipeline iterator, materializer, and collection terminals
+0xE0 pipeline materializing, ordering, and slicing terminals
+0xF0 pipeline random and pattern terminals
 ```
+
+The exhaustive opcode field map lives in `BytecodeOpcodeShape.md`. That table
+lists every currently defined opcode as its own row. Unused address ranges are
+marked as `reserved` ranges.
 
 For JSON transport, instructions serialize as a normalized four-field object:
 
@@ -367,13 +366,13 @@ slot/index/target instructions the payload packs `A`, `B`, `C`, and `D` into
 successive 16-bit lanes. For literal instructions the same payload carries
 `I64`, `U64`, or the IEEE-754 `F64` bit pattern.
 
-Large structured metadata belongs in side tables and pools, not nested
-instruction objects. Examples: `UShortListPool` message shapes/slot lists,
-pipeline pools, pipeline selector/pattern pools, and diagnostic layouts.
+Large structured metadata belongs in tables and pools, not nested instruction
+objects. Examples: `UShortListPool` message shapes/slot lists, `StringPool`
+names, bind tables, and optional debug/diagnostic layouts.
 
 An instruction that produces a `nothing` value writes it to `Dest_U16`. Returning
-without a value uses `ReturnNothing`; returning a slot value uses `Return
-A_U16`. There is no implicit push. There are no operand-stack `Pop` or
+without a value uses `ReturnVoid`; returning a slot value uses
+`ReturnValue A_U16`. There is no implicit push. There are no operand-stack `Pop` or
 `Duplicate` instructions in the portable target model.
 
 ## Execution Model
@@ -404,7 +403,7 @@ Frame
 ```
 
 The C# stack is not part of script control flow. `Call` pushes a portable frame
-record onto `callStack`; `Return` restores the next `pc` and writes the returned
+record onto `callStack`; `ReturnValue` restores the next `pc` and writes the returned
 value to the caller's destination slot.
 
 Manual stepping pauses after the instruction budget is consumed. The current
@@ -590,8 +589,8 @@ implication combine inside that branch sequence.
 - `IteratorClose iterator`
 - `Call dst entryAddress argumentSlotList`
 - `CallPredicate dst entryAddress argumentSlotList`
-- `Return src`
-- `ReturnNothing`
+- `ReturnValue src`
+- `ReturnVoid`
 
 `if` and guarded choices compile to condition code plus jumps. `else` runs when
 the condition is not true, so normal `if` lowering should use `JumpIfNotTrue`,
@@ -823,75 +822,56 @@ same source syntax but must remain distinguishable in portable metadata.
 ### Collection DSL
 
 Collection operations should stay high-level enough to avoid exploding code size
-and losing optimized paths.
+and losing optimized paths, but pipeline selectors no longer live in public
+metadata pools. Prefix selectors and selector helper expressions are lowered to
+normal entry addresses in the global code segment.
 
-Recommended shape:
+Core streaming shape:
 
 ```text
-Pipeline dst pipelineIndex
+CollectionIterator source -> iterator
+PipelineIterator transformedIterator sourceIterator nextEntry itemBindingSlot
+PipelineCollectList/Set dst iterator
+PipelineFirst/Last/Single dst iterator
+PipelineHasAny/HasAll dst iterator
+IteratorReduce dst iterator itemBindingSlot reducerEntry
+IteratorReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry
+IteratorFold dst iterator seedSlot itemBindingSlot reducerEntry
 CollectionBuilderList builder
 CollectionBuilderSet builder
 CollectionBuilderAdd builder item
 CollectionBuilderFinish dst builder
 ```
 
-`PipelinePool` is portable metadata, not nested code. It references pipeline
-selector entries and expression entry addresses through `PipelineSelectorPool`.
-Pipeline-owned pattern pools are named together so they are easy to identify in
-the binary surface.
+`PipelineIterator` is a lazy one-time adapter over another VM iterator. Its
+helper entry binds the current source item in `C_U16`. `ReturnValue` yields the
+returned value. `ReturnVoid` means "no yielded item"; the adapter continues with
+the next source item until the source iterator itself is exhausted. For normal
+call frames, `ReturnVoid` is mapped to DSL `nothing`; for pipeline iterators it
+is control flow.
 
-```text
-Pipeline
-  SourceSlot
-  PrefixSelectorIndexes[]
-  TerminalSelectorIndex
+Reducer entries use `Dest_U16` as the current accumulator slot and the
+instruction item binding slot as the current element. A reducer `ReturnValue`
+replaces the accumulator. A reducer `ReturnVoid` replaces the accumulator with
+DSL `nothing`.
 
-PipelineSelector
-  Kind
-  IdentifierSlot
-  PredicateAddress?
-  PredicateResultSlot?
-  ProjectionAddress?
-  ProjectionResultSlot?
-  SecondaryIdentifierSlot?
-  SecondaryProjectionAddress?
-  SecondaryProjectionResultSlot?
-  Count
-  Mode
-  SecondaryMode
-  Flag
-  PipelinePatternIndex?
-  ObjectPatternIndex?
+Generic reduction contracts:
 
-PipelinePattern
-  Kind: FullHouse | Straight | Count
-  Count?
-  FaceAddress?
+- `IteratorReduce`: empty iterator -> `nothing`; one item -> that item; two or
+  more items -> first item is accumulator, reducer starts with the second item.
+- `IteratorReduceOrDefault`: empty iterator -> default slot; one item -> that
+  item; two or more items -> first item is accumulator, reducer starts with the
+  second item. `:sum` uses this form so empty sum returns `0`, while non-empty
+  sums preserve the first projected value's type/unit.
+- `IteratorFold`: empty iterator -> seed slot; otherwise seed is accumulator
+  and the reducer runs for every item. `:count` and `:average` use this form.
 
-PipelineObjectPattern
-  Entries[]
-
-PipelineObjectPatternEntry
-  Key
-  ValueKind: Expression | Nested
-  ExpressionAddress?
-  NestedPatternIndex?
-```
-
-Required selector kinds:
-
-- prefix selectors: `Filter`, `Select`
-- predicate terminals: `Predicate` for `:any`, `:all`, and related modes
-- numeric terminals: `Sum`, `Average`, `Count`, `Min`, `Max`
-- edge terminals: `Edge` for `first`, `last`, `single`, `highest`, `lowest`
-- dictionary terminal: `Dictionary`
-- membership terminal: `Contains`
-- ordering/grouping terminals: `Sort`, `Distinct`, `GroupBy`, `OrderBy`,
-  `Reverse`
-- slicing terminals: `SequenceSlice`
-- series terminal: `SeriesTerm`
-- dice/object pattern terminals: `Pattern`, `ObjectMatch`, `TakePattern`
-- random terminals: `Choose`, `Draw`, `Shuffle`
+Fixed terminal opcodes cover materializers and operations that need full
+collection semantics: dictionary, distinct, group/order/sort/reverse, sequence
+slices, random choose/draw/shuffle, dice patterns, object matches, and series
+term/take/drop operations. These opcodes reference only iterator slots, helper
+entry addresses, immediate counts, and binding slots; there are no pipeline
+selector, pattern, or object-pattern pools.
 
 Streaming/materialization contract:
 
@@ -904,10 +884,6 @@ Streaming/materialization contract:
   budgets such as `MaxRangeItems` are checked.
 - Non-range list-like sources should keep an indexed hot path for selectors such
   as `:sum`, `:average`, `:count`, and edge selectors.
-
-The VM may execute a pipeline as one high-level operation while retaining
-operation-local state for stepping. The active `pc` remains at the `Pipeline`
-instruction; debug state can identify selector/item progress when needed.
 
 ### Generated Collections
 
@@ -938,12 +914,6 @@ use explicit range-source syntax.
 At runtime, collection builders are VM-internal values and are not visible as DSL
 values. `CollectionBuilderAdd` applies `MaxGeneratedCollectionItems` while
 materializing the result.
-
-### Patterns
-
-Pipeline pattern metadata lives in `PipelinePatternPool` and
-`PipelineObjectPatternPool`. Pattern helper expressions are entry addresses in
-the global code segment and write their result into normal frame slots.
 
 ### Diagnostics
 
@@ -1021,7 +991,7 @@ code[26]
 @0006 ...
 @0010 L_if_0_else:
 @0010 ...
-@0025 Return src=sReturn
+@0025 ReturnValue src=sReturn
 ```
 
 With typed parameters:

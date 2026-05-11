@@ -194,16 +194,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
 
-        Assert.HasCount(1, compiled.PipelinePool);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(layout =>
-            layout.Kind == GameEventScriptBytecodePipelineSelectorKind.Select &&
-            layout.IdentifierSlot >= 0 &&
-            layout.ExpressionEntryAddress >= 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline &&
-            instruction.C_U16 >= 0 &&
-            instruction.C_U16 < compiled.PipelinePool.Count));
-        Assert.IsGreaterThanOrEqualTo(0, compiled.PipelinePool[0].SourceSlot);
+            instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator &&
+            instruction.B_U16 > 0));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineCollectList));
     }
 
     [TestMethod]
@@ -329,15 +324,15 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let values be [1, 2, 3][:select item => item + 1]
               emit Done(first: values[1], replacement: 2)
             }
-            """;
+        """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.PipelineSelectorPool[compiled.PipelinePool.Single().TerminalSelectorIndex];
-        Assert.AreEqual(GameEventScriptBytecodePipelineSelectorKind.Select, selector.Kind);
-        Assert.IsGreaterThanOrEqualTo(0, selector.ExpressionEntryAddress);
+        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
+        var entryAddress = selector.B_U16;
+        Assert.IsGreaterThanOrEqualTo(0, entryAddress);
         Assert.IsTrue(compiled.Code
-            .Skip(selector.ExpressionEntryAddress)
-            .TakeWhile(instruction => instruction.OpCode != GameEventScriptBytecodeOpCode.Return)
+            .Skip(entryAddress)
+            .TakeWhile(instruction => instruction.OpCode != GameEventScriptBytecodeOpCode.ReturnValue)
             .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.Add or GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd));
     }
 
@@ -352,20 +347,21 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let values be [1, 2, 3][:select item => item + 1]
               emit Done(first: values[1], replacement: 2)
             }
-            """;
+        """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.PipelineSelectorPool[compiled.PipelinePool.Single().TerminalSelectorIndex];
-        Assert.IsGreaterThanOrEqualTo(0, selector.ExpressionEntryAddress);
+        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
+        var entryAddress = selector.B_U16;
+        Assert.IsGreaterThanOrEqualTo(0, entryAddress);
 
         var originalConstant = 1L;
         var replacementConstant = 2L;
         var selectorEnd = Array.FindIndex(
             compiled.Code.ToArray(),
-            selector.ExpressionEntryAddress,
-            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
+            entryAddress,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.ReturnValue) + 1;
         var code = compiled.Code
-            .Select((instruction, index) => index >= selector.ExpressionEntryAddress &&
+            .Select((instruction, index) => index >= entryAddress &&
                                            index < selectorEnd &&
                                            IsIntegerLoad(instruction, originalConstant)
                 ? WithIntegerLoad(instruction, replacementConstant)
@@ -397,21 +393,21 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let values be [[1], [2]][:select item => item[1] + 5]
               emit Done(first: values[1], replacement: 6)
             }
-            """;
+        """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.PipelineSelectorPool[compiled.PipelinePool.Single().TerminalSelectorIndex];
-        Assert.AreEqual(GameEventScriptBytecodePipelineSelectorKind.Select, selector.Kind);
-        Assert.IsGreaterThanOrEqualTo(0, selector.ExpressionEntryAddress);
+        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
+        var entryAddress = selector.B_U16;
+        Assert.IsGreaterThanOrEqualTo(0, entryAddress);
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
         var selectorEnd = Array.FindIndex(
             compiled.Code.ToArray(),
-            selector.ExpressionEntryAddress,
-            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1;
+            entryAddress,
+            instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.ReturnValue) + 1;
         var code = compiled.Code
-            .Select((instruction, index) => index >= selector.ExpressionEntryAddress &&
+            .Select((instruction, index) => index >= entryAddress &&
                                            index < selectorEnd &&
                                            IsIntegerLoad(instruction, originalConstant)
                 ? WithIntegerLoad(instruction, replacementConstant)
@@ -447,7 +443,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -487,7 +483,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -527,8 +523,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Sum));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Average));
 
         var originalConstant = 7L;
         var replacementConstant = 9L;
@@ -566,8 +560,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Sum));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Average));
 
         var originalConstant = 7L;
         var replacementConstant = 9L;
@@ -606,10 +598,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Predicate &&
-                                                               selector.EdgeMode == "any"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Predicate &&
-                                                               selector.EdgeMode == "all"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -647,10 +635,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Predicate &&
-                                                               selector.EdgeMode == "any"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Predicate &&
-                                                               selector.EdgeMode == "all"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -715,10 +699,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Edge &&
-                                                               selector.EdgeMode == "last"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Edge &&
-                                                               selector.EdgeMode == "single"));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -756,10 +736,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Edge &&
-                                                               selector.EdgeMode == "last"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Edge &&
-                                                               selector.EdgeMode == "single"));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -798,8 +774,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Min));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Max));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -837,8 +811,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Min));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Max));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -877,12 +849,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "single"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "all"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "any"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -920,12 +886,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "single"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "all"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "any"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -967,15 +927,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelinePool.Any(layout =>
-            layout.PrefixSelectorIndexes.Count > 0 &&
-            compiled.PipelineSelectorPool[layout.TerminalSelectorIndex].Kind == GameEventScriptBytecodePipelineSelectorKind.Contains));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "single"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "all"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "any"));
 
         var originalNeedle = 99L;
         var replacementNeedle = 13L;
@@ -1020,15 +971,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelinePool.Any(layout =>
-            layout.PrefixSelectorIndexes.Count > 0 &&
-            compiled.PipelineSelectorPool[layout.TerminalSelectorIndex].Kind == GameEventScriptBytecodePipelineSelectorKind.Contains));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "single"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "all"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Contains &&
-                                                               selector.EdgeMode == "any"));
 
         var originalNeedle = 99L;
         var replacementNeedle = 13L;
@@ -1098,10 +1040,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Dictionary &&
-                                                               selector.SecondaryExpressionEntryAddress < 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Dictionary &&
-                                                               selector.SecondaryExpressionEntryAddress >= 0));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1140,10 +1078,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Dictionary &&
-                                                               selector.SecondaryExpressionEntryAddress < 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Dictionary &&
-                                                               selector.SecondaryExpressionEntryAddress >= 0));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1186,10 +1120,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Distinct &&
-                                                               selector.ExpressionEntryAddress < 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Distinct &&
-                                                               selector.ExpressionEntryAddress >= 0));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1231,10 +1161,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Distinct &&
-                                                               selector.ExpressionEntryAddress < 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Distinct &&
-                                                               selector.ExpressionEntryAddress >= 0));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1275,7 +1201,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.GroupBy));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1315,7 +1240,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.GroupBy));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1357,7 +1281,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Reverse));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1399,7 +1322,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Reverse));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1443,10 +1365,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Sort &&
-                                                               selector.EdgeMode == "ascending"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Sort &&
-                                                               selector.EdgeMode == "descending"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1488,10 +1406,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Sort &&
-                                                               selector.EdgeMode == "ascending"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Sort &&
-                                                               selector.EdgeMode == "descending"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1535,12 +1449,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.OrderBy &&
-                                                               selector.EdgeMode == "ascending" &&
-                                                               selector.ExpressionEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.OrderBy &&
-                                                               selector.EdgeMode == "descending" &&
-                                                               selector.ExpressionEntryAddress >= 0));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1583,12 +1491,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.OrderBy &&
-                                                               selector.EdgeMode == "ascending" &&
-                                                               selector.ExpressionEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.OrderBy &&
-                                                               selector.EdgeMode == "descending" &&
-                                                               selector.ExpressionEntryAddress >= 0));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1634,12 +1536,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "take" &&
-                                                               selector.SecondaryMode == "highest"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "drop" &&
-                                                               selector.SecondaryMode == "lowest"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1684,12 +1580,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "take" &&
-                                                               selector.SecondaryMode == "highest"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "drop" &&
-                                                               selector.SecondaryMode == "lowest"));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1731,7 +1621,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Shuffle));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1773,7 +1662,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Shuffle));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -1820,14 +1708,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SeriesTerm &&
-                                                               selector.ExpressionEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "take" &&
-                                                               selector.SecondaryMode == "first"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "drop" &&
-                                                               selector.SecondaryMode == "first"));
 
         var originalConstant = 7L;
         var replacementConstant = 8L;
@@ -1875,14 +1755,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SeriesTerm &&
-                                                               selector.ExpressionEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "take" &&
-                                                               selector.SecondaryMode == "first"));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.SequenceSlice &&
-                                                               selector.EdgeMode == "drop" &&
-                                                               selector.SecondaryMode == "first"));
 
         var originalConstant = 7L;
         var replacementConstant = 8L;
@@ -1929,21 +1801,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Pattern &&
-                                                               selector.PipelinePatternIndex >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.TakePattern &&
-                                                               selector.PipelinePatternIndex >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.ObjectMatch &&
-                                                               selector.ObjectPatternIndex >= 0));
-        Assert.IsTrue(compiled.PipelinePatternPool.Any(pattern => pattern.Kind == GameEventScriptBytecodePipelinePatternKind.Count &&
-                                                                 pattern.Count == 2 &&
-                                                                 pattern.FaceEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineObjectPatternPool.Any(pattern => pattern.Entries.Any(entry =>
-            entry.ValueKind == GameEventScriptBytecodePipelineObjectPatternValueKind.Expression &&
-            entry.ExpressionEntryAddress >= 0)));
-        Assert.IsTrue(compiled.PipelineObjectPatternPool.Any(pattern => pattern.Entries.Any(entry =>
-            entry.ValueKind == GameEventScriptBytecodePipelineObjectPatternValueKind.Nested &&
-            entry.NestedPatternIndex >= 0)));
 
         var replacements = new Dictionary<int, int>
         {
@@ -1994,21 +1851,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Pattern &&
-                                                               selector.PipelinePatternIndex >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.TakePattern &&
-                                                               selector.PipelinePatternIndex >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.ObjectMatch &&
-                                                               selector.ObjectPatternIndex >= 0));
-        Assert.IsTrue(compiled.PipelinePatternPool.Any(pattern => pattern.Kind == GameEventScriptBytecodePipelinePatternKind.Count &&
-                                                                 pattern.Count == 2 &&
-                                                                 pattern.FaceEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineObjectPatternPool.Any(pattern => pattern.Entries.Any(entry =>
-            entry.ValueKind == GameEventScriptBytecodePipelineObjectPatternValueKind.Expression &&
-            entry.ExpressionEntryAddress >= 0)));
-        Assert.IsTrue(compiled.PipelineObjectPatternPool.Any(pattern => pattern.Entries.Any(entry =>
-            entry.ValueKind == GameEventScriptBytecodePipelineObjectPatternValueKind.Nested &&
-            entry.NestedPatternIndex >= 0)));
 
         var replacements = new Dictionary<int, int>
         {
@@ -2062,16 +1904,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Choose &&
-                                                               selector.Count == 1 &&
-                                                               selector.ExpressionEntryAddress >= 0 &&
-                                                               selector.SecondaryExpressionEntryAddress < 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Choose &&
-                                                               selector.SecondaryIdentifierSlot >= 0 &&
-                                                               selector.SecondaryExpressionEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Choose &&
-                                                               selector.Count == 2 &&
-                                                               selector.Flag));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -2117,16 +1949,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Choose &&
-                                                               selector.Count == 1 &&
-                                                               selector.ExpressionEntryAddress >= 0 &&
-                                                               selector.SecondaryExpressionEntryAddress < 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Choose &&
-                                                               selector.SecondaryIdentifierSlot >= 0 &&
-                                                               selector.SecondaryExpressionEntryAddress >= 0));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Choose &&
-                                                               selector.Count == 2 &&
-                                                               selector.Flag));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -2170,10 +1992,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Draw &&
-                                                               selector.Count == 1));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Draw &&
-                                                               selector.Count == 3));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -2216,10 +2034,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Draw &&
-                                                               selector.Count == 1));
-        Assert.IsTrue(compiled.PipelineSelectorPool.Any(selector => selector.Kind == GameEventScriptBytecodePipelineSelectorKind.Draw &&
-                                                               selector.Count == 3));
 
         var originalConstant = 5L;
         var replacementConstant = 6L;
@@ -2523,11 +2337,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             code?.ToArray() ?? original.Code.ToArray(),
             original.MaxFrameSlots,
-            original.DebugSegment,
-            original.PipelinePatternPool.ToArray(),
-            original.PipelineObjectPatternPool.ToArray(),
-            original.PipelineSelectorPool.ToArray(),
-            original.PipelinePool.ToArray());
+            original.DebugSegment);
 
     private static int FindTextConstant(GameEventScriptCompiled compiled, string value)
         => compiled.StringPool

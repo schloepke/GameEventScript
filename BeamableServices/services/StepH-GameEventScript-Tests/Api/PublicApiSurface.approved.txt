@@ -145,8 +145,8 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field JumpIfTrue = 11
   enum-field JumpIfFalse = 12
   enum-field JumpIfNotTrue = 13
-  enum-field ReturnNothing = 14
-  enum-field Return = 15
+  enum-field ReturnVoid = 14
+  enum-field ReturnValue = 15
   enum-field Or = 16
   enum-field And = 17
   enum-field Xor = 18
@@ -293,77 +293,60 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CollectionBuilderSet = 183
   enum-field CollectionBuilderAdd = 184
   enum-field CollectionBuilderFinish = 185
+  enum-field IteratorReduce = 186
+  enum-field IteratorReduceOrDefault = 187
+  enum-field IteratorFold = 188
+  enum-field SeriesTerm = 189
+  enum-field SeriesTake = 190
+  enum-field SeriesDrop = 191
   enum-field Call = 192
   enum-field CallPredicate = 193
   enum-field CallStandard = 194
   enum-field CallStandardPredicate = 195
   enum-field CallExternal = 196
   enum-field CallExternalPredicate = 197
-  enum-field Pipeline = 208
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipeline
-  ctor GameEventScriptBytecodePipeline(System.Int32 sourceSlot, System.Collections.Generic.IReadOnlyList<System.Int32> prefixSelectorIndexes, System.Int32 terminalSelectorIndex)
-  property System.Collections.Generic.IReadOnlyList<System.Int32> PrefixSelectorIndexes { get }
-  property System.Int32 SourceSlot { get }
-  property System.Int32 TerminalSelectorIndex { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern
-  ctor GameEventScriptBytecodePipelineObjectPattern(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternEntry> entries)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternEntry> Entries { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternEntry
-  ctor GameEventScriptBytecodePipelineObjectPatternEntry(System.String key, StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternValueKind valueKind, System.Int32 expressionEntryAddress, System.Int32 nestedPatternIndex)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternValueKind ValueKind { get }
-  property System.Int32 ExpressionEntryAddress { get }
-  property System.Int32 NestedPatternIndex { get }
-  property System.String Key { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPatternValueKind
-  enum-field Expression = 0
-  enum-field Nested = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePattern
-  ctor GameEventScriptBytecodePipelinePattern(StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePatternKind kind, System.Int32 count, System.Int32 faceEntryAddress)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePatternKind Kind { get }
-  property System.Int32 Count { get }
-  property System.Int32 FaceEntryAddress { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePatternKind
-  enum-field Count = 0
-  enum-field FullHouse = 1
-  enum-field Straight = 2
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelector
-  ctor GameEventScriptBytecodePipelineSelector(StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelectorKind kind, System.Int32 identifierSlot, System.String edgeMode, System.String secondaryMode, System.Int32 count, System.Int32 secondaryIdentifierSlot, System.Boolean flag, System.Int32 expressionEntryAddress, System.Int32 secondaryExpressionEntryAddress, System.Int32 pipelinePatternIndex, System.Int32 objectPatternIndex)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelectorKind Kind { get }
-  property System.Boolean Flag { get }
-  property System.Int32 Count { get }
-  property System.Int32 ExpressionEntryAddress { get }
-  property System.Int32 IdentifierSlot { get }
-  property System.Int32 ObjectPatternIndex { get }
-  property System.Int32 PipelinePatternIndex { get }
-  property System.Int32 SecondaryExpressionEntryAddress { get }
-  property System.Int32 SecondaryIdentifierSlot { get }
-  property System.String EdgeMode { get }
-  property System.String SecondaryMode { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelectorKind
-  enum-field Filter = 0
-  enum-field Select = 1
-  enum-field Predicate = 2
-  enum-field Sum = 3
-  enum-field Average = 4
-  enum-field Count = 5
-  enum-field Edge = 6
-  enum-field Min = 7
-  enum-field Max = 8
-  enum-field Dictionary = 9
-  enum-field Contains = 10
-  enum-field Sort = 11
-  enum-field Distinct = 12
-  enum-field GroupBy = 13
-  enum-field OrderBy = 14
-  enum-field Reverse = 15
-  enum-field SequenceSlice = 16
-  enum-field SeriesTerm = 17
-  enum-field Pattern = 18
-  enum-field ObjectMatch = 19
-  enum-field TakePattern = 20
-  enum-field Choose = 21
-  enum-field Draw = 22
-  enum-field Shuffle = 23
+  enum-field PipelineIterator = 208
+  enum-field PipelineCollectList = 209
+  enum-field PipelineCollectSet = 210
+  enum-field PipelineFirst = 211
+  enum-field PipelineLast = 212
+  enum-field PipelineSingle = 213
+  enum-field PipelineHasAny = 214
+  enum-field PipelineHasAll = 215
+  enum-field PipelineContainsSingle = 216
+  enum-field PipelineContainsAny = 217
+  enum-field PipelineContainsAll = 218
+  enum-field PipelineDictionary = 219
+  enum-field PipelineDictionaryValue = 220
+  enum-field PipelineDistinct = 221
+  enum-field PipelineDistinctBy = 222
+  enum-field PipelineGroupBy = 223
+  enum-field PipelineReverse = 224
+  enum-field PipelineSortAscending = 225
+  enum-field PipelineSortDescending = 226
+  enum-field PipelineOrderByAscending = 227
+  enum-field PipelineOrderByDescending = 228
+  enum-field PipelineTakeFirst = 229
+  enum-field PipelineTakeLast = 230
+  enum-field PipelineTakeHighest = 231
+  enum-field PipelineTakeLowest = 232
+  enum-field PipelineDropFirst = 233
+  enum-field PipelineDropLast = 234
+  enum-field PipelineDropHighest = 235
+  enum-field PipelineDropLowest = 236
+  enum-field PipelineShuffle = 237
+  enum-field PipelineDraw = 238
+  enum-field PipelineChoose = 239
+  enum-field PipelineChooseRandom = 240
+  enum-field PipelineChooseWeighted = 241
+  enum-field PipelineDicePatternCountAny = 242
+  enum-field PipelineDicePatternCountFace = 243
+  enum-field PipelineDicePatternFullHouse = 244
+  enum-field PipelineDicePatternStraight = 245
+  enum-field PipelineTakePatternCountAny = 246
+  enum-field PipelineTakePatternCountFace = 247
+  enum-field PipelineTakePatternFullHouse = 248
+  enum-field PipelineTakePatternStraight = 249
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }
@@ -423,10 +406,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipeline> PipelinePool { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineSelector> PipelineSelectorPool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExtensionReference> ExternalReferences { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get }
   property System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> UShortListPool { get }
@@ -605,6 +584,8 @@ interface StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection
 interface StepH.GameEventScript.Api.IGameEventScriptSeries
   method System.Boolean TryGetTerm(System.Int64 index, StepH.GameEventScript.Types.GameEventScriptValue& value)
   property System.String SignatureId { get }
+static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
 static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper
   method static System.String DumpBytecode(StepH.GameEventScript.Api.GameEventScriptCompiled module)
 static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter

@@ -29,7 +29,6 @@ public static class GameEventScriptBytecodeDumper
         AppendPool(builder, "strings", module.StringPool);
         AppendUShortListPool(builder, module);
         AppendExternalReferences(builder, module);
-        AppendSideTables(builder, module);
         AppendDebugSegment(builder, module);
         AppendCode(builder, module);
         AppendCallables(builder, module);
@@ -58,14 +57,6 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendSideTables(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        AppendPipelinePatternPool(builder, module);
-        AppendPipelineObjectPatternPool(builder, module);
-        AppendPipelineSelectorPool(builder, module);
-        AppendPipelinePool(builder, module);
-    }
-
     private static void AppendDebugSegment(StringBuilder builder, GameEventScriptCompiled module)
     {
         builder.Append("debugDiagnosticSites[").Append(module.DebugSegment.DiagnosticSites.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
@@ -78,78 +69,6 @@ public static class GameEventScriptBytecodeDumper
                 .Append(" address=@").Append(site.Address.ToString("D4", CultureInfo.InvariantCulture));
             AppendSlot(builder, "slot", site.Slot);
             AppendText(builder, "name", site.Name);
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendPipelineSelectorPool(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("pipelineSelectorPool[").Append(module.PipelineSelectorPool.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.PipelineSelectorPool.Count; i++)
-        {
-            var layout = module.PipelineSelectorPool[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ").Append($"{layout.Kind,-7}");
-            AppendSlot(builder, "identifier", layout.IdentifierSlot);
-            AppendText(builder, "edge", layout.EdgeMode);
-            AppendText(builder, "secondary", layout.SecondaryMode);
-            AppendIndex(builder, "count", layout.Count);
-            AppendSlot(builder, "secondaryIdentifier", layout.SecondaryIdentifierSlot);
-            AppendAddress(builder, "expr", layout.ExpressionEntryAddress);
-            AppendAddress(builder, "secondaryExpr", layout.SecondaryExpressionEntryAddress);
-            AppendIndex(builder, "pattern", layout.PipelinePatternIndex);
-            AppendIndex(builder, "objectPattern", layout.ObjectPatternIndex);
-            if (layout.Flag)
-            {
-                builder.Append(" flag=true");
-            }
-
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendPipelinePatternPool(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("pipelinePatternPool[").Append(module.PipelinePatternPool.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.PipelinePatternPool.Count; i++)
-        {
-            var layout = module.PipelinePatternPool[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ").Append(layout.Kind);
-            AppendIndex(builder, "count", layout.Count);
-            AppendAddress(builder, "face", layout.FaceEntryAddress);
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendPipelineObjectPatternPool(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("pipelineObjectPatternPool[").Append(module.PipelineObjectPatternPool.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.PipelineObjectPatternPool.Count; i++)
-        {
-            var layout = module.PipelineObjectPatternPool[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(':');
-            for (var entryIndex = 0; entryIndex < layout.Entries.Count; entryIndex++)
-            {
-                var entry = layout.Entries[entryIndex];
-                builder.Append(entryIndex == 0 ? " " : ", ");
-                builder.Append(entry.Key).Append('=').Append(entry.ValueKind);
-                AppendAddress(builder, "expr", entry.ExpressionEntryAddress);
-                AppendIndex(builder, "nested", entry.NestedPatternIndex);
-            }
-
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendPipelinePool(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("pipelinePool[").Append(module.PipelinePool.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.PipelinePool.Count; i++)
-        {
-            var layout = module.PipelinePool[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(':');
-            AppendSlot(builder, "source", layout.SourceSlot);
-            AppendIndexList(builder, "prefixSelectors", layout.PrefixSelectorIndexes);
-            AppendIndex(builder, "terminalSelector", layout.TerminalSelectorIndex);
             builder.AppendLine();
         }
     }
@@ -377,10 +296,10 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "src", instruction.A_U16);
                 break;
 
-            case GameEventScriptBytecodeOpCode.ReturnNothing:
+            case GameEventScriptBytecodeOpCode.ReturnVoid:
                 break;
 
-            case GameEventScriptBytecodeOpCode.Return:
+            case GameEventScriptBytecodeOpCode.ReturnValue:
                 AppendSlot(builder, "src", instruction.A_U16);
                 break;
 
@@ -474,6 +393,124 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
                 break;
 
+            case GameEventScriptBytecodeOpCode.PipelineIterator:
+                AppendSlot(builder, "source", instruction.A_U16);
+                AppendAddress(builder, "entry", instruction.B_U16);
+                AppendSlot(builder, "item", instruction.C_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineCollectList:
+            case GameEventScriptBytecodeOpCode.PipelineCollectSet:
+            case GameEventScriptBytecodeOpCode.PipelineFirst:
+            case GameEventScriptBytecodeOpCode.PipelineLast:
+            case GameEventScriptBytecodeOpCode.PipelineSingle:
+            case GameEventScriptBytecodeOpCode.PipelineHasAny:
+            case GameEventScriptBytecodeOpCode.PipelineHasAll:
+            case GameEventScriptBytecodeOpCode.PipelineDistinct:
+            case GameEventScriptBytecodeOpCode.PipelineReverse:
+            case GameEventScriptBytecodeOpCode.PipelineSortAscending:
+            case GameEventScriptBytecodeOpCode.PipelineSortDescending:
+            case GameEventScriptBytecodeOpCode.PipelineShuffle:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorReduce:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendSlot(builder, "item", instruction.B_U16);
+                AppendAddress(builder, "reducer", instruction.C_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendSlot(builder, "default", instruction.B_U16);
+                AppendSlot(builder, "item", instruction.C_U16);
+                AppendAddress(builder, "reducer", instruction.D_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorFold:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendSlot(builder, "seed", instruction.B_U16);
+                AppendSlot(builder, "item", instruction.C_U16);
+                AppendAddress(builder, "reducer", instruction.D_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
+            case GameEventScriptBytecodeOpCode.PipelineContainsAny:
+            case GameEventScriptBytecodeOpCode.PipelineContainsAll:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendSlot(builder, "needle", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDictionary:
+            case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
+            case GameEventScriptBytecodeOpCode.PipelineGroupBy:
+            case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
+            case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendSlot(builder, "item", instruction.B_U16);
+                AppendAddress(builder, "entry", instruction.C_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDictionaryValue:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendSlot(builder, "item", instruction.B_U16);
+                AppendAddress(builder, "keyEntry", instruction.C_U16);
+                AppendAddress(builder, "valueEntry", instruction.D_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineTakeFirst:
+            case GameEventScriptBytecodeOpCode.PipelineTakeLast:
+            case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
+            case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
+            case GameEventScriptBytecodeOpCode.PipelineDropFirst:
+            case GameEventScriptBytecodeOpCode.PipelineDropLast:
+            case GameEventScriptBytecodeOpCode.PipelineDropHighest:
+            case GameEventScriptBytecodeOpCode.PipelineDropLowest:
+            case GameEventScriptBytecodeOpCode.PipelineDraw:
+            case GameEventScriptBytecodeOpCode.PipelineChoose:
+            case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendIndex(builder, "count", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendIndex(builder, "count", instruction.B_U16);
+                AppendSlot(builder, "item", instruction.C_U16);
+                AppendAddress(builder, "weightEntry", instruction.D_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendIndex(builder, "count", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                AppendIndex(builder, "count", instruction.B_U16);
+                AppendAddress(builder, "faceEntry", instruction.C_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
+                AppendSlot(builder, "iterator", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.SeriesTerm:
+                AppendSlot(builder, "series", instruction.A_U16);
+                AppendSlot(builder, "index", instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.SeriesTake:
+            case GameEventScriptBytecodeOpCode.SeriesDrop:
+                AppendSlot(builder, "source", instruction.A_U16);
+                AppendIndex(builder, "count", instruction.B_U16);
+                break;
+
             default:
                 AppendSlot(builder, "a", instruction.A_U16);
                 AppendSlot(builder, "b", instruction.B_U16);
@@ -483,9 +520,6 @@ public static class GameEventScriptBytecodeDumper
 
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.Pipeline:
-                AppendIndex(builder, "pipeline", instruction.C_U16);
-                break;
             case GameEventScriptBytecodeOpCode.MemberAccess:
                 AppendPoolIndex(builder, "member", module.StringPool, instruction.C_U16);
                 break;
@@ -560,8 +594,8 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.JumpIfNotTrue or
             GameEventScriptBytecodeOpCode.EnterScope or
             GameEventScriptBytecodeOpCode.ExitScope or
-            GameEventScriptBytecodeOpCode.ReturnNothing or
-            GameEventScriptBytecodeOpCode.Return or
+            GameEventScriptBytecodeOpCode.ReturnVoid or
+            GameEventScriptBytecodeOpCode.ReturnValue or
             GameEventScriptBytecodeOpCode.EmitMessage or
             GameEventScriptBytecodeOpCode.EmitMessageWithTags or
             GameEventScriptBytecodeOpCode.PublishMessage or

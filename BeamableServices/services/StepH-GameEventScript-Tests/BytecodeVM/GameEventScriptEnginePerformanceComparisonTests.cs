@@ -76,11 +76,11 @@ public sealed class BytecodeVmPerformanceReportTests
         WriteReport("With diagnostic:", bytecodeVmCompileDiag, bytecodeVmBuildDiag, bytecodeVmRunDiag);
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
+        TestContext.WriteLine("-----");
+        TestContext.WriteLine("Binary file:\n" + bytecodeVmCompileDiag.Value.ToGameEventScriptBinary().Dump());
         /*
         TestContext.WriteLine("-----");
-        TestContext.WriteLine(diagnosticCollector.ToString());
-        TestContext.WriteLine("-----");
-        TestContext.WriteLine("BytecodeVM Diagnostics:\n" + JsonSerializer.Serialize(bytecodeVmCompileDiag.Value.ToGameEventScriptBinary(), new JsonSerializerOptions { WriteIndented = true }));
+        TestContext.WriteLine("BytecodeVM Diagnostics:\n" +diagnosticCollector.ToString());
         */
         TestContext.WriteLine("-----");
     }

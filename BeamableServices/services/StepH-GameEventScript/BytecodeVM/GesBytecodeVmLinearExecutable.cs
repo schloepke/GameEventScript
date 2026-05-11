@@ -5,16 +5,6 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.BytecodeVM;
 
-internal enum GesBytecodeVmLinearProjectionFastKind
-{
-    None,
-    Operand,
-    PredicateCall,
-    Binary,
-    BinaryThenBinary,
-    BinaryThenBinaryThenBinary
-}
-
 internal sealed class GesBytecodeVmLinearExecutable
 {
     private GesBytecodeVmLinearExecutable(
@@ -24,7 +14,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         GesBytecodeVmLinearCallableEntry[] callables,
         IReadOnlyDictionary<int, GesBytecodeVmLinearCallableEntry> callablesByEntryAddress,
         GesBytecodeVmLinearTypeFieldEntry[] typeFields,
-        GesBytecodeVmLinearProjectionFastKind[] projectionFastKinds,
         IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsBefore,
         IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsAfter)
     {
@@ -34,7 +23,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         Callables = callables;
         CallablesByEntryAddress = callablesByEntryAddress;
         TypeFields = typeFields;
-        ProjectionFastKinds = projectionFastKinds;
         DiagnosticsBefore = diagnosticsBefore;
         DiagnosticsAfter = diagnosticsAfter;
     }
@@ -50,8 +38,6 @@ internal sealed class GesBytecodeVmLinearExecutable
     internal IReadOnlyDictionary<int, GesBytecodeVmLinearCallableEntry> CallablesByEntryAddress { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearTypeFieldEntry> TypeFields { get; }
-
-    internal IReadOnlyList<GesBytecodeVmLinearProjectionFastKind> ProjectionFastKinds { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] DiagnosticsBefore { get; }
 
@@ -121,8 +107,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         var diagnosticsBefore = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.BeforeInstruction);
         var diagnosticsAfter = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.AfterInstruction);
 
-        var projectionFastKinds = BuildProjectionFastKinds(module, code);
-
         return new GesBytecodeVmLinearExecutable(
             code,
             module.MaxFrameSlots,
@@ -130,163 +114,9 @@ internal sealed class GesBytecodeVmLinearExecutable
             callables,
             callablesByEntryAddress,
             typeFields,
-            projectionFastKinds,
             diagnosticsBefore,
             diagnosticsAfter);
     }
-
-    private static GesBytecodeVmLinearProjectionFastKind[] BuildProjectionFastKinds(
-        GameEventScriptCompiled module,
-        IReadOnlyList<GameEventScriptBytecodeInstruction> code)
-    {
-        var kinds = new GesBytecodeVmLinearProjectionFastKind[code.Count];
-        for (var entryAddress = 0; entryAddress < code.Count; entryAddress++)
-        {
-            kinds[entryAddress] = IdentifyProjectionFastKind(module, code, entryAddress);
-        }
-
-        return kinds;
-    }
-
-    private static GesBytecodeVmLinearProjectionFastKind IdentifyProjectionFastKind(
-        GameEventScriptCompiled module,
-        IReadOnlyList<GameEventScriptBytecodeInstruction> code,
-        int entryAddress)
-    {
-        if (TryMatchLinearReturn(code, entryAddress, offset: 1, out var returnInstruction) &&
-            returnInstruction.A_U16 == code[entryAddress].Dest_U16 &&
-            IsLinearProjectionOperandInstruction(code[entryAddress]))
-        {
-            return GesBytecodeVmLinearProjectionFastKind.Operand;
-        }
-
-        if (TryMatchLinearReturn(code, entryAddress, offset: 2, out returnInstruction) &&
-            code[entryAddress + 1].OpCode == GameEventScriptBytecodeOpCode.CallPredicate &&
-            TryGetSingleSlot(module, code[entryAddress + 1].B_U16, out var predicateInputSlot) &&
-            predicateInputSlot == code[entryAddress].Dest_U16 &&
-            returnInstruction.A_U16 == code[entryAddress + 1].Dest_U16 &&
-            IsLinearProjectionOperandInstruction(code[entryAddress]))
-        {
-            return GesBytecodeVmLinearProjectionFastKind.PredicateCall;
-        }
-
-        if (TryMatchLinearReturn(code, entryAddress, offset: 3, out returnInstruction) &&
-            IsProjectionBinaryOp(code[entryAddress + 2].OpCode) &&
-            returnInstruction.A_U16 == code[entryAddress + 2].Dest_U16 &&
-            code[entryAddress + 2].A_U16 == code[entryAddress].Dest_U16 &&
-            code[entryAddress + 2].B_U16 == code[entryAddress + 1].Dest_U16 &&
-            IsLinearProjectionOperandInstruction(code[entryAddress]) &&
-            IsLinearProjectionOperandInstruction(code[entryAddress + 1]))
-        {
-            return GesBytecodeVmLinearProjectionFastKind.Binary;
-        }
-
-        if (TryMatchLinearReturn(code, entryAddress, offset: 5, out returnInstruction) &&
-            IsProjectionBinaryOp(code[entryAddress + 2].OpCode) &&
-            IsProjectionBinaryOp(code[entryAddress + 4].OpCode) &&
-            returnInstruction.A_U16 == code[entryAddress + 4].Dest_U16 &&
-            code[entryAddress + 2].A_U16 == code[entryAddress].Dest_U16 &&
-            code[entryAddress + 2].B_U16 == code[entryAddress + 1].Dest_U16 &&
-            code[entryAddress + 4].A_U16 == code[entryAddress + 2].Dest_U16 &&
-            code[entryAddress + 4].B_U16 == code[entryAddress + 3].Dest_U16 &&
-            IsLinearProjectionOperandInstruction(code[entryAddress]) &&
-            IsLinearProjectionOperandInstruction(code[entryAddress + 1]) &&
-            IsLinearProjectionOperandInstruction(code[entryAddress + 3]))
-        {
-            return GesBytecodeVmLinearProjectionFastKind.BinaryThenBinary;
-        }
-
-        if (TryMatchLinearReturn(code, entryAddress, offset: 7, out returnInstruction) &&
-            IsProjectionBinaryOp(code[entryAddress + 2].OpCode) &&
-            IsProjectionBinaryOp(code[entryAddress + 4].OpCode) &&
-            IsProjectionBinaryOp(code[entryAddress + 6].OpCode) &&
-            returnInstruction.A_U16 == code[entryAddress + 6].Dest_U16 &&
-            code[entryAddress + 2].A_U16 == code[entryAddress].Dest_U16 &&
-            code[entryAddress + 2].B_U16 == code[entryAddress + 1].Dest_U16 &&
-            code[entryAddress + 4].A_U16 == code[entryAddress + 2].Dest_U16 &&
-            code[entryAddress + 4].B_U16 == code[entryAddress + 3].Dest_U16 &&
-            code[entryAddress + 6].A_U16 == code[entryAddress + 4].Dest_U16 &&
-            code[entryAddress + 6].B_U16 == code[entryAddress + 5].Dest_U16 &&
-            IsLinearProjectionOperandInstruction(code[entryAddress]) &&
-            IsLinearProjectionOperandInstruction(code[entryAddress + 1]) &&
-            IsLinearProjectionOperandInstruction(code[entryAddress + 3]) &&
-            IsLinearProjectionOperandInstruction(code[entryAddress + 5]))
-        {
-            return GesBytecodeVmLinearProjectionFastKind.BinaryThenBinaryThenBinary;
-        }
-
-        return GesBytecodeVmLinearProjectionFastKind.None;
-    }
-
-    private static bool TryMatchLinearReturn(
-        IReadOnlyList<GameEventScriptBytecodeInstruction> code,
-        int entryAddress,
-        int offset,
-        out GameEventScriptBytecodeInstruction returnInstruction)
-    {
-        var returnAddress = entryAddress + offset;
-        if ((uint)returnAddress < (uint)code.Count &&
-            code[returnAddress].OpCode == GameEventScriptBytecodeOpCode.Return)
-        {
-            returnInstruction = code[returnAddress];
-            return true;
-        }
-
-        returnInstruction = default;
-        return false;
-    }
-
-    private static bool TryGetSingleSlot(GameEventScriptCompiled module, int slotListIndex, out ushort slot)
-    {
-        if ((uint)slotListIndex < (uint)module.UShortListPool.Count)
-        {
-            var slots = module.UShortListPool[slotListIndex];
-            if (slots.Count == 1)
-            {
-                slot = slots[0];
-                return true;
-            }
-        }
-
-        slot = 0;
-        return false;
-    }
-
-    private static bool IsLinearProjectionOperandInstruction(GameEventScriptBytecodeInstruction instruction)
-        => instruction.OpCode == GameEventScriptBytecodeOpCode.MoveSlot ||
-           IsInlineConstantInstruction(instruction.OpCode);
-
-    private static bool IsProjectionBinaryOp(GameEventScriptBytecodeOpCode opCode)
-        => opCode is
-            GameEventScriptBytecodeOpCode.Default or
-            GameEventScriptBytecodeOpCode.Add or
-            GameEventScriptBytecodeOpCode.Subtract or
-            GameEventScriptBytecodeOpCode.Multiply or
-            GameEventScriptBytecodeOpCode.Divide or
-            GameEventScriptBytecodeOpCode.IntegerDivide or
-            GameEventScriptBytecodeOpCode.Modulo or
-            GameEventScriptBytecodeOpCode.Remainder or
-            GameEventScriptBytecodeOpCode.Power or
-            GameEventScriptBytecodeOpCode.Equal or
-            GameEventScriptBytecodeOpCode.NotEqual or
-            GameEventScriptBytecodeOpCode.ApproxEqual or
-            GameEventScriptBytecodeOpCode.Less or
-            GameEventScriptBytecodeOpCode.Greater or
-            GameEventScriptBytecodeOpCode.LessOrEqual or
-            GameEventScriptBytecodeOpCode.GreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder;
 
     private static IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] BuildDiagnosticSites(
         GameEventScriptCompiled module,
@@ -395,10 +225,10 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateAddress(module, code, instruction.A_U16, $"{context} target");
                 break;
 
-            case GameEventScriptBytecodeOpCode.ReturnNothing:
+            case GameEventScriptBytecodeOpCode.ReturnVoid:
                 break;
 
-            case GameEventScriptBytecodeOpCode.Return:
+            case GameEventScriptBytecodeOpCode.ReturnValue:
                 ValidateSlot(module, instruction.A_U16, $"{context} return slot");
                 break;
 
@@ -466,8 +296,98 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} member name");
                 break;
 
-            case GameEventScriptBytecodeOpCode.Pipeline:
-                ValidateIndex(module.PipelinePool.Count, instruction.C_U16, $"{context} pipeline");
+            case GameEventScriptBytecodeOpCode.PipelineIterator:
+                ValidateSlot(module, instruction.A_U16, $"{context} source iterator slot");
+                ValidateAddress(module, code, instruction.B_U16, $"{context} iterator entry");
+                ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineCollectList:
+            case GameEventScriptBytecodeOpCode.PipelineCollectSet:
+            case GameEventScriptBytecodeOpCode.PipelineFirst:
+            case GameEventScriptBytecodeOpCode.PipelineLast:
+            case GameEventScriptBytecodeOpCode.PipelineSingle:
+            case GameEventScriptBytecodeOpCode.PipelineHasAny:
+            case GameEventScriptBytecodeOpCode.PipelineHasAll:
+            case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
+            case GameEventScriptBytecodeOpCode.PipelineContainsAny:
+            case GameEventScriptBytecodeOpCode.PipelineContainsAll:
+            case GameEventScriptBytecodeOpCode.PipelineDistinct:
+            case GameEventScriptBytecodeOpCode.PipelineReverse:
+            case GameEventScriptBytecodeOpCode.PipelineSortAscending:
+            case GameEventScriptBytecodeOpCode.PipelineSortDescending:
+            case GameEventScriptBytecodeOpCode.PipelineTakeFirst:
+            case GameEventScriptBytecodeOpCode.PipelineTakeLast:
+            case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
+            case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
+            case GameEventScriptBytecodeOpCode.PipelineDropFirst:
+            case GameEventScriptBytecodeOpCode.PipelineDropLast:
+            case GameEventScriptBytecodeOpCode.PipelineDropHighest:
+            case GameEventScriptBytecodeOpCode.PipelineDropLowest:
+            case GameEventScriptBytecodeOpCode.PipelineShuffle:
+            case GameEventScriptBytecodeOpCode.PipelineDraw:
+            case GameEventScriptBytecodeOpCode.PipelineChoose:
+            case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorReduce:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
+                ValidateAddress(module, code, instruction.C_U16, $"{context} reducer entry");
+                break;
+
+            case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
+            case GameEventScriptBytecodeOpCode.IteratorFold:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} seed/default slot");
+                ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
+                ValidateAddress(module, code, instruction.D_U16, $"{context} reducer entry");
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDictionary:
+            case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
+            case GameEventScriptBytecodeOpCode.PipelineGroupBy:
+            case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
+            case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
+                ValidateAddress(module, code, instruction.C_U16, $"{context} entry");
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDictionaryValue:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
+                ValidateAddress(module, code, instruction.C_U16, $"{context} key entry");
+                ValidateAddress(module, code, instruction.D_U16, $"{context} value entry");
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
+                ValidateAddress(module, code, instruction.D_U16, $"{context} weight entry");
+                break;
+
+            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
+            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
+                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateAddress(module, code, instruction.C_U16, $"{context} face entry");
+                break;
+
+            case GameEventScriptBytecodeOpCode.SeriesTerm:
+                ValidateSlot(module, instruction.A_U16, $"{context} series slot");
+                ValidateSlot(module, instruction.B_U16, $"{context} index slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.SeriesTake:
+            case GameEventScriptBytecodeOpCode.SeriesDrop:
+                ValidateSlot(module, instruction.A_U16, $"{context} series slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderList:
@@ -627,10 +547,6 @@ internal sealed class GesBytecodeVmLinearExecutable
     private static void ValidateSideTables(GameEventScriptCompiled module)
     {
         ValidateDebugSegment(module);
-        ValidatePipelinePatternPool(module);
-        ValidatePipelineObjectPatternPool(module);
-        ValidatePipelineSelectorPool(module);
-        ValidatePipelinePool(module);
     }
 
     private static void ValidateDebugSegment(GameEventScriptCompiled module)
@@ -651,79 +567,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             }
 
             ValidateOptionalSlot(module, site.Slot, $"{context} slot");
-        }
-    }
-
-    private static void ValidatePipelineSelectorPool(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.PipelineSelectorPool.Count; index++)
-        {
-            var layout = module.PipelineSelectorPool[index];
-            var context = $"pipeline selector #{index}";
-            ValidateOptionalSlot(module, layout.IdentifierSlot, $"{context} identifier slot");
-            ValidateOptionalSlot(module, layout.SecondaryIdentifierSlot, $"{context} secondary identifier slot");
-            ValidateOptionalAddress(module, module.Code, layout.ExpressionEntryAddress, $"{context} expression entry");
-            ValidateOptionalAddress(module, module.Code, layout.SecondaryExpressionEntryAddress, $"{context} secondary expression entry");
-            ValidateOptionalIndex(module.PipelinePatternPool.Count, layout.PipelinePatternIndex, $"{context} pattern");
-            ValidateOptionalIndex(module.PipelineObjectPatternPool.Count, layout.ObjectPatternIndex, $"{context} object pattern");
-            ValidateNonNegative(layout.Count, $"{context} count");
-        }
-    }
-
-    private static void ValidatePipelinePatternPool(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.PipelinePatternPool.Count; index++)
-        {
-            var layout = module.PipelinePatternPool[index];
-            var context = $"pipeline pattern #{index}";
-            ValidateNonNegative(layout.Count, $"{context} count");
-            ValidateOptionalAddress(module, module.Code, layout.FaceEntryAddress, $"{context} face entry");
-        }
-    }
-
-    private static void ValidatePipelineObjectPatternPool(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.PipelineObjectPatternPool.Count; index++)
-        {
-            var layout = module.PipelineObjectPatternPool[index];
-            for (var entryIndex = 0; entryIndex < layout.Entries.Count; entryIndex++)
-            {
-                var entry = layout.Entries[entryIndex];
-                var context = $"pipeline object pattern #{index} entry #{entryIndex}";
-                if (string.IsNullOrEmpty(entry.Key))
-                {
-                    throw InvalidBytecode($"{context} has no key.");
-                }
-
-                switch (entry.ValueKind)
-                {
-                    case GameEventScriptBytecodePipelineObjectPatternValueKind.Expression:
-                        ValidateOptionalAddress(module, module.Code, entry.ExpressionEntryAddress, $"{context} expression entry");
-                        break;
-
-                    case GameEventScriptBytecodePipelineObjectPatternValueKind.Nested:
-                        ValidateIndex(module.PipelineObjectPatternPool.Count, entry.NestedPatternIndex, $"{context} nested object pattern");
-                        break;
-                }
-            }
-        }
-    }
-
-    private static void ValidatePipelinePool(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.PipelinePool.Count; index++)
-        {
-            var layout = module.PipelinePool[index];
-            var context = $"pipeline #{index}";
-            ValidateSlot(module, layout.SourceSlot, $"{context} source slot");
-            var prefixSelectorIndexes = layout.PrefixSelectorIndexes;
-            for (var prefixIndex = 0; prefixIndex < prefixSelectorIndexes.Count; prefixIndex++)
-            {
-                var selectorIndex = prefixSelectorIndexes[prefixIndex];
-                ValidateIndex(module.PipelineSelectorPool.Count, selectorIndex, $"{context} prefix selector");
-            }
-
-            ValidateIndex(module.PipelineSelectorPool.Count, layout.TerminalSelectorIndex, $"{context} terminal selector");
         }
     }
 
@@ -995,8 +838,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.JumpIfNotTrue or
             GameEventScriptBytecodeOpCode.EnterScope or
             GameEventScriptBytecodeOpCode.ExitScope or
-            GameEventScriptBytecodeOpCode.ReturnNothing or
-            GameEventScriptBytecodeOpCode.Return or
+            GameEventScriptBytecodeOpCode.ReturnVoid or
+            GameEventScriptBytecodeOpCode.ReturnValue or
             GameEventScriptBytecodeOpCode.EmitMessage or
             GameEventScriptBytecodeOpCode.EmitMessageWithTags or
             GameEventScriptBytecodeOpCode.PublishMessage or
@@ -1039,16 +882,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastOptional or
             GameEventScriptBytecodeOpCode.CastCustom;
-
-    private static bool IsInlineConstantInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.LoadNothing or
-            GameEventScriptBytecodeOpCode.LoadTrue or
-            GameEventScriptBytecodeOpCode.LoadFalse or
-            GameEventScriptBytecodeOpCode.LoadInteger or
-            GameEventScriptBytecodeOpCode.LoadFloat or
-            GameEventScriptBytecodeOpCode.LoadText or
-            GameEventScriptBytecodeOpCode.LoadTag or
-            GameEventScriptBytecodeOpCode.LoadHandler;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.TypeCheckNothing or

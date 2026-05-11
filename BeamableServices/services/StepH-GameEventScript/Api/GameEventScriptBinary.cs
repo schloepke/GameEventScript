@@ -193,8 +193,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfTrue = 0x0B,
     JumpIfFalse = 0x0C,
     JumpIfNotTrue = 0x0D,
-    ReturnNothing = 0x0E,
-    Return = 0x0F,
+    ReturnVoid = 0x0E,
+    ReturnValue = 0x0F,
     
     #endregion
     #region Generic boolean/comparison/arithmetic/default operations
@@ -385,10 +385,16 @@ public enum GameEventScriptBytecodeOpCode : byte
     CollectionBuilderSet = 0xB7,
     CollectionBuilderAdd = 0xB8,
     CollectionBuilderFinish = 0xB9,
+    IteratorReduce = 0xBA,
+    IteratorReduceOrDefault = 0xBB,
+    IteratorFold = 0xBC,
+    SeriesTerm = 0xBD,
+    SeriesTake = 0xBE,
+    SeriesDrop = 0xBF,
     
     #endregion
     
-    #region Reserved
+    #region Calls
     Call = 0xC0,
     CallPredicate = 0xC1,
     CallStandard = 0xC2,
@@ -397,9 +403,52 @@ public enum GameEventScriptBytecodeOpCode : byte
     CallExternalPredicate = 0xC5,
     #endregion
     
-    #region Pipeline operations and future pipeline expansion
+    #region Pipeline operations
 
-    Pipeline = 0xD0
+    PipelineIterator = 0xD0,
+    PipelineCollectList = 0xD1,
+    PipelineCollectSet = 0xD2,
+    PipelineFirst = 0xD3,
+    PipelineLast = 0xD4,
+    PipelineSingle = 0xD5,
+    PipelineHasAny = 0xD6,
+    PipelineHasAll = 0xD7,
+    PipelineContainsSingle = 0xD8,
+    PipelineContainsAny = 0xD9,
+    PipelineContainsAll = 0xDA,
+    PipelineDictionary = 0xDB,
+    PipelineDictionaryValue = 0xDC,
+    PipelineDistinct = 0xDD,
+    PipelineDistinctBy = 0xDE,
+    PipelineGroupBy = 0xDF,
+
+    PipelineReverse = 0xE0,
+    PipelineSortAscending = 0xE1,
+    PipelineSortDescending = 0xE2,
+    PipelineOrderByAscending = 0xE3,
+    PipelineOrderByDescending = 0xE4,
+    PipelineTakeFirst = 0xE5,
+    PipelineTakeLast = 0xE6,
+    PipelineTakeHighest = 0xE7,
+    PipelineTakeLowest = 0xE8,
+    PipelineDropFirst = 0xE9,
+    PipelineDropLast = 0xEA,
+    PipelineDropHighest = 0xEB,
+    PipelineDropLowest = 0xEC,
+    PipelineShuffle = 0xED,
+    PipelineDraw = 0xEE,
+    PipelineChoose = 0xEF,
+
+    PipelineChooseRandom = 0xF0,
+    PipelineChooseWeighted = 0xF1,
+    PipelineDicePatternCountAny = 0xF2,
+    PipelineDicePatternCountFace = 0xF3,
+    PipelineDicePatternFullHouse = 0xF4,
+    PipelineDicePatternStraight = 0xF5,
+    PipelineTakePatternCountAny = 0xF6,
+    PipelineTakePatternCountFace = 0xF7,
+    PipelineTakePatternFullHouse = 0xF8,
+    PipelineTakePatternStraight = 0xF9
     
     #endregion
 }

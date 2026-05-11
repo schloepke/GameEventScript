@@ -7,4 +7,21 @@ public sealed class GameEventScriptCompileOptions
     public bool Optimize { get; init; } = true;
 
     public bool EnableDiagnostics { get; init; }
+
+    public bool EnableDebugInfo { get; init; }
+
+    internal GameEventScriptCompileOptions NormalizeDebugInfo()
+    {
+        if (!EnableDiagnostics || EnableDebugInfo)
+        {
+            return this;
+        }
+
+        return new GameEventScriptCompileOptions
+        {
+            Optimize = Optimize,
+            EnableDiagnostics = EnableDiagnostics,
+            EnableDebugInfo = true
+        };
+    }
 }

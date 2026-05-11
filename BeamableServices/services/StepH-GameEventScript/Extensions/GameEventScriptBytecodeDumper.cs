@@ -24,11 +24,13 @@ public static class GameEventScriptBytecodeDumper
         var builder = new StringBuilder();
         builder.AppendLine("gameeventscript bytecode v1");
         builder.Append("diagnostics: ").AppendLine(module.Options.EnableDiagnostics ? "on" : "off");
+        builder.Append("debugInfo: ").AppendLine(module.Options.EnableDebugInfo ? "on" : "off");
         builder.Append("maxFrameSlots: ").AppendLine(module.MaxFrameSlots.ToString(CultureInfo.InvariantCulture));
         AppendPool(builder, "strings", module.StringPool);
         AppendUShortListPool(builder, module);
         AppendExternalReferences(builder, module);
         AppendSideTables(builder, module);
+        AppendDebugSegment(builder, module);
         AppendCode(builder, module);
         AppendCallables(builder, module);
         AppendTypeDefinitions(builder, module);
@@ -59,25 +61,24 @@ public static class GameEventScriptBytecodeDumper
     private static void AppendSideTables(StringBuilder builder, GameEventScriptCompiled module)
     {
         AppendOperationLayouts(builder, module);
-        AppendDiagnosticLayouts(builder, module);
         AppendPipelinePatternPool(builder, module);
         AppendPipelineObjectPatternPool(builder, module);
         AppendPipelineSelectorPool(builder, module);
         AppendPipelinePool(builder, module);
     }
 
-    private static void AppendDiagnosticLayouts(StringBuilder builder, GameEventScriptCompiled module)
+    private static void AppendDebugSegment(StringBuilder builder, GameEventScriptCompiled module)
     {
-        builder.Append("diagnosticLayouts[").Append(module.DiagnosticLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.DiagnosticLayouts.Count; i++)
+        builder.Append("debugDiagnosticSites[").Append(module.DebugSegment.DiagnosticSites.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.DebugSegment.DiagnosticSites.Count; i++)
         {
-            var layout = module.DiagnosticLayouts[i];
+            var site = module.DebugSegment.DiagnosticSites[i];
             builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ")
-                .Append(layout.Kind)
-                .Append(" timing=").Append(layout.Timing)
-                .Append(" address=@").Append(layout.Address.ToString("D4", CultureInfo.InvariantCulture));
-            AppendSlot(builder, "slot", layout.Slot);
-            AppendText(builder, "name", layout.Name);
+                .Append(site.Kind)
+                .Append(" timing=").Append(site.Timing)
+                .Append(" address=@").Append(site.Address.ToString("D4", CultureInfo.InvariantCulture));
+            AppendSlot(builder, "slot", site.Slot);
+            AppendText(builder, "name", site.Name);
             builder.AppendLine();
         }
     }

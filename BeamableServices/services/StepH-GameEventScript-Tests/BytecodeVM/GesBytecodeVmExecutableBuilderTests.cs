@@ -4831,6 +4831,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             new GameEventScriptCompileOptions
             {
                 EnableDiagnostics = original.Options.EnableDiagnostics,
+                EnableDebugInfo = original.Options.EnableDebugInfo,
                 Optimize = original.Options.Optimize
             },
             original.ModuleName,
@@ -4848,7 +4849,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             code?.ToArray() ?? original.Code.ToArray(),
             original.MaxFrameSlots,
             original.OperationLayouts.ToArray(),
-            original.DiagnosticLayouts.ToArray(),
+            original.DebugSegment,
             original.PipelinePatternPool.ToArray(),
             original.PipelineObjectPatternPool.ToArray(),
             original.PipelineSelectorPool.ToArray(),

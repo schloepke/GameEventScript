@@ -35,7 +35,8 @@ public sealed class GameEventScriptBuilder
         _options = new GameEventScriptCompileOptions
         {
             Optimize = enabled,
-            EnableDiagnostics = _options.EnableDiagnostics
+            EnableDiagnostics = _options.EnableDiagnostics,
+            EnableDebugInfo = _options.EnableDebugInfo
         };
         return this;
     }
@@ -50,7 +51,24 @@ public sealed class GameEventScriptBuilder
         _options = new GameEventScriptCompileOptions
         {
             Optimize = _options.Optimize,
-            EnableDiagnostics = enabled
+            EnableDiagnostics = enabled,
+            EnableDebugInfo = _options.EnableDebugInfo
+        };
+        return this;
+    }
+
+    /// <summary>
+    /// Enables or disables debug metadata generation for bytecode diagnostics, dumps, and tooling.
+    /// </summary>
+    /// <param name="enabled">A boolean value indicating whether debug metadata should be generated. Defaults to true.</param>
+    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified debug setting applied.</returns>
+    public GameEventScriptBuilder WithDebugInfo(bool enabled = true)
+    {
+        _options = new GameEventScriptCompileOptions
+        {
+            Optimize = _options.Optimize,
+            EnableDiagnostics = _options.EnableDiagnostics,
+            EnableDebugInfo = enabled
         };
         return this;
     }
@@ -113,7 +131,7 @@ public sealed class GameEventScriptBuilder
     /// <returns>The generated GameEventScript bytecode.</returns>
     public GameEventScriptCompiled Compile(GameEventScriptCompileOptions? options = null)
     {
-        var compileOptions = options ?? _options;
+        var compileOptions = (options ?? _options).NormalizeDebugInfo();
         return GesBytecodeCompiler.Compile(BuildModule(compileOptions), compileOptions);
     }
 

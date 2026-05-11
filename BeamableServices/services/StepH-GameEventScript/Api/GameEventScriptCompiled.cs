@@ -22,7 +22,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
         int maxFrameSlots = 0,
         IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
-        IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout>? diagnosticLayouts = null,
+        GameEventScriptBytecodeDebugSegment? debugSegment = null,
         IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineSelector>? pipelineSelectorPool = null,
@@ -42,7 +42,7 @@ public sealed class GameEventScriptCompiled
         Code = code?.ToArray() ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
         OperationLayouts = operationLayouts?.ToArray() ?? [];
-        DiagnosticLayouts = diagnosticLayouts?.ToArray() ?? [];
+        DebugSegment = debugSegment ?? GameEventScriptBytecodeDebugSegment.Empty;
         PipelinePatternPool = pipelinePatternPool?.ToArray() ?? [];
         PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
         PipelineSelectorPool = pipelineSelectorPool?.ToArray() ?? [];
@@ -73,7 +73,7 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts { get; }
 
-    public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get; }
+    public GameEventScriptBytecodeDebugSegment DebugSegment { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get; }
 

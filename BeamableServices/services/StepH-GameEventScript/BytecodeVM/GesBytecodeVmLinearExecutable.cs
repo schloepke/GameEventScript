@@ -266,22 +266,22 @@ internal sealed class GesBytecodeVmLinearExecutable
         GameEventScriptBytecodeDiagnosticTiming timing)
     {
         var sites = new List<GesBytecodeVmLinearDiagnosticEntry>?[code.Count + 1];
-        foreach (var layout in module.DiagnosticLayouts.Where(layout => layout.Timing == timing))
+        foreach (var site in module.DebugSegment.DiagnosticSites.Where(site => site.Timing == timing))
         {
-            if (layout.Address < 0 || layout.Address > code.Count)
+            if (site.Address < 0 || site.Address > code.Count)
             {
-                throw InvalidBytecode($"diagnostic layout '{layout.Name}' references address {layout.Address}, outside code range 0..{code.Count}.");
+                throw InvalidBytecode($"debug diagnostic site '{site.Name}' references address {site.Address}, outside code range 0..{code.Count}.");
             }
 
             if (timing == GameEventScriptBytecodeDiagnosticTiming.AfterInstruction &&
-                layout.Address >= code.Count)
+                site.Address >= code.Count)
             {
-                throw InvalidBytecode($"diagnostic layout '{layout.Name}' cannot run after end address {layout.Address}.");
+                throw InvalidBytecode($"debug diagnostic site '{site.Name}' cannot run after end address {site.Address}.");
             }
 
-            ValidateOptionalSlot(module, layout.Slot, $"diagnostic layout '{layout.Name}' slot");
-            sites[layout.Address] ??= [];
-            sites[layout.Address]!.Add(new GesBytecodeVmLinearDiagnosticEntry(layout.Kind, layout.Name, layout.Slot));
+            ValidateOptionalSlot(module, site.Slot, $"debug diagnostic site '{site.Name}' slot");
+            sites[site.Address] ??= [];
+            sites[site.Address]!.Add(new GesBytecodeVmLinearDiagnosticEntry(site.Kind, site.Name, site.Slot));
         }
 
         return sites
@@ -544,31 +544,31 @@ internal sealed class GesBytecodeVmLinearExecutable
     private static void ValidateSideTables(GameEventScriptCompiled module)
     {
         ValidateOperationLayouts(module);
-        ValidateDiagnosticLayouts(module);
+        ValidateDebugSegment(module);
         ValidatePipelinePatternPool(module);
         ValidatePipelineObjectPatternPool(module);
         ValidatePipelineSelectorPool(module);
         ValidatePipelinePool(module);
     }
 
-    private static void ValidateDiagnosticLayouts(GameEventScriptCompiled module)
+    private static void ValidateDebugSegment(GameEventScriptCompiled module)
     {
-        for (var index = 0; index < module.DiagnosticLayouts.Count; index++)
+        for (var index = 0; index < module.DebugSegment.DiagnosticSites.Count; index++)
         {
-            var layout = module.DiagnosticLayouts[index];
-            var context = $"diagnostic layout #{index}";
-            if (layout.Address < 0 || layout.Address > module.Code.Count)
+            var site = module.DebugSegment.DiagnosticSites[index];
+            var context = $"debug diagnostic site #{index}";
+            if (site.Address < 0 || site.Address > module.Code.Count)
             {
-                throw InvalidBytecode($"{context} references address {layout.Address}, outside code range 0..{module.Code.Count}.");
+                throw InvalidBytecode($"{context} references address {site.Address}, outside code range 0..{module.Code.Count}.");
             }
 
-            if (layout.Timing == GameEventScriptBytecodeDiagnosticTiming.AfterInstruction &&
-                layout.Address >= module.Code.Count)
+            if (site.Timing == GameEventScriptBytecodeDiagnosticTiming.AfterInstruction &&
+                site.Address >= module.Code.Count)
             {
-                throw InvalidBytecode($"{context} cannot run after end address {layout.Address}.");
+                throw InvalidBytecode($"{context} cannot run after end address {site.Address}.");
             }
 
-            ValidateOptionalSlot(module, layout.Slot, $"{context} slot");
+            ValidateOptionalSlot(module, site.Slot, $"{context} slot");
         }
     }
 

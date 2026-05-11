@@ -36,7 +36,9 @@ public class GameEventScriptBinaryBuilder
 
     public GameEventScriptBinaryBuilder WithFlag(GameEventScriptBinaryFlags flag, bool enabled = true)
     {
-        _flags |= (_flags & ~flag) | (enabled ? flag : 0);
+        _flags = enabled
+            ? _flags | flag
+            : _flags & ~flag;
         return this;
     }
 
@@ -159,6 +161,7 @@ public static class GameEventScriptBinaryExtensions
         builder
             .WithVersion(1)
             .WithModuleName(compiled.ModuleName)
+            .WithFlag(GameEventScriptBinaryFlags.Optimization, compiled.Options.Optimize)
             .AddStringPoolElements(compiled.StringPool, out _)
             .AddUint16TableEntries(compiled.UShortListPool, out _)
             .AddBytecodeInstructions(compiled.Code);

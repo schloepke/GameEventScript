@@ -52,6 +52,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   ctor GameEventScriptBuilder()
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddScript(System.String text, System.String sourceName)
+  method StepH.GameEventScript.Api.GameEventScriptBuilder WithDebugInfo(System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithEnableDiagnostic(System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(System.Type[] types)
@@ -70,16 +71,21 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind
   enum-field Predicate = 0
   enum-field Function = 1
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind
-  enum-field LetEvaluated = 0
-  enum-field ExpressionEvaluatedToNothing = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout
-  ctor GameEventScriptBytecodeDiagnosticLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming timing, System.Int32 address, System.Int32 slot, System.String name)
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDebugDiagnosticSite
+  ctor GameEventScriptBytecodeDebugDiagnosticSite(StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming timing, System.Int32 address, System.Int32 slot, System.String name)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind Kind { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming Timing { get }
   property System.Int32 Address { get }
   property System.Int32 Slot { get }
   property System.String Name { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDebugSegment
+  ctor GameEventScriptBytecodeDebugSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDebugDiagnosticSite> diagnosticSites)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeDebugSegment Empty { get }
+  property System.Boolean IsEmpty { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDebugDiagnosticSite> DiagnosticSites { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind
+  enum-field LetEvaluated = 0
+  enum-field ExpressionEvaluatedToNothing = 1
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming
   enum-field BeforeInstruction = 0
   enum-field AfterInstruction = 1
@@ -423,14 +429,15 @@ class StepH.GameEventScript.Api.GameEventScriptCompileException
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptCompileError> Errors { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
   ctor GameEventScriptCompileOptions()
+  property System.Boolean EnableDebugInfo { get set }
   property System.Boolean EnableDiagnostics { get set }
   property System.Boolean Optimize { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeDebugSegment DebugSegment { get }
   property StepH.GameEventScript.Api.GameEventScriptCompileOptions Options { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeCallable> Callables { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout> OperationLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipeline> PipelinePool { get }

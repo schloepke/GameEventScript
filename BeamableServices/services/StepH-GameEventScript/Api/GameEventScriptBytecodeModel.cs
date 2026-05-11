@@ -340,9 +340,24 @@ public enum GameEventScriptBytecodeDiagnosticTiming
     AfterInstruction
 }
 
-public sealed class GameEventScriptBytecodeDiagnosticLayout
+public sealed class GameEventScriptBytecodeDebugSegment
 {
-    public GameEventScriptBytecodeDiagnosticLayout(
+    public static GameEventScriptBytecodeDebugSegment Empty { get; } = new();
+
+    public GameEventScriptBytecodeDebugSegment(
+        IReadOnlyList<GameEventScriptBytecodeDebugDiagnosticSite>? diagnosticSites = null)
+    {
+        DiagnosticSites = diagnosticSites?.ToArray() ?? [];
+    }
+
+    public IReadOnlyList<GameEventScriptBytecodeDebugDiagnosticSite> DiagnosticSites { get; }
+
+    public bool IsEmpty => DiagnosticSites.Count == 0;
+}
+
+public sealed class GameEventScriptBytecodeDebugDiagnosticSite
+{
+    public GameEventScriptBytecodeDebugDiagnosticSite(
         GameEventScriptBytecodeDiagnosticKind kind,
         GameEventScriptBytecodeDiagnosticTiming timing,
         int address,

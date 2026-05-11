@@ -71,13 +71,13 @@ public sealed class BytecodeVmPerformanceReportTests
         TestContext.WriteLine("-----");
         WriteReport("Without diagnostic;", bytecodeVmCompile, bytecodeVmBuild, bytecodeVmRun);
         WriteReport("With diagnostic:", bytecodeVmCompileDiag, bytecodeVmBuildDiag, bytecodeVmRunDiag);
-        /*
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
         TestContext.WriteLine("-----");
         TestContext.WriteLine(diagnosticCollector.ToString());
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Diagnostics:\n" + JsonSerializer.Serialize(bytecodeVmCompileDiag.Value.ToGameEventScriptBinary(), new JsonSerializerOptions { WriteIndented = true }));
+        /*
         */
         TestContext.WriteLine("-----");
     }
@@ -87,7 +87,8 @@ public sealed class BytecodeVmPerformanceReportTests
         MeasureRun(BuildExecutable(BuildPerformanceBytecode(false)), input, WarmupRuns);
     }
 
-    private static GameEventScriptCompiled BuildPerformanceBytecode(bool diagnostic) => GameEventScriptBuilder.Create().WithEnableDiagnostic(diagnostic).AddScript(PerformanceScript, "engine-performance.es").Compile();
+    private static GameEventScriptCompiled BuildPerformanceBytecode(bool diagnostic) => GameEventScriptBuilder.Create()
+        .WithEnableDiagnostic(diagnostic).WithDebugInfo().AddScript(PerformanceScript, "engine-performance.es").Compile();
 
     private static GesBytecodeVmExecutable BuildExecutable(GameEventScriptCompiled bytecode) => GesBytecodeVmExecutableBuilder.Build(bytecode);
 

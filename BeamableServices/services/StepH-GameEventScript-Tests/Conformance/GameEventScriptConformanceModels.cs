@@ -93,6 +93,8 @@ public sealed class GameEventScriptCompileOptionsSpec
     public bool? Optimize { get; set; }
 
     public bool? EnableDiagnostics { get; set; }
+
+    public bool? EnableDebugInfo { get; set; }
 }
 
 public sealed class GameEventScriptExternalSubscriberSpec

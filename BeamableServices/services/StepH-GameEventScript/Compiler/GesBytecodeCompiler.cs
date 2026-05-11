@@ -14,7 +14,7 @@ internal static class GesBytecodeCompiler
     public static GameEventScriptCompiled Compile(GesModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
-        var compileOptions = options ?? new GameEventScriptCompileOptions();
+        var compileOptions = (options ?? new GameEventScriptCompileOptions()).NormalizeDebugInfo();
         var builder = new CompilerBuilder(module, compileOptions);
         return builder.Build();
     }
@@ -52,7 +52,7 @@ internal static class GesBytecodeCompiler
                 AddExternalReference,
                 module.Callables,
                 module.TypeDefinitions,
-                options.EnableDiagnostics);
+                options.EnableDebugInfo);
             linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group), _handlerSources);
             linearBuilder.AddCallables(callables.Values, module.Callables);
             linearBuilder.AddTypeDefinitions(typeDefinitions.Values, module.TypeDefinitions);
@@ -70,7 +70,7 @@ internal static class GesBytecodeCompiler
                 linearBuilder.Code.ToArray(),
                 linearBuilder.MaxFrameSlots,
                 linearBuilder.OperationLayouts.ToArray(),
-                linearBuilder.DiagnosticLayouts.ToArray(),
+                linearBuilder.DebugSegment,
                 linearBuilder.PipelinePatternPool.ToArray(),
                 linearBuilder.PipelineObjectPatternPool.ToArray(),
                 linearBuilder.PipelineSelectorPool.ToArray(),

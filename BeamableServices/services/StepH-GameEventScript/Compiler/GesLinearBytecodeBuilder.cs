@@ -14,10 +14,10 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly Func<GameEventScriptExtensionReference, int> _resolveExternalReferenceIndex;
     private readonly IReadOnlyDictionary<string, GesCallableDefinition> _sourceCallables;
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _sourceTypeDefinitions;
-    private readonly bool _emitDiagnosticLayouts;
+    private readonly bool _emitDebugInfo;
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
     private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
-    private readonly List<GameEventScriptBytecodeDiagnosticLayout> _diagnosticLayouts = [];
+    private readonly List<GameEventScriptBytecodeDebugDiagnosticSite> _debugDiagnosticSites = [];
     private readonly List<GameEventScriptBytecodePipelinePattern> _pipelinePatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
@@ -32,14 +32,14 @@ internal sealed class GesLinearBytecodeBuilder
         Func<GameEventScriptExtensionReference, int>? resolveExternalReferenceIndex = null,
         IReadOnlyDictionary<string, GesCallableDefinition>? sourceCallables = null,
         IReadOnlyDictionary<string, TypeDefinitionNode>? sourceTypeDefinitions = null,
-        bool emitDiagnosticLayouts = false)
+        bool emitDebugInfo = false)
     {
         _resolveStringIndex = resolveStringIndex ?? (_ => -1);
         _resolveUShortListIndex = resolveUShortListIndex ?? (_ => -1);
         _resolveExternalReferenceIndex = resolveExternalReferenceIndex ?? (_ => -1);
         _sourceCallables = sourceCallables ?? new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
         _sourceTypeDefinitions = sourceTypeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
-        _emitDiagnosticLayouts = emitDiagnosticLayouts;
+        _emitDebugInfo = emitDebugInfo;
     }
 
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code => _code;
@@ -48,7 +48,7 @@ internal sealed class GesLinearBytecodeBuilder
 
     public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts => _operationLayouts;
 
-    public IReadOnlyList<GameEventScriptBytecodeDiagnosticLayout> DiagnosticLayouts => _diagnosticLayouts;
+    public GameEventScriptBytecodeDebugSegment DebugSegment => new(_debugDiagnosticSites);
 
     public IReadOnlyList<GameEventScriptBytecodePipelinePattern> PipelinePatternPool => _pipelinePatternPool;
 
@@ -262,13 +262,13 @@ internal sealed class GesLinearBytecodeBuilder
                     diagnosticAddress = EmitCastSlot(letSlot, letSlot, let.DeclaredType);
                 }
 
-                AddDiagnosticLayout(
+                AddDebugDiagnosticSite(
                     GameEventScriptBytecodeDiagnosticKind.LetEvaluated,
                     GameEventScriptBytecodeDiagnosticTiming.AfterInstruction,
                     diagnosticAddress,
                     letSlot,
                     let.Identifier);
-                AddDiagnosticLayout(
+                AddDebugDiagnosticSite(
                     GameEventScriptBytecodeDiagnosticKind.ExpressionEvaluatedToNothing,
                     GameEventScriptBytecodeDiagnosticTiming.AfterInstruction,
                     diagnosticAddress,
@@ -282,7 +282,7 @@ internal sealed class GesLinearBytecodeBuilder
                 var result = EmitSourceExpression(expressionStatement.Expression, context, new ExpressionState(context.SlotCount));
                 if (_code.Count > 0)
                 {
-                    AddDiagnosticLayout(
+                    AddDebugDiagnosticSite(
                         GameEventScriptBytecodeDiagnosticKind.ExpressionEvaluatedToNothing,
                         GameEventScriptBytecodeDiagnosticTiming.AfterInstruction,
                         _code.Count - 1,
@@ -1209,19 +1209,19 @@ internal sealed class GesLinearBytecodeBuilder
         return false;
     }
 
-    private void AddDiagnosticLayout(
+    private void AddDebugDiagnosticSite(
         GameEventScriptBytecodeDiagnosticKind kind,
         GameEventScriptBytecodeDiagnosticTiming timing,
         int address,
         int slot,
         string name)
     {
-        if (!_emitDiagnosticLayouts)
+        if (!_emitDebugInfo)
         {
             return;
         }
 
-        _diagnosticLayouts.Add(new GameEventScriptBytecodeDiagnosticLayout(kind, timing, address, slot, name));
+        _debugDiagnosticSites.Add(new GameEventScriptBytecodeDebugDiagnosticSite(kind, timing, address, slot, name));
     }
 
     private int AddSourcePipelineSelector(CollectionSelectorNode selector, bool isTerminal, SourceContext context, ExpressionState state)

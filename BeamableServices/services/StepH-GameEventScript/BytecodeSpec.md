@@ -131,12 +131,11 @@ GameEventScriptCompiled
   Callables: CallableEntry[]
   TypeDefinitions: TypeDefinitionEntry[]
   OperationLayouts
-  DiagnosticLayouts
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
   PipelinePool
-  DebugSymbols
+  DebugSegment
   MaxFrameSlots
   MaxCallStackDepth
 ```
@@ -161,7 +160,7 @@ GameEventScriptCompiled
   TypeDefinitions
   MaxFrameSlots
   OperationLayouts
-  DiagnosticLayouts
+  DebugSegment
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
@@ -987,13 +986,18 @@ the global code segment and write their result into normal frame slots.
 ### Diagnostics
 
 Diagnostics are execution instrumentation, not bytecode. The bytecode stream
-does not contain diagnostic-only instructions. Diagnostic metadata is carried by
-side tables linked to instruction addresses, operation layouts, handler
-metadata, and message shape/slot-list pools.
-If compile diagnostics are disabled, `DiagnosticLayouts` may be empty.
+does not contain diagnostic-only instructions. Diagnostic-only metadata is
+carried by the optional `DebugSegment`, linked to instruction addresses and
+slots. Runtime collectors read the executable diagnostic sites derived from that
+segment; production bytecode side tables must not carry diagnostic-only fields.
+If debug info is disabled, the debug segment may be empty. Compile diagnostics
+implicitly request debug info for compatibility with trace collection.
 
 ```text
-DiagnosticLayout
+DebugSegment
+  DiagnosticSites[]
+
+DebugDiagnosticSite
   Kind: LetEvaluated | ExpressionEvaluatedToNothing
   Timing: BeforeInstruction | AfterInstruction
   Address
@@ -1006,16 +1010,17 @@ The VM records diagnostic events while executing normal instructions:
 - Handler and parameter events are derived from handler metadata and
   `BindParameter`/cast execution.
 - Function and predicate call events are derived from call operation layouts.
-- Let and expression-to-nothing events are derived from diagnostic layouts.
+- Let and expression-to-nothing events are derived from debug diagnostic sites.
 - Publish argument events are derived from message shape and slot-list metadata.
 
-## Debug Symbols
+## Debug Segment
 
-Debug symbols are optional but should be generated when compile diagnostics are
-enabled, and may also be generated for deterministic dumps.
+Debug metadata is optional and should be generated when compile diagnostics are
+enabled, and may also be generated for deterministic dumps or debugger UIs.
 
 ```text
-DebugSymbols
+DebugSegment
+  DiagnosticSites[]
   Labels[]
   AddressToSource[]
   AddressToLogicalNode[]

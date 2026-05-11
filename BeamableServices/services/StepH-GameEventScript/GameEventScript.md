@@ -2088,6 +2088,10 @@ var bytecode = GameEventScriptManager.Compile(
 });
 ```
 
+`EnableDebugInfo` emits the optional debug segment used by tooling and
+diagnostic trace sites. `EnableDiagnostics` requests debug info automatically so
+runtime collectors can resolve names and slots.
+
 For multiple source strings or files, use `GameEventScriptBuilder` directly:
 
 ```csharp
@@ -2186,6 +2190,8 @@ callbacks remain lenient like script handlers.
 ### Diagnostics
 
 Diagnostics are collected through `IGameEventScriptDiagnosticCollector`.
+Compile with diagnostics enabled so the optional debug segment contains the
+diagnostic sites consumed by the VM.
 
 ```csharp
 var diagnostics = new GameEventScriptDiagnosticTraceCollector();

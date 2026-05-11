@@ -444,7 +444,8 @@ internal static class GameEventScriptConformanceRunner
         return builder.Compile(new GameEventScriptCompileOptions
         {
             Optimize = test.CompileOptions?.Optimize ?? true,
-            EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false
+            EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false,
+            EnableDebugInfo = test.CompileOptions?.EnableDebugInfo ?? false
         });
     }
 

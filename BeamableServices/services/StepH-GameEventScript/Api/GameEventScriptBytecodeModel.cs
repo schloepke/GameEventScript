@@ -148,7 +148,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     CollectionBuilderSet,
     CollectionBuilderAdd,
     CollectionBuilderFinish,
-    GuardedChoice,
     Power,
     ShortCircuitOr,
     ShortCircuitAnd,
@@ -517,25 +516,6 @@ public sealed class GameEventScriptBytecodePipeline
     public IReadOnlyList<int> PrefixSelectorIndexes { get; }
 
     public int TerminalSelectorIndex { get; }
-}
-
-public sealed class GameEventScriptBytecodeGuardedChoiceLayout
-{
-    public GameEventScriptBytecodeGuardedChoiceLayout(
-        IReadOnlyList<int>? valueEntryAddresses,
-        IReadOnlyList<int>? conditionEntryAddresses,
-        int otherwiseEntryAddress = -1)
-    {
-        ValueEntryAddresses = valueEntryAddresses?.ToArray() ?? [];
-        ConditionEntryAddresses = conditionEntryAddresses?.ToArray() ?? [];
-        OtherwiseEntryAddress = otherwiseEntryAddress;
-    }
-
-    public IReadOnlyList<int> ValueEntryAddresses { get; }
-
-    public IReadOnlyList<int> ConditionEntryAddresses { get; }
-
-    public int OtherwiseEntryAddress { get; }
 }
 
 internal sealed record class GameEventScriptBytecodeStackInstruction(

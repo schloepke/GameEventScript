@@ -18,7 +18,7 @@ Implementation note: the current public artifact already exposes the global
 linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
 callables, and computed/clamped type-field helpers, plus public side tables for
 operation, publish, loop, selector/pipeline, generated-collection,
-seeded-random, guarded-choice, dice-pattern, and object-match metadata. The
+seeded-random, dice-pattern, and object-match metadata. The
 synchronous VM executes handlers, callable/predicate frames, helper entries,
 high-level opcodes, and supported type-field helpers directly from that linear
 code with a VM-owned call-frame stack. The manual stepping Fiber starts from
@@ -26,10 +26,11 @@ the same handler entry addresses and uses the same linear instruction execution
 state: program counter, end address, frame slots, VM call frames, scope marks,
 pausable linear range/collection loops, and seeded-random block frames. It has
 no statement-program or expression-program compatibility dispatcher.
-High-level operations such as pipelines, guarded choices, seeded-random blocks,
-publish operations, dice-pattern matching, and object matching execute from
+High-level operations such as pipelines, publish operations, dice-pattern
+matching, and object matching execute from
 normalized public side-table layouts plus helper entry addresses. Generated
-collections use normal iterator and collection-builder opcodes. Runtime pipeline execution may
+collections and guarded choices use normal iterator/collection-builder and
+jump opcodes. Runtime pipeline execution may
 keep indexed/streaming hot paths where that avoids per-item frame allocation;
 non-fast selector expressions evaluate through their public linear helper
 entries while staying inside those optimized pipeline paths. The pipeline helper
@@ -135,7 +136,6 @@ GameEventScriptCompiled
   PipelineObjectPatternPool
   PipelineSelectorPool
   PipelinePool
-  GuardedChoiceLayouts
   DebugSymbols
   MaxFrameSlots
   MaxCallStackDepth
@@ -166,7 +166,6 @@ GameEventScriptCompiled
   PipelineObjectPatternPool
   PipelineSelectorPool
   PipelinePool
-  GuardedChoiceLayouts
 
 GameEventScriptBytecodeInstruction
   OpCode
@@ -377,9 +376,8 @@ successive 16-bit lanes. For literal instructions the same payload carries
 
 Large structured metadata belongs in side tables and pools, not nested
 instruction objects. Examples: operation layouts, `UShortListPool` message
-shapes/slot lists, pipeline pools, iteration-source layouts,
-generated-collection layouts, guarded-choice layouts, diagnostic layouts, and
-loop layouts.
+shapes/slot lists, pipeline pools, pipeline selector/pattern pools, and
+diagnostic layouts.
 
 An instruction that produces a `nothing` value writes it to `Dest_U16`. Returning
 without a value uses `ReturnNothing`; returning a slot value uses `Return
@@ -619,11 +617,11 @@ Example:
 @0110 ...
 ```
 
-Guarded expressions may lower either to explicit condition jumps and value
-writes to a shared destination slot, or to a high-level `GuardedChoice`
-instruction whose side-table layout stores condition, value, and otherwise
-helper entry addresses. In the high-level form, condition helpers are evaluated
-in order and only the selected value helper is evaluated.
+Guarded expressions lower to explicit condition jumps and value writes to a
+shared destination slot. Conditions are evaluated in order via `JumpIfNotTrue`;
+only the first true branch value is evaluated, and otherwise code runs when no
+condition is true. A future optimizer may add expression-into-destination or
+peephole branch compaction, but there is no public `GuardedChoice` layout.
 
 `for` statements lower to normal linear iterator control flow. The source is
 evaluated once, an iterator is stored in a temporary slot, `IteratorNext` writes
@@ -1055,8 +1053,7 @@ A grouped view may still be offered, but it must keep global addresses visible.
 
 The public bytecode model is normalized around one global linear `Code` segment
 plus side tables for runtime high-level operations, including pipelines,
-selectors, guarded choices, publish
-operations, seeded-random blocks, dice patterns, and object-match patterns.
+selectors, publish operations, dice patterns, and object-match patterns.
 
 The BytecodeVM executable builder consumes and validates the public linear
 `Code` segment plus side tables into an internal linear executable artifact.

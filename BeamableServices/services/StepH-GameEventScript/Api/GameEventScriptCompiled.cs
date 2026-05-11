@@ -26,8 +26,7 @@ public sealed class GameEventScriptCompiled
         IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineSelector>? pipelineSelectorPool = null,
-        IReadOnlyList<GameEventScriptBytecodePipeline>? pipelinePool = null,
-        IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout>? guardedChoiceLayouts = null)
+        IReadOnlyList<GameEventScriptBytecodePipeline>? pipelinePool = null)
     {
         Options = options ?? throw new ArgumentNullException(nameof(options));
         ModuleName = string.IsNullOrWhiteSpace(moduleName)
@@ -48,7 +47,6 @@ public sealed class GameEventScriptCompiled
         PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
         PipelineSelectorPool = pipelineSelectorPool?.ToArray() ?? [];
         PipelinePool = pipelinePool?.ToArray() ?? [];
-        GuardedChoiceLayouts = guardedChoiceLayouts?.ToArray() ?? [];
     }
 
     public GameEventScriptCompileOptions Options { get; }
@@ -84,8 +82,6 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool { get; }
 
     public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts { get; }
 
     private static IReadOnlyList<T> CopyList<T>(IReadOnlyList<T> source, string parameterName)
         => (source ?? throw new ArgumentNullException(parameterName)).ToArray();

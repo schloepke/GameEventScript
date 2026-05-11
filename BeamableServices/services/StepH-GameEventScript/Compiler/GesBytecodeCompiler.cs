@@ -74,8 +74,7 @@ internal static class GesBytecodeCompiler
                 linearBuilder.PipelinePatternPool.ToArray(),
                 linearBuilder.PipelineObjectPatternPool.ToArray(),
                 linearBuilder.PipelineSelectorPool.ToArray(),
-                linearBuilder.PipelinePool.ToArray(),
-                linearBuilder.GuardedChoiceLayouts.ToArray());
+                linearBuilder.PipelinePool.ToArray());
         }
 
         private IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptBytecodeHandler>> BuildHandlers()

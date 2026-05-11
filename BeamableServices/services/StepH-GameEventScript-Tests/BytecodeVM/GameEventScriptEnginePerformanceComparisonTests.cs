@@ -71,9 +71,9 @@ public sealed class BytecodeVmPerformanceReportTests
         TestContext.WriteLine("-----");
         WriteReport("Without diagnostic;", bytecodeVmCompile, bytecodeVmBuild, bytecodeVmRun);
         WriteReport("With diagnostic:", bytecodeVmCompileDiag, bytecodeVmBuildDiag, bytecodeVmRunDiag);
+        /*
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
-        /*
         TestContext.WriteLine("-----");
         TestContext.WriteLine(diagnosticCollector.ToString());
         TestContext.WriteLine("-----");

@@ -455,10 +455,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.A_U16, $"{context} collection builder slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
-                ValidateIndex(module.GuardedChoiceLayouts.Count, instruction.C_U16, $"{context} guarded choice layout");
-                break;
-
             case GameEventScriptBytecodeOpCode.Dice:
                 ValidateNonNegative(instruction.A_U16, $"{context} dice count");
                 ValidateNonNegative(instruction.B_U16, $"{context} dice sides");
@@ -553,7 +549,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         ValidatePipelineObjectPatternPool(module);
         ValidatePipelineSelectorPool(module);
         ValidatePipelinePool(module);
-        ValidateGuardedChoiceLayouts(module);
     }
 
     private static void ValidateDiagnosticLayouts(GameEventScriptCompiled module)
@@ -668,25 +663,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             }
 
             ValidateIndex(module.PipelineSelectorPool.Count, layout.TerminalSelectorIndex, $"{context} terminal selector");
-        }
-    }
-
-    private static void ValidateGuardedChoiceLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.GuardedChoiceLayouts.Count; index++)
-        {
-            var layout = module.GuardedChoiceLayouts[index];
-            foreach (var entryAddress in layout.ValueEntryAddresses)
-            {
-                ValidateOptionalAddress(module, module.Code, entryAddress, $"guarded choice layout #{index} value entry");
-            }
-
-            foreach (var entryAddress in layout.ConditionEntryAddresses)
-            {
-                ValidateOptionalAddress(module, module.Code, entryAddress, $"guarded choice layout #{index} condition entry");
-            }
-
-            ValidateOptionalAddress(module, module.Code, layout.OtherwiseEntryAddress, $"guarded choice layout #{index} otherwise entry");
         }
     }
 

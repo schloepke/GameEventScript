@@ -64,7 +64,6 @@ public static class GameEventScriptBytecodeDumper
         AppendPipelineObjectPatternPool(builder, module);
         AppendPipelineSelectorPool(builder, module);
         AppendPipelinePool(builder, module);
-        AppendGuardedChoiceLayouts(builder, module);
     }
 
     private static void AppendDiagnosticLayouts(StringBuilder builder, GameEventScriptCompiled module)
@@ -174,20 +173,6 @@ public static class GameEventScriptBytecodeDumper
             AppendSlot(builder, "source", layout.SourceSlot);
             AppendIndexList(builder, "prefixSelectors", layout.PrefixSelectorIndexes);
             AppendIndex(builder, "terminalSelector", layout.TerminalSelectorIndex);
-            builder.AppendLine();
-        }
-    }
-
-    private static void AppendGuardedChoiceLayouts(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("guardedChoiceLayouts[").Append(module.GuardedChoiceLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.GuardedChoiceLayouts.Count; i++)
-        {
-            var layout = module.GuardedChoiceLayouts[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(':');
-            AppendIndexList(builder, "values", layout.ValueEntryAddresses);
-            AppendIndexList(builder, "conditions", layout.ConditionEntryAddresses);
-            AppendAddress(builder, "otherwise", layout.OtherwiseEntryAddress);
             builder.AppendLine();
         }
     }
@@ -488,9 +473,6 @@ public static class GameEventScriptBytecodeDumper
         {
             case GameEventScriptBytecodeOpCode.Pipeline:
                 AppendIndex(builder, "pipeline", instruction.C_U16);
-                break;
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
-                AppendIndex(builder, "guardedChoiceLayout", instruction.C_U16);
                 break;
             case GameEventScriptBytecodeOpCode.MemberAccess:
                 AppendPoolIndex(builder, "member", module.StringPool, instruction.C_U16);

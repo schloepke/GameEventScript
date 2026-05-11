@@ -85,9 +85,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Pipeline:
                 return allowPipeline && CanExecuteLinearPipeline(instruction.C_U16, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
-                return CanExecuteLinearGuardedChoice(instruction.C_U16, visitingCallables, allowPipeline);
-
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.PredicateTest:
                 return TryGetOperationLayout(instruction.C_U16, out var layout) &&
@@ -298,26 +295,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         visitingPatterns.Remove(layoutIndex);
         return true;
-    }
-
-    private bool CanExecuteLinearGuardedChoice(int layoutIndex, HashSet<string> visitingCallables, bool allowPipeline)
-    {
-        if (!TryGetGuardedChoiceLayout(layoutIndex, out var layout) ||
-            layout.ConditionEntryAddresses.Count != layout.ValueEntryAddresses.Count)
-        {
-            return false;
-        }
-
-        for (var branchIndex = 0; branchIndex < layout.ConditionEntryAddresses.Count; branchIndex++)
-        {
-            if (!CanExecuteLinearEntry(layout.ConditionEntryAddresses[branchIndex], visitingCallables, allowPipeline) ||
-                !CanExecuteLinearEntry(layout.ValueEntryAddresses[branchIndex], visitingCallables, allowPipeline))
-            {
-                return false;
-            }
-        }
-
-        return CanExecuteLinearEntry(layout.OtherwiseEntryAddress, visitingCallables, allowPipeline);
     }
 
     private bool CanExecuteLinearEntry(int entryAddress, HashSet<string> visitingCallables, bool allowPipeline)
@@ -1122,14 +1099,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
 
                 return DefineSlot(instruction.Dest_U16, pipelineValue);
-
-            case GameEventScriptBytecodeOpCode.GuardedChoice:
-                if (!TryEvaluateLinearGuardedChoice(instruction.C_U16, out var guardedValue))
-                {
-                    return false;
-                }
-
-                return DefineSlot(instruction.Dest_U16, guardedValue);
         }
 
         if (IsCastInstruction(instruction.OpCode))
@@ -3632,31 +3601,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryEvaluateLinearProjectionFastRange(parameterSlot, parameterValue, pc, out value);
     }
 
-    private bool TryEvaluateLinearGuardedChoice(int layoutIndex, out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        if (!TryGetGuardedChoiceLayout(layoutIndex, out var layout) ||
-            layout.ConditionEntryAddresses.Count != layout.ValueEntryAddresses.Count)
-        {
-            return false;
-        }
-
-        for (var branchIndex = 0; branchIndex < layout.ConditionEntryAddresses.Count; branchIndex++)
-        {
-            if (!TryEvaluateLinearHelperExpression(layout.ConditionEntryAddresses[branchIndex], out var condition))
-            {
-                return false;
-            }
-
-            if (condition.IsTrue())
-            {
-                return TryEvaluateLinearHelperExpression(layout.ValueEntryAddresses[branchIndex], out value);
-            }
-        }
-
-        return TryEvaluateLinearHelperExpression(layout.OtherwiseEntryAddress, out value);
-    }
-
     private bool TryEvaluateLinearHelperExpression(int entryAddress, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
@@ -4087,18 +4031,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if ((uint)index < (uint)_compiledScript.BytecodeModule.PipelinePool.Count)
         {
             layout = _compiledScript.BytecodeModule.PipelinePool[index];
-            return true;
-        }
-
-        layout = default!;
-        return false;
-    }
-
-    private bool TryGetGuardedChoiceLayout(int index, out GameEventScriptBytecodeGuardedChoiceLayout layout)
-    {
-        if ((uint)index < (uint)_compiledScript.BytecodeModule.GuardedChoiceLayouts.Count)
-        {
-            layout = _compiledScript.BytecodeModule.GuardedChoiceLayouts[index];
             return true;
         }
 

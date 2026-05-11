@@ -1617,6 +1617,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
+        AssertGuardedChoiceLoweredToLinearJumps(compiled);
         var otherwiseRanges = GetGuardedChoiceOtherwiseRanges(compiled);
 
         var originalConstant = 2L;
@@ -1657,6 +1658,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
+        AssertGuardedChoiceLoweredToLinearJumps(compiled);
         var otherwiseRanges = GetGuardedChoiceOtherwiseRanges(compiled);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
 
@@ -1698,6 +1700,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
+        AssertGuardedChoiceLoweredToLinearJumps(compiled);
         var otherwiseRanges = GetGuardedChoiceOtherwiseRanges(compiled);
 
         var originalConstant = 2L;
@@ -1740,7 +1743,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GuardedChoice));
+        AssertGuardedChoiceLoweredToLinearJumps(compiled);
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1781,7 +1784,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.GuardedChoice));
+        AssertGuardedChoiceLoweredToLinearJumps(compiled);
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -4651,22 +4654,58 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
     private static (int Start, int End)[] GetGuardedChoiceOtherwiseRanges(GameEventScriptCompiled compiled)
     {
-        Assert.IsNotEmpty(compiled.GuardedChoiceLayouts);
-        Assert.IsTrue(compiled.GuardedChoiceLayouts.All(layout => layout.ConditionEntryAddresses.All(address => address >= 0)));
-        Assert.IsTrue(compiled.GuardedChoiceLayouts.All(layout => layout.ValueEntryAddresses.All(address => address >= 0)));
-        Assert.IsTrue(compiled.GuardedChoiceLayouts.All(layout => layout.OtherwiseEntryAddress >= 0));
-
         var compiledCode = compiled.Code.ToArray();
-        var ranges = compiled.GuardedChoiceLayouts
-            .Select(layout => (
-                Start: layout.OtherwiseEntryAddress,
-                End: Array.FindIndex(
-                    compiledCode,
-                    layout.OtherwiseEntryAddress,
-                    instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Return) + 1))
-            .ToArray();
+        var ranges = new List<(int Start, int End)>();
+        for (var index = 0; index < compiledCode.Length; index++)
+        {
+            var instruction = compiledCode[index];
+            if (instruction.OpCode != GameEventScriptBytecodeOpCode.JumpIfNotTrue)
+            {
+                continue;
+            }
+
+            var otherwiseStart = instruction.A_U16;
+            if (otherwiseStart <= index || otherwiseStart >= compiledCode.Length)
+            {
+                continue;
+            }
+
+            var branchJumpIndex = Array.FindIndex(
+                compiledCode,
+                index + 1,
+                otherwiseStart - index - 1,
+                candidate => candidate.OpCode == GameEventScriptBytecodeOpCode.Jump);
+            if (branchJumpIndex < 0)
+            {
+                continue;
+            }
+
+            var branchWritesResult = compiledCode
+                .Skip(index + 1)
+                .Take(branchJumpIndex - index - 1)
+                .Any(candidate => candidate.OpCode == GameEventScriptBytecodeOpCode.MoveSlot);
+            if (!branchWritesResult)
+            {
+                continue;
+            }
+
+            var otherwiseEnd = compiledCode[branchJumpIndex].A_U16;
+            if (otherwiseEnd > otherwiseStart && otherwiseEnd <= compiledCode.Length)
+            {
+                ranges.Add((otherwiseStart, otherwiseEnd));
+            }
+        }
+
+        Assert.IsNotEmpty(ranges);
         Assert.IsTrue(ranges.All(range => range.End > range.Start));
-        return ranges;
+        return ranges.ToArray();
+    }
+
+    private static void AssertGuardedChoiceLoweredToLinearJumps(GameEventScriptCompiled compiled)
+    {
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.JumpIfNotTrue));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.MoveSlot));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Jump));
     }
 
     private static (int Start, int End)[] GetGeneratedCollectionLinearRanges(GameEventScriptCompiled compiled)
@@ -4813,8 +4852,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.PipelinePatternPool.ToArray(),
             original.PipelineObjectPatternPool.ToArray(),
             original.PipelineSelectorPool.ToArray(),
-            original.PipelinePool.ToArray(),
-            original.GuardedChoiceLayouts.ToArray());
+            original.PipelinePool.ToArray());
 
     private static IReadOnlyList<(int Start, int End)> FindRandomScopeRanges(IReadOnlyList<GameEventScriptBytecodeInstruction> code)
     {

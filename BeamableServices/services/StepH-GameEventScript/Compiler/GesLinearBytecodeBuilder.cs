@@ -22,7 +22,6 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
     private readonly List<GameEventScriptBytecodePipeline> _pipelinePool = [];
-    private readonly List<GameEventScriptBytecodeGuardedChoiceLayout> _guardedChoiceLayouts = [];
     private readonly List<Action> _deferredHelperEmitters = [];
     private int _currentFrameSlotCount;
     private int _maxFrameSlots = 1;
@@ -58,8 +57,6 @@ internal sealed class GesLinearBytecodeBuilder
     public IReadOnlyList<GameEventScriptBytecodePipelineSelector> PipelineSelectorPool => _pipelineSelectorPool;
 
     public IReadOnlyList<GameEventScriptBytecodePipeline> PipelinePool => _pipelinePool;
-
-    public IReadOnlyList<GameEventScriptBytecodeGuardedChoiceLayout> GuardedChoiceLayouts => _guardedChoiceLayouts;
 
     public void AddHandlers(
         IEnumerable<GameEventScriptBytecodeHandler> handlers,
@@ -565,10 +562,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitSourceGeneratedCollection(generatedCollection, context, state);
 
             case GuardedChoiceExpressionNode guardedChoice:
-            {
-                var layoutIndex = AddSourceGuardedChoiceLayout(guardedChoice, context, state);
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.GuardedChoice, c: layoutIndex);
-            }
+                return EmitSourceGuardedChoice(guardedChoice, context, state);
 
             case BinaryExpressionNode binary:
                 return EmitSourceBinary(binary, context, state);
@@ -816,6 +810,35 @@ internal sealed class GesLinearBytecodeBuilder
 
         seed = default;
         return false;
+    }
+
+    private int EmitSourceGuardedChoice(GuardedChoiceExpressionNode guardedChoice, SourceContext context, ExpressionState state)
+    {
+        var resultSlot = AllocateSlot(state);
+        var endJumps = new List<int>(guardedChoice.Branches.Count);
+
+        foreach (var branch in guardedChoice.Branches)
+        {
+            var condition = EmitSourceExpression(branch.ConditionExpression, context, state);
+            var jumpToNextBranch = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: condition));
+
+            var value = EmitSourceExpression(branch.ValueExpression, context, state);
+            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: resultSlot, a: value));
+            endJumps.Add(Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump)));
+
+            PatchTarget(jumpToNextBranch, _code.Count);
+        }
+
+        var otherwiseValue = EmitSourceExpression(guardedChoice.OtherwiseExpression, context, state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: resultSlot, a: otherwiseValue));
+
+        var endAddress = _code.Count;
+        foreach (var jump in endJumps)
+        {
+            PatchTarget(jump, endAddress);
+        }
+
+        return resultSlot;
     }
 
     private int EmitSourceBinary(BinaryExpressionNode binary, SourceContext context, ExpressionState state)
@@ -1491,32 +1514,6 @@ internal sealed class GesLinearBytecodeBuilder
             prefixSelectorIndexes,
             terminalSelectorIndex));
         return layoutIndex;
-    }
-
-    private int AddSourceGuardedChoiceLayout(GuardedChoiceExpressionNode guardedChoice, SourceContext context, ExpressionState state)
-    {
-        var index = _guardedChoiceLayouts.Count;
-        _guardedChoiceLayouts.Add(new GameEventScriptBytecodeGuardedChoiceLayout(
-            Enumerable.Repeat(-1, guardedChoice.Branches.Count).ToArray(),
-            Enumerable.Repeat(-1, guardedChoice.Branches.Count).ToArray()));
-        _deferredHelperEmitters.Add(() =>
-        {
-            var valueEntryAddresses = new int[guardedChoice.Branches.Count];
-            var conditionEntryAddresses = new int[guardedChoice.Branches.Count];
-            for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
-            {
-                var branch = guardedChoice.Branches[branchIndex];
-                conditionEntryAddresses[branchIndex] = EmitSourceExpressionEntry(branch.ConditionExpression, context, state);
-                valueEntryAddresses[branchIndex] = EmitSourceExpressionEntry(branch.ValueExpression, context, state);
-            }
-
-            var otherwiseEntryAddress = EmitSourceExpressionEntry(guardedChoice.OtherwiseExpression, context, state);
-            _guardedChoiceLayouts[index] = new GameEventScriptBytecodeGuardedChoiceLayout(
-                valueEntryAddresses,
-                conditionEntryAddresses,
-                otherwiseEntryAddress);
-        });
-        return index;
     }
 
     private void FlushDeferredHelpers()

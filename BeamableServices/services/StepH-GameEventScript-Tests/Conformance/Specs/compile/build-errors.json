@@ -348,6 +348,24 @@
     },
     {
       "kind": "compileError",
+      "name": "seeded random unit seed fails module build",
+      "script": "on Start {\n  let value be :random with 5m 1\n  emit Done(value: value)\n}",
+      "expectedError": {
+        "phase": "build",
+        "messageContains": "unitless :integer"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "seeded random unknown seed requires explicit integer cast",
+      "script": "on Start(seed) {\n  let value be :random with seed 1\n  emit Done(value: value)\n}",
+      "expectedError": {
+        "phase": "build",
+        "messageContains": "as :integer"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "undeliverable endpoint rejects normal parameter syntax",
       "script": "on undeliverable(message as :message) {\n}",
       "expectedError": {

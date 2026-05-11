@@ -24,6 +24,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
         RangeLimitReached
     }
 
+    private enum PublishKind
+    {
+        Emit,
+        Publish
+    }
+
     private readonly GesBytecodeVmExecutable _compiledScript;
     private readonly GameEventScriptContext _context;
     private readonly GesRuntimeBudget _runtimeBudget;
@@ -532,7 +538,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return CompleteLinearReturn(ref pc, ref endAddress, ref arguments, ref callFrames, ref returned, ref returnValue);
 
             case GameEventScriptBytecodeOpCode.EmitMessage:
-                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Emit, instruction.A_U16, instruction.B_U16, tagSlotListIndex: -1))
+                if (!TryPublishLinearMessage(PublishKind.Emit, instruction.A_U16, instruction.B_U16, tagSlotListIndex: -1))
                 {
                     return false;
                 }
@@ -541,7 +547,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
-                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Emit, instruction.A_U16, instruction.B_U16, instruction.C_U16))
+                if (!TryPublishLinearMessage(PublishKind.Emit, instruction.A_U16, instruction.B_U16, instruction.C_U16))
                 {
                     return false;
                 }
@@ -550,7 +556,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessage:
-                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Publish, instruction.A_U16, instruction.B_U16, tagSlotListIndex: -1))
+                if (!TryPublishLinearMessage(PublishKind.Publish, instruction.A_U16, instruction.B_U16, tagSlotListIndex: -1))
                 {
                     return false;
                 }
@@ -559,7 +565,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
-                if (!TryPublishLinearMessage(GameEventScriptBytecodePublishKind.Publish, instruction.A_U16, instruction.B_U16, instruction.C_U16))
+                if (!TryPublishLinearMessage(PublishKind.Publish, instruction.A_U16, instruction.B_U16, instruction.C_U16))
                 {
                     return false;
                 }
@@ -568,7 +574,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValue:
-                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Emit, ResolveSlot(instruction.A_U16), tagSlotListIndex: -1))
+                if (!TryPublishLinearMessageValue(PublishKind.Emit, ResolveSlot(instruction.A_U16), tagSlotListIndex: -1))
                 {
                     return false;
                 }
@@ -577,7 +583,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
-                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Emit, ResolveSlot(instruction.A_U16), instruction.C_U16))
+                if (!TryPublishLinearMessageValue(PublishKind.Emit, ResolveSlot(instruction.A_U16), instruction.C_U16))
                 {
                     return false;
                 }
@@ -586,7 +592,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessageValue:
-                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Publish, ResolveSlot(instruction.A_U16), tagSlotListIndex: -1))
+                if (!TryPublishLinearMessageValue(PublishKind.Publish, ResolveSlot(instruction.A_U16), tagSlotListIndex: -1))
                 {
                     return false;
                 }
@@ -595,7 +601,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
-                if (!TryPublishLinearMessageValue(GameEventScriptBytecodePublishKind.Publish, ResolveSlot(instruction.A_U16), instruction.C_U16))
+                if (!TryPublishLinearMessageValue(PublishKind.Publish, ResolveSlot(instruction.A_U16), instruction.C_U16))
                 {
                     return false;
                 }
@@ -3879,7 +3885,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryPublishLinearMessage(
-        GameEventScriptBytecodePublishKind publishKind,
+        PublishKind publishKind,
         int messageShapeListIndex,
         int argumentSlotListIndex,
         int tagSlotListIndex)
@@ -3914,7 +3920,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryPublishLinearMessageValue(
-        GameEventScriptBytecodePublishKind publishKind,
+        PublishKind publishKind,
         BytecodeVmValue messageValue,
         int tagSlotListIndex)
     {
@@ -4433,9 +4439,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return args.TryGetValue(parameter, out value!);
     }
 
-    internal void PublishMessage(GameEventScriptBytecodePublishKind publishKind, GameEventScriptMessage message)
+    private void PublishMessage(PublishKind publishKind, GameEventScriptMessage message)
     {
-        if (publishKind == GameEventScriptBytecodePublishKind.Publish)
+        if (publishKind == PublishKind.Publish)
         {
             _context.Publish(message);
         }

@@ -1,10 +1,7 @@
 # GameEventScript Bytecode Spec
 
-Status: public bytecode target, current linear artifact shape, and binary
-container direction.
-
 This document defines the intended portable bytecode shape for
-`GameEventScriptCompiled` and the emerging `GameEventScriptBinary` container.
+`GameEventScriptCompiled` and the `GameEventScriptBinary` container.
 The goal is a compact, portable, high-level bytecode for the GameEventScript DSL
 that is naturally executable by a linear program-counter VM.
 
@@ -14,44 +11,21 @@ is still part of the VM target state for calls, return addresses, frame
 metadata, scoped locals, and resumable execution. The C# call stack is not part
 of script control flow.
 
-Implementation note: the current public artifact already exposes the global
-linear `Code` segment, `MaxFrameSlots`, entry addresses for handlers,
-callables, and computed/clamped type-field helpers, plus public side tables for
-operation, publish, loop, selector/pipeline, generated-collection,
-seeded-random, dice-pattern, and object-match metadata. The
-synchronous VM executes handlers, callable/predicate frames, helper entries,
-high-level opcodes, and supported type-field helpers directly from that linear
-code with a VM-owned call-frame stack. The manual stepping Fiber starts from
-the same handler entry addresses and uses the same linear instruction execution
-state: program counter, end address, frame slots, VM call frames, scope marks,
-pausable linear range/collection loops, and seeded-random block frames. It has
-no statement-program or expression-program compatibility dispatcher.
-High-level operations such as pipelines, publish operations, dice-pattern
-matching, and object matching execute from
-normalized public side-table layouts plus helper entry addresses. Generated
-collections and guarded choices use normal iterator/collection-builder and
-jump opcodes. Runtime pipeline execution may
-keep indexed/streaming hot paths where that avoids per-item frame allocation;
-non-fast selector expressions evaluate through their public linear helper
-entries while staying inside those optimized pipeline paths. The pipeline helper
-supports `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
-`all`, `first`, `last`, `single`, `Count`, `Sum`, `Average`, `Min`, `Max`,
-`Dictionary`, `Sort`, `OrderBy`, `Distinct`, `GroupBy`, `Reverse`,
-`SequenceSlice`, `Shuffle`, `Draw`, `Choose`, `Pattern`, `ObjectMatch`,
-`TakePattern`, `SeriesTerm`, and `Contains`. Function and predicate calls use
-their public callable entry addresses in isolated VM frames when the entry is
-supported. Layout-free helper expressions run through public linear helper
-entries and isolate their temporary slots from handler locals and scope-change
-tracking. Predicate calls use direct `CallPredicate` instructions with target
-entry addresses and argument-slot-list operands. Local calls use direct `Call`
-instructions with target entry addresses and argument-slot-list operands.
-Extension calls use direct `CallStandard*` or
-`CallExternal*` instructions with argument slot lists. Variadic
-operators, type constructors, local builders, message literals, handler binding,
-casts, type checks, member access, and seeded-random expressions are
-layout-free direct instructions.
-Predicate-test fast paths should read directly from the tested value slot and
-avoid per-execution operand-array materialization.
+The public artifact exposes one global linear `Code` segment, `MaxFrameSlots`,
+entry addresses for handlers, callables, and type-field helpers, plus normalized
+tables for strings, ushort lists, external references, debug metadata, and
+pipelines. High-level language constructs lower either to normal linear
+instructions or to explicit opcodes that reference normalized tables. Function
+and predicate calls use public callable entry addresses in VM-owned frames.
+Helper expressions run through linear entry addresses and isolate their
+temporary slots from handler locals and scope-change tracking. Predicate calls
+use direct `CallPredicate` instructions with target entry addresses and argument
+slot-list indexes. Local calls use direct `Call` instructions with target entry
+addresses and argument slot-list indexes. Extension calls use direct
+`CallStandard*` or `CallExternal*` instructions with argument slot lists.
+Variadic operators, type constructors, local builders, message literals,
+handler binding, casts, type checks, member access, and seeded-random
+expressions are layout-free direct instructions.
 
 ## Goals
 
@@ -61,7 +35,7 @@ avoid per-execution operand-array materialization.
 - Use slot/register-style instructions: every value-producing instruction writes
   to a destination slot and reads operands from source slots or pools.
 - Compile control flow such as `if`, loops, guarded choices, predicates, and
-  functions into jumps and calls rather than nested program objects.
+  functions into jumps and calls.
 - Keep domain-heavy collection operations high-level when that is faster or
   simpler than expanding them into many tiny instructions.
 - Preserve streaming and short-circuit behavior where the language requires it.
@@ -72,7 +46,8 @@ avoid per-execution operand-array materialization.
 ## Non-Goals
 
 - No public exposure of `StepH.GameEventScript.BytecodeVM` implementation types.
-- No promise that this draft is the final binary `.gesb` encoding.
+- No requirement that the diagnostic dump format matches the binary `.gesb`
+  encoding.
 - No requirement to split every DSL operation into primitive opcodes.
 - No operand stack for expression evaluation.
 - No C# call stack dependency for normal script control flow.
@@ -172,8 +147,7 @@ GameEventScriptBytecodeInstruction
 
 `MaxFrameSlots` is the maximum local slot count needed by any handler or
 callable frame, including parameters, user `let` bindings, compiler temporaries,
-loop temporaries, and high-level operation temporaries. It replaces the old
-operand-stack-depth concept.
+loop temporaries, and high-level operation temporaries.
 
 ## Portable Constants
 
@@ -597,10 +571,10 @@ Implication is right-associative at source level and uses the truth table for
 `not a or b`: false antecedent yields `true`; unknown participates as
 `nothing` unless the consequent resolves the result to `true`.
 
-The VM executes `and` and `or` laziness from the linear branch sequence;
-`ShortCircuitAnd` and `ShortCircuitOr` are lowering metadata and must not be
-required as runtime fallbacks. `ShortCircuitImplies` can be emitted as the
-binary implication combine inside that branch sequence.
+The VM executes `and` and `or` laziness from the linear branch sequence.
+`ShortCircuitAnd` and `ShortCircuitOr` are lowering metadata and are not needed
+for runtime execution. `ShortCircuitImplies` can be emitted as the binary
+implication combine inside that branch sequence.
 
 ### Control Flow
 
@@ -639,8 +613,7 @@ Example:
 Guarded expressions lower to explicit condition jumps and value writes to a
 shared destination slot. Conditions are evaluated in order via `JumpIfNotTrue`;
 only the first true branch value is evaluated, and otherwise code runs when no
-condition is true. A future optimizer may add expression-into-destination or
-peephole branch compaction, but there is no public `GuardedChoice` layout.
+condition is true. The public bytecode has no `GuardedChoice` layout.
 
 `for` statements lower to normal linear iterator control flow. The source is
 evaluated once, an iterator is stored in a temporary slot, `IteratorNext` writes
@@ -784,15 +757,6 @@ publish BusEvent(value) with :radio, dynamicTags
 
 on BusEvent(value) matching :radio without :blocked {
 }
-```
-
-`emit` and `publish` should use the same high-level instruction family. The
-instruction records intent with a small kind field:
-
-```text
-PublishKind
-  Emit
-  Publish
 ```
 
 `Emit` targets the current event space. `Publish` targets the configured publish
@@ -989,7 +953,8 @@ carried by the optional `DebugSegment`, linked to instruction addresses and
 slots. Runtime collectors read the executable diagnostic sites derived from that
 segment; production bytecode side tables must not carry diagnostic-only fields.
 If debug info is disabled, the debug segment may be empty. Compile diagnostics
-implicitly request debug info for compatibility with trace collection.
+request debug info so trace collectors can resolve instruction addresses and
+slots.
 
 ```text
 DebugSegment
@@ -1077,54 +1042,13 @@ handler DamageTaken(unit, amount)
 
 A grouped view may still be offered, but it must keep global addresses visible.
 
-## Current Status
-
-The public bytecode model is normalized around one global linear `Code` segment
-plus side tables for runtime high-level operations, including pipelines,
-selectors, publish operations, dice patterns, and object-match patterns.
-
-The BytecodeVM executable builder consumes and validates the public linear
-`Code` segment plus side tables into an internal linear executable artifact.
-Synchronous execution and manual Fiber stepping enter handlers through public
-linear entry addresses and use VM-owned frame state. Remaining runtime high-level
-opcodes use side-table layouts and helper entry addresses; old nested program
-graphs are not part of the public artifact or runtime execution.
-
-Conformance behavior remains the semantic baseline. Future changes should move
-bytecode shape, VM internals, and physical encoding forward without changing
-source-level behavior unless a language change is explicitly intended.
-
-The current compiler emits active handler, callable, type-helper, and high-level
-helper bytecode directly from the source AST into the public linear model. The
-VM load path builds a validated linear runtime artifact from that public model.
-Old nested program graphs are no longer created, and construction-time
-execution-plan metadata has been removed from handler bytecode records.
-`GameEventScriptCompiled` defensively copies table inputs and stores
-dictionary-shaped tables in deterministic ordinal order. The next bytecode
-architecture phase is defining the `.gesb` binary file structure, tightening the
-portable VM contract, and then optimizing opcode/side-table encodings against
-that contract.
-
-## Compatibility Predicates
+## Format Invariants
 
 - New bytecode format changes must increment `FormatVersion`.
-- Old dumps are diagnostic only and are not a stable wire format.
+- Bytecode dumps are diagnostic only and are not a stable wire format.
 - Public bytecode must remain deterministic for the same script/options.
 - Host dynamic linking remains separate from compilation.
 - Runtime extension binding is not serialized into portable bytecode.
 - Runtime execution must be resumable without relying on the C# call stack.
 - The portable model must preserve source-level short-circuit and tri-state
   truth semantics.
-
-## Open Design Questions
-
-- Should the physical binary encoding use one code segment, or allow multiple
-  segments while presenting one logical global address space?
-- Should high-level pipeline execution expose selector/item debug state through
-  diagnostics, a debugger API, or only the bytecode dump?
-- Should call frames use local-base frame slices or per-frame local arrays? Frame
-  slices should allocate less but are more complex.
-- Should `Ref` constants be first-class constants, or should refs always be
-  encoded as constructor operations?
-- Which standard intrinsics deserve dedicated opcodes or compact ids instead of
-  `CallStandard` shape lists?

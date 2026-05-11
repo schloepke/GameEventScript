@@ -51,11 +51,10 @@ The byte layout is:
 | `8..9` | `C_U16` / `C_I16` | `B_I32` / `B_U32` low half | `I64`/`U64`/`F64` bytes `4..5` | Third operand/layout index, or payload bytes. |
 | `10..11` | `D_U16` / `D_I16` | `B_I32` / `B_U32` high half | `I64`/`U64`/`F64` bytes `6..7` | Fourth operand when needed, or payload bytes. |
 
-There are no compatibility helper operands and no instruction-word sentinel for
-"unused". Unused fields are undefined/ignored. Only the fields documented for a
-specific opcode may be read or validated. Optional instruction forms are encoded
-with dedicated opcodes or concrete empty pool entries, not with sentinel
-operands.
+The instruction word has no sentinel for "unused". Unused fields are
+undefined/ignored. Only the fields documented for a specific opcode may be read
+or validated. Optional instruction forms are encoded with dedicated opcodes or
+concrete empty pool entries, not with sentinel operands.
 
 ## JSON Shape
 

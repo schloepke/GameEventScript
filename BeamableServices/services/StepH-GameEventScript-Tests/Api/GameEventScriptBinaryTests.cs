@@ -29,7 +29,6 @@ public sealed class GameEventScriptBinaryTests
         Assert.AreEqual("BinaryShape", compiled.ModuleName);
         Assert.AreEqual("BinaryShape", binary.ModuleName);
         Assert.AreEqual((ushort)1, binary.Header.Version);
-        Assert.AreEqual(16u, GameEventScriptBinaryHeader.HeaderSize);
 
         var binds = binary.BindTable.Entries.ToArray();
         Assert.AreEqual((ushort)4, binary.BindTable.EntryCount);

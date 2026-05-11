@@ -11,13 +11,13 @@ namespace StepH.GameEventScript.Api;
 
 public readonly struct GameEventScriptBinary
 {
-    public readonly GameEventScriptBinaryHeader Header { get; init; }
-    public readonly string ModuleName { get; init; }
-    public readonly GameEventScriptTextTable StringTable { get; init; }
-    public readonly GameEventScriptUInt16Table UInt16SliceTable { get; init; }
-    public readonly GameEventScriptBinaryBindTable BindTable { get; init; }
+    public GameEventScriptBinaryHeader Header { get; init; }
+    public string ModuleName { get; init; }
+    public GameEventScriptTextTable StringTable { get; init; }
+    public GameEventScriptUInt16Table UInt16SliceTable { get; init; }
+    public GameEventScriptBinaryBindTable BindTable { get; init; }
     
-    public readonly GameEventScriptBytecodeInstruction[] InstructionTable { get; init; }
+    public GameEventScriptBytecodeInstruction[] InstructionTable { get; init; }
 }
 
 public readonly struct GameEventScriptBinaryHeader

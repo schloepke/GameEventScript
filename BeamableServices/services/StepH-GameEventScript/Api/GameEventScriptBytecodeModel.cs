@@ -170,12 +170,6 @@ public sealed class GameEventScriptBytecodePipeline(
     public int TerminalSelectorIndex { get; } = terminalSelectorIndex;
 }
 
-public enum GameEventScriptBytecodePublishKind
-{
-    Emit,
-    Publish
-}
-
 public sealed class GameEventScriptBytecodeTypeDefinition(
     string name,
     GameEventScriptBytecodeTypeFieldDefinition[] fields)

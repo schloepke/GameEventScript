@@ -238,7 +238,7 @@ var host = GameEventScriptHost.CreateBuilder()
     .Build();
 ```
 
-Tools and tests that need the old synchronous behavior can call
+Tools and tests that need synchronous dispatch can call
 `host.PublishToCompletion(message)`.
 
 `GameEventScriptRunStepResult` reports the run state, the number of consumed
@@ -302,8 +302,8 @@ is dictionary-backed and currently guarantees:
 - `message`: the original message as `:message`
 - `tags`: all original envelope tags as a list of `:tag` values
 
-The legacy parenthesized form `on undeliverable(envelope as :envelope)` is
-invalid; system endpoints bind their envelope through `as`.
+The parenthesized form `on undeliverable(envelope as :envelope)` is invalid;
+system endpoints bind their envelope through `as`.
 
 The fallback endpoint does not receive itself recursively.
 
@@ -1549,7 +1549,7 @@ inspected. They are not dictionaries for type checks.
 ### `:envelope`
 
 Envelope values are dictionary-backed system values. They are intentionally open
-so future envelope metadata can be added without changing bytecode shape. The
+so envelope metadata can be extended without changing the value shape. The
 current system envelope is used by `undeliverable` and exposes `message` and
 `tags`.
 
@@ -2130,7 +2130,7 @@ in bytecode without storing runtime values.
 
 `GameEventScriptBytecodeDumper.DumpBytecode(...)` can be used to inspect this
 structure during development. The dump is deterministic and diagnostic; it is not
-the future `.gesb` wire format.
+the `.gesb` binary interchange format.
 
 `ToGameEventScriptBinary(...)` projects the current compiled artifact
 into the first compact binary container shape: a 16-byte `GESB` header, module
@@ -2228,9 +2228,8 @@ Host publish diagnostics are recorded independently of compile diagnostics.
 GameEventScript is lenient at runtime, but it still rejects malformed programs at
 syntax, module-build, or VM-compile time.
 
-Syntax errors include malformed tokens, missing expressions, legacy removed
-syntax, invalid handler headers, invalid dice counts, and invalid selector
-syntax.
+Syntax errors include malformed tokens, missing expressions, removed syntax,
+invalid handler headers, invalid dice counts, and invalid selector syntax.
 
 Module build errors include:
 

@@ -166,6 +166,63 @@
     },
     {
       "kind": "scriptApi",
+      "name": "multi argument predicates can be called directly",
+      "script": "predicate higher(left, right) means left > right\n\non Start(left, right) {\n  emit Done(ok: higher(left: left, right: right), reversed: higher(left: right, right: left))\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "left": { "type": ":integer", "value": "7" },
+              "right": { "type": ":integer", "value": "4" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "ok": { "type": ":boolean", "value": true },
+                "reversed": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "typed handler callable and record parameters coerce inputs",
+      "script": "record :gauge as {\n  current: :integer\n}\n\npredicate high(value as :integer) means value > 2\nfunction boosted(_ value as :integer) means value + 1\n\non Start(value as :integer, hp as :gauge) {\n  emit Done(handlerValue: value + 1, ok: value is high, boosted: boosted(value), current: hp.current)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":float", "value": "2" },
+              "hp": {
+                "type": ":dictionary",
+                "entries": {
+                  "current": { "type": ":float", "value": "4" }
+                }
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "handlerValue": { "type": ":integer", "value": "3" },
+                "ok": { "type": ":boolean", "value": false },
+                "boosted": { "type": ":integer", "value": "3" },
+                "current": { "type": ":integer", "value": "4" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "multiple modules share predicate function and type definitions",
       "scripts": [
         {

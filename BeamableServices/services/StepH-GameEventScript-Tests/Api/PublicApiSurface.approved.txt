@@ -264,7 +264,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field TypeCheckDice = 138
   enum-field LoadHandler = 144
   enum-field TypeConstructor = 145
-  enum-field PredicateTest = 146
   enum-field MemberAccess = 147
   enum-field IndexedAccess = 148
   enum-field BuildList = 149
@@ -295,21 +294,12 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CollectionBuilderAdd = 184
   enum-field CollectionBuilderFinish = 185
   enum-field Call = 192
+  enum-field CallPredicate = 193
   enum-field CallStandard = 194
   enum-field CallStandardPredicate = 195
   enum-field CallExternal = 196
   enum-field CallExternalPredicate = 197
   enum-field Pipeline = 208
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
-  ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.Int32 nameIndex, System.Int32 argumentNameIndex, System.Int32 nameListIndex, System.Int32 argumentSlotListIndex, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind CallableKind { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> DeclaredTypes { get }
-  property System.Int32 ArgumentNameIndex { get }
-  property System.Int32 ArgumentSlotListIndex { get }
-  property System.Int32 ExternalReferenceIndex { get }
-  property System.Int32 NameIndex { get }
-  property System.Int32 NameListIndex { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodePipeline
   ctor GameEventScriptBytecodePipeline(System.Int32 sourceSlot, System.Collections.Generic.IReadOnlyList<System.Int32> prefixSelectorIndexes, System.Int32 terminalSelectorIndex)
   property System.Collections.Generic.IReadOnlyList<System.Int32> PrefixSelectorIndexes { get }
@@ -436,7 +426,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout> OperationLayouts { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipeline> PipelinePool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelineObjectPattern> PipelineObjectPatternPool { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodePipelinePattern> PipelinePatternPool { get }

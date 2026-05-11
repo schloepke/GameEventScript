@@ -86,14 +86,29 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return allowPipeline && CanExecuteLinearPipeline(instruction.C_U16, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.Call:
-            case GameEventScriptBytecodeOpCode.PredicateTest:
-                return TryGetOperationLayout(instruction.C_U16, out var layout) &&
-                       TryReadOperationName(layout, out var callableName) &&
-                       !string.IsNullOrEmpty(callableName) &&
-                       CanExecuteLinearCallable(callableName, visitingCallables, allowPipeline);
+            case GameEventScriptBytecodeOpCode.CallPredicate:
+                return CanExecuteLinearCallableAddress(instruction.A_U16, visitingCallables, allowPipeline);
 
             default:
                 return true;
+        }
+    }
+
+    private bool CanExecuteLinearCallableAddress(int entryAddress, HashSet<string> visitingCallables, bool allowPipeline)
+    {
+        var key = "@call:" + entryAddress.ToString(CultureInfo.InvariantCulture);
+        if (!visitingCallables.Add(key))
+        {
+            return true;
+        }
+
+        try
+        {
+            return CanExecuteLinearEntry(entryAddress, visitingCallables, allowPipeline);
+        }
+        finally
+        {
+            visitingCallables.Remove(key);
         }
     }
 
@@ -395,7 +410,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 var callFrameCountAfter = callFrames?.Count ?? 0;
                 if (callFrameCountAfter <= callFrameCountBefore ||
-                    instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.PredicateTest))
+                    instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate))
                 {
                     RecordLinearDiagnosticsAfter(instructionAddress);
                 }
@@ -702,7 +717,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.Call:
-            case GameEventScriptBytecodeOpCode.PredicateTest:
+            case GameEventScriptBytecodeOpCode.CallPredicate:
+                if (instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate)
+                {
+                    if (!TryExecuteLinearPredicateCallFast(instruction, out var handledPredicateCallFast))
+                    {
+                        return false;
+                    }
+
+                    if (handledPredicateCallFast)
+                    {
+                        pc++;
+                        return true;
+                    }
+                }
+
                 return TryEnterLinearCallFrame(
                     instruction,
                     pc,
@@ -786,28 +815,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
         nextEndAddress = currentEndAddress;
         nextPc = returnAddress;
 
-        if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
-            !TryReadOperationName(layout, out var callableName) ||
-            string.IsNullOrEmpty(callableName) ||
-            !_compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable))
+        var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate;
+        LinearArgumentSource callArgumentSource;
+        if (!TryGetUShortList(instruction.B_U16, out var argumentSlots))
         {
             return false;
         }
 
-        var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest;
-        BytecodeVmValue[] callArguments;
-        if (normalizePredicateResult)
+        if (argumentSlots.Count == 1)
         {
-            callArguments = [ResolveSlot(instruction.A_U16)];
+            callArgumentSource = LinearArgumentSource.ForSingleValue(ResolveSlot(argumentSlots[0]));
         }
         else
         {
-            if (!TryReadOperationArgumentSlots(layout, out var argumentSlots))
-            {
-                return false;
-            }
-
-            callArguments = CopyLinearOperands(argumentSlots);
+            callArgumentSource = LinearArgumentSource.ForValues(CopyLinearOperands(argumentSlots));
         }
 
         if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
@@ -822,7 +843,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return DefineSlot(instruction.Dest_U16, value);
         }
 
-        if (!RecordLinearCallableCalled(layout, callArguments, normalizePredicateResult))
+        if (!RecordLinearCallableCalled(instruction.A_U16, callArgumentSource))
         {
             _runtimeBudget.ExitCall();
             return false;
@@ -842,14 +863,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
             callInstructionAddress,
             normalizePredicateResult));
 
-        _locals = new BytecodeVmValue[Math.Max(1, callable.LocalSlotCount)];
-        _assignedSlots = new bool[_locals.Length];
+        var nextFrameSlotCount = _compiledScript.LinearExecutable.CallablesByEntryAddress.TryGetValue(instruction.A_U16, out var callable)
+            ? Math.Max(1, callable.LocalSlotCount)
+            : Math.Max(1, _compiledScript.LinearExecutable.MaxFrameSlots);
+        _locals = new BytecodeVmValue[nextFrameSlotCount];
+        _assignedSlots = new bool[nextFrameSlotCount];
         _changes = [];
         _scopeMarks = [];
-        _trackedLocalSlotCount = callable.LocalSlotCount;
-        nextArguments = LinearArgumentSource.ForValues(callArguments);
+        _trackedLocalSlotCount = nextFrameSlotCount;
+        nextArguments = callArgumentSource;
         nextEndAddress = _compiledScript.LinearExecutable.Code.Count;
-        nextPc = callable.EntryAddress;
+        nextPc = instruction.A_U16;
         EnterScope();
         return true;
     }
@@ -884,6 +908,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         pc = target;
         return true;
+    }
+
+    private bool TryExecuteLinearPredicateCallFast(
+        GameEventScriptBytecodeInstruction instruction,
+        out bool handled)
+    {
+        handled = false;
+        if (_diagnosticsEnabled ||
+            !TryGetSingleSlot(instruction.B_U16, out var inputSlot) ||
+            !CanEvaluateLinearPredicateCallFast(instruction))
+        {
+            return true;
+        }
+
+        handled = true;
+        return TryEvaluateLinearPredicateCallFast(instruction, ResolveSlot(inputSlot), out var value) &&
+               DefineSlot(instruction.Dest_U16, value);
     }
 
     private bool RecordLinearHandlerInvokedIfReady(LinearArgumentSource? arguments)
@@ -933,40 +974,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool RecordLinearCallableCalled(
-        GameEventScriptBytecodeOperationLayout layout,
-        IReadOnlyList<BytecodeVmValue> arguments,
-        bool normalizePredicateResult)
+        int entryAddress,
+        LinearArgumentSource arguments)
     {
         if (!_diagnosticsEnabled)
         {
             return true;
         }
 
-        if (normalizePredicateResult)
+        if (!_compiledScript.LinearExecutable.CallablesByEntryAddress.TryGetValue(entryAddress, out var callable))
         {
-            var predicateInput = arguments.Count > 0 ? arguments[0] : BytecodeVmValue.Nothing;
-            if (!TryConvertParameterType(layout.DeclaredTypes, 0, predicateInput, out predicateInput))
-            {
-                return false;
-            }
-
-            if (!TryReadOperationName(layout, out var predicateName) ||
-                !TryReadOperationArgumentName(layout, out var predicateArgumentName))
-            {
-                return false;
-            }
-
-            RecordPredicateCalled(predicateName ?? string.Empty, predicateArgumentName ?? "value", predicateInput);
             return true;
         }
 
-        if (!TryReadOperationName(layout, out var callableName) ||
-            !TryReadOperationNameList(layout, out var callableArgumentNames))
-        {
-            return false;
-        }
-
-        RecordCallableCalled(callableName ?? string.Empty, layout.CallableKind, callableArgumentNames, arguments);
+        RecordCallableCalled(callable.Name, callable.Kind, callable.Parameters, callable.ParameterTypes, arguments);
         return true;
     }
 
@@ -1303,40 +1324,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
         }
 
-        if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
-            !TryReadOperationName(layout, out var operationName) ||
-            !TryReadOperationArgumentName(layout, out var operationArgumentName) ||
-            !TryReadOperationNameList(layout, out var operationNames) ||
-            !TryReadOperationArgumentSlots(layout, out var operationArgumentSlots))
-        {
-            return false;
-        }
-
-        var operandCount = operationArgumentSlots.Count;
-        var operands = operandCount == 0
-            ? Array.Empty<BytecodeVmValue>()
-            : ArrayPool<BytecodeVmValue>.Shared.Rent(operandCount);
-        if (operandCount > 0)
-        {
-            CopyLinearOperands(operationArgumentSlots, operands);
-        }
-
-        try
-        {
-            switch (instruction.OpCode)
-            {
-                default:
-                    return false;
-            }
-        }
-        finally
-        {
-            if (operandCount > 0)
-            {
-                Array.Clear(operands, 0, operandCount);
-                ArrayPool<BytecodeVmValue>.Shared.Return(operands);
-            }
-        }
+        return false;
     }
 
     private bool TryRentLinearOperands(
@@ -3102,7 +3090,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        if (!CanEvaluateLinearProjectionFast(entryAddress, allowPredicateTest: true))
+        if (!CanEvaluateLinearProjectionFast(entryAddress, allowPredicateCall: true))
         {
             return false;
         }
@@ -3135,8 +3123,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return TryGetLinearProjectionOperand(code[entryAddress], identifierSlot, item, out value) &&
                        TryConsumeLinearProjectionPatternSteps(2, ref value);
 
-            case GesBytecodeVmLinearProjectionFastKind.PredicateTest:
-                if (!CanEvaluateLinearPredicateTestFast(code[entryAddress + 1]))
+            case GesBytecodeVmLinearProjectionFastKind.PredicateCall:
+                if (!CanEvaluateLinearPredicateCallFast(code[entryAddress + 1]))
                 {
                     return false;
                 }
@@ -3148,7 +3136,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                return TryEvaluateLinearPredicateTestFast(code[entryAddress + 1], predicateInput, out value);
+                return TryEvaluateLinearPredicateCallFast(code[entryAddress + 1], predicateInput, out value);
 
             case GesBytecodeVmLinearProjectionFastKind.Binary:
                 handled = true;
@@ -3227,27 +3215,27 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool CanEvaluateLinearProjectionFast(int entryAddress, bool allowPredicateTest)
+    private bool CanEvaluateLinearProjectionFast(int entryAddress, bool allowPredicateCall)
     {
         if (entryAddress < 0)
         {
             return false;
         }
 
-        var cacheKey = entryAddress * 2 + (allowPredicateTest ? 1 : 0);
+        var cacheKey = entryAddress * 2 + (allowPredicateCall ? 1 : 0);
         if (_linearProjectionFastSupportCache is not null &&
             _linearProjectionFastSupportCache.TryGetValue(cacheKey, out var cached))
         {
             return cached;
         }
 
-        var supported = CanEvaluateLinearProjectionFastRange(entryAddress, allowPredicateTest);
+        var supported = CanEvaluateLinearProjectionFastRange(entryAddress, allowPredicateCall);
         _linearProjectionFastSupportCache ??= [];
         _linearProjectionFastSupportCache[cacheKey] = supported;
         return supported;
     }
 
-    private bool CanEvaluateLinearProjectionFastRange(int entryAddress, bool allowPredicateTest)
+    private bool CanEvaluateLinearProjectionFastRange(int entryAddress, bool allowPredicateCall)
     {
         var code = _compiledScript.LinearExecutable.Code;
         if ((uint)entryAddress >= (uint)code.Count)
@@ -3293,9 +3281,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
-                case GameEventScriptBytecodeOpCode.PredicateTest:
-                    if (!allowPredicateTest ||
-                        !CanEvaluateLinearPredicateTestFast(instruction) ||
+                case GameEventScriptBytecodeOpCode.CallPredicate:
+                    if (!allowPredicateCall ||
+                        !CanEvaluateLinearPredicateCallFast(instruction) ||
+                        !TryGetSingleSlot(instruction.B_U16, out _) ||
                         !AddTemp(instruction.Dest_U16))
                     {
                         return false;
@@ -3383,17 +3372,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool CanEvaluateLinearPredicateTestFast(GameEventScriptBytecodeInstruction instruction)
-        => TryGetOperationLayout(instruction.C_U16, out var layout) &&
-           TryReadOperationName(layout, out var callableName) &&
-           !string.IsNullOrEmpty(callableName) &&
-           _compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable) &&
-           CanEvaluateLinearPredicateCallableFast(callable);
+    private bool CanEvaluateLinearPredicateCallFast(GameEventScriptBytecodeInstruction instruction)
+        => CanEvaluateLinearPredicateCallableFast(instruction.A_U16);
 
-    private bool CanEvaluateLinearPredicateCallableFast(GameEventScriptBytecodeCallable callable)
+    private bool CanEvaluateLinearPredicateCallableFast(int entryAddress)
     {
         var code = _compiledScript.LinearExecutable.Code;
-        var pc = callable.EntryAddress;
+        var pc = entryAddress;
         if ((uint)pc >= (uint)code.Count ||
             code[pc].OpCode != GameEventScriptBytecodeOpCode.BindParameter ||
             code[pc].A_U16 != 0)
@@ -3411,7 +3396,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             pc++;
         }
 
-        return CanEvaluateLinearProjectionFastRange(pc, allowPredicateTest: false);
+        return CanEvaluateLinearProjectionFastRange(pc, allowPredicateCall: false);
     }
 
     private bool TryEvaluateLinearProjectionFastRange(
@@ -3492,8 +3477,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
-                case GameEventScriptBytecodeOpCode.PredicateTest:
-                    if (!TryEvaluateLinearPredicateTestFast(instruction, GetSlot(instruction.A_U16), out var predicateValue) ||
+                case GameEventScriptBytecodeOpCode.CallPredicate:
+                    if (!TryGetSingleSlot(instruction.B_U16, out var predicateInputSlot) ||
+                        !TryEvaluateLinearPredicateCallFast(instruction, GetSlot(predicateInputSlot), out var predicateValue) ||
                         !SetTemp(instruction.Dest_U16, predicateValue))
                     {
                         return false;
@@ -3680,20 +3666,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryEvaluateLinearPredicateTestFast(
+    private bool TryEvaluateLinearPredicateCallFast(
         GameEventScriptBytecodeInstruction instruction,
         BytecodeVmValue input,
         out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
-            !TryReadOperationName(layout, out var callableName) ||
-            !TryReadOperationArgumentName(layout, out var argumentName) ||
-            string.IsNullOrEmpty(callableName) ||
-            !_compiledScript.BytecodeModule.Callables.TryGetValue(callableName, out var callable))
-        {
-            return false;
-        }
+        var entryAddress = instruction.A_U16;
 
         if (!_runtimeBudget.TryEnterCall(CallableCallDepthExceededDetail))
         {
@@ -3702,14 +3681,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         try
         {
-            var diagnosticInput = input;
-            if (!TryConvertParameterType(layout.DeclaredTypes, 0, input, out diagnosticInput))
+            if (_diagnosticsEnabled &&
+                _compiledScript.LinearExecutable.CallablesByEntryAddress.TryGetValue(entryAddress, out var callable))
             {
-                return false;
+                var diagnosticInput = input;
+                if (!TryConvertParameterType(callable.ParameterTypes, 0, input, out diagnosticInput))
+                {
+                    return false;
+                }
+
+                var argumentName = callable.Parameters.Count > 0 ? callable.Parameters[0] : "value";
+                RecordPredicateCalled(callable.Name, argumentName, diagnosticInput);
             }
 
-            RecordPredicateCalled(callableName, argumentName ?? "value", diagnosticInput);
-            if (!TryEvaluateLinearPredicateCallableBodyFast(callable, input, out value))
+            if (!TryEvaluateLinearPredicateCallableBodyFast(entryAddress, input, out value))
             {
                 return false;
             }
@@ -3723,13 +3708,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private bool TryEvaluateLinearPredicateCallableBodyFast(
-        GameEventScriptBytecodeCallable callable,
+        int entryAddress,
         BytecodeVmValue input,
         out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
         var code = _compiledScript.LinearExecutable.Code;
-        var pc = callable.EntryAddress;
+        var pc = entryAddress;
         if ((uint)pc >= (uint)code.Count)
         {
             return false;
@@ -4094,36 +4079,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    private bool TryReadOptionalStringPool(int index, out string? value)
-    {
-        if (index < 0)
-        {
-            value = null;
-            return true;
-        }
-
-        if (TryReadStringPool(index, out var resolved))
-        {
-            value = resolved;
-            return true;
-        }
-
-        value = null;
-        return false;
-    }
-
-    private bool TryReadOperationName(GameEventScriptBytecodeOperationLayout layout, out string? value)
-        => TryReadOptionalStringPool(layout.NameIndex, out value);
-
-    private bool TryReadOperationArgumentName(GameEventScriptBytecodeOperationLayout layout, out string? value)
-        => TryReadOptionalStringPool(layout.ArgumentNameIndex, out value);
-
-    private bool TryReadOperationNameList(GameEventScriptBytecodeOperationLayout layout, out string[] values)
-        => TryReadStringList(layout.NameListIndex, out values);
-
-    private bool TryReadOperationArgumentSlots(GameEventScriptBytecodeOperationLayout layout, out IReadOnlyList<ushort> slots)
-        => TryGetUShortList(layout.ArgumentSlotListIndex, out slots);
-
     private bool TryReadStringList(int index, out string[] values)
     {
         if (!TryGetUShortList(index, out var indexes))
@@ -4176,6 +4131,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryGetUShortList(index, out layout);
     }
 
+    private bool TryGetSingleSlot(int index, out ushort slot)
+    {
+        if (TryGetUShortList(index, out var slots) &&
+            slots.Count == 1)
+        {
+            slot = slots[0];
+            return true;
+        }
+
+        slot = 0;
+        return false;
+    }
+
     private bool TryReadMessageShape(int index, out string messageName, out string[] argumentNames)
     {
         if ((uint)index >= (uint)_compiledScript.BytecodeModule.UShortListPool.Count)
@@ -4207,18 +4175,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return true;
-    }
-
-    private bool TryGetOperationLayout(int index, out GameEventScriptBytecodeOperationLayout layout)
-    {
-        if ((uint)index < (uint)_compiledScript.BytecodeModule.OperationLayouts.Count)
-        {
-            layout = _compiledScript.BytecodeModule.OperationLayouts[index];
-            return true;
-        }
-
-        layout = default!;
-        return false;
     }
 
     private bool TryGetPipelineSelector(int index, out GameEventScriptBytecodePipelineSelector layout)
@@ -4310,6 +4266,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         private readonly GesBytecodeVmCompiledHandler? _handler;
         private readonly IReadOnlyDictionary<string, GameEventScriptValue>? _handlerArgs;
         private readonly IReadOnlyList<BytecodeVmValue>? _values;
+        private readonly BytecodeVmValue _singleValue;
+        private readonly bool _hasSingleValue;
         private Dictionary<int, int>? _pendingTypedParameterSlots;
         private bool[]? _recordedParameterDiagnostics;
         private int _recordedParameterDiagnosticCount;
@@ -4318,11 +4276,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
         private LinearArgumentSource(
             GesBytecodeVmCompiledHandler? handler,
             IReadOnlyDictionary<string, GameEventScriptValue>? handlerArgs,
-            IReadOnlyList<BytecodeVmValue>? values)
+            IReadOnlyList<BytecodeVmValue>? values,
+            BytecodeVmValue singleValue = default,
+            bool hasSingleValue = false)
         {
             _handler = handler;
             _handlerArgs = handlerArgs;
             _values = values;
+            _singleValue = singleValue;
+            _hasSingleValue = hasSingleValue;
         }
 
         public static LinearArgumentSource ForHandler(
@@ -4333,8 +4295,28 @@ internal sealed partial class GesBytecodeVmExecutionSession
         public static LinearArgumentSource ForValues(IReadOnlyList<BytecodeVmValue> values)
             => new(null, null, values);
 
+        public static LinearArgumentSource ForSingleValue(BytecodeVmValue value)
+            => new(null, null, null, value, hasSingleValue: true);
+
+        public int Count
+            => _hasSingleValue
+                ? 1
+                : _values?.Count ?? _handler?.Parameters.Count ?? 0;
+
         public bool TryGetValue(int index, out BytecodeVmValue value)
         {
+            if (_hasSingleValue)
+            {
+                if (index == 0)
+                {
+                    value = _singleValue;
+                    return true;
+                }
+
+                value = BytecodeVmValue.Nothing;
+                return false;
+            }
+
             if (_values is not null)
             {
                 if ((uint)index < (uint)_values.Count)
@@ -7322,7 +7304,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         string callableName,
         GameEventScriptBytecodeCallableKind callableKind,
         IReadOnlyList<string> parameters,
-        IReadOnlyList<BytecodeVmValue> arguments)
+        IReadOnlyList<string?> parameterTypes,
+        LinearArgumentSource arguments)
     {
         if (!_diagnosticsEnabled)
         {
@@ -7332,9 +7315,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var pairs = new KeyValuePair<string, GameEventScriptValue>[Math.Min(parameters.Count, arguments.Count)];
         for (var argumentIndex = 0; argumentIndex < pairs.Length; argumentIndex++)
         {
+            if (!arguments.TryGetValue(argumentIndex, out var argumentValue))
+            {
+                argumentValue = BytecodeVmValue.Nothing;
+            }
+
+            if (callableKind == GameEventScriptBytecodeCallableKind.Predicate &&
+                !TryConvertParameterType(parameterTypes, argumentIndex, argumentValue, out argumentValue))
+            {
+                argumentValue = BytecodeVmValue.Nothing;
+            }
+
             pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
                 parameters[argumentIndex],
-                arguments[argumentIndex].ToGameEventScriptValue());
+                argumentValue.ToGameEventScriptValue());
         }
 
         var kind = callableKind == GameEventScriptBytecodeCallableKind.Predicate

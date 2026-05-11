@@ -348,7 +348,6 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     LoadHandler = 0x90,
     TypeConstructor = 0x91,
-    PredicateTest = 0x92,
     MemberAccess = 0x93,
     IndexedAccess = 0x94,
     BuildList = 0x95,
@@ -391,7 +390,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     
     #region Reserved
     Call = 0xC0,
-    // 0xC1 reserved for future CallPredicate
+    CallPredicate = 0xC1,
     CallStandard = 0xC2,
     CallStandardPredicate = 0xC3,
     CallExternal = 0xC4,

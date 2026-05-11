@@ -261,7 +261,7 @@ runtime dispatch step.
 | 0x80..0x8A | `TypeCheckSequence`..`TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x90 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x91 | `TypeConstructor` | - | result slot | type name `StringPool` index | argument name-list `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | Constructs a record/external value from named argument slots. |
-| 0x92 | `PredicateTest` | - | result slot | tested value slot | - | `OperationLayouts` index | - | - | - | Enters a predicate frame or fast path; predicate metadata is referenced through layout pool indexes. |
+| 0x92 | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access expansion. |
 | 0x93 | `MemberAccess` | - | result slot | target slot | - | `StringPool` index | - | - | - | Reads a named member. |
 | 0x94 | `IndexedAccess` | - | result slot | target slot | index slot | - | - | - | - | Direct indexed lookup. |
 | 0x95 | `BuildList` | - | result slot | item slot-list `UShortListPool` index | - | - | - | - | - | Builds a list from slot-list operands. |
@@ -291,8 +291,8 @@ runtime dispatch step.
 | 0xB7 | `CollectionBuilderSet` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal set builder. |
 | 0xB8 | `CollectionBuilderAdd` | - | - | builder slot | item slot | - | - | - | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
 | 0xB9 | `CollectionBuilderFinish` | - | result slot | builder slot | - | - | - | - | - | Materializes the builder as a list or set. |
-| 0xC0 | `Call` | - | result slot | - | - | `OperationLayouts` index | - | - | - | Enters a VM-owned local call frame; argument names and slots are referenced through layout pool indexes. |
-| 0xC1 | reserved | - | - | - | - | - | - | - | - | Reserved for future `CallPredicate`. |
+| 0xC0 | `Call` | - | result slot | callable entry address | argument slot-list `UShortListPool` index | - | - | - | - | Enters a VM-owned local call frame at a known code address. |
+| 0xC1 | `CallPredicate` | - | result slot | predicate entry address | argument slot-list `UShortListPool` index | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. |
 | 0xC2 | `CallStandard` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
 | 0xC3 | `CallStandardPredicate` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension and normalizes the result to `boolean | nothing`. |
 | 0xC4 | `CallExternal` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension. |
@@ -306,14 +306,12 @@ runtime dispatch step.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `CallStandard*`, `CallExternal*`, operation name lists, operation argument slot lists |
-| `OperationLayouts` | `PredicateTest`, `Call` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `Call`, `CallStandard*`, `CallExternal*` |
 | `PipelinePool` | `Pipeline` |
 | `PipelineSelectorPool` | Referenced by `PipelinePool` |
 | `PipelinePatternPool` | Referenced by `PipelineSelectorPool` |
 | `PipelineObjectPatternPool` | Referenced by `PipelineSelectorPool` |
 
-`OperationLayouts` are transitional metadata records retained only for the
-remaining local call-family opcodes. Construction, extension calls, and collection/message
-builder opcodes now reference `StringPool`/`UShortListPool` directly from the
-instruction word.
+Local calls, predicate calls, construction, extension calls, and collection/message
+builder opcodes now reference entry addresses or `StringPool`/`UShortListPool`
+directly from the instruction word.

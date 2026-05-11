@@ -35,6 +35,9 @@ public sealed class BytecodeVmPerformanceReportTests
             let myMessage be myHandler(message: 'hello', value: success)
             let myMessageDirect be Success(message: 'world', value: scaled)
           }
+          if folded is high {
+            publish FoldedHigh(folded)
+          }
           for item from 1 to 16 {
             let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]
           }
@@ -65,7 +68,7 @@ public sealed class BytecodeVmPerformanceReportTests
         var bytecodeVmRunDiag = MeasureRun(bytecodeVmBuildDiag.Value, input, MeasuredRuns, new GameEventScriptDiagnosticTraceCollector());
         MeasureRun(bytecodeVmBuildDiag.Value, input, 1, diagnosticCollector);
 
-        Assert.AreEqual(MeasuredRuns, bytecodeVmRun.PublishedMessages);
+        Assert.AreEqual(MeasuredRuns * 2, bytecodeVmRun.PublishedMessages);
         Assert.AreEqual("Done", bytecodeVmRun.LastMessage.Name);
 
         TestContext.WriteLine("-----");

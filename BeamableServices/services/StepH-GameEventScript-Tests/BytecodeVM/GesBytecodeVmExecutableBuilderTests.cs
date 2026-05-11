@@ -109,7 +109,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var buildShape = compiled.UShortListPool[build.A_U16].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, buildShape);
         Assert.HasCount(1, compiled.UShortListPool[build.B_U16]);
-        Assert.IsFalse(compiled.OperationLayouts.Any(layout => layout.OpCode == GameEventScriptBytecodeOpCode.BuildMessage));
     }
 
     [TestMethod]
@@ -470,7 +469,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPredicateTestsFromLinearPublicCodeInHandlerStatements()
+    public void BytecodeVmExecutesPredicateCallsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -486,6 +485,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
+        var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        Assert.AreEqual(compiled.Callables["high"].EntryAddress, predicateInstruction.A_U16);
+        Assert.HasCount(1, compiled.UShortListPool[predicateInstruction.B_U16]);
 
         var replacementConstant = 2L;
         var callableEntry = compiled.Callables["high"].EntryAddress;
@@ -517,6 +519,41 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(1, published);
         Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["ok"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(1), published[0].Arguments["blocker"]);
+    }
+
+    [TestMethod]
+    public void BytecodeVmExecutesMultiArgumentPredicateCallsThroughCallPredicate()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            predicate higher(left, right) means left > right
+
+            on Start(left, right) {
+              emit Done(ok: higher(left: left, right: right))
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.A_U16);
+        Assert.HasCount(2, compiled.UShortListPool[predicateInstruction.B_U16]);
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(compiled);
+
+        host.PublishToCompletion(
+            Create(
+                "Start",
+                ("left", GameEventScriptValueFactory.GesInteger(7)),
+                ("right", GameEventScriptValueFactory.GesInteger(4))));
+
+        Assert.HasCount(1, published);
+        Assert.AreEqual(GameEventScriptValueFactory.GesBoolean(true), published[0].Arguments["ok"]);
     }
 
     [TestMethod]
@@ -1249,7 +1286,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.HasCount(2, standardCalls);
         Assert.HasCount(0, compiled.ExternalReferences);
-        Assert.IsFalse(compiled.OperationLayouts.Any(layout => layout.OpCode == GameEventScriptBytecodeOpCode.CallStandard));
         foreach (var instruction in standardCalls)
         {
             var shape = compiled.UShortListPool[instruction.A_U16];
@@ -1284,9 +1320,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(
             compiled.ExternalReferences[predicateCall.A_U16].ArgumentLabels.Count,
             compiled.UShortListPool[predicateCall.B_U16]);
-        Assert.IsFalse(compiled.OperationLayouts.Any(layout =>
-            layout.OpCode == GameEventScriptBytecodeOpCode.CallExternal ||
-            layout.OpCode == GameEventScriptBytecodeOpCode.CallExternalPredicate));
     }
 
     [TestMethod]
@@ -1398,7 +1431,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call));
+        var callInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
+        Assert.AreEqual(compiled.Callables["identity"].EntryAddress, callInstruction.A_U16);
+        Assert.HasCount(1, compiled.UShortListPool[callInstruction.B_U16]);
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1476,7 +1511,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmExecutesPredicateTestStatementExpressionsFromLinearPublicCodeInHandlerStatements()
+    public void BytecodeVmExecutesPredicateCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1493,7 +1528,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest));
+        var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        Assert.AreEqual(compiled.Callables["high"].EntryAddress, predicateInstruction.A_U16);
+        Assert.HasCount(1, compiled.UShortListPool[predicateInstruction.B_U16]);
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1519,7 +1556,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void BytecodeVmStepsPredicateTestStatementExpressionsFromLinearPublicCodeInHandlerStatements()
+    public void BytecodeVmStepsPredicateCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
             """
@@ -1536,7 +1573,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PredicateTest));
+        var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        Assert.AreEqual(compiled.Callables["high"].EntryAddress, predicateInstruction.A_U16);
+        Assert.HasCount(1, compiled.UShortListPool[predicateInstruction.B_U16]);
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -4910,7 +4949,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.TypeDefinitions.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
             code?.ToArray() ?? original.Code.ToArray(),
             original.MaxFrameSlots,
-            original.OperationLayouts.ToArray(),
             original.DebugSegment,
             original.PipelinePatternPool.ToArray(),
             original.PipelineObjectPatternPool.ToArray(),

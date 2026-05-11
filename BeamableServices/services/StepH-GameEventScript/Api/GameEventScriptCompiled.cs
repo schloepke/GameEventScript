@@ -21,7 +21,6 @@ public sealed class GameEventScriptCompiled
         IReadOnlyDictionary<string, GameEventScriptBytecodeTypeDefinition> typeDefinitions,
         IReadOnlyList<GameEventScriptBytecodeInstruction>? code = null,
         int maxFrameSlots = 0,
-        IReadOnlyList<GameEventScriptBytecodeOperationLayout>? operationLayouts = null,
         GameEventScriptBytecodeDebugSegment? debugSegment = null,
         IReadOnlyList<GameEventScriptBytecodePipelinePattern>? pipelinePatternPool = null,
         IReadOnlyList<GameEventScriptBytecodePipelineObjectPattern>? pipelineObjectPatternPool = null,
@@ -39,7 +38,6 @@ public sealed class GameEventScriptCompiled
         TypeDefinitions = CopyDictionary(typeDefinitions, nameof(typeDefinitions));
         Code = code?.ToArray() ?? [];
         MaxFrameSlots = Math.Max(1, maxFrameSlots);
-        OperationLayouts = operationLayouts?.ToArray() ?? [];
         DebugSegment = debugSegment ?? GameEventScriptBytecodeDebugSegment.Empty;
         PipelinePatternPool = pipelinePatternPool?.ToArray() ?? [];
         PipelineObjectPatternPool = pipelineObjectPatternPool?.ToArray() ?? [];
@@ -68,8 +66,6 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code { get; }
 
     public int MaxFrameSlots { get; }
-
-    public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts { get; }
 
     public GameEventScriptBytecodeDebugSegment DebugSegment { get; }
 

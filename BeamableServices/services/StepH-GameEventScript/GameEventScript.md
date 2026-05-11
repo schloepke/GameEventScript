@@ -2119,7 +2119,7 @@ The artifact exposes neutral bytecode data:
 - `TypeDefinitions`
 - `Code`
 - `MaxFrameSlots`
-- Side tables for operation layouts, pipeline pools, and pattern metadata
+- Side tables for pipeline pools and pattern metadata
 
 Literal constants are encoded by typed linear load instructions instead of an
 object-shaped constant pool. `LoadInteger` uses the overlapped `I64` payload plus

@@ -9,7 +9,7 @@ internal enum GesBytecodeVmLinearProjectionFastKind
 {
     None,
     Operand,
-    PredicateTest,
+    PredicateCall,
     Binary,
     BinaryThenBinary,
     BinaryThenBinaryThenBinary
@@ -22,6 +22,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         int maxFrameSlots,
         GesBytecodeVmLinearHandlerEntry[] handlers,
         GesBytecodeVmLinearCallableEntry[] callables,
+        IReadOnlyDictionary<int, GesBytecodeVmLinearCallableEntry> callablesByEntryAddress,
         GesBytecodeVmLinearTypeFieldEntry[] typeFields,
         GesBytecodeVmLinearProjectionFastKind[] projectionFastKinds,
         IReadOnlyList<GesBytecodeVmLinearDiagnosticEntry>[] diagnosticsBefore,
@@ -31,6 +32,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         MaxFrameSlots = maxFrameSlots;
         Handlers = handlers;
         Callables = callables;
+        CallablesByEntryAddress = callablesByEntryAddress;
         TypeFields = typeFields;
         ProjectionFastKinds = projectionFastKinds;
         DiagnosticsBefore = diagnosticsBefore;
@@ -44,6 +46,8 @@ internal sealed class GesBytecodeVmLinearExecutable
     public IReadOnlyList<GesBytecodeVmLinearHandlerEntry> Handlers { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearCallableEntry> Callables { get; }
+
+    internal IReadOnlyDictionary<int, GesBytecodeVmLinearCallableEntry> CallablesByEntryAddress { get; }
 
     public IReadOnlyList<GesBytecodeVmLinearTypeFieldEntry> TypeFields { get; }
 
@@ -96,6 +100,9 @@ internal sealed class GesBytecodeVmLinearExecutable
                     callable.ParameterTypes.ToArray());
             })
             .ToArray();
+        var callablesByEntryAddress = callables.ToDictionary(
+            callable => callable.EntryAddress,
+            callable => callable);
         var typeFields = module.TypeDefinitions.Values
             .SelectMany(type => type.Fields.Select(field =>
             {
@@ -114,31 +121,35 @@ internal sealed class GesBytecodeVmLinearExecutable
         var diagnosticsBefore = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.BeforeInstruction);
         var diagnosticsAfter = BuildDiagnosticSites(module, code, GameEventScriptBytecodeDiagnosticTiming.AfterInstruction);
 
-        var projectionFastKinds = BuildProjectionFastKinds(code);
+        var projectionFastKinds = BuildProjectionFastKinds(module, code);
 
         return new GesBytecodeVmLinearExecutable(
             code,
             module.MaxFrameSlots,
             handlers,
             callables,
+            callablesByEntryAddress,
             typeFields,
             projectionFastKinds,
             diagnosticsBefore,
             diagnosticsAfter);
     }
 
-    private static GesBytecodeVmLinearProjectionFastKind[] BuildProjectionFastKinds(IReadOnlyList<GameEventScriptBytecodeInstruction> code)
+    private static GesBytecodeVmLinearProjectionFastKind[] BuildProjectionFastKinds(
+        GameEventScriptCompiled module,
+        IReadOnlyList<GameEventScriptBytecodeInstruction> code)
     {
         var kinds = new GesBytecodeVmLinearProjectionFastKind[code.Count];
         for (var entryAddress = 0; entryAddress < code.Count; entryAddress++)
         {
-            kinds[entryAddress] = IdentifyProjectionFastKind(code, entryAddress);
+            kinds[entryAddress] = IdentifyProjectionFastKind(module, code, entryAddress);
         }
 
         return kinds;
     }
 
     private static GesBytecodeVmLinearProjectionFastKind IdentifyProjectionFastKind(
+        GameEventScriptCompiled module,
         IReadOnlyList<GameEventScriptBytecodeInstruction> code,
         int entryAddress)
     {
@@ -150,12 +161,13 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
 
         if (TryMatchLinearReturn(code, entryAddress, offset: 2, out returnInstruction) &&
-            code[entryAddress + 1].OpCode == GameEventScriptBytecodeOpCode.PredicateTest &&
-            code[entryAddress + 1].A_U16 == code[entryAddress].Dest_U16 &&
+            code[entryAddress + 1].OpCode == GameEventScriptBytecodeOpCode.CallPredicate &&
+            TryGetSingleSlot(module, code[entryAddress + 1].B_U16, out var predicateInputSlot) &&
+            predicateInputSlot == code[entryAddress].Dest_U16 &&
             returnInstruction.A_U16 == code[entryAddress + 1].Dest_U16 &&
             IsLinearProjectionOperandInstruction(code[entryAddress]))
         {
-            return GesBytecodeVmLinearProjectionFastKind.PredicateTest;
+            return GesBytecodeVmLinearProjectionFastKind.PredicateCall;
         }
 
         if (TryMatchLinearReturn(code, entryAddress, offset: 3, out returnInstruction) &&
@@ -221,6 +233,22 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
 
         returnInstruction = default;
+        return false;
+    }
+
+    private static bool TryGetSingleSlot(GameEventScriptCompiled module, int slotListIndex, out ushort slot)
+    {
+        if ((uint)slotListIndex < (uint)module.UShortListPool.Count)
+        {
+            var slots = module.UShortListPool[slotListIndex];
+            if (slots.Count == 1)
+            {
+                slot = slots[0];
+                return true;
+            }
+        }
+
+        slot = 0;
         return false;
     }
 
@@ -550,6 +578,18 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateExternalReferenceArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
                 break;
 
+            case GameEventScriptBytecodeOpCode.Call:
+                ValidateAddress(module, module.Code, instruction.A_U16, $"{context} callable entry");
+                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
+                ValidateCallableArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                break;
+
+            case GameEventScriptBytecodeOpCode.CallPredicate:
+                ValidateAddress(module, module.Code, instruction.A_U16, $"{context} predicate entry");
+                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
+                ValidatePredicateCallArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                break;
+
             default:
                 if (IsCastInstruction(instruction.OpCode))
                 {
@@ -573,12 +613,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                     break;
                 }
 
-                if (IsOperationLayoutInstruction(instruction.OpCode))
-                {
-                    ValidateIndex(module.OperationLayouts.Count, instruction.C_U16, $"{context} operation layout");
-                    break;
-                }
-
                 if (IsBinarySlotInstruction(instruction.OpCode))
                 {
                     ValidateSlot(module, instruction.A_U16, $"{context} left slot");
@@ -592,7 +626,6 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static void ValidateSideTables(GameEventScriptCompiled module)
     {
-        ValidateOperationLayouts(module);
         ValidateDebugSegment(module);
         ValidatePipelinePatternPool(module);
         ValidatePipelineObjectPatternPool(module);
@@ -618,25 +651,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             }
 
             ValidateOptionalSlot(module, site.Slot, $"{context} slot");
-        }
-    }
-
-    private static void ValidateOperationLayouts(GameEventScriptCompiled module)
-    {
-        for (var index = 0; index < module.OperationLayouts.Count; index++)
-        {
-            var layout = module.OperationLayouts[index];
-            var context = $"operation layout #{index}";
-            if (!IsOperationLayoutInstruction(layout.OpCode))
-            {
-                throw InvalidBytecode($"{context} references unsupported opcode '{layout.OpCode}'.");
-            }
-
-            ValidateOptionalIndex(module.StringPool.Count, layout.NameIndex, $"{context} name");
-            ValidateOptionalIndex(module.StringPool.Count, layout.ArgumentNameIndex, $"{context} argument name");
-            ValidateStringListIndex(module, layout.NameListIndex, $"{context} name list");
-            ValidateSlotListIndex(module, layout.ArgumentSlotListIndex, $"{context} argument slots");
-            ValidateOptionalIndex(module.ExternalReferences.Count, layout.ExternalReferenceIndex, $"{context} external reference");
         }
     }
 
@@ -779,6 +793,41 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (slots.Count != argumentCount)
         {
             throw InvalidBytecode($"{context} count {slots.Count} does not match external reference argument count {argumentCount}.");
+        }
+    }
+
+    private static void ValidateCallableArgumentSlots(GameEventScriptCompiled module, int entryAddress, int slotListIndex, string context)
+    {
+        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == entryAddress);
+        if (callable is null)
+        {
+            throw InvalidBytecode($"{context} references unknown callable entry address {entryAddress}.");
+        }
+
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != callable.Parameters.Count)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match callable parameter count {callable.Parameters.Count}.");
+        }
+    }
+
+    private static void ValidatePredicateCallArgumentSlots(GameEventScriptCompiled module, int entryAddress, int slotListIndex, string context)
+    {
+        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == entryAddress);
+        if (callable is null)
+        {
+            throw InvalidBytecode($"{context} references unknown predicate entry address {entryAddress}.");
+        }
+
+        if (callable.Kind != GameEventScriptBytecodeCallableKind.Predicate)
+        {
+            throw InvalidBytecode($"{context} references function '{callable.Name}' instead of a predicate.");
+        }
+
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != callable.Parameters.Count)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match predicate parameter count {callable.Parameters.Count}.");
         }
     }
 
@@ -961,11 +1010,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
             GameEventScriptBytecodeOpCode.RandomPop);
-
-    private static bool IsOperationLayoutInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is
-            GameEventScriptBytecodeOpCode.PredicateTest or
-            GameEventScriptBytecodeOpCode.Call;
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.CastNothing or

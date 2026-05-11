@@ -56,6 +56,7 @@ internal static class GesBytecodeCompiler
             linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group), _handlerSources);
             linearBuilder.AddCallables(callables.Values, module.Callables);
             linearBuilder.AddTypeDefinitions(typeDefinitions.Values, module.TypeDefinitions);
+            linearBuilder.PatchDeferredCallableAddresses();
 
             return new GameEventScriptCompiled(
                 options,
@@ -69,7 +70,6 @@ internal static class GesBytecodeCompiler
                 typeDefinitions,
                 linearBuilder.Code.ToArray(),
                 linearBuilder.MaxFrameSlots,
-                linearBuilder.OperationLayouts.ToArray(),
                 linearBuilder.DebugSegment,
                 linearBuilder.PipelinePatternPool.ToArray(),
                 linearBuilder.PipelineObjectPatternPool.ToArray(),

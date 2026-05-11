@@ -42,18 +42,16 @@ supports `Filter`/`Select` prefixes and terminal `Select`, `Filter`, `any`,
 their public callable entry addresses in isolated VM frames when the entry is
 supported. Layout-free helper expressions run through public linear helper
 entries and isolate their temporary slots from handler locals and scope-change
-tracking. Simple operation-layout helper expressions are supported when the
-operation consumes only already-lowered slot operands and local metadata. The
-remaining operation-layout instructions are script function calls through
-`Call` and predicate tests through `PredicateTest`. Extension calls use direct
-`CallStandard*` or `CallExternal*` instructions with argument slot lists. Variadic
+tracking. Predicate calls use direct `CallPredicate` instructions with target
+entry addresses and argument-slot-list operands. Local calls use direct `Call`
+instructions with target entry addresses and argument-slot-list operands.
+Extension calls use direct `CallStandard*` or
+`CallExternal*` instructions with argument slot lists. Variadic
 operators, type constructors, local builders, message literals, handler binding,
 casts, type checks, member access, and seeded-random expressions are
 layout-free direct instructions.
-Immediate operation-layout value execution should avoid
-per-execution operand-array materialization when possible; operand buffers may
-be reused because the values are consumed before the instruction returns, and
-fixed operand operations should read directly from their source slots.
+Predicate-test fast paths should read directly from the tested value slot and
+avoid per-execution operand-array materialization.
 
 ## Goals
 
@@ -130,7 +128,6 @@ GameEventScriptCompiled
   Handlers: HandlerEntry[]
   Callables: CallableEntry[]
   TypeDefinitions: TypeDefinitionEntry[]
-  OperationLayouts
   PipelinePatternPool
   PipelineObjectPatternPool
   PipelineSelectorPool
@@ -159,7 +156,6 @@ GameEventScriptCompiled
   Callables
   TypeDefinitions
   MaxFrameSlots
-  OperationLayouts
   DebugSegment
   PipelinePatternPool
   PipelineObjectPatternPool
@@ -398,9 +394,8 @@ successive 16-bit lanes. For literal instructions the same payload carries
 `I64`, `U64`, or the IEEE-754 `F64` bit pattern.
 
 Large structured metadata belongs in side tables and pools, not nested
-instruction objects. Examples: operation layouts, `UShortListPool` message
-shapes/slot lists, pipeline pools, pipeline selector/pattern pools, and
-diagnostic layouts.
+instruction objects. Examples: `UShortListPool` message shapes/slot lists,
+pipeline pools, pipeline selector/pattern pools, and diagnostic layouts.
 
 An instruction that produces a `nothing` value writes it to `Dest_U16`. Returning
 without a value uses `ReturnNothing`; returning a slot value uses `Return
@@ -619,7 +614,8 @@ binary implication combine inside that branch sequence.
 - `CollectionIterator dst collection`
 - `IteratorNext dst iterator noMoreTarget`
 - `IteratorClose iterator`
-- `Call dst operationLayoutIndex`
+- `Call dst entryAddress argumentSlotList`
+- `CallPredicate dst entryAddress argumentSlotList`
 - `Return src`
 - `ReturnNothing`
 
@@ -658,29 +654,21 @@ VM-internal collection builder opcodes.
 
 Predicates and functions are normal callable entries. A call instruction
 transfers control to the callable entry and returns to the next instruction.
+Predicate calls use the same frame mechanism, normalize the result to
+`boolean | nothing`, and read their arguments from the `B_U16` slot-list. The
+`x is predicate` syntax is unary sugar that lowers to `CallPredicate` with a
+single-entry argument slot-list.
 
 ```text
 @0500 Call dst=s3 callable=wounded args=#0
 @0501 JumpIfNotTrue cond=s3 target=@0510
+@0520 CallPredicate dst=s4 predicate=@0900 args=#1
 ```
 
-The current transitional `OperationLayout` remains only for local call-family
-opcodes that still need one more encoding pass: `Call` and `PredicateTest`.
-Type constructors, variadic operators, collection builders,
-dictionaries, message literals, and handler binding now reference `StringPool`
-and `UShortListPool` directly from the instruction word.
-
-```text
-OperationLayout
-  OpCode
-  NameIndex
-  ArgumentNameIndex
-  NameListIndex
-  ArgumentSlotListIndex
-  DeclaredTypes[]
-  CallableKind
-  ExternalReferenceIndex
-```
+Type constructors, variadic operators, collection builders, dictionaries,
+message literals, handler binding, local calls, and predicate calls now
+reference entry addresses, `StringPool`, or `UShortListPool` directly from the
+instruction word.
 
 Call frame state:
 
@@ -1019,7 +1007,8 @@ The VM records diagnostic events while executing normal instructions:
 
 - Handler and parameter events are derived from handler metadata and
   `BindParameter`/cast execution.
-- Function and predicate call events are derived from call operation layouts.
+- Function and predicate call events are derived from callable metadata and
+  direct call entry addresses.
 - Let and expression-to-nothing events are derived from debug diagnostic sites.
 - Publish argument events are derived from message shape and slot-list metadata.
 

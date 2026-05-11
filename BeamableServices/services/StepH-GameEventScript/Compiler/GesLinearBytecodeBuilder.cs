@@ -16,13 +16,14 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _sourceTypeDefinitions;
     private readonly bool _emitDebugInfo;
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
-    private readonly List<GameEventScriptBytecodeOperationLayout> _operationLayouts = [];
     private readonly List<GameEventScriptBytecodeDebugDiagnosticSite> _debugDiagnosticSites = [];
     private readonly List<GameEventScriptBytecodePipelinePattern> _pipelinePatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineObjectPattern> _pipelineObjectPatternPool = [];
     private readonly List<GameEventScriptBytecodePipelineSelector> _pipelineSelectorPool = [];
     private readonly List<GameEventScriptBytecodePipeline> _pipelinePool = [];
     private readonly List<Action> _deferredHelperEmitters = [];
+    private readonly Dictionary<string, GameEventScriptBytecodeCallable> _bytecodeCallables = new(StringComparer.Ordinal);
+    private readonly List<(int Address, string CallableName)> _deferredCallableAddressPatches = [];
     private int _currentFrameSlotCount;
     private int _maxFrameSlots = 1;
 
@@ -45,8 +46,6 @@ internal sealed class GesLinearBytecodeBuilder
     public IReadOnlyList<GameEventScriptBytecodeInstruction> Code => _code;
 
     public int MaxFrameSlots => _maxFrameSlots;
-
-    public IReadOnlyList<GameEventScriptBytecodeOperationLayout> OperationLayouts => _operationLayouts;
 
     public GameEventScriptBytecodeDebugSegment DebugSegment => new(_debugDiagnosticSites);
 
@@ -98,7 +97,13 @@ internal sealed class GesLinearBytecodeBuilder
             throw new GameEventScriptCompileException("GameEventScript linear bytecode builder requires source callable bodies.");
         }
 
-        foreach (var callable in callables)
+        var callableArray = callables.ToArray();
+        foreach (var callable in callableArray)
+        {
+            _bytecodeCallables[callable.Name] = callable;
+        }
+
+        foreach (var callable in callableArray)
         {
             if (sourceCallables.TryGetValue(callable.Name, out var sourceCallable))
             {
@@ -109,6 +114,25 @@ internal sealed class GesLinearBytecodeBuilder
             throw new GameEventScriptCompileException(
                 $"GameEventScript linear bytecode builder requires source callable body for '{FormatSignature(callable.Name, callable.SignatureLabels)}'.");
         }
+    }
+
+    public void PatchDeferredCallableAddresses()
+    {
+        foreach (var (address, callableName) in _deferredCallableAddressPatches)
+        {
+            if (!_bytecodeCallables.TryGetValue(callableName, out var callable) ||
+                callable.EntryAddress < 0)
+            {
+                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer could not resolve callable entry address for '{callableName}'.");
+            }
+
+            _code[address] = _code[address] with
+            {
+                A_U16 = ToUShortOperand(callable.EntryAddress, "callable entry address")
+            };
+        }
+
+        _deferredCallableAddressPatches.Clear();
     }
 
     public void AddTypeDefinitions(
@@ -367,14 +391,17 @@ internal sealed class GesLinearBytecodeBuilder
         var condition = EmitSourceExpression(ifStatement.Condition, context, new ExpressionState(context.SlotCount));
         var jumpToElse = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: condition));
         EmitSourceStatements(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock, context.Slots);
-        var jumpToEnd = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump));
-        PatchTarget(jumpToElse, _code.Count);
-        if (ifStatement.ElseBody is not null)
+        if (ifStatement.ElseBody is null)
         {
-            EmitSourceStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock, context.Slots);
+            PatchTarget(jumpToElse, _code.Count);
         }
-
-        PatchTarget(jumpToEnd, _code.Count);
+        else
+        {
+            var jumpToEnd = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump));
+            PatchTarget(jumpToElse, _code.Count);
+            EmitSourceStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock, context.Slots);
+            PatchTarget(jumpToEnd, _code.Count);
+        }
     }
 
     private void EmitSourceLoop(ForStatementNode forStatement, SourceContext context)
@@ -917,14 +944,13 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var input = EmitSourceExpression(predicateCall.Value, context, state);
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.PredicateTest,
-            CallableKind: GameEventScriptBytecodeCallableKind.Predicate,
-            DiagnosticName: callable.Name,
-            DiagnosticArgumentName: callable.Parameters[0],
-            DeclaredTypes: new string?[] { callable.ParameterList[0].DeclaredType });
-        var layoutIndex = AddOperationLayout(instruction, [input]);
-        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PredicateTest, a: input, c: layoutIndex);
+        var destinationSlot = AllocateSlot(state);
+        var address = Emit(CreateInstruction(
+            GameEventScriptBytecodeOpCode.CallPredicate,
+            dest: destinationSlot,
+            b: ResolveSlotListIndex([input])));
+        _deferredCallableAddressPatches.Add((address, callable.Name));
+        return destinationSlot;
     }
 
     private int EmitSourceExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, SourceContext context, ExpressionState state)
@@ -988,16 +1014,16 @@ internal sealed class GesLinearBytecodeBuilder
             argumentSlots[argumentIndex] = EmitSourceExpression(call.Arguments[argumentIndex], context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.Call,
-            CallableKind: called.Kind == GameEventScriptCallableKind.PredicateCall
-                ? GameEventScriptBytecodeCallableKind.Predicate
-                : GameEventScriptBytecodeCallableKind.Function,
-            DiagnosticName: called.Name,
-            Names: called.Parameters.ToArray(),
-            DeclaredTypes: called.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
-        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Call, c: layoutIndex);
+        var destinationSlot = AllocateSlot(state);
+        var opCode = called.Kind == GameEventScriptCallableKind.PredicateCall
+            ? GameEventScriptBytecodeOpCode.CallPredicate
+            : GameEventScriptBytecodeOpCode.Call;
+        var address = Emit(CreateInstruction(
+            opCode,
+            dest: destinationSlot,
+            b: ResolveSlotListIndex(argumentSlots)));
+        _deferredCallableAddressPatches.Add((address, called.Name));
+        return destinationSlot;
     }
 
     private int EmitSourceTypeCast(TypeCastExpressionNode typeCast, SourceContext context, ExpressionState state)
@@ -1045,29 +1071,6 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var layoutIndex = AddSourcePipeline(collectionAccess, context, state);
         return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Pipeline, c: layoutIndex);
-    }
-
-    private int AddOperationLayout(
-        GameEventScriptBytecodeStackInstruction instruction,
-        IReadOnlyList<int> argumentSlots)
-    {
-        var names = instruction.Names ?? [];
-        var layoutIndex = _operationLayouts.Count;
-        var nameIndex = ResolveStringIndex(instruction.DiagnosticName);
-        var argumentNameIndex = ResolveStringIndex(instruction.DiagnosticArgumentName);
-        var nameListIndex = ResolveStringListIndex(names);
-        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
-        _operationLayouts.Add(new GameEventScriptBytecodeOperationLayout(
-            instruction.OpCode,
-            nameIndex: nameIndex,
-            argumentNameIndex: argumentNameIndex,
-            nameListIndex: nameListIndex,
-            argumentSlotListIndex: argumentSlotListIndex,
-            declaredTypes: instruction.DeclaredTypes,
-            callableKind: instruction.CallableKind,
-            externalReferenceIndex: instruction.B));
-
-        return layoutIndex;
     }
 
     private int EmitSourceIterator(IterationSourceNode source, SourceContext context, ExpressionState state)

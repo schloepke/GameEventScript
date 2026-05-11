@@ -15,33 +15,6 @@ public enum GameEventScriptBytecodeCallableKind
 
 
 
-public sealed class GameEventScriptBytecodeOperationLayout(
-    GameEventScriptBytecodeOpCode opCode,
-    int nameIndex = -1,
-    int argumentNameIndex = -1,
-    int nameListIndex = 0,
-    int argumentSlotListIndex = 0,
-    IReadOnlyList<string?>? declaredTypes = null,
-    GameEventScriptBytecodeCallableKind callableKind = GameEventScriptBytecodeCallableKind.Function,
-    int externalReferenceIndex = -1)
-{
-    public GameEventScriptBytecodeOpCode OpCode { get; } = opCode;
-
-    public int NameIndex { get; } = nameIndex;
-
-    public int ArgumentNameIndex { get; } = argumentNameIndex;
-
-    public int NameListIndex { get; } = nameListIndex;
-
-    public int ArgumentSlotListIndex { get; } = argumentSlotListIndex;
-
-    public IReadOnlyList<string?> DeclaredTypes { get; } = declaredTypes?.ToArray() ?? [];
-
-    public GameEventScriptBytecodeCallableKind CallableKind { get; } = callableKind;
-
-    public int ExternalReferenceIndex { get; } = externalReferenceIndex;
-}
-
 public enum GameEventScriptBytecodeDiagnosticKind
 {
     LetEvaluated,
@@ -196,15 +169,6 @@ public sealed class GameEventScriptBytecodePipeline(
 
     public int TerminalSelectorIndex { get; } = terminalSelectorIndex;
 }
-
-internal sealed record GameEventScriptBytecodeStackInstruction(
-    GameEventScriptBytecodeOpCode OpCode,
-    int B = -1,
-    GameEventScriptBytecodeCallableKind CallableKind = GameEventScriptBytecodeCallableKind.Function,
-    string? DiagnosticName = null,
-    string? DiagnosticArgumentName = null,
-    string[]? Names = null,
-    string?[]? DeclaredTypes = null);
 
 public enum GameEventScriptBytecodePublishKind
 {

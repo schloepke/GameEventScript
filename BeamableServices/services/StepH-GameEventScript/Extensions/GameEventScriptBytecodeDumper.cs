@@ -60,7 +60,6 @@ public static class GameEventScriptBytecodeDumper
 
     private static void AppendSideTables(StringBuilder builder, GameEventScriptCompiled module)
     {
-        AppendOperationLayouts(builder, module);
         AppendPipelinePatternPool(builder, module);
         AppendPipelineObjectPatternPool(builder, module);
         AppendPipelineSelectorPool(builder, module);
@@ -80,23 +79,6 @@ public static class GameEventScriptBytecodeDumper
             AppendSlot(builder, "slot", site.Slot);
             AppendText(builder, "name", site.Name);
             builder.AppendLine();
-        }
-    }
-
-    private static void AppendOperationLayouts(StringBuilder builder, GameEventScriptCompiled module)
-    {
-        builder.Append("operationLayouts[").Append(module.OperationLayouts.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
-        for (var i = 0; i < module.OperationLayouts.Count; i++)
-        {
-            var layout = module.OperationLayouts[i];
-            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ").Append(layout.OpCode);
-            AppendPoolIndex(builder, "name", module.StringPool, layout.NameIndex);
-            AppendPoolIndex(builder, "argument", module.StringPool, layout.ArgumentNameIndex);
-            AppendStringListPoolIndex(builder, "nameList", module, layout.NameListIndex);
-            AppendSlotListPoolIndex(builder, "args", module, layout.ArgumentSlotListIndex);
-            AppendIndex(builder, "external", layout.ExternalReferenceIndex);
-            AppendNullableStringList(builder, "types", layout.DeclaredTypes);
-            builder.Append(" callable=").AppendLine(layout.CallableKind.ToString());
         }
     }
 
@@ -388,7 +370,6 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.UnaryEntries:
             case GameEventScriptBytecodeOpCode.UnaryAbs:
             case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
-            case GameEventScriptBytecodeOpCode.PredicateTest:
                 AppendSlot(builder, "src", instruction.A_U16);
                 break;
 
@@ -488,6 +469,9 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.Call:
+            case GameEventScriptBytecodeOpCode.CallPredicate:
+                AppendAddress(builder, "target", instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
                 break;
 
             default:
@@ -509,14 +493,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendPoolIndex(builder, "type", module.StringPool, instruction.C_U16);
                 break;
             default:
-            {
-                if (IsOperationLayoutInstruction(instruction.OpCode))
-                {
-                    AppendIndex(builder, "operationLayout", instruction.C_U16);
-                }
-
                 break;
-            }
         }
     }
 
@@ -714,16 +691,6 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendNullableStringList(StringBuilder builder, string name, IReadOnlyList<string?> values)
-    {
-        if (values.Count > 0)
-        {
-            builder.Append(' ').Append(name).Append("=[")
-                .Append(string.Join(", ", values.Select(value => string.IsNullOrEmpty(value) ? "none" : value)))
-                .Append(']');
-        }
-    }
-
     private static void AppendAddress(StringBuilder builder, string name, int value)
     {
         if (value >= 0)
@@ -733,11 +700,6 @@ public static class GameEventScriptBytecodeDumper
     }
 
     private static string FormatAddress(int value) => value < 0 ? "none" : value.ToString("0000", CultureInfo.InvariantCulture);
-
-    private static bool IsOperationLayoutInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is
-            GameEventScriptBytecodeOpCode.Call or
-            GameEventScriptBytecodeOpCode.PredicateTest;
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.CastNothing or

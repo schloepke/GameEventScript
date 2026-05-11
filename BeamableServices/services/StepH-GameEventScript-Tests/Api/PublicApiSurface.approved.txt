@@ -16,7 +16,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
   enum-field Function = 17
   enum-field Predicate = 18
   enum-field ExtensionCall = 32
-  enum-field ExternalType = 33
+  enum-field ExternalType = 48
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable
   ctor GameEventScriptBinaryBindTable(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> entries)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> Entries { get }

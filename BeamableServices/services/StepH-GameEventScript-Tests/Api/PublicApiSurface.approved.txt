@@ -273,9 +273,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field BuildDictionary = 152
   enum-field BuildMessage = 153
   enum-field BindHandler = 154
-  enum-field CallExtension = 155
-  enum-field Call = 156
-  enum-field Variadic = 157
+  enum-field Variadic = 155
   enum-field EnterScope = 160
   enum-field ExitScope = 161
   enum-field EmitMessage = 162
@@ -296,6 +294,11 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CollectionBuilderSet = 183
   enum-field CollectionBuilderAdd = 184
   enum-field CollectionBuilderFinish = 185
+  enum-field Call = 192
+  enum-field CallStandard = 194
+  enum-field CallStandardPredicate = 195
+  enum-field CallExternal = 196
+  enum-field CallExternalPredicate = 197
   enum-field Pipeline = 208
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeOperationLayout
   ctor GameEventScriptBytecodeOperationLayout(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.Int32 nameIndex, System.Int32 argumentNameIndex, System.Int32 nameListIndex, System.Int32 argumentSlotListIndex, System.Collections.Generic.IReadOnlyList<System.String> declaredTypes, StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind callableKind, System.Int32 externalReferenceIndex)

@@ -1138,6 +1138,171 @@ internal sealed partial class GesBytecodeVmExecutionSession
                    DefineSlot(instruction.Dest_U16, BytecodeVmValue.Boolean(typeCheckValue));
         }
 
+        switch (instruction.OpCode)
+        {
+            case GameEventScriptBytecodeOpCode.Variadic:
+            {
+                if (!TryReadStringPool(instruction.A_U16, out var variadicOperationName) ||
+                    !TryRentLinearOperands(instruction.B_U16, out var variadicOperands, out var variadicOperandCount))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    if (!TryEvaluateVariadicOperation(variadicOperationName, variadicOperands, 0, variadicOperandCount, out var variadicValue))
+                    {
+                        return false;
+                    }
+
+                    return DefineSlot(instruction.Dest_U16, variadicValue);
+                }
+                finally
+                {
+                    ReturnLinearOperands(variadicOperands, variadicOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.TypeConstructor:
+            {
+                if (!TryReadStringPool(instruction.A_U16, out var typeName) ||
+                    !TryReadStringList(instruction.B_U16, out var constructorArgumentNames) ||
+                    !TryRentLinearOperands(instruction.C_U16, out var constructorOperands, out var constructorOperandCount))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    return DefineSlot(
+                        instruction.Dest_U16,
+                        EvaluateTypeConstructor(typeName, constructorArgumentNames, constructorOperands, 0, constructorOperandCount));
+                }
+                finally
+                {
+                    ReturnLinearOperands(constructorOperands, constructorOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.BuildList:
+            case GameEventScriptBytecodeOpCode.BuildSequence:
+            case GameEventScriptBytecodeOpCode.BuildSet:
+            {
+                if (!TryRentLinearOperands(instruction.A_U16, out var collectionOperands, out var collectionOperandCount))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    var value = instruction.OpCode switch
+                    {
+                        GameEventScriptBytecodeOpCode.BuildList => BuildListValue(collectionOperands, 0, collectionOperandCount),
+                        GameEventScriptBytecodeOpCode.BuildSequence => BuildSequenceValue(collectionOperands, 0, collectionOperandCount),
+                        _ => BuildSetValue(collectionOperands, 0, collectionOperandCount)
+                    };
+                    return DefineSlot(instruction.Dest_U16, value);
+                }
+                finally
+                {
+                    ReturnLinearOperands(collectionOperands, collectionOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.BuildDictionary:
+            {
+                if (!TryReadStringList(instruction.A_U16, out var keys) ||
+                    !TryRentLinearOperands(instruction.B_U16, out var dictionaryOperands, out var dictionaryOperandCount))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    return DefineSlot(instruction.Dest_U16, BuildDictionaryValue(dictionaryOperands, 0, dictionaryOperandCount, keys));
+                }
+                finally
+                {
+                    ReturnLinearOperands(dictionaryOperands, dictionaryOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.BuildMessage:
+            {
+                if (!TryReadMessageShape(instruction.A_U16, out var messageName, out var messageArgumentNames) ||
+                    !TryRentLinearOperands(instruction.B_U16, out var messageOperands, out var messageOperandCount))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    return DefineSlot(
+                        instruction.Dest_U16,
+                        BuildMessageValue(messageOperands, 0, messageOperandCount, messageArgumentNames, messageName));
+                }
+                finally
+                {
+                    ReturnLinearOperands(messageOperands, messageOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.BindHandler:
+            {
+                if (!TryRentLinearOperands(instruction.A_U16, out var bindOperands, out var bindOperandCount) ||
+                    !TryReadStringList(instruction.B_U16, out var boundArgumentNames))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    if (bindOperandCount == 0)
+                    {
+                        return DefineSlot(instruction.Dest_U16, BytecodeVmValue.Nothing);
+                    }
+
+                    return DefineSlot(
+                        instruction.Dest_U16,
+                        BindHandlerValue(bindOperands[0], bindOperands, 1, bindOperandCount - 1, boundArgumentNames));
+                }
+                finally
+                {
+                    ReturnLinearOperands(bindOperands, bindOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.CallStandard:
+            case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+            {
+                if (!TryCallStandard(
+                        instruction.A_U16,
+                        instruction.B_U16,
+                        instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandardPredicate,
+                        out var standardValue))
+                {
+                    return false;
+                }
+
+                return DefineSlot(instruction.Dest_U16, standardValue);
+            }
+
+            case GameEventScriptBytecodeOpCode.CallExternal:
+            case GameEventScriptBytecodeOpCode.CallExternalPredicate:
+            {
+                if (!TryCallExternal(
+                        instruction.A_U16,
+                        instruction.B_U16,
+                        instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternalPredicate,
+                        out var externalValue))
+                {
+                    return false;
+                }
+
+                return DefineSlot(instruction.Dest_U16, externalValue);
+            }
+        }
+
         if (!TryGetOperationLayout(instruction.C_U16, out var layout) ||
             !TryReadOperationName(layout, out var operationName) ||
             !TryReadOperationArgumentName(layout, out var operationArgumentName) ||
@@ -1160,68 +1325,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.Variadic:
-                    if (!TryEvaluateVariadicOperation(operationName, operands, 0, operandCount, out var variadicValue))
-                    {
-                        return false;
-                    }
-
-                    return DefineSlot(instruction.Dest_U16, variadicValue);
-
-                case GameEventScriptBytecodeOpCode.TypeConstructor:
-                    return DefineSlot(
-                        instruction.Dest_U16,
-                        EvaluateTypeConstructor(operationName, operationNames, operands, 0, operandCount));
-
-                case GameEventScriptBytecodeOpCode.BuildList:
-                    return DefineSlot(instruction.Dest_U16, BuildListValue(operands, 0, operandCount));
-
-                case GameEventScriptBytecodeOpCode.BuildSequence:
-                    return DefineSlot(instruction.Dest_U16, BuildSequenceValue(operands, 0, operandCount));
-
-                case GameEventScriptBytecodeOpCode.BuildSet:
-                    return DefineSlot(instruction.Dest_U16, BuildSetValue(operands, 0, operandCount));
-
-                case GameEventScriptBytecodeOpCode.BuildDictionary:
-                    return DefineSlot(instruction.Dest_U16, BuildDictionaryValue(operands, 0, operandCount, operationNames));
-
-                case GameEventScriptBytecodeOpCode.BuildMessage:
-                    return DefineSlot(
-                        instruction.Dest_U16,
-                        BuildMessageValue(
-                            operands,
-                            0,
-                            operandCount,
-                            operationNames,
-                            operationName));
-
-                case GameEventScriptBytecodeOpCode.BindHandler:
-                    if (operandCount == 0)
-                    {
-                        return DefineSlot(instruction.Dest_U16, BytecodeVmValue.Nothing);
-                    }
-
-                    return DefineSlot(
-                        instruction.Dest_U16,
-                        BindHandlerValue(operands[0], operands, 1, operandCount - 1, operationNames));
-
-                case GameEventScriptBytecodeOpCode.CallExtension:
-                    if (!TryCallExtension(
-                            operationName,
-                            operationArgumentName,
-                            operationNames,
-                            layout.ExternalReferenceIndex,
-                            operands,
-                            0,
-                            operandCount,
-                            layout.CallableKind == GameEventScriptBytecodeCallableKind.Predicate,
-                            out var extensionValue))
-                    {
-                        return false;
-                    }
-
-                    return DefineSlot(instruction.Dest_U16, extensionValue);
-
                 default:
                     return false;
             }
@@ -1234,6 +1337,41 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 ArrayPool<BytecodeVmValue>.Shared.Return(operands);
             }
         }
+    }
+
+    private bool TryRentLinearOperands(
+        int slotListIndex,
+        out BytecodeVmValue[] operands,
+        out int operandCount)
+    {
+        if (!TryGetUShortList(slotListIndex, out var slots))
+        {
+            operands = [];
+            operandCount = 0;
+            return false;
+        }
+
+        operandCount = slots.Count;
+        operands = operandCount == 0
+            ? Array.Empty<BytecodeVmValue>()
+            : ArrayPool<BytecodeVmValue>.Shared.Rent(operandCount);
+        if (operandCount > 0)
+        {
+            CopyLinearOperands(slots, operands);
+        }
+
+        return true;
+    }
+
+    private static void ReturnLinearOperands(BytecodeVmValue[] operands, int operandCount)
+    {
+        if (operandCount == 0)
+        {
+            return;
+        }
+
+        Array.Clear(operands, 0, operandCount);
+        ArrayPool<BytecodeVmValue>.Shared.Return(operands);
     }
 
     private bool TryEvaluateLinearPipeline(int layoutIndex, out BytecodeVmValue value)
@@ -4567,58 +4705,88 @@ internal sealed partial class GesBytecodeVmExecutionSession
             : BytecodeVmValue.Nothing;
     }
 
-    private bool TryCallExtension(
-        string? extensionName,
-        string? functionName,
-        string[]? labels,
-        int referenceIndex,
-        BytecodeVmValue[] inputs,
-        int start,
-        int count,
+    private bool TryCallStandard(
+        int shapeIndex,
+        int argumentSlotListIndex,
         bool requirePredicateResult,
         out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (string.IsNullOrWhiteSpace(extensionName) ||
-            string.IsNullOrWhiteSpace(functionName))
+        if (!TryGetUShortList(shapeIndex, out var shape) ||
+            shape.Count < 2 ||
+            !TryGetUShortList(argumentSlotListIndex, out var argumentSlots) ||
+            argumentSlots.Count != shape.Count - 2)
         {
-            return true;
+            return false;
         }
 
-        var argumentLabels = labels is { Length: var labelCount } && labelCount == count
-            ? labels
-            : Enumerable.Repeat(GameEventScriptMessageSignature.UnlabeledParameterName, count).ToArray();
-        var reference = new GameEventScriptExtensionReference(extensionName, functionName, argumentLabels);
-        var arguments = new GameEventScriptFastValue[count];
-        for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
+        var argumentCount = argumentSlots.Count;
+        if (argumentCount > 2)
         {
-            arguments[argumentIndex] = ToGameEventScriptFastValue(inputs[start + argumentIndex]);
+            return false;
         }
 
-        if (GesStandardExtensions.TryInvoke(reference, arguments, out var standardValue))
+        var argument0 = argumentCount > 0
+            ? ToGameEventScriptFastValue(ResolveSlot(argumentSlots[0]))
+            : default;
+        var argument1 = argumentCount > 1
+            ? ToGameEventScriptFastValue(ResolveSlot(argumentSlots[1]))
+            : default;
+        if (!GesStandardExtensions.TryInvoke(_compiledScript.BytecodeModule.StringPool, shape, argument0, argument1, argumentCount, out var standardValue))
         {
-            value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
+            return false;
+        }
+
+        value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
+        return NormalizeExtensionPredicateResult(requirePredicateResult, ref value);
+    }
+
+    private bool TryCallExternal(
+        int referenceIndex,
+        int argumentSlotListIndex,
+        bool requirePredicateResult,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if ((uint)referenceIndex >= (uint)_compiledScript.BytecodeModule.ExternalReferences.Count ||
+            !TryGetUShortList(argumentSlotListIndex, out var argumentSlots))
+        {
+            return false;
+        }
+
+        var reference = _compiledScript.BytecodeModule.ExternalReferences[referenceIndex];
+        if (reference.ArgumentLabels.Count != argumentSlots.Count)
+        {
+            return false;
+        }
+
+        if (!_compiledScript.TryGetBoundExtension(referenceIndex, out var function))
+        {
+            throw new GameEventScriptDynamicLinkException($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to reference slot '{referenceIndex}'.");
+        }
+
+        var argumentCount = argumentSlots.Count;
+        var arguments = argumentCount == 0
+            ? Array.Empty<GameEventScriptFastValue>()
+            : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+        try
+        {
+            for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
+            {
+                arguments[argumentIndex] = ToGameEventScriptFastValue(ResolveSlot(argumentSlots[argumentIndex]));
+            }
+
+            value = BytecodeVmValue.FromGameEventScriptFastValue(function.Invoke(new GameEventScriptExtensionContext(_context), arguments.AsSpan(0, argumentCount)));
             return NormalizeExtensionPredicateResult(requirePredicateResult, ref value);
         }
-
-        IGameEventScriptExtensionFunction function;
-        if (referenceIndex >= 0)
+        finally
         {
-            if (!_compiledScript.TryGetBoundExtension(referenceIndex, out function))
+            if (argumentCount > 0)
             {
-                throw new GameEventScriptDynamicLinkException($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to reference slot '{referenceIndex}'.");
+                Array.Clear(arguments, 0, argumentCount);
+                ArrayPool<GameEventScriptFastValue>.Shared.Return(arguments);
             }
         }
-        else
-        {
-            if (!_compiledScript.TryGetBoundExtension(reference, out function))
-            {
-                throw new GameEventScriptDynamicLinkException($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound.");
-            }
-        }
-
-        value = BytecodeVmValue.FromGameEventScriptFastValue(function.Invoke(new GameEventScriptExtensionContext(_context), arguments));
-        return NormalizeExtensionPredicateResult(requirePredicateResult, ref value);
     }
 
     private static bool NormalizeExtensionPredicateResult(bool requirePredicateResult, ref BytecodeVmValue value)

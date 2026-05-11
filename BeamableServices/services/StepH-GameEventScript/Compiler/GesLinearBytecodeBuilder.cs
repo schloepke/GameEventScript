@@ -673,18 +673,13 @@ internal sealed class GesLinearBytecodeBuilder
             argumentSlots[argumentIndex] = EmitSourceExpression(argument.Expression, context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.BuildMessage,
-            DiagnosticName: GameEventScriptMessageSignature.NormalizeMessageName(message.Message),
-            DiagnosticArgumentName: GameEventScriptMessageSignature.CreateSignatureId(message.Message, argumentNames),
-            Names: argumentNames);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
+        var messageShapeIndex = ResolveMessageShapeIndex(message.Message, argumentNames);
+        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
         return EmitValueInstruction(
             state,
             GameEventScriptBytecodeOpCode.BuildMessage,
-            argumentSlots.Length > 0 ? argumentSlots[0] : 0,
-            argumentSlots.Length > 1 ? argumentSlots[1] : 0,
-            layoutIndex);
+            a: messageShapeIndex,
+            b: argumentSlotListIndex);
     }
 
     private int EmitSourceExtensionCall(ExtensionCallExpressionNode extensionCall, SourceContext context, ExpressionState state)
@@ -698,19 +693,31 @@ internal sealed class GesLinearBytecodeBuilder
             argumentSlots[argumentIndex] = EmitSourceExpression(argument.Expression, context, state);
         }
 
-        var referenceIndex = _resolveExternalReferenceIndex(new GameEventScriptExtensionReference(
+        var reference = new GameEventScriptExtensionReference(
             extensionCall.ExtensionName,
             extensionCall.FunctionName,
-            argumentNames));
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.CallExtension,
-            B: referenceIndex,
-            CallableKind: GameEventScriptBytecodeCallableKind.Function,
-            DiagnosticName: extensionCall.ExtensionName,
-            DiagnosticArgumentName: extensionCall.FunctionName,
-            Names: argumentNames);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
-        return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.CallExtension, argumentSlots, state, layoutIndex);
+            argumentNames);
+        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
+        if (GesStandardExtensions.IsStandardReference(reference))
+        {
+            return EmitValueInstruction(
+                state,
+                GameEventScriptBytecodeOpCode.CallStandard,
+                a: ResolveExtensionShapeIndex(reference),
+                b: argumentSlotListIndex);
+        }
+
+        var referenceIndex = _resolveExternalReferenceIndex(reference);
+        if (referenceIndex < 0)
+        {
+            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer could not resolve extension reference '{reference.SignatureId}'.");
+        }
+
+        return EmitValueInstruction(
+            state,
+            GameEventScriptBytecodeOpCode.CallExternal,
+            a: referenceIndex,
+            b: argumentSlotListIndex);
     }
 
     private int EmitSourceCollectionBuilder(
@@ -726,9 +733,8 @@ internal sealed class GesLinearBytecodeBuilder
             itemSlots[index] = EmitSourceExpression(items[index], context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(opCode, Names: names);
-        var layoutIndex = AddOperationLayout(instruction, itemSlots);
-        return EmitSourceValueInstruction(opCode, itemSlots, state, layoutIndex);
+        var itemSlotListIndex = ResolveSlotListIndex(itemSlots);
+        return EmitValueInstruction(state, opCode, a: itemSlotListIndex);
     }
 
     private int EmitSourceDictionary(DictionaryLiteralExpressionNode dictionary, SourceContext context, ExpressionState state)
@@ -742,11 +748,13 @@ internal sealed class GesLinearBytecodeBuilder
             valueSlots[entryIndex] = EmitSourceExpression(entry.Value, context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(
+        var nameListIndex = ResolveStringListIndex(names);
+        var valueSlotListIndex = ResolveSlotListIndex(valueSlots);
+        return EmitValueInstruction(
+            state,
             GameEventScriptBytecodeOpCode.BuildDictionary,
-            Names: names);
-        var layoutIndex = AddOperationLayout(instruction, valueSlots);
-        return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.BuildDictionary, valueSlots, state, layoutIndex);
+            a: nameListIndex,
+            b: valueSlotListIndex);
     }
 
     private int EmitSourceVariadic(VariadicTaggedExpressionNode variadic, SourceContext context, ExpressionState state)
@@ -757,11 +765,13 @@ internal sealed class GesLinearBytecodeBuilder
             argumentSlots[index] = EmitSourceExpression(variadic.Arguments[index], context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(
+        var operatorIndex = ResolveStringIndex(variadic.Operator);
+        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
+        return EmitValueInstruction(
+            state,
             GameEventScriptBytecodeOpCode.Variadic,
-            DiagnosticName: variadic.Operator);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
-        return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.Variadic, argumentSlots, state, layoutIndex);
+            a: operatorIndex,
+            b: argumentSlotListIndex);
     }
 
     private int EmitSourceRange(RangeExpressionNode range, SourceContext context, ExpressionState state)
@@ -921,19 +931,31 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var input = EmitSourceExpression(extensionPredicate.Value, context, state);
         var labels = new[] { GameEventScriptMessageSignature.UnlabeledParameterName };
-        var referenceIndex = _resolveExternalReferenceIndex(new GameEventScriptExtensionReference(
+        var reference = new GameEventScriptExtensionReference(
             extensionPredicate.ExtensionName,
             extensionPredicate.FunctionName,
-            labels));
-        var instruction = new GameEventScriptBytecodeStackInstruction(
-            GameEventScriptBytecodeOpCode.CallExtension,
-            B: referenceIndex,
-            CallableKind: GameEventScriptBytecodeCallableKind.Predicate,
-            DiagnosticName: extensionPredicate.ExtensionName,
-            DiagnosticArgumentName: extensionPredicate.FunctionName,
-            Names: labels);
-        var layoutIndex = AddOperationLayout(instruction, [input]);
-        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.CallExtension, a: input, c: layoutIndex);
+            labels);
+        var argumentSlotListIndex = ResolveSlotListIndex([input]);
+        if (GesStandardExtensions.IsStandardReference(reference))
+        {
+            return EmitValueInstruction(
+                state,
+                GameEventScriptBytecodeOpCode.CallStandardPredicate,
+                a: ResolveExtensionShapeIndex(reference),
+                b: argumentSlotListIndex);
+        }
+
+        var referenceIndex = _resolveExternalReferenceIndex(reference);
+        if (referenceIndex < 0)
+        {
+            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer could not resolve extension reference '{reference.SignatureId}'.");
+        }
+
+        return EmitValueInstruction(
+            state,
+            GameEventScriptBytecodeOpCode.CallExternalPredicate,
+            a: referenceIndex,
+            b: argumentSlotListIndex);
     }
 
     private int EmitSourceCall(CallExpressionNode call, SourceContext context, ExpressionState state)
@@ -951,11 +973,13 @@ internal sealed class GesLinearBytecodeBuilder
                 operandSlots[argumentIndex + 1] = EmitSourceExpression(argument.Expression, context, state);
             }
 
-            var bindInstruction = new GameEventScriptBytecodeStackInstruction(
+            var operandSlotListIndex = ResolveSlotListIndex(operandSlots);
+            var argumentNameListIndex = ResolveStringListIndex(argumentNames);
+            return EmitValueInstruction(
+                state,
                 GameEventScriptBytecodeOpCode.BindHandler,
-                Names: argumentNames);
-            var bindLayoutIndex = AddOperationLayout(bindInstruction, operandSlots);
-            return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.BindHandler, operandSlots, state, bindLayoutIndex);
+                a: operandSlotListIndex,
+                b: argumentNameListIndex);
         }
 
         var argumentSlots = new int[call.Arguments.Count];
@@ -973,7 +997,7 @@ internal sealed class GesLinearBytecodeBuilder
             Names: called.Parameters.ToArray(),
             DeclaredTypes: called.ParameterList.Select(parameter => parameter.DeclaredType).ToArray());
         var layoutIndex = AddOperationLayout(instruction, argumentSlots);
-        return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.Call, argumentSlots, state, layoutIndex);
+        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Call, c: layoutIndex);
     }
 
     private int EmitSourceTypeCast(TypeCastExpressionNode typeCast, SourceContext context, ExpressionState state)
@@ -1006,12 +1030,15 @@ internal sealed class GesLinearBytecodeBuilder
             argumentSlots[argumentIndex] = EmitSourceExpression(argument.Expression, context, state);
         }
 
-        var instruction = new GameEventScriptBytecodeStackInstruction(
+        var typeNameIndex = ResolveStringIndex(typeConstructor.TypeName);
+        var argumentNameListIndex = ResolveStringListIndex(argumentNames);
+        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
+        return EmitValueInstruction(
+            state,
             GameEventScriptBytecodeOpCode.TypeConstructor,
-            DiagnosticName: typeConstructor.TypeName,
-            Names: argumentNames);
-        var layoutIndex = AddOperationLayout(instruction, argumentSlots);
-        return EmitSourceValueInstruction(GameEventScriptBytecodeOpCode.TypeConstructor, argumentSlots, state, layoutIndex);
+            a: typeNameIndex,
+            b: argumentNameListIndex,
+            c: argumentSlotListIndex);
     }
 
     private int EmitSourcePipeline(CollectionAccessExpressionNode collectionAccess, SourceContext context, ExpressionState state)
@@ -1019,18 +1046,6 @@ internal sealed class GesLinearBytecodeBuilder
         var layoutIndex = AddSourcePipeline(collectionAccess, context, state);
         return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Pipeline, c: layoutIndex);
     }
-
-    private int EmitSourceValueInstruction(
-        GameEventScriptBytecodeOpCode opCode,
-        IReadOnlyList<int> operands,
-        ExpressionState state,
-        int layoutIndex)
-        => EmitValueInstruction(
-            state,
-            opCode,
-            operands.Count > 0 ? operands[0] : 0,
-            operands.Count > 1 ? operands[1] : 0,
-            layoutIndex);
 
     private int AddOperationLayout(
         GameEventScriptBytecodeStackInstruction instruction,
@@ -1548,6 +1563,19 @@ internal sealed class GesLinearBytecodeBuilder
         for (var index = 0; index < argumentNames.Count; index++)
         {
             shape[index + 1] = ToUShortOperand(ResolveStringIndex(argumentNames[index]), "message argument string pool index");
+        }
+
+        return _resolveUShortListIndex(shape);
+    }
+
+    private int ResolveExtensionShapeIndex(GameEventScriptExtensionReference reference)
+    {
+        var shape = new ushort[reference.ArgumentLabels.Count + 2];
+        shape[0] = ToUShortOperand(ResolveStringIndex(reference.ExtensionName), "extension name string pool index");
+        shape[1] = ToUShortOperand(ResolveStringIndex(reference.FunctionName), "extension function string pool index");
+        for (var index = 0; index < reference.ArgumentLabels.Count; index++)
+        {
+            shape[index + 2] = ToUShortOperand(ResolveStringIndex(reference.ArgumentLabels[index]), "extension argument string pool index");
         }
 
         return _resolveUShortListIndex(shape);

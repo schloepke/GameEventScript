@@ -105,11 +105,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageValueWithTags &&
             instruction.C_U16 < compiled.UShortListPool.Count));
-        Assert.IsTrue(compiled.OperationLayouts.Any(layout =>
-            layout.OpCode == GameEventScriptBytecodeOpCode.BuildMessage &&
-            layout.NameIndex >= 0 &&
-            compiled.StringPool[layout.NameIndex] == "Done" &&
-            compiled.UShortListPool[layout.NameListIndex].Select(index => compiled.StringPool[index]).SequenceEqual(new[] { "value" })));
+        var build = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildMessage);
+        var buildShape = compiled.UShortListPool[build.A_U16].Select(index => compiled.StringPool[index]).ToArray();
+        CollectionAssert.AreEqual(new[] { "Done", "value" }, buildShape);
+        Assert.HasCount(1, compiled.UShortListPool[build.B_U16]);
+        Assert.IsFalse(compiled.OperationLayouts.Any(layout => layout.OpCode == GameEventScriptBytecodeOpCode.BuildMessage));
     }
 
     [TestMethod]
@@ -1229,6 +1229,67 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmLowersStandardExtensionCallsToDirectStandardCallOpcodesWithSlotLists()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start(heading) {
+              let fib be :series.fibonacci()
+              let wrapped be :degree.wrap(heading)
+              emit Done(fibIsSeries: fib is :series, wrapped: wrapped)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var standardCalls = compiled.Code
+            .Where(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandard)
+            .ToArray();
+
+        Assert.HasCount(2, standardCalls);
+        Assert.HasCount(0, compiled.ExternalReferences);
+        Assert.IsFalse(compiled.OperationLayouts.Any(layout => layout.OpCode == GameEventScriptBytecodeOpCode.CallStandard));
+        foreach (var instruction in standardCalls)
+        {
+            var shape = compiled.UShortListPool[instruction.A_U16];
+            var argumentSlots = compiled.UShortListPool[instruction.B_U16];
+            Assert.IsGreaterThanOrEqualTo(2, shape.Count);
+            Assert.HasCount(shape.Count - 2, argumentSlots);
+        }
+    }
+
+    [TestMethod]
+    public void BytecodeVmLowersHostExtensionCallsToDirectExternalCallOpcodesWithSlotLists()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start(value, heading) {
+              let floored be :math.floor(value)
+              let north be heading is :nav.isNorth
+              emit Done(floored: floored, north: north)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var functionCall = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternal);
+        var predicateCall = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternalPredicate);
+
+        Assert.HasCount(2, compiled.ExternalReferences);
+        Assert.HasCount(
+            compiled.ExternalReferences[functionCall.A_U16].ArgumentLabels.Count,
+            compiled.UShortListPool[functionCall.B_U16]);
+        Assert.HasCount(
+            compiled.ExternalReferences[predicateCall.A_U16].ArgumentLabels.Count,
+            compiled.UShortListPool[predicateCall.B_U16]);
+        Assert.IsFalse(compiled.OperationLayouts.Any(layout =>
+            layout.OpCode == GameEventScriptBytecodeOpCode.CallExternal ||
+            layout.OpCode == GameEventScriptBytecodeOpCode.CallExternalPredicate));
+    }
+
+    [TestMethod]
     public void BytecodeVmExecutesExtensionCallStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =
@@ -1244,7 +1305,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExtension));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandard));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -1285,7 +1346,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Pipeline));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExtension));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandard));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;

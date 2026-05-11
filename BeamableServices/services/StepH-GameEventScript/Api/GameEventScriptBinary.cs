@@ -357,9 +357,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     BuildDictionary = 0x98,
     BuildMessage = 0x99,
     BindHandler = 0x9A,
-    CallExtension = 0x9B,
-    Call = 0x9C,
-    Variadic = 0x9D,
+    Variadic = 0x9B,
     
     #endregion
     #region Scopes and message emit/publish operations
@@ -392,7 +390,12 @@ public enum GameEventScriptBytecodeOpCode : byte
     #endregion
     
     #region Reserved
-    // reserved area for group 0xC0 for future expansion
+    Call = 0xC0,
+    // 0xC1 reserved for future CallPredicate
+    CallStandard = 0xC2,
+    CallStandardPredicate = 0xC3,
+    CallExternal = 0xC4,
+    CallExternalPredicate = 0xC5,
     #endregion
     
     #region Pipeline operations and future pipeline expansion

@@ -501,6 +501,55 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.B_U16, $"{context} index slot");
                 break;
 
+            case GameEventScriptBytecodeOpCode.Variadic:
+                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} operation name");
+                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
+                break;
+
+            case GameEventScriptBytecodeOpCode.TypeConstructor:
+                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} type name");
+                ValidateStringListIndex(module, instruction.B_U16, $"{context} argument names");
+                ValidateSlotListIndex(module, instruction.C_U16, $"{context} argument slots");
+                ValidateMatchingListCounts(module, instruction.B_U16, instruction.C_U16, $"{context} type constructor arguments");
+                break;
+
+            case GameEventScriptBytecodeOpCode.BuildList:
+            case GameEventScriptBytecodeOpCode.BuildSequence:
+            case GameEventScriptBytecodeOpCode.BuildSet:
+                ValidateSlotListIndex(module, instruction.A_U16, $"{context} item slots");
+                break;
+
+            case GameEventScriptBytecodeOpCode.BuildDictionary:
+                ValidateStringListIndex(module, instruction.A_U16, $"{context} keys");
+                ValidateSlotListIndex(module, instruction.B_U16, $"{context} value slots");
+                ValidateMatchingListCounts(module, instruction.A_U16, instruction.B_U16, $"{context} dictionary entries");
+                break;
+
+            case GameEventScriptBytecodeOpCode.BuildMessage:
+                ValidateMessageShape(module, instruction.A_U16, $"{context} message shape");
+                ValidateMessageArgumentSlotList(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                break;
+
+            case GameEventScriptBytecodeOpCode.BindHandler:
+                ValidateSlotListIndex(module, instruction.A_U16, $"{context} operand slots");
+                ValidateStringListIndex(module, instruction.B_U16, $"{context} argument names");
+                ValidateBindHandlerLists(module, instruction.A_U16, instruction.B_U16, $"{context} bound handler arguments");
+                break;
+
+            case GameEventScriptBytecodeOpCode.CallStandard:
+            case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+                ValidateExtensionShape(module, instruction.A_U16, $"{context} standard extension shape");
+                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
+                ValidateExtensionShapeArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                break;
+
+            case GameEventScriptBytecodeOpCode.CallExternal:
+            case GameEventScriptBytecodeOpCode.CallExternalPredicate:
+                ValidateIndex(module.ExternalReferences.Count, instruction.A_U16, $"{context} external reference");
+                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
+                ValidateExternalReferenceArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                break;
+
             default:
                 if (IsCastInstruction(instruction.OpCode))
                 {
@@ -703,6 +752,66 @@ internal sealed class GesBytecodeVmLinearExecutable
         ValidateSlotList(module, slots, context);
     }
 
+    private static void ValidateExtensionShape(GameEventScriptCompiled module, int index, string context)
+    {
+        ValidateStringListIndex(module, index, context);
+        var shape = module.UShortListPool[index];
+        if (shape.Count < 2)
+        {
+            throw InvalidBytecode($"{context} must contain extension and function string-pool indexes.");
+        }
+    }
+
+    private static void ValidateExtensionShapeArgumentSlots(GameEventScriptCompiled module, int shapeIndex, int slotListIndex, string context)
+    {
+        var argumentCount = module.UShortListPool[shapeIndex].Count - 2;
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != argumentCount)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match extension shape argument count {argumentCount}.");
+        }
+    }
+
+    private static void ValidateExternalReferenceArgumentSlots(GameEventScriptCompiled module, int referenceIndex, int slotListIndex, string context)
+    {
+        var argumentCount = module.ExternalReferences[referenceIndex].ArgumentLabels.Count;
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != argumentCount)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match external reference argument count {argumentCount}.");
+        }
+    }
+
+    private static void ValidateMatchingListCounts(GameEventScriptCompiled module, int leftIndex, int rightIndex, string context)
+    {
+        var leftCount = module.UShortListPool[leftIndex].Count;
+        var rightCount = module.UShortListPool[rightIndex].Count;
+        if (leftCount != rightCount)
+        {
+            throw InvalidBytecode($"{context} count mismatch: {leftCount} name(s) for {rightCount} slot(s).");
+        }
+    }
+
+    private static void ValidateBindHandlerLists(GameEventScriptCompiled module, int operandSlotListIndex, int argumentNameListIndex, string context)
+    {
+        var operandCount = module.UShortListPool[operandSlotListIndex].Count;
+        var argumentNameCount = module.UShortListPool[argumentNameListIndex].Count;
+        if (operandCount == 0)
+        {
+            if (argumentNameCount != 0)
+            {
+                throw InvalidBytecode($"{context} cannot have argument names without a handler operand.");
+            }
+
+            return;
+        }
+
+        if (argumentNameCount != operandCount - 1)
+        {
+            throw InvalidBytecode($"{context} count mismatch: {argumentNameCount} name(s) for {operandCount - 1} bound argument slot(s).");
+        }
+    }
+
     private static void ValidateStringListIndex(GameEventScriptCompiled module, int index, string context)
     {
         ValidateIndex(module.UShortListPool.Count, index, context);
@@ -855,16 +964,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static bool IsOperationLayoutInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is
-            GameEventScriptBytecodeOpCode.Variadic or
-            GameEventScriptBytecodeOpCode.TypeConstructor or
             GameEventScriptBytecodeOpCode.PredicateTest or
-            GameEventScriptBytecodeOpCode.BuildList or
-            GameEventScriptBytecodeOpCode.BuildSequence or
-            GameEventScriptBytecodeOpCode.BuildSet or
-            GameEventScriptBytecodeOpCode.BuildDictionary or
-            GameEventScriptBytecodeOpCode.BuildMessage or
-            GameEventScriptBytecodeOpCode.BindHandler or
-            GameEventScriptBytecodeOpCode.CallExtension or
             GameEventScriptBytecodeOpCode.Call;
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)

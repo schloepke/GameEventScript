@@ -40,6 +40,63 @@ internal static class GesStandardExtensions
         return true;
     }
 
+    public static bool TryInvoke(
+        IReadOnlyList<string> stringPool,
+        IReadOnlyList<ushort> shape,
+        GameEventScriptFastValue argument0,
+        GameEventScriptFastValue argument1,
+        int argumentCount,
+        out GameEventScriptFastValue value)
+    {
+        value = GameEventScriptFastValue.Nothing;
+        if (shape.Count < 2 ||
+            !TryReadStringPool(stringPool, shape[0], out var extensionName) ||
+            !TryReadStringPool(stringPool, shape[1], out var functionName) ||
+            argumentCount != shape.Count - 2)
+        {
+            return false;
+        }
+
+        if (extensionName == "series")
+        {
+            switch (functionName)
+            {
+                case "fibonacci" when shape.Count == 2:
+                    value = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Fibonacci());
+                    return true;
+                case "factorial" when shape.Count == 2:
+                    value = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Factorial());
+                    return true;
+                case "natural" when IsNaturalSeriesSignature(stringPool, shape):
+                    value = GameEventScriptFastValue.FromGameEventScriptValue(EvaluateNaturalSeries(stringPool, shape, argument0, argument1, argumentCount));
+                    return true;
+            }
+        }
+
+        if (shape.Count != 3 ||
+            !TryReadStringPool(stringPool, shape[2], out var label) ||
+            !IsUnlabeledNormalized(label))
+        {
+            return false;
+        }
+
+        if (extensionName == "integer" &&
+            functionName is "floor" or "ceil" or "truncate" or "halfEven" or "halfUp" or "halfDown")
+        {
+            value = EvaluateInteger(functionName, argument0);
+            return true;
+        }
+
+        if (extensionName == "degree" &&
+            functionName is "wrap" or "toRadians" or "fromRadians")
+        {
+            value = EvaluateDegree(functionName, argument0);
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool IsSeriesStandardReference(GameEventScriptExtensionReference reference)
     {
         if (reference.ExtensionName != "series")
@@ -72,6 +129,30 @@ internal static class GesStandardExtensions
                IsLabel(labels[1], "step");
     }
 
+    private static bool IsNaturalSeriesSignature(IReadOnlyList<string> stringPool, IReadOnlyList<ushort> shape)
+    {
+        var labelCount = shape.Count - 2;
+        if (labelCount == 0)
+        {
+            return true;
+        }
+
+        if (!TryReadStringPool(stringPool, shape[2], out var first))
+        {
+            return false;
+        }
+
+        if (labelCount == 1)
+        {
+            return IsUnlabeledNormalized(first) || IsLabelNormalized(first, "start") || IsLabelNormalized(first, "step");
+        }
+
+        return labelCount == 2 &&
+               TryReadStringPool(stringPool, shape[3], out var second) &&
+               IsLabelNormalized(first, "start") &&
+               IsLabelNormalized(second, "step");
+    }
+
     private static bool IsUnaryStandardReference(GameEventScriptExtensionReference reference)
         => reference.ArgumentLabels.Count == 1 &&
            IsUnlabeled(reference.ArgumentLabels[0]) &&
@@ -88,6 +169,12 @@ internal static class GesStandardExtensions
 
     private static bool IsLabel(string label, string expected)
         => string.Equals(GameEventScriptMessageSignature.NormalizeParameterName(label), expected, StringComparison.Ordinal);
+
+    private static bool IsUnlabeledNormalized(string label)
+        => string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
+
+    private static bool IsLabelNormalized(string label, string expected)
+        => string.Equals(label, expected, StringComparison.Ordinal);
 
     private static GameEventScriptFastValue EvaluateSeries(GameEventScriptExtensionReference reference, ReadOnlySpan<GameEventScriptFastValue> arguments)
     {
@@ -120,6 +207,45 @@ internal static class GesStandardExtensions
         }
 
         return GameEventScriptSeriesValue.Natural(start, step);
+    }
+
+    private static GameEventScriptValue EvaluateNaturalSeries(
+        IReadOnlyList<string> stringPool,
+        IReadOnlyList<ushort> shape,
+        GameEventScriptFastValue argument0,
+        GameEventScriptFastValue argument1,
+        int argumentCount)
+    {
+        long start = 0;
+        long step = 1;
+        for (var index = 0; index < argumentCount; index++)
+        {
+            var label = TryReadStringPool(stringPool, shape[index + 2], out var resolved)
+                ? resolved
+                : GameEventScriptMessageSignature.UnlabeledParameterName;
+            if (IsUnlabeledNormalized(label) || IsLabelNormalized(label, "start"))
+            {
+                start = index == 0 ? argument0.Integer : argument1.Integer;
+            }
+            else if (IsLabelNormalized(label, "step"))
+            {
+                step = index == 0 ? argument0.Integer : argument1.Integer;
+            }
+        }
+
+        return GameEventScriptSeriesValue.Natural(start, step);
+    }
+
+    private static bool TryReadStringPool(IReadOnlyList<string> stringPool, int index, out string value)
+    {
+        if ((uint)index < (uint)stringPool.Count)
+        {
+            value = stringPool[index];
+            return true;
+        }
+
+        value = string.Empty;
+        return false;
     }
 
     private static GameEventScriptFastValue EvaluateInteger(string functionName, GameEventScriptFastValue input)

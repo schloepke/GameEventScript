@@ -444,17 +444,50 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.Variadic:
+                AppendPoolIndex(builder, "operation", module.StringPool, instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.TypeConstructor:
+                AppendPoolIndex(builder, "type", module.StringPool, instruction.A_U16);
+                AppendStringListPoolIndex(builder, "names", module, instruction.B_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.C_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.BuildList:
             case GameEventScriptBytecodeOpCode.BuildSequence:
             case GameEventScriptBytecodeOpCode.BuildSet:
+                AppendSlotListPoolIndex(builder, "items", module, instruction.A_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.BuildDictionary:
+                AppendStringListPoolIndex(builder, "keys", module, instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "values", module, instruction.B_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.BuildMessage:
+                AppendStringListPoolIndex(builder, "shape", module, instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.BindHandler:
-            case GameEventScriptBytecodeOpCode.CallExtension:
+                AppendSlotListPoolIndex(builder, "operands", module, instruction.A_U16);
+                AppendStringListPoolIndex(builder, "names", module, instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.CallStandard:
+            case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+                AppendStringListPoolIndex(builder, "shape", module, instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.CallExternal:
+            case GameEventScriptBytecodeOpCode.CallExternalPredicate:
+                AppendIndex(builder, "external", instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
+                break;
+
             case GameEventScriptBytecodeOpCode.Call:
-                AppendSlot(builder, "a", instruction.A_U16);
-                AppendSlot(builder, "b", instruction.B_U16);
                 break;
 
             default:
@@ -703,15 +736,6 @@ public static class GameEventScriptBytecodeDumper
 
     private static bool IsOperationLayoutInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is
-            GameEventScriptBytecodeOpCode.Variadic or
-            GameEventScriptBytecodeOpCode.TypeConstructor or
-            GameEventScriptBytecodeOpCode.BuildList or
-            GameEventScriptBytecodeOpCode.BuildSequence or
-            GameEventScriptBytecodeOpCode.BuildSet or
-            GameEventScriptBytecodeOpCode.BuildDictionary or
-            GameEventScriptBytecodeOpCode.BuildMessage or
-            GameEventScriptBytecodeOpCode.BindHandler or
-            GameEventScriptBytecodeOpCode.CallExtension or
             GameEventScriptBytecodeOpCode.Call or
             GameEventScriptBytecodeOpCode.PredicateTest;
 

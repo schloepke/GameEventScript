@@ -21,8 +21,8 @@ public sealed class BytecodeVmPerformanceReportTests
         predicate high(value as :integer) means value >= 10
 
         on Start(values) {
-          let total be values[:filter value where value is high][:select value => value + 5%][:sum value => value]
-          let average be values[:filter value where value is high][:select value => value + 5%][:average value => value]
+          let total be values[:filter value where value is high][:select value => value + 5%][:sum value => :integer.floor value]
+          let average be values[:filter value where value is high][:select value => value + 5%][:average value => :integer.floor value]
           let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
           let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
           let scaled as :meter be 100m + 5%
@@ -73,11 +73,11 @@ public sealed class BytecodeVmPerformanceReportTests
         WriteReport("With diagnostic:", bytecodeVmCompileDiag, bytecodeVmBuildDiag, bytecodeVmRunDiag);
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
+        /*
         TestContext.WriteLine("-----");
         TestContext.WriteLine(diagnosticCollector.ToString());
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Diagnostics:\n" + JsonSerializer.Serialize(bytecodeVmCompileDiag.Value.ToGameEventScriptBinary(), new JsonSerializerOptions { WriteIndented = true }));
-        /*
         */
         TestContext.WriteLine("-----");
     }

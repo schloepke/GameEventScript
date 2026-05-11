@@ -43,13 +43,13 @@ their public callable entry addresses in isolated VM frames when the entry is
 supported. Layout-free helper expressions run through public linear helper
 entries and isolate their temporary slots from handler locals and scope-change
 tracking. Simple operation-layout helper expressions are supported when the
-operation consumes only already-lowered slot operands and local metadata; this
-currently includes `Variadic` and `TypeConstructor`, plus local builders
-`BuildList`, `BuildSequence`, `BuildSet`, `BuildDictionary`, `BuildMessage`,
-handler binding through `BindHandler`, extension calls through `CallExtension`,
-script function calls through `Call`, and predicate tests through
-`PredicateTest`. Casts, type checks, member access, and seeded-random
-expressions are layout-free direct instructions.
+operation consumes only already-lowered slot operands and local metadata. The
+remaining operation-layout instructions are script function calls through
+`Call` and predicate tests through `PredicateTest`. Extension calls use direct
+`CallStandard*` or `CallExternal*` instructions with argument slot lists. Variadic
+operators, type constructors, local builders, message literals, handler binding,
+casts, type checks, member access, and seeded-random expressions are
+layout-free direct instructions.
 Immediate operation-layout value execution should avoid
 per-execution operand-array materialization when possible; operand buffers may
 be reused because the values are consumed before the instruction returns, and
@@ -664,11 +664,11 @@ transfers control to the callable entry and returns to the next instruction.
 @0501 JumpIfNotTrue cond=s3 target=@0510
 ```
 
-The current transitional `OperationLayout` describes source argument slots and
-metadata for calls, extension calls, type constructors, and collection/message
-builders. Names and slot lists are stored through `StringPool` and
-`UShortListPool` indexes, not direct object arrays. It intentionally no longer
-carries helper entry addresses or diagnostic-only parameter-slot metadata.
+The current transitional `OperationLayout` remains only for local call-family
+opcodes that still need one more encoding pass: `Call` and `PredicateTest`.
+Type constructors, variadic operators, collection builders,
+dictionaries, message literals, and handler binding now reference `StringPool`
+and `UShortListPool` directly from the instruction word.
 
 ```text
 OperationLayout
@@ -729,12 +729,12 @@ compiler-assigned loop temporary slot.
 
 ### Values and Containers
 
-- `BuildList dst itemStart count`
-- `BuildSequence dst itemStart count`
-- `BuildSet dst itemStart count`
-- `BuildDictionary dst layoutIndex`
-- `BuildMessage dst layoutIndex`
-- `BindHandler dst calleeSlot callLayoutIndex`
+- `BuildList dst itemSlotListIndex`
+- `BuildSequence dst itemSlotListIndex`
+- `BuildSet dst itemSlotListIndex`
+- `BuildDictionary dst keyNameListIndex valueSlotListIndex`
+- `BuildMessage dst messageShapeIndex argumentSlotListIndex`
+- `BindHandler dst operandSlotListIndex argumentNameListIndex`
 - `MemberAccess dst targetSlot nameIndex`
 - `IndexedAccess dst targetSlot selectorSlot`
 - `Range dst fromSlot toSlot`
@@ -744,9 +744,11 @@ compiler-assigned loop temporary slot.
 - `RandomPush seedSlot`
 - `RandomPushConstant seedU64`
 - `RandomPop`
-- `TypeConstructor dst typeIndex callLayoutIndex`
+- `TypeConstructor dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
 
 These remain high-level because they map directly to public value semantics.
+List indexes reference `UShortListPool`; name lists and message shapes contain
+`StringPool` indexes, while slot lists contain frame slot indexes.
 Seeded random no longer has a side table or helper expression opcode. The
 lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless `U64`; signed integer literals are mapped by their
@@ -845,22 +847,21 @@ or `EmitMessageValue`. Tagged dynamic values use
 
 ### Extensions, Intrinsics, and External Types
 
-- `CallExtension dst externalReferenceIndex callLayoutIndex`
-- `CallStandard dst standardIntrinsicId callLayoutIndex`
-- `TypeConstructor dst typeIndex callLayoutIndex`
+- `CallStandard dst extensionShapeIndex argumentSlotListIndex`
+- `CallStandardPredicate dst extensionShapeIndex argumentSlotListIndex`
+- `CallExternal dst externalReferenceIndex argumentSlotListIndex`
+- `CallExternalPredicate dst externalReferenceIndex argumentSlotListIndex`
 
 External references are collected at compile time and dynamically bound by the
 host when loading the compiled artifact. Runtime extension binding is not
 serialized into portable bytecode.
 
 Standard intrinsics are non-overridable and do not appear in
-`ExternalReferences`. The target linear model should represent them as
-`CallStandard` or an equivalent direct intrinsic id, not as a host extension
-lookup.
-
-Current implementation note: standard intrinsics may still execute through
-`CallExtension` with an external reference slot of `-1` until dedicated
-standard-intrinsic side tables land.
+`ExternalReferences`. They are represented by `CallStandard*` with an extension
+shape stored in `UShortListPool` as
+`[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`.
+All extension call arguments, including zero-argument calls, are represented by
+a concrete argument slot-list entry in `UShortListPool`.
 
 External type constructors are collected separately in
 `ExternalTypeConstructorReferences` and dynamically bound against the host's
@@ -1136,5 +1137,5 @@ that contract.
   slices should allocate less but are more complex.
 - Should `Ref` constants be first-class constants, or should refs always be
   encoded as constructor operations?
-- Which standard intrinsics deserve dedicated opcodes instead of
-  `CallStandard` ids?
+- Which standard intrinsics deserve dedicated opcodes or compact ids instead of
+  `CallStandard` shape lists?

@@ -362,6 +362,30 @@ by distinct opcodes such as `ReturnNothing` and
 still define its own optional `-1` fields where the table schema explicitly
 allows them.
 
+Opcode values are grouped in 16-value blocks by operation family. The VM still
+dispatches directly on the full opcode byte; the group nibble is a portable
+layout convention and may be used by validators, dumpers, or future decoders.
+The current groups are:
+
+```text
+0x00 core loads, slot movement, branches, returns
+0x10 generic boolean, comparison, arithmetic, and default operations
+0x20 primitive integer fast-path operations
+0x30 unary, random, dice, and range value operations
+0x40 collection/text operations, key/value projections, short-circuit markers
+0x50 primitive/domain casts
+0x60 collection/message/reference casts
+0x70 primitive/domain type checks
+0x80 collection/message/reference type checks
+0x90 construction, access, handlers, predicates, calls
+0xA0 scopes and message emit/publish operations
+0xB0 iterators and collection builders
+0xC0 reserved
+0xD0 pipeline operations; 0xD1..0xDF reserved for pipeline expansion
+0xE0 reserved
+0xF0 reserved
+```
+
 For JSON transport, instructions serialize as a normalized four-field object:
 
 ```json

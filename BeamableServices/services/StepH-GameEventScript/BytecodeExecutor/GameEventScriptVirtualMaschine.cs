@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterArithmetic;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -33,8 +32,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     if (requiredTotalSlots > _vmState.RegisterSlots.Length)
                     {
                         // FIXME: Here we might want to let the register frame grow.
-                        throw new OverflowException("Not enough slots in register frame.");
+                        _vmState.RaiseError("Not enough slots in register frame.");
+                        continue;
                     }
+
                     _vmState.RegisterFrameLength = slotCount;
                     break;
                 case LoadNothing:
@@ -47,10 +48,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).SetBoolean(false);
                     break;
                 case LoadInteger:
-                    Register(instruction.Dest_U16).SetInteger(instruction.I64, (GameEventScriptNumericUnit)(instruction.UnitAndFlags & 0x1F));
+                    Register(instruction.Dest_U16).SetInteger(instruction.I64, VmRegisterUnitCalculation.DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case LoadFloat:
-                    Register(instruction.Dest_U16).SetFloat(instruction.F64, (GameEventScriptNumericUnit)(instruction.UnitAndFlags & 0x1F));
+                    Register(instruction.Dest_U16).SetFloat(instruction.F64, VmRegisterUnitCalculation.DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case LoadText:
                     Register(instruction.Dest_U16).SetStringPointer(instruction.A_U16);
@@ -62,75 +63,8 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16) = Register(instruction.A_U16);
                     break;
                 case BindParameter:
-                    var argument = message.Arguments[instruction.A_U16];
-                    switch (argument.Kind)
-                    {
-                        case GameEventScriptValueKind.Nothing:
-                            Register(instruction.Dest_U16).SetNothing();
-                            break;
-                        case GameEventScriptValueKind.Tag:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Text:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Percentage:
-                            Register(instruction.Dest_U16).SetFloat(argument.AsNumber(), GameEventScriptNumericUnit.Percentage);
-                            break;
-                        case GameEventScriptValueKind.Vector:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Point:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Float:
-                            Register(instruction.Dest_U16).SetFloat(argument.AsNumber());
-                            break;
-                        case GameEventScriptValueKind.Integer:
-                            Register(instruction.Dest_U16).SetInteger(argument.AsInteger());
-                            break;
-                        case GameEventScriptValueKind.Boolean:
-                            Register(instruction.Dest_U16).SetBoolean(argument.AsBoolean());
-                            break;
-                        case GameEventScriptValueKind.Uuid:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Optional:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Sequence:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Series:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Range:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Message:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Handler:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Ref:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.List:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Dictionary:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Set:
-                            throw new NotImplementedException();
-                            break;
-                        case GameEventScriptValueKind.Dice:
-                            throw new NotImplementedException();
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    // FIXME here we need an abstraction for the parameter binding since sub calls do not bind over the message! They do need a list with the argument indexes
+                    Register(instruction.Dest_U16).BindArguments(message.Arguments[instruction.A_U16]);
                     break;
                 case Jump:
                     _vmState.JumpAddress(instruction.Target_U16);
@@ -151,109 +85,105 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.ReturnValue(instruction.A_U16);
                     break;
                 case Or:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmOr(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmOr(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case And:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmAnd(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmAnd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Xor:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmXor(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmXor(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Equal:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case NotEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmNotEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmNotEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case ApproxEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmApproxEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmApproxEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Less:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmLess(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmLess(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Greater:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmGreater(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmGreater(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case LessOrEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmLessOrEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmLessOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case GreaterOrEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmGreaterOrEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmGreaterOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Add:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmAdd(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmAdd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Subtract:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmSubtract(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmSubtract(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Multiply:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmMultiply(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmMultiply(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Divide:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmDivide(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Power:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmPower(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmPower(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Default:
                     break;
                 case PrimitiveIntegerEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerNotEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerNotEqual(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerNotEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerLess:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerLess(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerLess(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerGreater:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerGreater(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerGreater(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerLessOrEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerLessOrEqual( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerLessOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerGreaterOrEqual:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerGreaterOrEqual( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerGreaterOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerAdd:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerAdd( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerAdd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerSubtract:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerSubtract( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerSubtract(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerMultiply:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerMultiply( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerMultiply(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerDivide:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerDivide( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerFloorDivide:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerFloorDivide( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerFloorDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerModulo:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerModulo( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerModulo(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case PrimitiveIntegerRemainder:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerRemainder( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerRemainder(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case IntegerDivide:
-                    Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerDivide( ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Modulo:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmModulo(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmModulo(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Remainder:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmRemainder(ref Register(instruction.B_U16)));
+                    Register(instruction.Dest_U16).VmRemainder(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case UnaryNegate:
-                    var a = Register(instruction.A_U16);
-                    if(a.IsInteger)
-                        Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerNegate(), a.Unit);
-                    else 
-                        Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmNegate(), a.Unit);
+                    Register(instruction.Dest_U16).VmNegate(ref Register(instruction.A_U16));
                     break;
                 case UnaryNot:
-                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmNot());
+                    Register(instruction.Dest_U16).VmNot(ref Register(instruction.A_U16));
                     break;
                 case UnaryHasValue:
                     break;
@@ -595,4 +525,5 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
 
         return true;
     }
+
 }

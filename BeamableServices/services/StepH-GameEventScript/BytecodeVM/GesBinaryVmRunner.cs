@@ -454,9 +454,9 @@ internal sealed class GesBinaryVmRunState
     private static GameEventScriptNumericUnit? DecodeUnit(byte unitAndFlags)
         => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F) switch
         {
-            GameEventScriptBytecodeInstructionUnit.Degree => GameEventScriptNumericUnit.Degree,
-            GameEventScriptBytecodeInstructionUnit.Meter => GameEventScriptNumericUnit.Meter,
-            GameEventScriptBytecodeInstructionUnit.Second => GameEventScriptNumericUnit.Second,
+            GameEventScriptBytecodeInstructionUnit.UnitDegree => GameEventScriptNumericUnit.Degree,
+            GameEventScriptBytecodeInstructionUnit.UnitMeter => GameEventScriptNumericUnit.Meter,
+            GameEventScriptBytecodeInstructionUnit.UnitSecond => GameEventScriptNumericUnit.Second,
             _ => null
         };
 }

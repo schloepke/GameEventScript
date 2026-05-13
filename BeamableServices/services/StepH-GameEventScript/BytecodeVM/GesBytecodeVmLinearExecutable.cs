@@ -846,10 +846,10 @@ internal sealed class GesBytecodeVmLinearExecutable
     private static void ValidateNumericUnit(byte value, bool allowPercentage, string context)
     {
         var unit = (GameEventScriptBytecodeInstructionUnit)value;
-        if (unit is GameEventScriptBytecodeInstructionUnit.None or
-            GameEventScriptBytecodeInstructionUnit.Degree or
-            GameEventScriptBytecodeInstructionUnit.Meter or
-            GameEventScriptBytecodeInstructionUnit.Second)
+        if (unit is GameEventScriptBytecodeInstructionUnit.UnitNone or
+            GameEventScriptBytecodeInstructionUnit.UnitDegree or
+            GameEventScriptBytecodeInstructionUnit.UnitMeter or
+            GameEventScriptBytecodeInstructionUnit.UnitSecond)
         {
             return;
         }

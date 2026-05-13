@@ -8,40 +8,70 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public static class VmRegisterBooleanLogic
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool? VmOr(ref this VmRegister a, ref VmRegister b)
+    public static void VmOr(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
-        if (x.HasValue && y.HasValue) return x.Value || y.Value;
-        if (x.HasValue && x.Value) return true;
-        if (y.HasValue && y.Value) return true;
-        return null;
+        if (x.HasValue && y.HasValue)
+        {
+            dst.SetBoolean(x.Value || y.Value);
+            return;
+        }
+
+        if ((x.HasValue && x.Value) || (y.HasValue && y.Value))
+        {
+            dst.SetBoolean(true);
+            return;
+        }
+
+        dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool? VmAnd(ref this VmRegister a, ref VmRegister b)
+    public static void VmAnd(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
-        if (x.HasValue && y.HasValue) return x.Value && y.Value;
-        if (x.HasValue && !x.Value) return false;
-        if (y.HasValue && !y.Value) return false;
-        return null;
+        if (x.HasValue && y.HasValue)
+        {
+            dst.SetBoolean(x.Value && y.Value);
+            return;
+        }
+
+        if ((x.HasValue && !x.Value) || (y.HasValue && !y.Value))
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool? VmXor(ref this VmRegister a, ref VmRegister b)
+    public static void VmXor(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
-        if(x.HasValue && y.HasValue) return x.Value ^ y.Value;
-        return null;
+        if (x.HasValue && y.HasValue)
+        {
+            dst.SetBoolean(x.Value ^ y.Value);
+            return;
+        }
+
+        dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool? VmNot(ref this VmRegister a)
+    public static void VmNot(ref this VmRegister dst, ref VmRegister a)
     {
-        return !a.BooleanValueOrNothing;
+        var x = a.BooleanValueOrNothing;
+        if (x.HasValue)
+        {
+            dst.SetBoolean(!x.Value);
+            return;
+        }
+
+        dst.SetNothing();
     }
 
 

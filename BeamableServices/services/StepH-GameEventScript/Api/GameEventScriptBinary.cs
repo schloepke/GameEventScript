@@ -109,11 +109,13 @@ public enum GameEventScriptBinaryBindKind : byte
 
 public enum GameEventScriptBytecodeInstructionUnit : byte
 {
-    None = 0,
-    Degree = 1,
-    Meter = 2,
-    Second = 3,
-    Percentage = 4
+    UnitNone = 0,
+    Percentage = 1,
+    UnitDegree = 2,
+    UnitMeter = 3,
+    UnitSecond = 4,
+    
+    UnitNothing = 255 // Special non-unit type for nothing / void helping to evaluate unions to nothing 
 }
 
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]

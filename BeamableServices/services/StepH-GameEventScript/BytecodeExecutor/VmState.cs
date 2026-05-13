@@ -47,13 +47,6 @@ public struct VmState
 
     public readonly ushort CodeSegmentSize; 
 
-    private bool RaiseError(string message)
-    {
-        State = StateValue.Error;
-        ErrorMessage = message;
-        return false;
-    }
-    
     public VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         Binary = binary;
@@ -81,6 +74,14 @@ public struct VmState
         return true;
 
     }
+
+    public bool RaiseError(string message)
+    {
+        State = StateValue.Error;
+        ErrorMessage = message;
+        return false;
+    }
+
 
     public void Reset()
     {

@@ -2,66 +2,66 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegister.VmValueKind;
+using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 public static class VmRegisterIntegerArithmetic
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerAdd(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerAdd(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        return a.IntegerValue + b.IntegerValue;
+        if (a.Kind != Integer || b.Kind != Integer || a.Unit != b.Unit) dst.SetNothing();
+        else dst.SetInteger(a.IntegerValue + b.IntegerValue, a.Unit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerSubtract(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerSubtract(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        return a.IntegerValue - b.IntegerValue;
+        if (a.Kind != Integer || b.Kind != Integer || a.Unit != b.Unit) dst.SetNothing();
+        else dst.SetInteger(a.IntegerValue - b.IntegerValue, a.Unit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerMultiply(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerMultiply(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        return a.IntegerValue * b.IntegerValue;
+        if (a.Kind != Integer || b.Kind != Integer || (a.HasUnit && b.HasUnit)) dst.SetNothing();
+        else dst.SetInteger(a.IntegerValue * b.IntegerValue, a.Unit is UnitNone ? b.Unit : a.Unit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerDivide(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerDivide(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        return a.IntegerValue / b.IntegerValue;
+        if (a.Kind != Integer || b.Kind != Integer || b.IntegerValue == 0 || !TryQuotientUnit(ref a, ref b, out var unit)) dst.SetNothing();
+        else dst.SetInteger(a.IntegerValue / b.IntegerValue, unit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerFloorDivide(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerFloorDivide(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        // FIXME: Needs correct implementation
-        return a.IntegerValue / b.IntegerValue;
+        dst.VmIntegerDivide(ref a, ref b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerModulo(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerModulo(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        return a.IntegerValue % b.IntegerValue;
+        if (a.Kind != Integer || b.Kind != Integer || b.IntegerValue == 0 || a.Unit != b.Unit) dst.SetNothing();
+        else dst.SetInteger(a.IntegerValue % b.IntegerValue, a.Unit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerRemainder(ref this VmRegister a, ref VmRegister b)
+    public static void VmIntegerRemainder(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
     {
-        if (a.Kind != Integer || b.Kind != Integer) return null;
-        // FIXME: Needs correct implementation
-        return a.IntegerValue % b.IntegerValue;
+        dst.VmIntegerModulo(ref a, ref b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long? VmIntegerNegate(ref this VmRegister a)
+    public static void VmIntegerNegate(ref this VmRegister dst, ref VmRegister a)
     {
-        return -a.IntegerValueOrNothing;
+        if (a.Kind != Integer) dst.SetNothing();
+        else dst.SetInteger(-a.IntegerValue, a.Unit);
     }
+
 }

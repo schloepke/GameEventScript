@@ -586,7 +586,7 @@ interface StepH.GameEventScript.Api.IGameEventScriptSeries
   method System.Boolean TryGetTerm(System.Int64 index, StepH.GameEventScript.Types.GameEventScriptValue& value)
   property System.String SignatureId { get }
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
-  ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 globalRegisterCount, System.UInt16 maxLocalRegisterCount, System.UInt16 stackSize)
+  ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptContext context)
 struct StepH.GameEventScript.BytecodeExecutor.VmRegister
   method System.Boolean IsUnit(StepH.GameEventScript.Types.GameEventScriptNumericUnit requiredUnit)
@@ -631,54 +631,61 @@ enum StepH.GameEventScript.BytecodeExecutor.VmRegister.VmValueKind
   enum-field DataPointer = 6
   enum-field CodePointer = 7
 static class StepH.GameEventScript.BytecodeExecutor.VmRegisterBooleanLogic
-  method static System.Boolean? VmAnd(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmOr(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmXor(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmAnd(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmNot(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a)
+  method static System.Void VmOr(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmXor(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
 static class StepH.GameEventScript.BytecodeExecutor.VmRegisterCompare
-  method static System.Boolean? VmApproxEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmGreater(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmLess(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmNotEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmApproxEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmGreater(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmLess(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmNotEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
 static class StepH.GameEventScript.BytecodeExecutor.VmRegisterIntegerArithmetic
-  method static System.Int64? VmIntegerAdd(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Int64? VmIntegerDivide(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Int64? VmIntegerFloorDivide(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Int64? VmIntegerModulo(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Int64? VmIntegerMultiply(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Int64? VmIntegerRemainder(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Int64? VmIntegerSubtract(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerAdd(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerDivide(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerFloorDivide(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerModulo(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerMultiply(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerNegate(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a)
+  method static System.Void VmIntegerRemainder(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerSubtract(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
 static class StepH.GameEventScript.BytecodeExecutor.VmRegisterIntegerCompare
-  method static System.Boolean? VmIntegerEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmIntegerGreater(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmIntegerGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmIntegerLess(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmIntegerLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
-  method static System.Boolean? VmIntegerNotEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerGreater(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerLess(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Void VmIntegerNotEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& dst, StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
 struct StepH.GameEventScript.BytecodeExecutor.VmState
-  ctor VmState(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 stackSize, System.UInt16 globalRegisterCount)
+  ctor VmState(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
+  field System.UInt16 CodeSegmentSize
+  field System.UInt16 RegisterFrameLength
+  field System.UInt16 RegisterFrameStart
   method StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
+  method System.Boolean CallAddress(System.UInt16 address, System.UInt16? resultRegister)
+  method System.Boolean CallAddressFromRegister(System.UInt16 registerIndex, System.UInt16? resultRegister)
   method System.Boolean PrepareMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.ReadOnlySpan<System.UInt16> FetchUInt16SliceTableByPointer(System.UInt16 index)
   method System.String FetchStringByPointer(System.UInt16 index)
-  method System.Void CallAddress(System.UInt16 address, System.UInt16? resultRegister)
-  method System.Void CallAddressFromRegister(System.UInt16 registerIndex, System.UInt16? resultRegister)
   method System.Void JumpAddress(System.UInt16 address)
   method System.Void Reset()
   method System.Void ReturnValue(System.UInt16 registerIndex)
   method System.Void ReturnVoid()
   property StepH.GameEventScript.Api.GameEventScriptBinary Binary { get set }
-  property StepH.GameEventScript.BytecodeExecutor.VmRegister[] GlobalRegisters { get set }
+  property StepH.GameEventScript.BytecodeExecutor.VmRegister[] RegisterSlots { get set }
   property StepH.GameEventScript.BytecodeExecutor.VmState.CallFrame[] CallStack { get set }
   property StepH.GameEventScript.BytecodeExecutor.VmState.StateValue State { get set }
   property System.Collections.Generic.Dictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> MessageHandlerBindings { get set }
-  property System.Collections.Generic.List<StepH.GameEventScript.BytecodeExecutor.VmRegister[]> LocalRegisters { get set }
+  property System.String ErrorMessage { get set }
   property System.UInt16 CallStackPointer { get set }
   property System.UInt16 InstructionPointer { get set }
 struct StepH.GameEventScript.BytecodeExecutor.VmState.CallFrame
   field System.UInt16 InstructionPointer
+  field System.UInt16 RegisterFrameLength
+  field System.UInt16 RegisterFrameStart
   field System.UInt16? ResultRegisterIndex
 enum StepH.GameEventScript.BytecodeExecutor.VmState.StateValue
   enum-field Initialized = 0

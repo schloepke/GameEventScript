@@ -1,8 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using StepH.GameEventScript.Types;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegister.VmValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -27,24 +26,14 @@ public struct VmRegister
     internal long IntegerValue;
     internal double FloatValue;
     internal bool BooleanValue;
-    internal GameEventScriptNumericUnit? Unit;
+    internal GameEventScriptBytecodeInstructionUnit Unit;
 
-    public bool IsNothing => Kind is Nothing;
-    public bool IsBoolean => Kind is Boolean;
     public bool IsTrue => BooleanValue;
     public bool IsFalse => !BooleanValue && Kind is not Nothing;
     public bool IsNotTrue => !BooleanValue;
-    public bool IsInteger => Kind is Integer;
-    public bool IsFloat => Kind is Float or Integer;
-    
-    public bool IsPointer => Kind is StringPointer or DataPointer or CodePointer;
 
-    public bool IsStringPointer => Kind is StringPointer;
-    public bool IsDataPointer => Kind is DataPointer;
-    public bool IsCodePointer => Kind is CodePointer;
-
-    public bool IsUnit(GameEventScriptNumericUnit requiredUnit) => Unit == requiredUnit;
-    public bool HasUnit => Unit is not null;
+    public bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
+    public bool HasUnit => Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone;
 
     public void SetNothing()
     {
@@ -52,7 +41,7 @@ public struct VmRegister
         FloatValue = 0.0;
         IntegerValue = 0;
         BooleanValue = false;
-        Unit = null;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
 
     public void SetBoolean(bool value)
@@ -61,7 +50,7 @@ public struct VmRegister
         FloatValue = value ? 1.0 : 0.0;
         IntegerValue = value ? 1 : 0;
         BooleanValue = value;
-        Unit = null;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
 
     public void SetBooleanOrNothing(bool? value)
@@ -70,7 +59,7 @@ public struct VmRegister
         else SetBoolean(value.Value);
     }
 
-    public void SetInteger(long value, GameEventScriptNumericUnit? unit = null)
+    public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Integer;
         FloatValue = value;
@@ -79,13 +68,13 @@ public struct VmRegister
         Unit = unit;
     }
     
-    public void SetIntegerOrNothing(long? value, GameEventScriptNumericUnit? unit = null)
+    public void SetIntegerOrNothing(long? value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         if (value is null) SetNothing();
         else SetInteger(value.Value, unit);
     }
 
-    public void SetFloat(double value, GameEventScriptNumericUnit? unit = null)
+    public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Float;
         FloatValue = value;
@@ -94,7 +83,7 @@ public struct VmRegister
         Unit = unit;
     }
 
-    public void SetFloatOrNothing(double? value, GameEventScriptNumericUnit? unit = null)
+    public void SetFloatOrNothing(double? value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         if (value is null) SetNothing();
         else SetFloat(value.Value, unit);
@@ -106,7 +95,7 @@ public struct VmRegister
         IntegerValue = pointer;
         FloatValue = 0;
         BooleanValue = true;
-        Unit = null;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
 
     public void SetStringPointer(ushort pointer)
@@ -115,7 +104,7 @@ public struct VmRegister
         IntegerValue = pointer;
         FloatValue = 0;
         BooleanValue = true;
-        Unit = null;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
 
     public void SetTagPointer(ushort pointer)
@@ -124,7 +113,7 @@ public struct VmRegister
         IntegerValue = pointer;
         FloatValue = 0;
         BooleanValue = true;
-        Unit = null;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
 
     public void SetCodePointer(ushort pointer)
@@ -133,13 +122,13 @@ public struct VmRegister
         IntegerValue = pointer;
         FloatValue = 0;
         BooleanValue = true;
-        Unit = null;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
     
-    public ushort? CodePointerOrNothing => IsCodePointer ? (ushort)IntegerValue : null;
-    public long? IntegerValueOrNothing => IsInteger ? IntegerValue : null;
-    public double? FloatValueOrNothing => IsFloat ? FloatValue : null;
-    public bool? BooleanValueOrNothing => IsBoolean ? BooleanValue : null;
+    public ushort? CodePointerOrNothing => Kind is CodePointer ? (ushort)IntegerValue : null;
+    public long? IntegerValueOrNothing => Kind is Integer ? IntegerValue : null;
+    public double? FloatValueOrNothing => Kind is Float or Integer ? FloatValue : null;
+    public bool? BooleanValueOrNothing => Kind is Boolean ? BooleanValue : null;
 
     public long AsIntegerValue => IntegerValue;
     public double AsFloatValue => FloatValue;

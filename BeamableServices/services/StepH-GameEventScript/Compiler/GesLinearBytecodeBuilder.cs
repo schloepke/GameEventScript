@@ -2073,10 +2073,10 @@ internal sealed class GesLinearBytecodeBuilder
     private static byte EncodeNumericUnitAndFlags(GameEventScriptNumericUnit? unit)
         => unit switch
         {
-            null => (byte)GameEventScriptBytecodeInstructionUnit.None,
-            GameEventScriptNumericUnit.Degree => (byte)GameEventScriptBytecodeInstructionUnit.Degree,
-            GameEventScriptNumericUnit.Meter => (byte)GameEventScriptBytecodeInstructionUnit.Meter,
-            GameEventScriptNumericUnit.Second => (byte)GameEventScriptBytecodeInstructionUnit.Second,
+            null => (byte)GameEventScriptBytecodeInstructionUnit.UnitNone,
+            GameEventScriptNumericUnit.Degree => (byte)GameEventScriptBytecodeInstructionUnit.UnitDegree,
+            GameEventScriptNumericUnit.Meter => (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter,
+            GameEventScriptNumericUnit.Second => (byte)GameEventScriptBytecodeInstructionUnit.UnitSecond,
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 

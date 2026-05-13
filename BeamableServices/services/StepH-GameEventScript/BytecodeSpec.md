@@ -318,6 +318,9 @@ Operands are interpreted by opcode:
   parameters.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
   indices directly in `A_U16`, `B_U16`, `C_U16`, or `D_U16`.
+- `ReserveSlots A_U16` is the required prolog instruction for every executable
+  entry address. It declares the frame slot count for that entry. The bind/export
+  tables do not carry this internal execution value.
 
 Unused instruction fields are undefined and ignored. The instruction word does
 not use sentinel operands for optional operands. Optional forms are represented
@@ -336,7 +339,7 @@ The current groups are:
 0x10 generic boolean, comparison, arithmetic, and default operations
 0x20 primitive integer fast-path operations
 0x30 unary, random, dice, and range value operations
-0x40 collection/text operations, key/value projections, short-circuit markers
+0x40 collection/text operations, key/value projections, short-circuit/frame markers
 0x50 primitive/domain casts
 0x60 collection/message/reference casts
 0x70 primitive/domain type checks
@@ -413,7 +416,10 @@ operation-local debug state such as selector index or item index.
 
 ## Entry Tables
 
-Handlers and callables are metadata over the shared code segment.
+Handlers and callables are metadata over the shared code segment. Their
+`EntryAddress` points at a `ReserveSlots` prolog instruction. The instruction
+immediately after the prolog is the first executable body instruction, typically
+one or more `BindParameter` instructions.
 
 ```text
 HandlerEntry
@@ -425,7 +431,6 @@ HandlerEntry
   RequiredTags[]
   ExcludedTags[]
   EntryAddress
-  LocalSlotCount
   DeclarationOrder
 
 CallableEntry
@@ -435,13 +440,13 @@ CallableEntry
   SignatureLabels
   SignatureId
   EntryAddress
-  LocalSlotCount
   ReturnSlot
 ```
 
-`LocalSlotCount` includes parameters, declared locals, and compiler temporaries.
-Temporary slots are implementation details but are part of the portable frame
-layout for the bytecode version.
+The frame slot count is intentionally not part of the bind/export metadata. It
+is encoded as `ReserveSlots A_U16` at the entry address because it is a VM
+execution detail needed equally by exported handlers/callables and private
+helper entries.
 
 `ExactSignature` handlers subscribe by `SignatureId`. `MessageEnvelope` handlers
 subscribe by `MessageName` and tag filters only; the runtime invokes them with a

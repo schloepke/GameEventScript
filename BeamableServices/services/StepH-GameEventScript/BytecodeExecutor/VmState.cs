@@ -13,39 +13,58 @@ public struct VmState
 {
     public enum StateValue
     {
-        Initialized, Ready, Running, Halted, Error
+        Initialized,
+        Ready,
+        Running,
+        Halted,
+        Error
     }
 
     public struct CallFrame
     {
         public ushort InstructionPointer;
         public ushort? ResultRegisterIndex;
+        public ushort RegisterFrameStart;
+        public ushort RegisterFrameLength;
     }
-    
+
     public GameEventScriptBinary Binary { get; init; }
-    
+
     public StateValue State { get; internal set; }
 
     public ushort InstructionPointer { get; private set; } = 0;
     public ushort CallStackPointer { get; private set; } = 0;
     public CallFrame[] CallStack { get; init; }
 
-    public VmRegister[] GlobalRegisters { get; init; }
-    public List<VmRegister[]> LocalRegisters { get; init; }
+    public VmRegister[] RegisterSlots { get; init; }
+
+    public ushort RegisterFrameStart = 0;
+    public ushort RegisterFrameLength = 0;
     
+    public string? ErrorMessage { get; private set; } = null;
+
     public Dictionary<string, GameEventScriptBinaryBindEntry> MessageHandlerBindings { get; init; }
 
-    public VmState(GameEventScriptBinary binary, ushort stackSize, ushort globalRegisterCount)
+    public readonly ushort CodeSegmentSize; 
+
+    private bool RaiseError(string message)
+    {
+        State = StateValue.Error;
+        ErrorMessage = message;
+        return false;
+    }
+    
+    public VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         Binary = binary;
+        CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        GlobalRegisters = new VmRegister[globalRegisterCount];
-        LocalRegisters = [];
-        for (var i = 0; i < GlobalRegisters.Length; i++)
+        RegisterSlots = new VmRegister[registerSize];
+        for (var i = 0; i < RegisterSlots.Length; i++)
         {
-            GlobalRegisters[i].SetNothing();
+            RegisterSlots[i].SetNothing();
         }
         MessageHandlerBindings = binary.BindTable.Entries.Where(x => x.Kind == GameEventScriptBinaryBindKind.MessageHandler).ToDictionary(
             bind => GameEventScriptMessageSignature.CreateSignatureId(binary.StringTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.StringTable.Resolve)),
@@ -54,16 +73,13 @@ public struct VmState
 
     public bool PrepareMessage(GameEventScriptMessage message)
     {
-        if(State != StateValue.Initialized) throw new InvalidOperationException("Handler can only be loaded when the VM is initialized.");
+        if (State != StateValue.Initialized) return RaiseError("Handler can only be loaded when the VM is initialized.");
         var signatureId = message.SignatureId;
-        if (MessageHandlerBindings.TryGetValue(signatureId, out var bind))
-        {
-            InstructionPointer = bind.EntryAddress;
-            State = StateValue.Ready;
-            return true;
-        }
-        State = StateValue.Error;
-        return false;
+        if (!MessageHandlerBindings.TryGetValue(signatureId, out var bind)) return RaiseError($"No handler found for message '{signatureId}'.");
+        InstructionPointer = bind.EntryAddress;
+        State = StateValue.Ready;
+        return true;
+
     }
 
     public void Reset()
@@ -71,6 +87,8 @@ public struct VmState
         InstructionPointer = 0;
         CallStackPointer = 0;
         State = StateValue.Initialized;
+        RegisterFrameStart = 0;
+        RegisterFrameLength = 0;
     }
 
     public void JumpAddress(ushort address)
@@ -78,19 +96,42 @@ public struct VmState
         InstructionPointer = address;
     }
 
-    public void CallAddress(ushort address, ushort? resultRegister = null)
+    public bool CallAddress(ushort address, ushort? resultRegister = null)
     {
-        if (CallStackPointer >= CallStack.Length) throw new StackOverflowException();
-        CallStack[CallStackPointer++] = new CallFrame { InstructionPointer = InstructionPointer, ResultRegisterIndex = resultRegister };
+        if (CallStackPointer >= CallStack.Length) return RaiseError("Stack overflow");
+        CallStack[CallStackPointer++] = new CallFrame
+        {
+            InstructionPointer = InstructionPointer,
+            ResultRegisterIndex = resultRegister,
+            RegisterFrameStart = RegisterFrameStart,
+            RegisterFrameLength = RegisterFrameLength
+        };
         InstructionPointer = address;
+        RegisterFrameStart += RegisterFrameLength;
+        RegisterFrameLength = 0;
+        return true;
     }
 
-    public void CallAddressFromRegister(ushort registerIndex, ushort? resultRegister = null)
+    public bool CallAddressFromRegister(ushort registerIndex, ushort? resultRegister = null)
     {
-        if (CallStackPointer >= CallStack.Length) throw new StackOverflowException();
-        var register = GlobalRegisters[registerIndex];
-        CallStack[CallStackPointer++] = new CallFrame { InstructionPointer = InstructionPointer, ResultRegisterIndex = resultRegister };
-        InstructionPointer = register.CodePointerOrNothing ?? throw new ArgumentException($"Register {registerIndex} is not a code pointer.");
+        if (CallStackPointer >= CallStack.Length) return RaiseError("Stack overflow");
+        if (registerIndex >= RegisterFrameLength) return RaiseError($"Register overflow");
+        var register = RegisterSlots[registerIndex + RegisterFrameStart];
+        CallStack[CallStackPointer++] = new CallFrame
+        {
+            InstructionPointer = InstructionPointer,
+            ResultRegisterIndex = resultRegister,
+            RegisterFrameStart = RegisterFrameStart,
+            RegisterFrameLength = RegisterFrameLength
+        };
+        if (register.CodePointerOrNothing == null)
+        {
+            return RaiseError($"Illegal call: register {registerIndex} is not a code pointer.");
+        }
+        InstructionPointer = register.CodePointerOrNothing ?? throw new InvalidOperationException();
+        RegisterFrameStart += RegisterFrameLength;
+        RegisterFrameLength = 0;
+        return true;
     }
 
     public void ReturnVoid()
@@ -100,21 +141,27 @@ public struct VmState
             State = StateValue.Halted;
             return;
         }
+
         var callFrame = CallStack[--CallStackPointer];
-        InstructionPointer = callFrame.InstructionPointer; 
-        if (callFrame.ResultRegisterIndex.HasValue) GlobalRegisters[callFrame.ResultRegisterIndex.Value].SetNothing();
+        InstructionPointer = callFrame.InstructionPointer;
+        RegisterFrameStart = callFrame.RegisterFrameStart;
+        RegisterFrameLength = callFrame.RegisterFrameLength;
+        if (callFrame.ResultRegisterIndex.HasValue) RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart].SetNothing();
     }
 
     public void ReturnValue(ushort registerIndex)
     {
+        var result = RegisterSlots[registerIndex + RegisterFrameStart];
         var callFrame = CallStack[--CallStackPointer];
-        InstructionPointer = callFrame.InstructionPointer; 
-        if (callFrame.ResultRegisterIndex.HasValue) GlobalRegisters[callFrame.ResultRegisterIndex.Value] = GlobalRegisters[registerIndex];
+        InstructionPointer = callFrame.InstructionPointer;
+        RegisterFrameStart = callFrame.RegisterFrameStart;
+        RegisterFrameLength = callFrame.RegisterFrameLength;
+        if (callFrame.ResultRegisterIndex.HasValue) RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
 
     public GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
     {
-        return InstructionPointer >= ushort.MaxValue ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
+        return InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
     }
 
     public string FetchStringByPointer(ushort index)
@@ -127,4 +174,3 @@ public struct VmState
         return Binary.UInt16SliceTable.Resolve(index);
     }
 }
-

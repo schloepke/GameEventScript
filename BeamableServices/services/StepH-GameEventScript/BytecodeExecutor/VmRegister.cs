@@ -97,7 +97,7 @@ public struct VmRegister
     public void SetFloatOrNothing(double? value, GameEventScriptNumericUnit? unit = null)
     {
         if (value is null) SetNothing();
-        else SetFloat(value.Value);
+        else SetFloat(value.Value, unit);
     }
 
     public void SetDataPointer(ushort pointer)

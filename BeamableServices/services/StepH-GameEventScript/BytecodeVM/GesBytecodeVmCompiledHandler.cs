@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.BytecodeVM;
 
 internal sealed class GesBytecodeVmCompiledHandler
 {
-    internal GesBytecodeVmCompiledHandler(GameEventScriptBytecodeHandler handler, bool diagnosticsEnabled)
+    internal GesBytecodeVmCompiledHandler(GameEventScriptBytecodeHandler handler, bool diagnosticsEnabled, int localSlotCount)
     {
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         Message = handler.Message;
@@ -20,7 +20,7 @@ internal sealed class GesBytecodeVmCompiledHandler
         SignatureId = GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels);
         DeclarationOrder = handler.DeclarationOrder;
         EntryAddress = handler.EntryAddress;
-        LocalSlotCount = handler.LocalSlotCount;
+        LocalSlotCount = localSlotCount;
         Slots = handler.Slots.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         DiagnosticsEnabled = diagnosticsEnabled;
         Definition = GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels);

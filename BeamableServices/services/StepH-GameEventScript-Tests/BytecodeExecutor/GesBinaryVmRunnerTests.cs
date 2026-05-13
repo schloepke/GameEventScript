@@ -44,9 +44,8 @@ public sealed class BytecodeExecutorTests
         TestContext.WriteLine("-----");
         TestContext.WriteLine("Binary file:\n" + binary.Dump());
         TestContext.WriteLine("-----");
-
         
-        var runner = new GameEventScriptVirtualMaschine(binary, 20, 20, 20);
+        var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);
         var handled = runner.ExecuteMessage(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(40))), context);
 
         Assert.IsTrue(handled);

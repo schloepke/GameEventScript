@@ -279,6 +279,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     ShortCircuitOr = 0x4B,
     ShortCircuitAnd = 0x4C,
     ShortCircuitImplies = 0x4D,
+    ReserveSlots = 0x4E,
     
     #endregion
     #region Primitive/domain casts

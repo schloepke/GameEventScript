@@ -84,6 +84,14 @@ internal sealed class GesBinaryVmRunner
                     maxSlot = Math.Max(maxSlot, instruction.A_U16);
                     break;
 
+                case GameEventScriptBytecodeOpCode.ReserveSlots:
+                    if (instruction.A_U16 > 0)
+                    {
+                        maxSlot = Math.Max(maxSlot, instruction.A_U16 - 1);
+                    }
+
+                    break;
+
                 case GameEventScriptBytecodeOpCode.Add:
                 case GameEventScriptBytecodeOpCode.Subtract:
                 case GameEventScriptBytecodeOpCode.Multiply:
@@ -161,6 +169,7 @@ internal sealed class GesBinaryVmRunState
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.Nop:
+                case GameEventScriptBytecodeOpCode.ReserveSlots:
                 case GameEventScriptBytecodeOpCode.EnterScope:
                 case GameEventScriptBytecodeOpCode.ExitScope:
                     break;

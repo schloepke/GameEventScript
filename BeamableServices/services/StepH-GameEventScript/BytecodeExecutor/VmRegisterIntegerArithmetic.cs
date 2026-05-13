@@ -58,4 +58,10 @@ public static class VmRegisterIntegerArithmetic
         // FIXME: Needs correct implementation
         return a.IntegerValue % b.IntegerValue;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static long? VmIntegerNegate(ref this VmRegister a)
+    {
+        return -a.IntegerValueOrNothing;
+    }
 }

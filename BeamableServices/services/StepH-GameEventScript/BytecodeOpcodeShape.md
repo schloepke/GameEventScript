@@ -262,7 +262,8 @@ runtime dispatch step.
 | 0x4B | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
 | 0x4C | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
 | 0x4D | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
-| 0x4E..0x4F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text or short-circuit operations. |
+| 0x4E | `ReserveSlots` | - | - | slot count immediate | - | - | - | - | - | Entry prolog. Reserves/declares the frame slot count for the entry at this address. |
+| 0x4F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text, frame, or short-circuit operations. |
 | 0x50 | `CastNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x51 | `CastBoolean` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x52 | `CastInteger` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |

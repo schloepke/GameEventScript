@@ -39,6 +39,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         StringAssert.Contains(first, "code[");
         StringAssert.Contains(first, "@0000");
         StringAssert.Contains(first, "handlers[1]");
+        StringAssert.Contains(first, "ReserveSlots");
         StringAssert.Contains(first, "LoadInteger");
         StringAssert.Contains(first, "MoveSlot");
         StringAssert.Contains(first, "BuildMessage");
@@ -46,7 +47,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsFalse(first.Contains("maxStackDepth", StringComparison.Ordinal));
         Assert.IsFalse(first.Contains("nestedExpression", StringComparison.Ordinal));
         Assert.IsNotEmpty(compiled.Code);
-        Assert.IsGreaterThanOrEqualTo(compiled.Handlers["Start"][0].LocalSlotCount, compiled.MaxFrameSlots);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, compiled.Code[compiled.Handlers["Start"][0].EntryAddress].OpCode);
+        Assert.IsGreaterThanOrEqualTo(1, compiled.Code[compiled.Handlers["Start"][0].EntryAddress].A_U16);
         Assert.IsGreaterThanOrEqualTo(compiled.Handlers["Start"][0].EntryAddress, 0);
         Assert.IsFalse(first.Contains("EvaluateExpression", StringComparison.Ordinal));
     }
@@ -262,8 +264,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(compiled.Code.Count, executable.LinearExecutable.Code);
         Assert.AreEqual(compiled.MaxFrameSlots, executable.LinearExecutable.MaxFrameSlots);
         Assert.AreEqual(handler.EntryAddress, linearHandler.EntryAddress);
-        Assert.AreEqual(handler.LocalSlotCount, linearHandler.LocalSlotCount);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, executable.LinearExecutable.Code[linearHandler.EntryAddress].OpCode);
+        Assert.AreEqual(executable.LinearExecutable.Code[linearHandler.EntryAddress].A_U16, linearHandler.LocalSlotCount);
         Assert.AreEqual(callable.EntryAddress, linearCallable.EntryAddress);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, executable.LinearExecutable.Code[linearCallable.EntryAddress].OpCode);
+        Assert.AreEqual(executable.LinearExecutable.Code[linearCallable.EntryAddress].A_U16, linearCallable.LocalSlotCount);
         Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
         Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
             instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessage or GameEventScriptBytecodeOpCode.EmitMessageWithTags &&

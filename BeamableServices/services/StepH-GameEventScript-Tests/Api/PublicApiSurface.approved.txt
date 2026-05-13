@@ -6,11 +6,11 @@ struct StepH.GameEventScript.Api.GameEventScriptBinary
   property StepH.GameEventScript.Api.GameEventScriptUInt16Table UInt16SliceTable { get set }
   property System.String ModuleName { get set }
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry
-  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt32 entryAddress)
+  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress)
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
   property System.Collections.Generic.IReadOnlyList<System.UInt16> ArgumentNames { get }
+  property System.UInt16 EntryAddress { get }
   property System.UInt16 Name { get }
-  property System.UInt32 EntryAddress { get }
 enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
   enum-field MessageHandler = 16
   enum-field Function = 17
@@ -65,7 +65,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.Int32 EntryAddress { get set }
-  property System.Int32 LocalSlotCount { get set }
   property System.Int32 ReturnSlot { get set }
   property System.String Name { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind
@@ -99,7 +98,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.Int32 DeclarationOrder { get }
   property System.Int32 EntryAddress { get set }
-  property System.Int32 LocalSlotCount { get }
   property System.String Message { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
@@ -119,8 +117,10 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 A_U16
   field System.UInt16 B_U16
   field System.UInt16 C_U16
+  field System.UInt16 Condition_U16
   field System.UInt16 D_U16
   field System.UInt16 Dest_U16
+  field System.UInt16 Target_U16
   field System.UInt32 A_U32
   field System.UInt32 B_U32
   field System.UInt64 U64
@@ -209,6 +209,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field ShortCircuitOr = 75
   enum-field ShortCircuitAnd = 76
   enum-field ShortCircuitImplies = 77
+  enum-field ReserveSlots = 78
   enum-field CastNothing = 80
   enum-field CastBoolean = 81
   enum-field CastInteger = 82
@@ -584,6 +585,107 @@ interface StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection
 interface StepH.GameEventScript.Api.IGameEventScriptSeries
   method System.Boolean TryGetTerm(System.Int64 index, StepH.GameEventScript.Types.GameEventScriptValue& value)
   property System.String SignatureId { get }
+class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
+  ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 globalRegisterCount, System.UInt16 maxLocalRegisterCount, System.UInt16 stackSize)
+  method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptContext context)
+struct StepH.GameEventScript.BytecodeExecutor.VmRegister
+  method System.Boolean IsUnit(StepH.GameEventScript.Types.GameEventScriptNumericUnit requiredUnit)
+  method System.Void SetBoolean(System.Boolean value)
+  method System.Void SetBooleanOrNothing(System.Boolean? value)
+  method System.Void SetCodePointer(System.UInt16 pointer)
+  method System.Void SetDataPointer(System.UInt16 pointer)
+  method System.Void SetFloat(System.Double value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
+  method System.Void SetFloatOrNothing(System.Double? value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
+  method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
+  method System.Void SetIntegerOrNothing(System.Int64? value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
+  method System.Void SetNothing()
+  method System.Void SetStringPointer(System.UInt16 pointer)
+  method System.Void SetTagPointer(System.UInt16 pointer)
+  property StepH.GameEventScript.BytecodeExecutor.VmRegister.VmValueKind ValueKind { get }
+  property System.Boolean AsBooleanValue { get }
+  property System.Boolean HasUnit { get }
+  property System.Boolean IsBoolean { get }
+  property System.Boolean IsCodePointer { get }
+  property System.Boolean IsDataPointer { get }
+  property System.Boolean IsFalse { get }
+  property System.Boolean IsFloat { get }
+  property System.Boolean IsInteger { get }
+  property System.Boolean IsNotTrue { get }
+  property System.Boolean IsNothing { get }
+  property System.Boolean IsPointer { get }
+  property System.Boolean IsStringPointer { get }
+  property System.Boolean IsTrue { get }
+  property System.Boolean? BooleanValueOrNothing { get }
+  property System.Double AsFloatValue { get }
+  property System.Double? FloatValueOrNothing { get }
+  property System.Int64 AsIntegerValue { get }
+  property System.Int64? IntegerValueOrNothing { get }
+  property System.UInt16? CodePointerOrNothing { get }
+enum StepH.GameEventScript.BytecodeExecutor.VmRegister.VmValueKind
+  enum-field Nothing = 0
+  enum-field Boolean = 1
+  enum-field Integer = 2
+  enum-field Float = 3
+  enum-field StringPointer = 4
+  enum-field TagPointer = 5
+  enum-field DataPointer = 6
+  enum-field CodePointer = 7
+static class StepH.GameEventScript.BytecodeExecutor.VmRegisterBooleanLogic
+  method static System.Boolean? VmAnd(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmOr(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmXor(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+static class StepH.GameEventScript.BytecodeExecutor.VmRegisterCompare
+  method static System.Boolean? VmApproxEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmGreater(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmLess(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmNotEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+static class StepH.GameEventScript.BytecodeExecutor.VmRegisterIntegerArithmetic
+  method static System.Int64? VmIntegerAdd(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Int64? VmIntegerDivide(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Int64? VmIntegerFloorDivide(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Int64? VmIntegerModulo(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Int64? VmIntegerMultiply(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Int64? VmIntegerRemainder(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Int64? VmIntegerSubtract(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+static class StepH.GameEventScript.BytecodeExecutor.VmRegisterIntegerCompare
+  method static System.Boolean? VmIntegerEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmIntegerGreater(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmIntegerGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmIntegerLess(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmIntegerLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+  method static System.Boolean? VmIntegerNotEqual(StepH.GameEventScript.BytecodeExecutor.VmRegister& a, StepH.GameEventScript.BytecodeExecutor.VmRegister& b)
+struct StepH.GameEventScript.BytecodeExecutor.VmState
+  ctor VmState(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 stackSize, System.UInt16 globalRegisterCount)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
+  method System.Boolean PrepareMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.ReadOnlySpan<System.UInt16> FetchUInt16SliceTableByPointer(System.UInt16 index)
+  method System.String FetchStringByPointer(System.UInt16 index)
+  method System.Void CallAddress(System.UInt16 address, System.UInt16? resultRegister)
+  method System.Void CallAddressFromRegister(System.UInt16 registerIndex, System.UInt16? resultRegister)
+  method System.Void JumpAddress(System.UInt16 address)
+  method System.Void Reset()
+  method System.Void ReturnValue(System.UInt16 registerIndex)
+  method System.Void ReturnVoid()
+  property StepH.GameEventScript.Api.GameEventScriptBinary Binary { get set }
+  property StepH.GameEventScript.BytecodeExecutor.VmRegister[] GlobalRegisters { get set }
+  property StepH.GameEventScript.BytecodeExecutor.VmState.CallFrame[] CallStack { get set }
+  property StepH.GameEventScript.BytecodeExecutor.VmState.StateValue State { get set }
+  property System.Collections.Generic.Dictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> MessageHandlerBindings { get set }
+  property System.Collections.Generic.List<StepH.GameEventScript.BytecodeExecutor.VmRegister[]> LocalRegisters { get set }
+  property System.UInt16 CallStackPointer { get set }
+  property System.UInt16 InstructionPointer { get set }
+struct StepH.GameEventScript.BytecodeExecutor.VmState.CallFrame
+  field System.UInt16 InstructionPointer
+  field System.UInt16? ResultRegisterIndex
+enum StepH.GameEventScript.BytecodeExecutor.VmState.StateValue
+  enum-field Initialized = 0
+  enum-field Ready = 1
+  enum-field Running = 2
+  enum-field Halted = 3
+  enum-field Error = 4
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
 static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper
@@ -906,9 +1008,10 @@ sealed class StepH.GameEventScript.Types.GameEventScriptNothingValue
   method System.String AsText()
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
 enum StepH.GameEventScript.Types.GameEventScriptNumericUnit
-  enum-field Degree = 0
-  enum-field Meter = 1
-  enum-field Second = 2
+  enum-field Percentage = 0
+  enum-field Degree = 1
+  enum-field Meter = 2
+  enum-field Second = 3
 static class StepH.GameEventScript.Types.GameEventScriptNumericUnits
   method static System.Boolean TryParseTypeName(System.String typeName, StepH.GameEventScript.Types.GameEventScriptNumericUnit& unit)
   method static System.String ToSuffix(StepH.GameEventScript.Types.GameEventScriptNumericUnit unit)

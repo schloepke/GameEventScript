@@ -99,7 +99,6 @@ public static class GameEventScriptBytecodeDumper
                 .Append(' ').Append(callable.Kind)
                 .Append(' ').Append(signatureId)
                 .Append(" entry=@").Append(FormatAddress(callable.EntryAddress))
-                .Append(" slots=").Append(callable.LocalSlotCount.ToString(CultureInfo.InvariantCulture))
                 .Append(" return=s").Append(callable.ReturnSlot.ToString(CultureInfo.InvariantCulture))
                 .Append(" params=[").Append(FormatParameters(callable.Parameters, callable.ParameterTypes)).AppendLine("]");
         }
@@ -145,13 +144,7 @@ public static class GameEventScriptBytecodeDumper
                 .Append(" params=[").Append(FormatParameters(handler.Parameters, handler.ParameterTypes)).Append(']')
                 .Append(" matching=[").Append(FormatTags(handler.RequiredTags)).Append(']')
                 .Append(" without=[").Append(FormatTags(handler.ExcludedTags)).Append(']')
-                .Append(" entry=@").Append(FormatAddress(handler.EntryAddress))
-                .Append(" slots=").AppendLine(handler.LocalSlotCount.ToString(CultureInfo.InvariantCulture));
-            if (handler.Slots.Count > 0)
-            {
-                builder.Append("    slots: ")
-                    .AppendLine(string.Join(", ", handler.Slots.OrderBy(pair => pair.Value).Select(pair => $"{pair.Key}=s{pair.Value.ToString(CultureInfo.InvariantCulture)}")));
-            }
+                .Append(" entry=@").AppendLine(FormatAddress(handler.EntryAddress));
         }
     }
 
@@ -169,6 +162,10 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.ExitScope:
             case GameEventScriptBytecodeOpCode.ShortCircuitOr:
             case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                break;
+
+            case GameEventScriptBytecodeOpCode.ReserveSlots:
+                AppendIndex(builder, "count", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.BindParameter:
@@ -588,6 +585,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.Nop or
             GameEventScriptBytecodeOpCode.ShortCircuitOr or
             GameEventScriptBytecodeOpCode.ShortCircuitAnd or
+            GameEventScriptBytecodeOpCode.ReserveSlots or
             GameEventScriptBytecodeOpCode.Jump or
             GameEventScriptBytecodeOpCode.JumpIfTrue or
             GameEventScriptBytecodeOpCode.JumpIfFalse or

@@ -122,7 +122,6 @@ public sealed class GameEventScriptBytecodeHandler
         DeclarationOrder = declarationOrder;
         Slots = NormalizeSlots(slots);
         EntryAddress = entryAddress;
-        LocalSlotCount = GetLocalSlotCount(Slots);
     }
 
     public string Message { get; }
@@ -142,8 +141,6 @@ public sealed class GameEventScriptBytecodeHandler
     public int DeclarationOrder { get; }
 
     public int EntryAddress { get; internal set; }
-
-    public int LocalSlotCount { get; }
 
     public IReadOnlyDictionary<string, int> Slots { get; }
 
@@ -188,10 +185,6 @@ public sealed class GameEventScriptBytecodeHandler
         return copy;
     }
 
-    private static int GetLocalSlotCount(IReadOnlyDictionary<string, int> slots)
-        => slots.Count == 0
-            ? 0
-            : slots.Values.Max() + 1;
 }
 
 public sealed class GameEventScriptBytecodeCallable
@@ -203,7 +196,6 @@ public sealed class GameEventScriptBytecodeCallable
         IReadOnlyList<string> signatureLabels,
         IReadOnlyList<string?>? parameterTypes = null,
         int entryAddress = -1,
-        int localSlotCount = 0,
         int returnSlot = -1)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -212,7 +204,6 @@ public sealed class GameEventScriptBytecodeCallable
         SignatureLabels = signatureLabels ?? throw new ArgumentNullException(nameof(signatureLabels));
         ParameterTypes = NormalizeParameterTypes(parameterTypes, parameters);
         EntryAddress = entryAddress;
-        LocalSlotCount = localSlotCount;
         ReturnSlot = returnSlot;
     }
 
@@ -227,8 +218,6 @@ public sealed class GameEventScriptBytecodeCallable
     public IReadOnlyList<string?> ParameterTypes { get; }
 
     public int EntryAddress { get; internal set; }
-
-    public int LocalSlotCount { get; internal set; }
 
     public int ReturnSlot { get; internal set; }
 

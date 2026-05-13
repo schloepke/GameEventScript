@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterArithmetic
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double? VmAdd(ref VmRegister a, ref VmRegister b)
+    public static double? VmAdd(ref this VmRegister a, ref VmRegister b)
     {
         if (a.IsNothing || b.IsNothing) return null;
         if (a.IsInteger && b.IsInteger) return a.AsIntegerValue + b.AsIntegerValue;
@@ -18,7 +18,7 @@ internal static class VmRegisterArithmetic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double? VmSubtract(ref VmRegister a, ref VmRegister b)
+    public static double? VmSubtract(ref this VmRegister a, ref VmRegister b)
     {
         if (a.IsNothing || b.IsNothing) return null;
         if (a.IsInteger && b.IsInteger) return a.AsIntegerValue - b.AsIntegerValue;
@@ -30,23 +30,45 @@ internal static class VmRegisterArithmetic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double? VmMultiply(ref VmRegister a, ref VmRegister b)
+    public static double? VmMultiply(ref this VmRegister a, ref VmRegister b)
     {
         // FIXME: Needs correct implementation
         throw new NotImplementedException();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double? VmDivide(ref VmRegister a, ref VmRegister b)
+    public static double? VmDivide(ref this VmRegister a, ref VmRegister b)
     {
         // FIXME: Needs correct implementation
         throw new NotImplementedException();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double? VmPower(ref VmRegister a, ref VmRegister b)
+    public static double? VmPower(ref this VmRegister a, ref VmRegister b)
     {
         // FIXME: Needs correct implementation
         throw new NotImplementedException();
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static double? VmModulo(ref this VmRegister a, ref VmRegister b)
+    {
+        // FIXME: Needs correct implementation
+        throw new NotImplementedException();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static double? VmRemainder(ref this VmRegister a, ref VmRegister b)
+    {
+        // FIXME: Needs correct implementation
+        throw new NotImplementedException();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static double? VmNegate(ref this VmRegister a)
+    {
+        // FIXME: Needs correct implementation
+        throw new NotImplementedException();
+    }
+
 }

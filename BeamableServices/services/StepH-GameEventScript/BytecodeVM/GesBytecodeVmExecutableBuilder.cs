@@ -11,10 +11,19 @@ internal static class GesBytecodeVmExecutableBuilder
     {
         _ = compiled ?? throw new ArgumentNullException(nameof(compiled));
         var linearExecutable = GesBytecodeVmLinearExecutable.Build(compiled);
+        var linearHandlers = linearExecutable.Handlers.ToDictionary(
+            handler => (handler.Message, handler.SignatureId, handler.DeclarationOrder));
         var handlers = compiled.Handlers.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<GesBytecodeVmCompiledHandler>)pair.Value
-                .Select(handler => new GesBytecodeVmCompiledHandler(handler, compiled.Options.EnableDiagnostics))
+                .Select(handler =>
+                {
+                    var signatureId = GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels);
+                    return new GesBytecodeVmCompiledHandler(
+                        handler,
+                        compiled.Options.EnableDiagnostics,
+                        linearHandlers[(handler.Message, signatureId, handler.DeclarationOrder)].LocalSlotCount);
+                })
                 .ToArray(),
             StringComparer.Ordinal);
 

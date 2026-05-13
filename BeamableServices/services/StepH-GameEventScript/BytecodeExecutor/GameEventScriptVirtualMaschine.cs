@@ -4,17 +4,17 @@ using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterArithmetic;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterCompare;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort globalRegisterCount, ushort maxLocalRegisterCount, ushort stackSize)
+public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
 {
-    private VmState _vmState = new(binary, stackSize, globalRegisterCount);
+    private VmState _vmState = new(binary, registerSize, stackSize);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ref VmRegister Register(ushort index) => ref _vmState.GlobalRegisters[index];
+    private ref VmRegister Register(ushort index) => ref _vmState.RegisterSlots[index + _vmState.RegisterFrameStart];
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
     {
@@ -25,33 +25,43 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
             var instruction = _vmState.FetchInstructionAndIncrementInstructionPointer();
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.Nop:
+                case Nop:
                     break;
-                case GameEventScriptBytecodeOpCode.LoadNothing:
+                case ReserveSlots:
+                    var slotCount = instruction.A_U16;
+                    var requiredTotalSlots = _vmState.RegisterFrameStart + slotCount;
+                    if (requiredTotalSlots > _vmState.RegisterSlots.Length)
+                    {
+                        // FIXME: Here we might want to let the register frame grow.
+                        throw new OverflowException("Not enough slots in register frame.");
+                    }
+                    _vmState.RegisterFrameLength = slotCount;
+                    break;
+                case LoadNothing:
                     Register(instruction.Dest_U16).SetNothing();
                     break;
-                case GameEventScriptBytecodeOpCode.LoadTrue:
+                case LoadTrue:
                     Register(instruction.Dest_U16).SetBoolean(true);
                     break;
-                case GameEventScriptBytecodeOpCode.LoadFalse:
+                case LoadFalse:
                     Register(instruction.Dest_U16).SetBoolean(false);
                     break;
-                case GameEventScriptBytecodeOpCode.LoadInteger:
+                case LoadInteger:
                     Register(instruction.Dest_U16).SetInteger(instruction.I64, (GameEventScriptNumericUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
-                case GameEventScriptBytecodeOpCode.LoadFloat:
+                case LoadFloat:
                     Register(instruction.Dest_U16).SetFloat(instruction.F64, (GameEventScriptNumericUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
-                case GameEventScriptBytecodeOpCode.LoadText:
+                case LoadText:
                     Register(instruction.Dest_U16).SetStringPointer(instruction.A_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.LoadTag:
+                case LoadTag:
                     Register(instruction.Dest_U16).SetTagPointer(instruction.A_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case MoveSlot:
                     Register(instruction.Dest_U16) = Register(instruction.A_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.BindParameter:
+                case BindParameter:
                     var argument = message.Arguments[instruction.A_U16];
                     switch (argument.Kind)
                     {
@@ -122,452 +132,461 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                             throw new ArgumentOutOfRangeException();
                     }
                     break;
-                case GameEventScriptBytecodeOpCode.Jump:
+                case Jump:
                     _vmState.JumpAddress(instruction.Target_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.JumpIfTrue:
+                case JumpIfTrue:
                     if (Register(instruction.Condition_U16).IsTrue) _vmState.JumpAddress(instruction.Target_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.JumpIfFalse:
+                case JumpIfFalse:
                     if (Register(instruction.Condition_U16).IsFalse) _vmState.JumpAddress(instruction.Target_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
+                case JumpIfNotTrue:
                     if (Register(instruction.Condition_U16).IsNotTrue) _vmState.JumpAddress(instruction.Target_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.ReturnVoid:
+                case ReturnVoid:
                     _vmState.ReturnVoid();
                     break;
-                case GameEventScriptBytecodeOpCode.ReturnValue:
+                case ReturnValue:
                     _vmState.ReturnValue(instruction.A_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.Or:
+                case Or:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmOr(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.And:
+                case And:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmAnd(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Xor:
+                case Xor:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmXor(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Equal:
+                case Equal:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.NotEqual:
+                case NotEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmNotEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.ApproxEqual:
+                case ApproxEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmApproxEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Less:
+                case Less:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmLess(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Greater:
+                case Greater:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmGreater(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.LessOrEqual:
+                case LessOrEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmLessOrEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.GreaterOrEqual:
+                case GreaterOrEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmGreaterOrEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Add:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(VmAdd(ref Register(instruction.A_U16), ref Register(instruction.B_U16)));
+                case Add:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmAdd(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Subtract:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(VmSubtract(ref Register(instruction.A_U16), ref Register(instruction.B_U16)));
+                case Subtract:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmSubtract(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Multiply:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(VmMultiply(ref Register(instruction.A_U16), ref Register(instruction.B_U16)));
+                case Multiply:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmMultiply(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Divide:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(VmDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16)));
+                case Divide:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmDivide(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Power:
-                    Register(instruction.Dest_U16).SetFloatOrNothing(VmPower(ref Register(instruction.A_U16), ref Register(instruction.B_U16)));
+                case Power:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmPower(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Default:
+                case Default:
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+                case PrimitiveIntegerEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+                case PrimitiveIntegerNotEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerNotEqual(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+                case PrimitiveIntegerLess:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerLess(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+                case PrimitiveIntegerGreater:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerGreater(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+                case PrimitiveIntegerLessOrEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerLessOrEqual( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+                case PrimitiveIntegerGreaterOrEqual:
                     Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmIntegerGreaterOrEqual( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+                case PrimitiveIntegerAdd:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerAdd( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+                case PrimitiveIntegerSubtract:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerSubtract( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+                case PrimitiveIntegerMultiply:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerMultiply( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+                case PrimitiveIntegerDivide:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerDivide( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+                case PrimitiveIntegerFloorDivide:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerFloorDivide( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+                case PrimitiveIntegerModulo:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerModulo( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+                case PrimitiveIntegerRemainder:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerRemainder( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.IntegerDivide:
+                case IntegerDivide:
                     Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerDivide( ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Modulo:
+                case Modulo:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmModulo(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.Remainder:
+                case Remainder:
+                    Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmRemainder(ref Register(instruction.B_U16)));
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryNegate:
+                case UnaryNegate:
+                    var a = Register(instruction.A_U16);
+                    if(a.IsInteger)
+                        Register(instruction.Dest_U16).SetIntegerOrNothing(Register(instruction.A_U16).VmIntegerNegate(), a.Unit);
+                    else 
+                        Register(instruction.Dest_U16).SetFloatOrNothing(Register(instruction.A_U16).VmNegate(), a.Unit);
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryNot:
+                case UnaryNot:
+                    Register(instruction.Dest_U16).SetBooleanOrNothing(Register(instruction.A_U16).VmNot());
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryHasValue:
+                case UnaryHasValue:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryEmpty:
+                case UnaryEmpty:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryLength:
+                case UnaryLength:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryChance:
+                case UnaryChance:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryAbs:
+                case UnaryAbs:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
+                case UnaryNaturalLog:
                     break;
-                case GameEventScriptBytecodeOpCode.Clamp:
+                case Clamp:
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
                     break;
-                case GameEventScriptBytecodeOpCode.Dice:
+                case Dice:
                     break;
-                case GameEventScriptBytecodeOpCode.RandomPush:
+                case RandomPush:
                     break;
-                case GameEventScriptBytecodeOpCode.RandomPushConstant:
+                case RandomPushConstant:
                     break;
-                case GameEventScriptBytecodeOpCode.RandomPop:
+                case RandomPop:
                     break;
                 case GameEventScriptBytecodeOpCode.Range:
                     break;
-                case GameEventScriptBytecodeOpCode.RangeWithStep:
+                case RangeWithStep:
                     break;
-                case GameEventScriptBytecodeOpCode.Contains:
+                case Contains:
                     break;
-                case GameEventScriptBytecodeOpCode.ContainsValue:
+                case ContainsValue:
                     break;
-                case GameEventScriptBytecodeOpCode.StartsWith:
+                case StartsWith:
                     break;
-                case GameEventScriptBytecodeOpCode.EndsWith:
+                case EndsWith:
                     break;
-                case GameEventScriptBytecodeOpCode.Intersect:
+                case Intersect:
                     break;
-                case GameEventScriptBytecodeOpCode.Combine:
+                case Combine:
                     break;
-                case GameEventScriptBytecodeOpCode.Except:
+                case Except:
                     break;
-                case GameEventScriptBytecodeOpCode.Zip:
+                case Zip:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryKeys:
+                case UnaryKeys:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryValues:
+                case UnaryValues:
                     break;
-                case GameEventScriptBytecodeOpCode.UnaryEntries:
+                case UnaryEntries:
                     break;
-                case GameEventScriptBytecodeOpCode.ShortCircuitOr:
+                case ShortCircuitOr:
                     break;
-                case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                case ShortCircuitAnd:
                     break;
-                case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+                case ShortCircuitImplies:
                     break;
-                case GameEventScriptBytecodeOpCode.CastNothing:
+                case CastNothing:
                     break;
-                case GameEventScriptBytecodeOpCode.CastBoolean:
+                case CastBoolean:
                     break;
-                case GameEventScriptBytecodeOpCode.CastInteger:
+                case CastInteger:
                     break;
-                case GameEventScriptBytecodeOpCode.CastFloat:
+                case CastFloat:
                     break;
-                case GameEventScriptBytecodeOpCode.CastNumber:
+                case CastNumber:
                     break;
-                case GameEventScriptBytecodeOpCode.CastPercentage:
+                case CastPercentage:
                     break;
-                case GameEventScriptBytecodeOpCode.CastDegree:
+                case CastDegree:
                     break;
-                case GameEventScriptBytecodeOpCode.CastMeter:
+                case CastMeter:
                     break;
-                case GameEventScriptBytecodeOpCode.CastSecond:
+                case CastSecond:
                     break;
-                case GameEventScriptBytecodeOpCode.CastVector:
+                case CastVector:
                     break;
-                case GameEventScriptBytecodeOpCode.CastPoint:
+                case CastPoint:
                     break;
-                case GameEventScriptBytecodeOpCode.CastUuid:
+                case CastUuid:
                     break;
-                case GameEventScriptBytecodeOpCode.CastOptional:
+                case CastOptional:
                     break;
-                case GameEventScriptBytecodeOpCode.CastCustom:
+                case CastCustom:
                     break;
-                case GameEventScriptBytecodeOpCode.CastSequence:
+                case CastSequence:
                     break;
-                case GameEventScriptBytecodeOpCode.CastSeries:
+                case CastSeries:
                     break;
-                case GameEventScriptBytecodeOpCode.CastEnvelope:
+                case CastEnvelope:
                     break;
-                case GameEventScriptBytecodeOpCode.CastRef:
+                case CastRef:
                     break;
-                case GameEventScriptBytecodeOpCode.CastTag:
+                case CastTag:
                     break;
-                case GameEventScriptBytecodeOpCode.CastText:
+                case CastText:
                     break;
-                case GameEventScriptBytecodeOpCode.CastList:
+                case CastList:
                     break;
-                case GameEventScriptBytecodeOpCode.CastRange:
+                case CastRange:
                     break;
-                case GameEventScriptBytecodeOpCode.CastMessage:
+                case CastMessage:
                     break;
-                case GameEventScriptBytecodeOpCode.CastHandler:
+                case CastHandler:
                     break;
-                case GameEventScriptBytecodeOpCode.CastDictionary:
+                case CastDictionary:
                     break;
-                case GameEventScriptBytecodeOpCode.CastSet:
+                case CastSet:
                     break;
-                case GameEventScriptBytecodeOpCode.CastDice:
+                case CastDice:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckNothing:
+                case TypeCheckNothing:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckBoolean:
+                case TypeCheckBoolean:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckInteger:
+                case TypeCheckInteger:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckFloat:
+                case TypeCheckFloat:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckPercentage:
+                case TypeCheckPercentage:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckDegree:
+                case TypeCheckDegree:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckMeter:
+                case TypeCheckMeter:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckSecond:
+                case TypeCheckSecond:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckVector:
+                case TypeCheckVector:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckPoint:
+                case TypeCheckPoint:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckUuid:
+                case TypeCheckUuid:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckOptional:
+                case TypeCheckOptional:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckTag:
+                case TypeCheckTag:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckText:
+                case TypeCheckText:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckCustom:
+                case TypeCheckCustom:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckSequence:
+                case TypeCheckSequence:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckSeries:
+                case TypeCheckSeries:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckEnvelope:
+                case TypeCheckEnvelope:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckList:
+                case TypeCheckList:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckRange:
+                case TypeCheckRange:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckMessage:
+                case TypeCheckMessage:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckHandler:
+                case TypeCheckHandler:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckRef:
+                case TypeCheckRef:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckDictionary:
+                case TypeCheckDictionary:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckSet:
+                case TypeCheckSet:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeCheckDice:
+                case TypeCheckDice:
                     break;
-                case GameEventScriptBytecodeOpCode.LoadHandler:
+                case LoadHandler:
                     break;
-                case GameEventScriptBytecodeOpCode.TypeConstructor:
+                case TypeConstructor:
                     break;
-                case GameEventScriptBytecodeOpCode.MemberAccess:
+                case MemberAccess:
                     break;
-                case GameEventScriptBytecodeOpCode.IndexedAccess:
+                case IndexedAccess:
                     break;
-                case GameEventScriptBytecodeOpCode.BuildList:
+                case BuildList:
                     break;
-                case GameEventScriptBytecodeOpCode.BuildSequence:
+                case BuildSequence:
                     break;
-                case GameEventScriptBytecodeOpCode.BuildSet:
+                case BuildSet:
                     break;
-                case GameEventScriptBytecodeOpCode.BuildDictionary:
+                case BuildDictionary:
                     break;
-                case GameEventScriptBytecodeOpCode.BuildMessage:
+                case BuildMessage:
                     break;
-                case GameEventScriptBytecodeOpCode.BindHandler:
+                case BindHandler:
                     break;
-                case GameEventScriptBytecodeOpCode.Variadic:
+                case Variadic:
                     break;
-                case GameEventScriptBytecodeOpCode.EnterScope:
+                case EnterScope:
                     break;
-                case GameEventScriptBytecodeOpCode.ExitScope:
+                case ExitScope:
                     break;
-                case GameEventScriptBytecodeOpCode.EmitMessage:
+                case EmitMessage:
                     break;
-                case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
+                case EmitMessageWithTags:
                     break;
-                case GameEventScriptBytecodeOpCode.PublishMessage:
+                case PublishMessage:
                     break;
-                case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
+                case PublishMessageWithTags:
                     break;
-                case GameEventScriptBytecodeOpCode.EmitMessageValue:
+                case EmitMessageValue:
                     break;
-                case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
+                case EmitMessageValueWithTags:
                     break;
-                case GameEventScriptBytecodeOpCode.PublishMessageValue:
+                case PublishMessageValue:
                     break;
-                case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
+                case PublishMessageValueWithTags:
                     break;
-                case GameEventScriptBytecodeOpCode.RangeIterator:
+                case RangeIterator:
                     break;
-                case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+                case RangeIteratorWithStep:
                     break;
-                case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+                case RangeIteratorShort:
                     break;
-                case GameEventScriptBytecodeOpCode.CollectionIterator:
+                case CollectionIterator:
                     break;
-                case GameEventScriptBytecodeOpCode.IteratorNext:
+                case IteratorNext:
                     break;
-                case GameEventScriptBytecodeOpCode.IteratorClose:
+                case IteratorClose:
                     break;
-                case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+                case CollectionBuilderList:
                     break;
-                case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
+                case CollectionBuilderSet:
                     break;
-                case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
+                case CollectionBuilderAdd:
                     break;
-                case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
+                case CollectionBuilderFinish:
                     break;
-                case GameEventScriptBytecodeOpCode.IteratorReduce:
+                case IteratorReduce:
                     break;
-                case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
+                case IteratorReduceOrDefault:
                     break;
-                case GameEventScriptBytecodeOpCode.IteratorFold:
+                case IteratorFold:
                     break;
-                case GameEventScriptBytecodeOpCode.SeriesTerm:
+                case SeriesTerm:
                     break;
-                case GameEventScriptBytecodeOpCode.SeriesTake:
+                case SeriesTake:
                     break;
-                case GameEventScriptBytecodeOpCode.SeriesDrop:
+                case SeriesDrop:
                     break;
-                case GameEventScriptBytecodeOpCode.Call:
+                case Call:
                     break;
-                case GameEventScriptBytecodeOpCode.CallPredicate:
+                case CallPredicate:
+                    _vmState.CallAddress(instruction.Target_U16, instruction.Dest_U16);
                     break;
-                case GameEventScriptBytecodeOpCode.CallStandard:
+                case CallStandard:
                     break;
-                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+                case CallStandardPredicate:
                     break;
-                case GameEventScriptBytecodeOpCode.CallExternal:
+                case CallExternal:
                     break;
-                case GameEventScriptBytecodeOpCode.CallExternalPredicate:
+                case CallExternalPredicate:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineIterator:
+                case PipelineIterator:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineCollectList:
+                case PipelineCollectList:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineCollectSet:
+                case PipelineCollectSet:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineFirst:
+                case PipelineFirst:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineLast:
+                case PipelineLast:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineSingle:
+                case PipelineSingle:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineHasAny:
+                case PipelineHasAny:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineHasAll:
+                case PipelineHasAll:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
+                case PipelineContainsSingle:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineContainsAny:
+                case PipelineContainsAny:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineContainsAll:
+                case PipelineContainsAll:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDictionary:
+                case PipelineDictionary:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDictionaryValue:
+                case PipelineDictionaryValue:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDistinct:
+                case PipelineDistinct:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
+                case PipelineDistinctBy:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineGroupBy:
+                case PipelineGroupBy:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineReverse:
+                case PipelineReverse:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineSortAscending:
+                case PipelineSortAscending:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineSortDescending:
+                case PipelineSortDescending:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
+                case PipelineOrderByAscending:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
+                case PipelineOrderByDescending:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakeFirst:
+                case PipelineTakeFirst:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakeLast:
+                case PipelineTakeLast:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
+                case PipelineTakeHighest:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
+                case PipelineTakeLowest:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDropFirst:
+                case PipelineDropFirst:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDropLast:
+                case PipelineDropLast:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDropHighest:
+                case PipelineDropHighest:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDropLowest:
+                case PipelineDropLowest:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineShuffle:
+                case PipelineShuffle:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDraw:
+                case PipelineDraw:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineChoose:
+                case PipelineChoose:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
+                case PipelineChooseRandom:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+                case PipelineChooseWeighted:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
+                case PipelineDicePatternCountAny:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
+                case PipelineDicePatternCountFace:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
+                case PipelineDicePatternFullHouse:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
+                case PipelineDicePatternStraight:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
+                case PipelineTakePatternCountAny:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
+                case PipelineTakePatternCountFace:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
+                case PipelineTakePatternFullHouse:
                     break;
-                case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
+                case PipelineTakePatternStraight:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

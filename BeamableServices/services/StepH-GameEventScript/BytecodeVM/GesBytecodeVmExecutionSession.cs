@@ -326,6 +326,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
+            case GameEventScriptBytecodeOpCode.ReserveSlots:
                 pc++;
                 return true;
 
@@ -744,9 +745,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             callInstructionAddress,
             normalizePredicateResult));
 
-        var nextFrameSlotCount = _compiledScript.LinearExecutable.CallablesByEntryAddress.TryGetValue(instruction.A_U16, out var callable)
-            ? Math.Max(1, callable.LocalSlotCount)
-            : Math.Max(1, _compiledScript.LinearExecutable.MaxFrameSlots);
+        var nextFrameSlotCount = GetLinearEntrySlotCount(instruction.A_U16);
         _locals = new BytecodeVmValue[nextFrameSlotCount];
         _assignedSlots = new bool[nextFrameSlotCount];
         _changes = [];
@@ -757,6 +756,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
         nextPc = instruction.A_U16;
         EnterScope();
         return true;
+    }
+
+    private int GetLinearEntrySlotCount(int entryAddress)
+    {
+        var code = _compiledScript.LinearExecutable.Code;
+        if ((uint)entryAddress < (uint)code.Count &&
+            code[entryAddress].OpCode == GameEventScriptBytecodeOpCode.ReserveSlots &&
+            code[entryAddress].A_U16 > 0)
+        {
+            return code[entryAddress].A_U16;
+        }
+
+        return Math.Max(1, _compiledScript.LinearExecutable.MaxFrameSlots);
     }
 
     private void UnwindLinearCallFrames(List<LinearCallFrame>? callFrames)
@@ -788,6 +800,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         pc = target;
+        return true;
+    }
+
+    private static bool TrySkipReserveSlots(IReadOnlyList<GameEventScriptBytecodeInstruction> code, ref int pc)
+    {
+        if ((uint)pc >= (uint)code.Count)
+        {
+            return false;
+        }
+
+        if (code[pc].OpCode == GameEventScriptBytecodeOpCode.ReserveSlots)
+        {
+            pc++;
+        }
+
         return true;
     }
 
@@ -1374,6 +1401,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.Nop:
+                case GameEventScriptBytecodeOpCode.ReserveSlots:
                     break;
 
                 case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -1512,6 +1540,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var code = _compiledScript.LinearExecutable.Code;
         var pc = entryAddress;
         if ((uint)pc >= (uint)code.Count ||
+            !TrySkipReserveSlots(code, ref pc) ||
+            (uint)pc >= (uint)code.Count ||
             code[pc].OpCode != GameEventScriptBytecodeOpCode.BindParameter ||
             code[pc].A_U16 != 0)
         {
@@ -1575,6 +1605,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.Nop:
+                case GameEventScriptBytecodeOpCode.ReserveSlots:
                     break;
 
                 case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -1802,7 +1833,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = BytecodeVmValue.Nothing;
         var code = _compiledScript.LinearExecutable.Code;
         var pc = entryAddress;
-        if ((uint)pc >= (uint)code.Count)
+        if ((uint)pc >= (uint)code.Count ||
+            !TrySkipReserveSlots(code, ref pc))
         {
             return false;
         }

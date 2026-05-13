@@ -172,7 +172,7 @@ public static class GameEventScriptBinaryExtensions
                 .AddStringPoolElement(handler.Message, out var messageIndex)
                 .AddStringPoolElements(handler.SignatureLabels, out var argumentIndexes)
                 .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.MessageHandler, messageIndex, argumentIndexes,
-                    handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((uint)handler.EntryAddress)));
+                    handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)handler.EntryAddress)));
         }
 
         foreach (var callable in compiled.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
@@ -180,7 +180,7 @@ public static class GameEventScriptBinaryExtensions
             builder.AddStringPoolElement(callable.Name, out var messageIndex);
             builder.AddStringPoolElements(callable.SignatureLabels, out var argumentIndexes);
             builder.AddBind(new GameEventScriptBinaryBindEntry(callable.Kind == GameEventScriptBytecodeCallableKind.Predicate ? GameEventScriptBinaryBindKind.Predicate : GameEventScriptBinaryBindKind.Function, messageIndex, argumentIndexes,
-                callable.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((uint)callable.EntryAddress)));
+                callable.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)callable.EntryAddress)));
         }
 
         foreach (var reference in compiled.ExternalReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))

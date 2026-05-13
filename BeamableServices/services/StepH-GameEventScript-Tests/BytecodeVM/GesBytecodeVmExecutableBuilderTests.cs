@@ -160,6 +160,40 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void BytecodeVmRangeForLoopContinuesAtIteratorNext()
+    {
+        const string script =
+            """
+            module LoopRuntime
+
+            on Start {
+              for item from 1 to 3 emit Tick(value: item)
+              emit Done(value: 99)
+            }
+            """;
+
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxExecutionSteps = 200 })
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(GameEventScriptManager.Compile(script));
+
+        host.PublishToCompletion(Create("Start"));
+
+        CollectionAssert.AreEqual(new[] { "Tick", "Tick", "Tick", "Done" }, published.Select(message => message.Name).ToArray());
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                GameEventScriptValueFactory.GesInteger(1),
+                GameEventScriptValueFactory.GesInteger(2),
+                GameEventScriptValueFactory.GesInteger(3),
+                GameEventScriptValueFactory.GesInteger(99)
+            },
+            published.Select(message => message.Arguments["value"]).ToArray());
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeUsesDynamicRandomPushForExplicitIntegerSeed()
     {
         const string script =

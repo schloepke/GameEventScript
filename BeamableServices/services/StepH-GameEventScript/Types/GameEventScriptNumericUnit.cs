@@ -6,6 +6,7 @@ namespace StepH.GameEventScript.Types;
 
 public enum GameEventScriptNumericUnit
 {
+    Percentage,
     Degree,
     Meter,
     Second

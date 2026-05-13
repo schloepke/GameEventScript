@@ -1408,6 +1408,22 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
+                case GameEventScriptBytecodeOpCode.CallStandard:
+                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+                    if (!CanEvaluateLinearStandardCallFast(instruction) ||
+                        !AddTemp(instruction.Dest_U16))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Jump:
+                case GameEventScriptBytecodeOpCode.JumpIfTrue:
+                case GameEventScriptBytecodeOpCode.JumpIfFalse:
+                case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
+                    return false;
+
                 default:
                     if (!IsProjectionBinaryOp(instruction.OpCode) ||
                         !AddTemp(instruction.Dest_U16))
@@ -1521,6 +1537,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
         int entryAddress,
         out BytecodeVmValue value)
     {
+        var success = TryEvaluateLinearProjectionFastRange(
+            identifierSlot,
+            item,
+            entryAddress,
+            out _,
+            out value);
+        return success;
+    }
+
+    private bool TryEvaluateLinearProjectionFastRange(
+        int identifierSlot,
+        BytecodeVmValue item,
+        int entryAddress,
+        out bool hasValue,
+        out BytecodeVmValue value)
+    {
+        hasValue = false;
         value = BytecodeVmValue.Nothing;
         var code = _compiledScript.LinearExecutable.Code;
         if ((uint)entryAddress >= (uint)code.Count)
@@ -1528,22 +1561,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        var tempSlot0 = -1;
-        var tempSlot1 = -1;
-        var tempSlot2 = -1;
-        var tempSlot3 = -1;
-        var tempSlot4 = -1;
-        var tempSlot5 = -1;
-        var tempSlot6 = -1;
-        var tempSlot7 = -1;
-        var tempValue0 = BytecodeVmValue.Nothing;
-        var tempValue1 = BytecodeVmValue.Nothing;
-        var tempValue2 = BytecodeVmValue.Nothing;
-        var tempValue3 = BytecodeVmValue.Nothing;
-        var tempValue4 = BytecodeVmValue.Nothing;
-        var tempValue5 = BytecodeVmValue.Nothing;
-        var tempValue6 = BytecodeVmValue.Nothing;
-        var tempValue7 = BytecodeVmValue.Nothing;
+        var projection = new FastProjectionState(this, identifierSlot, item);
 
         for (var pc = entryAddress; pc < code.Count; pc++)
         {
@@ -1561,14 +1579,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 case GameEventScriptBytecodeOpCode.ReturnVoid:
                     value = BytecodeVmValue.Nothing;
+                    hasValue = false;
                     return true;
 
                 case GameEventScriptBytecodeOpCode.ReturnValue:
-                    value = GetSlot(instruction.A_U16);
+                    value = projection.GetSlot(instruction.A_U16);
+                    hasValue = true;
                     return true;
 
                 case GameEventScriptBytecodeOpCode.MoveSlot:
-                    if (!SetTemp(instruction.Dest_U16, GetSlot(instruction.A_U16)))
+                    if (!projection.SetTemp(instruction.Dest_U16, projection.GetSlot(instruction.A_U16)))
                     {
                         return false;
                     }
@@ -1577,7 +1597,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 case var opCode when IsInlineConstantInstruction(opCode):
                     if (!TryLoadInlineConstant(instruction, out var inlineConstant) ||
-                        !SetTemp(instruction.Dest_U16, inlineConstant))
+                        !projection.SetTemp(instruction.Dest_U16, inlineConstant))
                     {
                         return false;
                     }
@@ -1585,8 +1605,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case var opCode when IsCastInstruction(opCode):
-                    if (!TryEvaluateCastInstruction(instruction, GetSlot(instruction.A_U16), out var castedValue) ||
-                        !SetTemp(instruction.Dest_U16, castedValue))
+                    if (!TryEvaluateCastInstruction(instruction, projection.GetSlot(instruction.A_U16), out var castedValue) ||
+                        !projection.SetTemp(instruction.Dest_U16, castedValue))
                     {
                         return false;
                     }
@@ -1595,17 +1615,76 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 case GameEventScriptBytecodeOpCode.CallPredicate:
                     if (!TryGetSingleSlot(instruction.B_U16, out var predicateInputSlot) ||
-                        !TryEvaluateLinearPredicateCallFast(instruction, GetSlot(predicateInputSlot), out var predicateValue) ||
-                        !SetTemp(instruction.Dest_U16, predicateValue))
+                        !TryEvaluateLinearPredicateCallFast(instruction, projection.GetSlot(predicateInputSlot), out var predicateValue) ||
+                        !projection.SetTemp(instruction.Dest_U16, predicateValue))
                     {
                         return false;
                     }
 
                     break;
 
+                case GameEventScriptBytecodeOpCode.CallStandard:
+                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+                    if (!TryEvaluateLinearStandardCallFast(instruction, ref projection, out var standardValue) ||
+                        !projection.SetTemp(instruction.Dest_U16, standardValue))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Jump:
+                    if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                    {
+                        return false;
+                    }
+
+                    continue;
+
+                case GameEventScriptBytecodeOpCode.JumpIfTrue:
+                    if (projection.GetSlot(instruction.C_U16).IsTrue())
+                    {
+                        if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.JumpIfFalse:
+                    if (projection.GetSlot(instruction.C_U16).IsFalse())
+                    {
+                        if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
+                    if (!projection.GetSlot(instruction.C_U16).IsTrue())
+                    {
+                        if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    break;
+
                 default:
                     if (!IsProjectionBinaryOp(instruction.OpCode) ||
-                        !SetTemp(instruction.Dest_U16, EvaluateProjectionBinary(instruction.OpCode, GetSlot(instruction.A_U16), GetSlot(instruction.B_U16))))
+                        !projection.SetTemp(
+                            instruction.Dest_U16,
+                            EvaluateProjectionBinary(instruction.OpCode, projection.GetSlot(instruction.A_U16), projection.GetSlot(instruction.B_U16))))
                     {
                         return false;
                     }
@@ -1616,170 +1695,62 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         value = BytecodeVmValue.Nothing;
         return false;
+    }
 
-        BytecodeVmValue GetSlot(int slot)
+    private static bool TryMoveProjectionPc(int target, int entryAddress, int codeCount, ref int pc)
+    {
+        if (target < entryAddress || target >= codeCount)
         {
-            if (slot == identifierSlot)
-            {
-                return item;
-            }
-
-            if (slot == tempSlot0)
-            {
-                return tempValue0;
-            }
-
-            if (slot == tempSlot1)
-            {
-                return tempValue1;
-            }
-
-            if (slot == tempSlot2)
-            {
-                return tempValue2;
-            }
-
-            if (slot == tempSlot3)
-            {
-                return tempValue3;
-            }
-
-            if (slot == tempSlot4)
-            {
-                return tempValue4;
-            }
-
-            if (slot == tempSlot5)
-            {
-                return tempValue5;
-            }
-
-            if (slot == tempSlot6)
-            {
-                return tempValue6;
-            }
-
-            if (slot == tempSlot7)
-            {
-                return tempValue7;
-            }
-
-            return ResolveSlot(slot);
-        }
-
-        bool SetTemp(int slot, BytecodeVmValue input)
-        {
-            if (slot < 0)
-            {
-                return false;
-            }
-
-            if (slot == tempSlot0)
-            {
-                tempValue0 = input;
-                return true;
-            }
-
-            if (slot == tempSlot1)
-            {
-                tempValue1 = input;
-                return true;
-            }
-
-            if (slot == tempSlot2)
-            {
-                tempValue2 = input;
-                return true;
-            }
-
-            if (slot == tempSlot3)
-            {
-                tempValue3 = input;
-                return true;
-            }
-
-            if (slot == tempSlot4)
-            {
-                tempValue4 = input;
-                return true;
-            }
-
-            if (slot == tempSlot5)
-            {
-                tempValue5 = input;
-                return true;
-            }
-
-            if (slot == tempSlot6)
-            {
-                tempValue6 = input;
-                return true;
-            }
-
-            if (slot == tempSlot7)
-            {
-                tempValue7 = input;
-                return true;
-            }
-
-            if (tempSlot0 < 0)
-            {
-                tempSlot0 = slot;
-                tempValue0 = input;
-                return true;
-            }
-
-            if (tempSlot1 < 0)
-            {
-                tempSlot1 = slot;
-                tempValue1 = input;
-                return true;
-            }
-
-            if (tempSlot2 < 0)
-            {
-                tempSlot2 = slot;
-                tempValue2 = input;
-                return true;
-            }
-
-            if (tempSlot3 < 0)
-            {
-                tempSlot3 = slot;
-                tempValue3 = input;
-                return true;
-            }
-
-            if (tempSlot4 < 0)
-            {
-                tempSlot4 = slot;
-                tempValue4 = input;
-                return true;
-            }
-
-            if (tempSlot5 < 0)
-            {
-                tempSlot5 = slot;
-                tempValue5 = input;
-                return true;
-            }
-
-            if (tempSlot6 < 0)
-            {
-                tempSlot6 = slot;
-                tempValue6 = input;
-                return true;
-            }
-
-            if (tempSlot7 < 0)
-            {
-                tempSlot7 = slot;
-                tempValue7 = input;
-                return true;
-            }
-
             return false;
         }
+
+        pc = target - 1;
+        return true;
+    }
+
+    private bool CanEvaluateLinearStandardCallFast(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetUShortList(instruction.A_U16, out var shape) ||
+            !TryGetUShortList(instruction.B_U16, out var argumentSlots))
+        {
+            return false;
+        }
+
+        return shape.Count >= 2 &&
+               argumentSlots.Count == shape.Count - 2 &&
+               argumentSlots.Count <= 2;
+    }
+
+    private bool TryEvaluateLinearStandardCallFast(
+        GameEventScriptBytecodeInstruction instruction,
+        ref FastProjectionState projection,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if (!TryGetUShortList(instruction.A_U16, out var shape) ||
+            !TryGetUShortList(instruction.B_U16, out var argumentSlots) ||
+            argumentSlots.Count != shape.Count - 2 ||
+            argumentSlots.Count > 2)
+        {
+            return false;
+        }
+
+        var argumentCount = argumentSlots.Count;
+        var argument0 = argumentCount > 0
+            ? ToGameEventScriptFastValue(projection.GetSlot(argumentSlots[0]))
+            : default;
+        var argument1 = argumentCount > 1
+            ? ToGameEventScriptFastValue(projection.GetSlot(argumentSlots[1]))
+            : default;
+        if (!GesStandardExtensions.TryInvoke(_compiledScript.BytecodeModule.StringPool, shape, argument0, argument1, argumentCount, out var standardValue))
+        {
+            return false;
+        }
+
+        value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
+        return NormalizeExtensionPredicateResult(
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandardPredicate,
+            ref value);
     }
 
     private bool TryEvaluateLinearPredicateCallFast(
@@ -2157,6 +2128,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         _assignedSlots[itemSlot] = true;
         try
         {
+            if (!_diagnosticsEnabled &&
+                _runtimeBudget.Limits.MaxExecutionSteps <= 0 &&
+                CanEvaluateLinearProjectionFast(entryAddress, allowPredicateCall: true))
+            {
+                return TryEvaluateLinearProjectionFastRange(itemSlot, item, entryAddress, out yielded, out value);
+            }
+
             if (!TryEvaluateLinearHelperEntry(entryAddress, out yielded, out value))
             {
                 return false;
@@ -3232,6 +3210,185 @@ internal sealed partial class GesBytecodeVmExecutionSession
         public int CallInstructionAddress { get; } = callInstructionAddress;
 
         public bool NormalizePredicateResult { get; } = normalizePredicateResult;
+    }
+
+    private struct FastProjectionState
+    {
+        private readonly GesBytecodeVmExecutionSession _session;
+        private readonly int _identifierSlot;
+        private readonly BytecodeVmValue _item;
+        private int _tempSlot0;
+        private int _tempSlot1;
+        private int _tempSlot2;
+        private int _tempSlot3;
+        private int _tempSlot4;
+        private int _tempSlot5;
+        private int _tempSlot6;
+        private int _tempSlot7;
+        private BytecodeVmValue _tempValue0;
+        private BytecodeVmValue _tempValue1;
+        private BytecodeVmValue _tempValue2;
+        private BytecodeVmValue _tempValue3;
+        private BytecodeVmValue _tempValue4;
+        private BytecodeVmValue _tempValue5;
+        private BytecodeVmValue _tempValue6;
+        private BytecodeVmValue _tempValue7;
+
+        public FastProjectionState(GesBytecodeVmExecutionSession session, int identifierSlot, BytecodeVmValue item)
+        {
+            _session = session;
+            _identifierSlot = identifierSlot;
+            _item = item;
+            _tempSlot0 = -1;
+            _tempSlot1 = -1;
+            _tempSlot2 = -1;
+            _tempSlot3 = -1;
+            _tempSlot4 = -1;
+            _tempSlot5 = -1;
+            _tempSlot6 = -1;
+            _tempSlot7 = -1;
+            _tempValue0 = BytecodeVmValue.Nothing;
+            _tempValue1 = BytecodeVmValue.Nothing;
+            _tempValue2 = BytecodeVmValue.Nothing;
+            _tempValue3 = BytecodeVmValue.Nothing;
+            _tempValue4 = BytecodeVmValue.Nothing;
+            _tempValue5 = BytecodeVmValue.Nothing;
+            _tempValue6 = BytecodeVmValue.Nothing;
+            _tempValue7 = BytecodeVmValue.Nothing;
+        }
+
+        public BytecodeVmValue GetSlot(int slot)
+        {
+            if (slot == _identifierSlot)
+            {
+                return _item;
+            }
+
+            if (slot == _tempSlot0) return _tempValue0;
+            if (slot == _tempSlot1) return _tempValue1;
+            if (slot == _tempSlot2) return _tempValue2;
+            if (slot == _tempSlot3) return _tempValue3;
+            if (slot == _tempSlot4) return _tempValue4;
+            if (slot == _tempSlot5) return _tempValue5;
+            if (slot == _tempSlot6) return _tempValue6;
+            if (slot == _tempSlot7) return _tempValue7;
+
+            return _session.ResolveSlot(slot);
+        }
+
+        public bool SetTemp(int slot, BytecodeVmValue input)
+        {
+            if (slot < 0)
+            {
+                return false;
+            }
+
+            if (slot == _tempSlot0)
+            {
+                _tempValue0 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot1)
+            {
+                _tempValue1 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot2)
+            {
+                _tempValue2 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot3)
+            {
+                _tempValue3 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot4)
+            {
+                _tempValue4 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot5)
+            {
+                _tempValue5 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot6)
+            {
+                _tempValue6 = input;
+                return true;
+            }
+
+            if (slot == _tempSlot7)
+            {
+                _tempValue7 = input;
+                return true;
+            }
+
+            if (_tempSlot0 < 0)
+            {
+                _tempSlot0 = slot;
+                _tempValue0 = input;
+                return true;
+            }
+
+            if (_tempSlot1 < 0)
+            {
+                _tempSlot1 = slot;
+                _tempValue1 = input;
+                return true;
+            }
+
+            if (_tempSlot2 < 0)
+            {
+                _tempSlot2 = slot;
+                _tempValue2 = input;
+                return true;
+            }
+
+            if (_tempSlot3 < 0)
+            {
+                _tempSlot3 = slot;
+                _tempValue3 = input;
+                return true;
+            }
+
+            if (_tempSlot4 < 0)
+            {
+                _tempSlot4 = slot;
+                _tempValue4 = input;
+                return true;
+            }
+
+            if (_tempSlot5 < 0)
+            {
+                _tempSlot5 = slot;
+                _tempValue5 = input;
+                return true;
+            }
+
+            if (_tempSlot6 < 0)
+            {
+                _tempSlot6 = slot;
+                _tempValue6 = input;
+                return true;
+            }
+
+            if (_tempSlot7 < 0)
+            {
+                _tempSlot7 = slot;
+                _tempValue7 = input;
+                return true;
+            }
+
+            return false;
+        }
     }
 
     private sealed class LinearArgumentSource

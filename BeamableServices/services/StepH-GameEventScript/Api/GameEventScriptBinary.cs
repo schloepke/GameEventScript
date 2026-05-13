@@ -85,7 +85,7 @@ public readonly struct GameEventScriptBinaryBindTable
     private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptBinary tables cannot exceed 65535 entries.") : checked((ushort)count);
 }
 
-public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind kind, ushort name, IReadOnlyList<ushort>? argumentNames, uint entryAddress = 0)
+public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind kind, ushort name, IReadOnlyList<ushort>? argumentNames, ushort entryAddress = 0xFFFF)
 {
     private readonly ushort[]? _argumentNames = argumentNames?.ToArray() ?? [];
 
@@ -95,7 +95,7 @@ public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindK
 
     public IReadOnlyList<ushort> ArgumentNames => _argumentNames ?? [];
 
-    public uint EntryAddress { get; } = entryAddress;
+    public ushort EntryAddress { get; } = entryAddress;
 }
 
 public enum GameEventScriptBinaryBindKind : byte
@@ -128,6 +128,12 @@ public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode o
 
     [FieldOffset(2)]
     public readonly ushort Dest_U16 = dest;
+
+    [FieldOffset(4)]
+    public ushort Target_U16;
+
+    [FieldOffset(8)]
+    public ushort Condition_U16;
 
     [FieldOffset(4)]
     public ushort A_U16 = a;

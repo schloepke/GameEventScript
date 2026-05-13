@@ -29,7 +29,12 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         }
 
         var limit = Limits.MaxExecutionSteps;
-        if (limit > 0 && _executionSteps >= limit)
+        if (limit <= 0)
+        {
+            return true;
+        }
+
+        if (_executionSteps >= limit)
         {
             MarkExhausted("MaxExecutionSteps", detail, limit);
             return false;
@@ -53,7 +58,12 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         }
 
         var limit = Limits.MaxExecutionSteps;
-        if (limit > 0 && _executionSteps > limit - count)
+        if (limit <= 0)
+        {
+            return true;
+        }
+
+        if (_executionSteps > limit - count)
         {
             MarkExhausted("MaxExecutionSteps", detail, limit);
             return false;

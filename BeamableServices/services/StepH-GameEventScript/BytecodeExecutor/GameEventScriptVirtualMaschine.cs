@@ -16,7 +16,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref VmRegister Register(ushort index) => ref _vmState.GlobalRegisters[index];
 
-    public bool ExecuteMessage(GameEventScriptMessage message)
+    public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
     {
         if (!_vmState.PrepareMessage(message)) return false;
         _vmState.State = VmState.StateValue.Running;
@@ -52,8 +52,75 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16) = Register(instruction.A_U16);
                     break;
                 case GameEventScriptBytecodeOpCode.BindParameter:
-                    // FIXME: Needs correct implementation
-                    throw new NotImplementedException();
+                    var argument = message.Arguments[instruction.A_U16];
+                    switch (argument.Kind)
+                    {
+                        case GameEventScriptValueKind.Nothing:
+                            Register(instruction.Dest_U16).SetNothing();
+                            break;
+                        case GameEventScriptValueKind.Tag:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Text:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Percentage:
+                            Register(instruction.Dest_U16).SetFloat(argument.AsNumber(), GameEventScriptNumericUnit.Percentage);
+                            break;
+                        case GameEventScriptValueKind.Vector:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Point:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Float:
+                            Register(instruction.Dest_U16).SetFloat(argument.AsNumber());
+                            break;
+                        case GameEventScriptValueKind.Integer:
+                            Register(instruction.Dest_U16).SetInteger(argument.AsInteger());
+                            break;
+                        case GameEventScriptValueKind.Boolean:
+                            Register(instruction.Dest_U16).SetBoolean(argument.AsBoolean());
+                            break;
+                        case GameEventScriptValueKind.Uuid:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Optional:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Sequence:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Series:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Range:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Message:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Handler:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Ref:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.List:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Dictionary:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Set:
+                            throw new NotImplementedException();
+                            break;
+                        case GameEventScriptValueKind.Dice:
+                            throw new NotImplementedException();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                     break;
                 case GameEventScriptBytecodeOpCode.Jump:
                     _vmState.JumpAddress(instruction.Target_U16);

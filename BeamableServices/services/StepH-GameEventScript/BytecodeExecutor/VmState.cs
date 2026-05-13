@@ -92,6 +92,11 @@ public struct VmState
 
     public void ReturnVoid()
     {
+        if (CallStackPointer == 0)
+        {
+            State = StateValue.Halted;
+            return;
+        }
         var callFrame = CallStack[--CallStackPointer];
         InstructionPointer = callFrame.InstructionPointer; 
         if (callFrame.ResultRegisterIndex.HasValue) GlobalRegisters[callFrame.ResultRegisterIndex.Value].SetNothing();

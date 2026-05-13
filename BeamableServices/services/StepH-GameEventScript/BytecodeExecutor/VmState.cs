@@ -60,14 +60,17 @@ public struct VmState
         {
             InstructionPointer = bind.EntryAddress;
             State = StateValue.Ready;
-            // TODO load argument values, but register plan currently not available?
             return true;
         }
-        else
-        {
-            State = StateValue.Error;
-            return false;
-        }
+        State = StateValue.Error;
+        return false;
+    }
+
+    public void Reset()
+    {
+        InstructionPointer = 0;
+        CallStackPointer = 0;
+        State = StateValue.Initialized;
     }
 
     public void JumpAddress(ushort address)

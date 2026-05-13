@@ -18,9 +18,12 @@ public sealed class BytecodeExecutorTests
         const string script =
             """
             module BinaryExecutor
+            
+            predicate high(value) means value > 3
 
             on Start(value) {
               let plusTwo be value + 2
+              let isTrue be value is high
               let byThree be value * 3
             }
             """;

@@ -25,7 +25,7 @@ internal static class GesBytecodeLowerer
                 $"GameEventScript bytecode lowerer does not support handler '{messageName}' #{declarationOrder}: {failureReason}");
         }
 
-        var slotCollector = new SlotCollector(callables, typeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal));
+        var slotCollector = new SlotCollector(typeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal));
         foreach (var parameter in parameters)
         {
             slotCollector.AddSlot(parameter);
@@ -70,7 +70,7 @@ internal static class GesBytecodeLowerer
         var result = new Dictionary<string, GameEventScriptBytecodeCallable>(StringComparer.Ordinal);
         foreach (var callable in callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
         {
-            var slotCollector = new SlotCollector(callables, typeDefinitions);
+            var slotCollector = new SlotCollector(typeDefinitions);
             foreach (var parameter in callable.Parameters)
             {
                 slotCollector.AddSlot(parameter);
@@ -94,7 +94,7 @@ internal static class GesBytecodeLowerer
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
-        var slotCollector = new SlotCollector(callables, typeDefinitions);
+        var slotCollector = new SlotCollector(typeDefinitions);
         foreach (var parameter in callable.Parameters)
         {
             slotCollector.AddSlot(parameter);
@@ -109,7 +109,7 @@ internal static class GesBytecodeLowerer
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
-        var slotCollector = new SlotCollector(callables, typeDefinitions);
+        var slotCollector = new SlotCollector(typeDefinitions);
         slotCollector.CollectTypeDefinitions();
         return new Dictionary<string, int>(slotCollector.Slots, StringComparer.Ordinal);
     }
@@ -1113,11 +1113,10 @@ internal static class GesBytecodeLowerer
         return true;
     }
 
-    private sealed class SlotCollector(
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
+    private sealed class SlotCollector(IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions)
     {
         private readonly Dictionary<string, int> _slots = new(StringComparer.Ordinal);
+        private readonly Stack<HashSet<string>> _scopedLocals = new();
 
         public IReadOnlyDictionary<string, int> Slots => _slots;
 
@@ -1154,28 +1153,60 @@ internal static class GesBytecodeLowerer
             }
         }
 
+        private void EnterScope()
+            => _scopedLocals.Push(new HashSet<string>(StringComparer.Ordinal));
+
+        private void ExitScope()
+            => _scopedLocals.Pop();
+
+        private void DeclareLocal(string name)
+        {
+            if (_scopedLocals.Count == 0)
+            {
+                AddSlot(name);
+                return;
+            }
+
+            _scopedLocals.Peek().Add(name);
+        }
+
+        private bool IsScopedLocal(string name)
+            => _scopedLocals.Any(scope => scope.Contains(name));
+
+        private void CollectStatements(IReadOnlyList<StatementNode> statements, bool createsScope)
+        {
+            if (createsScope)
+            {
+                EnterScope();
+            }
+
+            foreach (var nested in statements)
+            {
+                CollectStatement(nested);
+            }
+
+            if (createsScope)
+            {
+                ExitScope();
+            }
+        }
+
         public void CollectStatement(StatementNode statement)
         {
             switch (statement)
             {
                 case LetStatementNode let:
                     CollectExpression(let.Expression);
-                    AddSlot(let.Identifier);
+                    DeclareLocal(let.Identifier);
                     break;
 
                 case IfStatementNode ifStatement:
                     CollectExpression(ifStatement.Condition);
-                    foreach (var nested in ifStatement.ThenBody.Statements)
-                    {
-                        CollectStatement(nested);
-                    }
+                    CollectStatements(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock);
 
                     if (ifStatement.ElseBody is not null)
                     {
-                        foreach (var nested in ifStatement.ElseBody.Statements)
-                        {
-                            CollectStatement(nested);
-                        }
+                        CollectStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock);
                     }
 
                     break;
@@ -1191,21 +1222,19 @@ internal static class GesBytecodeLowerer
 
                 case ForStatementNode { Source: RangeIterationSourceNode range } forStatement:
                     CollectRange(range.RangeExpression);
-                    AddSlot(forStatement.Identifier);
-                    foreach (var nested in forStatement.Body.Statements)
-                    {
-                        CollectStatement(nested);
-                    }
+                    EnterScope();
+                    DeclareLocal(forStatement.Identifier);
+                    CollectStatements(forStatement.Body.Statements, forStatement.Body.IsBlock);
+                    ExitScope();
 
                     break;
 
                 case ForStatementNode { Source: CollectionIterationSourceNode collection } forStatement:
                     CollectExpression(collection.Expression);
-                    AddSlot(forStatement.Identifier);
-                    foreach (var nested in forStatement.Body.Statements)
-                    {
-                        CollectStatement(nested);
-                    }
+                    EnterScope();
+                    DeclareLocal(forStatement.Identifier);
+                    CollectStatements(forStatement.Body.Statements, forStatement.Body.IsBlock);
+                    ExitScope();
 
                     break;
 
@@ -1215,10 +1244,7 @@ internal static class GesBytecodeLowerer
 
                 case SeededRandomStatementNode seededRandom:
                     CollectExpression(seededRandom.SeedExpression);
-                    foreach (var nested in seededRandom.Body.Statements)
-                    {
-                        CollectStatement(nested);
-                    }
+                    CollectStatements(seededRandom.Body.Statements, seededRandom.Body.IsBlock);
 
                     break;
             }
@@ -1239,7 +1265,11 @@ internal static class GesBytecodeLowerer
             switch (expression)
             {
                 case IdentifierExpressionNode identifier:
-                    AddSlot(identifier.Name);
+                    if (!IsScopedLocal(identifier.Name))
+                    {
+                        AddSlot(identifier.Name);
+                    }
+
                     break;
 
                 case MessageLiteralExpressionNode message:
@@ -1307,14 +1337,23 @@ internal static class GesBytecodeLowerer
                     break;
 
                 case GeneratedCollectionExpressionNode generatedCollection:
-                    AddSlot(generatedCollection.Identifier);
                     CollectIterationSource(generatedCollection.Source);
-                    if (generatedCollection.Predicate is not null)
+                    EnterScope();
+                    DeclareLocal(generatedCollection.Identifier);
+                    try
                     {
-                        CollectExpression(generatedCollection.Predicate);
+                        if (generatedCollection.Predicate is not null)
+                        {
+                            CollectExpression(generatedCollection.Predicate);
+                        }
+
+                        CollectExpression(generatedCollection.Projection);
+                    }
+                    finally
+                    {
+                        ExitScope();
                     }
 
-                    CollectExpression(generatedCollection.Projection);
                     break;
 
                 case GuardedChoiceExpressionNode guardedChoice:
@@ -1334,32 +1373,12 @@ internal static class GesBytecodeLowerer
 
                 case PredicateCallExpressionNode predicateCall:
                     CollectExpression(predicateCall.Value);
-                    if (callables.TryGetValue(predicateCall.PredicateName, out var callable))
-                    {
-                        foreach (var parameter in callable.Parameters)
-                        {
-                            AddSlot(parameter);
-                        }
-
-                        CollectExpression(callable.Expression);
-                    }
-
                     break;
 
                 case CallExpressionNode call:
                     foreach (var argument in call.Arguments)
                     {
                         CollectExpression(argument);
-                    }
-
-                    if (callables.TryGetValue(call.Name, out var called))
-                    {
-                        foreach (var parameter in called.Parameters)
-                        {
-                            AddSlot(parameter);
-                        }
-
-                        CollectExpression(called.Expression);
                     }
 
                     break;
@@ -1473,7 +1492,6 @@ internal static class GesBytecodeLowerer
                     {
                         CollectExpression(edge.Predicate);
                     }
-
                     break;
 
                 case PatternSelectorNode pattern:

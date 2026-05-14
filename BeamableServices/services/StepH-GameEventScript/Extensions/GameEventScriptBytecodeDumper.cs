@@ -158,10 +158,13 @@ public static class GameEventScriptBytecodeDumper
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
-            case GameEventScriptBytecodeOpCode.EnterScope:
             case GameEventScriptBytecodeOpCode.ExitScope:
             case GameEventScriptBytecodeOpCode.ShortCircuitOr:
             case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                break;
+
+            case GameEventScriptBytecodeOpCode.EnterScope:
+                AppendIndex(builder, "locals", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.ReserveSlots:
@@ -206,6 +209,42 @@ public static class GameEventScriptBytecodeDumper
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
                 AppendIndex(builder, "shape", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageRegister:
+                AppendSlot(builder, "src", instruction.A_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageNothing:
+                builder.Append(" value=nothing");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageTrue:
+                builder.Append(" value=true");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageFalse:
+                builder.Append(" value=false");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageInteger:
+                AppendInt64Constant(builder, instruction);
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageFloat:
+                AppendDoubleConstant(
+                    builder,
+                    instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage ? "ratio" : "value",
+                    instruction);
+                AppendNumericUnit(builder, instruction.UnitAndFlags);
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageText:
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.C_U16);
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageTag:
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.C_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
@@ -387,7 +426,7 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.CallPredicate:
                 AppendAddress(builder, "target", instruction.A_U16);
-                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
+                AppendIndex(builder, "args", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineIterator:
@@ -507,7 +546,16 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "source", instruction.A_U16);
                 AppendIndex(builder, "count", instruction.B_U16);
                 break;
-
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+                AppendSlot(builder, "a", instruction.A_U16);
+                AppendSlot(builder, "b", instruction.B_U16);
+                break;
             default:
                 AppendSlot(builder, "a", instruction.A_U16);
                 AppendSlot(builder, "b", instruction.B_U16);
@@ -606,7 +654,15 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.IteratorClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
-            GameEventScriptBytecodeOpCode.RandomPop);
+            GameEventScriptBytecodeOpCode.RandomPop or
+            GameEventScriptBytecodeOpCode.StageRegister or
+            GameEventScriptBytecodeOpCode.StageNothing or
+            GameEventScriptBytecodeOpCode.StageTrue or
+            GameEventScriptBytecodeOpCode.StageFalse or
+            GameEventScriptBytecodeOpCode.StageInteger or
+            GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StageText or
+            GameEventScriptBytecodeOpCode.StageTag);
 
     private static void AppendPoolIndex(StringBuilder builder, string name, IReadOnlyList<string> pool, int index)
     {

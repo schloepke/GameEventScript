@@ -164,6 +164,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             private List<LinearCallFrame>? _callFrames;
             private LinearArgumentSource? _arguments = arguments;
+            private List<BytecodeVmValue>? _stagedArguments;
             private int _pc = startAddress;
             private int _endAddress = endAddress;
             private int _randomScopeMark;
@@ -209,6 +210,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             ref _endAddress,
                             ref _arguments,
                             ref _callFrames,
+                            ref _stagedArguments,
                             out var returned,
                             out var returnValue,
                             out _))

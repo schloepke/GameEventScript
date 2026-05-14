@@ -3,6 +3,7 @@
 using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.BytecodeExecutor.VmRegister;
 using static StepH.GameEventScript.Types.GameEventScriptValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -13,7 +14,7 @@ public static class VmRegisterMapping
     {
         switch (argument.Kind)
         {
-            case Nothing:
+            case GameEventScriptValueKind.Nothing:
                 destination.SetNothing();
                 break;
             case Tag:
@@ -31,10 +32,10 @@ public static class VmRegisterMapping
             case Point:
                 throw new NotImplementedException();
                 break;
-            case Float:
+            case GameEventScriptValueKind.Float:
                 destination.SetFloat(argument.AsNumber());
                 break;
-            case Integer:
+            case GameEventScriptValueKind.Integer:
                 destination.SetInteger(argument.AsInteger());
                 break;
             case GameEventScriptValueKind.Boolean:
@@ -80,4 +81,13 @@ public static class VmRegisterMapping
                 throw new ArgumentOutOfRangeException();
         }
     }
+
+    public static GameEventScriptValue ToGameEventScriptValue(this ref VmRegister a) => a.Kind switch
+    {
+        VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.AsIntegerValue),
+        VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.AsFloatValue),
+        VmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.AsBooleanValue),
+        // FIXME this might not work here, since we need to binary to look up strings and tags
+        _ => GameEventScriptValueFactory.GesNothing(),
+    };
 }

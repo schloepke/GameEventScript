@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -374,10 +375,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case ExitScope:
                     break;
                 case EmitMessage:
+                    VmPublishMessage(binary.UInt16SliceTable.Resolve(instruction.A_U16), binary.UInt16SliceTable.Resolve(instruction.B_U16), false, context);
                     break;
                 case EmitMessageWithTags:
                     break;
                 case PublishMessage:
+                    VmPublishMessage(binary.UInt16SliceTable.Resolve(instruction.A_U16), binary.UInt16SliceTable.Resolve(instruction.B_U16), true, context);
                     break;
                 case PublishMessageWithTags:
                     break;
@@ -518,12 +521,37 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case PipelineTakePatternStraight:
                     break;
+                case StageRegister:
+                case StageNothing:
+                case StageTrue:
+                case StageFalse:
+                case StageInteger:
+                case StageFloat:
+                case StageText:
+                case StageTag:
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null);
             }
         }
 
         return true;
     }
 
+
+    private bool VmPublishMessage(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptContext context)
+    {
+        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
+        var messageName = binary.StringTable.Resolve(shape[0]);
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
+        for (var index = 0; index < argumentSlots.Length; index++)
+        {
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
+                binary.StringTable.Resolve(shape[index + 1]),
+                Register(argumentSlots[index]).ToGameEventScriptValue());
+        }
+
+        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
+        return publish ? context.Publish(message) : context.Emit(message);
+    }
 }

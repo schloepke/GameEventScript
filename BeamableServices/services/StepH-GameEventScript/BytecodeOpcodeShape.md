@@ -193,7 +193,7 @@ runtime dispatch step.
 | 0x06 | `LoadText` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a text literal. |
 | 0x07 | `LoadTag` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a tag literal. |
 | 0x08 | `MoveSlot` | - | result slot | source slot | - | - | - | - | - | Copies a slot value/reference; the source slot remains unchanged. |
-| 0x09 | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads invocation argument `A_U16` and writes it to `Dest_U16`. |
+| 0x09 | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads a handler invocation argument `A_U16` and writes it to `Dest_U16`. |
 | 0x0A | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
 | 0x0B | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
 | 0x0C | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
@@ -334,8 +334,8 @@ runtime dispatch step.
 | 0x9A | `BindHandler` | - | result slot | operand slot-list `UShortListPool` index | argument name-list `UShortListPool` index | - | - | - | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
 | 0x9B | `Variadic` | - | result slot | operation name `StringPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Evaluates a variadic operator over slot-list operands. |
 | 0x9C..0x9F | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access operations. |
-| 0xA0 | `EnterScope` | - | - | - | - | - | - | - | - | Pushes a scope mark for local-slot cleanup. |
-| 0xA1 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope and restores changed slots. |
+| 0xA0 | `EnterScope` | - | - | additional local slot count | - | - | - | - | - | Pushes a scope mark and extends the current frame by `A_U16` active slots. |
+| 0xA1 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope, clears slots added by that scope, and restores the previous active slot count. |
 | 0xA2 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
 | 0xA3 | `EmitMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message with tags. |
 | 0xA4 | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Publishes a statically shaped message without tags. |
@@ -361,13 +361,21 @@ runtime dispatch step.
 | 0xBD | `SeriesTerm` | - | result slot | series slot | index slot | - | - | - | - | Reads a series term. |
 | 0xBE | `SeriesTake` | - | result slot | source slot | count immediate | - | - | - | - | Takes the first `B_U16` values from a series or list-like source. |
 | 0xBF | `SeriesDrop` | - | result slot | source slot | count immediate | - | - | - | - | Drops the first `B_U16` values from a series or list-like source. |
-| 0xC0 | `Call` | - | result slot | callable entry address | argument slot-list `UShortListPool` index | - | - | - | - | Enters a VM-owned local call frame at a known code address. |
-| 0xC1 | `CallPredicate` | - | result slot | predicate entry address | argument slot-list `UShortListPool` index | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. |
+| 0xC0 | `Call` | - | result slot | callable entry address | staged argument count | - | - | - | - | Enters a VM-owned local call frame at a known code address. Arguments must be staged immediately before the call. |
+| 0xC1 | `CallPredicate` | - | result slot | predicate entry address | staged argument count | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. Arguments must be staged immediately before the call. |
 | 0xC2 | `CallStandard` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
 | 0xC3 | `CallStandardPredicate` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension and normalizes the result to `boolean | nothing`. |
 | 0xC4 | `CallExternal` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension. |
 | 0xC5 | `CallExternalPredicate` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension and normalizes the result to `boolean | nothing`. |
-| 0xC6..0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
+| 0xC6 | `StageRegister` | - | - | source slot | - | - | - | - | - | Stages a register value as the next local call argument. |
+| 0xC7 | `StageNothing` | - | - | - | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
+| 0xC8 | `StageTrue` | - | - | - | - | - | - | - | - | Stages `true` as the next local call argument. |
+| 0xC9 | `StageFalse` | - | - | - | - | - | - | - | - | Stages `false` as the next local call argument. |
+| 0xCA | `StageInteger` | unit/flags | - | n/a | n/a | n/a | n/a | integer payload | n/a | Stages an inline integer argument. |
+| 0xCB | `StageFloat` | unit/flags | - | n/a | n/a | n/a | n/a | n/a | float payload | Stages an inline float/percentage argument. |
+| 0xCC | `StageText` | - | - | - | - | string index | - | - | - | Stages a text literal from `StringPool`. |
+| 0xCD | `StageTag` | - | - | - | - | string index | - | - | - | Stages a tag literal from `StringPool`. |
+| 0xCE..0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
 | 0xD0 | `PipelineIterator` | - | iterator slot | source iterator slot | next-entry address | source item binding slot | - | - | - | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
 | 0xD1 | `PipelineCollectList` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a list. |
 | 0xD2 | `PipelineCollectSet` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a set. |
@@ -417,7 +425,7 @@ runtime dispatch step.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `Call`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `CallStandard*`, `CallExternal*` |
 
 Local calls, predicate calls, construction, extension calls, and collection/message
 builder opcodes now reference entry addresses or `StringPool`/`UShortListPool`

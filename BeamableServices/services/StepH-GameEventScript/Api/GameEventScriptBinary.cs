@@ -410,6 +410,14 @@ public enum GameEventScriptBytecodeOpCode : byte
     CallStandardPredicate = 0xC3,
     CallExternal = 0xC4,
     CallExternalPredicate = 0xC5,
+    StageRegister = 0xC6,
+    StageNothing = 0xC7,
+    StageTrue = 0xC8,
+    StageFalse = 0xC9,
+    StageInteger = 0xCA,
+    StageFloat = 0xCB,
+    StageText = 0xCC,
+    StageTag = 0xCD,
     #endregion
     
     #region Pipeline operations

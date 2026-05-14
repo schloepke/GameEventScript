@@ -153,6 +153,57 @@ internal sealed class GesBytecodeVmLinearExecutable
         {
             ValidateInstruction(module, code, address, code[address]);
         }
+
+        ValidateStageSequences(code);
+    }
+
+    private static void ValidateStageSequences(IReadOnlyList<GameEventScriptBytecodeInstruction> code)
+    {
+        var stagedCount = 0;
+        var stageStartAddress = -1;
+        for (var address = 0; address < code.Count; address++)
+        {
+            var instruction = code[address];
+            if (IsStageInstruction(instruction.OpCode))
+            {
+                if (stagedCount == 0)
+                {
+                    stageStartAddress = address;
+                }
+
+                stagedCount++;
+                continue;
+            }
+
+            if (stagedCount == 0)
+            {
+                if (instruction.OpCode is (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate) &&
+                    instruction.B_U16 != 0)
+                {
+                    throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {instruction.B_U16} staged argument(s), but no stage sequence precedes it.");
+                }
+
+                continue;
+            }
+
+            if (instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate))
+            {
+                throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} is interrupted by instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode}.");
+            }
+
+            if (instruction.B_U16 != stagedCount)
+            {
+                throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {instruction.B_U16} staged argument(s), but {stagedCount} argument(s) were staged.");
+            }
+
+            stagedCount = 0;
+            stageStartAddress = -1;
+        }
+
+        if (stagedCount != 0)
+        {
+            throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} has no following call.");
+        }
     }
 
     private static void ValidateInstruction(
@@ -175,10 +226,13 @@ internal sealed class GesBytecodeVmLinearExecutable
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
-            case GameEventScriptBytecodeOpCode.EnterScope:
             case GameEventScriptBytecodeOpCode.ExitScope:
             case GameEventScriptBytecodeOpCode.ShortCircuitOr:
             case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
+                break;
+
+            case GameEventScriptBytecodeOpCode.EnterScope:
+                ValidateFrameSlotCount(module, instruction.A_U16, $"{context} additional local slot count");
                 break;
 
             case GameEventScriptBytecodeOpCode.ReserveSlots:
@@ -212,6 +266,31 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             case GameEventScriptBytecodeOpCode.MoveSlot:
                 ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageRegister:
+                ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageNothing:
+            case GameEventScriptBytecodeOpCode.StageTrue:
+            case GameEventScriptBytecodeOpCode.StageFalse:
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageInteger:
+                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: false, $"{context} numeric unit");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageFloat:
+                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: true, $"{context} numeric unit");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageText:
+                ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} text");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StageTag:
+                ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} tag");
                 break;
 
             case GameEventScriptBytecodeOpCode.BindParameter:
@@ -504,14 +583,12 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             case GameEventScriptBytecodeOpCode.Call:
                 ValidateEntryAddress(module, code, instruction.A_U16, $"{context} callable entry");
-                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
-                ValidateCallableArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidateCallableArgumentCount(module, instruction.A_U16, instruction.B_U16, $"{context} staged argument count");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallPredicate:
                 ValidateEntryAddress(module, code, instruction.A_U16, $"{context} predicate entry");
-                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
-                ValidatePredicateCallArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidatePredicateCallArgumentCount(module, instruction.A_U16, instruction.B_U16, $"{context} staged argument count");
                 break;
 
             default:
@@ -658,6 +735,20 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
     }
 
+    private static void ValidateCallableArgumentCount(GameEventScriptCompiled module, int entryAddress, int argumentCount, string context)
+    {
+        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == entryAddress);
+        if (callable is null)
+        {
+            throw InvalidBytecode($"{context} references unknown callable entry address {entryAddress}.");
+        }
+
+        if (argumentCount != callable.Parameters.Count)
+        {
+            throw InvalidBytecode($"{context} {argumentCount} does not match callable parameter count {callable.Parameters.Count}.");
+        }
+    }
+
     private static void ValidatePredicateCallArgumentSlots(GameEventScriptCompiled module, int entryAddress, int slotListIndex, string context)
     {
         var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == entryAddress);
@@ -675,6 +766,25 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (slots.Count != callable.Parameters.Count)
         {
             throw InvalidBytecode($"{context} count {slots.Count} does not match predicate parameter count {callable.Parameters.Count}.");
+        }
+    }
+
+    private static void ValidatePredicateCallArgumentCount(GameEventScriptCompiled module, int entryAddress, int argumentCount, string context)
+    {
+        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == entryAddress);
+        if (callable is null)
+        {
+            throw InvalidBytecode($"{context} references unknown predicate entry address {entryAddress}.");
+        }
+
+        if (callable.Kind != GameEventScriptBytecodeCallableKind.Predicate)
+        {
+            throw InvalidBytecode($"{context} references function '{callable.Name}' instead of a predicate.");
+        }
+
+        if (argumentCount != callable.Parameters.Count)
+        {
+            throw InvalidBytecode($"{context} {argumentCount} does not match predicate parameter count {callable.Parameters.Count}.");
         }
     }
 
@@ -896,7 +1006,25 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.IteratorClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
-            GameEventScriptBytecodeOpCode.RandomPop);
+            GameEventScriptBytecodeOpCode.RandomPop or
+            GameEventScriptBytecodeOpCode.StageRegister or
+            GameEventScriptBytecodeOpCode.StageNothing or
+            GameEventScriptBytecodeOpCode.StageTrue or
+            GameEventScriptBytecodeOpCode.StageFalse or
+            GameEventScriptBytecodeOpCode.StageInteger or
+            GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StageText or
+            GameEventScriptBytecodeOpCode.StageTag);
+
+    private static bool IsStageInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.StageRegister or
+            GameEventScriptBytecodeOpCode.StageNothing or
+            GameEventScriptBytecodeOpCode.StageTrue or
+            GameEventScriptBytecodeOpCode.StageFalse or
+            GameEventScriptBytecodeOpCode.StageInteger or
+            GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StageText or
+            GameEventScriptBytecodeOpCode.StageTag;
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.CastNothing or

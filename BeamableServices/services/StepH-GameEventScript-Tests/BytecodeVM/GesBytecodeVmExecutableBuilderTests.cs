@@ -276,7 +276,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeUsesSlotListsForMultiArgumentPredicateCalls()
+    public void PublicLinearBytecodeStagesArgumentsForMultiArgumentPredicateCalls()
     {
         const string script =
             """
@@ -292,7 +292,37 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
         Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.A_U16);
-        Assert.HasCount(2, compiled.UShortListPool[predicateInstruction.B_U16]);
+        Assert.AreEqual((ushort)2, predicateInstruction.B_U16);
+
+        var predicateIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 2].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 1].OpCode);
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeStagesLiteralArgumentsWithImmediateOpcodes()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            function add(left, right) means left + right
+
+            on Start {
+              emit Done(value: add(left: 1, right: 2))
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var callInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
+        Assert.AreEqual(compiled.Callables["add"].EntryAddress, callInstruction.A_U16);
+        Assert.AreEqual((ushort)2, callInstruction.B_U16);
+
+        var callIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.StageInteger, compiled.Code[callIndex - 2].OpCode);
+        Assert.AreEqual(1L, compiled.Code[callIndex - 2].I64);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.StageInteger, compiled.Code[callIndex - 1].OpCode);
+        Assert.AreEqual(2L, compiled.Code[callIndex - 1].I64);
     }
 
     [TestMethod]

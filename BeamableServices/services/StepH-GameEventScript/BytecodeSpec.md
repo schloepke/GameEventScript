@@ -18,10 +18,10 @@ pipelines. High-level language constructs lower either to normal linear
 instructions or to explicit opcodes that reference normalized tables. Function
 and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
-temporary slots from handler locals and scope-change tracking. Predicate calls
-use direct `CallPredicate` instructions with target entry addresses and argument
-slot-list indexes. Local calls use direct `Call` instructions with target entry
-addresses and argument slot-list indexes. Extension calls use direct
+temporary slots from handler locals with temporary frame extensions. Predicate calls
+use direct `CallPredicate` instructions with target entry addresses and staged
+argument counts. Local calls use direct `Call` instructions with target entry
+addresses and staged argument counts. Extension calls use direct
 `CallStandard*` or `CallExternal*` instructions with argument slot lists.
 Variadic operators, type constructors, local builders, message literals,
 handler binding, casts, type checks, member access, and seeded-random
@@ -243,7 +243,7 @@ Predicates:
 The portable metadata carries the hint:
 
 ```text
-ParameterEntry
+HandlerParameterEntry
   ExternalLabel
   LocalName
   Slot
@@ -260,7 +260,10 @@ counter and dump show where normalization happens:
 @0003 CastInteger dst=s1 src=s1
 ```
 
-For untyped parameters the compiler emits only `BindParameter`.
+For untyped handler parameters the compiler emits only `BindParameter`.
+Callable parameters use the same slot/type metadata externally, but the call
+ABI stages arguments before `Call`; the callee starts with those values already
+assigned to slots `0..n-1`.
 
 ## Instruction Addresses
 
@@ -360,7 +363,7 @@ marked as `reserved` ranges.
 For JSON transport, instructions serialize as a normalized four-field object:
 
 ```json
-{ "Opcode": "LoadInteger", "Flags": "0x04", "Dst": "0x0007", "Parameter": "0x000000000000002A" }
+{ "Opcode": "LoadInteger", "Flags": "0x00", "Dst": "0x0007", "Parameter": "0x000000000000002A" }
 ```
 
 `Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot, and
@@ -419,7 +422,8 @@ operation-local debug state such as selector index or item index.
 Handlers and callables are metadata over the shared code segment. Their
 `EntryAddress` points at a `ReserveSlots` prolog instruction. The instruction
 immediately after the prolog is the first executable body instruction, typically
-one or more `BindParameter` instructions.
+one or more `BindParameter` instructions for message handlers. Callable
+arguments are already present in slots `0..n-1` when their frame starts.
 
 ```text
 HandlerEntry
@@ -509,6 +513,12 @@ for `pc`-based execution.
 - `LoadHandler dst messageNameIndex namedArgumentLayoutIndex`
 - `Move dst src`
 - `BindParameter dst parameterIndex`
+- `StageRegister src`
+- `StageNothing`/`StageTrue`/`StageFalse`
+- `StageInteger i64 unitAndFlags`
+- `StageFloat f64 unitAndFlags`
+- `StageText stringIndex`
+- `StageTag stringIndex`
 - `CastBoolean`/`CastInteger`/`CastFloat`/etc. `dst src`
 - `CastCustom dst src nameIndex`
 - `TypeCheckBoolean`/`TypeCheckInteger`/etc. `dst src`
@@ -516,16 +526,21 @@ for `pc`-based execution.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
-Parameter type hints lower to `BindParameter` plus an optional direct cast in
-the entry prologue.
+Handler parameter type hints lower to `BindParameter` plus an optional direct
+cast in the entry prologue. Callable parameter type hints lower to an optional
+direct cast over the already staged argument slot.
 
 ### Scopes
 
-- `EnterScope data=scopePlan`
-- `ExitScope data=scopePlan`
+- `EnterScope A_U16`
+- `ExitScope`
 
-Scopes are explicit instructions. They restore locals through the VM scope stack
-instead of relying on C# `try/finally`.
+Scopes are explicit instructions. `EnterScope` records the current active frame
+slot count and extends the same frame by `A_U16` additional local slots. Slot
+addresses stay absolute in the current frame, so a scope entered from active
+slots `s0..s3` with `EnterScope 2` exposes `s0..s5`. `ExitScope` clears slots
+added by that scope and restores the previous active slot count. Existing parent
+slots remain visible and are not rolled back by scope exit.
 
 ### Arithmetic and Logic
 
@@ -592,8 +607,8 @@ implication combine inside that branch sequence.
 - `CollectionIterator dst collection`
 - `IteratorNext dst iterator noMoreTarget`
 - `IteratorClose iterator`
-- `Call dst entryAddress argumentSlotList`
-- `CallPredicate dst entryAddress argumentSlotList`
+- `Call dst entryAddress stagedArgumentCount`
+- `CallPredicate dst entryAddress stagedArgumentCount`
 - `ReturnValue src`
 - `ReturnVoid`
 
@@ -632,14 +647,19 @@ VM-internal collection builder opcodes.
 Predicates and functions are normal callable entries. A call instruction
 transfers control to the callable entry and returns to the next instruction.
 Predicate calls use the same frame mechanism, normalize the result to
-`boolean | nothing`, and read their arguments from the `B_U16` slot-list. The
-`x is predicate` syntax is unary sugar that lowers to `CallPredicate` with a
-single-entry argument slot-list.
+`boolean | nothing`, and read their arguments from the stage sequence immediately
+before the call. The `B_U16` operand stores the staged argument count. A stage
+sequence may contain only `Stage*` instructions and must be followed by `Call`
+or `CallPredicate`. The callee frame receives arguments in slots `0..n-1`.
+The `x is predicate` syntax is unary sugar that lowers to one staged argument
+plus `CallPredicate`.
 
 ```text
-@0500 Call dst=s3 callable=wounded args=#0
-@0501 JumpIfNotTrue cond=s3 target=@0510
-@0520 CallPredicate dst=s4 predicate=@0900 args=#1
+@0500 StageRegister src=s0
+@0501 Call dst=s3 callable=wounded args=1
+@0502 JumpIfNotTrue cond=s3 target=@0510
+@0520 StageRegister src=s2
+@0521 CallPredicate dst=s4 predicate=@0900 args=1
 ```
 
 Type constructors, variadic operators, collection builders, dictionaries,
@@ -670,27 +690,34 @@ Loops should be compiled to explicit loop control instructions and jumps.
 Range loop shape:
 
 ```text
-@0200 RangeLoopInit data=rangeLoopPlan
-@0201 RangeLoopMoveNextOrJump dst=sItem data=rangeLoopPlan target=@0210
-@0202 EnterScope data=loopScope
-@0203 ...
-@0208 ExitScope data=loopScope
-@0209 Jump @0201
-@0210 RangeLoopEnd data=rangeLoopPlan
+@0200 EnterScope locals=loopLocalCount
+@0201 RangeIteratorShort dst=sIterator from=1 to=20 step=1
+@0202 IteratorNext dst=sItem iterator=sIterator noMore=@0210
+@0203 EnterScope locals=iterationLocalCount
+@0204 MoveSlot dst=sIdentifier src=sItem
+@0205 ...
+@0208 ExitScope
+@0209 Jump @0202
+@0210 IteratorClose iterator=sIterator
+@0211 ExitScope
 ```
 
 Collection loop shape:
 
 ```text
-@0300 CollectionLoopInit source=sValues data=collectionLoopPlan
-@0301 CollectionLoopMoveNextOrJump dst=sItem data=collectionLoopPlan target=@0310
-@0302 ...
-@0309 Jump @0301
-@0310 CollectionLoopEnd data=collectionLoopPlan
+@0300 EnterScope locals=loopLocalCount
+@0301 CollectionIterator dst=sIterator source=sValues
+@0302 IteratorNext dst=sItem iterator=sIterator noMore=@0310
+@0303 EnterScope locals=iterationLocalCount
+@0304 ...
+@0308 ExitScope
+@0309 Jump @0302
+@0310 IteratorClose iterator=sIterator
+@0311 ExitScope
 ```
 
-Loop runtime state belongs to the VM session, indexed by the loop plan or by a
-compiler-assigned loop temporary slot.
+Loop runtime state is stored in the VM-internal iterator value held by the
+compiler-assigned iterator slot.
 
 ### Values and Containers
 
@@ -896,11 +923,11 @@ Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
 CollectionBuilderList/Set builder
-EnterScope
+EnterScope locals=collectionLocalCount
 RangeIterator* / CollectionIterator iterator
 loop:
   IteratorNext item iterator noMore
-  EnterScope
+  EnterScope locals=iterationLocalCount
   MoveSlot identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
@@ -987,16 +1014,15 @@ slot operands:
 ```text
 code[26]
 @0000 L_handler_Start:
-@0000 EnterScope data=#0
+@0000 ReserveSlots slots=6
 @0001 BindParameter dst=s0 arg=values
-@0002 Pipeline dst=s2 source=s0 data=#0
-@0003 LoadInteger dst=s3 value=0
-@0004 Greater dst=s4 left=s2 right=s3
-@0005 JumpIfNotTrue cond=s4 target=@0010 ; L_if_0_else
-@0006 ...
-@0010 L_if_0_else:
-@0010 ...
-@0025 ReturnValue src=sReturn
+@0002 EnterScope locals=1
+@0003 CollectionIterator dst=s2 source=s0
+@0004 IteratorNext dst=s3 iterator=s2 noMore=@0010
+@0005 ...
+@0010 IteratorClose iterator=s2
+@0011 ExitScope
+@0012 ReturnVoid
 ```
 
 With typed parameters:

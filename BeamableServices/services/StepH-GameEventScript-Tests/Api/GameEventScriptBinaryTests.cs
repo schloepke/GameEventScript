@@ -57,7 +57,7 @@ public sealed class GameEventScriptBinaryTests
         var json = JsonSerializer.Serialize(instruction);
 
         Assert.AreEqual(
-            """{"Opcode":"LoadInteger","Flags":"0x04","Dst":"0x0007","Parameter":"0x000000000000002A"}""",
+            """{"Opcode":"LoadInteger","Flags":"0x01","Dst":"0x0007","Parameter":"0x000000000000002A"}""",
             json);
 
         var decoded = JsonSerializer.Deserialize<GameEventScriptBytecodeInstruction>(json);

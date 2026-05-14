@@ -20,6 +20,8 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly List<Action> _deferredHelperEmitters = [];
     private readonly Dictionary<string, GameEventScriptBytecodeCallable> _bytecodeCallables = new(StringComparer.Ordinal);
     private readonly List<(int Address, string CallableName)> _deferredCallableAddressPatches = [];
+    private readonly Stack<ScopeBuildState> _scopeBuildStates = new();
+    private readonly List<ScopeBuildState> _deferredRootScopePatches = [];
     private int _currentFrameSlotCount;
     private int _maxFrameSlots = 1;
 
@@ -63,7 +65,7 @@ internal sealed class GesLinearBytecodeBuilder
             EmitParameterBindings(handler.Parameters, handler.ParameterTypes, handler.Slots);
             if (sourceHandlers.TryGetValue(handler, out var sourceHandler))
             {
-                EmitSourceStatements(sourceHandler.Statements, createsScope: false, handler.Slots);
+                EmitSourceStatements(sourceHandler.Statements, createsScope: false, new SourceContext(handler.Slots));
             }
             else
             {
@@ -72,9 +74,11 @@ internal sealed class GesLinearBytecodeBuilder
             }
 
             Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
+            var handlerSlotCount = _currentFrameSlotCount;
+            PatchDeferredRootScopes(handlerSlotCount);
             FlushDeferredHelpers();
-            PatchReserveSlots(reserveSlotsAddress, _currentFrameSlotCount);
-            _maxFrameSlots = Math.Max(_maxFrameSlots, _currentFrameSlotCount);
+            PatchReserveSlots(reserveSlotsAddress, handlerSlotCount);
+            _maxFrameSlots = Math.Max(_maxFrameSlots, handlerSlotCount);
         }
     }
 
@@ -143,26 +147,26 @@ internal sealed class GesLinearBytecodeBuilder
         var context = new SourceContext(slots);
         callable.EntryAddress = _code.Count;
         var reserveSlotsAddress = EmitReserveSlots(0);
-        var callableSlotCount = Math.Max(callable.Parameters.Count + 1, slots.Count);
+        var callableSlotCount = Math.Max(callable.Parameters.Count + 1, context.SlotCount);
         _currentFrameSlotCount = callableSlotCount;
         _maxFrameSlots = Math.Max(_maxFrameSlots, callableSlotCount);
 
         for (var index = 0; index < callable.Parameters.Count; index++)
         {
             var parameterSlot = context.RequireSlot(callable.Parameters[index]);
-            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.BindParameter, dest: parameterSlot, a: index));
             if (index < callable.ParameterTypes.Count && !string.IsNullOrEmpty(callable.ParameterTypes[index]))
             {
                 EmitCastSlot(parameterSlot, parameterSlot, callable.ParameterTypes[index]);
             }
         }
 
-        var state = new ExpressionState(slots.Count);
+        var state = new ExpressionState(context.SlotCount);
         var result = EmitSourceExpression(sourceCallable.Expression, context, state);
         callable.ReturnSlot = result;
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: result));
-        FlushDeferredHelpers();
         callableSlotCount = Math.Max(callableSlotCount, _currentFrameSlotCount);
+        PatchDeferredRootScopes(callableSlotCount);
+        FlushDeferredHelpers();
         PatchReserveSlots(reserveSlotsAddress, callableSlotCount);
         _maxFrameSlots = Math.Max(_maxFrameSlots, callableSlotCount);
     }
@@ -219,12 +223,72 @@ internal sealed class GesLinearBytecodeBuilder
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: result));
+        PatchDeferredRootScopes(state.NextSlot);
         PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
         return entry;
     }
 
     private int EmitReserveSlots(int count)
         => Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReserveSlots, a: count));
+
+    private int BeginScope(int activeSlotCount)
+    {
+        var address = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        _scopeBuildStates.Push(new ScopeBuildState(address, activeSlotCount, isRootScope: _scopeBuildStates.Count == 0));
+        return address;
+    }
+
+    private void EndScope(int address)
+    {
+        if (_scopeBuildStates.Count == 0 ||
+            _scopeBuildStates.Peek().Address != address)
+        {
+            throw new GameEventScriptCompileException("GameEventScript bytecode lowerer could not close scope.");
+        }
+
+        var scope = _scopeBuildStates.Pop();
+        if (scope.IsRootScope)
+        {
+            _deferredRootScopePatches.Add(scope);
+        }
+        else
+        {
+            PatchScope(scope, scope.BaseSlotCount);
+        }
+
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+    }
+
+    private void PatchDeferredRootScopes(int rootSlotCount)
+    {
+        foreach (var scope in _deferredRootScopePatches)
+        {
+            PatchScope(scope, rootSlotCount);
+        }
+
+        _deferredRootScopePatches.Clear();
+    }
+
+    private void PatchScope(ScopeBuildState scope, int activeSlotCount)
+    {
+        var localSlotCount = Math.Max(0, scope.MaxSlotCount - activeSlotCount);
+        PatchA(scope.Address, localSlotCount);
+    }
+
+    private int AllocateScopedLocalSlot()
+    {
+        if (_scopeBuildStates.Count > 0)
+        {
+            var scope = _scopeBuildStates.Peek();
+            var scopedSlot = scope.AllocateSlot();
+            MarkAllocatedSlotCount(scopedSlot + 1);
+            return scopedSlot;
+        }
+
+        var slot = _currentFrameSlotCount;
+        MarkAllocatedSlotCount(slot + 1);
+        return slot;
+    }
 
     private static int GetSlotCount(IReadOnlyDictionary<string, int> slots)
         => slots.Count == 0
@@ -268,15 +332,21 @@ internal sealed class GesLinearBytecodeBuilder
     private void EmitSourceStatements(
         IReadOnlyList<StatementNode> statements,
         bool createsScope,
-        IReadOnlyDictionary<string, int> slots,
+        SourceContext context,
         int? temporaryBaseSlot = null)
     {
-        if (createsScope)
+        if (temporaryBaseSlot is not null)
         {
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+            context = context.WithTemporaryBaseSlot(temporaryBaseSlot.Value);
         }
 
-        var context = new SourceContext(slots, temporaryBaseSlot);
+        var scopeAddress = -1;
+        if (createsScope)
+        {
+            scopeAddress = BeginScope(context.SlotCount);
+            context = context.CreateScope(context.SlotCount, AllocateScopedLocalSlot);
+        }
+
         foreach (var statement in statements)
         {
             EmitSourceStatement(statement, context);
@@ -284,7 +354,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         if (createsScope)
         {
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+            EndScope(scopeAddress);
         }
     }
 
@@ -294,9 +364,33 @@ internal sealed class GesLinearBytecodeBuilder
         {
             case LetStatementNode let:
             {
-                var result = EmitSourceExpression(let.Expression, context, new ExpressionState(context.SlotCount));
-                var letSlot = context.RequireSlot(let.Identifier);
-                var diagnosticAddress = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: letSlot, a: result));
+                var state = new ExpressionState(context.SlotCount);
+                var canDeclareBeforeExpression = !ExpressionReferencesIdentifier(let.Expression, let.Identifier);
+                var letSlot = canDeclareBeforeExpression ? context.DeclareSlot(let.Identifier) : -1;
+                if (canDeclareBeforeExpression)
+                {
+                    state.EnsureNextSlot(context.SlotCount);
+                }
+
+                int diagnosticAddress;
+                if (canDeclareBeforeExpression &&
+                    TryEmitSourceExpressionToSlot(let.Expression, letSlot, context, state, out diagnosticAddress))
+                {
+                    // Expression emitted directly into the declared local.
+                }
+                else
+                {
+                    var result = EmitSourceExpression(let.Expression, context, state);
+                    if (letSlot < 0)
+                    {
+                        letSlot = context.DeclareSlot(let.Identifier);
+                    }
+
+                    diagnosticAddress = result == letSlot
+                        ? _code.Count - 1
+                        : Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: letSlot, a: result));
+                }
+
                 if (!string.IsNullOrEmpty(let.DeclaredType))
                 {
                     diagnosticAddress = EmitCastSlot(letSlot, letSlot, let.DeclaredType);
@@ -406,7 +500,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var condition = EmitSourceExpression(ifStatement.Condition, context, new ExpressionState(context.SlotCount));
         var jumpToElse = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: condition));
-        EmitSourceStatements(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock, context.Slots);
+        EmitSourceStatements(ifStatement.ThenBody.Statements, ifStatement.ThenBody.IsBlock, context);
         if (ifStatement.ElseBody is null)
         {
             PatchTarget(jumpToElse, _code.Count);
@@ -415,35 +509,42 @@ internal sealed class GesLinearBytecodeBuilder
         {
             var jumpToEnd = Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Jump));
             PatchTarget(jumpToElse, _code.Count);
-            EmitSourceStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock, context.Slots);
+            EmitSourceStatements(ifStatement.ElseBody.Statements, ifStatement.ElseBody.IsBlock, context);
             PatchTarget(jumpToEnd, _code.Count);
         }
     }
 
     private void EmitSourceLoop(ForStatementNode forStatement, SourceContext context)
     {
-        var state = new ExpressionState(context.SlotCount);
-        var identifierSlot = context.RequireSlot(forStatement.Identifier);
-
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        var outerScopeAddress = BeginScope(context.SlotCount);
+        var loopContext = context.CreateScope(context.SlotCount, AllocateScopedLocalSlot);
+        var identifierSlot = loopContext.DeclareSlot(forStatement.Identifier);
+        var state = new ExpressionState(loopContext.SlotCount);
         var iteratorSlot = EmitSourceIterator(forStatement.Source, context, state);
-        var itemSlot = AllocateSlot(state);
 
         var loopAddress = _code.Count;
         var nextInstruction = Emit(CreateInstruction(
             GameEventScriptBytecodeOpCode.IteratorNext,
-            dest: itemSlot,
+            dest: identifierSlot,
             a: iteratorSlot));
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: itemSlot));
-        EmitSourceStatements(forStatement.Body.Statements, forStatement.Body.IsBlock, context.Slots, state.NextSlot);
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+        if (forStatement.Body.IsBlock)
+        {
+            EmitSourceStatements(forStatement.Body.Statements, createsScope: true, loopContext, state.NextSlot);
+        }
+        else
+        {
+            var iterationScopeAddress = BeginScope(state.NextSlot);
+            var iterationContext = loopContext.CreateScope(state.NextSlot, AllocateScopedLocalSlot);
+            EmitSourceStatements(forStatement.Body.Statements, createsScope: false, iterationContext, state.NextSlot);
+            EndScope(iterationScopeAddress);
+        }
+
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Jump, a: loopAddress));
 
         var endAddress = _code.Count;
         PatchB(nextInstruction, endAddress);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.IteratorClose, a: iteratorSlot));
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+        EndScope(outerScopeAddress);
     }
 
     private int EmitSourceGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection, SourceContext context, ExpressionState state)
@@ -455,11 +556,13 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support generated collection type '{generatedCollection.CollectionType}'.")
         };
 
-        var identifierSlot = context.RequireSlot(generatedCollection.Identifier);
         var builderSlot = AllocateSlot(state);
         Emit(CreateInstruction(builderOpCode, dest: builderSlot));
 
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        var outerScopeAddress = BeginScope(state.NextSlot);
+        var collectionContext = context.CreateScope(state.NextSlot, AllocateScopedLocalSlot);
+        var identifierSlot = collectionContext.DeclareSlot(generatedCollection.Identifier);
+        state.EnsureNextSlot(collectionContext.SlotCount);
         var iteratorSlot = EmitSourceIterator(generatedCollection.Source, context, state);
         var itemSlot = AllocateSlot(state);
 
@@ -468,30 +571,31 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.IteratorNext,
             dest: itemSlot,
             a: iteratorSlot));
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        var iterationScopeAddress = BeginScope(state.NextSlot);
+        var iterationContext = collectionContext.CreateScope(state.NextSlot, AllocateScopedLocalSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: itemSlot));
 
         var skipProjectionJump = -1;
         if (generatedCollection.Predicate is not null)
         {
-            var predicateSlot = EmitSourceExpression(generatedCollection.Predicate, context, state);
+            var predicateSlot = EmitSourceExpression(generatedCollection.Predicate, iterationContext, state);
             skipProjectionJump = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: predicateSlot));
         }
 
-        var projectionSlot = EmitSourceExpression(generatedCollection.Projection, context, state);
+        var projectionSlot = EmitSourceExpression(generatedCollection.Projection, iterationContext, state);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionBuilderAdd, a: builderSlot, b: projectionSlot));
         if (skipProjectionJump >= 0)
         {
             PatchTarget(skipProjectionJump, _code.Count);
         }
 
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+        EndScope(iterationScopeAddress);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Jump, a: loopAddress));
 
         var endAddress = _code.Count;
         PatchB(nextInstruction, endAddress);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.IteratorClose, a: iteratorSlot));
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
+        EndScope(outerScopeAddress);
 
         var resultSlot = AllocateSlot(state);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionBuilderFinish, dest: resultSlot, a: builderSlot));
@@ -502,7 +606,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var state = new ExpressionState(context.SlotCount);
         EmitRandomPush(seededRandom.SeedExpression, context, state);
-        EmitSourceStatements(seededRandom.Body.Statements, seededRandom.Body.IsBlock, context.Slots);
+        EmitSourceStatements(seededRandom.Body.Statements, seededRandom.Body.IsBlock, context);
         Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.RandomPop));
     }
 
@@ -548,7 +652,7 @@ internal sealed class GesLinearBytecodeBuilder
                     GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels)));
 
             case IdentifierExpressionNode identifier:
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MoveSlot, a: context.RequireSlot(identifier.Name));
+                return context.RequireSlot(identifier.Name);
 
             case MessageLiteralExpressionNode message:
                 return EmitSourceMessage(message, context, state);
@@ -653,6 +757,131 @@ internal sealed class GesLinearBytecodeBuilder
         }
     }
 
+    private bool TryEmitSourceExpressionToSlot(
+        ExpressionNode expression,
+        int destinationSlot,
+        SourceContext context,
+        ExpressionState state,
+        out int instructionAddress)
+    {
+        instructionAddress = -1;
+        switch (expression)
+        {
+            case BooleanLiteralExpressionNode boolean:
+                instructionAddress = Emit(CreateInstruction(
+                    boolean.Value ? GameEventScriptBytecodeOpCode.LoadTrue : GameEventScriptBytecodeOpCode.LoadFalse,
+                    dest: destinationSlot));
+                return true;
+
+            case IntegerLiteralExpressionNode integer:
+                instructionAddress = EmitLoadIntegerToSlot(
+                    destinationSlot,
+                    integer.Value,
+                    (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
+                return true;
+
+            case UnitIntegerLiteralExpressionNode unitInteger:
+                instructionAddress = EmitLoadIntegerToSlot(
+                    destinationSlot,
+                    unitInteger.Value,
+                    GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
+                        ? EncodeNumericUnitAndFlags(integerUnit)
+                        : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
+                return true;
+
+            case FloatLiteralExpressionNode floatLiteral:
+                instructionAddress = EmitLoadFloatToSlot(
+                    destinationSlot,
+                    floatLiteral.Value,
+                    (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
+                return true;
+
+            case PercentageLiteralExpressionNode percentage:
+                instructionAddress = EmitLoadFloatToSlot(
+                    destinationSlot,
+                    percentage.PercentValue / 100d,
+                    (byte)GameEventScriptBytecodeInstructionUnit.Percentage);
+                return true;
+
+            case UnitFloatLiteralExpressionNode unitFloat:
+                instructionAddress = EmitLoadFloatToSlot(
+                    destinationSlot,
+                    unitFloat.Value,
+                    GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
+                        ? EncodeNumericUnitAndFlags(unit)
+                        : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
+                return true;
+
+            case TextLiteralExpressionNode text:
+                instructionAddress = Emit(CreateInstruction(
+                    GameEventScriptBytecodeOpCode.LoadText,
+                    dest: destinationSlot,
+                    c: ResolveStringIndex(text.Value)));
+                return true;
+
+            case TagLiteralExpressionNode tag:
+                instructionAddress = Emit(CreateInstruction(
+                    GameEventScriptBytecodeOpCode.LoadTag,
+                    dest: destinationSlot,
+                    c: ResolveStringIndex(tag.Name)));
+                return true;
+
+            case IdentifierExpressionNode identifier:
+            {
+                var sourceSlot = context.RequireSlot(identifier.Name);
+                if (sourceSlot == destinationSlot)
+                {
+                    return true;
+                }
+
+                instructionAddress = Emit(CreateInstruction(
+                    GameEventScriptBytecodeOpCode.MoveSlot,
+                    dest: destinationSlot,
+                    a: sourceSlot));
+                return true;
+            }
+
+            case UnaryExpressionNode unary:
+            {
+                var operand = EmitSourceExpression(unary.Operand, context, state);
+                instructionAddress = Emit(CreateInstruction(
+                    ToUnaryOpCode(unary.Operator),
+                    dest: destinationSlot,
+                    a: operand));
+                return true;
+            }
+
+            case BinaryExpressionNode binary
+                when binary.Operator is not ("|" or "&" or "->"):
+            {
+                var left = EmitSourceExpression(binary.Left, context, state);
+                var right = EmitSourceExpression(binary.Right, context, state);
+                instructionAddress = Emit(CreateInstruction(
+                    ToBinaryOpCode(binary),
+                    dest: destinationSlot,
+                    a: left,
+                    b: right));
+                return true;
+            }
+
+            case PredicateCallExpressionNode predicateCall:
+                return TryEmitSourcePredicateCallToSlot(predicateCall, destinationSlot, context, state, out instructionAddress);
+
+            case CallExpressionNode call:
+                return TryEmitSourceCallToSlot(call, destinationSlot, context, state, out instructionAddress);
+
+            case TypeCastExpressionNode typeCast:
+            {
+                var value = EmitSourceExpression(typeCast.Value, context, state);
+                instructionAddress = EmitCastSlot(destinationSlot, value, typeCast.TypeName);
+                return true;
+            }
+
+            default:
+                return false;
+        }
+    }
+
     private int EmitSourceConstant(ExpressionState state, GameEventScriptValue value)
     {
         if (value is null || value.IsNothing())
@@ -702,6 +931,113 @@ internal sealed class GesLinearBytecodeBuilder
 
             default:
                 throw new GameEventScriptCompileException($"GameEventScript bytecode inline constants do not support value kind '{value.Kind}'.");
+        }
+    }
+
+    private StageArgumentPlan PrepareStageArgument(ExpressionNode expression, SourceContext context, ExpressionState state)
+    {
+        if (TryCreateStageConstantInstruction(expression, out var instruction))
+        {
+            return StageArgumentPlan.FromInstruction(instruction);
+        }
+
+        return StageArgumentPlan.FromSlot(EmitSourceExpression(expression, context, state));
+    }
+
+    private void EmitStageArgument(StageArgumentPlan argument)
+    {
+        if (argument.HasInstruction)
+        {
+            Emit(argument.Instruction);
+            return;
+        }
+
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StageRegister, a: argument.Slot));
+    }
+
+    private bool TryCreateStageConstantInstruction(ExpressionNode expression, out GameEventScriptBytecodeInstruction instruction)
+    {
+        switch (expression)
+        {
+            case BooleanLiteralExpressionNode boolean:
+                instruction = new GameEventScriptBytecodeInstruction(boolean.Value
+                    ? GameEventScriptBytecodeOpCode.StageTrue
+                    : GameEventScriptBytecodeOpCode.StageFalse);
+                return true;
+
+            case IntegerLiteralExpressionNode integer:
+                instruction = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.StageInteger)
+                {
+                    I64 = integer.Value
+                };
+                return true;
+
+            case UnitIntegerLiteralExpressionNode unitInteger:
+                instruction = new GameEventScriptBytecodeInstruction(
+                    GameEventScriptBytecodeOpCode.StageInteger,
+                    unitAndFlags: GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
+                        ? EncodeNumericUnitAndFlags(integerUnit)
+                        : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone)
+                {
+                    I64 = unitInteger.Value
+                };
+                if (!GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out _))
+                {
+                    instruction = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.StageFloat)
+                    {
+                        F64 = double.NaN
+                    };
+                }
+
+                return true;
+
+            case FloatLiteralExpressionNode floatLiteral:
+                instruction = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.StageFloat)
+                {
+                    F64 = floatLiteral.Value
+                };
+                return true;
+
+            case PercentageLiteralExpressionNode percentage:
+                instruction = new GameEventScriptBytecodeInstruction(
+                    GameEventScriptBytecodeOpCode.StageFloat,
+                    unitAndFlags: (byte)GameEventScriptBytecodeInstructionUnit.Percentage)
+                {
+                    F64 = percentage.PercentValue / 100d
+                };
+                return true;
+
+            case UnitFloatLiteralExpressionNode unitFloat:
+                if (GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit))
+                {
+                    instruction = new GameEventScriptBytecodeInstruction(
+                        GameEventScriptBytecodeOpCode.StageFloat,
+                        unitAndFlags: EncodeNumericUnitAndFlags(unit))
+                    {
+                        F64 = unitFloat.Value
+                    };
+                }
+                else
+                {
+                    instruction = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.StageFloat)
+                    {
+                        F64 = double.NaN
+                    };
+                }
+
+                return true;
+
+            case TextLiteralExpressionNode text:
+                instruction = CreateInstruction(GameEventScriptBytecodeOpCode.StageText, c: ResolveStringIndex(text.Value));
+                return true;
+
+            case TagLiteralExpressionNode tag:
+                instruction = CreateInstruction(GameEventScriptBytecodeOpCode.StageTag, c: ResolveStringIndex(tag.Name));
+                return true;
+
+            default:
+                instruction = default;
+                return false;
         }
     }
 
@@ -953,20 +1289,37 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourcePredicateCall(PredicateCallExpressionNode predicateCall, SourceContext context, ExpressionState state)
     {
-        if (!_sourceCallables.TryGetValue(predicateCall.PredicateName, out var callable) ||
-            callable.Parameters.Count != 1)
+        var destinationSlot = AllocateSlot(state);
+        if (!TryEmitSourcePredicateCallToSlot(predicateCall, destinationSlot, context, state, out _))
         {
             throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support predicate test '{predicateCall.PredicateName}'.");
         }
 
-        var input = EmitSourceExpression(predicateCall.Value, context, state);
-        var destinationSlot = AllocateSlot(state);
-        var address = Emit(CreateInstruction(
+        return destinationSlot;
+    }
+
+    private bool TryEmitSourcePredicateCallToSlot(
+        PredicateCallExpressionNode predicateCall,
+        int destinationSlot,
+        SourceContext context,
+        ExpressionState state,
+        out int instructionAddress)
+    {
+        if (!_sourceCallables.TryGetValue(predicateCall.PredicateName, out var callable) ||
+            callable.Parameters.Count != 1)
+        {
+            instructionAddress = -1;
+            return false;
+        }
+
+        var argument = PrepareStageArgument(predicateCall.Value, context, state);
+        EmitStageArgument(argument);
+        instructionAddress = Emit(CreateInstruction(
             GameEventScriptBytecodeOpCode.CallPredicate,
             dest: destinationSlot,
-            b: ResolveSlotListIndex([input])));
-        _deferredCallableAddressPatches.Add((address, callable.Name));
-        return destinationSlot;
+            b: 1));
+        _deferredCallableAddressPatches.Add((instructionAddress, callable.Name));
+        return true;
     }
 
     private int EmitSourceExtensionPredicate(ExtensionPredicateExpressionNode extensionPredicate, SourceContext context, ExpressionState state)
@@ -1024,22 +1377,48 @@ internal sealed class GesLinearBytecodeBuilder
                 b: argumentNameListIndex);
         }
 
-        var argumentSlots = new int[call.Arguments.Count];
-        for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
+        var destinationSlot = AllocateSlot(state);
+        if (!TryEmitSourceCallToSlot(call, destinationSlot, context, state, out _))
         {
-            argumentSlots[argumentIndex] = EmitSourceExpression(call.Arguments[argumentIndex], context, state);
+            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support callable '{call.Name}'.");
         }
 
-        var destinationSlot = AllocateSlot(state);
+        return destinationSlot;
+    }
+
+    private bool TryEmitSourceCallToSlot(
+        CallExpressionNode call,
+        int destinationSlot,
+        SourceContext context,
+        ExpressionState state,
+        out int instructionAddress)
+    {
+        instructionAddress = -1;
+        if (!_sourceCallables.TryGetValue(call.Name, out var called))
+        {
+            return false;
+        }
+
+        var arguments = new StageArgumentPlan[call.Arguments.Count];
+        for (var argumentIndex = 0; argumentIndex < call.Arguments.Count; argumentIndex++)
+        {
+            arguments[argumentIndex] = PrepareStageArgument(call.Arguments[argumentIndex], context, state);
+        }
+
+        for (var argumentIndex = 0; argumentIndex < arguments.Length; argumentIndex++)
+        {
+            EmitStageArgument(arguments[argumentIndex]);
+        }
+
         var opCode = called.Kind == GameEventScriptCallableKind.PredicateCall
             ? GameEventScriptBytecodeOpCode.CallPredicate
             : GameEventScriptBytecodeOpCode.Call;
-        var address = Emit(CreateInstruction(
+        instructionAddress = Emit(CreateInstruction(
             opCode,
             dest: destinationSlot,
-            b: ResolveSlotListIndex(argumentSlots)));
-        _deferredCallableAddressPatches.Add((address, called.Name));
-        return destinationSlot;
+            b: arguments.Length));
+        _deferredCallableAddressPatches.Add((instructionAddress, called.Name));
+        return true;
     }
 
     private int EmitSourceTypeCast(TypeCastExpressionNode typeCast, SourceContext context, ExpressionState state)
@@ -1647,6 +2026,13 @@ internal sealed class GesLinearBytecodeBuilder
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: currentItemSlot, a: itemSlot));
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: accumulatorSlot));
         var accumulatorProjectionSlot = EmitSourceExpression(projection, context, state);
+        if (accumulatorProjectionSlot == identifierSlot)
+        {
+            var projectedAccumulatorSlot = AllocateSlot(state);
+            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: projectedAccumulatorSlot, a: accumulatorProjectionSlot));
+            accumulatorProjectionSlot = projectedAccumulatorSlot;
+        }
+
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: currentItemSlot));
         var currentProjectionSlot = EmitSourceExpression(projection, context, state);
         var comparisonSlot = EmitValueInstruction(
@@ -1893,9 +2279,22 @@ internal sealed class GesLinearBytecodeBuilder
     private int AllocateSlot(ExpressionState state)
     {
         var slot = state.Allocate();
-        _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
-        _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
+        MarkAllocatedSlotCount(state.NextSlot);
         return slot;
+    }
+
+    private void MarkAllocatedSlotCount(int slotCount)
+    {
+        _maxFrameSlots = Math.Max(_maxFrameSlots, slotCount);
+        if (_scopeBuildStates.Count == 0)
+        {
+            _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, slotCount);
+        }
+
+        if (_scopeBuildStates.Count > 0)
+        {
+            _scopeBuildStates.Peek().MarkSlotCount(slotCount);
+        }
     }
 
     private int Emit(GameEventScriptBytecodeInstruction instruction)
@@ -1907,6 +2306,9 @@ internal sealed class GesLinearBytecodeBuilder
 
     private void PatchTarget(int address, int target)
         => _code[address] = _code[address] with { A_U16 = ToUShortOperand(target, "target address") };
+
+    private void PatchA(int address, int value)
+        => _code[address] = _code[address] with { A_U16 = ToUShortOperand(value, "operand") };
 
     private void PatchTargets(int address, int target, int target2)
         => _code[address] = _code[address] with
@@ -2027,14 +2429,23 @@ internal sealed class GesLinearBytecodeBuilder
         byte unitAndFlags)
     {
         var dest = AllocateSlot(state);
+        EmitLoadIntegerToSlot(dest, value, unitAndFlags);
+        return dest;
+    }
+
+    private int EmitLoadIntegerToSlot(
+        int destinationSlot,
+        long value,
+        byte unitAndFlags)
+    {
         Emit(new GameEventScriptBytecodeInstruction(
             GameEventScriptBytecodeOpCode.LoadInteger,
-            dest: ToUShortOperand(dest, "destination operand"),
+            dest: ToUShortOperand(destinationSlot, "destination operand"),
             unitAndFlags: unitAndFlags)
         {
             I64 = value
         });
-        return dest;
+        return _code.Count - 1;
     }
 
     private int EmitLoadFloat(
@@ -2043,14 +2454,23 @@ internal sealed class GesLinearBytecodeBuilder
         byte unitAndFlags)
     {
         var dest = AllocateSlot(state);
+        EmitLoadFloatToSlot(dest, value, unitAndFlags);
+        return dest;
+    }
+
+    private int EmitLoadFloatToSlot(
+        int destinationSlot,
+        double value,
+        byte unitAndFlags)
+    {
         Emit(new GameEventScriptBytecodeInstruction(
             GameEventScriptBytecodeOpCode.LoadFloat,
-            dest: ToUShortOperand(dest, "destination operand"),
+            dest: ToUShortOperand(destinationSlot, "destination operand"),
             unitAndFlags: unitAndFlags)
         {
             F64 = value
         });
-        return dest;
+        return _code.Count - 1;
     }
 
     private static double EncodeFloatPayload(GameEventScriptFloatValue value)
@@ -2335,22 +2755,82 @@ internal sealed class GesLinearBytecodeBuilder
         Select
     }
 
-    private sealed class SourceContext(IReadOnlyDictionary<string, int> slots, int? temporaryBaseSlot = null)
+    private sealed class SourceContext
     {
-        private readonly IReadOnlyDictionary<string, int> _slots = slots;
+        private readonly IReadOnlyDictionary<string, int> _slots;
+        private readonly SourceContext? _parent;
+        private readonly Func<int>? _allocateScopedSlot;
+        private readonly Dictionary<string, int> _locals = new(StringComparer.Ordinal);
+
+        public SourceContext(IReadOnlyDictionary<string, int> slots, int? temporaryBaseSlot = null)
+        {
+            _slots = slots;
+            SlotCount = Math.Max(GetSlotCount(slots), temporaryBaseSlot ?? 0);
+        }
+
+        private SourceContext(IReadOnlyDictionary<string, int> slots, SourceContext parent, int slotCount, Func<int> allocateScopedSlot)
+        {
+            _slots = slots;
+            _parent = parent;
+            _allocateScopedSlot = allocateScopedSlot;
+            SlotCount = slotCount;
+        }
 
         public IReadOnlyDictionary<string, int> Slots => _slots;
 
-        public int SlotCount { get; } = Math.Max(slots.Count, temporaryBaseSlot ?? 0);
+        public int SlotCount { get; private set; }
 
-        public int RequireSlot(string name)
+        public SourceContext CreateScope(int slotCount, Func<int> allocateScopedSlot)
+            => new(_slots, this, slotCount, allocateScopedSlot);
+
+        public SourceContext WithTemporaryBaseSlot(int temporaryBaseSlot)
         {
-            if (!_slots.TryGetValue(name, out var slot))
+            SlotCount = Math.Max(SlotCount, temporaryBaseSlot);
+            return this;
+        }
+
+        public int DeclareSlot(string name)
+        {
+            if (_allocateScopedSlot is null)
             {
-                throw new InvalidOperationException($"Missing GameEventScript bytecode local slot '{name}'.");
+                return RequireSlot(name);
+            }
+
+            if (!_locals.TryGetValue(name, out var slot))
+            {
+                slot = _allocateScopedSlot();
+                _locals[name] = slot;
+                SlotCount = Math.Max(SlotCount, slot + 1);
             }
 
             return slot;
+        }
+
+        public int RequireSlot(string name)
+        {
+            if (TryResolveScopedSlot(name, out var slot) ||
+                _slots.TryGetValue(name, out slot))
+            {
+                return slot;
+            }
+
+            throw new InvalidOperationException($"Missing GameEventScript bytecode local slot '{name}'.");
+        }
+
+        private bool TryResolveScopedSlot(string name, out int slot)
+        {
+            if (_locals.TryGetValue(name, out slot))
+            {
+                return true;
+            }
+
+            if (_parent is not null)
+            {
+                return _parent.TryResolveScopedSlot(name, out slot);
+            }
+
+            slot = 0;
+            return false;
         }
     }
 
@@ -2362,5 +2842,185 @@ internal sealed class GesLinearBytecodeBuilder
 
         public int Allocate()
             => NextSlot++;
+
+        public void EnsureNextSlot(int slot)
+        {
+            if (slot > NextSlot)
+            {
+                NextSlot = slot;
+            }
+        }
+    }
+
+    private static bool ExpressionReferencesIdentifier(ExpressionNode expression, string identifier)
+    {
+        switch (expression)
+        {
+            case IdentifierExpressionNode candidate:
+                return string.Equals(candidate.Name, identifier, StringComparison.Ordinal);
+
+            case MessageLiteralExpressionNode message:
+                return message.Arguments.Any(argument => ExpressionReferencesIdentifier(argument.Expression, identifier));
+
+            case ListLiteralExpressionNode list:
+                return list.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
+
+            case SequenceLiteralExpressionNode sequence:
+                return sequence.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
+
+            case SetLiteralExpressionNode set:
+                return set.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
+
+            case DictionaryLiteralExpressionNode dictionary:
+                return dictionary.Entries.Any(entry => ExpressionReferencesIdentifier(entry.Value, identifier));
+
+            case UnaryExpressionNode unary:
+                return ExpressionReferencesIdentifier(unary.Operand, identifier);
+
+            case VariadicTaggedExpressionNode variadic:
+                return variadic.Arguments.Any(argument => ExpressionReferencesIdentifier(argument, identifier));
+
+            case ClampExpressionNode clamp:
+                return ExpressionReferencesIdentifier(clamp.Value, identifier) ||
+                       ExpressionReferencesIdentifier(clamp.Minimum, identifier) ||
+                       ExpressionReferencesIdentifier(clamp.Maximum, identifier);
+
+            case RandomExpressionNode random:
+                return ExpressionReferencesIdentifier(random.FromExpression, identifier) ||
+                       ExpressionReferencesIdentifier(random.ToExpression, identifier);
+
+            case RangeExpressionNode range:
+                return ExpressionReferencesIdentifier(range.FromExpression, identifier) ||
+                       ExpressionReferencesIdentifier(range.ToExpression, identifier) ||
+                       (range.StepExpression is not null && ExpressionReferencesIdentifier(range.StepExpression, identifier));
+
+            case SeededRandomExpressionNode seededRandom:
+                return ExpressionReferencesIdentifier(seededRandom.SeedExpression, identifier) ||
+                       ExpressionReferencesIdentifier(seededRandom.BodyExpression, identifier);
+
+            case GeneratedCollectionExpressionNode generatedCollection:
+                return ExpressionReferencesIdentifier(generatedCollection.Source, identifier) ||
+                       (generatedCollection.Predicate is not null && ExpressionReferencesIdentifier(generatedCollection.Predicate, identifier)) ||
+                       ExpressionReferencesIdentifier(generatedCollection.Projection, identifier);
+
+            case GuardedChoiceExpressionNode guardedChoice:
+                return guardedChoice.Branches.Any(branch =>
+                           ExpressionReferencesIdentifier(branch.ConditionExpression, identifier) ||
+                           ExpressionReferencesIdentifier(branch.ValueExpression, identifier)) ||
+                       ExpressionReferencesIdentifier(guardedChoice.OtherwiseExpression, identifier);
+
+            case BinaryExpressionNode binary:
+                return ExpressionReferencesIdentifier(binary.Left, identifier) ||
+                       ExpressionReferencesIdentifier(binary.Right, identifier);
+
+            case PredicateCallExpressionNode predicateCall:
+                return ExpressionReferencesIdentifier(predicateCall.Value, identifier);
+
+            case ExtensionPredicateExpressionNode extensionPredicate:
+                return ExpressionReferencesIdentifier(extensionPredicate.Value, identifier);
+
+            case CallExpressionNode call:
+                return call.Arguments.Any(argument => ExpressionReferencesIdentifier(argument, identifier));
+
+            case TypeCastExpressionNode typeCast:
+                return ExpressionReferencesIdentifier(typeCast.Value, identifier);
+
+            case TypeConstructorExpressionNode typeConstructor:
+                return typeConstructor.Arguments.Any(argument => ExpressionReferencesIdentifier(argument.Expression, identifier));
+
+            case TypeCheckExpressionNode typeCheck:
+                return ExpressionReferencesIdentifier(typeCheck.Value, identifier);
+
+            case MemberAccessExpressionNode memberAccess:
+                return ExpressionReferencesIdentifier(memberAccess.Target, identifier);
+
+            case CollectionAccessExpressionNode collectionAccess:
+                return ExpressionReferencesIdentifier(collectionAccess.Target, identifier) ||
+                       ExpressionReferencesIdentifier(collectionAccess.Selector, identifier);
+
+            case ExtensionCallExpressionNode extensionCall:
+                return extensionCall.Arguments.Any(argument => ExpressionReferencesIdentifier(argument.Expression, identifier));
+
+            default:
+                return false;
+        }
+    }
+
+    private static bool ExpressionReferencesIdentifier(IterationSourceNode source, string identifier)
+        => source switch
+        {
+            CollectionIterationSourceNode collection => ExpressionReferencesIdentifier(collection.Expression, identifier),
+            RangeIterationSourceNode range => ExpressionReferencesIdentifier(range.RangeExpression, identifier),
+            _ => false
+        };
+
+    private static bool ExpressionReferencesIdentifier(CollectionSelectorNode selector, string identifier)
+        => selector switch
+        {
+            ExpressionSelectorNode expression => ExpressionReferencesIdentifier(expression.Expression, identifier),
+            FilterSelectorNode filter => ExpressionReferencesIdentifier(filter.Predicate, identifier),
+            SelectSelectorNode select => ExpressionReferencesIdentifier(select.Projection, identifier),
+            SumSelectorNode sum => ExpressionReferencesIdentifier(sum.Projection, identifier),
+            AverageSelectorNode average => ExpressionReferencesIdentifier(average.Projection, identifier),
+            CountSelectorNode count => ExpressionReferencesIdentifier(count.Predicate, identifier),
+            PredicateSelectorNode predicate => ExpressionReferencesIdentifier(predicate.Predicate, identifier),
+            EdgeSelectorNode edge => edge.Predicate is not null && ExpressionReferencesIdentifier(edge.Predicate, identifier),
+            MinSelectorNode min => ExpressionReferencesIdentifier(min.Projection, identifier),
+            MaxSelectorNode max => ExpressionReferencesIdentifier(max.Projection, identifier),
+            DictionarySelectorNode dictionary => ExpressionReferencesIdentifier(dictionary.KeyProjection, identifier) ||
+                                                 (dictionary.ValueProjection is not null && ExpressionReferencesIdentifier(dictionary.ValueProjection, identifier)),
+            ContainsSelectorNode contains => ExpressionReferencesIdentifier(contains.ValueExpression, identifier),
+            ChooseSelectorNode choose => (choose.Predicate is not null && ExpressionReferencesIdentifier(choose.Predicate, identifier)) ||
+                                         (choose.WeightExpression is not null && ExpressionReferencesIdentifier(choose.WeightExpression, identifier)),
+            DistinctSelectorNode distinct => distinct.Projection is not null && ExpressionReferencesIdentifier(distinct.Projection, identifier),
+            GroupBySelectorNode groupBy => ExpressionReferencesIdentifier(groupBy.Projection, identifier),
+            OrderBySelectorNode orderBy => ExpressionReferencesIdentifier(orderBy.Projection, identifier),
+            _ => false
+        };
+
+    private sealed class ScopeBuildState(int address, int baseSlotCount, bool isRootScope)
+    {
+        public int Address { get; } = address;
+
+        public int BaseSlotCount { get; } = baseSlotCount;
+
+        public bool IsRootScope { get; } = isRootScope;
+
+        private int NextLocalSlot { get; set; } = baseSlotCount;
+
+        public int MaxSlotCount { get; private set; } = baseSlotCount;
+
+        public void MarkSlotCount(int slotCount)
+            => MaxSlotCount = Math.Max(MaxSlotCount, slotCount);
+
+        public int AllocateSlot()
+        {
+            var slot = NextLocalSlot;
+            NextLocalSlot++;
+            MarkSlotCount(NextLocalSlot);
+            return slot;
+        }
+    }
+
+    private readonly struct StageArgumentPlan
+    {
+        private StageArgumentPlan(GameEventScriptBytecodeInstruction instruction, int slot, bool hasInstruction)
+        {
+            Instruction = instruction;
+            Slot = slot;
+            HasInstruction = hasInstruction;
+        }
+
+        public GameEventScriptBytecodeInstruction Instruction { get; }
+
+        public int Slot { get; }
+
+        public bool HasInstruction { get; }
+
+        public static StageArgumentPlan FromInstruction(GameEventScriptBytecodeInstruction instruction)
+            => new(instruction, 0, hasInstruction: true);
+
+        public static StageArgumentPlan FromSlot(int slot)
+            => new(default, slot, hasInstruction: false);
     }
 }

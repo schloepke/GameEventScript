@@ -376,7 +376,7 @@ runtime dispatch step.
 | 0xCC | `StageText` | - | - | - | - | string index | - | - | - | Stages a text literal from `StringPool`. |
 | 0xCD | `StageTag` | - | - | - | - | string index | - | - | - | Stages a tag literal from `StringPool`. |
 | 0xCE..0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
-| 0xD0 | `PipelineIterator` | - | iterator slot | source iterator slot | next-entry address | source item binding slot | - | - | - | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
+| 0xD0 | `PipelineIterator` | - | iterator slot | source iterator slot | next-entry address | helper item slot | capture slot-list index | - | - | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
 | 0xD1 | `PipelineCollectList` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a list. |
 | 0xD2 | `PipelineCollectSet` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a set. |
 | 0xD3 | `PipelineFirst` | - | result slot | iterator slot | - | - | - | - | - | Returns the first element or `nothing`. |
@@ -426,6 +426,7 @@ runtime dispatch step.
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
 | `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `CallStandard*`, `CallExternal*` |
+| `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message
 builder opcodes now reference entry addresses or `StringPool`/`UShortListPool`

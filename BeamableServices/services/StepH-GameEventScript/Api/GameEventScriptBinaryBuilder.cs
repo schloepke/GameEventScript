@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 
 namespace StepH.GameEventScript.Api;
@@ -114,15 +115,14 @@ public class GameEventScriptBinaryBuilder
 
     public GameEventScriptBinary Build()
     {
-        return new GameEventScriptBinary
-        {
-            Header = new GameEventScriptBinaryHeader { Version = 1, Flags = _flags, FileSize = _fileSize },
-            ModuleName = _moduleName,
-            StringTable = BuildTextTable(_stringPool),
-            UInt16SliceTable = BuildUInt16SliceTable(_uint16Table),
-            BindTable = new GameEventScriptBinaryBindTable(_binds),
-            InstructionTable = _bytecodeInstructions.ToArray()
-        };
+        return new GameEventScriptBinary(
+            new GameEventScriptBinaryHeader { Version = 1, Flags = _flags, FileSize = _fileSize },
+            _moduleName,
+            BuildTextTable(_stringPool),
+            BuildUInt16SliceTable(_uint16Table),
+            new GameEventScriptBinaryBindTable(_binds),
+            _bytecodeInstructions.ToArray()
+        );
     }
 
     private static GameEventScriptUInt16Table BuildUInt16SliceTable(IReadOnlyList<IReadOnlyList<ushort>> uint16Table)
@@ -181,6 +181,27 @@ public static class GameEventScriptBinaryExtensions
             builder.AddStringPoolElements(callable.SignatureLabels, out var argumentIndexes);
             builder.AddBind(new GameEventScriptBinaryBindEntry(callable.Kind == GameEventScriptBytecodeCallableKind.Predicate ? GameEventScriptBinaryBindKind.Predicate : GameEventScriptBinaryBindKind.Function, messageIndex, argumentIndexes,
                 callable.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)callable.EntryAddress)));
+        }
+
+        foreach (var signatureIndex in compiled.OutboundMessageSignatures)
+        {
+            if (signatureIndex >= compiled.UShortListPool.Count)
+            {
+                throw new InvalidOperationException($"GameEventScriptBinary outbound message signature index {signatureIndex} is outside the UShortListPool.");
+            }
+
+            var signature = compiled.UShortListPool[signatureIndex];
+            if (signature.Count == 0 || signature.Any(index => index >= compiled.StringPool.Count))
+            {
+                throw new InvalidOperationException($"GameEventScriptBinary outbound message signature index {signatureIndex} is invalid.");
+            }
+
+            var messageName = compiled.StringPool[signature[0]];
+            var argumentNames = signature.Skip(1).Select(index => compiled.StringPool[index]).ToArray();
+            builder
+                .AddStringPoolElement(messageName, out var messageIndex)
+                .AddStringPoolElements(argumentNames, out var argumentIndexes)
+                .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, messageIndex, argumentIndexes));
         }
 
         foreach (var reference in compiled.ExternalReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))

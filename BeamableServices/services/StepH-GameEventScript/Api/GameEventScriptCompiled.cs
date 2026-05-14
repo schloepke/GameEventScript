@@ -14,6 +14,7 @@ public sealed class GameEventScriptCompiled
         string moduleName,
         IReadOnlyList<string> stringPool,
         IReadOnlyList<IReadOnlyList<ushort>> uShortListPool,
+        IReadOnlyList<ushort> outboundMessageSignatures,
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<GameEventScriptExternalTypeConstructorReference> externalTypeConstructorReferences,
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
@@ -27,6 +28,7 @@ public sealed class GameEventScriptCompiled
         ModuleName = string.IsNullOrWhiteSpace(moduleName) ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName)) : moduleName;
         StringPool = CopyList(stringPool, nameof(stringPool));
         UShortListPool = CopyNestedUShortLayouts(uShortListPool, nameof(uShortListPool));
+        OutboundMessageSignatures = CopyList(outboundMessageSignatures, nameof(outboundMessageSignatures));
         ExternalReferences = CopyList(externalReferences, nameof(externalReferences));
         ExternalTypeConstructorReferences = CopyList(externalTypeConstructorReferences, nameof(externalTypeConstructorReferences));
         Callables = CopyDictionary(callables, nameof(callables));
@@ -44,6 +46,8 @@ public sealed class GameEventScriptCompiled
     public IReadOnlyList<string> StringPool { get; }
 
     public IReadOnlyList<IReadOnlyList<ushort>> UShortListPool { get; }
+
+    public IReadOnlyList<ushort> OutboundMessageSignatures { get; }
 
     public IReadOnlyList<GameEventScriptExtensionReference> ExternalReferences { get; }
 

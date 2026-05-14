@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using StepH.GameEventScript.Api;
+using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -36,14 +37,15 @@ public struct VmState
     public ushort CallStackPointer { get; private set; } = 0;
     public CallFrame[] CallStack { get; init; }
 
-    public VmRegister[] RegisterSlots { get; init; }
+    public VmValue[] RegisterSlots { get; init; }
 
     public ushort RegisterFrameStart = 0;
     public ushort RegisterFrameLength = 0;
     
     public string? ErrorMessage { get; private set; } = null;
 
-    public Dictionary<string, GameEventScriptBinaryBindEntry> MessageHandlerBindings { get; init; }
+    public Dictionary<string, GameEventScriptBinaryBindEntry> InboundMessageHandlers { get; init; }
+    public List<GameEventScriptMessageSignature> OutboundMessageSignatures { get; init; }
 
     public readonly ushort CodeSegmentSize; 
 
@@ -54,13 +56,13 @@ public struct VmState
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterSlots = new VmRegister[registerSize];
+        RegisterSlots = new VmValue[registerSize];
         for (var i = 0; i < RegisterSlots.Length; i++)
         {
             RegisterSlots[i].SetNothing();
         }
-        MessageHandlerBindings = binary.BindTable.Entries.Where(x => x.Kind == GameEventScriptBinaryBindKind.MessageHandler).ToDictionary(
-            bind => GameEventScriptMessageSignature.CreateSignatureId(binary.StringTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.StringTable.Resolve)),
+        InboundMessageHandlers = binary.BindTable.Entries.Where(x => x.Kind == GameEventScriptBinaryBindKind.MessageHandler).ToDictionary(
+            bind => GameEventScriptMessageSignature.CreateSignatureId(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve)),
             x => x);
     }
 
@@ -68,7 +70,7 @@ public struct VmState
     {
         if (State != StateValue.Initialized) return RaiseError("Handler can only be loaded when the VM is initialized.");
         var signatureId = message.SignatureId;
-        if (!MessageHandlerBindings.TryGetValue(signatureId, out var bind)) return RaiseError($"No handler found for message '{signatureId}'.");
+        if (!InboundMessageHandlers.TryGetValue(signatureId, out var bind)) return RaiseError($"No handler found for message '{signatureId}'.");
         InstructionPointer = bind.EntryAddress;
         State = StateValue.Ready;
         return true;
@@ -167,11 +169,11 @@ public struct VmState
 
     public string FetchStringByPointer(ushort index)
     {
-        return Binary.StringTable.Resolve(index);
+        return Binary.TextConstantTable.Resolve(index);
     }
 
     public ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index)
     {
-        return Binary.UInt16SliceTable.Resolve(index);
+        return Binary.Uint16ConstantTable.Resolve(index);
     }
 }

@@ -1,14 +1,15 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegister.VmValueKind;
+using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
-public struct VmRegister
+public struct VmValue
 {
     public enum VmValueKind
     {
@@ -16,17 +17,24 @@ public struct VmRegister
         Boolean,
         Integer,
         Float,
+        Dice,
         StringPointer,
         TagPointer,
         DataPointer,
-        CodePointer
+        CodePointer,
+        TextObject,
+        ListObject,
+        DictionaryObject,
+        TagObject,
+        DiceObject
     }
     
     internal VmValueKind Kind;
+    internal bool BooleanValue;
     internal long IntegerValue;
     internal double FloatValue;
-    internal bool BooleanValue;
     internal GameEventScriptBytecodeInstructionUnit Unit;
+    internal IVmObject? ObjectValue;
 
     public bool IsTrue => BooleanValue;
     public bool IsFalse => !BooleanValue && Kind is not Nothing;
@@ -134,6 +142,23 @@ public struct VmRegister
     public double AsFloatValue => FloatValue;
     public bool AsBooleanValue => BooleanValue;
     
-    public VmValueKind ValueKind => Kind;
-    
+}
+
+public interface IVmObject
+{
+}
+
+public class VmTextObject(string text) : IVmObject
+{
+    internal string Text = text;
+}
+
+public class VmListObject(IReadOnlyList<VmValue> items) : IVmObject
+{
+    internal IReadOnlyList<VmValue> Items = items;
+}
+
+public class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : IVmObject
+{
+    internal IReadOnlyDictionary<string, VmValue> Entries = entries;
 }

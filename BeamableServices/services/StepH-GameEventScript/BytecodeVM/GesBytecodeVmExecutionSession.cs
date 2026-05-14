@@ -1009,19 +1009,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.IntegerDivide:
             case GameEventScriptBytecodeOpCode.Modulo:
             case GameEventScriptBytecodeOpCode.Remainder:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+            case GameEventScriptBytecodeOpCode.IntEqual:
+            case GameEventScriptBytecodeOpCode.IntNotEqual:
+            case GameEventScriptBytecodeOpCode.IntLess:
+            case GameEventScriptBytecodeOpCode.IntGreater:
+            case GameEventScriptBytecodeOpCode.IntLessOrEqual:
+            case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.IntAdd:
+            case GameEventScriptBytecodeOpCode.IntSubtract:
+            case GameEventScriptBytecodeOpCode.IntMultiply:
+            case GameEventScriptBytecodeOpCode.IntDivide:
+            case GameEventScriptBytecodeOpCode.IntFloorDivide:
+            case GameEventScriptBytecodeOpCode.IntModulo:
+            case GameEventScriptBytecodeOpCode.IntRemainder:
             case GameEventScriptBytecodeOpCode.Default:
             case GameEventScriptBytecodeOpCode.Contains:
             case GameEventScriptBytecodeOpCode.ContainsValue:
@@ -1639,6 +1639,182 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryEvaluateLinearProjectionFastRange(
         int identifierSlot,
         BytecodeVmValue item,
+        IReadOnlyList<BytecodeVmValue> captures,
+        int entryAddress,
+        out bool hasValue,
+        out BytecodeVmValue value)
+    {
+        hasValue = false;
+        value = BytecodeVmValue.Nothing;
+        var code = _compiledScript.LinearExecutable.Code;
+        if ((uint)entryAddress >= (uint)code.Count)
+        {
+            return false;
+        }
+
+        var projection = new FastProjectionState(this, identifierSlot, item, captures);
+        var stagedArgument = BytecodeVmValue.Nothing;
+        var hasStagedArgument = false;
+
+        for (var pc = entryAddress; pc < code.Count; pc++)
+        {
+            if (!TryConsumeExecutionStep("Expression evaluation budget exhausted."))
+            {
+                value = BytecodeVmValue.Nothing;
+                return true;
+            }
+
+            var instruction = code[pc];
+            switch (instruction.OpCode)
+            {
+                case GameEventScriptBytecodeOpCode.Nop:
+                case GameEventScriptBytecodeOpCode.ReserveSlots:
+                    break;
+
+                case GameEventScriptBytecodeOpCode.ReturnVoid:
+                    value = BytecodeVmValue.Nothing;
+                    hasValue = false;
+                    return true;
+
+                case GameEventScriptBytecodeOpCode.ReturnValue:
+                    value = projection.GetSlot(instruction.A_U16);
+                    hasValue = true;
+                    return true;
+
+                case GameEventScriptBytecodeOpCode.MoveSlot:
+                    if (!projection.SetTemp(instruction.Dest_U16, projection.GetSlot(instruction.A_U16)))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case var opCode when IsInlineConstantInstruction(opCode):
+                    if (!TryLoadInlineConstant(instruction, out var inlineConstant) ||
+                        !projection.SetTemp(instruction.Dest_U16, inlineConstant))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.StageRegister:
+                    stagedArgument = projection.GetSlot(instruction.A_U16);
+                    hasStagedArgument = true;
+                    break;
+
+                case GameEventScriptBytecodeOpCode.StageNothing:
+                case GameEventScriptBytecodeOpCode.StageTrue:
+                case GameEventScriptBytecodeOpCode.StageFalse:
+                case GameEventScriptBytecodeOpCode.StageInteger:
+                case GameEventScriptBytecodeOpCode.StageFloat:
+                case GameEventScriptBytecodeOpCode.StageText:
+                case GameEventScriptBytecodeOpCode.StageTag:
+                    if (!TryLoadStageConstant(instruction, out stagedArgument))
+                    {
+                        return false;
+                    }
+
+                    hasStagedArgument = true;
+                    break;
+
+                case var opCode when IsCastInstruction(opCode):
+                    if (!TryEvaluateCastInstruction(instruction, projection.GetSlot(instruction.A_U16), out var castedValue) ||
+                        !projection.SetTemp(instruction.Dest_U16, castedValue))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.CallPredicate:
+                    if (instruction.B_U16 != 1 ||
+                        !hasStagedArgument ||
+                        !TryEvaluateLinearPredicateCallFast(instruction, stagedArgument, out var predicateValue) ||
+                        !projection.SetTemp(instruction.Dest_U16, predicateValue))
+                    {
+                        return false;
+                    }
+
+                    hasStagedArgument = false;
+                    break;
+
+                case GameEventScriptBytecodeOpCode.CallStandard:
+                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
+                    if (!TryEvaluateLinearStandardCallFast(instruction, ref projection, out var standardValue) ||
+                        !projection.SetTemp(instruction.Dest_U16, standardValue))
+                    {
+                        return false;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.Jump:
+                    if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                    {
+                        return false;
+                    }
+
+                    continue;
+
+                case GameEventScriptBytecodeOpCode.JumpIfTrue:
+                    if (projection.GetSlot(instruction.C_U16).IsTrue())
+                    {
+                        if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.JumpIfFalse:
+                    if (projection.GetSlot(instruction.C_U16).IsFalse())
+                    {
+                        if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    break;
+
+                case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
+                    if (!projection.GetSlot(instruction.C_U16).IsTrue())
+                    {
+                        if (!TryMoveProjectionPc(instruction.A_U16, entryAddress, code.Count, ref pc))
+                        {
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    break;
+
+                default:
+                    if (!IsProjectionBinaryOp(instruction.OpCode) ||
+                        !projection.SetTemp(
+                            instruction.Dest_U16,
+                            EvaluateProjectionBinary(instruction.OpCode, projection.GetSlot(instruction.A_U16), projection.GetSlot(instruction.B_U16))))
+                    {
+                        return false;
+                    }
+
+                    break;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryEvaluateLinearProjectionFastRange(
+        int identifierSlot,
+        BytecodeVmValue item,
         int entryAddress,
         out bool hasValue,
         out BytecodeVmValue value)
@@ -2002,6 +2178,82 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
+    private bool TryEvaluateLinearIsolatedHelperEntry(
+        int entryAddress,
+        BytecodeVmValue item,
+        IReadOnlyList<BytecodeVmValue> captures,
+        out bool hasValue,
+        out BytecodeVmValue value)
+    {
+        hasValue = false;
+        value = BytecodeVmValue.Nothing;
+        if ((uint)entryAddress >= (uint)_compiledScript.LinearExecutable.Code.Count)
+        {
+            return false;
+        }
+
+        var slotCount = GetLinearEntrySlotCount(entryAddress);
+        if (captures.Count + 1 > slotCount)
+        {
+            return false;
+        }
+
+        var previousLocals = _locals;
+        var previousAssignedSlots = _assignedSlots;
+        var previousActiveLocalSlotCount = _activeLocalSlotCount;
+        var previousChanges = _changes;
+        var previousScopeMarks = _scopeMarks;
+        var previousTrackedLocalSlotCount = _trackedLocalSlotCount;
+
+        _locals = new BytecodeVmValue[slotCount];
+        _assignedSlots = new bool[slotCount];
+        _activeLocalSlotCount = slotCount;
+        _locals[0] = item;
+        _assignedSlots[0] = true;
+        for (var index = 0; index < captures.Count; index++)
+        {
+            var slot = index + 1;
+            _locals[slot] = captures[index];
+            _assignedSlots[slot] = true;
+        }
+
+        _changes = [];
+        _scopeMarks = [];
+        _trackedLocalSlotCount = slotCount;
+        try
+        {
+            EnterScope();
+            try
+            {
+                if (!TryExecuteLinearRange(
+                        entryAddress,
+                        _compiledScript.LinearExecutable.Code.Count,
+                        null,
+                        out var returned,
+                        out value,
+                        out hasValue))
+                {
+                    return false;
+                }
+
+                return returned;
+            }
+            finally
+            {
+                ExitScope();
+            }
+        }
+        finally
+        {
+            _locals = previousLocals;
+            _assignedSlots = previousAssignedSlots;
+            _activeLocalSlotCount = previousActiveLocalSlotCount;
+            _changes = previousChanges;
+            _scopeMarks = previousScopeMarks;
+            _trackedLocalSlotCount = previousTrackedLocalSlotCount;
+        }
+    }
+
     private bool TryEvaluateLinearHelperExpressionWithIsolatedTemporaries(
         int entryAddress,
         int temporaryBaseSlot,
@@ -2199,9 +2451,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryCreatePipelineIterator(GameEventScriptBytecodeInstruction instruction)
     {
-        if (!TryGetIterator(instruction.A_U16, out var sourceIterator))
+        if (!TryGetIterator(instruction.A_U16, out var sourceIterator) ||
+            !TryGetUShortList(instruction.D_U16, out var captureSlots))
         {
             return false;
+        }
+
+        var captures = captureSlots.Count == 0
+            ? Array.Empty<BytecodeVmValue>()
+            : new BytecodeVmValue[captureSlots.Count];
+        for (var index = 0; index < captureSlots.Count; index++)
+        {
+            captures[index] = ResolveSlot(captureSlots[index]);
         }
 
         return DefineSlot(
@@ -2210,7 +2471,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 this,
                 sourceIterator,
                 instruction.B_U16,
-                instruction.C_U16)));
+                instruction.C_U16,
+                captures)));
     }
 
     private bool TryGetIterator(int slot, out BytecodeVmIterator iterator)
@@ -2225,6 +2487,31 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         iterator = BytecodeVmIterator.Empty;
         return false;
+    }
+
+    internal bool TryEvaluatePipelineIteratorEntry(
+        int entryAddress,
+        int itemSlot,
+        BytecodeVmValue item,
+        IReadOnlyList<BytecodeVmValue> captures,
+        out bool yielded,
+        out BytecodeVmValue value)
+    {
+        yielded = false;
+        value = BytecodeVmValue.Nothing;
+        if (itemSlot != 0)
+        {
+            return false;
+        }
+
+        if (!_diagnosticsEnabled &&
+            _runtimeBudget.Limits.MaxExecutionSteps <= 0 &&
+            CanEvaluateLinearProjectionFast(entryAddress, allowPredicateCall: true))
+        {
+            return TryEvaluateLinearProjectionFastRange(itemSlot, item, captures, entryAddress, out yielded, out value);
+        }
+
+        return TryEvaluateLinearIsolatedHelperEntry(entryAddress, item, captures, out yielded, out value);
     }
 
     internal bool TryEvaluatePipelineIteratorEntry(
@@ -2254,12 +2541,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return TryEvaluateLinearProjectionFastRange(itemSlot, item, entryAddress, out yielded, out value);
             }
 
-            if (!TryEvaluateLinearHelperEntry(entryAddress, out yielded, out value))
-            {
-                return false;
-            }
-
-            return true;
+            return TryEvaluateLinearHelperEntry(entryAddress, out yielded, out value);
         }
         finally
         {
@@ -3339,6 +3621,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         private readonly GesBytecodeVmExecutionSession _session;
         private readonly int _identifierSlot;
         private readonly BytecodeVmValue _item;
+        private readonly IReadOnlyList<BytecodeVmValue> _captures;
         private int _tempSlot0;
         private int _tempSlot1;
         private int _tempSlot2;
@@ -3357,10 +3640,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
         private BytecodeVmValue _tempValue7;
 
         public FastProjectionState(GesBytecodeVmExecutionSession session, int identifierSlot, BytecodeVmValue item)
+            : this(session, identifierSlot, item, [])
+        {
+        }
+
+        public FastProjectionState(
+            GesBytecodeVmExecutionSession session,
+            int identifierSlot,
+            BytecodeVmValue item,
+            IReadOnlyList<BytecodeVmValue> captures)
         {
             _session = session;
             _identifierSlot = identifierSlot;
             _item = item;
+            _captures = captures;
             _tempSlot0 = -1;
             _tempSlot1 = -1;
             _tempSlot2 = -1;
@@ -3384,6 +3677,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             if (slot == _identifierSlot)
             {
                 return _item;
+            }
+
+            var captureIndex = slot - 1;
+            if ((uint)captureIndex < (uint)_captures.Count)
+            {
+                return _captures[captureIndex];
             }
 
             if (slot == _tempSlot0) return _tempValue0;
@@ -4161,43 +4460,43 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return BytecodeVmValue.Modulo(left, right);
             case GameEventScriptBytecodeOpCode.Remainder:
                 return BytecodeVmValue.Remainder(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
+            case GameEventScriptBytecodeOpCode.IntEqual:
                 return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var equalComparison)
                     ? BytecodeVmValue.Boolean(equalComparison == 0)
                     : BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+            case GameEventScriptBytecodeOpCode.IntNotEqual:
                 return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var notEqualComparison)
                     ? BytecodeVmValue.Boolean(notEqualComparison != 0)
                     : BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(left, right));
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
+            case GameEventScriptBytecodeOpCode.IntLess:
                 return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerLessComparison)
                     ? BytecodeVmValue.Boolean(integerLessComparison < 0)
                     : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveLessComparison) && primitiveLessComparison < 0);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
+            case GameEventScriptBytecodeOpCode.IntGreater:
                 return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerGreaterComparison)
                     ? BytecodeVmValue.Boolean(integerGreaterComparison > 0)
                     : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveGreaterComparison) && primitiveGreaterComparison > 0);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+            case GameEventScriptBytecodeOpCode.IntLessOrEqual:
                 return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerLessOrEqualComparison)
                     ? BytecodeVmValue.Boolean(integerLessOrEqualComparison <= 0)
                     : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveLessOrEqualComparison) && primitiveLessOrEqualComparison <= 0);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
+            case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
                 return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerGreaterOrEqualComparison)
                     ? BytecodeVmValue.Boolean(integerGreaterOrEqualComparison >= 0)
                     : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveGreaterOrEqualComparison) && primitiveGreaterOrEqualComparison >= 0);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+            case GameEventScriptBytecodeOpCode.IntAdd:
                 return BytecodeVmValue.TryPrimitiveIntegerAdd(left, right, out var integerAdd) ? integerAdd : BytecodeVmValue.Add(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
+            case GameEventScriptBytecodeOpCode.IntSubtract:
                 return BytecodeVmValue.TryPrimitiveIntegerSubtract(left, right, out var integerSubtract) ? integerSubtract : BytecodeVmValue.Subtract(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
+            case GameEventScriptBytecodeOpCode.IntMultiply:
                 return BytecodeVmValue.TryPrimitiveIntegerMultiply(left, right, out var integerMultiply) ? integerMultiply : BytecodeVmValue.Multiply(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
+            case GameEventScriptBytecodeOpCode.IntDivide:
                 return BytecodeVmValue.TryPrimitiveIntegerDivide(left, right, out var integerDivide) ? integerDivide : BytecodeVmValue.Divide(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
+            case GameEventScriptBytecodeOpCode.IntFloorDivide:
                 return BytecodeVmValue.TryPrimitiveIntegerFloorDivide(left, right, out var integerFloorDivide) ? integerFloorDivide : BytecodeVmValue.IntegerDivide(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
+            case GameEventScriptBytecodeOpCode.IntModulo:
                 return BytecodeVmValue.TryPrimitiveIntegerModulo(left, right, out var integerModulo) ? integerModulo : BytecodeVmValue.Modulo(left, right);
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
+            case GameEventScriptBytecodeOpCode.IntRemainder:
                 return BytecodeVmValue.TryPrimitiveIntegerRemainder(left, right, out var integerRemainder) ? integerRemainder : BytecodeVmValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
@@ -4227,19 +4526,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Greater or
             GameEventScriptBytecodeOpCode.LessOrEqual or
             GameEventScriptBytecodeOpCode.GreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder;
+            GameEventScriptBytecodeOpCode.IntEqual or
+            GameEventScriptBytecodeOpCode.IntNotEqual or
+            GameEventScriptBytecodeOpCode.IntLess or
+            GameEventScriptBytecodeOpCode.IntGreater or
+            GameEventScriptBytecodeOpCode.IntLessOrEqual or
+            GameEventScriptBytecodeOpCode.IntGreaterOrEqual or
+            GameEventScriptBytecodeOpCode.IntAdd or
+            GameEventScriptBytecodeOpCode.IntSubtract or
+            GameEventScriptBytecodeOpCode.IntMultiply or
+            GameEventScriptBytecodeOpCode.IntDivide or
+            GameEventScriptBytecodeOpCode.IntFloorDivide or
+            GameEventScriptBytecodeOpCode.IntModulo or
+            GameEventScriptBytecodeOpCode.IntRemainder;
 
     private static BytecodeVmValue EvaluateLogicalAnd(in BytecodeVmValue left, in BytecodeVmValue right)
     {
@@ -8310,7 +8609,8 @@ internal sealed class BytecodeVmPipelineIterator(
     GesBytecodeVmExecutionSession session,
     BytecodeVmIterator source,
     int entryAddress,
-    int itemSlot) : BytecodeVmIterator
+    int itemSlot,
+    IReadOnlyList<BytecodeVmValue> captures) : BytecodeVmIterator
 {
     private bool _disposed;
 
@@ -8328,7 +8628,7 @@ internal sealed class BytecodeVmPipelineIterator(
 
         while (source.TryMoveNext(out var item))
         {
-            if (!session.TryEvaluatePipelineIteratorEntry(entryAddress, itemSlot, item, out var yielded, out value))
+            if (!session.TryEvaluatePipelineIteratorEntry(entryAddress, itemSlot, item, captures, out var yielded, out value))
             {
                 Dispose();
                 value = BytecodeVmValue.Nothing;

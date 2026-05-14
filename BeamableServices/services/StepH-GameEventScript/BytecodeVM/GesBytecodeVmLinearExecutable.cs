@@ -383,6 +383,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.A_U16, $"{context} source iterator slot");
                 ValidateEntryAddress(module, code, instruction.B_U16, $"{context} iterator entry");
                 ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
+                ValidateSlotListIndex(module, instruction.D_U16, $"{context} capture slot list");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
@@ -627,7 +628,16 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static void ValidateSideTables(GameEventScriptCompiled module)
     {
+        ValidateOutboundMessageSignatures(module);
         ValidateDebugSegment(module);
+    }
+
+    private static void ValidateOutboundMessageSignatures(GameEventScriptCompiled module)
+    {
+        for (var index = 0; index < module.OutboundMessageSignatures.Count; index++)
+        {
+            ValidateMessageShape(module, module.OutboundMessageSignatures[index], $"outbound message signature #{index}");
+        }
     }
 
     private static void ValidateDebugSegment(GameEventScriptCompiled module)
@@ -1103,19 +1113,19 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.IntegerDivide or
             GameEventScriptBytecodeOpCode.Modulo or
             GameEventScriptBytecodeOpCode.Remainder or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder or
+            GameEventScriptBytecodeOpCode.IntEqual or
+            GameEventScriptBytecodeOpCode.IntNotEqual or
+            GameEventScriptBytecodeOpCode.IntLess or
+            GameEventScriptBytecodeOpCode.IntGreater or
+            GameEventScriptBytecodeOpCode.IntLessOrEqual or
+            GameEventScriptBytecodeOpCode.IntGreaterOrEqual or
+            GameEventScriptBytecodeOpCode.IntAdd or
+            GameEventScriptBytecodeOpCode.IntSubtract or
+            GameEventScriptBytecodeOpCode.IntMultiply or
+            GameEventScriptBytecodeOpCode.IntDivide or
+            GameEventScriptBytecodeOpCode.IntFloorDivide or
+            GameEventScriptBytecodeOpCode.IntModulo or
+            GameEventScriptBytecodeOpCode.IntRemainder or
             GameEventScriptBytecodeOpCode.Default or
             GameEventScriptBytecodeOpCode.Contains or
             GameEventScriptBytecodeOpCode.ContainsValue or

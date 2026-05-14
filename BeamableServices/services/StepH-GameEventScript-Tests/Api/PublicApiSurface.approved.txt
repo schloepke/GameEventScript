@@ -16,6 +16,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
   enum-field Function = 17
   enum-field Predicate = 18
   enum-field ExtensionCall = 32
+  enum-field OutboundMessage = 33
   enum-field ExternalType = 48
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable
   ctor GameEventScriptBinaryBindTable(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindEntry> entries)
@@ -420,6 +421,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get }
   property System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> UShortListPool { get }
   property System.Collections.Generic.IReadOnlyList<System.String> StringPool { get }
+  property System.Collections.Generic.IReadOnlyList<System.UInt16> OutboundMessageSignatures { get }
   property System.Int32 MaxFrameSlots { get }
   property System.String ModuleName { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptContext

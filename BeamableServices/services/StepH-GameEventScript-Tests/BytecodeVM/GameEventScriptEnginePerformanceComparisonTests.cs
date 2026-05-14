@@ -145,7 +145,7 @@ public sealed class BytecodeVmPerformanceReportTests
             run.Elapsed.TotalMilliseconds,
             FormatBytes(run.AllocatedBytes),
             run.PublishedMessages,
-            FormatBytes(run.AllocatedBytes / Math.Max(1, run.PublishedMessages)));
+            FormatBytes(run.AllocatedBytes / Math.Max(1, run.PublishedMessages/2)));
     }
 
     private static string FormatBytes(long bytes)

@@ -22,9 +22,9 @@ public static class GameEventScriptBinaryDumper
             .Append("//  Format version: ").Append(binary.Header.Version).AppendLine()
             .AppendLine("// -------------------------------------------------------------------------------")
             .AppendLine();
-        AppendStringTable(builder, binary.StringTable);
-        AppendUInt16Table(builder, binary.UInt16SliceTable);
-        AppendBindTable(builder, binary.BindTable, binary.StringTable);
+        AppendStringTable(builder, binary.TextConstantTable);
+        AppendUInt16Table(builder, binary.Uint16ConstantTable);
+        AppendBindTable(builder, binary.BindTable, binary.TextConstantTable);
         AppendInstructionTable(builder, binary.InstructionTable);
         return builder.ToString();
     }

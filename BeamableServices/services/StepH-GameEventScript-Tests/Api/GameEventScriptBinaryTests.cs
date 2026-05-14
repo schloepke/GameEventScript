@@ -31,7 +31,7 @@ public sealed class GameEventScriptBinaryTests
         Assert.AreEqual((ushort)1, binary.Header.Version);
 
         var binds = binary.BindTable.Entries.ToArray();
-        Assert.AreEqual((ushort)4, binary.BindTable.EntryCount);
+        Assert.AreEqual((ushort)5, binary.BindTable.EntryCount);
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Function && Resolve(binary, entry.Name) == "score"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Predicate && Resolve(binary, entry.Name) == "high"));
@@ -39,6 +39,10 @@ public sealed class GameEventScriptBinaryTests
 
         var start = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler);
         CollectionAssert.AreEqual(new[] { "value" }, start.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
+
+        var outbound = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage);
+        Assert.AreEqual("Done", Resolve(binary, outbound.Name));
+        CollectionAssert.AreEqual(new[] { "score", "high", "rounded" }, outbound.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
 
         var import = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.ExtensionCall);
         Assert.AreEqual("math.floor", Resolve(binary, import.Name));
@@ -92,5 +96,5 @@ public sealed class GameEventScriptBinaryTests
         Assert.IsFalse(json.Contains("A_U16", StringComparison.Ordinal), "Instruction JSON must not expose overlapped typed fields.");
     }
 
-    private static string Resolve(GameEventScriptBinary binary, ushort index) => binary.StringTable.Resolve(index);
+    private static string Resolve(GameEventScriptBinary binary, ushort index) => binary.TextConstantTable.Resolve(index);
 }

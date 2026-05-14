@@ -9,15 +9,20 @@ using System.Text.Json.Serialization;
 
 namespace StepH.GameEventScript.Api;
 
-public readonly struct GameEventScriptBinary
+public sealed class GameEventScriptBinary(
+    GameEventScriptBinaryHeader header,
+    string moduleName,
+    GameEventScriptTextTable textConstantTable,
+    GameEventScriptUInt16Table uint16ConstantTable,
+    GameEventScriptBinaryBindTable bindTable,
+    GameEventScriptBytecodeInstruction[] instructionTable)
 {
-    public GameEventScriptBinaryHeader Header { get; init; }
-    public string ModuleName { get; init; }
-    public GameEventScriptTextTable StringTable { get; init; }
-    public GameEventScriptUInt16Table UInt16SliceTable { get; init; }
-    public GameEventScriptBinaryBindTable BindTable { get; init; }
-    
-    public GameEventScriptBytecodeInstruction[] InstructionTable { get; init; }
+    public GameEventScriptBinaryHeader Header { get; } = header;
+    public string ModuleName { get; } = moduleName;
+    public GameEventScriptTextTable TextConstantTable { get; } = textConstantTable;
+    public GameEventScriptUInt16Table Uint16ConstantTable { get; } = uint16ConstantTable;
+    public GameEventScriptBinaryBindTable BindTable { get; } = bindTable;
+    public GameEventScriptBytecodeInstruction[] InstructionTable { get; } = instructionTable;
 }
 
 public readonly struct GameEventScriptBinaryHeader
@@ -28,15 +33,14 @@ public readonly struct GameEventScriptBinaryHeader
         None = 0,
         Optimization = 1 << 0,
         Debug = 1 << 1,
-        CompactInstruction = 1 << 2,
     }
-    
+
     public const uint Magic = 0x42534547; // "GESB"
 
     public ushort Version { get; init; }
     public GameEventScriptBinaryFlags Flags { get; init; }
     public const uint HeaderSize = 16;
-    public uint FileSize { get; init; } 
+    public uint FileSize { get; init; }
 }
 
 public readonly struct GameEventScriptTextTable
@@ -46,13 +50,12 @@ public readonly struct GameEventScriptTextTable
         public ushort Start { get; init; }
         public ushort Length { get; init; }
     }
-    
+
     public SliceEntry[] Slices { get; init; }
     public byte[] Data { get; init; }
-    
+
     public string Resolve(ushort index) => Encoding.UTF8.GetString(Data.AsSpan(Slices[index].Start, Slices[index].Length));
 }
-
 
 public readonly struct GameEventScriptUInt16Table
 {
@@ -61,15 +64,29 @@ public readonly struct GameEventScriptUInt16Table
         public ushort Start { get; init; }
         public ushort Length { get; init; }
     }
-    
+
     public SliceEntry[] Slices { get; init; }
     public ushort[] Data { get; init; }
-    
+
     public ReadOnlySpan<ushort> Resolve(ushort index) => Data.AsSpan(Slices[index].Start, Slices[index].Length);
 }
 
 public readonly struct GameEventScriptBinaryBindTable
 {
+    
+    public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind kind, ushort name, IReadOnlyList<ushort>? argumentNames, ushort entryAddress = 0xFFFF)
+    {
+        private readonly ushort[]? _argumentNames = argumentNames?.ToArray() ?? [];
+
+        public GameEventScriptBinaryBindKind Kind { get; } = kind;
+
+        public ushort Name { get; } = name;
+
+        public IReadOnlyList<ushort> ArgumentNames => _argumentNames ?? [];
+
+        public ushort EntryAddress { get; } = entryAddress;
+    }
+
     private readonly GameEventScriptBinaryBindEntry[]? _entries;
 
     public GameEventScriptBinaryBindTable(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
@@ -83,19 +100,7 @@ public readonly struct GameEventScriptBinaryBindTable
     public IReadOnlyList<GameEventScriptBinaryBindEntry> Entries => _entries ?? [];
 
     private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptBinary tables cannot exceed 65535 entries.") : checked((ushort)count);
-}
-
-public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind kind, ushort name, IReadOnlyList<ushort>? argumentNames, ushort entryAddress = 0xFFFF)
-{
-    private readonly ushort[]? _argumentNames = argumentNames?.ToArray() ?? [];
-
-    public GameEventScriptBinaryBindKind Kind { get; } = kind;
-
-    public ushort Name { get; } = name;
-
-    public IReadOnlyList<ushort> ArgumentNames => _argumentNames ?? [];
-
-    public ushort EntryAddress { get; } = entryAddress;
+    
 }
 
 public enum GameEventScriptBinaryBindKind : byte
@@ -104,6 +109,7 @@ public enum GameEventScriptBinaryBindKind : byte
     Function = 0x11,
     Predicate = 0x12,
     ExtensionCall = 0x20,
+    OutboundMessage = 0x21,
     ExternalType = 0x30
 }
 
@@ -114,7 +120,7 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
     UnitDegree = 2,
     UnitMeter = 3,
     UnitSecond = 4,
-    
+
     UnitNothing = 255 // Special non-unit type for nothing / void helping to evaluate unions to nothing 
 }
 
@@ -122,71 +128,51 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
 [StructLayout(LayoutKind.Explicit, Size = 12)]
 public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort a = 0, ushort b = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
 {
-    [FieldOffset(0)]
-    public GameEventScriptBytecodeOpCode OpCode = opCode;
+    [FieldOffset(0)] public GameEventScriptBytecodeOpCode OpCode = opCode;
 
-    [FieldOffset(1)]
-    public readonly byte UnitAndFlags = unitAndFlags;
+    [FieldOffset(1)] public readonly byte UnitAndFlags = unitAndFlags;
 
-    [FieldOffset(2)]
-    public readonly ushort Dest_U16 = dest;
+    [FieldOffset(2)] public readonly ushort Dest_U16 = dest;
 
-    [FieldOffset(4)]
-    public ushort Target_U16;
+    [FieldOffset(4)] public ushort Target_U16;
 
-    [FieldOffset(8)]
-    public ushort Condition_U16;
+    [FieldOffset(8)] public ushort Condition_U16;
 
-    [FieldOffset(4)]
-    public ushort A_U16 = a;
+    [FieldOffset(4)] public ushort A_U16 = a;
 
-    [FieldOffset(6)]
-    public ushort B_U16 = b;
+    [FieldOffset(6)] public ushort B_U16 = b;
 
-    [FieldOffset(8)]
-    public ushort C_U16 = c;
+    [FieldOffset(8)] public ushort C_U16 = c;
 
-    [FieldOffset(10)]
-    public ushort D_U16 = d;
+    [FieldOffset(10)] public ushort D_U16 = d;
 
-    [FieldOffset(4)]
-    public short A_I16;
+    [FieldOffset(4)] public short A_I16;
 
-    [FieldOffset(6)]
-    public short B_I16;
+    [FieldOffset(6)] public short B_I16;
 
-    [FieldOffset(8)]
-    public short C_I16;
+    [FieldOffset(8)] public short C_I16;
 
-    [FieldOffset(10)]
-    public short D_I16;
+    [FieldOffset(10)] public short D_I16;
 
-    [FieldOffset(4)]
-    public int A_I32;
+    [FieldOffset(4)] public int A_I32;
 
-    [FieldOffset(8)]
-    public int B_I32;
+    [FieldOffset(8)] public int B_I32;
 
-    [FieldOffset(4)]
-    public uint A_U32;
+    [FieldOffset(4)] public uint A_U32;
 
-    [FieldOffset(8)]
-    public uint B_U32;
+    [FieldOffset(8)] public uint B_U32;
 
-    [FieldOffset(4)]
-    public long I64;
+    [FieldOffset(4)] public long I64;
 
-    [FieldOffset(4)]
-    public ulong U64;
+    [FieldOffset(4)] public ulong U64;
 
-    [FieldOffset(4)]
-    public double F64;
+    [FieldOffset(4)] public double F64;
 }
 
 public enum GameEventScriptBytecodeOpCode : byte
 {
     #region Core loads, slot movement, branches, returns
-    
+
     Nop = 0x00,
     LoadNothing = 0x01,
     LoadTrue = 0x02,
@@ -203,8 +189,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfNotTrue = 0x0D,
     ReturnVoid = 0x0E,
     ReturnValue = 0x0F,
-    
+
     #endregion
+
     #region Generic boolean/comparison/arithmetic/default operations
 
     Or = 0x10,
@@ -223,28 +210,30 @@ public enum GameEventScriptBytecodeOpCode : byte
     Divide = 0x1D,
     Power = 0x1E,
     Default = 0x1F,
-    
+
     #endregion
+
     #region Primitive integer fast paths
 
-    PrimitiveIntegerEqual = 0x20,
-    PrimitiveIntegerNotEqual = 0x21,
-    PrimitiveIntegerLess = 0x22,
-    PrimitiveIntegerGreater = 0x23,
-    PrimitiveIntegerLessOrEqual = 0x24,
-    PrimitiveIntegerGreaterOrEqual = 0x25,
-    PrimitiveIntegerAdd = 0x26,
-    PrimitiveIntegerSubtract = 0x27,
-    PrimitiveIntegerMultiply = 0x28,
-    PrimitiveIntegerDivide = 0x29,
-    PrimitiveIntegerFloorDivide = 0x2A,
-    PrimitiveIntegerModulo = 0x2B,
-    PrimitiveIntegerRemainder = 0x2C,
+    IntEqual = 0x20,
+    IntNotEqual = 0x21,
+    IntLess = 0x22,
+    IntGreater = 0x23,
+    IntLessOrEqual = 0x24,
+    IntGreaterOrEqual = 0x25,
+    IntAdd = 0x26,
+    IntSubtract = 0x27,
+    IntMultiply = 0x28,
+    IntDivide = 0x29,
+    IntFloorDivide = 0x2A,
+    IntModulo = 0x2B,
+    IntRemainder = 0x2C,
     IntegerDivide = 0x2D,
     Modulo = 0x2E,
     Remainder = 0x2F,
-    
+
     #endregion
+
     #region Unary, random, dice, range value operations
 
     UnaryNegate = 0x30,
@@ -263,8 +252,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     RandomPop = 0x3D,
     Range = 0x3E,
     RangeWithStep = 0x3F,
-    
+
     #endregion
+
     #region Collection/text operations, projections, short-circuit markers
 
     Contains = 0x40,
@@ -282,8 +272,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     ShortCircuitAnd = 0x4C,
     ShortCircuitImplies = 0x4D,
     ReserveSlots = 0x4E,
-    
+
     #endregion
+
     #region Primitive/domain casts
 
     CastNothing = 0x50,
@@ -300,8 +291,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     CastUuid = 0x5B,
     CastOptional = 0x5C,
     CastCustom = 0x5D,
-    
+
     #endregion
+
     #region Collection/message/reference casts
 
     CastSequence = 0x60,
@@ -317,10 +309,11 @@ public enum GameEventScriptBytecodeOpCode : byte
     CastDictionary = 0x6A,
     CastSet = 0x6B,
     CastDice = 0x6C,
-    
+
     #endregion
+
     #region Primitive/domain type checks
-    
+
     TypeCheckNothing = 0x70,
     TypeCheckBoolean = 0x71,
     TypeCheckInteger = 0x72,
@@ -336,8 +329,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckTag = 0x7C,
     TypeCheckText = 0x7D,
     TypeCheckCustom = 0x7E,
-    
+
     #endregion
+
     #region Collection/message/reference type checks
 
     TypeCheckSequence = 0x80,
@@ -351,8 +345,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckDictionary = 0x88,
     TypeCheckSet = 0x89,
     TypeCheckDice = 0x8A,
-    
+
     #endregion
+
     #region Construction, access, handlers, predicates, calls
 
     LoadHandler = 0x90,
@@ -366,8 +361,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     BuildMessage = 0x99,
     BindHandler = 0x9A,
     Variadic = 0x9B,
-    
+
     #endregion
+
     #region Scopes and message emit/publish operations
 
     EnterScope = 0xA0,
@@ -380,8 +376,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     EmitMessageValueWithTags = 0xA7,
     PublishMessageValue = 0xA8,
     PublishMessageValueWithTags = 0xA9,
-    
+
     #endregion
+
     #region Iterators and collection builders
 
     RangeIterator = 0xB0,
@@ -400,10 +397,11 @@ public enum GameEventScriptBytecodeOpCode : byte
     SeriesTerm = 0xBD,
     SeriesTake = 0xBE,
     SeriesDrop = 0xBF,
-    
+
     #endregion
-    
+
     #region Calls
+
     Call = 0xC0,
     CallPredicate = 0xC1,
     CallStandard = 0xC2,
@@ -418,8 +416,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     StageFloat = 0xCB,
     StageText = 0xCC,
     StageTag = 0xCD,
+
     #endregion
-    
+
     #region Pipeline operations
 
     PipelineIterator = 0xD0,
@@ -466,6 +465,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     PipelineTakePatternCountFace = 0xF7,
     PipelineTakePatternFullHouse = 0xF8,
     PipelineTakePatternStraight = 0xF9
-    
+
     #endregion
 }

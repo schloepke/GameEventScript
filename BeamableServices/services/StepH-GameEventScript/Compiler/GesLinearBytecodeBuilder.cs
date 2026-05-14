@@ -1526,14 +1526,14 @@ internal sealed class GesLinearBytecodeBuilder
         {
             FilterSelectorNode filter => EmitPipelineIterator(
                 sourceIteratorSlot,
-                context.RequireSlot(filter.Identifier),
+                filter.Identifier,
                 filter.Predicate,
                 PipelineIteratorEntryKind.Filter,
                 context,
                 state),
             SelectSelectorNode select => EmitPipelineIterator(
                 sourceIteratorSlot,
-                context.RequireSlot(select.Identifier),
+                select.Identifier,
                 select.Projection,
                 PipelineIteratorEntryKind.Select,
                 context,
@@ -1543,23 +1543,28 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitPipelineIterator(
         int sourceIteratorSlot,
-        int itemSlot,
+        string itemIdentifier,
         ExpressionNode expression,
         PipelineIteratorEntryKind kind,
         SourceContext context,
         ExpressionState state)
     {
         var iteratorSlot = AllocateSlot(state);
+        var captures = ResolvePipelineCaptures(expression, itemIdentifier, context);
+        var captureSlotListIndex = ResolveSlotListIndex(captures.Select(capture => capture.SourceSlot).ToArray());
         var instructionAddress = Emit(CreateInstruction(
             GameEventScriptBytecodeOpCode.PipelineIterator,
             dest: iteratorSlot,
             a: sourceIteratorSlot,
-            c: itemSlot));
+            c: 0,
+            d: captureSlotListIndex));
         _deferredHelperEmitters.Add(() =>
         {
+            var helperContext = CreatePipelineHelperContext(itemIdentifier, captures);
+            var helperState = new ExpressionState(helperContext.SlotCount);
             var entryAddress = kind == PipelineIteratorEntryKind.Filter
-                ? EmitPipelineFilterEntry(itemSlot, expression, context, state)
-                : EmitSourceExpressionEntry(expression, context, state);
+                ? EmitPipelineFilterEntry(0, expression, helperContext, helperState)
+                : EmitSourceExpressionEntry(expression, helperContext, helperState);
             PatchB(instructionAddress, entryAddress);
         });
         return iteratorSlot;
@@ -1590,13 +1595,13 @@ internal sealed class GesLinearBytecodeBuilder
         {
             case SelectSelectorNode select:
                 return EmitPipelineCollect(
-                    EmitPipelineIterator(iteratorSlot, context.RequireSlot(select.Identifier), select.Projection, PipelineIteratorEntryKind.Select, context, state),
+                    EmitPipelineIterator(iteratorSlot, select.Identifier, select.Projection, PipelineIteratorEntryKind.Select, context, state),
                     isSet: false,
                     state);
 
             case FilterSelectorNode filter:
                 return EmitPipelineCollect(
-                    EmitPipelineIterator(iteratorSlot, context.RequireSlot(filter.Identifier), filter.Predicate, PipelineIteratorEntryKind.Filter, context, state),
+                    EmitPipelineIterator(iteratorSlot, filter.Identifier, filter.Predicate, PipelineIteratorEntryKind.Filter, context, state),
                     isSet: false,
                     state);
 
@@ -1604,7 +1609,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var predicateIterator = EmitPipelineIterator(
                     iteratorSlot,
-                    context.RequireSlot(predicate.Identifier),
+                    predicate.Identifier,
                     predicate.Predicate,
                     PipelineIteratorEntryKind.Select,
                     context,
@@ -1623,7 +1628,7 @@ internal sealed class GesLinearBytecodeBuilder
                 {
                     iteratorSlot = EmitPipelineIterator(
                         iteratorSlot,
-                        context.RequireSlot(edge.Identifier!),
+                        edge.Identifier!,
                         edge.Predicate,
                         PipelineIteratorEntryKind.Filter,
                         context,
@@ -1645,7 +1650,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var filteredIterator = EmitPipelineIterator(
                     iteratorSlot,
-                    context.RequireSlot(count.Identifier),
+                    count.Identifier,
                     count.Predicate,
                     PipelineIteratorEntryKind.Filter,
                     context,
@@ -1657,7 +1662,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var projectedIterator = EmitPipelineIterator(
                     iteratorSlot,
-                    context.RequireSlot(sum.Identifier),
+                    sum.Identifier,
                     sum.Projection,
                     PipelineIteratorEntryKind.Select,
                     context,
@@ -1669,7 +1674,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var projectedIterator = EmitPipelineIterator(
                     iteratorSlot,
-                    context.RequireSlot(average.Identifier),
+                    average.Identifier,
                     average.Projection,
                     PipelineIteratorEntryKind.Select,
                     context,
@@ -1783,9 +1788,11 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot, b: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitSourceExpressionEntry(expression, context, state);
+            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot);
+            var entryAddress = EmitSourceExpressionEntry(expression, context, helperState);
             PatchC(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -1805,20 +1812,31 @@ internal sealed class GesLinearBytecodeBuilder
             dest: resultSlot,
             a: iteratorSlot,
             b: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var keyEntryAddress = EmitSourceExpressionEntry(keyProjection, context, state);
+            var keyEntryAddress = EmitSourceExpressionEntry(
+                keyProjection,
+                context,
+                CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot));
             PatchC(instructionAddress, keyEntryAddress);
             if (valueProjection is not null)
             {
-                var valueEntryAddress = EmitSourceExpressionEntry(valueProjection, context, state);
+                var valueEntryAddress = EmitSourceExpressionEntry(
+                    valueProjection,
+                    context,
+                    CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot));
                 PatchD(instructionAddress, valueEntryAddress);
             }
         });
         return resultSlot;
     }
 
-    private int EmitPipelineDistinct(int iteratorSlot, DistinctSelectorNode distinct, SourceContext context, ExpressionState state)
+    private int EmitPipelineDistinct(
+        int iteratorSlot,
+        DistinctSelectorNode distinct,
+        SourceContext context,
+        ExpressionState state)
     {
         if (distinct.Projection is null || string.IsNullOrEmpty(distinct.Identifier))
         {
@@ -1850,13 +1868,17 @@ internal sealed class GesLinearBytecodeBuilder
         return EmitValueInstruction(state, opCode, a: iteratorSlot, b: slice.Count);
     }
 
-    private int EmitPipelineChoose(int iteratorSlot, ChooseSelectorNode choose, SourceContext context, ExpressionState state)
+    private int EmitPipelineChoose(
+        int iteratorSlot,
+        ChooseSelectorNode choose,
+        SourceContext context,
+        ExpressionState state)
     {
         if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
         {
             iteratorSlot = EmitPipelineIterator(
                 iteratorSlot,
-                context.RequireSlot(choose.Identifier!),
+                choose.Identifier!,
                 choose.Predicate,
                 PipelineIteratorEntryKind.Filter,
                 context,
@@ -1880,9 +1902,11 @@ internal sealed class GesLinearBytecodeBuilder
             a: iteratorSlot,
             b: choose.Count,
             c: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, context, state);
+            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot);
+            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, context, helperState);
             PatchD(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -1899,9 +1923,11 @@ internal sealed class GesLinearBytecodeBuilder
             a: iteratorSlot,
             b: seedSlot,
             c: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitPipelineCountReducerEntry(resultSlot, state);
+            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, seedSlot, itemSlot, resultSlot);
+            var entryAddress = EmitPipelineCountReducerEntry(resultSlot, helperState);
             PatchD(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -1918,9 +1944,11 @@ internal sealed class GesLinearBytecodeBuilder
             a: iteratorSlot,
             b: defaultSlot,
             c: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitPipelineAddReducerEntry(resultSlot, itemSlot, state);
+            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, defaultSlot, itemSlot, resultSlot);
+            var entryAddress = EmitPipelineAddReducerEntry(resultSlot, itemSlot, helperState);
             PatchD(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -1938,9 +1966,11 @@ internal sealed class GesLinearBytecodeBuilder
             a: iteratorSlot,
             b: zeroSlot,
             c: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitPipelineAverageReducerEntry(resultSlot, itemSlot, countSlot, state);
+            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, zeroSlot, countSlot, itemSlot, resultSlot);
+            var entryAddress = EmitPipelineAverageReducerEntry(resultSlot, itemSlot, countSlot, helperState);
             PatchD(instructionAddress, entryAddress);
         });
 
@@ -1969,9 +1999,11 @@ internal sealed class GesLinearBytecodeBuilder
             dest: resultSlot,
             a: iteratorSlot,
             b: itemSlot));
+        var helperBaseSlot = state.NextSlot;
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitPipelineExtremaReducerEntry(resultSlot, itemSlot, identifierSlot, projection, isMax, context, state);
+            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, itemSlot, resultSlot, identifierSlot);
+            var entryAddress = EmitPipelineExtremaReducerEntry(resultSlot, itemSlot, identifierSlot, projection, isMax, context, helperState);
             PatchC(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -1992,7 +2024,7 @@ internal sealed class GesLinearBytecodeBuilder
         var entry = _code.Count;
         var reserveSlotsAddress = EmitReserveSlots(0);
         var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
-        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd, accumulatorSlot, oneSlot);
+        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IntAdd, accumulatorSlot, oneSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: nextCountSlot));
         PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
         return entry;
@@ -2003,7 +2035,7 @@ internal sealed class GesLinearBytecodeBuilder
         var entry = _code.Count;
         var reserveSlotsAddress = EmitReserveSlots(0);
         var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
-        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd, countSlot, oneSlot);
+        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IntAdd, countSlot, oneSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: countSlot, a: nextCountSlot));
         var sumSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, itemSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: sumSlot));
@@ -2066,9 +2098,11 @@ internal sealed class GesLinearBytecodeBuilder
                 var instructionAddress = Emit(CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot, b: count.Count));
                 if (count.Face is not null)
                 {
+                    var helperBaseSlot = state.NextSlot;
                     _deferredHelperEmitters.Add(() =>
                     {
-                        var entryAddress = EmitSourceExpressionEntry(count.Face, context, state);
+                        var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot);
+                        var entryAddress = EmitSourceExpressionEntry(count.Face, context, helperState);
                         PatchC(instructionAddress, entryAddress);
                     });
                 }
@@ -2095,18 +2129,26 @@ internal sealed class GesLinearBytecodeBuilder
         }
     }
 
-    private int EmitPipelineObjectMatch(int iteratorSlot, ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)
+    private int EmitPipelineObjectMatch(
+        int iteratorSlot,
+        ObjectMatchPatternNode pattern,
+        SourceContext context,
+        ExpressionState state)
     {
-        var itemSlot = AllocateSlot(state);
         var matchIterator = AllocateSlot(state);
+        var captures = ResolvePipelineCaptures(pattern, context);
+        var captureSlotListIndex = ResolveSlotListIndex(captures.Select(capture => capture.SourceSlot).ToArray());
         var instructionAddress = Emit(CreateInstruction(
             GameEventScriptBytecodeOpCode.PipelineIterator,
             dest: matchIterator,
             a: iteratorSlot,
-            c: itemSlot));
+            c: 0,
+            d: captureSlotListIndex));
         _deferredHelperEmitters.Add(() =>
         {
-            var entryAddress = EmitPipelineObjectMatchEntry(itemSlot, pattern, context, state);
+            var helperContext = CreatePipelineHelperContext(captures);
+            var helperState = new ExpressionState(helperContext.SlotCount);
+            var entryAddress = EmitPipelineObjectMatchEntry(0, pattern, helperContext, helperState);
             PatchB(instructionAddress, entryAddress);
         });
         return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineHasAny, a: matchIterator);
@@ -2544,19 +2586,19 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.IntegerDivide or
             GameEventScriptBytecodeOpCode.Modulo or
             GameEventScriptBytecodeOpCode.Remainder or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo or
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder or
+            GameEventScriptBytecodeOpCode.IntEqual or
+            GameEventScriptBytecodeOpCode.IntNotEqual or
+            GameEventScriptBytecodeOpCode.IntLess or
+            GameEventScriptBytecodeOpCode.IntGreater or
+            GameEventScriptBytecodeOpCode.IntLessOrEqual or
+            GameEventScriptBytecodeOpCode.IntGreaterOrEqual or
+            GameEventScriptBytecodeOpCode.IntAdd or
+            GameEventScriptBytecodeOpCode.IntSubtract or
+            GameEventScriptBytecodeOpCode.IntMultiply or
+            GameEventScriptBytecodeOpCode.IntDivide or
+            GameEventScriptBytecodeOpCode.IntFloorDivide or
+            GameEventScriptBytecodeOpCode.IntModulo or
+            GameEventScriptBytecodeOpCode.IntRemainder or
             GameEventScriptBytecodeOpCode.Default or
             GameEventScriptBytecodeOpCode.Contains or
             GameEventScriptBytecodeOpCode.ContainsValue or
@@ -2699,19 +2741,19 @@ internal sealed class GesLinearBytecodeBuilder
     private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(string operation)
         => operation switch
         {
-            "=" or "==" => GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual,
-            "<>" => GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual,
-            "<" => GameEventScriptBytecodeOpCode.PrimitiveIntegerLess,
-            ">" => GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater,
-            "<=" => GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual,
-            ">=" => GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual,
-            "+" => GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd,
-            "-" => GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract,
-            "*" => GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply,
-            "/" => GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide,
-            "div" => GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide,
-            "mod" => GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo,
-            "rem" => GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder,
+            "=" or "==" => GameEventScriptBytecodeOpCode.IntEqual,
+            "<>" => GameEventScriptBytecodeOpCode.IntNotEqual,
+            "<" => GameEventScriptBytecodeOpCode.IntLess,
+            ">" => GameEventScriptBytecodeOpCode.IntGreater,
+            "<=" => GameEventScriptBytecodeOpCode.IntLessOrEqual,
+            ">=" => GameEventScriptBytecodeOpCode.IntGreaterOrEqual,
+            "+" => GameEventScriptBytecodeOpCode.IntAdd,
+            "-" => GameEventScriptBytecodeOpCode.IntSubtract,
+            "*" => GameEventScriptBytecodeOpCode.IntMultiply,
+            "/" => GameEventScriptBytecodeOpCode.IntDivide,
+            "div" => GameEventScriptBytecodeOpCode.IntFloorDivide,
+            "mod" => GameEventScriptBytecodeOpCode.IntModulo,
+            "rem" => GameEventScriptBytecodeOpCode.IntRemainder,
             _ => ToBinaryOpCode(operation)
         };
 
@@ -2753,6 +2795,425 @@ internal sealed class GesLinearBytecodeBuilder
     {
         Filter,
         Select
+    }
+
+    private IReadOnlyList<PipelineCapture> ResolvePipelineCaptures(
+        ExpressionNode expression,
+        string itemIdentifier,
+        SourceContext context)
+    {
+        var identifiers = new List<string>();
+        CollectReferencedIdentifiers(expression, identifiers, new HashSet<string>(StringComparer.Ordinal));
+        return ResolvePipelineCaptures(identifiers, itemIdentifier, context);
+    }
+
+    private IReadOnlyList<PipelineCapture> ResolvePipelineCaptures(
+        ObjectMatchPatternNode pattern,
+        SourceContext context)
+    {
+        var identifiers = new List<string>();
+        CollectReferencedIdentifiers(pattern, identifiers, new HashSet<string>(StringComparer.Ordinal));
+        return ResolvePipelineCaptures(identifiers, itemIdentifier: null, context);
+    }
+
+    private IReadOnlyList<PipelineCapture> ResolvePipelineCaptures(
+        IReadOnlyList<string> identifiers,
+        string? itemIdentifier,
+        SourceContext context)
+    {
+        var captures = new List<PipelineCapture>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < identifiers.Count; index++)
+        {
+            var identifier = identifiers[index];
+            if ((itemIdentifier is not null && string.Equals(identifier, itemIdentifier, StringComparison.Ordinal)) ||
+                !seen.Add(identifier))
+            {
+                continue;
+            }
+
+            captures.Add(new PipelineCapture(
+                identifier,
+                context.RequireSlot(identifier),
+                captures.Count + 1));
+        }
+
+        return captures;
+    }
+
+    private static SourceContext CreatePipelineHelperContext(
+        string itemIdentifier,
+        IReadOnlyList<PipelineCapture> captures)
+    {
+        var slots = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            [itemIdentifier] = 0
+        };
+        for (var index = 0; index < captures.Count; index++)
+        {
+            slots[captures[index].Name] = captures[index].HelperSlot;
+        }
+
+        return new SourceContext(slots);
+    }
+
+    private static SourceContext CreatePipelineHelperContext(IReadOnlyList<PipelineCapture> captures)
+    {
+        var slots = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var index = 0; index < captures.Count; index++)
+        {
+            slots[captures[index].Name] = captures[index].HelperSlot;
+        }
+
+        return new SourceContext(slots, temporaryBaseSlot: 1 + captures.Count);
+    }
+
+    private static ExpressionState CreateHelperState(int baseSlot, params int[] referencedSlots)
+    {
+        var nextSlot = Math.Max(0, baseSlot);
+        for (var index = 0; index < referencedSlots.Length; index++)
+        {
+            var slot = referencedSlots[index];
+            if (slot >= nextSlot)
+            {
+                nextSlot = slot + 1;
+            }
+        }
+
+        return new ExpressionState(nextSlot);
+    }
+
+    private readonly record struct PipelineCapture(string Name, int SourceSlot, int HelperSlot);
+
+    private static void CollectReferencedIdentifiers(
+        ExpressionNode expression,
+        List<string> identifiers,
+        ISet<string> bound)
+    {
+        switch (expression)
+        {
+            case IdentifierExpressionNode identifier:
+                if (!bound.Contains(identifier.Name))
+                {
+                    identifiers.Add(identifier.Name);
+                }
+
+                break;
+
+            case MessageLiteralExpressionNode message:
+                foreach (var argument in message.Arguments)
+                {
+                    CollectReferencedIdentifiers(argument.Expression, identifiers, bound);
+                }
+
+                break;
+
+            case ListLiteralExpressionNode list:
+                foreach (var item in list.Items)
+                {
+                    CollectReferencedIdentifiers(item, identifiers, bound);
+                }
+
+                break;
+
+            case SequenceLiteralExpressionNode sequence:
+                foreach (var item in sequence.Items)
+                {
+                    CollectReferencedIdentifiers(item, identifiers, bound);
+                }
+
+                break;
+
+            case SetLiteralExpressionNode set:
+                foreach (var item in set.Items)
+                {
+                    CollectReferencedIdentifiers(item, identifiers, bound);
+                }
+
+                break;
+
+            case DictionaryLiteralExpressionNode dictionary:
+                foreach (var entry in dictionary.Entries)
+                {
+                    CollectReferencedIdentifiers(entry.Value, identifiers, bound);
+                }
+
+                break;
+
+            case UnaryExpressionNode unary:
+                CollectReferencedIdentifiers(unary.Operand, identifiers, bound);
+                break;
+
+            case VariadicTaggedExpressionNode variadic:
+                foreach (var argument in variadic.Arguments)
+                {
+                    CollectReferencedIdentifiers(argument, identifiers, bound);
+                }
+
+                break;
+
+            case ClampExpressionNode clamp:
+                CollectReferencedIdentifiers(clamp.Value, identifiers, bound);
+                CollectReferencedIdentifiers(clamp.Minimum, identifiers, bound);
+                CollectReferencedIdentifiers(clamp.Maximum, identifiers, bound);
+                break;
+
+            case RandomExpressionNode random:
+                CollectReferencedIdentifiers(random.FromExpression, identifiers, bound);
+                CollectReferencedIdentifiers(random.ToExpression, identifiers, bound);
+                break;
+
+            case RangeExpressionNode range:
+                CollectReferencedIdentifiers(range.FromExpression, identifiers, bound);
+                CollectReferencedIdentifiers(range.ToExpression, identifiers, bound);
+                if (range.StepExpression is not null)
+                {
+                    CollectReferencedIdentifiers(range.StepExpression, identifiers, bound);
+                }
+
+                break;
+
+            case SeededRandomExpressionNode seededRandom:
+                CollectReferencedIdentifiers(seededRandom.SeedExpression, identifiers, bound);
+                CollectReferencedIdentifiers(seededRandom.BodyExpression, identifiers, bound);
+                break;
+
+            case GeneratedCollectionExpressionNode generatedCollection:
+            {
+                CollectReferencedIdentifiers(generatedCollection.Source, identifiers, bound);
+                var collectionBound = WithBound(bound, generatedCollection.Identifier);
+                if (generatedCollection.Predicate is not null)
+                {
+                    CollectReferencedIdentifiers(generatedCollection.Predicate, identifiers, collectionBound);
+                }
+
+                CollectReferencedIdentifiers(generatedCollection.Projection, identifiers, collectionBound);
+                break;
+            }
+
+            case GuardedChoiceExpressionNode guardedChoice:
+                foreach (var branch in guardedChoice.Branches)
+                {
+                    CollectReferencedIdentifiers(branch.ConditionExpression, identifiers, bound);
+                    CollectReferencedIdentifiers(branch.ValueExpression, identifiers, bound);
+                }
+
+                CollectReferencedIdentifiers(guardedChoice.OtherwiseExpression, identifiers, bound);
+                break;
+
+            case BinaryExpressionNode binary:
+                CollectReferencedIdentifiers(binary.Left, identifiers, bound);
+                CollectReferencedIdentifiers(binary.Right, identifiers, bound);
+                break;
+
+            case PredicateCallExpressionNode predicateCall:
+                CollectReferencedIdentifiers(predicateCall.Value, identifiers, bound);
+                break;
+
+            case ExtensionPredicateExpressionNode extensionPredicate:
+                CollectReferencedIdentifiers(extensionPredicate.Value, identifiers, bound);
+                break;
+
+            case CallExpressionNode call:
+                foreach (var argument in call.Arguments)
+                {
+                    CollectReferencedIdentifiers(argument, identifiers, bound);
+                }
+
+                break;
+
+            case TypeCastExpressionNode typeCast:
+                CollectReferencedIdentifiers(typeCast.Value, identifiers, bound);
+                break;
+
+            case TypeConstructorExpressionNode typeConstructor:
+                foreach (var argument in typeConstructor.Arguments)
+                {
+                    CollectReferencedIdentifiers(argument.Expression, identifiers, bound);
+                }
+
+                break;
+
+            case TypeCheckExpressionNode typeCheck:
+                CollectReferencedIdentifiers(typeCheck.Value, identifiers, bound);
+                break;
+
+            case MemberAccessExpressionNode memberAccess:
+                CollectReferencedIdentifiers(memberAccess.Target, identifiers, bound);
+                break;
+
+            case CollectionAccessExpressionNode collectionAccess:
+                CollectReferencedIdentifiers(collectionAccess.Target, identifiers, bound);
+                CollectReferencedIdentifiers(collectionAccess.Selector, identifiers, bound);
+                break;
+
+            case ExtensionCallExpressionNode extensionCall:
+                foreach (var argument in extensionCall.Arguments)
+                {
+                    CollectReferencedIdentifiers(argument.Expression, identifiers, bound);
+                }
+
+                break;
+        }
+    }
+
+    private static void CollectReferencedIdentifiers(
+        IterationSourceNode source,
+        List<string> identifiers,
+        ISet<string> bound)
+    {
+        switch (source)
+        {
+            case CollectionIterationSourceNode collection:
+                CollectReferencedIdentifiers(collection.Expression, identifiers, bound);
+                break;
+
+            case RangeIterationSourceNode range:
+                CollectReferencedIdentifiers(range.RangeExpression, identifiers, bound);
+                break;
+        }
+    }
+
+    private static void CollectReferencedIdentifiers(
+        CollectionSelectorNode selector,
+        List<string> identifiers,
+        ISet<string> bound)
+    {
+        switch (selector)
+        {
+            case ExpressionSelectorNode expression:
+                CollectReferencedIdentifiers(expression.Expression, identifiers, bound);
+                break;
+
+            case FilterSelectorNode filter:
+                CollectReferencedIdentifiers(filter.Predicate, identifiers, WithBound(bound, filter.Identifier));
+                break;
+
+            case SelectSelectorNode select:
+                CollectReferencedIdentifiers(select.Projection, identifiers, WithBound(bound, select.Identifier));
+                break;
+
+            case SumSelectorNode sum:
+                CollectReferencedIdentifiers(sum.Projection, identifiers, WithBound(bound, sum.Identifier));
+                break;
+
+            case AverageSelectorNode average:
+                CollectReferencedIdentifiers(average.Projection, identifiers, WithBound(bound, average.Identifier));
+                break;
+
+            case CountSelectorNode count:
+                CollectReferencedIdentifiers(count.Predicate, identifiers, WithBound(bound, count.Identifier));
+                break;
+
+            case PredicateSelectorNode predicate:
+                CollectReferencedIdentifiers(predicate.Predicate, identifiers, WithBound(bound, predicate.Identifier));
+                break;
+
+            case EdgeSelectorNode edge when edge.Predicate is not null && !string.IsNullOrEmpty(edge.Identifier):
+                CollectReferencedIdentifiers(edge.Predicate, identifiers, WithBound(bound, edge.Identifier!));
+                break;
+
+            case MinSelectorNode min:
+                CollectReferencedIdentifiers(min.Projection, identifiers, WithBound(bound, min.Identifier));
+                break;
+
+            case MaxSelectorNode max:
+                CollectReferencedIdentifiers(max.Projection, identifiers, WithBound(bound, max.Identifier));
+                break;
+
+            case DictionarySelectorNode dictionary:
+            {
+                var dictionaryBound = WithBound(bound, dictionary.Identifier);
+                CollectReferencedIdentifiers(dictionary.KeyProjection, identifiers, dictionaryBound);
+                if (dictionary.ValueProjection is not null)
+                {
+                    CollectReferencedIdentifiers(dictionary.ValueProjection, identifiers, dictionaryBound);
+                }
+
+                break;
+            }
+
+            case ContainsSelectorNode contains:
+                CollectReferencedIdentifiers(contains.ValueExpression, identifiers, bound);
+                break;
+
+            case ChooseSelectorNode choose:
+                if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
+                {
+                    CollectReferencedIdentifiers(choose.Predicate, identifiers, WithBound(bound, choose.Identifier!));
+                }
+
+                if (choose.WeightExpression is not null && !string.IsNullOrEmpty(choose.WeightIdentifier))
+                {
+                    CollectReferencedIdentifiers(choose.WeightExpression, identifiers, WithBound(bound, choose.WeightIdentifier!));
+                }
+
+                break;
+
+            case DistinctSelectorNode distinct when distinct.Projection is not null && !string.IsNullOrEmpty(distinct.Identifier):
+                CollectReferencedIdentifiers(distinct.Projection, identifiers, WithBound(bound, distinct.Identifier!));
+                break;
+
+            case GroupBySelectorNode groupBy:
+                CollectReferencedIdentifiers(groupBy.Projection, identifiers, WithBound(bound, groupBy.Identifier));
+                break;
+
+            case OrderBySelectorNode orderBy:
+                CollectReferencedIdentifiers(orderBy.Projection, identifiers, WithBound(bound, orderBy.Identifier));
+                break;
+
+            case PatternSelectorNode pattern:
+                CollectReferencedIdentifiers(pattern.Pattern, identifiers, bound);
+                break;
+
+            case TakePatternSelectorNode takePattern:
+                CollectReferencedIdentifiers(takePattern.Pattern, identifiers, bound);
+                break;
+
+            case ObjectMatchSelectorNode objectMatch:
+                CollectReferencedIdentifiers(objectMatch.Pattern, identifiers, bound);
+                break;
+        }
+    }
+
+    private static void CollectReferencedIdentifiers(
+        DicePatternNode pattern,
+        List<string> identifiers,
+        ISet<string> bound)
+    {
+        if (pattern is DiceCountPatternNode { Face: { } face })
+        {
+            CollectReferencedIdentifiers(face, identifiers, bound);
+        }
+    }
+
+    private static void CollectReferencedIdentifiers(
+        ObjectMatchPatternNode pattern,
+        List<string> identifiers,
+        ISet<string> bound)
+    {
+        foreach (var entry in pattern.Entries)
+        {
+            switch (entry.Value)
+            {
+                case ObjectMatchExpressionValueNode expression:
+                    CollectReferencedIdentifiers(expression.Expression, identifiers, bound);
+                    break;
+
+                case ObjectMatchNestedValueNode nested:
+                    CollectReferencedIdentifiers(nested.Pattern, identifiers, bound);
+                    break;
+            }
+        }
+    }
+
+    private static HashSet<string> WithBound(ISet<string> bound, string identifier)
+    {
+        var copy = new HashSet<string>(bound, StringComparer.Ordinal)
+        {
+            identifier
+        };
+        return copy;
     }
 
     private sealed class SourceContext

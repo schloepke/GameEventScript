@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public static class VmRegisterBooleanLogic
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmOr(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
+    public static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
@@ -28,7 +28,7 @@ public static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmAnd(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
+    public static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
@@ -48,7 +48,7 @@ public static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmXor(ref this VmRegister dst, ref VmRegister a, ref VmRegister b)
+    public static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
@@ -62,7 +62,7 @@ public static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmNot(ref this VmRegister dst, ref VmRegister a)
+    public static void VmNot(ref this VmValue dst, ref VmValue a)
     {
         var x = a.BooleanValueOrNothing;
         if (x.HasValue)

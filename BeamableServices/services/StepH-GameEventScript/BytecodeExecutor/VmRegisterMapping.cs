@@ -3,14 +3,14 @@
 using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegister;
+using static StepH.GameEventScript.BytecodeExecutor.VmValue;
 using static StepH.GameEventScript.Types.GameEventScriptValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 public static class VmRegisterMapping
 {
-    public static void BindArguments(ref this VmRegister destination, GameEventScriptValue argument)
+    public static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
     {
         switch (argument.Kind)
         {
@@ -82,7 +82,7 @@ public static class VmRegisterMapping
         }
     }
 
-    public static GameEventScriptValue ToGameEventScriptValue(this ref VmRegister a) => a.Kind switch
+    public static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
         VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.AsIntegerValue),
         VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.AsFloatValue),

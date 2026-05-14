@@ -73,13 +73,19 @@ GameEventScriptBinary
   Header
   ModuleName
   StringPool              zero-based UTF-8 strings in the file
+  UInt16SliceTable        compact ushort lists used by code and metadata
   BindTable
     Kind                  0x10-0x1F export, 0x20-0x2F import
-    MessageHandler | Function | Predicate | ExtensionCall | ExternalType
+    MessageHandler | Function | Predicate | ExtensionCall | OutboundMessage | ExternalType
     Name                  string-pool index
     ArgumentNames         ordered string-pool indexes
     EntryAddress          global code address for exports, 0 for imports
 ```
+
+`OutboundMessage` bind entries list statically shaped `emit`/`publish` messages.
+Their name and argument-name fields are the outbound message signature, allowing
+loaders to construct outbound message-signature lookups without scanning the
+instruction table.
 
 Imports leave `EntryAddress` at `0`. They are linked by table index from
 instructions or side tables; extension and external-type implementation code is
@@ -97,6 +103,7 @@ GameEventScriptCompiled
   FormatVersion
   StringPool
   UShortListPool
+  OutboundMessageSignatures
   ExternalReferences
   ExternalTypeConstructorReferences
   Code: Instruction[]
@@ -120,6 +127,7 @@ Current C# public surface:
 GameEventScriptCompiled
   StringPool
   UShortListPool
+  OutboundMessageSignatures
   ExternalReferences
   ExternalTypeConstructorReferences
   Code: IReadOnlyList<GameEventScriptBytecodeInstruction>
@@ -862,7 +870,7 @@ Core streaming shape:
 
 ```text
 CollectionIterator source -> iterator
-PipelineIterator transformedIterator sourceIterator nextEntry itemBindingSlot
+PipelineIterator transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
 PipelineCollectList/Set dst iterator
 PipelineFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
@@ -876,11 +884,14 @@ CollectionBuilderFinish dst builder
 ```
 
 `PipelineIterator` is a lazy one-time adapter over another VM iterator. Its
-helper entry binds the current source item in `C_U16`. `ReturnValue` yields the
-returned value. `ReturnVoid` means "no yielded item"; the adapter continues with
-the next source item until the source iterator itself is exhausted. For normal
-call frames, `ReturnVoid` is mapped to DSL `nothing`; for pipeline iterators it
-is control flow.
+helper entry runs as an isolated helper frame: the current source item is bound
+to helper-local slot `C_U16` (normally slot `0`), and `D_U16` references a
+`UShortListPool` entry containing caller-frame capture slots copied when the
+iterator is created. Captures are exposed to the helper in order starting at
+slot `1`. `ReturnValue` yields the returned value. `ReturnVoid` means "no
+yielded item"; the adapter continues with the next source item until the source
+iterator itself is exhausted. For normal call frames, `ReturnVoid` is mapped to
+DSL `nothing`; for pipeline iterators it is control flow.
 
 Reducer entries use `Dest_U16` as the current accumulator slot and the
 instruction item binding slot as the current element. A reducer `ReturnValue`

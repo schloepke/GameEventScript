@@ -28,6 +28,7 @@ public static class GameEventScriptBytecodeDumper
         builder.Append("maxFrameSlots: ").AppendLine(module.MaxFrameSlots.ToString(CultureInfo.InvariantCulture));
         AppendPool(builder, "strings", module.StringPool);
         AppendUShortListPool(builder, module);
+        AppendOutboundMessageSignatures(builder, module);
         AppendExternalReferences(builder, module);
         AppendDebugSegment(builder, module);
         AppendCode(builder, module);
@@ -54,6 +55,26 @@ public static class GameEventScriptBytecodeDumper
         {
             builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture)).Append(": ")
                 .AppendLine(string.Join(", ", module.UShortListPool[i].Select(value => value.ToString(CultureInfo.InvariantCulture))));
+            }
+    }
+
+    private static void AppendOutboundMessageSignatures(StringBuilder builder, GameEventScriptCompiled module)
+    {
+        builder.Append("outboundMessageSignatures[").Append(module.OutboundMessageSignatures.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
+        for (var i = 0; i < module.OutboundMessageSignatures.Count; i++)
+        {
+            var shapeIndex = module.OutboundMessageSignatures[i];
+            builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture))
+                .Append(": shape=").Append(shapeIndex.ToString(CultureInfo.InvariantCulture));
+            if (shapeIndex < module.UShortListPool.Count)
+            {
+                var signature = module.UShortListPool[shapeIndex]
+                    .Select(index => index < module.StringPool.Count ? module.StringPool[index] : "?")
+                    .ToArray();
+                builder.Append(" [").Append(string.Join(", ", signature)).Append(']');
+            }
+
+            builder.AppendLine();
         }
     }
 
@@ -433,6 +454,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "source", instruction.A_U16);
                 AppendAddress(builder, "entry", instruction.B_U16);
                 AppendSlot(builder, "item", instruction.C_U16);
+                AppendSlotListPoolIndex(builder, "captures", module, instruction.D_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
@@ -546,13 +568,13 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "source", instruction.A_U16);
                 AppendIndex(builder, "count", instruction.B_U16);
                 break;
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerFloorDivide:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerRemainder:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerModulo:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-            case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
+            case GameEventScriptBytecodeOpCode.IntFloorDivide:
+            case GameEventScriptBytecodeOpCode.IntDivide:
+            case GameEventScriptBytecodeOpCode.IntRemainder:
+            case GameEventScriptBytecodeOpCode.IntModulo:
+            case GameEventScriptBytecodeOpCode.IntMultiply:
+            case GameEventScriptBytecodeOpCode.IntSubtract:
+            case GameEventScriptBytecodeOpCode.IntAdd:
                 AppendSlot(builder, "a", instruction.A_U16);
                 AppendSlot(builder, "b", instruction.B_U16);
                 break;

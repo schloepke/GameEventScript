@@ -102,6 +102,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsLessThan(compiled.UShortListPool.Count, direct.C_U16);
         var shape = compiled.UShortListPool[direct.A_U16].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, shape);
+        Assert.HasCount(1, compiled.OutboundMessageSignatures);
+        Assert.AreEqual(direct.A_U16, compiled.OutboundMessageSignatures[0]);
         Assert.HasCount(1, compiled.UShortListPool[direct.B_U16]);
         Assert.HasCount(1, compiled.UShortListPool[direct.C_U16]);
         Assert.IsTrue(compiled.Code.Any(instruction =>
@@ -402,7 +404,31 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code
             .Skip(entryAddress)
             .TakeWhile(instruction => instruction.OpCode != GameEventScriptBytecodeOpCode.ReturnValue)
-            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.Add or GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd));
+            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.Add or GameEventScriptBytecodeOpCode.IntAdd));
+    }
+
+    [TestMethod]
+    public void PipelineSelectorHelperEntriesDoNotInheritLaterCallerPeakSlots()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            predicate high(_ value) means value > 3
+
+            on Start(value) {
+              let filtered be [1, 2, 3, 4][:filter item where item is high]
+              let later be [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+              emit Done(filtered: filtered, later: later[1])
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var selector = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
+        var helperEntry = selector.B_U16;
+
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, compiled.Code[helperEntry].OpCode);
+        Assert.AreEqual(2, compiled.Code[helperEntry].A_U16);
     }
 
     [TestMethod]
@@ -2395,6 +2421,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.ModuleName,
             original.StringPool.ToArray(),
             original.UShortListPool.Select(layout => (IReadOnlyList<ushort>)layout.ToArray()).ToArray(),
+            original.OutboundMessageSignatures.ToArray(),
             original.ExternalReferences
                 .Select(reference => new GameEventScriptExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels.ToArray()))
                 .ToArray(),

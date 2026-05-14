@@ -29,6 +29,8 @@ internal static class GesBytecodeCompiler
         private readonly List<GameEventScriptExternalTypeConstructorReference> _externalTypeConstructorReferences = [];
         private readonly Dictionary<string, int> _uShortListIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<ushort>> _uShortListPool = [];
+        private readonly HashSet<int> _outboundMessageSignatureIndex = [];
+        private readonly List<ushort> _outboundMessageSignatures = [];
         private readonly Dictionary<GameEventScriptBytecodeHandler, EventHandlerNode> _handlerSources =
             new(ReferenceEqualityComparer<GameEventScriptBytecodeHandler>.Instance);
 
@@ -63,6 +65,7 @@ internal static class GesBytecodeCompiler
                 module.ModuleName,
                 _stringPool.ToArray(),
                 _uShortListPool.ToArray(),
+                _outboundMessageSignatures.ToArray(),
                 _externalReferences.ToArray(),
                 _externalTypeConstructorReferences.ToArray(),
                 callables,
@@ -182,6 +185,38 @@ internal static class GesBytecodeCompiler
             _uShortListPool.Add(values.ToArray());
             _uShortListIndex[key] = index;
             return index;
+        }
+
+        private int AddMessageShape(string messageName, IReadOnlyList<string> argumentNames)
+        {
+            var shape = new ushort[argumentNames.Count + 1];
+            shape[0] = ToUShortIndex(AddString(GameEventScriptMessageSignature.NormalizeMessageName(messageName)), "message name string pool index");
+            for (var index = 0; index < argumentNames.Count; index++)
+            {
+                shape[index + 1] = ToUShortIndex(AddString(argumentNames[index]), "message argument string pool index");
+            }
+
+            return AddUShortList(shape);
+        }
+
+        private void AddOutboundMessageSignature(MessageLiteralExpressionNode message)
+        {
+            var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
+            var shapeIndex = AddMessageShape(message.Message, argumentNames);
+            if (_outboundMessageSignatureIndex.Add(shapeIndex))
+            {
+                _outboundMessageSignatures.Add(ToUShortIndex(shapeIndex, "outbound message signature index"));
+            }
+        }
+
+        private static ushort ToUShortIndex(int value, string name)
+        {
+            if (value < 0 || value > ushort.MaxValue)
+            {
+                throw new GameEventScriptCompileException($"GameEventScript bytecode {name} must fit into an unsigned 16-bit index.");
+            }
+
+            return (ushort)value;
         }
 
         private void CollectSourceMetadata()
@@ -362,6 +397,7 @@ internal static class GesBytecodeCompiler
 
             if (publish.MessageExpression is MessageLiteralExpressionNode message)
             {
+                AddOutboundMessageSignature(message);
                 CollectSourceMessageMetadata(message);
                 return;
             }

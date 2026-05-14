@@ -10,7 +10,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public static class VmRegisterUnitCalculation
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HasSameUnit(ref VmRegister a, ref VmRegister b)
+    public static bool HasSameUnit(ref VmValue a, ref VmValue b)
         => a.Unit == b.Unit;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -18,7 +18,7 @@ public static class VmRegisterUnitCalculation
         => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TrySameUnit(ref VmRegister a, ref VmRegister b, out GameEventScriptBytecodeInstructionUnit unit)
+    public static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.Unit == b.Unit)
         {
@@ -31,7 +31,7 @@ public static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryProductUnit(ref VmRegister a, ref VmRegister b, out GameEventScriptBytecodeInstructionUnit unit)
+    public static bool TryProductUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.HasUnit && b.HasUnit)
         {
@@ -44,7 +44,7 @@ public static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryQuotientUnit(ref VmRegister a, ref VmRegister b, out GameEventScriptBytecodeInstructionUnit unit)
+    public static bool TryQuotientUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         switch (a.HasUnit)
         {
@@ -61,7 +61,7 @@ public static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPowerUnit(ref VmRegister value, double exponent, out GameEventScriptBytecodeInstructionUnit unit)
+    public static bool TryPowerUnit(ref VmValue value, double exponent, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (!value.HasUnit || exponent == 0.0)
         {

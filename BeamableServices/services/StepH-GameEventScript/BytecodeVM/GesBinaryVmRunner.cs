@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 
 namespace StepH.GameEventScript.BytecodeVM;
 
@@ -35,7 +36,7 @@ internal sealed class GesBinaryVmRunner
         foreach (var entry in _binary.BindTable.Entries)
         {
             if (entry.Kind != GameEventScriptBinaryBindKind.MessageHandler ||
-                !string.Equals(_binary.StringTable.Resolve(entry.Name), message.Name, StringComparison.Ordinal) ||
+                !string.Equals(_binary.TextConstantTable.Resolve(entry.Name), message.Name, StringComparison.Ordinal) ||
                 entry.ArgumentNames.Count != message.Arguments.SignatureLabels.Count)
             {
                 continue;
@@ -45,7 +46,7 @@ internal sealed class GesBinaryVmRunner
             for (var index = 0; index < entry.ArgumentNames.Count; index++)
             {
                 if (!string.Equals(
-                        _binary.StringTable.Resolve(entry.ArgumentNames[index]),
+                        _binary.TextConstantTable.Resolve(entry.ArgumentNames[index]),
                         message.Arguments.SignatureLabels[index],
                         StringComparison.Ordinal))
                 {
@@ -102,16 +103,16 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.GreaterOrEqual:
                 case GameEventScriptBytecodeOpCode.Less:
                 case GameEventScriptBytecodeOpCode.LessOrEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
+                case GameEventScriptBytecodeOpCode.IntAdd:
+                case GameEventScriptBytecodeOpCode.IntSubtract:
+                case GameEventScriptBytecodeOpCode.IntMultiply:
+                case GameEventScriptBytecodeOpCode.IntDivide:
+                case GameEventScriptBytecodeOpCode.IntGreater:
+                case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
+                case GameEventScriptBytecodeOpCode.IntLess:
+                case GameEventScriptBytecodeOpCode.IntLessOrEqual:
+                case GameEventScriptBytecodeOpCode.IntEqual:
+                case GameEventScriptBytecodeOpCode.IntNotEqual:
                     maxSlot = Math.Max(maxSlot, Math.Max(instruction.A_U16, instruction.B_U16));
                     break;
 
@@ -209,11 +210,11 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadText:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Text(_binary.StringTable.Resolve(checked((ushort)instruction.A_U32))));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Text(_binary.TextConstantTable.Resolve(checked((ushort)instruction.A_U32))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadTag:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Tag(_binary.StringTable.Resolve(checked((ushort)instruction.A_U32))));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Tag(_binary.TextConstantTable.Resolve(checked((ushort)instruction.A_U32))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastInteger:
@@ -232,16 +233,16 @@ internal sealed class GesBinaryVmRunState
                     Set(instruction.Dest_U16, GesBinaryVmValue.Text(Get(instruction.A_U16).ToGameEventScriptValue().AsText()));
                     break;
 
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLess:
-                case GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual:
+                case GameEventScriptBytecodeOpCode.IntAdd:
+                case GameEventScriptBytecodeOpCode.IntSubtract:
+                case GameEventScriptBytecodeOpCode.IntMultiply:
+                case GameEventScriptBytecodeOpCode.IntDivide:
+                case GameEventScriptBytecodeOpCode.IntEqual:
+                case GameEventScriptBytecodeOpCode.IntNotEqual:
+                case GameEventScriptBytecodeOpCode.IntGreater:
+                case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
+                case GameEventScriptBytecodeOpCode.IntLess:
+                case GameEventScriptBytecodeOpCode.IntLessOrEqual:
                     Set(instruction.Dest_U16, EvaluatePrimitiveInteger(instruction.OpCode, Get(instruction.A_U16), Get(instruction.B_U16)));
                     break;
 
@@ -326,7 +327,7 @@ internal sealed class GesBinaryVmRunState
             return false;
         }
 
-        var name = _binary.StringTable.Resolve(_handler.ArgumentNames[parameterIndex]);
+        var name = _binary.TextConstantTable.Resolve(_handler.ArgumentNames[parameterIndex]);
         if (!_message.Arguments.TryGetValue(name, out var value))
         {
             return false;
@@ -338,19 +339,19 @@ internal sealed class GesBinaryVmRunState
 
     private bool PublishMessage(GameEventScriptBytecodeInstruction instruction, bool publish)
     {
-        var shape = _binary.UInt16SliceTable.Resolve(instruction.A_U16);
-        var argumentSlots = _binary.UInt16SliceTable.Resolve(instruction.B_U16);
+        var shape = _binary.Uint16ConstantTable.Resolve(instruction.A_U16);
+        var argumentSlots = _binary.Uint16ConstantTable.Resolve(instruction.B_U16);
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
         {
             return false;
         }
 
-        var messageName = _binary.StringTable.Resolve(shape[0]);
+        var messageName = _binary.TextConstantTable.Resolve(shape[0]);
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
-                _binary.StringTable.Resolve(shape[index + 1]),
+                _binary.TextConstantTable.Resolve(shape[index + 1]),
                 Get(argumentSlots[index]).ToGameEventScriptValue());
         }
 
@@ -379,16 +380,16 @@ internal sealed class GesBinaryVmRunState
         var b = right.AsInteger();
         return opCode switch
         {
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd => GesBinaryVmValue.Integer(a + b, left.Unit ?? right.Unit),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract => GesBinaryVmValue.Integer(a - b, left.Unit),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply => GesBinaryVmValue.Integer(a * b, left.Unit ?? right.Unit),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide => b == 0 ? GesBinaryVmValue.Nothing : GesBinaryVmValue.Integer(a / b, left.Unit),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerEqual => GesBinaryVmValue.Boolean(a == b),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerNotEqual => GesBinaryVmValue.Boolean(a != b),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater => GesBinaryVmValue.Boolean(a > b),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual => GesBinaryVmValue.Boolean(a >= b),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLess => GesBinaryVmValue.Boolean(a < b),
-            GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual => GesBinaryVmValue.Boolean(a <= b),
+            GameEventScriptBytecodeOpCode.IntAdd => GesBinaryVmValue.Integer(a + b, left.Unit ?? right.Unit),
+            GameEventScriptBytecodeOpCode.IntSubtract => GesBinaryVmValue.Integer(a - b, left.Unit),
+            GameEventScriptBytecodeOpCode.IntMultiply => GesBinaryVmValue.Integer(a * b, left.Unit ?? right.Unit),
+            GameEventScriptBytecodeOpCode.IntDivide => b == 0 ? GesBinaryVmValue.Nothing : GesBinaryVmValue.Integer(a / b, left.Unit),
+            GameEventScriptBytecodeOpCode.IntEqual => GesBinaryVmValue.Boolean(a == b),
+            GameEventScriptBytecodeOpCode.IntNotEqual => GesBinaryVmValue.Boolean(a != b),
+            GameEventScriptBytecodeOpCode.IntGreater => GesBinaryVmValue.Boolean(a > b),
+            GameEventScriptBytecodeOpCode.IntGreaterOrEqual => GesBinaryVmValue.Boolean(a >= b),
+            GameEventScriptBytecodeOpCode.IntLess => GesBinaryVmValue.Boolean(a < b),
+            GameEventScriptBytecodeOpCode.IntLessOrEqual => GesBinaryVmValue.Boolean(a <= b),
             _ => GesBinaryVmValue.Nothing
         };
     }
@@ -440,14 +441,14 @@ internal sealed class GesBinaryVmRunState
     private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(GameEventScriptBytecodeOpCode opCode)
         => opCode switch
         {
-            GameEventScriptBytecodeOpCode.Add => GameEventScriptBytecodeOpCode.PrimitiveIntegerAdd,
-            GameEventScriptBytecodeOpCode.Subtract => GameEventScriptBytecodeOpCode.PrimitiveIntegerSubtract,
-            GameEventScriptBytecodeOpCode.Multiply => GameEventScriptBytecodeOpCode.PrimitiveIntegerMultiply,
-            GameEventScriptBytecodeOpCode.Divide => GameEventScriptBytecodeOpCode.PrimitiveIntegerDivide,
-            GameEventScriptBytecodeOpCode.Greater => GameEventScriptBytecodeOpCode.PrimitiveIntegerGreater,
-            GameEventScriptBytecodeOpCode.GreaterOrEqual => GameEventScriptBytecodeOpCode.PrimitiveIntegerGreaterOrEqual,
-            GameEventScriptBytecodeOpCode.Less => GameEventScriptBytecodeOpCode.PrimitiveIntegerLess,
-            GameEventScriptBytecodeOpCode.LessOrEqual => GameEventScriptBytecodeOpCode.PrimitiveIntegerLessOrEqual,
+            GameEventScriptBytecodeOpCode.Add => GameEventScriptBytecodeOpCode.IntAdd,
+            GameEventScriptBytecodeOpCode.Subtract => GameEventScriptBytecodeOpCode.IntSubtract,
+            GameEventScriptBytecodeOpCode.Multiply => GameEventScriptBytecodeOpCode.IntMultiply,
+            GameEventScriptBytecodeOpCode.Divide => GameEventScriptBytecodeOpCode.IntDivide,
+            GameEventScriptBytecodeOpCode.Greater => GameEventScriptBytecodeOpCode.IntGreater,
+            GameEventScriptBytecodeOpCode.GreaterOrEqual => GameEventScriptBytecodeOpCode.IntGreaterOrEqual,
+            GameEventScriptBytecodeOpCode.Less => GameEventScriptBytecodeOpCode.IntLess,
+            GameEventScriptBytecodeOpCode.LessOrEqual => GameEventScriptBytecodeOpCode.IntLessOrEqual,
             _ => opCode
         };
 

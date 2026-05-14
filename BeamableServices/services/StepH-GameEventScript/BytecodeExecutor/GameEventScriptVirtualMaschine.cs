@@ -14,7 +14,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
     private VmState _vmState = new(binary, registerSize, stackSize);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ref VmRegister Register(ushort index) => ref _vmState.RegisterSlots[index + _vmState.RegisterFrameStart];
+    private ref VmValue Register(ushort index) => ref _vmState.RegisterSlots[index + _vmState.RegisterFrameStart];
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
     {
@@ -132,43 +132,43 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Default:
                     break;
-                case PrimitiveIntegerEqual:
+                case IntEqual:
                     Register(instruction.Dest_U16).VmIntegerEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerNotEqual:
+                case IntNotEqual:
                     Register(instruction.Dest_U16).VmIntegerNotEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerLess:
+                case IntLess:
                     Register(instruction.Dest_U16).VmIntegerLess(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerGreater:
+                case IntGreater:
                     Register(instruction.Dest_U16).VmIntegerGreater(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerLessOrEqual:
+                case IntLessOrEqual:
                     Register(instruction.Dest_U16).VmIntegerLessOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerGreaterOrEqual:
+                case IntGreaterOrEqual:
                     Register(instruction.Dest_U16).VmIntegerGreaterOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerAdd:
+                case IntAdd:
                     Register(instruction.Dest_U16).VmIntegerAdd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerSubtract:
+                case IntSubtract:
                     Register(instruction.Dest_U16).VmIntegerSubtract(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerMultiply:
+                case IntMultiply:
                     Register(instruction.Dest_U16).VmIntegerMultiply(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerDivide:
+                case IntDivide:
                     Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerFloorDivide:
+                case IntFloorDivide:
                     Register(instruction.Dest_U16).VmIntegerFloorDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerModulo:
+                case IntModulo:
                     Register(instruction.Dest_U16).VmIntegerModulo(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
-                case PrimitiveIntegerRemainder:
+                case IntRemainder:
                     Register(instruction.Dest_U16).VmIntegerRemainder(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case IntegerDivide:
@@ -375,12 +375,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case ExitScope:
                     break;
                 case EmitMessage:
-                    VmPublishMessage(binary.UInt16SliceTable.Resolve(instruction.A_U16), binary.UInt16SliceTable.Resolve(instruction.B_U16), false, context);
+                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.A_U16), binary.Uint16ConstantTable.Resolve(instruction.B_U16), false, context);
                     break;
                 case EmitMessageWithTags:
                     break;
                 case PublishMessage:
-                    VmPublishMessage(binary.UInt16SliceTable.Resolve(instruction.A_U16), binary.UInt16SliceTable.Resolve(instruction.B_U16), true, context);
+                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.A_U16), binary.Uint16ConstantTable.Resolve(instruction.B_U16), true, context);
                     break;
                 case PublishMessageWithTags:
                     break;
@@ -542,12 +542,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
     private bool VmPublishMessage(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptContext context)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
-        var messageName = binary.StringTable.Resolve(shape[0]);
+        var messageName = binary.TextConstantTable.Resolve(shape[0]);
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
-                binary.StringTable.Resolve(shape[index + 1]),
+                binary.TextConstantTable.Resolve(shape[index + 1]),
                 Register(argumentSlots[index]).ToGameEventScriptValue());
         }
 

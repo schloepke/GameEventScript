@@ -2113,6 +2113,7 @@ The artifact exposes neutral bytecode data:
 - `ModuleName`
 - `StringPool`
 - `UShortListPool`
+- `OutboundMessageSignatures`
 - `ExternalReferences`
 - `Callables`
 - `Handlers`
@@ -2134,9 +2135,11 @@ the `.gesb` binary interchange format.
 
 `ToGameEventScriptBinary(...)` projects the current compiled artifact
 into the first compact binary container shape: a 16-byte `GESB` header, module
-name, zero-based string pool, and one public bind table. Bind kinds in the
-`0x10` range export message handlers/functions/predicates; bind kinds in the
-`0x20` range import extension calls and external types.
+name, zero-based string pool, compact `UInt16SliceTable`, and one public bind
+table. Statically shaped emitted/published messages are represented as
+`OutboundMessage` bind entries with message name plus ordered argument names.
+Bind kinds in the `0x10` range export message handlers/functions/predicates;
+bind kinds in the `0x20` range import extension calls and outbound messages.
 
 The host loads bytecode and builds the BytecodeVM executable internally.
 

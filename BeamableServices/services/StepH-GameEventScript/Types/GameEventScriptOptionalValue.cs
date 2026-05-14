@@ -34,7 +34,7 @@ public sealed class GameEventScriptOptionalValue : GameEventScriptValue
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => TryConvertToList(out var value) ? value.AsList() : System.Array.Empty<GameEventScriptValue>();
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => TryConvertToDictionary(out var value) ? value.AsDictionary() : GameEventScriptDictionaryValue.EmptyView;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => TryConvertToMap(out var value) ? value.AsMap() : GameEventScriptMapValue.EmptyView;
 
     public override ISet<GameEventScriptValue> AsSet() => TryConvertToSet(out var value) ? value.AsSet() : new SortedSet<GameEventScriptValue>(StableComparer);
 
@@ -71,8 +71,8 @@ public sealed class GameEventScriptOptionalValue : GameEventScriptValue
     internal override bool TryConvertToList(out GameEventScriptValue value)
         => TryConvertValue(static source => source.TryConvertToList(out var converted) ? converted : null, out value);
 
-    internal override bool TryConvertToDictionary(out GameEventScriptValue value)
-        => TryConvertValue(static source => source.TryConvertToDictionary(out var converted) ? converted : null, out value);
+    internal override bool TryConvertToMap(out GameEventScriptValue value)
+        => TryConvertValue(static source => source.TryConvertToMap(out var converted) ? converted : null, out value);
 
     internal override bool TryConvertToSet(out GameEventScriptValue value)
         => TryConvertValue(static source => source.TryConvertToSet(out var converted) ? converted : null, out value);

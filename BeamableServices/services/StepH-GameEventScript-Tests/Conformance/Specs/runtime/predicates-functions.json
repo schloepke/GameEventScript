@@ -12,7 +12,7 @@
             "name": "Start",
             "args": {
               "unit": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "name": { "type": ":text", "value": "Ada" },
                   "hp": { "type": ":integer", "value": "2" },
@@ -23,7 +23,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": { "type": ":text", "value": "Ada" },
                       "hp": { "type": ":integer", "value": "2" },
@@ -31,7 +31,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": { "type": ":text", "value": "Bert" },
                       "hp": { "type": ":integer", "value": "4" },
@@ -39,7 +39,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": { "type": ":text", "value": "Cara" },
                       "hp": { "type": ":integer", "value": "1" },
@@ -75,7 +75,7 @@
             "name": "Start",
             "args": {
               "unit": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "name": { "type": ":text", "value": "NoHp" }
                 }
@@ -84,13 +84,13 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": { "type": ":text", "value": "NoHp" }
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": { "type": ":text", "value": "Healthy" },
                       "hp": { "type": ":integer", "value": "5" },
@@ -124,7 +124,7 @@
             "name": "Start",
             "args": {
               "unit": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "alive": { "type": ":boolean", "value": true },
                   "hidden": { "type": ":boolean", "value": false }
@@ -200,7 +200,7 @@
             "args": {
               "value": { "type": ":float", "value": "2" },
               "hp": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "current": { "type": ":float", "value": "4" }
                 }
@@ -240,7 +240,7 @@
             "name": "Start",
             "args": {
               "unit": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "hp": { "type": ":integer", "value": "2" },
                   "maxHp": { "type": ":integer", "value": "5" }
@@ -250,14 +250,14 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "hp": { "type": ":integer", "value": "2" },
                       "maxHp": { "type": ":integer", "value": "5" }
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "hp": { "type": ":integer", "value": "5" },
                       "maxHp": { "type": ":integer", "value": "5" }

@@ -256,7 +256,7 @@
     {
       "kind": "scriptApi",
       "name": "message and handler values expose members without becoming dictionaries",
-      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsDictionary: msg is :dictionary, handlerIsHandler: shoot is :handler, handlerIsDictionary: shoot is :dictionary, msgName: msg.name, msgSignature: msg[:signatureid], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
+      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: shoot is :handler, handlerIsMap: shoot is :map, msgName: msg.name, msgSignature: msg[:signatureid], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
       "steps": [
         {
           "input": {
@@ -280,7 +280,7 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "msgIsDictionary": {
+                "msgIsMap": {
                   "type": ":boolean",
                   "value": false
                 },
@@ -288,7 +288,7 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "handlerIsDictionary": {
+                "handlerIsMap": {
                   "type": ":boolean",
                   "value": false
                 },

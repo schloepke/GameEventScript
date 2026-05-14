@@ -1006,15 +1006,7 @@ internal static class GesValidator
 
                     return;
 
-                case SequenceLiteralExpressionNode sequence:
-                    foreach (var item in sequence.Items)
-                    {
-                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
-                    }
-
-                    return;
-
-                case DictionaryLiteralExpressionNode dictionary:
+                case MapLiteralExpressionNode dictionary:
                     foreach (var entry in dictionary.Entries)
                     {
                         ValidateExpressionReferences(parsedScriptContext, entry.Value, callables, typeDefinitions, errors, declaredTypes);
@@ -1170,7 +1162,7 @@ internal static class GesValidator
                     errors);
                 ValidateExpressionReferences(parsedScriptContext, selectSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
-            case DictionarySelectorNode dictionarySelector:
+            case MapSelectorNode dictionarySelector:
                 ValidateIdentifierCase(
                     parsedScriptContext,
                     dictionarySelector.Identifier,
@@ -1598,8 +1590,8 @@ internal static class GesValidator
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
-            "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "sequence" or "series" or
-            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "dictionary" or "set" or "dice" or "optional";
+            "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "series" or
+            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "set" or "dice" or "optional";
 
     private static void AddTypeConstructorError(
         ParsedScript parsedScriptContext,

@@ -86,7 +86,7 @@ internal static class GesCollectionOperations
             bucket.Add(item);
         }
 
-        return GameEventScriptValueFactory.GesDictionary(groups.ToDictionary(
+        return GameEventScriptValueFactory.GesMap(groups.ToDictionary(
             pair => pair.Key,
             pair => GameEventScriptValueFactory.GesList(pair.Value),
             StringComparer.Ordinal));

@@ -22,7 +22,7 @@ public class GameEventScriptValueScenarios
         var sourceSet = new HashSet<GameEventScriptValue> { 1d, 2d };
 
         var listValue = GesList(sourceList);
-        var dictionaryValue = GesDictionary(sourceDictionary);
+        var dictionaryValue = GesMap(sourceDictionary);
         var setValue = GesSet(sourceSet);
 
         sourceList.Add(3d);
@@ -30,7 +30,7 @@ public class GameEventScriptValueScenarios
         sourceSet.Add(3d);
 
         Assert.HasCount(2, listValue.AsList());
-        Assert.HasCount(1, dictionaryValue.AsDictionary());
+        Assert.HasCount(1, dictionaryValue.AsMap());
         Assert.HasCount(2, setValue.AsSet());
     }
 
@@ -42,10 +42,10 @@ public class GameEventScriptValueScenarios
         Assert.ThrowsExactly<NotSupportedException>(() => ((IList<GameEventScriptValue>)listView)[0] = 9d);
         Assert.AreEqual(1d, listValue.AsList()[0].AsNumber());
 
-        var dictionaryValue = GesDictionary(new Dictionary<string, GameEventScriptValue> { ["a"] = 1d });
-        var dictionaryView = dictionaryValue.AsDictionary();
+        var dictionaryValue = GesMap(new Dictionary<string, GameEventScriptValue> { ["a"] = 1d });
+        var dictionaryView = dictionaryValue.AsMap();
         Assert.ThrowsExactly<NotSupportedException>(() => ((IDictionary<string, GameEventScriptValue>)dictionaryView)["b"] = 2d);
-        Assert.HasCount(1, dictionaryValue.AsDictionary());
+        Assert.HasCount(1, dictionaryValue.AsMap());
 
         var setValue = GesSet([1d, 2d]);
         var setCopy = setValue.AsSet();
@@ -59,7 +59,7 @@ public class GameEventScriptValueScenarios
         Assert.AreSame(GesText(string.Empty), GesText(string.Empty));
         Assert.AreSame(GesOptionalNone(), GesOptionalNone());
         Assert.AreSame(GesList(null), GesList(Array.Empty<GameEventScriptValue>()));
-        Assert.AreSame(GesDictionary(null), GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
+        Assert.AreSame(GesMap(null), GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
         Assert.AreSame(GesSet(null), GesSet(Array.Empty<GameEventScriptValue>()));
         Assert.AreSame(GesDice((GameEventScriptDiceValue?)null), GameEventScriptDiceValue.Create(Array.Empty<int>()));
         Assert.AreSame(GesMessage(GameEventScriptMessage.Empty), GesMessage(GameEventScriptMessage.Empty));
@@ -143,10 +143,10 @@ public class GameEventScriptValueScenarios
         Assert.AreEqual(GameEventScriptValueKind.Vector, vector.Kind);
         Assert.AreEqual(vector, vectorEqual);
         Assert.AreEqual(vector.GetHashCode(), vectorEqual.GetHashCode());
-        Assert.AreEqual(10.5d, vector.AsDictionary()["x"].AsNumber());
+        Assert.AreEqual(10.5d, vector.AsMap()["x"].AsNumber());
         Assert.AreEqual(-2d, vector.AsList()[1].AsNumber());
-        Assert.AreEqual(0d, vector.AsDictionary()["z"].AsNumber());
-        Assert.AreEqual(3d, vectorWithZ.AsDictionary()["z"].AsNumber());
+        Assert.AreEqual(0d, vector.AsMap()["z"].AsNumber());
+        Assert.AreEqual(3d, vectorWithZ.AsMap()["z"].AsNumber());
         Assert.AreSame(GameEventScriptVectorValue.Zero, GesVector(0d, 0d, 0d));
         Assert.AreEqual("vector[x: 10.5, y: -2, z: 0]", vector.ToString());
 
@@ -157,7 +157,7 @@ public class GameEventScriptValueScenarios
         Assert.AreNotEqual(unitVector, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitVector.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
         Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptVectorValue)unitVector).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitVector.AsDictionary()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitVector.AsMap()["x"]).Unit);
         Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitVector.AsList()[1]).Unit);
         Assert.AreEqual("vector[x: 0m, y: 0m, z: 0m]", unitVector.ToString());
     }
@@ -172,10 +172,10 @@ public class GameEventScriptValueScenarios
         Assert.AreEqual(GameEventScriptValueKind.Point, point.Kind);
         Assert.AreEqual(point, pointEqual);
         Assert.AreEqual(point.GetHashCode(), pointEqual.GetHashCode());
-        Assert.AreEqual(10.5d, point.AsDictionary()["x"].AsNumber());
+        Assert.AreEqual(10.5d, point.AsMap()["x"].AsNumber());
         Assert.AreEqual(-2d, point.AsList()[1].AsNumber());
-        Assert.AreEqual(0d, point.AsDictionary()["z"].AsNumber());
-        Assert.AreEqual(3d, pointWithZ.AsDictionary()["z"].AsNumber());
+        Assert.AreEqual(0d, point.AsMap()["z"].AsNumber());
+        Assert.AreEqual(3d, pointWithZ.AsMap()["z"].AsNumber());
         Assert.AreSame(GameEventScriptPointValue.Zero, GesPoint(0d, 0d, 0d));
         Assert.AreEqual("point[x: 10.5, y: -2, z: 0]", point.ToString());
 
@@ -186,7 +186,7 @@ public class GameEventScriptValueScenarios
         Assert.AreNotEqual(unitPoint, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitPoint.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
         Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptPointValue)unitPoint).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitPoint.AsDictionary()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitPoint.AsMap()["x"]).Unit);
         Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitPoint.AsList()[1]).Unit);
         Assert.AreEqual("point[x: 0m, y: 0m, z: 0m]", unitPoint.ToString());
     }
@@ -300,8 +300,8 @@ public class GameEventScriptValueScenarios
     {
         var value = new Dictionary<int, string> { [1] = "a" }.ToGameEventScriptValue();
 
-        Assert.AreEqual(GameEventScriptValueKind.Dictionary, value.Kind);
-        Assert.HasCount(0, value.AsDictionary());
+        Assert.AreEqual(GameEventScriptValueKind.Map, value.Kind);
+        Assert.HasCount(0, value.AsMap());
     }
 
     private static GameEventScriptValue EvaluatePercentageBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)

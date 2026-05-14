@@ -226,7 +226,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:nothing|text|boolean|uuid|integer|float|number|percentage|degree|meter|second|vector|point|optional|sequence|series|range|message|handler|envelope|ref|list|dictionary|set|dice)\b</string>
+					<string>:(?:nothing|text|boolean|uuid|integer|float|number|percentage|degree|meter|second|vector|point|optional|series|range|message|handler|envelope|ref|list|map|set|dice)\b</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript</string>
 				</dict>
@@ -413,7 +413,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|dictionary|distinct|group|order|term)\b</string>
+					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|map|distinct|group|order|term)\b</string>
 					<key>name</key>
 					<string>support.function.selector.pipeline.gameeventscript</string>
 				</dict>

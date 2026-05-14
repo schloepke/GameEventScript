@@ -7,12 +7,12 @@ using System.Linq;
 
 namespace StepH.GameEventScript.Types;
 
-public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
+public sealed class GameEventScriptMapValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptDictionaryValue Empty = new(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
+    public static readonly GameEventScriptMapValue Empty = new(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
     public static IReadOnlyDictionary<string, GameEventScriptValue> EmptyView => Empty.VisibleView;
 
-    public static GameEventScriptDictionaryValue Create(IReadOnlyDictionary<string, GameEventScriptValue>? values)
+    public static GameEventScriptMapValue Create(IReadOnlyDictionary<string, GameEventScriptValue>? values)
     {
         if (values == null || values.Count == 0) return Empty;
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
@@ -21,25 +21,25 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
             if (pair.Key == null) continue;
             map[pair.Key] = pair.Value ?? GameEventScriptNothingValue.Instance;
         }
-        return map.Count == 0 ? Empty : new GameEventScriptDictionaryValue(map);
+        return map.Count == 0 ? Empty : new GameEventScriptMapValue(map);
     }
 
-    public static GameEventScriptDictionaryValue Create(string? typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values)
+    public static GameEventScriptMapValue Create(string? typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values)
     {
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
             [HiddenTypeKey] = GameEventScriptTagValue.Create(typeName)
         };
-        if (values == null) return new GameEventScriptDictionaryValue(map);
+        if (values == null) return new GameEventScriptMapValue(map);
         foreach (var pair in values)
         {
             if (pair.Key == null || IsHiddenKey(pair.Key)) continue;
             map[pair.Key] = pair.Value ?? GameEventScriptNothingValue.Instance;
         }
-        return new GameEventScriptDictionaryValue(map);
+        return new GameEventScriptMapValue(map);
     }
     
-    private GameEventScriptDictionaryValue(Dictionary<string, GameEventScriptValue> storage)
+    private GameEventScriptMapValue(Dictionary<string, GameEventScriptValue> storage)
     {
         Storage = storage;
         var visible = new Dictionary<string, GameEventScriptValue>(
@@ -51,9 +51,9 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
     internal Dictionary<string, GameEventScriptValue> Storage { get; }
     public ReadOnlyDictionary<string, GameEventScriptValue> VisibleView { get; }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Dictionary;
+    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Map;
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => VisibleView;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => VisibleView;
 
     public override bool HasSemanticValue() => VisibleView.Count > 0;
 
@@ -63,7 +63,9 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
 
     public override bool ContainsValue(GameEventScriptValue needle) => VisibleView.Values.Any(value => value.Equals(needle));
 
-    public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
+    public override IEnumerable<GameEventScriptValue> AsEnumerable() => VisibleView.Values;
+
+    public override bool TryGetMapMember(string key, out GameEventScriptValue value)
     {
         if (!IsHiddenKey(key)) return Storage.TryGetValue(key, out value);
         value = GameEventScriptNothingValue.Instance;
@@ -71,7 +73,7 @@ public sealed class GameEventScriptDictionaryValue : GameEventScriptValue
 
     }
 
-    internal override bool TryConvertToDictionary(out GameEventScriptValue value)
+    internal override bool TryConvertToMap(out GameEventScriptValue value)
     {
         value = this;
         return true;

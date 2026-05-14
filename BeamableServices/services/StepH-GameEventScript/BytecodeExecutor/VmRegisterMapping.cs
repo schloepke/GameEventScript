@@ -47,9 +47,6 @@ public static class VmRegisterMapping
             case Optional:
                 throw new NotImplementedException();
                 break;
-            case Sequence:
-                throw new NotImplementedException();
-                break;
             case Series:
                 throw new NotImplementedException();
                 break;
@@ -68,7 +65,7 @@ public static class VmRegisterMapping
             case List:
                 throw new NotImplementedException();
                 break;
-            case Dictionary:
+            case Map:
                 throw new NotImplementedException();
                 break;
             case Set:

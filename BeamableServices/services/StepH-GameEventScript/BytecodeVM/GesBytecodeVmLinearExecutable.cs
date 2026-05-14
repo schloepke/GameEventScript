@@ -435,7 +435,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateEntryAddress(module, code, instruction.D_U16, $"{context} reducer entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineDictionary:
+            case GameEventScriptBytecodeOpCode.PipelineMap:
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
             case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
@@ -445,7 +445,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateEntryAddress(module, code, instruction.C_U16, $"{context} entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineDictionaryValue:
+            case GameEventScriptBytecodeOpCode.PipelineMapValue:
                 ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
                 ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.C_U16, $"{context} key entry");
@@ -546,15 +546,14 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
-            case GameEventScriptBytecodeOpCode.BuildSequence:
             case GameEventScriptBytecodeOpCode.BuildSet:
                 ValidateSlotListIndex(module, instruction.A_U16, $"{context} item slots");
                 break;
 
-            case GameEventScriptBytecodeOpCode.BuildDictionary:
+            case GameEventScriptBytecodeOpCode.BuildMap:
                 ValidateStringListIndex(module, instruction.A_U16, $"{context} keys");
                 ValidateSlotListIndex(module, instruction.B_U16, $"{context} value slots");
-                ValidateMatchingListCounts(module, instruction.A_U16, instruction.B_U16, $"{context} dictionary entries");
+                ValidateMatchingListCounts(module, instruction.A_U16, instruction.B_U16, $"{context} map entries");
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildMessage:
@@ -1049,7 +1048,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastVector or
             GameEventScriptBytecodeOpCode.CastPoint or
             GameEventScriptBytecodeOpCode.CastUuid or
-            GameEventScriptBytecodeOpCode.CastSequence or
             GameEventScriptBytecodeOpCode.CastSeries or
             GameEventScriptBytecodeOpCode.CastEnvelope or
             GameEventScriptBytecodeOpCode.CastRef or
@@ -1059,7 +1057,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastRange or
             GameEventScriptBytecodeOpCode.CastMessage or
             GameEventScriptBytecodeOpCode.CastHandler or
-            GameEventScriptBytecodeOpCode.CastDictionary or
+            GameEventScriptBytecodeOpCode.CastMap or
             GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastOptional or
@@ -1080,7 +1078,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.TypeCheckBoolean or
             GameEventScriptBytecodeOpCode.TypeCheckUuid or
             GameEventScriptBytecodeOpCode.TypeCheckOptional or
-            GameEventScriptBytecodeOpCode.TypeCheckSequence or
             GameEventScriptBytecodeOpCode.TypeCheckSeries or
             GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
             GameEventScriptBytecodeOpCode.TypeCheckList or
@@ -1088,7 +1085,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.TypeCheckMessage or
             GameEventScriptBytecodeOpCode.TypeCheckHandler or
             GameEventScriptBytecodeOpCode.TypeCheckRef or
-            GameEventScriptBytecodeOpCode.TypeCheckDictionary or
+            GameEventScriptBytecodeOpCode.TypeCheckMap or
             GameEventScriptBytecodeOpCode.TypeCheckSet or
             GameEventScriptBytecodeOpCode.TypeCheckDice or
             GameEventScriptBytecodeOpCode.TypeCheckCustom;

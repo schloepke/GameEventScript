@@ -70,9 +70,9 @@ public static class GameEventScriptClrValueConverter
         }
 
         if (TryExtractStringDictionary(value, out var dictionaryEntries))
-            return GameEventScriptValueFactory.GesDictionary(dictionaryEntries.ToDictionary(x => x.Key, x => x.Value.ToGameEventScriptValue(), StringComparer.Ordinal));
+            return GameEventScriptValueFactory.GesMap(dictionaryEntries.ToDictionary(x => x.Key, x => x.Value.ToGameEventScriptValue(), StringComparer.Ordinal));
         if (value is ISet<GameEventScriptValue> typedSet) return GameEventScriptValueFactory.GesSet(typedSet);
-        if (value is not (IEnumerable enumerable and not string)) return GameEventScriptValueFactory.GesDictionary(ExtractObjectMembers(value));
+        if (value is not (IEnumerable enumerable and not string)) return GameEventScriptValueFactory.GesMap(ExtractObjectMembers(value));
         var list = (from object? item in enumerable select item.ToGameEventScriptValue()).ToList();
         return GameEventScriptValueFactory.GesList(list);
     }

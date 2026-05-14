@@ -469,14 +469,6 @@ internal static class GesBytecodeCompiler
 
                     return;
 
-                case SequenceLiteralExpressionNode sequence:
-                    foreach (var item in sequence.Items)
-                    {
-                        CollectSourceExpressionMetadata(item);
-                    }
-
-                    return;
-
                 case SetLiteralExpressionNode set:
                     foreach (var item in set.Items)
                     {
@@ -485,7 +477,7 @@ internal static class GesBytecodeCompiler
 
                     return;
 
-                case DictionaryLiteralExpressionNode dictionary:
+                case MapLiteralExpressionNode dictionary:
                     foreach (var entry in dictionary.Entries)
                     {
                         AddString(entry.Key);
@@ -748,7 +740,7 @@ internal static class GesBytecodeCompiler
                     CollectSourceExpressionMetadata(max.Projection);
                     break;
 
-                case DictionarySelectorNode dictionary:
+                case MapSelectorNode dictionary:
                     AddString(dictionary.Identifier);
                     CollectSourceExpressionMetadata(dictionary.KeyProjection);
                     CollectSourceExpressionMetadata(dictionary.ValueProjection);

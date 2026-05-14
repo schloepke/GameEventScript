@@ -28,7 +28,7 @@ public struct VmValue
         TagObject,
         DiceObject
     }
-    
+
     internal VmValueKind Kind;
     internal bool BooleanValue;
     internal long IntegerValue;
@@ -75,7 +75,7 @@ public struct VmValue
         BooleanValue = value != 0.0;
         Unit = unit;
     }
-    
+
     public void SetIntegerOrNothing(long? value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         if (value is null) SetNothing();
@@ -133,6 +133,16 @@ public struct VmValue
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
     }
     
+    public void SetObject(VmValueKind kind, IVmObject value)
+    {
+        Kind = kind;
+        ObjectValue = value;
+        FloatValue = 0;
+        IntegerValue = 0;
+        BooleanValue = true;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+    }
+
     public ushort? CodePointerOrNothing => Kind is CodePointer ? (ushort)IntegerValue : null;
     public long? IntegerValueOrNothing => Kind is Integer ? IntegerValue : null;
     public double? FloatValueOrNothing => Kind is Float or Integer ? FloatValue : null;
@@ -141,7 +151,6 @@ public struct VmValue
     public long AsIntegerValue => IntegerValue;
     public double AsFloatValue => FloatValue;
     public bool AsBooleanValue => BooleanValue;
-    
 }
 
 public interface IVmObject
@@ -161,4 +170,32 @@ public class VmListObject(IReadOnlyList<VmValue> items) : IVmObject
 public class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : IVmObject
 {
     internal IReadOnlyDictionary<string, VmValue> Entries = entries;
+}
+
+public interface IVmIterator : IVmObject
+{
+    public bool HasNext();
+    public bool TryNext(ref VmValue value);
+}
+
+public class VmIntegerRangeIterator(long from, long to, long step) : IVmIterator
+{
+    private long current = from;
+    private long end = to;
+    private long step = step;
+
+    public bool HasNext() => step switch
+    {
+        > 0 => current <= end,
+        < 0 => current >= end,
+        _ => false
+    };
+
+    public bool TryNext(ref VmValue value)
+    {
+        if (!HasNext()) return false;
+        value.SetInteger(current);
+        current += step;
+        return true;
+    }
 }

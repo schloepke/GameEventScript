@@ -18,7 +18,7 @@ internal sealed class GameEventScriptExternalObjectValue : GameEventScriptValue,
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
     }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Dictionary;
+    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Map;
 
     public object Instance { get; }
 
@@ -26,7 +26,7 @@ internal sealed class GameEventScriptExternalObjectValue : GameEventScriptValue,
 
     public string CustomTypeName => Definition.Name;
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary()
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap()
         => _dictionary ??= MaterializeDictionary();
 
     public override bool HasSemanticValue() => Definition.Fields.Count > 0;
@@ -37,16 +37,16 @@ internal sealed class GameEventScriptExternalObjectValue : GameEventScriptValue,
         => Definition.Fields.Any(field => string.Equals(field.Name, needle.AsText(), StringComparison.Ordinal));
 
     public override bool ContainsValue(GameEventScriptValue needle)
-        => AsDictionary().Values.Any(value => value.Equals(needle));
+        => AsMap().Values.Any(value => value.Equals(needle));
 
-    public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
+    public override bool TryGetMapMember(string key, out GameEventScriptValue value)
         => Definition.TryGetField(key, Instance, out value);
 
     private IReadOnlyDictionary<string, GameEventScriptValue> MaterializeDictionary()
     {
         if (Definition.Fields.Count == 0)
         {
-            return GameEventScriptDictionaryValue.EmptyView;
+            return GameEventScriptMapValue.EmptyView;
         }
 
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);

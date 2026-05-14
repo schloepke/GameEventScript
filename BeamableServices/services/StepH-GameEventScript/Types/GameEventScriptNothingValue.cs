@@ -28,7 +28,7 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => [];
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => GameEventScriptDictionaryValue.EmptyView;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => GameEventScriptMapValue.EmptyView;
 
     public override ISet<GameEventScriptValue> AsSet() => new SortedSet<GameEventScriptValue>(StableComparer);
 
@@ -68,9 +68,9 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
         return true;
     }
 
-    internal override bool TryConvertToDictionary(out GameEventScriptValue value)
+    internal override bool TryConvertToMap(out GameEventScriptValue value)
     {
-        value = GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
+        value = GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
         return true;
     }
 

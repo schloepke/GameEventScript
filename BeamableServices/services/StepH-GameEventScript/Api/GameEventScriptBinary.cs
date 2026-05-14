@@ -296,7 +296,6 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     #region Collection/message/reference casts
 
-    CastSequence = 0x60,
     CastSeries = 0x61,
     CastEnvelope = 0x62,
     CastRef = 0x63,
@@ -306,7 +305,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     CastRange = 0x67,
     CastMessage = 0x68,
     CastHandler = 0x69,
-    CastDictionary = 0x6A,
+    CastMap = 0x6A,
     CastSet = 0x6B,
     CastDice = 0x6C,
 
@@ -334,7 +333,6 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     #region Collection/message/reference type checks
 
-    TypeCheckSequence = 0x80,
     TypeCheckSeries = 0x81,
     TypeCheckEnvelope = 0x82,
     TypeCheckList = 0x83,
@@ -342,7 +340,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckMessage = 0x85,
     TypeCheckHandler = 0x86,
     TypeCheckRef = 0x87,
-    TypeCheckDictionary = 0x88,
+    TypeCheckMap = 0x88,
     TypeCheckSet = 0x89,
     TypeCheckDice = 0x8A,
 
@@ -355,9 +353,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     MemberAccess = 0x93,
     IndexedAccess = 0x94,
     BuildList = 0x95,
-    BuildSequence = 0x96,
     BuildSet = 0x97,
-    BuildDictionary = 0x98,
+    BuildMap = 0x98,
     BuildMessage = 0x99,
     BindHandler = 0x9A,
     Variadic = 0x9B,
@@ -432,8 +429,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     PipelineContainsSingle = 0xD8,
     PipelineContainsAny = 0xD9,
     PipelineContainsAll = 0xDA,
-    PipelineDictionary = 0xDB,
-    PipelineDictionaryValue = 0xDC,
+    PipelineMap = 0xDB,
+    PipelineMapValue = 0xDC,
     PipelineDistinct = 0xDD,
     PipelineDistinctBy = 0xDE,
     PipelineGroupBy = 0xDF,

@@ -15,7 +15,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -28,7 +28,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -41,7 +41,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -182,7 +182,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -203,7 +203,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -224,7 +224,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -363,13 +363,13 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "points": { "type": ":integer", "value": "3" }
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "points": { "type": ":integer", "value": "7" }
                     }
@@ -405,13 +405,13 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "points": {
                         "type": ":list",
                         "items": [
                           {
-                            "type": ":dictionary",
+                            "type": ":map",
                             "entries": {
                               "x": {
                                 "type": ":integer",
@@ -420,7 +420,7 @@
                             }
                           },
                           {
-                            "type": ":dictionary",
+                            "type": ":map",
                             "entries": {
                               "x": {
                                 "type": ":integer",
@@ -433,13 +433,13 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "points": {
                         "type": ":list",
                         "items": [
                           {
-                            "type": ":dictionary",
+                            "type": ":map",
                             "entries": {
                               "x": {
                                 "type": ":integer",
@@ -448,7 +448,7 @@
                             }
                           },
                           {
-                            "type": ":dictionary",
+                            "type": ":map",
                             "entries": {
                               "x": {
                                 "type": ":integer",
@@ -485,7 +485,7 @@
     {
       "kind": "scriptApi",
       "name": "dictionary selectors use last wins semantics",
-      "script": "on Start(items) {\n  let byId be items[:dictionary item by item.id]\n  let namesById be items[:dictionary item by item.id => item.name]\n  emit Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
+      "script": "on Start(items) {\n  let byId be items[:map item by item.id]\n  let namesById be items[:map item by item.id => item.name]\n  emit Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
       "steps": [
         {
           "input": {
@@ -495,7 +495,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "id": {
                         "type": ":tag",
@@ -512,7 +512,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "id": {
                         "type": ":tag",
@@ -529,7 +529,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "id": {
                         "type": ":tag",
@@ -617,7 +617,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -634,7 +634,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -651,7 +651,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -854,7 +854,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "faction": {
                         "type": ":text",
@@ -865,7 +865,7 @@
                         "value": true
                       },
                       "owner": {
-                        "type": ":dictionary",
+                        "type": ":map",
                         "entries": {
                           "team": {
                             "type": ":text",
@@ -876,7 +876,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "faction": {
                         "type": ":text",
@@ -887,7 +887,7 @@
                         "value": true
                       },
                       "owner": {
-                        "type": ":dictionary",
+                        "type": ":map",
                         "entries": {
                           "team": {
                             "type": ":text",
@@ -968,7 +968,7 @@
             "name": "Start",
             "args": {
               "player": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "age": {
                     "type": ":integer",

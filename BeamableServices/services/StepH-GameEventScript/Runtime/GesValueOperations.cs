@@ -77,7 +77,7 @@ internal static class GesValueOperations
 
     public static bool TryCombineWithPlus(GameEventScriptValue left, GameEventScriptValue right, out GameEventScriptValue value)
     {
-        if (left.Kind == GameEventScriptValueKind.Dictionary && right.Kind == GameEventScriptValueKind.Dictionary)
+        if (left.Kind == GameEventScriptValueKind.Map && right.Kind == GameEventScriptValueKind.Map)
         {
             value = EvaluateDictionaryCombine(left, right);
             return true;
@@ -107,7 +107,7 @@ internal static class GesValueOperations
 
     public static GameEventScriptValue EvaluateCollectionCombine(GameEventScriptValue left, GameEventScriptValue right)
     {
-        if (left.Kind == GameEventScriptValueKind.Dictionary && right.Kind == GameEventScriptValueKind.Dictionary)
+        if (left.Kind == GameEventScriptValueKind.Map && right.Kind == GameEventScriptValueKind.Map)
         {
             return EvaluateDictionaryCombine(left, right);
         }
@@ -128,13 +128,13 @@ internal static class GesValueOperations
 
     public static GameEventScriptValue EvaluateCollectionIntersect(GameEventScriptValue left, GameEventScriptValue right)
     {
-        if (left.Kind == GameEventScriptValueKind.Dictionary && right.Kind == GameEventScriptValueKind.Dictionary)
+        if (left.Kind == GameEventScriptValueKind.Map && right.Kind == GameEventScriptValueKind.Map)
         {
-            var rightKeys = new HashSet<string>(right.AsDictionary().Keys, StringComparer.Ordinal);
-            var map = left.AsDictionary()
+            var rightKeys = new HashSet<string>(right.AsMap().Keys, StringComparer.Ordinal);
+            var map = left.AsMap()
                 .Where(pair => rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return GameEventScriptValueFactory.GesDictionary(map);
+            return GameEventScriptValueFactory.GesMap(map);
         }
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
@@ -168,13 +168,13 @@ internal static class GesValueOperations
 
     public static GameEventScriptValue EvaluateCollectionExcept(GameEventScriptValue left, GameEventScriptValue right)
     {
-        if (left.Kind == GameEventScriptValueKind.Dictionary && right.Kind == GameEventScriptValueKind.Dictionary)
+        if (left.Kind == GameEventScriptValueKind.Map && right.Kind == GameEventScriptValueKind.Map)
         {
-            var rightKeys = new HashSet<string>(right.AsDictionary().Keys, StringComparer.Ordinal);
-            var map = left.AsDictionary()
+            var rightKeys = new HashSet<string>(right.AsMap().Keys, StringComparer.Ordinal);
+            var map = left.AsMap()
                 .Where(pair => !rightKeys.Contains(pair.Key))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            return GameEventScriptValueFactory.GesDictionary(map);
+            return GameEventScriptValueFactory.GesMap(map);
         }
 
         if (left.Kind == GameEventScriptValueKind.Set && right.Kind == GameEventScriptValueKind.Set)
@@ -220,7 +220,7 @@ internal static class GesValueOperations
         var zipped = new List<GameEventScriptValue>(count);
         for (var i = 0; i < count; i++)
         {
-            zipped.Add(GameEventScriptValueFactory.GesDictionary(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+            zipped.Add(GameEventScriptValueFactory.GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
             {
                 ["left"] = leftItems[i],
                 ["right"] = rightItems[i]
@@ -232,13 +232,13 @@ internal static class GesValueOperations
 
     public static GameEventScriptValue EvaluateDictionaryCombine(GameEventScriptValue left, GameEventScriptValue right)
     {
-        var map = new Dictionary<string, GameEventScriptValue>(left.AsDictionary(), StringComparer.Ordinal);
-        foreach (var pair in right.AsDictionary())
+        var map = new Dictionary<string, GameEventScriptValue>(left.AsMap(), StringComparer.Ordinal);
+        foreach (var pair in right.AsMap())
         {
             map[pair.Key] = pair.Value;
         }
 
-        return GameEventScriptValueFactory.GesDictionary(map);
+        return GameEventScriptValueFactory.GesMap(map);
     }
 
     public static bool AreEqual(GameEventScriptValue left, GameEventScriptValue right)

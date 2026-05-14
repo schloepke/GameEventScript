@@ -663,13 +663,10 @@ internal sealed class GesLinearBytecodeBuilder
             case ListLiteralExpressionNode list:
                 return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.BuildList, list.Items, null, context, state);
 
-            case SequenceLiteralExpressionNode sequence:
-                return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.BuildSequence, sequence.Items, null, context, state);
-
             case SetLiteralExpressionNode set:
                 return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.BuildSet, set.Items, null, context, state);
 
-            case DictionaryLiteralExpressionNode dictionary:
+            case MapLiteralExpressionNode dictionary:
                 return EmitSourceDictionary(dictionary, context, state);
 
             case UnaryExpressionNode unary:
@@ -1116,7 +1113,7 @@ internal sealed class GesLinearBytecodeBuilder
         return EmitValueInstruction(state, opCode, a: itemSlotListIndex);
     }
 
-    private int EmitSourceDictionary(DictionaryLiteralExpressionNode dictionary, SourceContext context, ExpressionState state)
+    private int EmitSourceDictionary(MapLiteralExpressionNode dictionary, SourceContext context, ExpressionState state)
     {
         var names = new string[dictionary.Entries.Count];
         var valueSlots = new int[dictionary.Entries.Count];
@@ -1131,7 +1128,7 @@ internal sealed class GesLinearBytecodeBuilder
         var valueSlotListIndex = ResolveSlotListIndex(valueSlots);
         return EmitValueInstruction(
             state,
-            GameEventScriptBytecodeOpCode.BuildDictionary,
+            GameEventScriptBytecodeOpCode.BuildMap,
             a: nameListIndex,
             b: valueSlotListIndex);
     }
@@ -1688,8 +1685,8 @@ internal sealed class GesLinearBytecodeBuilder
             case MaxSelectorNode max:
                 return EmitPipelineExtrema(iteratorSlot, context.RequireSlot(max.Identifier), max.Projection, isMax: true, context, state);
 
-            case DictionarySelectorNode dictionary:
-                return EmitPipelineDictionary(
+            case MapSelectorNode dictionary:
+                return EmitPipelineMap(
                     iteratorSlot,
                     context.RequireSlot(dictionary.Identifier),
                     dictionary.KeyProjection,
@@ -1798,7 +1795,7 @@ internal sealed class GesLinearBytecodeBuilder
         return resultSlot;
     }
 
-    private int EmitPipelineDictionary(
+    private int EmitPipelineMap(
         int iteratorSlot,
         int itemSlot,
         ExpressionNode keyProjection,
@@ -1808,7 +1805,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(
-            valueProjection is null ? GameEventScriptBytecodeOpCode.PipelineDictionary : GameEventScriptBytecodeOpCode.PipelineDictionaryValue,
+            valueProjection is null ? GameEventScriptBytecodeOpCode.PipelineMap : GameEventScriptBytecodeOpCode.PipelineMapValue,
             dest: resultSlot,
             a: iteratorSlot,
             b: itemSlot));
@@ -2642,7 +2639,6 @@ internal sealed class GesLinearBytecodeBuilder
             "vector" => GameEventScriptBytecodeOpCode.CastVector,
             "point" => GameEventScriptBytecodeOpCode.CastPoint,
             "uuid" => GameEventScriptBytecodeOpCode.CastUuid,
-            "sequence" => GameEventScriptBytecodeOpCode.CastSequence,
             "series" => GameEventScriptBytecodeOpCode.CastSeries,
             "envelope" => GameEventScriptBytecodeOpCode.CastEnvelope,
             "ref" => GameEventScriptBytecodeOpCode.CastRef,
@@ -2652,14 +2648,14 @@ internal sealed class GesLinearBytecodeBuilder
             "range" => GameEventScriptBytecodeOpCode.CastRange,
             "message" => GameEventScriptBytecodeOpCode.CastMessage,
             "handler" => GameEventScriptBytecodeOpCode.CastHandler,
-            "dictionary" => GameEventScriptBytecodeOpCode.CastDictionary,
+            "map" => GameEventScriptBytecodeOpCode.CastMap,
             "set" => GameEventScriptBytecodeOpCode.CastSet,
             "dice" => GameEventScriptBytecodeOpCode.CastDice,
             "optional" => GameEventScriptBytecodeOpCode.CastOptional,
             _ => default
         };
 
-        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "sequence" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "dictionary" or "set" or "dice" or "optional";
+        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "set" or "dice" or "optional";
     }
 
     private static bool TryGetTypeCheckOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode)
@@ -2680,7 +2676,6 @@ internal sealed class GesLinearBytecodeBuilder
             "boolean" => GameEventScriptBytecodeOpCode.TypeCheckBoolean,
             "uuid" => GameEventScriptBytecodeOpCode.TypeCheckUuid,
             "optional" => GameEventScriptBytecodeOpCode.TypeCheckOptional,
-            "sequence" => GameEventScriptBytecodeOpCode.TypeCheckSequence,
             "series" => GameEventScriptBytecodeOpCode.TypeCheckSeries,
             "envelope" => GameEventScriptBytecodeOpCode.TypeCheckEnvelope,
             "list" => GameEventScriptBytecodeOpCode.TypeCheckList,
@@ -2688,13 +2683,13 @@ internal sealed class GesLinearBytecodeBuilder
             "message" => GameEventScriptBytecodeOpCode.TypeCheckMessage,
             "handler" => GameEventScriptBytecodeOpCode.TypeCheckHandler,
             "ref" => GameEventScriptBytecodeOpCode.TypeCheckRef,
-            "dictionary" => GameEventScriptBytecodeOpCode.TypeCheckDictionary,
+            "map" => GameEventScriptBytecodeOpCode.TypeCheckMap,
             "set" => GameEventScriptBytecodeOpCode.TypeCheckSet,
             "dice" => GameEventScriptBytecodeOpCode.TypeCheckDice,
             _ => default
         };
 
-        return typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "optional" or "sequence" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "dictionary" or "set" or "dice";
+        return typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "optional" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "set" or "dice";
     }
 
     private static GameEventScriptBytecodeOpCode ToBinaryOpCode(BinaryExpressionNode expression)
@@ -2916,14 +2911,6 @@ internal sealed class GesLinearBytecodeBuilder
 
                 break;
 
-            case SequenceLiteralExpressionNode sequence:
-                foreach (var item in sequence.Items)
-                {
-                    CollectReferencedIdentifiers(item, identifiers, bound);
-                }
-
-                break;
-
             case SetLiteralExpressionNode set:
                 foreach (var item in set.Items)
                 {
@@ -2932,7 +2919,7 @@ internal sealed class GesLinearBytecodeBuilder
 
                 break;
 
-            case DictionaryLiteralExpressionNode dictionary:
+            case MapLiteralExpressionNode dictionary:
                 foreach (var entry in dictionary.Entries)
                 {
                     CollectReferencedIdentifiers(entry.Value, identifiers, bound);
@@ -3121,7 +3108,7 @@ internal sealed class GesLinearBytecodeBuilder
                 CollectReferencedIdentifiers(max.Projection, identifiers, WithBound(bound, max.Identifier));
                 break;
 
-            case DictionarySelectorNode dictionary:
+            case MapSelectorNode dictionary:
             {
                 var dictionaryBound = WithBound(bound, dictionary.Identifier);
                 CollectReferencedIdentifiers(dictionary.KeyProjection, identifiers, dictionaryBound);
@@ -3326,13 +3313,10 @@ internal sealed class GesLinearBytecodeBuilder
             case ListLiteralExpressionNode list:
                 return list.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
 
-            case SequenceLiteralExpressionNode sequence:
-                return sequence.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
-
             case SetLiteralExpressionNode set:
                 return set.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
 
-            case DictionaryLiteralExpressionNode dictionary:
+            case MapLiteralExpressionNode dictionary:
                 return dictionary.Entries.Any(entry => ExpressionReferencesIdentifier(entry.Value, identifier));
 
             case UnaryExpressionNode unary:
@@ -3428,7 +3412,7 @@ internal sealed class GesLinearBytecodeBuilder
             EdgeSelectorNode edge => edge.Predicate is not null && ExpressionReferencesIdentifier(edge.Predicate, identifier),
             MinSelectorNode min => ExpressionReferencesIdentifier(min.Projection, identifier),
             MaxSelectorNode max => ExpressionReferencesIdentifier(max.Projection, identifier),
-            DictionarySelectorNode dictionary => ExpressionReferencesIdentifier(dictionary.KeyProjection, identifier) ||
+            MapSelectorNode dictionary => ExpressionReferencesIdentifier(dictionary.KeyProjection, identifier) ||
                                                  (dictionary.ValueProjection is not null && ExpressionReferencesIdentifier(dictionary.ValueProjection, identifier)),
             ContainsSelectorNode contains => ExpressionReferencesIdentifier(contains.ValueExpression, identifier),
             ChooseSelectorNode choose => (choose.Predicate is not null && ExpressionReferencesIdentifier(choose.Predicate, identifier)) ||

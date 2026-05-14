@@ -93,8 +93,8 @@ internal static class GameEventScriptConformanceValueCodec
                 return DecodeOptionalValue(element);
             case ":list":
                 return GameEventScriptValueFactory.GesList(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
-            case ":dictionary":
-                return GameEventScriptValueFactory.GesDictionary(DecodeEntries(element));
+            case ":map":
+                return GameEventScriptValueFactory.GesMap(DecodeEntries(element));
             case ":set":
                 return GameEventScriptValueFactory.GesSet(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
             case ":dice":
@@ -168,7 +168,7 @@ internal static class GameEventScriptConformanceValueCodec
             return new JsonObject
             {
                 ["type"] = ToCanonicalTypeName(customTypeName),
-                ["entries"] = ToEntriesJson(value.AsDictionary())
+                ["entries"] = ToEntriesJson(value.AsMap())
             };
         }
 
@@ -186,14 +186,13 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Point => ToPointJson((GameEventScriptPointValue)value),
             GameEventScriptValueKind.Optional => ToOptionalJson(value),
             GameEventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
-            GameEventScriptValueKind.Dictionary => new JsonObject { ["type"] = ":dictionary", ["entries"] = ToEntriesJson(value.AsDictionary()) },
+            GameEventScriptValueKind.Map => new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) },
             GameEventScriptValueKind.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, GameEventScriptValue.StableComparer)) },
             GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
             GameEventScriptValueKind.Range => ToRangeJson(value),
             GameEventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GameEventScriptMessage>(value, "Value")) },
             GameEventScriptValueKind.Ref => ToRefJson((GameEventScriptRefValue)value),
             GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
-            GameEventScriptValueKind.Sequence => throw new NotSupportedException("Sequence values are not part of the conformance JSON value wire format."),
             GameEventScriptValueKind.Series => throw new NotSupportedException("Series values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
         };

@@ -76,7 +76,7 @@
             "name": "Start",
             "args": {
               "unit": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "hp": { "type": ":integer", "value": "2" },
                   "maxHp": { "type": ":integer", "value": "5" }
@@ -86,7 +86,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "hp": { "type": ":integer", "value": "2" },
                       "maxHp": { "type": ":integer", "value": "5" }

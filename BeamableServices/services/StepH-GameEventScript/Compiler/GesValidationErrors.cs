@@ -251,8 +251,7 @@ internal sealed class GesValidationErrors
                                                    FindNodeInExpression(guarded.OtherwiseExpression, symbol),
             ListLiteralExpressionNode list => FindNodeInExpressions(list.Items, symbol),
             SetLiteralExpressionNode set => FindNodeInExpressions(set.Items, symbol),
-            SequenceLiteralExpressionNode sequence => FindNodeInExpressions(sequence.Items, symbol),
-            DictionaryLiteralExpressionNode dictionary => dictionary.Entries
+            MapLiteralExpressionNode dictionary => dictionary.Entries
                 .Select(entry => FindNodeInExpression(entry.Value, symbol))
                 .FirstOrDefault(node => node is not null),
             MessageLiteralExpressionNode message => FindNodeInArguments(message.Arguments, symbol),
@@ -296,7 +295,7 @@ internal sealed class GesValidationErrors
             SumSelectorNode sumSelector => FindNodeInExpression(sumSelector.Projection, symbol),
             AverageSelectorNode averageSelector => FindNodeInExpression(averageSelector.Projection, symbol),
             SelectSelectorNode selectSelector => FindNodeInExpression(selectSelector.Projection, symbol),
-            DictionarySelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
+            MapSelectorNode dictionarySelector => FindNodeInExpression(dictionarySelector.KeyProjection, symbol) ??
                                                          (dictionarySelector.ValueProjection is null ? null : FindNodeInExpression(dictionarySelector.ValueProjection, symbol)),
             MinSelectorNode minSelector => FindNodeInExpression(minSelector.Projection, symbol),
             MaxSelectorNode maxSelector => FindNodeInExpression(maxSelector.Projection, symbol),

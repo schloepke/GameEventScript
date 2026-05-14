@@ -412,12 +412,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
-            case GameEventScriptBytecodeOpCode.BuildSequence:
             case GameEventScriptBytecodeOpCode.BuildSet:
                 AppendSlotListPoolIndex(builder, "items", module, instruction.A_U16);
                 break;
 
-            case GameEventScriptBytecodeOpCode.BuildDictionary:
+            case GameEventScriptBytecodeOpCode.BuildMap:
                 AppendStringListPoolIndex(builder, "keys", module, instruction.A_U16);
                 AppendSlotListPoolIndex(builder, "values", module, instruction.B_U16);
                 break;
@@ -499,7 +498,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "needle", instruction.B_U16);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineDictionary:
+            case GameEventScriptBytecodeOpCode.PipelineMap:
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
             case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
@@ -509,7 +508,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "entry", instruction.C_U16);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineDictionaryValue:
+            case GameEventScriptBytecodeOpCode.PipelineMapValue:
                 AppendSlot(builder, "iterator", instruction.A_U16);
                 AppendSlot(builder, "item", instruction.B_U16);
                 AppendAddress(builder, "keyEntry", instruction.C_U16);
@@ -824,7 +823,6 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CastVector or
             GameEventScriptBytecodeOpCode.CastPoint or
             GameEventScriptBytecodeOpCode.CastUuid or
-            GameEventScriptBytecodeOpCode.CastSequence or
             GameEventScriptBytecodeOpCode.CastSeries or
             GameEventScriptBytecodeOpCode.CastEnvelope or
             GameEventScriptBytecodeOpCode.CastRef or
@@ -834,7 +832,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CastRange or
             GameEventScriptBytecodeOpCode.CastMessage or
             GameEventScriptBytecodeOpCode.CastHandler or
-            GameEventScriptBytecodeOpCode.CastDictionary or
+            GameEventScriptBytecodeOpCode.CastMap or
             GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastOptional or
@@ -855,7 +853,6 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.TypeCheckBoolean or
             GameEventScriptBytecodeOpCode.TypeCheckUuid or
             GameEventScriptBytecodeOpCode.TypeCheckOptional or
-            GameEventScriptBytecodeOpCode.TypeCheckSequence or
             GameEventScriptBytecodeOpCode.TypeCheckSeries or
             GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
             GameEventScriptBytecodeOpCode.TypeCheckList or
@@ -863,7 +860,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.TypeCheckMessage or
             GameEventScriptBytecodeOpCode.TypeCheckHandler or
             GameEventScriptBytecodeOpCode.TypeCheckRef or
-            GameEventScriptBytecodeOpCode.TypeCheckDictionary or
+            GameEventScriptBytecodeOpCode.TypeCheckMap or
             GameEventScriptBytecodeOpCode.TypeCheckSet or
             GameEventScriptBytecodeOpCode.TypeCheckDice or
             GameEventScriptBytecodeOpCode.TypeCheckCustom;

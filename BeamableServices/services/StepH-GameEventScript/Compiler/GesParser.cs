@@ -1534,7 +1534,7 @@ internal sealed class GesParser
             return WithRange(new SelectSelectorNode(identifier, projection), startToken);
         }
 
-        if (MatchTag(":dictionary"))
+        if (MatchTag(":map"))
         {
             SkipNewLines();
             var identifier = ExpectIdentifier();
@@ -1550,7 +1550,7 @@ internal sealed class GesParser
                 valueProjection = ParseExpression();
             }
 
-            return WithRange(new DictionarySelectorNode(identifier, keyProjection, valueProjection), startToken);
+            return WithRange(new MapSelectorNode(identifier, keyProjection, valueProjection), startToken);
         }
 
         if (Match(SelectorContains))
@@ -1738,7 +1738,7 @@ internal sealed class GesParser
 
         if (MatchWord("of"))
         {
-            return ParseSequenceLiteralExpressionCore(Previous);
+            return ParseListLiteralExpressionCore(Previous);
         }
 
         if (MatchWord("from"))
@@ -1849,7 +1849,7 @@ internal sealed class GesParser
         {
             SkipNewLines();
             Expect(RightBracket);
-            return WithRange(new DictionaryLiteralExpressionNode(Array.Empty<DictionaryEntryNode>()), startToken);
+            return WithRange(new MapLiteralExpressionNode(Array.Empty<MapEntryNode>()), startToken);
         }
 
         if (Is(RightBracket))
@@ -1858,7 +1858,7 @@ internal sealed class GesParser
             return WithRange(new ListLiteralExpressionNode(Array.Empty<ExpressionNode>()), startToken);
         }
 
-        return IsDictionaryLiteralEntryStart()
+        return IsMapLiteralEntryStart()
             ? ParseDictionaryLiteralExpression()
             : ParseListLiteralExpression();
     }
@@ -2027,10 +2027,10 @@ internal sealed class GesParser
         return WithRange(new GeneratedCollectionExpressionNode(collectionType, identifier, source, predicate, projection), startToken);
     }
 
-    private DictionaryLiteralExpressionNode ParseDictionaryLiteralExpression()
+    private MapLiteralExpressionNode ParseDictionaryLiteralExpression()
     {
         var startToken = Previous;
-        var entries = new List<DictionaryEntryNode>();
+        var entries = new List<MapEntryNode>();
         SkipNewLines();
         if (!Is(RightBracket))
         {
@@ -2044,19 +2044,19 @@ internal sealed class GesParser
 
         SkipNewLines();
         Expect(RightBracket);
-        return WithRange(new DictionaryLiteralExpressionNode(entries), startToken);
+        return WithRange(new MapLiteralExpressionNode(entries), startToken);
     }
 
-    private DictionaryEntryNode ParseDictionaryEntry()
+    private MapEntryNode ParseDictionaryEntry()
     {
         var startToken = Current;
         var key = ExpectIdentifier();
         Expect(Colon);
         var value = ParseExpression();
-        return WithRange(new DictionaryEntryNode(key, value), startToken);
+        return WithRange(new MapEntryNode(key, value), startToken);
     }
 
-    private bool IsDictionaryLiteralEntryStart()
+    private bool IsMapLiteralEntryStart()
     {
         if (Current.Kind != Identifier)
         {
@@ -2302,7 +2302,7 @@ internal sealed class GesParser
         return WithRange(new TypeConstructorExpressionNode(typeName, arguments), startToken);
     }
 
-    private SequenceLiteralExpressionNode ParseSequenceLiteralExpressionCore(GesToken startToken)
+    private ListLiteralExpressionNode ParseListLiteralExpressionCore(GesToken startToken)
     {
         SkipNewLines();
         var items = new List<ExpressionNode> { ParseEqualityExpression() };
@@ -2312,7 +2312,7 @@ internal sealed class GesParser
             items.Add(ParseEqualityExpression());
         }
 
-        return WithRange(new SequenceLiteralExpressionNode(items), startToken);
+        return WithRange(new ListLiteralExpressionNode(items), startToken);
     }
 
     private ExpressionNode ParseClampExpression()

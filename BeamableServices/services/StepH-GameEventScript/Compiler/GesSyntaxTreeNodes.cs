@@ -139,9 +139,8 @@ internal sealed record UnitFloatLiteralExpressionNode(double Value, string UnitN
 internal sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 internal sealed record SetLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
-internal sealed record DictionaryLiteralExpressionNode(IReadOnlyList<DictionaryEntryNode> Entries) : ExpressionNode;
-internal sealed record SequenceLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
-internal sealed record DictionaryEntryNode(string Key, ExpressionNode Value) : ScriptNode;
+internal sealed record MapLiteralExpressionNode(IReadOnlyList<MapEntryNode> Entries) : ExpressionNode;
+internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNode;
 internal sealed record UnaryExpressionNode(string Operator, ExpressionNode Operand) : ExpressionNode;
 internal sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 internal sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
@@ -180,7 +179,7 @@ internal sealed record FilterSelectorNode(string Identifier, ExpressionNode Pred
 internal sealed record SumSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record AverageSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record SelectSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
-internal sealed record DictionarySelectorNode(string Identifier, ExpressionNode KeyProjection, ExpressionNode? ValueProjection) : CollectionSelectorNode;
+internal sealed record MapSelectorNode(string Identifier, ExpressionNode KeyProjection, ExpressionNode? ValueProjection) : CollectionSelectorNode;
 internal sealed record MinSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record MaxSelectorNode(string Identifier, ExpressionNode Projection) : CollectionSelectorNode;
 internal sealed record ContainsSelectorNode(string Mode, ExpressionNode ValueExpression) : CollectionSelectorNode;

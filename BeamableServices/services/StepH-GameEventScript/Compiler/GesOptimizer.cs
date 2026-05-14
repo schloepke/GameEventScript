@@ -212,7 +212,7 @@ internal static class GesOptimizer
             {
                 Items = set.Items.Select(item => OptimizeExpression(item, knownTypeNames)).ToArray()
             },
-            DictionaryLiteralExpressionNode dictionary => dictionary with
+            MapLiteralExpressionNode dictionary => dictionary with
             {
                 Entries = dictionary.Entries.Select(entry => entry with
                 {
@@ -239,10 +239,6 @@ internal static class GesOptimizer
                 {
                     Expression = OptimizeExpression(argument.Expression, knownTypeNames)
                 }).ToArray())
-            },
-            SequenceLiteralExpressionNode sequence => sequence with
-            {
-                Items = sequence.Items.Select(item => OptimizeExpression(item, knownTypeNames)).ToArray()
             },
             _ => expression
         };
@@ -328,7 +324,7 @@ internal static class GesOptimizer
             {
                 Projection = OptimizeExpression(selectSelector.Projection, knownTypeNames)
             },
-            DictionarySelectorNode dictionarySelector => dictionarySelector with
+            MapSelectorNode dictionarySelector => dictionarySelector with
             {
                 KeyProjection = OptimizeExpression(dictionarySelector.KeyProjection, knownTypeNames),
                 ValueProjection = dictionarySelector.ValueProjection is null ? null : OptimizeExpression(dictionarySelector.ValueProjection, knownTypeNames)
@@ -504,7 +500,7 @@ internal static class GesOptimizer
                 value = GameEventScriptValueFactory.GesSet(items);
                 return true;
             }
-            case DictionaryLiteralExpressionNode dictionaryLiteral:
+            case MapLiteralExpressionNode dictionaryLiteral:
             {
                 var items = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
                 foreach (var entry in dictionaryLiteral.Entries)
@@ -518,7 +514,7 @@ internal static class GesOptimizer
                     items[entry.Key] = item;
                 }
 
-                value = GameEventScriptValueFactory.GesDictionary(items);
+                value = GameEventScriptValueFactory.GesMap(items);
                 return true;
             }
             case TypeCastExpressionNode castExpression:
@@ -1265,8 +1261,8 @@ internal static class GesOptimizer
             case "ref":
                 converted = value.IsRef() ? value : GameEventScriptNothingValue.Instance;
                 return true;
-            case "dictionary":
-                converted = GameEventScriptValueFactory.GesDictionary(value.AsDictionary());
+            case "map":
+                converted = GameEventScriptValueFactory.GesMap(value.AsMap());
                 return true;
             case "set":
                 converted = GameEventScriptValueFactory.GesSet(value.AsSet());
@@ -1479,9 +1475,9 @@ internal static class GesOptimizer
 
     private static bool TryCreateSpatialFromMembers(string typeName, GameEventScriptValue value, out GameEventScriptValue spatial)
     {
-        var hasX = value.TryGetDictionaryMember("x", out var x);
-        var hasY = value.TryGetDictionaryMember("y", out var y);
-        var hasZ = value.TryGetDictionaryMember("z", out var z);
+        var hasX = value.TryGetMapMember("x", out var x);
+        var hasY = value.TryGetMapMember("y", out var y);
+        var hasZ = value.TryGetMapMember("z", out var z);
 
         if (!hasX && !hasY && !hasZ)
         {
@@ -2064,10 +2060,10 @@ internal static class GesOptimizer
                 expression = new SetLiteralExpressionNode(items);
                 return true;
             }
-            case GameEventScriptValueKind.Dictionary:
+            case GameEventScriptValueKind.Map:
             {
-                var entries = new List<DictionaryEntryNode>();
-                foreach (var entry in value.AsDictionary())
+                var entries = new List<MapEntryNode>();
+                foreach (var entry in value.AsMap())
                 {
                     if (!TryConvertValueToLiteral(entry.Value, out var itemLiteral))
                     {
@@ -2075,10 +2071,10 @@ internal static class GesOptimizer
                         return false;
                     }
 
-                    entries.Add(new DictionaryEntryNode(entry.Key, itemLiteral));
+                    entries.Add(new MapEntryNode(entry.Key, itemLiteral));
                 }
 
-                expression = new DictionaryLiteralExpressionNode(entries);
+                expression = new MapLiteralExpressionNode(entries);
                 return true;
             }
             default:

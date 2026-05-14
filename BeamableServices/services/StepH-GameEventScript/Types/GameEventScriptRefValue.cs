@@ -43,7 +43,7 @@ public sealed class GameEventScriptRefValue : GameEventScriptValue
 
     public override bool AsBoolean() => TypeName.Length > 0 && Id.Length > 0;
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => _dictionary;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => _dictionary;
 
     public override bool HasSemanticValue() => AsBoolean();
 
@@ -55,7 +55,7 @@ public sealed class GameEventScriptRefValue : GameEventScriptValue
     public override bool ContainsValue(GameEventScriptValue needle)
         => _dictionary.Values.Any(value => value.Equals(needle));
 
-    public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
+    public override bool TryGetMapMember(string key, out GameEventScriptValue value)
         => _dictionary.TryGetValue(key, out value!);
 
     internal override bool TryConvertToText(out GameEventScriptValue value)

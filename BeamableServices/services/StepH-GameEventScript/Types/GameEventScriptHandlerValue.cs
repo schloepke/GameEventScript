@@ -37,9 +37,9 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
 
     public override string AsText() => ToString();
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => _members;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => _members;
 
-    public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value) => _members.TryGetValue(key, out value!);
+    public override bool TryGetMapMember(string key, out GameEventScriptValue value) => _members.TryGetValue(key, out value!);
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
@@ -47,9 +47,9 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
         return true;
     }
 
-    internal override bool TryConvertToDictionary(out GameEventScriptValue value)
+    internal override bool TryConvertToMap(out GameEventScriptValue value)
     {
-        value = GesDictionary(AsDictionary());
+        value = GesMap(AsMap());
         return true;
     }
 

@@ -22,7 +22,7 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
         var map = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
         {
             ["name"] = GesText(message.Name),
-            ["arguments"] = GesDictionary(message.Arguments),
+            ["arguments"] = GesMap(message.Arguments),
             ["signatureid"] = GesText(message.SignatureId)
         };
 
@@ -39,9 +39,9 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
 
     public override string AsText() => ToString();
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => _members;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => _members;
 
-    public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value) => _members.TryGetValue(key, out value);
+    public override bool TryGetMapMember(string key, out GameEventScriptValue value) => _members.TryGetValue(key, out value);
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
@@ -49,9 +49,9 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
         return true;
     }
 
-    internal override bool TryConvertToDictionary(out GameEventScriptValue value)
+    internal override bool TryConvertToMap(out GameEventScriptValue value)
     {
-        value = GesDictionary(AsDictionary());
+        value = GesMap(AsMap());
         return true;
     }
 

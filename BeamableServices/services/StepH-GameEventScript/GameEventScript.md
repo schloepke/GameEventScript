@@ -297,7 +297,7 @@ on undeliverable as envelope matching :radio {
 
 The endpoint uses the same `matching` and `without` tag filters as normal
 handlers. Without filters, it receives every undeliverable message. The envelope
-is dictionary-backed and currently guarantees:
+is map-backed and currently guarantees:
 
 - `message`: the original message as `:message`
 - `tags`: all original envelope tags as a list of `:tag` values
@@ -437,7 +437,7 @@ let msg be Success(message: 'world', value: 42)
 publish Debug(name: msg.name, signature: msg[:signatureid], text: msg.arguments.message)
 ```
 
-Message and handler values are not dictionaries for type checks.
+Message and handler values are not maps for type checks.
 
 ## Language Semantics
 
@@ -503,7 +503,7 @@ else if score >= 50 publish Rank(value: :silver)
 else publish Rank(value: :bronze)
 ```
 
-`for` iterates collections, sequences, dice, sets, and ranges.
+`for` iterates collections, dice, sets, maps, and ranges.
 
 ```eventscript
 for unit in units {
@@ -587,7 +587,7 @@ result value.
 
 ```eventscript
 function woundedUnits(_ units) means units[:filter unit where unit.hp < unit.maxHp]
-function byId(_ units) means units[:dictionary unit by unit.id]
+function byId(_ units) means units[:map unit by unit.id]
 
 on Start(units) {
     let wounded be woundedUnits(units)
@@ -646,9 +646,9 @@ This is invalid:
 let hp be :gauge(125, 100)
 ```
 
-Custom records expose their fields through member access and dictionary-style
-lookup, but `hp is :dictionary` is false unless the value is actually a
-dictionary.
+Custom records expose their fields through member access and map-style
+lookup, but `hp is :map` is false unless the value is actually a
+map.
 
 ### Operators
 
@@ -789,7 +789,7 @@ a :except b
 a :zip b
 ```
 
-`+` also has collection behavior for lists and dictionaries:
+`+` also has collection behavior for lists and maps:
 
 ```eventscript
 [1, 2] + 3
@@ -804,9 +804,9 @@ These prefix helpers are built into the language:
 ```eventscript
 :len value
 :chance percentage
-:keys dictionary
+:keys map
 :values value
-:entries dictionary
+:entries map
 :abs value
 :ln value
 :sqrt value
@@ -888,7 +888,7 @@ The main predicates are:
 
 - `nothing` has no value and is empty.
 - `optional none` has no value and is empty.
-- Empty text, list, dictionary, set, dice, range, and sequence have no value and
+- Empty text, list, map, set, dice, and range have no value and
   are empty.
 - `NaN` and infinity have no semantic value, but are not considered empty.
 - `0` and `false` are valid values.
@@ -995,7 +995,6 @@ Types are written as tags. Built-in public type tags are:
 - `:vector`
 - `:point`
 - `:optional`
-- `:sequence`
 - `:series`
 - `:range`
 - `:message`
@@ -1003,7 +1002,7 @@ Types are written as tags. Built-in public type tags are:
 - `:envelope`
 - `:ref`
 - `:list`
-- `:dictionary`
+- `:map`
 - `:set`
 - `:dice`
 
@@ -1286,7 +1285,7 @@ let lifted be :vector(flat)       // keeps z as 0m
 let elevated be :vector(flat, 5m) // explicit z
 ```
 
-Vectors can also be converted from lists or dictionaries with matching
+Vectors can also be converted from lists or maps with matching
 components.
 
 ```eventscript
@@ -1412,23 +1411,20 @@ let ref be :ref(:unit, id: id)
 ```
 
 UUID equality compares the 128-bit value. Text conversion returns lowercase
-canonical form. UUIDs can be used as dictionary lookup keys through that
-canonical form, for example `items[id]` when the dictionary was keyed by UUID
+canonical form. UUIDs can be used as map lookup keys through that
+canonical form, for example `items[id]` when the map was keyed by UUID
 values. Arithmetic and other numeric operations on UUIDs evaluate to `nothing`.
 
-### `:sequence`
+### `of ... and ...`
 
-A sequence is a repeatable iterable value.
-
-Use `of ... and ...` to create one directly:
+Use `of ... and ...` to create a list without brackets:
 
 ```eventscript
 let values be of 10 and 20 and 30
 let listValues as :list be of 10 and 20 and 30
 ```
 
-Sequences are also produced by helpers such as `:keys`, `:values`, and
-`:entries`. They can be materialized as lists, sets, or dice when needed.
+Helpers such as `:keys`, `:values`, and `:entries` also produce lists.
 
 ### `:series`
 
@@ -1490,9 +1486,9 @@ values[3] // 30
 values[0] // nothing
 ```
 
-### `:dictionary`
+### `:map`
 
-Dictionaries use text keys. Literal keys are written without quotes.
+Maps use text keys. Literal keys are written without quotes.
 
 ```eventscript
 [name: 'Ada', hp: 10]
@@ -1543,12 +1539,12 @@ let h as :handler be Done(value)
 let m as :message be h(value: 42)
 ```
 
-They can be passed as arguments, stored in dictionaries, published, and
-inspected. They are not dictionaries for type checks.
+They can be passed as arguments, stored in maps, published, and
+inspected. They are not maps for type checks.
 
 ### `:envelope`
 
-Envelope values are dictionary-backed system values. They are intentionally open
+Envelope values are map-backed system values. They are intentionally open
 so envelope metadata can be extended without changing the value shape. The
 current system envelope is used by `undeliverable` and exposes `message` and
 `tags`.
@@ -1585,14 +1581,14 @@ units[:filter unit where unit.hp > 0]
 
 ### Lookup
 
-For lists, dice, ranges, and sequences, numeric lookup is one-based. Series do
+For lists, dice, and ranges, numeric lookup is one-based. Series do
 not support lookup; use `:term` instead.
 
 ```eventscript
 [10, 20, 30][2] // 20
 ```
 
-For dictionaries and custom record values, lookup uses keys.
+For maps and custom record values, lookup uses keys.
 
 ```eventscript
 unit[:hp]
@@ -1626,12 +1622,12 @@ write `in from ...`.
 ```eventscript
 units[:filter unit where unit.alive]
 units[:select unit => unit.name]
-units[:dictionary unit by unit.id]
-units[:dictionary unit by unit.id => unit.name]
+units[:map unit by unit.id]
+units[:map unit by unit.id => unit.name]
 ```
 
 Projection selectors use `=>`; `↦` is an alias for the same projection arrow.
-Dictionary projection uses last-wins semantics when duplicate keys occur.
+Map projection uses last-wins semantics when duplicate keys occur.
 
 ### Quantifiers and count
 
@@ -1684,7 +1680,7 @@ units[:distinct by unit => unit.faction]
 units[:group by unit => unit.faction]
 ```
 
-`:group by` returns a dictionary whose keys are projected group values and whose
+`:group by` returns a map whose keys are projected group values and whose
 values are lists of matching items.
 
 ### Contains
@@ -1703,7 +1699,7 @@ For text:
 'battle'[:contains any ['xx', 'tt']]
 ```
 
-For dictionaries, `:contains` checks keys.
+For maps, `:contains` checks keys.
 
 ### Membership operators
 
@@ -1720,10 +1716,10 @@ Membership and boundary checks can be written as infix expressions.
 [1, 2, 3] ends with [2, 3]
 ```
 
-For dictionaries, `x in dict` checks keys and `x value in dict` checks values.
+For maps, `x in map` checks keys and `x value in map` checks values.
 `∈` is an alias for `in`; `∉` is the negated membership operator.
 
-### Sequence operations
+### Collection operations
 
 ```eventscript
 items[:reverse]
@@ -1751,7 +1747,7 @@ let rest be cards[:drop first 3]
 ```
 
 `:shuffle` and `:draw` are supported for ordered collections such as lists and
-dice. They are lenient no-ops for unordered sets and dictionaries.
+dice. They are lenient no-ops for unordered sets and maps.
 
 ### Choosing
 
@@ -1795,7 +1791,7 @@ For straight checks, duplicates are ignored.
 
 ### Object matching
 
-Object matching uses dictionary-shaped subset patterns.
+Object matching uses map-shaped subset patterns.
 
 ```eventscript
 units[:has [faction: 'orc', alive: true]]
@@ -1807,7 +1803,7 @@ Predicates:
 - Extra keys in the actual object are allowed.
 - All specified keys must exist.
 - Nested patterns match recursively.
-- Non-dictionary items do not match.
+- Non-map items do not match.
 
 ### Collection combination
 
@@ -1821,7 +1817,7 @@ Lists and dice:
 [1, 2] :zip ['a', 'b']  // [{ left: 1, right: 'a' }, ...]
 ```
 
-Dictionaries:
+Maps:
 
 ```eventscript
 [name: 'Ada'] :merge [hp: 10]
@@ -2320,10 +2316,10 @@ on ChooseTarget(units) {
 }
 ```
 
-### Building a lookup dictionary
+### Building a lookup map
 
 ```eventscript
-function unitsById(_ units) means units[:dictionary unit by unit.id]
+function unitsById(_ units) means units[:map unit by unit.id]
 
 on Start(units) {
     let byId be unitsById(units)

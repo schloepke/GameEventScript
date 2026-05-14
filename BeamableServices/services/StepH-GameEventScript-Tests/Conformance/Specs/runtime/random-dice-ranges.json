@@ -112,7 +112,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -125,7 +125,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -138,7 +138,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -209,7 +209,7 @@
                 "type": ":list",
                 "items": [
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -222,7 +222,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -235,7 +235,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",
@@ -248,7 +248,7 @@
                     }
                   },
                   {
-                    "type": ":dictionary",
+                    "type": ":map",
                     "entries": {
                       "name": {
                         "type": ":text",

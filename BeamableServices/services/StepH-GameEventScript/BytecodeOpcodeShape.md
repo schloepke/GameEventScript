@@ -256,9 +256,9 @@ runtime dispatch step.
 | 0x45 | `Combine` | - | result slot | left slot | right slot | - | - | - | - | Collection operation. |
 | 0x46 | `Except` | - | result slot | left slot | right slot | - | - | - | - | Collection operation. |
 | 0x47 | `Zip` | - | result slot | left slot | right slot | - | - | - | - | Collection operation. |
-| 0x48 | `UnaryKeys` | - | result slot | operand slot | - | - | - | - | - | Dictionary/record keys projection. |
-| 0x49 | `UnaryValues` | - | result slot | operand slot | - | - | - | - | - | Dictionary/record values projection. |
-| 0x4A | `UnaryEntries` | - | result slot | operand slot | - | - | - | - | - | Dictionary/record entries projection. |
+| 0x48 | `UnaryKeys` | - | result slot | operand slot | - | - | - | - | - | Map/record keys projection. |
+| 0x49 | `UnaryValues` | - | result slot | operand slot | - | - | - | - | - | Map/record values projection. |
+| 0x4A | `UnaryEntries` | - | result slot | operand slot | - | - | - | - | - | Map/record entries projection. |
 | 0x4B | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
 | 0x4C | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
 | 0x4D | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
@@ -279,7 +279,7 @@ runtime dispatch step.
 | 0x5C | `CastOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x5D | `CastCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Declared-type conversion for custom record/external types. |
 | 0x5E..0x5F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain casts. |
-| 0x60 | `CastSequence` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x60 | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
 | 0x61 | `CastSeries` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x62 | `CastEnvelope` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x63 | `CastRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
@@ -289,7 +289,7 @@ runtime dispatch step.
 | 0x67 | `CastRange` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x68 | `CastMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x69 | `CastHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x6A | `CastDictionary` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x6A | `CastMap` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x6B | `CastSet` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x6C | `CastDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x6D..0x6F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
@@ -309,7 +309,7 @@ runtime dispatch step.
 | 0x7D | `TypeCheckText` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x7E | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
 | 0x7F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain type checks. |
-| 0x80 | `TypeCheckSequence` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x80 | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference type checks. |
 | 0x81 | `TypeCheckSeries` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x82 | `TypeCheckEnvelope` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x83 | `TypeCheckList` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
@@ -317,7 +317,7 @@ runtime dispatch step.
 | 0x85 | `TypeCheckMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x86 | `TypeCheckHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x87 | `TypeCheckRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x88 | `TypeCheckDictionary` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x88 | `TypeCheckMap` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x89 | `TypeCheckSet` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x8A | `TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x8B..0x8F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference type checks. |
@@ -327,9 +327,9 @@ runtime dispatch step.
 | 0x93 | `MemberAccess` | - | result slot | target slot | - | `StringPool` index | - | - | - | Reads a named member. |
 | 0x94 | `IndexedAccess` | - | result slot | target slot | index slot | - | - | - | - | Direct indexed lookup. |
 | 0x95 | `BuildList` | - | result slot | item slot-list `UShortListPool` index | - | - | - | - | - | Builds a list from slot-list operands. |
-| 0x96 | `BuildSequence` | - | result slot | item slot-list `UShortListPool` index | - | - | - | - | - | Builds a sequence from slot-list operands. |
+| 0x96 | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access operations. |
 | 0x97 | `BuildSet` | - | result slot | item slot-list `UShortListPool` index | - | - | - | - | - | Builds a set from slot-list operands. |
-| 0x98 | `BuildDictionary` | - | result slot | key name-list `UShortListPool` index | value slot-list `UShortListPool` index | - | - | - | - | Builds a dictionary from key names and value slots. |
+| 0x98 | `BuildMap` | - | result slot | key name-list `UShortListPool` index | value slot-list `UShortListPool` index | - | - | - | - | Builds a map from key names and value slots. |
 | 0x99 | `BuildMessage` | - | result slot | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Builds a message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x9A | `BindHandler` | - | result slot | operand slot-list `UShortListPool` index | argument name-list `UShortListPool` index | - | - | - | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
 | 0x9B | `Variadic` | - | result slot | operation name `StringPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Evaluates a variadic operator over slot-list operands. |
@@ -348,7 +348,7 @@ runtime dispatch step.
 | 0xB0 | `RangeIterator` | - | iterator slot | from slot | to slot | - | - | - | - | Creates a VM-internal range iterator with default step `+1`. |
 | 0xB1 | `RangeIteratorWithStep` | - | iterator slot | from slot | to slot | step slot | - | - | - | Creates a VM-internal range iterator with an explicit step. |
 | 0xB2 | `RangeIteratorShort` | - | iterator slot | from I16 | to I16 | step I16 | - | - | - | Creates a compact literal range iterator. |
-| 0xB3 | `CollectionIterator` | - | iterator slot | collection slot | - | - | - | - | - | Creates a VM-internal iterator over a collection/range/sequence value. |
+| 0xB3 | `CollectionIterator` | - | iterator slot | collection slot | - | - | - | - | - | Creates a VM-internal iterator over a collection or range value. |
 | 0xB4 | `IteratorNext` | - | item slot | iterator slot | no-more target address | - | - | - | - | Writes the next item and continues, or jumps to `B_U16` when exhausted. |
 | 0xB5 | `IteratorClose` | - | - | iterator slot | - | - | - | - | - | Disposes/closes a VM-internal iterator. |
 | 0xB6 | `CollectionBuilderList` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal list builder. |
@@ -387,8 +387,8 @@ runtime dispatch step.
 | 0xD8 | `PipelineContainsSingle` | - | result slot | iterator slot | needle slot | - | - | - | - | Tests whether the pipeline target contains one value. |
 | 0xD9 | `PipelineContainsAny` | - | result slot | iterator slot | needle slot | - | - | - | - | Tests whether the pipeline target contains any values from the needle collection. |
 | 0xDA | `PipelineContainsAll` | - | result slot | iterator slot | needle slot | - | - | - | - | Tests whether the pipeline target contains all values from the needle collection. |
-| 0xDB | `PipelineDictionary` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Builds a dictionary with each source item as the value. |
-| 0xDC | `PipelineDictionaryValue` | - | result slot | iterator slot | item binding slot | key entry address | value entry address | - | - | Builds a dictionary from key and value helper entries. |
+| 0xDB | `PipelineMap` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Builds a map with each source item as the value. |
+| 0xDC | `PipelineMapValue` | - | result slot | iterator slot | item binding slot | key entry address | value entry address | - | - | Builds a map from key and value helper entries. |
 | 0xDD | `PipelineDistinct` | - | result slot | iterator slot | - | - | - | - | - | Materializes distinct source items in source order. |
 | 0xDE | `PipelineDistinctBy` | - | result slot | iterator slot | item binding slot | projection entry address | - | - | - | Materializes source items distinct by projected key. |
 | 0xDF | `PipelineGroupBy` | - | result slot | iterator slot | item binding slot | key entry address | - | - | - | Groups source items by projected key. |

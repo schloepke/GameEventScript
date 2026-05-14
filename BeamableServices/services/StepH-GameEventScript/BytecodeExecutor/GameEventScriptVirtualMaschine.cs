@@ -270,8 +270,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastCustom:
                     break;
-                case CastSequence:
-                    break;
                 case CastSeries:
                     break;
                 case CastEnvelope:
@@ -290,7 +288,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastHandler:
                     break;
-                case CastDictionary:
+                case CastMap:
                     break;
                 case CastSet:
                     break;
@@ -326,8 +324,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case TypeCheckCustom:
                     break;
-                case TypeCheckSequence:
-                    break;
                 case TypeCheckSeries:
                     break;
                 case TypeCheckEnvelope:
@@ -342,7 +338,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case TypeCheckRef:
                     break;
-                case TypeCheckDictionary:
+                case TypeCheckMap:
                     break;
                 case TypeCheckSet:
                     break;
@@ -358,11 +354,9 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case BuildList:
                     break;
-                case BuildSequence:
-                    break;
                 case BuildSet:
                     break;
-                case BuildDictionary:
+                case BuildMap:
                     break;
                 case BuildMessage:
                     break;
@@ -459,9 +453,9 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case PipelineContainsAll:
                     break;
-                case PipelineDictionary:
+                case PipelineMap:
                     break;
-                case PipelineDictionaryValue:
+                case PipelineMapValue:
                     break;
                 case PipelineDistinct:
                     break;

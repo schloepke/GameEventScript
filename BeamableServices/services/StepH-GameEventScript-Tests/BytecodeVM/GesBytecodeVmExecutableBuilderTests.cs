@@ -1129,7 +1129,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start {
               let units be [[id: :rook, value: 1], [id: :mage, value: 2], [id: :rook, value: 3]]
-              let score be (units[:dictionary unit by unit.id][:rook].value + units[:dictionary unit by unit.id => unit.value][:mage]) + 4
+              let score be (units[:map unit by unit.id][:rook].value + units[:map unit by unit.id => unit.value][:mage]) + 4
               emit Done(score: score, replacement: 6)
             }
             """;
@@ -1167,7 +1167,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
             on Start {
               let units be [[id: :rook, value: 1], [id: :mage, value: 2], [id: :rook, value: 3]]
-              let score be (units[:dictionary unit by unit.id][:rook].value + units[:dictionary unit by unit.id => unit.value][:mage]) + 4
+              let score be (units[:map unit by unit.id][:rook].value + units[:map unit by unit.id => unit.value][:mage]) + 4
               emit Done(score: score, replacement: 6)
             }
             """;

@@ -45,7 +45,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => Components;
 
-    public override IReadOnlyDictionary<string, GameEventScriptValue> AsDictionary() => Members;
+    public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => Members;
 
     public override IEnumerable<GameEventScriptValue> AsEnumerable() => Components;
 
@@ -53,7 +53,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
 
     public override bool ContainsValue(GameEventScriptValue needle) => Contains(needle);
 
-    public override bool TryGetDictionaryMember(string key, out GameEventScriptValue value)
+    public override bool TryGetMapMember(string key, out GameEventScriptValue value)
     {
         if (Members.TryGetValue(key, out value)) return true;
         value = GameEventScriptNothingValue.Instance;
@@ -78,9 +78,9 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
         return true;
     }
 
-    internal override bool TryConvertToDictionary(out GameEventScriptValue value)
+    internal override bool TryConvertToMap(out GameEventScriptValue value)
     {
-        value = GesDictionary(Members);
+        value = GesMap(Members);
         return true;
     }
 }

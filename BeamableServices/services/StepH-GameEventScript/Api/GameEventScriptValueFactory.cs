@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Types;
 
@@ -174,23 +175,6 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesOptionalNone() => GameEventScriptOptionalValue.None;
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a sequence value.
-    /// </summary>
-    /// <param name="mode">The mode of the sequence, specifying how the source value should be interpreted (e.g., Values, Keys, or Entries).</param>
-    /// <param name="source">The source <see cref="GameEventScriptValue"/> to use as the basis of the sequence. Cannot be null.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the specified sequence.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesSequence(GameEventScriptSequenceMode mode, GameEventScriptValue source) => GameEventScriptSequenceValue.Create(mode, source);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a sequence of values.
-    /// </summary>
-    /// <param name="values">The collection of <see cref="GameEventScriptValue"/> instances to include in the sequence. Can be null or empty.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance encapsulating the sequence of values.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesSequence(IEnumerable<GameEventScriptValue>? values) => GameEventScriptSequenceValue.Create(GameEventScriptSequenceMode.Values, GesList(values));
-
-    /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptSeriesValue"/> from an index-addressed series provider.
     /// </summary>
     /// <param name="series">The series provider.</param>
@@ -252,29 +236,29 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesRef(string typeName, GameEventScriptValue id) => GameEventScriptRefValue.Create(typeName, id);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a sequence of values derived from the provided source value.
+    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a list of values derived from the provided source value.
     /// </summary>
     /// <param name="source">The source <see cref="GameEventScriptValue"/> to extract values from. Cannot be null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the resulting sequence of values.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesValues(GameEventScriptValue source) => GesSequence(GameEventScriptSequenceMode.Values, source);
+    public static GameEventScriptValue GesValues(GameEventScriptValue source) => GesList(EnumerateValues(source));
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing the keys of a specified sequence value.
+    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing the keys of a map value.
     /// </summary>
     /// <param name="source">The source sequence value. Must represent a sequence in a valid format.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the keys of the specified sequence value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesKeys(GameEventScriptValue source) => GesSequence(GameEventScriptSequenceMode.Keys, source);
+    public static GameEventScriptValue GesKeys(GameEventScriptValue source) => GesList(EnumerateKeys(source));
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a sequence
-    /// in entry mode derived from the specified source.
+    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing map entries
+    /// derived from the specified source.
     /// </summary>
     /// <param name="source">The source <see cref="GameEventScriptValue"/> used to generate the entry sequence. Cannot be null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the entry sequence.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesEntries(GameEventScriptValue source) => GesSequence(GameEventScriptSequenceMode.Entries, source);
+    public static GameEventScriptValue GesEntries(GameEventScriptValue source) => GesList(EnumerateEntries(source));
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptListValue"/> representing a list of script values.
@@ -285,12 +269,12 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesList(IEnumerable<GameEventScriptValue>? values) => GameEventScriptListValue.Create(values);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptDictionaryValue"/> encapsulating a dictionary of key-value pairs.
+    /// Creates a new instance of <see cref="GameEventScriptMapValue"/> encapsulating a dictionary of key-value pairs.
     /// </summary>
     /// <param name="values">The dictionary containing key-value pairs where keys are strings and values are instances of <see cref="GameEventScriptValue"/>. Can be null.</param>
-    /// <returns>A new <see cref="GameEventScriptDictionaryValue"/> instance representing the key-value pairs.</returns>
+    /// <returns>A new <see cref="GameEventScriptMapValue"/> instance representing the key-value pairs.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesDictionary(IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptDictionaryValue.Create(values);
+    public static GameEventScriptValue GesMap(IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptMapValue.Create(values);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a custom type value.
@@ -299,7 +283,7 @@ public static class GameEventScriptValueFactory
     /// <param name="values">The dictionary of field names and their respective <see cref="GameEventScriptValue"/> values. Can be null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance encapsulating the custom type with the specified fields.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesCustomType(string typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptDictionaryValue.Create(typeName, values);
+    public static GameEventScriptValue GesCustomType(string typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptMapValue.Create(typeName, values);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a set of values.
@@ -308,6 +292,96 @@ public static class GameEventScriptValueFactory
     /// <returns>A new <see cref="GameEventScriptSetValue"/> instance containing the specified values.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static GameEventScriptValue GesSet(IEnumerable<GameEventScriptValue>? values) => GameEventScriptSetValue.Create(values);
+
+    private static IEnumerable<GameEventScriptValue> EnumerateValues(GameEventScriptValue? source)
+    {
+        source ??= GesNothing();
+        if (source.Kind == GameEventScriptValueKind.Optional)
+        {
+            var optional = source.AsOptional();
+            if (!optional.HasValue)
+            {
+                yield break;
+            }
+
+            yield return optional.Value;
+            yield break;
+        }
+
+        if (source.IsNothing())
+        {
+            yield break;
+        }
+
+        if (source.Kind == GameEventScriptValueKind.Map)
+        {
+            foreach (var value in source.AsMap().Values)
+            {
+                yield return value;
+            }
+
+            yield break;
+        }
+
+        foreach (var value in source.AsEnumerable())
+        {
+            yield return value;
+        }
+    }
+
+    private static IEnumerable<GameEventScriptValue> EnumerateKeys(GameEventScriptValue? source)
+    {
+        source ??= GesNothing();
+        if (source.Kind == GameEventScriptValueKind.Optional)
+        {
+            var optional = source.AsOptional();
+            if (!optional.HasValue)
+            {
+                yield break;
+            }
+
+            source = optional.Value;
+        }
+
+        if (source.Kind != GameEventScriptValueKind.Map)
+        {
+            yield break;
+        }
+
+        foreach (var key in source.AsMap().Keys.OrderBy(key => key, StringComparer.Ordinal))
+        {
+            yield return GesTag(key);
+        }
+    }
+
+    private static IEnumerable<GameEventScriptValue> EnumerateEntries(GameEventScriptValue? source)
+    {
+        source ??= GesNothing();
+        if (source.Kind == GameEventScriptValueKind.Optional)
+        {
+            var optional = source.AsOptional();
+            if (!optional.HasValue)
+            {
+                yield break;
+            }
+
+            source = optional.Value;
+        }
+
+        if (source.Kind != GameEventScriptValueKind.Map)
+        {
+            yield break;
+        }
+
+        foreach (var pair in source.AsMap().OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            yield return GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+            {
+                ["key"] = GesTag(pair.Key),
+                ["value"] = pair.Value
+            });
+        }
+    }
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a dice value.

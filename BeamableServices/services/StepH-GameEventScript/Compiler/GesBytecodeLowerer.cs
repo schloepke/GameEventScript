@@ -372,19 +372,6 @@ internal static class GesBytecodeLowerer
                 failureReason = string.Empty;
                 return true;
 
-            case SequenceLiteralExpressionNode sequence:
-                for (var itemIndex = 0; itemIndex < sequence.Items.Count; itemIndex++)
-                {
-                    if (!TryValidateExpression(sequence.Items[itemIndex], callables, out failureReason))
-                    {
-                        failureReason = $"Sequence item {itemIndex}: {failureReason}";
-                        return false;
-                    }
-                }
-
-                failureReason = string.Empty;
-                return true;
-
             case SetLiteralExpressionNode set:
                 for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
                 {
@@ -398,7 +385,7 @@ internal static class GesBytecodeLowerer
                 failureReason = string.Empty;
                 return true;
 
-            case DictionaryLiteralExpressionNode dictionary:
+            case MapLiteralExpressionNode dictionary:
                 for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
                 {
                     var entry = dictionary.Entries[entryIndex];
@@ -731,15 +718,15 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "sequence" or "series" or "envelope" or "ref";
+        => typeName is "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref";
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or
             "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or
             "boolean" or "integer" or "float" or "number" or
-            "uuid" or "sequence" or "series" or "envelope" or "list" or "range" or "message" or "handler" or
-            "dictionary" or "set" or "dice" or "optional" ||
+            "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or
+            "map" or "set" or "dice" or "optional" ||
             !string.IsNullOrWhiteSpace(typeName);
 
     private static bool TryValidateIterationSource(
@@ -974,7 +961,7 @@ internal static class GesBytecodeLowerer
                 failureReason = string.Empty;
                 return true;
 
-            case DictionarySelectorNode dictionary when isTerminal:
+            case MapSelectorNode dictionary when isTerminal:
                 if (!TryValidateExpression(dictionary.KeyProjection, callables, out failureReason))
                 {
                     failureReason = $"Dictionary key projection: {failureReason}";
@@ -1296,7 +1283,7 @@ internal static class GesBytecodeLowerer
 
                     break;
 
-                case DictionaryLiteralExpressionNode dictionary:
+                case MapLiteralExpressionNode dictionary:
                     foreach (var entry in dictionary.Entries)
                     {
                         CollectExpression(entry.Value);
@@ -1516,7 +1503,7 @@ internal static class GesBytecodeLowerer
                     CollectExpression(max.Projection);
                     break;
 
-                case DictionarySelectorNode dictionary:
+                case MapSelectorNode dictionary:
                     AddSlot(dictionary.Identifier);
                     CollectExpression(dictionary.KeyProjection);
                     if (dictionary.ValueProjection is not null)

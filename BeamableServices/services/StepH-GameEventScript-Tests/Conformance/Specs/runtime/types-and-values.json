@@ -1241,7 +1241,7 @@
     {
       "kind": "scriptApi",
       "name": "vector values cast expose components",
-      "script": "on Start {\n  let position as :vector be [x: 10.5, y: -2]\n  let point as :vector be [1, 2, 3]\n  let lifted as :vector be position\n  let flattened as :vector be point\n  let vectorList as :list be position\n  let vectorDictionary as :dictionary be point\n  emit Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[:y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVectorPosition: position is :vector, isVectorPoint: point is :vector, vectorIsDictionary: position is :dictionary)\n}",
+      "script": "on Start {\n  let position as :vector be [x: 10.5, y: -2]\n  let point as :vector be [1, 2, 3]\n  let lifted as :vector be position\n  let flattened as :vector be point\n  let vectorList as :list be position\n  let vectorDictionary as :map be point\n  emit Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[:y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVectorPosition: position is :vector, isVectorPoint: point is :vector, vectorIsMap: position is :map)\n}",
       "steps": [
         {
           "input": {
@@ -1296,7 +1296,7 @@
                   "type": ":float",
                   "value": "3"
                 },
-                "vectorIsDictionary": {
+                "vectorIsMap": {
                   "type": ":boolean",
                   "value": false
                 },
@@ -1317,7 +1317,7 @@
     {
       "kind": "scriptApi",
       "name": "vector units are preserved in components and conversions",
-      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :float(position)\n  let rawPositionCast as :float be position\n  let remetered be :meter(rawPosition)\n  let sameMeter be :meter(position)\n  let wrongUnitVector be :second(position)\n  let wrongScalarUnit be :meter(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :dictionary be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
+      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :float(position)\n  let rawPositionCast as :float be position\n  let remetered be :meter(rawPosition)\n  let sameMeter be :meter(position)\n  let wrongUnitVector be :second(position)\n  let wrongScalarUnit be :meter(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
       "steps": [
         {
           "input": {
@@ -1892,7 +1892,7 @@
             "name": "Start",
             "args": {
               "entry": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "name": {
                     "type": ":text",
@@ -1986,7 +1986,7 @@
                 "items": []
               },
               "emptyDict": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {}
               },
               "zeroValue": {
@@ -2112,7 +2112,7 @@
     {
       "kind": "scriptApi",
       "name": "type conversions length checks and type tags",
-      "script": "on Start(optionalValue, a, b, c, d, e, f, g, h) {\n  let tagOk as :tag be :name\n  let numberOk as :float be '12.2'\n  let numberFail as :float be 'abc'\n  let integerOk as :integer be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let setOk be :set[1, 1, 2]\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, setLen: :len setOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], optionalLen: :len optionalValue, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :float, cIsInteger: c is :integer, dIsText: d is :text, eIsList: e is :list, fIsDictionary: f is :dictionary, gIsOptional: g is :optional, hIsSet: h is :set)\n}",
+      "script": "on Start(optionalValue, a, b, c, d, e, f, g, h) {\n  let tagOk as :tag be :name\n  let numberOk as :float be '12.2'\n  let numberFail as :float be 'abc'\n  let integerOk as :integer be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let setOk be :set[1, 1, 2]\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, setLen: :len setOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], optionalLen: :len optionalValue, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :float, cIsInteger: c is :integer, dIsText: d is :text, eIsList: e is :list, fIsMap: f is :map, gIsOptional: g is :optional, hIsSet: h is :set)\n}",
       "randomSequence": [
         "2",
         "6",
@@ -2158,7 +2158,7 @@
                 ]
               },
               "f": {
-                "type": ":dictionary",
+                "type": ":map",
                 "entries": {
                   "v": {
                     "type": ":integer",
@@ -2259,7 +2259,7 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "fIsDictionary": {
+                "fIsMap": {
                   "type": ":boolean",
                   "value": true
                 },
@@ -3037,7 +3037,7 @@
     {
       "kind": "scriptApi",
       "name": "type checks identify primitive custom and first class values",
-      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let setValue be :set[1, 1, 2]\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :integer, intIsFloat: integerValue is :float, percentIsFloat: percentValue is :float, degreeIsFloat: degreeValue is :float, degreeIsDegree: degreeValue is :degree, meterIsMeter: meterValue is :meter, secondIsSecond: secondValue is :second, textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsDictionary: dictValue is :dictionary, setIsSet: setValue is :set, customIsGauge: custom is :gauge, customIsDictionary: custom is :dictionary, msgIsMessage: msg is :message, msgIsDictionary: msg is :dictionary, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let setValue be :set[1, 1, 2]\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :integer, intIsFloat: integerValue is :float, percentIsFloat: percentValue is :float, degreeIsFloat: degreeValue is :float, degreeIsDegree: degreeValue is :degree, meterIsMeter: meterValue is :meter, secondIsSecond: secondValue is :second, textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, setIsSet: setValue is :set, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
       "steps": [
         {
           "input": {
@@ -3066,12 +3066,12 @@
                 "tagIsTag": { "type": ":boolean", "value": true },
                 "boolIsBoolean": { "type": ":boolean", "value": true },
                 "listIsList": { "type": ":boolean", "value": true },
-                "dictIsDictionary": { "type": ":boolean", "value": true },
+                "dictIsMap": { "type": ":boolean", "value": true },
                 "setIsSet": { "type": ":boolean", "value": true },
                 "customIsGauge": { "type": ":boolean", "value": true },
-                "customIsDictionary": { "type": ":boolean", "value": true },
+                "customIsMap": { "type": ":boolean", "value": true },
                 "msgIsMessage": { "type": ":boolean", "value": true },
-                "msgIsDictionary": { "type": ":boolean", "value": false },
+                "msgIsMap": { "type": ":boolean", "value": false },
                 "handlerIsHandler": { "type": ":boolean", "value": true },
                 "missingIsNothing": { "type": ":boolean", "value": true }
               }
@@ -3083,7 +3083,7 @@
     {
       "kind": "scriptApi",
       "name": "uuid values are canonical binary ids",
-      "script": "record :unit as {\n  id: :uuid,\n  name: :text\n}\n\non Start {\n  let id be :uuid('550e8400-e29b-41d4-a716-446655440000')\n  let same be :uuid('550E8400-E29B-41D4-A716-446655440000')\n  let other be :uuid('00000000-0000-0000-0000-000000000001')\n  let invalid as :uuid be 'not-a-uuid'\n  let units be of :unit(id: id, name: 'Rook') and :unit(id: other, name: 'Mage')\n  let byId be units[:dictionary unit by unit.id]\n  let unitRef be :ref(:unit, id: id)\n  let sameRef be :ref(type: :unit, id: same)\n  emit Done(id: id, text: :text(id), isUuid: id is :uuid, equal: id = same, invalid: invalid, lookup: byId[id].name, refEqual: unitRef = sameRef, refId: unitRef.id, refText: :text(unitRef), addNothing: id + 1, multiplyNothing: id * 2, negNothing: -id, integerCast: id as :integer, booleanCast: id as :boolean)\n}",
+      "script": "record :unit as {\n  id: :uuid,\n  name: :text\n}\n\non Start {\n  let id be :uuid('550e8400-e29b-41d4-a716-446655440000')\n  let same be :uuid('550E8400-E29B-41D4-A716-446655440000')\n  let other be :uuid('00000000-0000-0000-0000-000000000001')\n  let invalid as :uuid be 'not-a-uuid'\n  let units be of :unit(id: id, name: 'Rook') and :unit(id: other, name: 'Mage')\n  let byId be units[:map unit by unit.id]\n  let unitRef be :ref(:unit, id: id)\n  let sameRef be :ref(type: :unit, id: same)\n  emit Done(id: id, text: :text(id), isUuid: id is :uuid, equal: id = same, invalid: invalid, lookup: byId[id].name, refEqual: unitRef = sameRef, refId: unitRef.id, refText: :text(unitRef), addNothing: id + 1, multiplyNothing: id * 2, negNothing: -id, integerCast: id as :integer, booleanCast: id as :boolean)\n}",
       "steps": [
         {
           "input": {

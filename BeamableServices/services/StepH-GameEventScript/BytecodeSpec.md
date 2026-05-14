@@ -477,7 +477,7 @@ undeliverable as envelope
 ```
 
 It is encoded as a `MessageEnvelope` handler entry with message name
-`undeliverable`. It receives a dictionary-backed `:envelope` value when no
+`undeliverable`. It receives a map-backed `:envelope` value when no
 `ExactSignature` or `MessageEnvelope` handler could be queued for the original
 message after signature/name and tag filters were applied. System endpoints
 still use normal handler metadata, priority, declaration order, and tag filters.
@@ -670,7 +670,7 @@ plus `CallPredicate`.
 @0521 CallPredicate dst=s4 predicate=@0900 args=1
 ```
 
-Type constructors, variadic operators, collection builders, dictionaries,
+Type constructors, variadic operators, collection builders, maps,
 message literals, handler binding, local calls, and predicate calls now
 reference entry addresses, `StringPool`, or `UShortListPool` directly from the
 instruction word.
@@ -730,9 +730,8 @@ compiler-assigned iterator slot.
 ### Values and Containers
 
 - `BuildList dst itemSlotListIndex`
-- `BuildSequence dst itemSlotListIndex`
 - `BuildSet dst itemSlotListIndex`
-- `BuildDictionary dst keyNameListIndex valueSlotListIndex`
+- `BuildMap dst keyNameListIndex valueSlotListIndex`
 - `BuildMessage dst messageShapeIndex argumentSlotListIndex`
 - `BindHandler dst operandSlotListIndex argumentNameListIndex`
 - `MemberAccess dst targetSlot nameIndex`
@@ -763,13 +762,13 @@ Required portable value families:
 - numeric units: `:degree`, `:meter`, `:second`
 - vectors: `:vector`
 - points: `:point`
-- containers: `:optional`, `:sequence`, `:series`, `:range`, `:list`,
-  `:dictionary`, `:set`, `:dice`
+- containers: `:optional`, `:series`, `:range`, `:list`,
+  `:map`, `:set`, `:dice`
 - runtime values: `:message`, `:handler`, `:envelope`, `:ref`
 - custom record and external types
 
 UUIDs are RFC-compatible 128-bit binary values. They should compare by high/low
-bits and should be valid dictionary/ref ids. Invalid non-comparison operations
+bits and should be valid map/ref ids. Invalid non-comparison operations
 evaluate to `nothing`.
 
 Refs are immutable handles made from a target type name and id value. The target
@@ -780,8 +779,8 @@ Series values are index-addressed, repeatable mathematical series. Supported
 operations are `:term`, `:take`, and `:drop`; unsupported lookup/selector
 operations evaluate to `nothing`.
 
-Envelope values are dictionary-backed system values. The bytecode model should
-treat `:envelope` as an open typed dictionary so fields can be added later
+Envelope values are map-backed system values. The bytecode model should
+treat `:envelope` as an open typed map so fields can be added later
 without changing instruction shape. The currently guaranteed fields are
 `message: :message` and `tags: :list` of tag values.
 
@@ -806,7 +805,7 @@ bus, broadcaster, or parent dispatcher later.
 `with` attaches envelope tags to the message. Tags are not part of
 `SignatureId`, not part of handler parameter binding, and are normalized to a
 set while preserving first-seen order. A tag expression may evaluate to a single
-tag or to a list/set/sequence of tags.
+tag or to a list/set of tags.
 
 Handlers may declare static tag filters:
 
@@ -910,15 +909,15 @@ Generic reduction contracts:
   and the reducer runs for every item. `:count` and `:average` use this form.
 
 Fixed terminal opcodes cover materializers and operations that need full
-collection semantics: dictionary, distinct, group/order/sort/reverse, sequence
-slices, random choose/draw/shuffle, dice patterns, object matches, and series
-term/take/drop operations. These opcodes reference only iterator slots, helper
+collection semantics: map, distinct, group/order/sort/reverse, random
+choose/draw/shuffle, dice patterns, object matches, and series term/take/drop
+operations. These opcodes reference only iterator slots, helper
 entry addresses, immediate counts, and binding slots; there are no pipeline
 selector, pattern, or object-pattern pools.
 
 Streaming/materialization contract:
 
-- `:range`, `:sequence`, and `:series` sources must not be blindly materialized
+- `:range` and `:series` sources must not be blindly materialized
   before streamable terminal selectors.
 - Streamable/short-circuit terminal selectors include `:any`, `:all`, `:first`,
   and direct `:contains` without prefix selectors.

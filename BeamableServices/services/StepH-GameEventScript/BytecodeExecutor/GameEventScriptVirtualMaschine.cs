@@ -185,6 +185,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).VmPower(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case Default:
+                    Register(instruction.Dest_U16).VmDefault(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
                     break;
                 case IntEqual:
                     Register(instruction.Dest_U16).VmIntegerEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
@@ -316,8 +317,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastUuid:
                     break;
-                case CastOptional:
-                    break;
                 case CastCustom:
                     break;
                 case CastSeries:
@@ -365,8 +364,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case TypeCheckPoint:
                     break;
                 case TypeCheckUuid:
-                    break;
-                case TypeCheckOptional:
                     break;
                 case TypeCheckTag:
                     break;

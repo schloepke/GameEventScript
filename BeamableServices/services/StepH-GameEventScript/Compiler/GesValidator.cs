@@ -986,10 +986,12 @@ internal static class GesValidator
                     continue;
 
                 case TypeCheckExpressionNode typeCheck:
+                    ValidateRemovedOptionalType(parsedScriptContext, typeCheck.TypeName, typeCheck, errors);
                     expression = typeCheck.Value;
                     continue;
 
                 case TypeCastExpressionNode typeCast:
+                    ValidateRemovedOptionalType(parsedScriptContext, typeCast.TypeName, typeCast, errors);
                     expression = typeCast.Value;
                     continue;
 
@@ -1603,7 +1605,27 @@ internal static class GesValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "series" or
-            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "set" or "dice" or "optional";
+            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "set" or "dice";
+
+    private static void ValidateRemovedOptionalType(
+        ParsedScript parsedScriptContext,
+        string typeName,
+        ScriptNode sourceNode,
+        GesValidationErrors errors)
+    {
+        if (!string.Equals(typeName, "optional", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        errors.Add(
+            parsedScriptContext,
+            "Type ':optional' has been removed; use ':nothing' to represent absence.",
+            typeName,
+            GameEventScriptSymbolKind.Type,
+            GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+            sourceNode);
+    }
 
     private static void AddTypeConstructorError(
         ParsedScript parsedScriptContext,

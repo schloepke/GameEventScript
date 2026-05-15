@@ -998,12 +998,13 @@
                 ]
               },
               "maybeTarget": {
-                "type": ":optional",
-                "hasValue": true,
-                "value": {
-                  "type": ":text",
-                  "value": "boss"
-                }
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":text",
+                    "value": "boss"
+                  }
+                ]
               }
             }
           },

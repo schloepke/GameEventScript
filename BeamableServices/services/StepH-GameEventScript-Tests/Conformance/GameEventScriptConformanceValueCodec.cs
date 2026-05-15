@@ -89,8 +89,6 @@ internal static class GameEventScriptConformanceValueCodec
                     RequireFloat(element, "y", "point y component"),
                     RequireFloat(element, "z", "point z component"),
                     DecodeOptionalNumericUnit(element));
-            case ":optional":
-                return DecodeOptionalValue(element);
             case ":list":
                 return GameEventScriptValueFactory.GesList(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
             case ":map":
@@ -184,7 +182,6 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
             GameEventScriptValueKind.Vector => ToVectorJson((GameEventScriptVectorValue)value),
             GameEventScriptValueKind.Point => ToPointJson((GameEventScriptPointValue)value),
-            GameEventScriptValueKind.Optional => ToOptionalJson(value),
             GameEventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
             GameEventScriptValueKind.Map => new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) },
             GameEventScriptValueKind.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, GameEventScriptValue.StableComparer)) },
@@ -236,17 +233,6 @@ internal static class GameEventScriptConformanceValueCodec
         }
 
         return null;
-    }
-
-    private static GameEventScriptValue DecodeOptionalValue(JsonElement element)
-    {
-        var hasValue = RequireBoolean(element, "hasValue", "optional hasValue");
-        if (!hasValue)
-        {
-            return GameEventScriptValueFactory.GesOptionalNone();
-        }
-
-        return GameEventScriptValueFactory.GesOptionalSome(DecodeValue(RequireObjectProperty(element, "value", "optional value")));
     }
 
     private static IReadOnlyList<string> DecodeMessageTags(JsonElement element)
@@ -321,23 +307,6 @@ internal static class GameEventScriptConformanceValueCodec
         foreach (var pair in entries.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
             node[pair.Key] = ToValueJson(pair.Value);
-        }
-
-        return node;
-    }
-
-    private static JsonObject ToOptionalJson(GameEventScriptValue value)
-    {
-        var optional = value.AsOptional();
-        var node = new JsonObject
-        {
-            ["type"] = ":optional",
-            ["hasValue"] = optional.HasValue
-        };
-
-        if (optional.HasValue)
-        {
-            node["value"] = ToValueJson(optional.Value);
         }
 
         return node;

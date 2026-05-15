@@ -275,7 +275,7 @@ runtime dispatch step.
 | 0x59 | `CastVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x5A | `CastPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x5B | `CastUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x5C | `CastOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x5C | reserved | - | - | - | - | - | - | - | - | Removed optional cast slot. |
 | 0x5D | `CastCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Declared-type conversion for custom record/external types. |
 | 0x5E..0x5F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain casts. |
 | 0x60 | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
@@ -303,7 +303,7 @@ runtime dispatch step.
 | 0x78 | `TypeCheckVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x79 | `TypeCheckPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x7A | `TypeCheckUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x7B | `TypeCheckOptional` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x7B | reserved | - | - | - | - | - | - | - | - | Removed optional type-check slot. |
 | 0x7C | `TypeCheckTag` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x7D | `TypeCheckText` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x7E | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |

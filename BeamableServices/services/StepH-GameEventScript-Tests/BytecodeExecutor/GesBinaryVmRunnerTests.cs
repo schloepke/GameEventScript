@@ -25,6 +25,9 @@ public sealed class BytecodeExecutorTests
             function divide(_ dividend, _ divisor) means dividend / divisor
             
             on Start(value) {
+                let someList be [1, :b, 'hello', 0.7m]
+                let someMap be [a: 3, b: 'Jelly', c: 3.3m, d: :pi]
+                let someSet be :set[1, 2, 3, 4, 5]
                 let short be value is high and value is low
                 let implies_1 be value is high -> value is low
                 let implies_2 be value is high -> value is not low

@@ -160,19 +160,12 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesUuid(string value) => GameEventScriptUuidValue.Parse(value);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptOptionalValue"/> wrapping the provided value.
+    /// Returns the given value, or <see cref="GameEventScriptNothingValue.Instance"/> when it is null.
     /// </summary>
-    /// <param name="value">The value to wrap. Cannot be null.</param>
-    /// <returns>A new <see cref="GameEventScriptOptionalValue"/> instance encapsulating the provided value.</returns>
+    /// <param name="value">The maybe-present value.</param>
+    /// <returns>The provided value, or the canonical nothing value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesOptionalSome(GameEventScriptValue value) => GameEventScriptOptionalValue.Create(value);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing an optional "none" value.
-    /// </summary>
-    /// <returns>A <see cref="GameEventScriptOptionalValue"/> instance representing the absence of a value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesOptionalNone() => GameEventScriptOptionalValue.None;
+    public static GameEventScriptValue GesMaybe(GameEventScriptValue? value) => value ?? GesNothing();
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptSeriesValue"/> from an index-addressed series provider.
@@ -296,18 +289,6 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateValues(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.Kind == GameEventScriptValueKind.Optional)
-        {
-            var optional = source.AsOptional();
-            if (!optional.HasValue)
-            {
-                yield break;
-            }
-
-            yield return optional.Value;
-            yield break;
-        }
-
         if (source.IsNothing())
         {
             yield break;
@@ -332,17 +313,6 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateKeys(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.Kind == GameEventScriptValueKind.Optional)
-        {
-            var optional = source.AsOptional();
-            if (!optional.HasValue)
-            {
-                yield break;
-            }
-
-            source = optional.Value;
-        }
-
         if (source.Kind != GameEventScriptValueKind.Map)
         {
             yield break;
@@ -357,17 +327,6 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateEntries(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.Kind == GameEventScriptValueKind.Optional)
-        {
-            var optional = source.AsOptional();
-            if (!optional.HasValue)
-            {
-                yield break;
-            }
-
-            source = optional.Value;
-        }
-
         if (source.Kind != GameEventScriptValueKind.Map)
         {
             yield break;

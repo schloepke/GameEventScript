@@ -330,25 +330,6 @@ internal static class GesValueOperations
         return Math.Abs(left - right) <= ApproximateEqualityTolerance * scale;
     }
 
-    public static bool TryUnwrapOptionalForOperation(GameEventScriptValue value, out GameEventScriptValue unwrapped)
-    {
-        if (!value.IsOptional())
-        {
-            unwrapped = value;
-            return true;
-        }
-
-        var optional = value.AsOptional();
-        if (!optional.HasValue)
-        {
-            unwrapped = default!;
-            return false;
-        }
-
-        unwrapped = optional.Value;
-        return true;
-    }
-
     public static bool TryCoerceNumericForOperation(GameEventScriptValue value, out NumericValue number)
     {
         if (value.IsNothing())
@@ -976,8 +957,7 @@ internal static class GesValueOperations
 
     public static bool TryCreateVector(GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
     {
-        if (!TryUnwrapOptionalForOperation(xy, out var unwrapped) ||
-            unwrapped is not GameEventScriptVectorValue vector)
+        if (xy is not GameEventScriptVectorValue vector)
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
@@ -992,8 +972,7 @@ internal static class GesValueOperations
 
     public static bool TryCreatePoint(GameEventScriptValue xy, GameEventScriptValue z, out GameEventScriptValue value)
     {
-        if (!TryUnwrapOptionalForOperation(xy, out var unwrapped) ||
-            unwrapped is not GameEventScriptPointValue point)
+        if (xy is not GameEventScriptPointValue point)
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
@@ -1049,18 +1028,13 @@ internal static class GesValueOperations
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (!TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        if (GameEventScriptValue.TryGetNumericUnit(operand, out var unit) && unit != GameEventScriptNumericUnit.Degree)
         {
             return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var unit) && unit != GameEventScriptNumericUnit.Degree)
-        {
-            return GameEventScriptValueFactory.GesFloatNaN();
-        }
-
-        if (unwrapped.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer &&
-            TryCoerceNumericForOperation(unwrapped, out var number) &&
+        if (operand.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer &&
+            TryCoerceNumericForOperation(operand, out var number) &&
             number.IsFinite)
         {
             return GameEventScriptValueFactory.GesDegree(GameEventScriptValue.WrapDegrees(number.Value));
@@ -1239,8 +1213,7 @@ internal static class GesValueOperations
         unit = null;
         invalid = false;
 
-        if (!TryUnwrapOptionalForOperation(component, out var unwrapped) ||
-            !TryCoerceNumericForOperation(unwrapped, out var number))
+        if (!TryCoerceNumericForOperation(component, out var number))
         {
             return false;
         }
@@ -1252,7 +1225,7 @@ internal static class GesValueOperations
         }
 
         value = number.Value;
-        unit = GameEventScriptValue.TryGetNumericUnit(unwrapped, out var floatUnit) ? floatUnit : null;
+        unit = GameEventScriptValue.TryGetNumericUnit(component, out var floatUnit) ? floatUnit : null;
         return true;
     }
 

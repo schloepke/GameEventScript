@@ -2691,11 +2691,10 @@ internal sealed class GesLinearBytecodeBuilder
             "map" => GameEventScriptBytecodeOpCode.CastMap,
             "set" => GameEventScriptBytecodeOpCode.CastSet,
             "dice" => GameEventScriptBytecodeOpCode.CastDice,
-            "optional" => GameEventScriptBytecodeOpCode.CastOptional,
             _ => default
         };
 
-        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "set" or "dice" or "optional";
+        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "set" or "dice";
     }
 
     private static bool TryGetTypeCheckOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode)
@@ -2715,7 +2714,6 @@ internal sealed class GesLinearBytecodeBuilder
             "integer" => GameEventScriptBytecodeOpCode.TypeCheckInteger,
             "boolean" => GameEventScriptBytecodeOpCode.TypeCheckBoolean,
             "uuid" => GameEventScriptBytecodeOpCode.TypeCheckUuid,
-            "optional" => GameEventScriptBytecodeOpCode.TypeCheckOptional,
             "series" => GameEventScriptBytecodeOpCode.TypeCheckSeries,
             "envelope" => GameEventScriptBytecodeOpCode.TypeCheckEnvelope,
             "list" => GameEventScriptBytecodeOpCode.TypeCheckList,
@@ -2729,7 +2727,7 @@ internal sealed class GesLinearBytecodeBuilder
             _ => default
         };
 
-        return typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "optional" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "set" or "dice";
+        return typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "set" or "dice";
     }
 
     private static GameEventScriptBytecodeOpCode ToBinaryOpCode(BinaryExpressionNode expression)

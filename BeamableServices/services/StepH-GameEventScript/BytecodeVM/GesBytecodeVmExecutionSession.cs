@@ -3278,8 +3278,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static double EvaluatePositiveWeight(GameEventScriptValue value)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped) ||
-            !GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) ||
+        if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number) ||
             !number.IsFinite ||
             number.Value <= 0d)
         {
@@ -4620,7 +4619,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "integer" => value.Kind == BytecodeVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
             "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
             "uuid" => value.ReferenceValue?.IsUuid() ?? false,
-            "optional" => value.ReferenceValue?.IsOptional() ?? false,
             "series" => value.ReferenceValue?.IsSeries() ?? false,
             "envelope" => value.ReferenceValue is { } envelopeValue &&
                           envelopeValue.TryGetCustomTypeName(out var envelopeTypeName) &&
@@ -4646,13 +4644,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var fromRaw = fromValue.ToGameEventScriptValue();
         var toRaw = toValue.ToGameEventScriptValue();
 
-        if (GesValueOperations.TryUnwrapOptionalForOperation(fromRaw, out var unwrappedFrom) &&
-            GesValueOperations.TryUnwrapOptionalForOperation(toRaw, out var unwrappedTo) &&
-            unwrappedFrom.Kind == GameEventScriptValueKind.Integer &&
-            unwrappedTo.Kind == GameEventScriptValueKind.Integer)
+        if (fromRaw.Kind == GameEventScriptValueKind.Integer &&
+            toRaw.Kind == GameEventScriptValueKind.Integer)
         {
-            var from = unwrappedFrom.AsInteger();
-            var to = unwrappedTo.AsInteger();
+            var from = fromRaw.AsInteger();
+            var to = toRaw.AsInteger();
             if (from > to)
             {
                 (from, to) = (to, from);
@@ -4800,12 +4796,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(leftRaw, out var left) ||
-            !GesValueOperations.TryUnwrapOptionalForOperation(rightRaw, out var right))
-        {
-            value = BytecodeVmValue.Reference(GesOptionalNone());
-            return true;
-        }
+        var left = leftRaw;
+        var right = rightRaw;
 
         value = operation switch
         {
@@ -4877,12 +4869,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (!leftRaw.HasSemanticValue())
         {
             return rightRaw;
-        }
-
-        if (leftRaw.IsOptional())
-        {
-            var optional = leftRaw.AsOptional();
-            return optional.HasValue ? optional.Value : rightRaw;
         }
 
         return leftRaw;
@@ -4999,37 +4985,32 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(operand, out var unwrapped))
+        if (operand.IsPercentage())
         {
-            return GesOptionalNone();
+            return GesPercentage(-operand.AsNumber());
         }
 
-        if (unwrapped.IsPercentage())
-        {
-            return GesPercentage(-unwrapped.AsNumber());
-        }
-
-        if (GesValueOperations.TryEvaluatePointUnary(unwrapped, "-", out var pointNegation))
+        if (GesValueOperations.TryEvaluatePointUnary(operand, "-", out var pointNegation))
         {
             return pointNegation;
         }
 
-        if (GesValueOperations.TryEvaluateVectorUnary(unwrapped, "-", out var vectorNegation))
+        if (GesValueOperations.TryEvaluateVectorUnary(operand, "-", out var vectorNegation))
         {
             return vectorNegation;
         }
 
-        if (unwrapped is GameEventScriptIntegerValue { Value: not long.MinValue } integer)
+        if (operand is GameEventScriptIntegerValue { Value: not long.MinValue } integer)
         {
             return GesInteger(-integer.Value, integer.Unit);
         }
 
-        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var unit))
+        if (GameEventScriptValue.TryGetNumericUnit(operand, out var unit))
         {
-            return GesFloat(-unwrapped.AsNumber(), unit);
+            return GesFloat(-operand.AsNumber(), unit);
         }
 
-        return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number)
+        return GesValueOperations.TryCoerceNumericForOperation(operand, out var number)
             ? GesValueOperations.ToGameEventScriptFloat(GesValueOperations.NegateNumeric(number))
             : GameEventScriptNothingValue.Instance;
     }
@@ -5041,9 +5022,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return GameEventScriptNothingValue.Instance;
         }
 
-        return GesValueOperations.TryUnwrapOptionalForOperation(operand, out var unwrapped)
-            ? GesBoolean(!unwrapped.AsBoolean())
-            : GesOptionalNone();
+        return GesBoolean(!operand.AsBoolean());
     }
 
     private GameEventScriptValue EvaluateLenUnary(GameEventScriptValue operand)
@@ -5061,7 +5040,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptValueKind.Map => GesInteger(operand.AsMap().Count),
             GameEventScriptValueKind.Set => GesInteger(operand.AsSet().Count),
             GameEventScriptValueKind.Dice => GesInteger(operand.AsDice().Rolls.Count),
-            GameEventScriptValueKind.Optional => GesInteger(operand.AsOptional().HasValue ? 1 : 0),
             _ => GameEventScriptNothingValue.Instance
         };
     }
@@ -5147,17 +5125,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(operand, out var unwrapped))
-        {
-            return GesOptionalNone();
-        }
-
-        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out _))
+        if (GameEventScriptValue.TryGetNumericUnit(operand, out _))
         {
             return GesFloatNaN();
         }
 
-        if (!GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number))
+        if (!GesValueOperations.TryCoerceNumericForOperation(operand, out var number))
         {
             return GesFloatNaN();
         }
@@ -5447,17 +5420,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue NormalizeRefIdValue(GameEventScriptValue id)
     {
-        if (!id.TryUnwrapOptional(out var unwrapped) || unwrapped.IsNothing())
+        if (id.IsNothing())
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (unwrapped.IsUuid())
+        if (id.IsUuid())
         {
-            return unwrapped;
+            return id;
         }
 
-        var text = GesValueOperations.ToText(unwrapped).Trim();
+        var text = GesValueOperations.ToText(id).Trim();
         return text.Length == 0
             ? GameEventScriptNothingValue.Instance
             : GesText(text);
@@ -5692,7 +5665,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryConvertDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
     {
         if (input.ReferenceValue?.IsUuid() == true &&
-            declaredType is not "uuid" and not "text" and not "optional")
+            declaredType is not "uuid" and not "text")
         {
             value = BytecodeVmValue.Nothing;
             return true;
@@ -5746,11 +5719,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 ? BytecodeVmValue.Reference(GesSet(boxed.AsSet()))
                 : BytecodeVmValue.Nothing,
             "dice" => BytecodeVmValue.Reference(GesDice(boxed.AsDice())),
-            "optional" => boxed.IsOptional()
-                ? input
-                : boxed.IsNothing()
-                    ? BytecodeVmValue.Reference(GesOptionalNone())
-                    : BytecodeVmValue.Reference(GesOptionalSome(boxed)),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
                 ? BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
                 : boxed.TryGetCustomTypeName(out var customTypeName) &&
@@ -5932,7 +5900,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastMap => "map",
             GameEventScriptBytecodeOpCode.CastSet => "set",
             GameEventScriptBytecodeOpCode.CastDice => "dice",
-            GameEventScriptBytecodeOpCode.CastOptional => "optional",
             _ => string.Empty
         };
 
@@ -5956,7 +5923,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TypeCheckInteger => "integer",
             GameEventScriptBytecodeOpCode.TypeCheckBoolean => "boolean",
             GameEventScriptBytecodeOpCode.TypeCheckUuid => "uuid",
-            GameEventScriptBytecodeOpCode.TypeCheckOptional => "optional",
             GameEventScriptBytecodeOpCode.TypeCheckSeries => "series",
             GameEventScriptBytecodeOpCode.TypeCheckEnvelope => "envelope",
             GameEventScriptBytecodeOpCode.TypeCheckList => "list",
@@ -5998,7 +5964,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastMap or
             GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
-            GameEventScriptBytecodeOpCode.CastOptional or
             GameEventScriptBytecodeOpCode.CastCustom;
 
     private static bool IsInlineConstantInstruction(GameEventScriptBytecodeOpCode opCode)
@@ -6025,7 +5990,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TypeCheckInteger or
             GameEventScriptBytecodeOpCode.TypeCheckBoolean or
             GameEventScriptBytecodeOpCode.TypeCheckUuid or
-            GameEventScriptBytecodeOpCode.TypeCheckOptional or
             GameEventScriptBytecodeOpCode.TypeCheckSeries or
             GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
             GameEventScriptBytecodeOpCode.TypeCheckList or
@@ -6040,67 +6004,52 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue ConvertToFloat(GameEventScriptValue value)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrappedNumber))
-        {
-            return GesFloatNaN();
-        }
-
-        if (GesValueOperations.TryEraseVectorUnit(unwrappedNumber, out var vectorWithoutUnit))
+        if (GesValueOperations.TryEraseVectorUnit(value, out var vectorWithoutUnit))
         {
             return vectorWithoutUnit;
         }
 
-        if (unwrappedNumber is GameEventScriptTagValue && unwrappedNumber.TryConvertToNumber(out var convertedTag))
+        if (value is GameEventScriptTagValue && value.TryConvertToNumber(out var convertedTag))
         {
             return ConvertToFloat(convertedTag);
         }
 
-        return GesValueOperations.TryCoerceNumericForOperation(unwrappedNumber, out var number)
+        return GesValueOperations.TryCoerceNumericForOperation(value, out var number)
             ? GesValueOperations.ToGameEventScriptFloat(number)
             : GesFloatNaN();
     }
 
     private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (value.IsUuid())
         {
-            return GameEventScriptNothingValue.Instance;
+            return value;
         }
 
-        if (unwrapped.IsUuid())
-        {
-            return unwrapped;
-        }
-
-        return GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(unwrapped), out var uuid)
+        return GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(value), out var uuid)
             ? uuid
             : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
+        if (value.IsPercentage())
+        {
+            return value;
+        }
+
+        if (value.HasNumericUnit())
         {
             return GesFloatNaN();
         }
 
-        if (unwrapped.IsPercentage())
-        {
-            return unwrapped;
-        }
-
-        if (unwrapped.HasNumericUnit())
-        {
-            return GesFloatNaN();
-        }
-
-        if (!GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) ||
+        if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number) ||
             !number.IsFinite)
         {
             return GesFloatNaN();
         }
 
-        var ratio = unwrapped.Kind == GameEventScriptValueKind.Integer
+        var ratio = value.Kind == GameEventScriptValueKind.Integer
             ? number.Value / 100d
             : number.Value > 1d || number.Value < -1d
                 ? number.Value / 100d
@@ -6110,30 +6059,25 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-        {
-            return GesFloatNaN();
-        }
-
-        if (GesValueOperations.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
+        if (GesValueOperations.TryApplyVectorUnit(value, unit, out var vectorWithUnit))
         {
             return vectorWithUnit;
         }
 
-        if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var existingUnit) && existingUnit != unit)
+        if (GameEventScriptValue.TryGetNumericUnit(value, out var existingUnit) && existingUnit != unit)
         {
             return GesFloatNaN();
         }
 
-        if (unwrapped.Kind == GameEventScriptValueKind.Integer &&
-            GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var integerNumber) &&
+        if (value.Kind == GameEventScriptValueKind.Integer &&
+            GesValueOperations.TryCoerceNumericForOperation(value, out var integerNumber) &&
             integerNumber.IsFinite)
         {
             return GesInteger(GesValueOperations.ToIntegerSaturated(integerNumber.Value), unit);
         }
 
-        if (unwrapped.Kind == GameEventScriptValueKind.Float &&
-            GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) &&
+        if (value.Kind == GameEventScriptValueKind.Float &&
+            GesValueOperations.TryCoerceNumericForOperation(value, out var number) &&
             number.IsFinite)
         {
             return GesFloat(number.Value, unit);
@@ -6144,68 +6088,58 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue ConvertToVector(GameEventScriptValue value)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (unwrapped is GameEventScriptVectorValue vector)
+        if (value is GameEventScriptVectorValue vector)
         {
             return vector;
         }
 
-        if (unwrapped is GameEventScriptPointValue)
+        if (value is GameEventScriptPointValue)
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (TryCreateSpatialFromMembers("vector", unwrapped, out var vectorFromMembers))
+        if (TryCreateSpatialFromMembers("vector", value, out var vectorFromMembers))
         {
             return vectorFromMembers;
         }
 
-        var items = unwrapped.AsList();
+        var items = value.AsList();
         if (items.Count is >= 1 and <= 3 &&
             TryCreateSpatialFromComponents("vector", items, out var vectorFromItems))
         {
             return vectorFromItems;
         }
 
-        return TryCreateSpatialFromComponents("vector", [unwrapped], out var vectorFromScalar)
+        return TryCreateSpatialFromComponents("vector", [value], out var vectorFromScalar)
             ? vectorFromScalar
             : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToPoint(GameEventScriptValue value)
     {
-        if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (unwrapped is GameEventScriptPointValue point)
+        if (value is GameEventScriptPointValue point)
         {
             return point;
         }
 
-        if (unwrapped is GameEventScriptVectorValue)
+        if (value is GameEventScriptVectorValue)
         {
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (TryCreateSpatialFromMembers("point", unwrapped, out var pointFromMembers))
+        if (TryCreateSpatialFromMembers("point", value, out var pointFromMembers))
         {
             return pointFromMembers;
         }
 
-        var items = unwrapped.AsList();
+        var items = value.AsList();
         if (items.Count is >= 1 and <= 3 &&
             TryCreateSpatialFromComponents("point", items, out var pointFromItems))
         {
             return pointFromItems;
         }
 
-        return TryCreateSpatialFromComponents("point", [unwrapped], out var pointFromScalar)
+        return TryCreateSpatialFromComponents("point", [value], out var pointFromScalar)
             ? pointFromScalar
             : GameEventScriptNothingValue.Instance;
     }
@@ -6415,30 +6349,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        if (value.Kind == GameEventScriptValueKind.Optional)
-        {
-            var optional = value.AsOptional();
-            if (optional.HasValue && optional.Value is GameEventScriptSeriesValue optionalSeries)
-            {
-                series = optionalSeries;
-                return true;
-            }
-        }
-
         series = default!;
         return false;
     }
 
     private static IEnumerable<GameEventScriptValue> EnumerateListLikeValue(GameEventScriptValue value)
     {
-        if (value.Kind == GameEventScriptValueKind.Optional)
-        {
-            var optional = value.AsOptional();
-            return optional.HasValue
-                ? EnumerateListLikeValue(optional.Value)
-                : Array.Empty<GameEventScriptValue>();
-        }
-
         return value.Kind is GameEventScriptValueKind.Range
             ? value.AsEnumerable()
             : value.AsList();
@@ -7171,19 +7087,13 @@ internal readonly record struct BytecodeVmValue(
             case BytecodeVmValueKind.Percentage:
                 return TryFiniteDoubleToLong(Number, out value);
             case BytecodeVmValueKind.Reference when ReferenceValue is { } reference:
-                if (!GesValueOperations.TryUnwrapOptionalForOperation(reference, out var unwrapped))
-                {
-                    value = 0L;
-                    return false;
-                }
-
-                if (unwrapped is GameEventScriptIntegerValue integer)
+                if (reference is GameEventScriptIntegerValue integer)
                 {
                     value = integer.Value;
                     return true;
                 }
 
-                if (GesValueOperations.TryCoerceNumericForOperation(unwrapped, out var number) && number.IsFinite)
+                if (GesValueOperations.TryCoerceNumericForOperation(reference, out var number) && number.IsFinite)
                 {
                     return TryFiniteDoubleToLong(number.Value, out value);
                 }

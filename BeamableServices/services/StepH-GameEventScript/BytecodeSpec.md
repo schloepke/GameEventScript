@@ -765,8 +765,7 @@ Required portable value families:
 - numeric units: `:degree`, `:meter`, `:second`
 - vectors: `:vector`
 - points: `:point`
-- containers: `:optional`, `:series`, `:range`, `:list`,
-  `:map`, `:set`, `:dice`
+- containers: `:series`, `:range`, `:list`, `:map`, `:set`, `:dice`
 - runtime values: `:message`, `:handler`, `:envelope`, `:ref`
 - custom record and external types
 

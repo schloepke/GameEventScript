@@ -57,7 +57,7 @@ public class GameEventScriptValueScenarios
     public void EmptyValuesUseTypedSingletons()
     {
         Assert.AreSame(GesText(string.Empty), GesText(string.Empty));
-        Assert.AreSame(GesOptionalNone(), GesOptionalNone());
+        Assert.AreSame(GesNothing(), GesMaybe(null));
         Assert.AreSame(GesList(null), GesList(Array.Empty<GameEventScriptValue>()));
         Assert.AreSame(GesMap(null), GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
         Assert.AreSame(GesSet(null), GesSet(Array.Empty<GameEventScriptValue>()));
@@ -69,11 +69,11 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void StableComparisonOrdersValuesDeterministically()
     {
-        var values = new List<GameEventScriptValue> { GesBoolean(true), GesText("b"), GesFloat(2d), GesInteger(1), GesOptionalNone(), GesText("a") };
+        var values = new List<GameEventScriptValue> { GesBoolean(true), GesText("b"), GesFloat(2d), GesInteger(1), GesNothing(), GesText("a") };
 
         values.Sort(GameEventScriptValue.StableComparer);
 
-        string[] expected = ["1", "2", "a", "b", "True", "Optional.None"];
+        string[] expected = ["Nothing", "1", "2", "a", "b", "True"];
         CollectionAssert.AreEqual(
             expected,
             values.Select(v => v switch

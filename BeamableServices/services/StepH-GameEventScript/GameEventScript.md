@@ -887,7 +887,6 @@ values is empty
 The main predicates are:
 
 - `nothing` has no value and is empty.
-- `optional none` has no value and is empty.
 - Empty text, list, map, set, dice, and range have no value and
   are empty.
 - `NaN` and infinity have no semantic value, but are not considered empty.
@@ -994,7 +993,6 @@ Types are written as tags. Built-in public type tags are:
 - `:second`
 - `:vector`
 - `:point`
-- `:optional`
 - `:series`
 - `:range`
 - `:message`
@@ -1044,11 +1042,11 @@ code; it is produced by missing data and failed lenient operations.
 
 ```eventscript
 let missing be unit.unknown
-let none as :optional be missing
+let none be missing
 ```
 
 Converting `nothing` to primitive containers produces empty values in many
-places, while converting it to an optional produces `optional none`.
+places.
 
 ### `:tag`
 
@@ -1384,21 +1382,6 @@ Point arithmetic is affine:
 `point + point`, `vector + point`, point scalar arithmetic, point `div`, point
 `mod`, point `rem`, unary minus on points, `:abs point`, and incompatible units
 evaluate to `NaN`.
-
-### `:optional`
-
-Optional values represent either `some(value)` or `none`. Script code usually
-encounters optionals through the host API or typed input values.
-
-```eventscript
-on Start(maybeTarget) {
-    let target be maybeTarget :default [name: 'none']
-    publish Seen(name: target.name)
-}
-```
-
-Converting `nothing` to `:optional` creates an empty optional. Converting any
-other value creates an optional containing that value.
 
 ### `:uuid`
 

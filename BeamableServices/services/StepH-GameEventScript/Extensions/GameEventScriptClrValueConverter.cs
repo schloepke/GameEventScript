@@ -26,7 +26,7 @@ public static class GameEventScriptClrValueConverter
     /// <param name="value">The object to convert. Can be null, primitive types, strings, collections, or custom objects.</param>
     /// <returns>
     /// Returns a corresponding <see cref="GameEventScriptValue"/> instance based on the provided object's type.
-    /// If the object is null, it returns an optional 'none' value.
+    /// If the object is null, it returns the canonical nothing value.
     /// For unsupported types, it attempts to parse the object into a dictionary or other suitable types.
     /// </returns>
     public static GameEventScriptValue ToGameEventScriptValue(this object? value)
@@ -34,7 +34,7 @@ public static class GameEventScriptClrValueConverter
         switch (value)
         {
             case null:
-                return GameEventScriptValueFactory.GesOptionalNone();
+                return GameEventScriptValueFactory.GesNothing();
             case GameEventScriptDiceValue dice:
                 return GameEventScriptValueFactory.GesDice(dice);
             case IGameEventScriptSeries series:

@@ -720,7 +720,7 @@ internal static class GesBytecodeLowerer
             "vector" or "point" or
             "boolean" or "integer" or "float" or "number" or
             "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or
-            "map" or "set" or "dice" or "optional" ||
+            "map" or "set" or "dice" ||
             !string.IsNullOrWhiteSpace(typeName);
 
     private static bool TryValidateIterationSource(

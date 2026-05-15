@@ -658,12 +658,7 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                if (!TryUnwrapOptional(operand, out var unwrapped))
-                {
-                    value = GameEventScriptValueFactory.GesOptionalNone();
-                    return true;
-                }
-
+                var unwrapped = operand;
                 if (unwrapped.IsPercentage())
                 {
                     value = GameEventScriptValueFactory.GesPercentage(-unwrapped.AsNumber());
@@ -707,13 +702,7 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                if (!TryUnwrapOptional(operand, out var unwrappedBool))
-                {
-                    value = GameEventScriptValueFactory.GesOptionalNone();
-                    return true;
-                }
-
-                value = GameEventScriptValueFactory.GesBoolean(!unwrappedBool.AsBoolean());
+                value = GameEventScriptValueFactory.GesBoolean(!operand.AsBoolean());
                 return true;
             case GesUnaryOperator.HasValue:
                 value = GameEventScriptValueFactory.GesBoolean(operand.HasSemanticValue());
@@ -750,11 +739,7 @@ internal static class GesOptimizer
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (!TryUnwrapOptional(operand, out var unwrapped))
-        {
-            return GameEventScriptValueFactory.GesOptionalNone();
-        }
-
+        var unwrapped = operand;
         if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out _))
         {
             return GameEventScriptValueFactory.GesFloatNaN();
@@ -829,13 +814,6 @@ internal static class GesOptimizer
                 return true;
             }
 
-            if (leftRaw.IsOptional())
-            {
-                var optional = leftRaw.AsOptional();
-                value = optional.HasValue ? optional.Value : rightRaw;
-                return true;
-            }
-
             value = leftRaw;
             return true;
         }
@@ -862,11 +840,8 @@ internal static class GesOptimizer
             return true;
         }
 
-        if (!TryUnwrapOptional(leftRaw, out var left) || !TryUnwrapOptional(rightRaw, out var right))
-        {
-            value = GameEventScriptValueFactory.GesOptionalNone();
-            return true;
-        }
+        var left = leftRaw;
+        var right = rightRaw;
 
         switch (binary.Operator)
         {
@@ -1199,7 +1174,7 @@ internal static class GesOptimizer
 
     private static bool TryConvertConstantType(GameEventScriptValue value, string declaredType, ISet<string> knownTypeNames, out GameEventScriptValue converted)
     {
-        if (value.IsUuid() && declaredType is not "uuid" and not "text" and not "optional")
+        if (value.IsUuid() && declaredType is not "uuid" and not "text")
         {
             converted = GameEventScriptNothingValue.Instance;
             return true;
@@ -1270,11 +1245,6 @@ internal static class GesOptimizer
             case "dice":
                 converted = GameEventScriptValueFactory.GesDice(value.AsDice());
                 return true;
-            case "optional":
-                converted = value.IsOptional()
-                    ? value
-                    : value.IsNothing() ? GameEventScriptValueFactory.GesOptionalNone() : GameEventScriptValueFactory.GesOptionalSome(value);
-                return true;
             default:
                 if (knownTypeNames.Contains(declaredType))
                 {
@@ -1289,10 +1259,7 @@ internal static class GesOptimizer
 
     private static GameEventScriptValue ConvertToFloat(GameEventScriptValue value)
     {
-        if (!TryUnwrapOptional(value, out var unwrapped))
-        {
-            return GameEventScriptValueFactory.GesFloatNaN();
-        }
+        var unwrapped = value;
 
         if (GesValueOperations.TryEraseVectorUnit(unwrapped, out var vectorWithoutUnit))
         {
@@ -1326,10 +1293,7 @@ internal static class GesOptimizer
 
     private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)
     {
-        if (!TryUnwrapOptional(value, out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
+        var unwrapped = value;
 
         if (unwrapped.IsUuid())
         {
@@ -1343,10 +1307,7 @@ internal static class GesOptimizer
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
     {
-        if (!TryUnwrapOptional(value, out var unwrapped))
-        {
-            return GameEventScriptValueFactory.GesFloatNaN();
-        }
+        var unwrapped = value;
 
         if (unwrapped.IsPercentage())
         {
@@ -1373,10 +1334,7 @@ internal static class GesOptimizer
 
     private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit)
     {
-        if (!TryUnwrapOptional(value, out var unwrapped))
-        {
-            return GameEventScriptValueFactory.GesFloatNaN();
-        }
+        var unwrapped = value;
 
         if (GesValueOperations.TryApplyVectorUnit(unwrapped, unit, out var vectorWithUnit))
         {
@@ -1407,10 +1365,7 @@ internal static class GesOptimizer
 
     private static GameEventScriptValue ConvertToVector(GameEventScriptValue value)
     {
-        if (!TryUnwrapOptional(value, out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
+        var unwrapped = value;
 
         if (unwrapped is GameEventScriptVectorValue vector)
         {
@@ -1441,10 +1396,7 @@ internal static class GesOptimizer
 
     private static GameEventScriptValue ConvertToPoint(GameEventScriptValue value)
     {
-        if (!TryUnwrapOptional(value, out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
+        var unwrapped = value;
 
         if (unwrapped is GameEventScriptPointValue point)
         {
@@ -1490,25 +1442,6 @@ internal static class GesOptimizer
         if (hasY) components["y"] = y;
         if (hasZ) components["z"] = z;
         return TryCreateSpatialFromLabeledComponents(typeName, components, out spatial);
-    }
-
-    private static bool TryUnwrapOptional(GameEventScriptValue value, out GameEventScriptValue unwrapped)
-    {
-        if (!value.IsOptional())
-        {
-            unwrapped = value;
-            return true;
-        }
-
-        var optional = value.AsOptional();
-        if (!optional.HasValue)
-        {
-            unwrapped = default!;
-            return false;
-        }
-
-        unwrapped = optional.Value;
-        return true;
     }
 
     private static bool TryCoerceNumeric(GameEventScriptValue value, out double number, out bool isFinite)

@@ -1088,7 +1088,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastMap or
             GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
-            GameEventScriptBytecodeOpCode.CastOptional or
             GameEventScriptBytecodeOpCode.CastCustom;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
@@ -1105,7 +1104,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.TypeCheckInteger or
             GameEventScriptBytecodeOpCode.TypeCheckBoolean or
             GameEventScriptBytecodeOpCode.TypeCheckUuid or
-            GameEventScriptBytecodeOpCode.TypeCheckOptional or
             GameEventScriptBytecodeOpCode.TypeCheckSeries or
             GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
             GameEventScriptBytecodeOpCode.TypeCheckList or

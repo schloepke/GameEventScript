@@ -286,7 +286,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     CastVector = 0x59,
     CastPoint = 0x5A,
     CastUuid = 0x5B,
-    CastOptional = 0x5C,
     CastCustom = 0x5D,
 
     #endregion
@@ -321,7 +320,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckVector = 0x78,
     TypeCheckPoint = 0x79,
     TypeCheckUuid = 0x7A,
-    TypeCheckOptional = 0x7B,
     TypeCheckTag = 0x7C,
     TypeCheckText = 0x7D,
     TypeCheckCustom = 0x7E,

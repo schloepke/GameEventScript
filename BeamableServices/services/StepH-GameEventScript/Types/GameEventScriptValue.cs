@@ -21,7 +21,6 @@ public enum GameEventScriptValueKind
     Integer,
     Boolean,
     Uuid,
-    Optional,
     Series,
     Range,
     Message,
@@ -59,7 +58,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsSeries() => Kind == GameEventScriptValueKind.Series;
     public bool IsList() => Kind == GameEventScriptValueKind.List;
     public bool IsMap() => Kind == GameEventScriptValueKind.Map;
-    public bool IsOptional() => Kind == GameEventScriptValueKind.Optional;
     public bool IsSet() => Kind == GameEventScriptValueKind.Set;
     public bool IsDice() => Kind == GameEventScriptValueKind.Dice;
     public bool IsRange() => Kind == GameEventScriptValueKind.Range;
@@ -81,8 +79,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public int CompareTo(GameEventScriptValue? other) => other is null ? 1 : StableComparer.Compare(this, other);
 
-    public virtual GameEventScriptOptionalValue AsOptional() => GameEventScriptOptionalValue.Create(this);
-
     public virtual IReadOnlyList<GameEventScriptValue> AsList() => [];
 
     public virtual IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => GameEventScriptMapValue.EmptyView;
@@ -95,12 +91,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual bool IsSemanticallyEmpty() => false;
 
-    public virtual bool TryUnwrapOptional(out GameEventScriptValue unwrapped)
-    {
-        unwrapped = this;
-        return true;
-    }
-
     public GameEventScriptValue Lookup(GameEventScriptValue selector)
     {
         if (IsNothing() || selector.IsNothing())
@@ -108,18 +98,13 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (!selector.TryUnwrapOptional(out var lookup))
-        {
-            return GameEventScriptValueFactory.GesOptionalNone();
-        }
-
-        var key = lookup.AsText();
+        var key = selector.AsText();
         if (!string.IsNullOrEmpty(key) && TryGetMapMember(key, out var value))
         {
             return value;
         }
 
-        return LookupCore(lookup);
+        return LookupCore(selector);
     }
 
     public virtual bool Contains(GameEventScriptValue needle) => false;
@@ -217,7 +202,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Integer => ":Integer",
             GameEventScriptValueKind.Boolean => ":Boolean",
             GameEventScriptValueKind.Uuid => ":Uuid",
-            GameEventScriptValueKind.Optional => ":Optional",
             GameEventScriptValueKind.Series => ":Series",
             GameEventScriptValueKind.Range => ":Range",
             GameEventScriptValueKind.Message => ":Message",
@@ -245,7 +229,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Integer => FormatIntegerValue((GameEventScriptIntegerValue)this),
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
             GameEventScriptValueKind.Uuid => AsText(),
-            GameEventScriptValueKind.Optional => AsOptional().HasValue ? AsOptional().Value.ToString() : "Optional.None",
             GameEventScriptValueKind.Series => $"series[{((GameEventScriptSeriesValue)this).SignatureId} offset {((GameEventScriptSeriesValue)this).Offset}]",
             GameEventScriptValueKind.Range => $"range[{((GameEventScriptRangeValue)this).From} to {((GameEventScriptRangeValue)this).To} step {((GameEventScriptRangeValue)this).Step}]",
             GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.ToString(),
@@ -300,7 +283,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
             GameEventScriptValueKind.Uuid => ((GameEventScriptUuidValue)this).High == ((GameEventScriptUuidValue)other).High &&
                                              ((GameEventScriptUuidValue)this).Low == ((GameEventScriptUuidValue)other).Low,
-            GameEventScriptValueKind.Optional => EqualsOptional(AsOptional(), other.AsOptional()),
             GameEventScriptValueKind.Series => ((GameEventScriptSeriesValue)this).SignatureId == ((GameEventScriptSeriesValue)other).SignatureId &&
                                                ((GameEventScriptSeriesValue)this).Offset == ((GameEventScriptSeriesValue)other).Offset,
             GameEventScriptValueKind.Range => ((GameEventScriptRangeValue)this).From == ((GameEventScriptRangeValue)other).From &&
@@ -372,13 +354,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 hash.Add(((GameEventScriptPointValue)this).Z);
                 hash.Add(((GameEventScriptPointValue)this).Unit);
                 break;
-            case GameEventScriptValueKind.Optional:
-            {
-                var optional = AsOptional();
-                hash.Add(optional.HasValue);
-                if (optional.HasValue) hash.Add(optional.Value);
-                break;
-            }
             case GameEventScriptValueKind.Series:
             {
                 var series = (GameEventScriptSeriesValue)this;
@@ -456,16 +431,15 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Point => 5,
             GameEventScriptValueKind.Boolean => 6,
             GameEventScriptValueKind.Uuid => 7,
-            GameEventScriptValueKind.Optional => 8,
-            GameEventScriptValueKind.Series => 9,
-            GameEventScriptValueKind.Range => 10,
-            GameEventScriptValueKind.Message => 11,
-            GameEventScriptValueKind.Handler => 12,
-            GameEventScriptValueKind.List => 13,
-            GameEventScriptValueKind.Map => 14,
-            GameEventScriptValueKind.Set => 15,
-            GameEventScriptValueKind.Dice => 16,
-            GameEventScriptValueKind.Ref => 17,
+            GameEventScriptValueKind.Series => 8,
+            GameEventScriptValueKind.Range => 9,
+            GameEventScriptValueKind.Message => 10,
+            GameEventScriptValueKind.Handler => 11,
+            GameEventScriptValueKind.List => 12,
+            GameEventScriptValueKind.Map => 13,
+            GameEventScriptValueKind.Set => 14,
+            GameEventScriptValueKind.Dice => 15,
+            GameEventScriptValueKind.Ref => 16,
             _ => 8
         };
     }
@@ -654,7 +628,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Point => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
                 GameEventScriptValueKind.Uuid => CompareUuid((GameEventScriptUuidValue)left, (GameEventScriptUuidValue)right),
-                GameEventScriptValueKind.Optional => CompareOptional(left.AsOptional(), right.AsOptional()),
                 GameEventScriptValueKind.Series => CompareSeries((GameEventScriptSeriesValue)left, (GameEventScriptSeriesValue)right),
                 GameEventScriptValueKind.Range => CompareRange((GameEventScriptRangeValue)left, (GameEventScriptRangeValue)right),
                 GameEventScriptValueKind.Message => CompareMessage((GameEventScriptMessageValue)left, (GameEventScriptMessageValue)right),
@@ -666,14 +639,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Dice => CompareDice(left.AsDice(), right.AsDice()),
                 _ => left.Kind.CompareTo(right.Kind)
             };
-        }
-
-        private static int CompareOptional(GameEventScriptOptionalValue left, GameEventScriptOptionalValue right)
-        {
-            if (!left.HasValue && !right.HasValue) return 0;
-            if (!left.HasValue) return -1;
-            if (!right.HasValue) return 1;
-            return StableComparer.Compare(left.Value, right.Value);
         }
 
         private static int CompareDice(GameEventScriptDiceValue left, GameEventScriptDiceValue right)
@@ -775,8 +740,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         value = default!;
         return false;
     }
-
-    private static bool EqualsOptional(GameEventScriptOptionalValue left, GameEventScriptOptionalValue right) => left.HasValue == right.HasValue && (!left.HasValue || left.Value.Equals(right.Value));
 
     private static bool EqualsDictionary(IReadOnlyDictionary<string, GameEventScriptValue> left, IReadOnlyDictionary<string, GameEventScriptValue> right)
     {

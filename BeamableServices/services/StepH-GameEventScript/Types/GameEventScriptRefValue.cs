@@ -98,22 +98,17 @@ public sealed class GameEventScriptRefValue : GameEventScriptValue
     private static GameEventScriptValue NormalizeIdValue(GameEventScriptValue id)
     {
         id ??= GameEventScriptNothingValue.Instance;
-        if (!id.TryUnwrapOptional(out var unwrapped))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (unwrapped.IsNothing())
+        if (id.IsNothing())
         {
             throw new ArgumentException("Ref id must not be nothing.", nameof(id));
         }
 
-        if (unwrapped.IsUuid())
+        if (id.IsUuid())
         {
-            return unwrapped;
+            return id;
         }
 
-        var text = unwrapped.AsText().Trim();
+        var text = id.AsText().Trim();
         if (text.Length == 0)
         {
             throw new ArgumentException("Ref id must not be empty.", nameof(id));

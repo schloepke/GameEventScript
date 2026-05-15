@@ -352,19 +352,13 @@ internal static class GesStandardExtensions
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-            {
-                number = GesValueOperations.NumericValue.NaN();
-                return true;
-            }
-
-            if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out var unit) && unit != GameEventScriptNumericUnit.Degree)
+            if (GameEventScriptValue.TryGetNumericUnit(value, out var unit) && unit != GameEventScriptNumericUnit.Degree)
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;
             }
 
-            return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
+            return GesValueOperations.TryCoerceNumericForOperation(value, out number);
         }
 
         if (input.Unit.HasValue && input.Unit.Value != GameEventScriptNumericUnit.Degree)
@@ -381,19 +375,13 @@ internal static class GesStandardExtensions
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-            {
-                number = GesValueOperations.NumericValue.NaN();
-                return true;
-            }
-
-            if (GameEventScriptValue.TryGetNumericUnit(unwrapped, out _))
+            if (GameEventScriptValue.TryGetNumericUnit(value, out _))
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;
             }
 
-            return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
+            return GesValueOperations.TryCoerceNumericForOperation(value, out number);
         }
 
         if (input.Unit.HasValue)
@@ -410,13 +398,7 @@ internal static class GesStandardExtensions
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (!GesValueOperations.TryUnwrapOptionalForOperation(value, out var unwrapped))
-            {
-                number = GesValueOperations.NumericValue.NaN();
-                return true;
-            }
-
-            return GesValueOperations.TryCoerceNumericForOperation(unwrapped, out number);
+            return GesValueOperations.TryCoerceNumericForOperation(value, out number);
         }
 
         switch (input.Kind)

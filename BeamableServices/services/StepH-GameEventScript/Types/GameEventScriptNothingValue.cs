@@ -24,8 +24,6 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     public override double AsNumber() => 0d;
 
-    public override GameEventScriptOptionalValue AsOptional() => GameEventScriptOptionalValue.None;
-
     public override IReadOnlyList<GameEventScriptValue> AsList() => [];
 
     public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => GameEventScriptMapValue.EmptyView;

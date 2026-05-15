@@ -366,6 +366,28 @@
     },
     {
       "kind": "compileError",
+      "name": "optional cast is rejected",
+      "script": "on Start(value) {\n  let invalid be value as :optional\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "optional",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "optional type check is rejected",
+      "script": "on Start(value) {\n  let invalid be value is :optional\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "optional",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "undeliverable endpoint rejects normal parameter syntax",
       "script": "on undeliverable(message as :message) {\n}",
       "expectedError": {

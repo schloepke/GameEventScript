@@ -837,7 +837,6 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CastMap or
             GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
-            GameEventScriptBytecodeOpCode.CastOptional or
             GameEventScriptBytecodeOpCode.CastCustom;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
@@ -854,7 +853,6 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.TypeCheckInteger or
             GameEventScriptBytecodeOpCode.TypeCheckBoolean or
             GameEventScriptBytecodeOpCode.TypeCheckUuid or
-            GameEventScriptBytecodeOpCode.TypeCheckOptional or
             GameEventScriptBytecodeOpCode.TypeCheckSeries or
             GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
             GameEventScriptBytecodeOpCode.TypeCheckList or

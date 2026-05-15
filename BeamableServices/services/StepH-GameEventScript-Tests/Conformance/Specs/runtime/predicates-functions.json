@@ -116,6 +116,33 @@
     },
     {
       "kind": "scriptApi",
+      "name": "is operations support inline negation",
+      "script": "predicate high(_ value) means value > 3\n\non Start(value) {\n  emit Done(byWord: value is not high, byBang: value is !high, byType: value is not :text, byEmpty: value is not empty, byCompare: value is not 3 or less)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":integer", "value": "2" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "byWord": { "type": ":boolean", "value": true },
+                "byBang": { "type": ":boolean", "value": true },
+                "byType": { "type": ":boolean", "value": true },
+                "byEmpty": { "type": ":boolean", "value": true },
+                "byCompare": { "type": ":boolean", "value": false }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "predicates accept typed boolean record fields",
       "script": "record :unit as {\n  alive: :boolean,\n  hidden: :boolean\n}\n\npredicate targetable(_ unit as :unit) means unit.alive and not unit.hidden\n\non Start(unit) {\n  emit Done(targetable: unit is targetable)\n}",
       "steps": [

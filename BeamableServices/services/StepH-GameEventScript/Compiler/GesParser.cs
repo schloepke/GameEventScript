@@ -125,6 +125,11 @@ internal sealed class GesParser
     private T WithRange<T>(T node, ScriptNode? first, ScriptNode? last = null) where T : ScriptNode
         => node with { SourceRange = MergeRanges(first, last) };
 
+    private ExpressionNode ApplyIsNegation(ExpressionNode expression, bool negated)
+        => negated
+            ? WithRange(new UnaryExpressionNode(GesUnaryOperator.Not, expression), expression)
+            : expression;
+
     private ParsedScript ParseScript()
     {
         var typeDefinitions = new List<TypeDefinitionNode>();
@@ -1046,23 +1051,29 @@ internal sealed class GesParser
             if (Match(GesTokenKind.Is))
             {
                 SkipNewLines();
+                var negated = Match(OperatorNot);
+                if (negated)
+                {
+                    SkipNewLines();
+                }
+
                 if (IsExtensionCallStart())
                 {
                     var (extensionName, functionName, _) = ParseExtensionSymbol();
-                    expression = WithRange(new ExtensionPredicateExpressionNode(expression, extensionName, functionName), expression);
+                    expression = ApplyIsNegation(WithRange(new ExtensionPredicateExpressionNode(expression, extensionName, functionName), expression), negated);
                     continue;
                 }
 
                 if (Is(Tag))
                 {
                     var typeName = ParseTypeName();
-                    expression = WithRange(new TypeCheckExpressionNode(expression, typeName), expression);
+                    expression = ApplyIsNegation(WithRange(new TypeCheckExpressionNode(expression, typeName), expression), negated);
                     continue;
                 }
 
                 if (Match(Empty))
                 {
-                    expression = WithRange(new UnaryExpressionNode(GesUnaryOperator.Empty, expression), expression);
+                    expression = ApplyIsNegation(WithRange(new UnaryExpressionNode(GesUnaryOperator.Empty, expression), expression), negated);
                     continue;
                 }
 
@@ -1073,7 +1084,7 @@ internal sealed class GesParser
                     {
                         SkipNewLines();
                         var right = ParseRelationalComparisonOperand();
-                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, right), expression, right);
+                        expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, right), expression, right), negated);
                         continue;
                     }
 
@@ -1081,7 +1092,7 @@ internal sealed class GesParser
                     {
                         SkipNewLines();
                         var right = ParseRelationalComparisonOperand();
-                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.LessOrEqual, right), expression, right);
+                        expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.LessOrEqual, right), expression, right), negated);
                         continue;
                     }
 
@@ -1092,7 +1103,7 @@ internal sealed class GesParser
                 if (Current.Kind == Identifier)
                 {
                     var predicateName = Advance().Text;
-                    expression = WithRange(new PredicateCallExpressionNode(expression, predicateName), expression);
+                    expression = ApplyIsNegation(WithRange(new PredicateCallExpressionNode(expression, predicateName), expression), negated);
                     continue;
                 }
 
@@ -1103,13 +1114,13 @@ internal sealed class GesParser
                     SkipNewLines();
                     if (MatchWord("less"))
                     {
-                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.LessOrEqual, threshold), expression, threshold);
+                        expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.LessOrEqual, threshold), expression, threshold), negated);
                         continue;
                     }
 
                     if (MatchWord("more") || MatchWord("greater"))
                     {
-                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, threshold), expression, threshold);
+                        expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, threshold), expression, threshold), negated);
                         continue;
                     }
 
@@ -1117,7 +1128,7 @@ internal sealed class GesParser
                     throw new GameEventScriptParseException($"Expected less, more or greater but found {token.Text}", token.Line, token.Column);
                 }
 
-                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Equal, threshold), expression, threshold);
+                expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Equal, threshold), expression, threshold), negated);
                 continue;
             }
 

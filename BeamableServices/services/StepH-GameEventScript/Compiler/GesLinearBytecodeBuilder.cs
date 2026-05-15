@@ -60,9 +60,10 @@ internal sealed class GesLinearBytecodeBuilder
         {
             handler.EntryAddress = _code.Count;
             var reserveSlotsAddress = EmitReserveSlots(0);
+            var initialSlotCount = handler.Parameters.Count;
             _currentFrameSlotCount = GetSlotCount(handler.Slots);
             _maxFrameSlots = Math.Max(_maxFrameSlots, _currentFrameSlotCount);
-            EmitParameterBindings(handler.Parameters, handler.ParameterTypes, handler.Slots);
+            EmitParameterCasts(handler.Parameters, handler.ParameterTypes, handler.Slots);
             if (sourceHandlers.TryGetValue(handler, out var sourceHandler))
             {
                 EmitSourceStatements(sourceHandler.Statements, createsScope: false, new SourceContext(handler.Slots));
@@ -73,11 +74,11 @@ internal sealed class GesLinearBytecodeBuilder
                     $"GameEventScript linear bytecode builder requires source statements for handler '{FormatSignature(handler.Message, handler.SignatureLabels)}'.");
             }
 
-            Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
+            EmitReturnVoid();
             var handlerSlotCount = _currentFrameSlotCount;
             PatchDeferredRootScopes(handlerSlotCount);
             FlushDeferredHelpers();
-            PatchReserveSlots(reserveSlotsAddress, handlerSlotCount);
+            PatchReserveSlots(reserveSlotsAddress, handlerSlotCount - initialSlotCount);
             _maxFrameSlots = Math.Max(_maxFrameSlots, handlerSlotCount);
         }
     }
@@ -147,6 +148,7 @@ internal sealed class GesLinearBytecodeBuilder
         var context = new SourceContext(slots);
         callable.EntryAddress = _code.Count;
         var reserveSlotsAddress = EmitReserveSlots(0);
+        var initialSlotCount = callable.Parameters.Count;
         var callableSlotCount = Math.Max(callable.Parameters.Count + 1, context.SlotCount);
         _currentFrameSlotCount = callableSlotCount;
         _maxFrameSlots = Math.Max(_maxFrameSlots, callableSlotCount);
@@ -163,11 +165,11 @@ internal sealed class GesLinearBytecodeBuilder
         var state = new ExpressionState(context.SlotCount);
         var result = EmitSourceExpression(sourceCallable.Expression, context, state);
         callable.ReturnSlot = result;
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: result));
+        EmitReturnValue(result);
         callableSlotCount = Math.Max(callableSlotCount, _currentFrameSlotCount);
         PatchDeferredRootScopes(callableSlotCount);
         FlushDeferredHelpers();
-        PatchReserveSlots(reserveSlotsAddress, callableSlotCount);
+        PatchReserveSlots(reserveSlotsAddress, callableSlotCount - initialSlotCount);
         _maxFrameSlots = Math.Max(_maxFrameSlots, callableSlotCount);
     }
 
@@ -215,16 +217,21 @@ internal sealed class GesLinearBytecodeBuilder
     private int EmitSourceExpressionEntry(ExpressionNode expression, SourceContext context)
         => EmitSourceExpressionEntry(expression, context, new ExpressionState(context.SlotCount));
 
-    private int EmitSourceExpressionEntry(ExpressionNode expression, SourceContext context, ExpressionState state)
+    private int EmitSourceExpressionEntry(
+        ExpressionNode expression,
+        SourceContext context,
+        ExpressionState state,
+        int? initialSlotCount = null)
     {
         var entry = _code.Count;
         var reserveSlotsAddress = EmitReserveSlots(0);
+        var initialSlots = initialSlotCount ?? context.SlotCount;
         var result = EmitSourceExpression(expression, context, state);
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: result));
+        EmitReturnValue(result);
         PatchDeferredRootScopes(state.NextSlot);
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - initialSlots);
         return entry;
     }
 
@@ -233,7 +240,7 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int BeginScope(int activeSlotCount)
     {
-        var address = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.EnterScope));
+        var address = EmitReserveSlots(0);
         _scopeBuildStates.Push(new ScopeBuildState(address, activeSlotCount, isRootScope: _scopeBuildStates.Count == 0));
         return address;
     }
@@ -247,6 +254,8 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var scope = _scopeBuildStates.Pop();
+        var exitAddress = EmitReleaseSlots(0);
+        scope.SetExitAddress(exitAddress);
         if (scope.IsRootScope)
         {
             _deferredRootScopePatches.Add(scope);
@@ -255,8 +264,6 @@ internal sealed class GesLinearBytecodeBuilder
         {
             PatchScope(scope, scope.BaseSlotCount);
         }
-
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ExitScope));
     }
 
     private void PatchDeferredRootScopes(int rootSlotCount)
@@ -272,7 +279,15 @@ internal sealed class GesLinearBytecodeBuilder
     private void PatchScope(ScopeBuildState scope, int activeSlotCount)
     {
         var localSlotCount = Math.Max(0, scope.MaxSlotCount - activeSlotCount);
-        PatchA(scope.Address, localSlotCount);
+        if (localSlotCount == 0)
+        {
+            _code[scope.Address] = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Nop);
+            _code[scope.ExitAddress] = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Nop);
+            return;
+        }
+
+        _code[scope.Address] = CreateInstruction(GameEventScriptBytecodeOpCode.ReserveSlots, a: localSlotCount);
+        _code[scope.ExitAddress] = CreateInstruction(GameEventScriptBytecodeOpCode.ReleaseSlots, a: localSlotCount);
     }
 
     private int AllocateScopedLocalSlot()
@@ -305,11 +320,14 @@ internal sealed class GesLinearBytecodeBuilder
 
         _code[address] = _code[address] with
         {
-            A_U16 = ToUShortOperand(Math.Max(1, count), "entry frame slot count")
+            A_U16 = ToUShortOperand(Math.Max(0, count), "local slot reserve count")
         };
     }
 
-    private void EmitParameterBindings(
+    private int EmitReleaseSlots(int count)
+        => Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReleaseSlots, a: count));
+
+    private void EmitParameterCasts(
         IReadOnlyList<string> parameters,
         IReadOnlyList<string?> parameterTypes,
         IReadOnlyDictionary<string, int> slots)
@@ -321,11 +339,40 @@ internal sealed class GesLinearBytecodeBuilder
                 continue;
             }
 
-            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.BindParameter, dest: slot, a: index));
             if (index < parameterTypes.Count && !string.IsNullOrEmpty(parameterTypes[index]))
             {
                 EmitCastSlot(slot, slot, parameterTypes[index]);
             }
+        }
+    }
+
+    private void EmitReturnVoid()
+    {
+        RemoveTrailingReleaseSlots();
+        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
+    }
+
+    private void EmitReturnValue(int slot)
+    {
+        RemoveTrailingReleaseSlots();
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: slot));
+    }
+
+    private void RemoveTrailingReleaseSlots()
+    {
+        for (var index = _code.Count - 1; index >= 0; index--)
+        {
+            if (_code[index].OpCode == GameEventScriptBytecodeOpCode.Nop)
+            {
+                continue;
+            }
+
+            if (_code[index].OpCode != GameEventScriptBytecodeOpCode.ReleaseSlots)
+            {
+                break;
+            }
+
+            _code[index] = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.Nop);
         }
     }
 
@@ -1313,8 +1360,7 @@ internal sealed class GesLinearBytecodeBuilder
         EmitStageArgument(argument);
         instructionAddress = Emit(CreateInstruction(
             GameEventScriptBytecodeOpCode.CallPredicate,
-            dest: destinationSlot,
-            b: 1));
+            dest: destinationSlot));
         _deferredCallableAddressPatches.Add((instructionAddress, callable.Name));
         return true;
     }
@@ -1412,8 +1458,7 @@ internal sealed class GesLinearBytecodeBuilder
             : GameEventScriptBytecodeOpCode.Call;
         instructionAddress = Emit(CreateInstruction(
             opCode,
-            dest: destinationSlot,
-            b: arguments.Length));
+            dest: destinationSlot));
         _deferredCallableAddressPatches.Add((instructionAddress, called.Name));
         return true;
     }
@@ -1573,12 +1618,12 @@ internal sealed class GesLinearBytecodeBuilder
         var reserveSlotsAddress = EmitReserveSlots(0);
         var predicateSlot = EmitSourceExpression(predicate, context, state);
         var skipYield = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: predicateSlot));
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: itemSlot));
+        EmitReturnValue(itemSlot);
         PatchTarget(skipYield, _code.Count);
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
+        EmitReturnVoid();
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, state.NextSlot);
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - context.SlotCount);
         return entry;
     }
 
@@ -1789,7 +1834,7 @@ internal sealed class GesLinearBytecodeBuilder
         _deferredHelperEmitters.Add(() =>
         {
             var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot);
-            var entryAddress = EmitSourceExpressionEntry(expression, context, helperState);
+            var entryAddress = EmitSourceExpressionEntry(expression, context, helperState, helperState.BaseSlot);
             PatchC(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -1815,14 +1860,16 @@ internal sealed class GesLinearBytecodeBuilder
             var keyEntryAddress = EmitSourceExpressionEntry(
                 keyProjection,
                 context,
-                CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot));
+                CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot),
+                helperBaseSlot);
             PatchC(instructionAddress, keyEntryAddress);
             if (valueProjection is not null)
             {
                 var valueEntryAddress = EmitSourceExpressionEntry(
                     valueProjection,
                     context,
-                    CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot));
+                    CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot),
+                    helperBaseSlot);
                 PatchD(instructionAddress, valueEntryAddress);
             }
         });
@@ -1903,7 +1950,7 @@ internal sealed class GesLinearBytecodeBuilder
         _deferredHelperEmitters.Add(() =>
         {
             var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot);
-            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, context, helperState);
+            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, context, helperState, helperState.BaseSlot);
             PatchD(instructionAddress, entryAddress);
         });
         return resultSlot;
@@ -2011,8 +2058,8 @@ internal sealed class GesLinearBytecodeBuilder
         var entry = _code.Count;
         var reserveSlotsAddress = EmitReserveSlots(0);
         var sumSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, itemSlot);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: sumSlot));
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        EmitReturnValue(sumSlot);
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - state.BaseSlot);
         return entry;
     }
 
@@ -2022,8 +2069,8 @@ internal sealed class GesLinearBytecodeBuilder
         var reserveSlotsAddress = EmitReserveSlots(0);
         var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
         var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IntAdd, accumulatorSlot, oneSlot);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: nextCountSlot));
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        EmitReturnValue(nextCountSlot);
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - state.BaseSlot);
         return entry;
     }
 
@@ -2035,8 +2082,8 @@ internal sealed class GesLinearBytecodeBuilder
         var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IntAdd, countSlot, oneSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: countSlot, a: nextCountSlot));
         var sumSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, itemSlot);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: sumSlot));
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        EmitReturnValue(sumSlot);
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - state.BaseSlot);
         return entry;
     }
 
@@ -2070,10 +2117,10 @@ internal sealed class GesLinearBytecodeBuilder
             currentProjectionSlot,
             accumulatorProjectionSlot);
         var keepAccumulatorJump = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: comparisonSlot));
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: currentItemSlot));
+        EmitReturnValue(currentItemSlot);
         PatchTarget(keepAccumulatorJump, _code.Count);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: accumulatorSlot));
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        EmitReturnValue(accumulatorSlot);
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - state.BaseSlot);
         return entry;
     }
 
@@ -2099,7 +2146,7 @@ internal sealed class GesLinearBytecodeBuilder
                     _deferredHelperEmitters.Add(() =>
                     {
                         var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot);
-                        var entryAddress = EmitSourceExpressionEntry(count.Face, context, helperState);
+                        var entryAddress = EmitSourceExpressionEntry(count.Face, context, helperState, helperState.BaseSlot);
                         PatchC(instructionAddress, entryAddress);
                     });
                 }
@@ -2157,10 +2204,10 @@ internal sealed class GesLinearBytecodeBuilder
         var reserveSlotsAddress = EmitReserveSlots(0);
         var matchSlot = EmitObjectPatternPredicate(itemSlot, pattern, context, state);
         var skipYield = Emit(CreateInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, c: matchSlot));
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ReturnValue, a: matchSlot));
+        EmitReturnValue(matchSlot);
         PatchTarget(skipYield, _code.Count);
-        Emit(new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.ReturnVoid));
-        PatchReserveSlots(reserveSlotsAddress, state.NextSlot);
+        EmitReturnVoid();
+        PatchReserveSlots(reserveSlotsAddress, state.NextSlot - context.SlotCount);
         return entry;
     }
 
@@ -3427,9 +3474,14 @@ internal sealed class GesLinearBytecodeBuilder
     {
         public int Address { get; } = address;
 
+        public int ExitAddress { get; private set; } = -1;
+
         public int BaseSlotCount { get; } = baseSlotCount;
 
         public bool IsRootScope { get; } = isRootScope;
+
+        public void SetExitAddress(int exitAddress)
+            => ExitAddress = exitAddress;
 
         private int NextLocalSlot { get; set; } = baseSlotCount;
 

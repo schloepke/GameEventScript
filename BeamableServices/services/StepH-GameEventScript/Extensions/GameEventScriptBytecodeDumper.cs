@@ -169,7 +169,10 @@ public static class GameEventScriptBytecodeDumper
         }
     }
 
-    private static void AppendLinearInstructionOperands(StringBuilder builder, GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
+    private static void AppendLinearInstructionOperands(
+        StringBuilder builder,
+        GameEventScriptCompiled module,
+        GameEventScriptBytecodeInstruction instruction)
     {
         if (HasDestination(instruction.OpCode))
         {
@@ -179,21 +182,16 @@ public static class GameEventScriptBytecodeDumper
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
-            case GameEventScriptBytecodeOpCode.ExitScope:
             case GameEventScriptBytecodeOpCode.ShortCircuitOr:
             case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
                 break;
 
-            case GameEventScriptBytecodeOpCode.EnterScope:
-                AppendIndex(builder, "locals", instruction.A_U16);
-                break;
-
             case GameEventScriptBytecodeOpCode.ReserveSlots:
-                AppendIndex(builder, "count", instruction.A_U16);
+                AppendIndex(builder, "locals+=", instruction.A_U16);
                 break;
 
-            case GameEventScriptBytecodeOpCode.BindParameter:
-                AppendIndex(builder, "parameter", instruction.A_U16);
+            case GameEventScriptBytecodeOpCode.ReleaseSlots:
+                AppendIndex(builder, "locals-=", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadNothing:
@@ -446,7 +444,6 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.CallPredicate:
                 AppendAddress(builder, "target", instruction.A_U16);
-                AppendIndex(builder, "args", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineIterator:
@@ -659,8 +656,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.JumpIfTrue or
             GameEventScriptBytecodeOpCode.JumpIfFalse or
             GameEventScriptBytecodeOpCode.JumpIfNotTrue or
-            GameEventScriptBytecodeOpCode.EnterScope or
-            GameEventScriptBytecodeOpCode.ExitScope or
+            GameEventScriptBytecodeOpCode.ReleaseSlots or
             GameEventScriptBytecodeOpCode.ReturnVoid or
             GameEventScriptBytecodeOpCode.ReturnValue or
             GameEventScriptBytecodeOpCode.EmitMessage or
@@ -684,6 +680,16 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.StageFloat or
             GameEventScriptBytecodeOpCode.StageText or
             GameEventScriptBytecodeOpCode.StageTag);
+
+    private static bool IsStageInstruction(GameEventScriptBytecodeOpCode opCode)
+        => opCode is GameEventScriptBytecodeOpCode.StageRegister or
+            GameEventScriptBytecodeOpCode.StageNothing or
+            GameEventScriptBytecodeOpCode.StageTrue or
+            GameEventScriptBytecodeOpCode.StageFalse or
+            GameEventScriptBytecodeOpCode.StageInteger or
+            GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StageText or
+            GameEventScriptBytecodeOpCode.StageTag;
 
     private static void AppendPoolIndex(StringBuilder builder, string name, IReadOnlyList<string> pool, int index)
     {

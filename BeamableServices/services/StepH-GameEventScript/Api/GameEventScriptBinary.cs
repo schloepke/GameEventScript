@@ -182,7 +182,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     LoadText = 0x06,
     LoadTag = 0x07,
     MoveSlot = 0x08,
-    BindParameter = 0x09,
     Jump = 0x0A,
     JumpIfTrue = 0x0B,
     JumpIfFalse = 0x0C,
@@ -363,8 +362,7 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     #region Scopes and message emit/publish operations
 
-    EnterScope = 0xA0,
-    ExitScope = 0xA1,
+    ReleaseSlots = 0xA1,
     EmitMessage = 0xA2,
     EmitMessageWithTags = 0xA3,
     PublishMessage = 0xA4,

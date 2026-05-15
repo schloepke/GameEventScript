@@ -154,6 +154,7 @@ internal sealed class GesBinaryVmRunState
         _message = message;
         _slots = new GesBinaryVmValue[Math.Max(1, frameSlotCount)];
         _pc = checked((int)handler.EntryAddress);
+        BindHandlerArguments();
     }
 
     public bool Run()
@@ -171,16 +172,7 @@ internal sealed class GesBinaryVmRunState
             {
                 case GameEventScriptBytecodeOpCode.Nop:
                 case GameEventScriptBytecodeOpCode.ReserveSlots:
-                case GameEventScriptBytecodeOpCode.EnterScope:
-                case GameEventScriptBytecodeOpCode.ExitScope:
-                    break;
-
-                case GameEventScriptBytecodeOpCode.BindParameter:
-                    if (!BindParameter(instruction))
-                    {
-                        return false;
-                    }
-
+                case GameEventScriptBytecodeOpCode.ReleaseSlots:
                     break;
 
                 case GameEventScriptBytecodeOpCode.MoveSlot:
@@ -319,22 +311,16 @@ internal sealed class GesBinaryVmRunState
         return true;
     }
 
-    private bool BindParameter(GameEventScriptBytecodeInstruction instruction)
+    private void BindHandlerArguments()
     {
-        var parameterIndex = instruction.A_U16;
-        if (parameterIndex >= _handler.ArgumentNames.Count)
+        for (var parameterIndex = 0; parameterIndex < _handler.ArgumentNames.Count && parameterIndex < _slots.Length; parameterIndex++)
         {
-            return false;
+            var name = _binary.TextConstantTable.Resolve(_handler.ArgumentNames[parameterIndex]);
+            if (_message.Arguments.TryGetValue(name, out var value))
+            {
+                Set(parameterIndex, GesBinaryVmValue.FromGameEventScriptValue(value));
+            }
         }
-
-        var name = _binary.TextConstantTable.Resolve(_handler.ArgumentNames[parameterIndex]);
-        if (!_message.Arguments.TryGetValue(name, out var value))
-        {
-            return false;
-        }
-
-        Set(instruction.Dest_U16, GesBinaryVmValue.FromGameEventScriptValue(value));
-        return true;
     }
 
     private bool PublishMessage(GameEventScriptBytecodeInstruction instruction, bool publish)

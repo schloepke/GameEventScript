@@ -261,20 +261,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
             IReadOnlyDictionary<string, GameEventScriptValue> args) : Frame
         {
             private int _stage;
-            private bool _enteredScope;
 
             public override FrameSignal Run(Fiber fiber)
             {
                 var session = fiber._session;
                 if (_stage == 0)
                 {
-                    session.EnterScope();
-                    _enteredScope = true;
+                    var arguments = LinearArgumentSource.ForHandler(handler, args);
+                    if (!session.TryInitializeLinearHandlerFrame(handler, arguments))
+                    {
+                        fiber.Complete(BytecodeVmValue.Nothing, success: false);
+                        return FrameSignal.Completed;
+                    }
+
                     _stage = 1;
                     fiber.Push(new LinearRangeFrame(
                         handler.EntryAddress,
                         session._compiledScript.LinearExecutable.Code.Count,
-                        LinearArgumentSource.ForHandler(handler, args)));
+                        arguments));
                     return FrameSignal.Running;
                 }
 
@@ -290,11 +294,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             public override void Exit(Fiber fiber)
             {
-                if (_enteredScope)
-                {
-                    fiber._session.ExitScope();
-                    _enteredScope = false;
-                }
             }
         }
     }

@@ -54,6 +54,34 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodePreloadsHandlerArgumentsAndReservesOnlyLocals()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start(value) {
+              emit Done(value: value)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var handler = compiled.Handlers["Start"][0];
+        var prolog = compiled.Code[handler.EntryAddress];
+
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, prolog.OpCode);
+        Assert.AreEqual((ushort)0, prolog.A_U16);
+        Assert.IsFalse(compiled.Code.Any(instruction => (byte)instruction.OpCode == 0x09), "BindParameter must not be emitted.");
+        Assert.IsFalse(compiled.Code.Any(instruction => (byte)instruction.OpCode == 0xA0), "EnterScope must not be emitted.");
+
+        var dump = compiled.DumpBytecode();
+        Assert.IsFalse(dump.Contains("BindParameter", StringComparison.Ordinal));
+        Assert.IsFalse(dump.Contains("EnterScope", StringComparison.Ordinal));
+        Assert.IsFalse(dump.Contains("ExitScope", StringComparison.Ordinal));
+        StringAssert.Contains(dump, "locals+=");
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeLowersImplicationWithBranchingTriStateShape()
     {
         const string script =
@@ -294,7 +322,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
         Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.A_U16);
-        Assert.AreEqual((ushort)2, predicateInstruction.B_U16);
+        Assert.AreEqual((ushort)0, predicateInstruction.B_U16);
 
         var predicateIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 2].OpCode);
@@ -318,7 +346,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var callInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
         Assert.AreEqual(compiled.Callables["add"].EntryAddress, callInstruction.A_U16);
-        Assert.AreEqual((ushort)2, callInstruction.B_U16);
+        Assert.AreEqual((ushort)0, callInstruction.B_U16);
 
         var callIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageInteger, compiled.Code[callIndex - 2].OpCode);
@@ -428,7 +456,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var helperEntry = selector.B_U16;
 
         Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, compiled.Code[helperEntry].OpCode);
-        Assert.AreEqual(2, compiled.Code[helperEntry].A_U16);
+        Assert.AreEqual(1, compiled.Code[helperEntry].A_U16);
     }
 
     [TestMethod]

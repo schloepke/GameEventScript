@@ -19,16 +19,26 @@ public sealed class BytecodeExecutorTests
             """
             module BinaryExecutor
 
-            predicate high(_ value) means value > 3
+            predicate high(_ value) means value > 40
+            predicate low(_ value) means value <= 40
+            
+            function divide(_ dividend, _ divisor) means dividend / divisor
             
             on Start(value) {
-              let plusTwo be value + 2
-              let isTrue be high(value)
-              for x from 1 to 10 {
-                let y be x * 2
-                let z be y² + 3
-              }
-              let byThree be value * 3
+                let short be value is high and value is low
+                let x be value + 2
+                if value is high {
+                    publish Done(total: x)
+                }
+                let y be x * 4
+                let z be divide(divide(y, 2), 2)
+                if value is low {
+                    publish Done(total: z)                
+                }
+                for x from 1 to 10 {
+                    let aa be x * 2
+                    let bb be y² + 3
+                }
             }
             """;
 
@@ -50,12 +60,12 @@ public sealed class BytecodeExecutorTests
         TestContext.WriteLine("-----");
         
         var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);
-        //var handled = runner.ExecuteMessage(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(40))), context);
+        var handled = runner.ExecuteMessage(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(40))), context);
 
-        //Assert.IsTrue(handled);
-        //Assert.HasCount(1, published);
-        //Assert.AreEqual("Done", published[0].Name);
-        //Assert.AreEqual(GameEventScriptValueFactory.GesInteger(42), published[0].Arguments["total"]);
+        Assert.IsTrue(handled);
+        Assert.HasCount(1, published);
+        Assert.AreEqual("Done", published[0].Name);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(42), published[0].Arguments["total"]);
     }
     
 }

@@ -66,7 +66,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var frameSlotCount = Math.Max(localSlotCount, compiledScript.LinearExecutable.MaxFrameSlots);
         _locals = new BytecodeVmValue[frameSlotCount];
         _assignedSlots = new bool[frameSlotCount];
-        _activeLocalSlotCount = Math.Max(1, localSlotCount);
+        _activeLocalSlotCount = Math.Max(0, localSlotCount);
         _randomScopes.Push(context.Random);
     }
 
@@ -200,20 +200,37 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryInvokeLinearHandler(GesBytecodeVmCompiledHandler handler, IReadOnlyDictionary<string, GameEventScriptValue> args)
     {
-        EnterScope();
-        try
+        var arguments = LinearArgumentSource.ForHandler(handler, args);
+        return TryInitializeLinearHandlerFrame(handler, arguments) &&
+               TryExecuteLinearRange(
+                   handler.EntryAddress,
+                   _compiledScript.LinearExecutable.Code.Count,
+                   arguments,
+                   out _,
+                   out _);
+    }
+
+    private bool TryInitializeLinearHandlerFrame(
+        GesBytecodeVmCompiledHandler handler,
+        LinearArgumentSource arguments)
+    {
+        var argumentSlotCount = handler.Parameters.Count;
+        EnsureLocalCapacity(argumentSlotCount);
+        _activeLocalSlotCount = argumentSlotCount;
+        _trackedLocalSlotCount = argumentSlotCount;
+
+        for (var index = 0; index < handler.Parameters.Count; index++)
         {
-            return TryExecuteLinearRange(
-                handler.EntryAddress,
-                _compiledScript.LinearExecutable.Code.Count,
-                LinearArgumentSource.ForHandler(handler, args),
-                out _,
-                out _);
+            if (!arguments.TryGetValue(index, out var parameterValue) ||
+                !DefineSlot(index, parameterValue))
+            {
+                return false;
+            }
+
+            RecordLinearParameterInitialized(arguments, index, index);
         }
-        finally
-        {
-            ExitScope();
-        }
+
+        return true;
     }
 
     private bool TryExecuteLinearRange(
@@ -331,29 +348,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
+                pc++;
+                return true;
+
             case GameEventScriptBytecodeOpCode.ReserveSlots:
+                EnterLinearScope(instruction.A_U16);
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.EnterScope:
-                EnterScope(instruction.A_U16);
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.ExitScope:
-                ExitScope();
-                pc++;
-                return true;
-
-            case GameEventScriptBytecodeOpCode.BindParameter:
-                if (arguments is null ||
-                    !arguments.TryGetValue(instruction.A_U16, out var parameterValue) ||
-                    !DefineSlot(instruction.Dest_U16, parameterValue))
-                {
-                    return false;
-                }
-
-                RecordLinearParameterBoundFromBind(arguments, instruction.A_U16, instruction.Dest_U16);
+            case GameEventScriptBytecodeOpCode.ReleaseSlots:
+                ExitLinearScope(instruction.A_U16);
                 pc++;
                 return true;
 
@@ -688,12 +692,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var frame = callFrames[^1];
         callFrames.RemoveAt(callFrames.Count - 1);
-        ExitScope();
         _locals = frame.Locals;
         _assignedSlots = frame.AssignedSlots;
         _activeLocalSlotCount = frame.ActiveLocalSlotCount;
         _changes = frame.Changes;
         _scopeMarks = frame.ScopeMarks;
+        _trackedLocalSlotCount = frame.TrackedLocalSlotCount;
         arguments = frame.Arguments;
         stagedArguments = null;
         endAddress = frame.EndAddress;
@@ -732,8 +736,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
         nextPc = returnAddress;
 
         var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate;
-        var argumentCount = instruction.B_U16;
-        if ((stagedArguments?.Count ?? 0) != argumentCount)
+        var argumentCount = stagedArguments?.Count ?? 0;
+        if (!_compiledScript.LinearExecutable.CallablesByEntryAddress.TryGetValue(instruction.A_U16, out var callable) ||
+            callable.Parameters.Count != argumentCount)
         {
             return false;
         }
@@ -779,16 +784,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             callInstructionAddress,
             normalizePredicateResult));
 
-        var nextFrameSlotCount = GetLinearEntrySlotCount(instruction.A_U16);
-        if (argumentValues.Length > nextFrameSlotCount)
-        {
-            return false;
-        }
-
-        _locals = new BytecodeVmValue[nextFrameSlotCount];
-        _assignedSlots = new bool[nextFrameSlotCount];
-        _activeLocalSlotCount = nextFrameSlotCount;
-        for (var argumentIndex = 0; argumentIndex < argumentValues.Length && argumentIndex < nextFrameSlotCount; argumentIndex++)
+        var reserveSlotCount = GetLinearEntryReserveSlotCount(instruction.A_U16);
+        var nextFrameSlotCapacity = Math.Max(argumentCount + reserveSlotCount, _compiledScript.LinearExecutable.MaxFrameSlots);
+        _locals = new BytecodeVmValue[nextFrameSlotCapacity];
+        _assignedSlots = new bool[nextFrameSlotCapacity];
+        _activeLocalSlotCount = argumentCount;
+        for (var argumentIndex = 0; argumentIndex < argumentValues.Length; argumentIndex++)
         {
             _locals[argumentIndex] = argumentValues[argumentIndex];
             _assignedSlots[argumentIndex] = true;
@@ -796,25 +797,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         _changes = [];
         _scopeMarks = [];
-        _trackedLocalSlotCount = nextFrameSlotCount;
+        _trackedLocalSlotCount = argumentCount;
         nextArguments = callArgumentSource;
         nextEndAddress = _compiledScript.LinearExecutable.Code.Count;
         nextPc = instruction.A_U16;
-        EnterScope();
         return true;
     }
 
-    private int GetLinearEntrySlotCount(int entryAddress)
+    private int GetLinearEntryReserveSlotCount(int entryAddress)
     {
         var code = _compiledScript.LinearExecutable.Code;
         if ((uint)entryAddress < (uint)code.Count &&
-            code[entryAddress].OpCode == GameEventScriptBytecodeOpCode.ReserveSlots &&
-            code[entryAddress].A_U16 > 0)
+            code[entryAddress].OpCode == GameEventScriptBytecodeOpCode.ReserveSlots)
         {
             return code[entryAddress].A_U16;
         }
 
-        return Math.Max(1, _compiledScript.LinearExecutable.MaxFrameSlots);
+        return 0;
     }
 
     private void UnwindLinearCallFrames(List<LinearCallFrame>? callFrames)
@@ -828,7 +827,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             var frame = callFrames[^1];
             callFrames.RemoveAt(callFrames.Count - 1);
-            ExitScope();
             _locals = frame.Locals;
             _assignedSlots = frame.AssignedSlots;
             _activeLocalSlotCount = frame.ActiveLocalSlotCount;
@@ -872,7 +870,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         handled = false;
         if (_diagnosticsEnabled ||
-            instruction.B_U16 != 1 ||
             stagedArguments is null ||
             stagedArguments.Count != 1 ||
             !CanEvaluateLinearPredicateCallFast(instruction))
@@ -898,7 +895,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private void RecordLinearParameterBoundFromBind(LinearArgumentSource? arguments, int parameterIndex, int slot)
+    private void RecordLinearParameterInitialized(LinearArgumentSource? arguments, int parameterIndex, int slot)
     {
         if (!_diagnosticsEnabled ||
             arguments is null ||
@@ -1451,6 +1448,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 case GameEventScriptBytecodeOpCode.Nop:
                 case GameEventScriptBytecodeOpCode.ReserveSlots:
+                case GameEventScriptBytecodeOpCode.ReleaseSlots:
                     break;
 
                 case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -1488,7 +1486,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.CallPredicate:
                     if (!allowPredicateCall ||
                         !CanEvaluateLinearPredicateCallFast(instruction) ||
-                        instruction.B_U16 != 1 ||
                         stagedArgumentCount != 1 ||
                         !AddTemp(instruction.Dest_U16))
                     {
@@ -1667,6 +1664,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 case GameEventScriptBytecodeOpCode.Nop:
                 case GameEventScriptBytecodeOpCode.ReserveSlots:
+                case GameEventScriptBytecodeOpCode.ReleaseSlots:
                     break;
 
                 case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -1726,8 +1724,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.CallPredicate:
-                    if (instruction.B_U16 != 1 ||
-                        !hasStagedArgument ||
+                    if (!hasStagedArgument ||
                         !TryEvaluateLinearPredicateCallFast(instruction, stagedArgument, out var predicateValue) ||
                         !projection.SetTemp(instruction.Dest_U16, predicateValue))
                     {
@@ -1842,6 +1839,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 case GameEventScriptBytecodeOpCode.Nop:
                 case GameEventScriptBytecodeOpCode.ReserveSlots:
+                case GameEventScriptBytecodeOpCode.ReleaseSlots:
                     break;
 
                 case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -1901,8 +1899,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.CallPredicate:
-                    if (instruction.B_U16 != 1 ||
-                        !hasStagedArgument ||
+                    if (!hasStagedArgument ||
                         !TryEvaluateLinearPredicateCallFast(instruction, stagedArgument, out var predicateValue) ||
                         !projection.SetTemp(instruction.Dest_U16, predicateValue))
                     {
@@ -2128,7 +2125,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        EnterLinearEntryScope(entryAddress);
+        var previousActiveLocalSlotCount = _activeLocalSlotCount;
         try
         {
             return TryExecuteLinearRange(
@@ -2141,7 +2138,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
         finally
         {
-            ExitScope();
+            ClearLocalSlots(previousActiveLocalSlotCount);
         }
     }
 
@@ -2154,7 +2151,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        EnterLinearEntryScope(entryAddress);
+        var previousActiveLocalSlotCount = _activeLocalSlotCount;
         try
         {
             if (!TryExecuteLinearRange(
@@ -2172,7 +2169,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
         finally
         {
-            ExitScope();
+            ClearLocalSlots(previousActiveLocalSlotCount);
         }
     }
 
@@ -2190,8 +2187,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        var slotCount = GetLinearEntrySlotCount(entryAddress);
-        if (captures.Count + 1 > slotCount)
+        var initialSlotCount = captures.Count + 1;
+        var slotCount = initialSlotCount + GetLinearEntryReserveSlotCount(entryAddress);
+        if (initialSlotCount > slotCount)
         {
             return false;
         }
@@ -2205,7 +2203,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         _locals = new BytecodeVmValue[slotCount];
         _assignedSlots = new bool[slotCount];
-        _activeLocalSlotCount = slotCount;
+        _activeLocalSlotCount = initialSlotCount;
         _locals[0] = item;
         _assignedSlots[0] = true;
         for (var index = 0; index < captures.Count; index++)
@@ -2217,29 +2215,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         _changes = [];
         _scopeMarks = [];
-        _trackedLocalSlotCount = slotCount;
+        _trackedLocalSlotCount = initialSlotCount;
         try
         {
-            EnterScope();
-            try
+            if (!TryExecuteLinearRange(
+                    entryAddress,
+                    _compiledScript.LinearExecutable.Code.Count,
+                    null,
+                    out var returned,
+                    out value,
+                    out hasValue))
             {
-                if (!TryExecuteLinearRange(
-                        entryAddress,
-                        _compiledScript.LinearExecutable.Code.Count,
-                        null,
-                        out var returned,
-                        out value,
-                        out hasValue))
-                {
-                    return false;
-                }
+                return false;
+            }
 
-                return returned;
-            }
-            finally
-            {
-                ExitScope();
-            }
+            return returned;
         }
         finally
         {
@@ -6750,9 +6740,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private void EnterScope(int additionalLocalSlots = 0)
+    private void EnterLinearScope(int additionalLocalSlots)
     {
-        _scopeMarks.Add(_activeLocalSlotCount);
         if (additionalLocalSlots <= 0)
         {
             return;
@@ -6766,18 +6755,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
         EnsureLocalCapacity(_activeLocalSlotCount);
     }
 
-    private void EnterLinearEntryScope(int entryAddress)
+    private void ExitLinearScope(int localSlotCount)
     {
-        var entrySlotCount = GetLinearEntrySlotCount(entryAddress);
-        var additionalLocalSlots = Math.Max(0, entrySlotCount - _activeLocalSlotCount);
-        EnterScope(additionalLocalSlots);
+        if (localSlotCount <= 0)
+        {
+            return;
+        }
+
+        var previousActiveLocalSlotCount = Math.Max(0, _activeLocalSlotCount - localSlotCount);
+        ClearLocalSlots(previousActiveLocalSlotCount);
     }
 
-    private void ExitScope()
+    private void ClearLocalSlots(int previousActiveLocalSlotCount)
     {
-        var markIndex = _scopeMarks.Count - 1;
-        var previousActiveLocalSlotCount = _scopeMarks[markIndex];
-        _scopeMarks.RemoveAt(markIndex);
         if (previousActiveLocalSlotCount < _activeLocalSlotCount)
         {
             for (var slot = previousActiveLocalSlotCount; slot < _activeLocalSlotCount && slot < _locals.Length; slot++)

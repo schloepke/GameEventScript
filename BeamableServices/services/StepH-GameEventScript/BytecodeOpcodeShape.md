@@ -193,7 +193,7 @@ runtime dispatch step.
 | 0x06 | `LoadText` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a text literal. |
 | 0x07 | `LoadTag` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a tag literal. |
 | 0x08 | `MoveSlot` | - | result slot | source slot | - | - | - | - | - | Copies a slot value/reference; the source slot remains unchanged. |
-| 0x09 | `BindParameter` | - | parameter slot | parameter index immediate | - | - | - | - | - | Reads a handler invocation argument `A_U16` and writes it to `Dest_U16`. |
+| 0x09 | reserved | - | - | - | - | - | - | - | - | Reserved; handler/call arguments are preloaded into frame slots. |
 | 0x0A | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
 | 0x0B | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
 | 0x0C | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
@@ -262,7 +262,7 @@ runtime dispatch step.
 | 0x4B | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
 | 0x4C | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
 | 0x4D | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
-| 0x4E | `ReserveSlots` | - | - | slot count immediate | - | - | - | - | - | Entry prolog. Reserves/declares the frame slot count for the entry at this address. |
+| 0x4E | `ReserveSlots` | - | - | additional local slot count | - | - | - | - | - | Adds `A_U16` active local slots to the current frame. Entry prologs reserve only locals beyond preloaded arguments. |
 | 0x4F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text, frame, or short-circuit operations. |
 | 0x50 | `CastNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x51 | `CastBoolean` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
@@ -334,8 +334,8 @@ runtime dispatch step.
 | 0x9A | `BindHandler` | - | result slot | operand slot-list `UShortListPool` index | argument name-list `UShortListPool` index | - | - | - | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
 | 0x9B | `Variadic` | - | result slot | operation name `StringPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Evaluates a variadic operator over slot-list operands. |
 | 0x9C..0x9F | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access operations. |
-| 0xA0 | `EnterScope` | - | - | additional local slot count | - | - | - | - | - | Pushes a scope mark and extends the current frame by `A_U16` active slots. |
-| 0xA1 | `ExitScope` | - | - | - | - | - | - | - | - | Pops a scope, clears slots added by that scope, and restores the previous active slot count. |
+| 0xA0 | reserved | - | - | - | - | - | - | - | - | Reserved; scope growth uses `ReserveSlots`. |
+| 0xA1 | `ReleaseSlots` | - | - | removed local slot count | - | - | - | - | - | Clears and removes `A_U16` active local slots from the current frame. |
 | 0xA2 | `EmitMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Emits a statically shaped message without tags. |
 | 0xA3 | `EmitMessageWithTags` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | tag slot-list `UShortListPool` index | - | - | - | Emits a statically shaped message with tags. |
 | 0xA4 | `PublishMessage` | - | - | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Publishes a statically shaped message without tags. |
@@ -361,8 +361,8 @@ runtime dispatch step.
 | 0xBD | `SeriesTerm` | - | result slot | series slot | index slot | - | - | - | - | Reads a series term. |
 | 0xBE | `SeriesTake` | - | result slot | source slot | count immediate | - | - | - | - | Takes the first `B_U16` values from a series or list-like source. |
 | 0xBF | `SeriesDrop` | - | result slot | source slot | count immediate | - | - | - | - | Drops the first `B_U16` values from a series or list-like source. |
-| 0xC0 | `Call` | - | result slot | callable entry address | staged argument count | - | - | - | - | Enters a VM-owned local call frame at a known code address. Arguments must be staged immediately before the call. |
-| 0xC1 | `CallPredicate` | - | result slot | predicate entry address | staged argument count | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. Arguments must be staged immediately before the call. |
+| 0xC0 | `Call` | - | result slot | callable entry address | - | - | - | - | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. |
+| 0xC1 | `CallPredicate` | - | result slot | predicate entry address | - | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. Arguments are the contiguous staged sequence immediately before the call. |
 | 0xC2 | `CallStandard` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
 | 0xC3 | `CallStandardPredicate` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension and normalizes the result to `boolean | nothing`. |
 | 0xC4 | `CallExternal` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension. |

@@ -26,7 +26,8 @@ public struct VmValue
         ListObject,
         DictionaryObject,
         TagObject,
-        DiceObject
+        DiceObject,
+        Iterator
     }
 
     internal VmValueKind Kind;

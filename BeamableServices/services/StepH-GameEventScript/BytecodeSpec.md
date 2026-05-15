@@ -19,9 +19,10 @@ instructions or to explicit opcodes that reference normalized tables. Function
 and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
 temporary slots from handler locals with temporary frame extensions. Predicate calls
-use direct `CallPredicate` instructions with target entry addresses and staged
-argument counts. Local calls use direct `Call` instructions with target entry
-addresses and staged argument counts. Extension calls use direct
+use direct `CallPredicate` instructions with target entry addresses and
+contiguous staged argument sequences. Local calls use direct `Call`
+instructions with target entry addresses and contiguous staged argument
+sequences. Extension calls use direct
 `CallStandard*` or `CallExternal*` instructions with argument slot lists.
 Variadic operators, type constructors, local builders, message literals,
 handler binding, casts, type checks, member access, and seeded-random
@@ -262,15 +263,15 @@ The executable code should contain explicit coercion instructions so the program
 counter and dump show where normalization happens:
 
 ```text
-@0000 BindParameter dst=s0 arg=unit
+@0000 ReserveSlots locals+=localCount
 @0001 CastCustom dst=s0 src=s0 type=:unit
-@0002 BindParameter dst=s1 arg=amount
-@0003 CastInteger dst=s1 src=s1
+@0002 CastInteger dst=s1 src=s1
 ```
 
-For untyped handler parameters the compiler emits only `BindParameter`.
-Callable parameters use the same slot/type metadata externally, but the call
-ABI stages arguments before `Call`; the callee starts with those values already
+Handler arguments are preloaded into slots `0..n-1` before the entry starts.
+Untyped handler parameters therefore emit no binding instruction. Callable
+parameters use the same slot/type metadata externally; the call ABI stages
+arguments before `Call`, and the callee starts with those values already
 assigned to slots `0..n-1`.
 
 ## Instruction Addresses
@@ -330,8 +331,8 @@ Operands are interpreted by opcode:
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
   indices directly in `A_U16`, `B_U16`, `C_U16`, or `D_U16`.
 - `ReserveSlots A_U16` is the required prolog instruction for every executable
-  entry address. It declares the frame slot count for that entry. The bind/export
-  tables do not carry this internal execution value.
+  entry address. It adds local slots beyond the arguments already present in
+  the frame. The bind/export tables do not carry this internal execution value.
 
 Unused instruction fields are undefined and ignored. The instruction word does
 not use sentinel operands for optional operands. Optional forms are represented
@@ -429,9 +430,9 @@ operation-local debug state such as selector index or item index.
 
 Handlers and callables are metadata over the shared code segment. Their
 `EntryAddress` points at a `ReserveSlots` prolog instruction. The instruction
-immediately after the prolog is the first executable body instruction, typically
-one or more `BindParameter` instructions for message handlers. Callable
-arguments are already present in slots `0..n-1` when their frame starts.
+immediately after the prolog is the first executable body instruction. Handler
+and callable arguments are already present in slots `0..n-1` when their frame
+starts.
 
 ```text
 HandlerEntry
@@ -455,8 +456,8 @@ CallableEntry
   ReturnSlot
 ```
 
-The frame slot count is intentionally not part of the bind/export metadata. It
-is encoded as `ReserveSlots A_U16` at the entry address because it is a VM
+The local reserve count is intentionally not part of the bind/export metadata.
+It is encoded as `ReserveSlots A_U16` at the entry address because it is a VM
 execution detail needed equally by exported handlers/callables and private
 helper entries.
 
@@ -520,7 +521,6 @@ for `pc`-based execution.
 - `LoadTag dst stringIndex`
 - `LoadHandler dst messageNameIndex namedArgumentLayoutIndex`
 - `Move dst src`
-- `BindParameter dst parameterIndex`
 - `StageRegister src`
 - `StageNothing`/`StageTrue`/`StageFalse`
 - `StageInteger i64 unitAndFlags`
@@ -534,21 +534,22 @@ for `pc`-based execution.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
-Handler parameter type hints lower to `BindParameter` plus an optional direct
-cast in the entry prologue. Callable parameter type hints lower to an optional
-direct cast over the already staged argument slot.
+Handler and callable parameter type hints lower to optional direct casts over
+the preloaded argument slots.
 
 ### Scopes
 
-- `EnterScope A_U16`
-- `ExitScope`
+- `ReserveSlots A_U16`
+- `ReleaseSlots A_U16`
 
-Scopes are explicit instructions. `EnterScope` records the current active frame
-slot count and extends the same frame by `A_U16` additional local slots. Slot
-addresses stay absolute in the current frame, so a scope entered from active
-slots `s0..s3` with `EnterScope 2` exposes `s0..s5`. `ExitScope` clears slots
-added by that scope and restores the previous active slot count. Existing parent
-slots remain visible and are not rolled back by scope exit.
+Scopes are explicit local slot deltas. `ReserveSlots` extends the same frame by
+`A_U16` additional local slots. Slot addresses stay absolute in the current
+frame, so reserving two locals from active slots `s0..s3` exposes `s0..s5`.
+`ReleaseSlots A_U16` clears and releases that exact number of slots. Existing
+parent slots remain visible and are not rolled back by scope exit. The compiler
+must emit matching counts for normal exits; `ReturnValue` and `ReturnVoid`
+discard the whole active frame, so no `ReleaseSlots` is needed immediately
+before a return.
 
 ### Arithmetic and Logic
 
@@ -615,8 +616,8 @@ implication combine inside that branch sequence.
 - `CollectionIterator dst collection`
 - `IteratorNext dst iterator noMoreTarget`
 - `IteratorClose iterator`
-- `Call dst entryAddress stagedArgumentCount`
-- `CallPredicate dst entryAddress stagedArgumentCount`
+- `Call dst entryAddress`
+- `CallPredicate dst entryAddress`
 - `ReturnValue src`
 - `ReturnVoid`
 
@@ -656,18 +657,20 @@ Predicates and functions are normal callable entries. A call instruction
 transfers control to the callable entry and returns to the next instruction.
 Predicate calls use the same frame mechanism, normalize the result to
 `boolean | nothing`, and read their arguments from the stage sequence immediately
-before the call. The `B_U16` operand stores the staged argument count. A stage
-sequence may contain only `Stage*` instructions and must be followed by `Call`
-or `CallPredicate`. The callee frame receives arguments in slots `0..n-1`.
+before the call. The call instruction does not store an argument count; the VM
+uses the contiguous `Stage*` sequence immediately before the call and validates
+it against callable metadata. A stage sequence may contain only `Stage*`
+instructions and must be followed by `Call` or `CallPredicate`. The callee
+frame receives arguments in slots `0..n-1`.
 The `x is predicate` syntax is unary sugar that lowers to one staged argument
 plus `CallPredicate`.
 
 ```text
 @0500 StageRegister src=s0
-@0501 Call dst=s3 callable=wounded args=1
+@0501 Call dst=s3 callable=wounded stagedArgs=1
 @0502 JumpIfNotTrue cond=s3 target=@0510
 @0520 StageRegister src=s2
-@0521 CallPredicate dst=s4 predicate=@0900 args=1
+@0521 CallPredicate dst=s4 predicate=@0900 stagedArgs=1
 ```
 
 Type constructors, variadic operators, collection builders, maps,
@@ -698,30 +701,30 @@ Loops should be compiled to explicit loop control instructions and jumps.
 Range loop shape:
 
 ```text
-@0200 EnterScope locals=loopLocalCount
+@0200 ReserveSlots locals+=loopLocalCount
 @0201 RangeIteratorShort dst=sIterator from=1 to=20 step=1
 @0202 IteratorNext dst=sItem iterator=sIterator noMore=@0210
-@0203 EnterScope locals=iterationLocalCount
+@0203 ReserveSlots locals+=iterationLocalCount
 @0204 MoveSlot dst=sIdentifier src=sItem
 @0205 ...
-@0208 ExitScope
+@0208 ReleaseSlots locals-=iterationLocalCount
 @0209 Jump @0202
 @0210 IteratorClose iterator=sIterator
-@0211 ExitScope
+@0211 ReleaseSlots locals-=loopLocalCount
 ```
 
 Collection loop shape:
 
 ```text
-@0300 EnterScope locals=loopLocalCount
+@0300 ReserveSlots locals+=loopLocalCount
 @0301 CollectionIterator dst=sIterator source=sValues
 @0302 IteratorNext dst=sItem iterator=sIterator noMore=@0310
-@0303 EnterScope locals=iterationLocalCount
+@0303 ReserveSlots locals+=iterationLocalCount
 @0304 ...
-@0308 ExitScope
+@0308 ReleaseSlots locals-=iterationLocalCount
 @0309 Jump @0302
 @0310 IteratorClose iterator=sIterator
-@0311 ExitScope
+@0311 ReleaseSlots locals-=loopLocalCount
 ```
 
 Loop runtime state is stored in the VM-internal iterator value held by the
@@ -933,20 +936,20 @@ Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
 CollectionBuilderList/Set builder
-EnterScope locals=collectionLocalCount
+ReserveSlots locals+=collectionLocalCount
 RangeIterator* / CollectionIterator iterator
 loop:
   IteratorNext item iterator noMore
-  EnterScope locals=iterationLocalCount
+  ReserveSlots locals+=iterationLocalCount
   MoveSlot identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
   CollectionBuilderAdd builder projected
-  ExitScope
+  ReleaseSlots locals-=iterationLocalCount
   Jump loop
 noMore:
 IteratorClose iterator
-ExitScope
+ReleaseSlots locals-=collectionLocalCount
 CollectionBuilderFinish dst builder
 ```
 
@@ -983,7 +986,7 @@ DebugDiagnosticSite
 The VM records diagnostic events while executing normal instructions:
 
 - Handler and parameter events are derived from handler metadata and
-  `BindParameter`/cast execution.
+  preloaded argument slots plus optional parameter-cast execution.
 - Function and predicate call events are derived from callable metadata and
   direct call entry addresses.
 - Let and expression-to-nothing events are derived from debug diagnostic sites.
@@ -1024,14 +1027,13 @@ slot operands:
 ```text
 code[26]
 @0000 L_handler_Start:
-@0000 ReserveSlots slots=6
-@0001 BindParameter dst=s0 arg=values
-@0002 EnterScope locals=1
+@0000 ReserveSlots locals+=5
+@0001 ReserveSlots locals+=1
 @0003 CollectionIterator dst=s2 source=s0
 @0004 IteratorNext dst=s3 iterator=s2 noMore=@0010
 @0005 ...
 @0010 IteratorClose iterator=s2
-@0011 ExitScope
+@0011 ReleaseSlots locals-=1
 @0012 ReturnVoid
 ```
 
@@ -1044,10 +1046,10 @@ handler DamageTaken(unit, amount)
     amount -> s1 as :integer
 
 @0000 L_handler_DamageTaken:
-@0000 BindParameter dst=s0 arg=unit
+@0000 ReserveSlots locals+=localCount
 @0001 CastCustom dst=s0 src=s0 type=:unit
-@0002 BindParameter dst=s1 arg=amount
-@0003 CastInteger dst=s1 src=s1
+@0002 CastInteger dst=s1 src=s1
+@0003 ...
 @0004 ...
 ```
 

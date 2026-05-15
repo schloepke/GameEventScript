@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
+using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -15,6 +16,45 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref VmValue Register(ushort index) => ref _vmState.RegisterSlots[index + _vmState.RegisterFrameStart];
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddLocalSlots(ushort slotCount)
+    {
+        var requiredTotalSlots = _vmState.RegisterFrameStart + slotCount;
+        if (requiredTotalSlots > _vmState.RegisterSlots.Length)
+        {
+            // FIXME: Here we might want to let the register frame grow.
+            _vmState.RaiseError("Not enough slots in register frame.");
+        }
+        else
+        {
+            _vmState.RegisterFrameLength += slotCount;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void RemoveLocalSlots(ushort slotCount)
+    {
+        if (_vmState.RegisterFrameLength < slotCount)
+        {
+            // FIXME: Here we might want to let the register frame grow.
+            _vmState.RaiseError("Inconsistent register frame length. Cannot remove more slots than are available.");
+        }
+        else
+        {
+            _vmState.RegisterFrameLength -= slotCount;
+        }
+    }
+
+    private ref VmValue AddStageSlot()
+    {
+        var stageRegisterIndex = _vmState.RegisterFrameStart + _vmState.RegisterFrameLength + _vmState.StagedArgumentCount++;
+        if (stageRegisterIndex >= _vmState.RegisterSlots.Length) 
+        {
+            _vmState.RaiseError("Cannot add more staged arguments than available register slots.");
+        }
+        return ref _vmState.RegisterSlots[stageRegisterIndex];
+    }
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
     {
@@ -28,16 +68,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Nop:
                     break;
                 case ReserveSlots:
-                    var slotCount = instruction.A_U16;
-                    var requiredTotalSlots = _vmState.RegisterFrameStart + slotCount;
-                    if (requiredTotalSlots > _vmState.RegisterSlots.Length)
-                    {
-                        // FIXME: Here we might want to let the register frame grow.
-                        _vmState.RaiseError("Not enough slots in register frame.");
-                        continue;
-                    }
-
-                    _vmState.RegisterFrameLength = slotCount;
+                    AddLocalSlots(instruction.A_U16);
+                    break;
+                case ReleaseSlots:
+                    RemoveLocalSlots(instruction.A_U16);
                     break;
                 case LoadNothing:
                     Register(instruction.Dest_U16).SetNothing();
@@ -49,10 +83,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).SetBoolean(false);
                     break;
                 case LoadInteger:
-                    Register(instruction.Dest_U16).SetInteger(instruction.I64, VmRegisterUnitCalculation.DecodeNumericUnit(instruction.UnitAndFlags));
+                    Register(instruction.Dest_U16).SetInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case LoadFloat:
-                    Register(instruction.Dest_U16).SetFloat(instruction.F64, VmRegisterUnitCalculation.DecodeNumericUnit(instruction.UnitAndFlags));
+                    Register(instruction.Dest_U16).SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case LoadText:
                     Register(instruction.Dest_U16).SetStringPointer(instruction.A_U16);
@@ -60,12 +94,32 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case LoadTag:
                     Register(instruction.Dest_U16).SetTagPointer(instruction.A_U16);
                     break;
+                case StageRegister:
+                    AddStageSlot() = Register(instruction.A_U16);
+                    break;
+                case StageNothing:
+                    AddStageSlot().SetNothing();
+                    break;
+                case StageTrue:
+                    AddStageSlot().SetBoolean(true);
+                    break;
+                case StageFalse:
+                    AddStageSlot().SetBoolean(false);
+                    break;
+                case StageInteger:
+                    AddStageSlot().SetInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    break;
+                case StageFloat:
+                    AddStageSlot().SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    break;
+                case StageText:
+                    AddStageSlot().SetStringPointer(instruction.C_U16);
+                    break;
+                case StageTag:
+                    AddStageSlot().SetTagPointer(instruction.C_U16);
+                    break;
                 case MoveSlot:
                     Register(instruction.Dest_U16) = Register(instruction.A_U16);
-                    break;
-                case BindParameter:
-                    // FIXME here we need an abstraction for the parameter binding since sub calls do not bind over the message! They do need a list with the argument indexes
-                    Register(instruction.Dest_U16).BindArguments(message.Arguments[instruction.A_U16]);
                     break;
                 case Jump:
                     _vmState.JumpAddress(instruction.Target_U16);
@@ -364,10 +418,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Variadic:
                     break;
-                case EnterScope:
-                    break;
-                case ExitScope:
-                    break;
                 case EmitMessage:
                     VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.A_U16), binary.Uint16ConstantTable.Resolve(instruction.B_U16), false, context);
                     break;
@@ -391,10 +441,17 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case RangeIteratorWithStep:
                     break;
                 case RangeIteratorShort:
+                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.A_U16, instruction.B_U16, instruction.C_U16));
                     break;
                 case CollectionIterator:
                     break;
                 case IteratorNext:
+                    var iterator = Register(instruction.A_U16);
+                    if (!(iterator is { Kind: VmValue.VmValueKind.Iterator, ObjectValue: IVmIterator it } && it.TryNext(ref Register(instruction.Dest_U16))))
+                    {
+                        _vmState.JumpAddress(instruction.B_U16);
+                    }
+
                     break;
                 case IteratorClose:
                     break;
@@ -419,9 +476,11 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case SeriesDrop:
                     break;
                 case Call:
+                    _vmState.CallAddress(instruction.Target_U16, instruction.Dest_U16);
                     break;
                 case CallPredicate:
                     _vmState.CallAddress(instruction.Target_U16, instruction.Dest_U16);
+                    Register(instruction.Dest_U16).Kind = VmValue.VmValueKind.Boolean;
                     break;
                 case CallStandard:
                     break;
@@ -514,15 +573,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PipelineTakePatternFullHouse:
                     break;
                 case PipelineTakePatternStraight:
-                    break;
-                case StageRegister:
-                case StageNothing:
-                case StageTrue:
-                case StageFalse:
-                case StageInteger:
-                case StageFloat:
-                case StageText:
-                case StageTag:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null);

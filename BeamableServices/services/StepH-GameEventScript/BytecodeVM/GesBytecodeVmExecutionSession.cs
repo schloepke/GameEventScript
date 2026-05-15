@@ -391,6 +391,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StageFalse:
             case GameEventScriptBytecodeOpCode.StageInteger:
             case GameEventScriptBytecodeOpCode.StageFloat:
+            case GameEventScriptBytecodeOpCode.StagePercentage:
             case GameEventScriptBytecodeOpCode.StageText:
             case GameEventScriptBytecodeOpCode.StageTag:
                 if (!TryLoadStageConstant(instruction, out var stagedValue))
@@ -1470,6 +1471,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.StageFalse:
                 case GameEventScriptBytecodeOpCode.StageInteger:
                 case GameEventScriptBytecodeOpCode.StageFloat:
+                case GameEventScriptBytecodeOpCode.StagePercentage:
                 case GameEventScriptBytecodeOpCode.StageText:
                 case GameEventScriptBytecodeOpCode.StageTag:
                     stagedArgumentCount++;
@@ -1704,6 +1706,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.StageFalse:
                 case GameEventScriptBytecodeOpCode.StageInteger:
                 case GameEventScriptBytecodeOpCode.StageFloat:
+                case GameEventScriptBytecodeOpCode.StagePercentage:
                 case GameEventScriptBytecodeOpCode.StageText:
                 case GameEventScriptBytecodeOpCode.StageTag:
                     if (!TryLoadStageConstant(instruction, out stagedArgument))
@@ -1879,6 +1882,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.StageFalse:
                 case GameEventScriptBytecodeOpCode.StageInteger:
                 case GameEventScriptBytecodeOpCode.StageFloat:
+                case GameEventScriptBytecodeOpCode.StagePercentage:
                 case GameEventScriptBytecodeOpCode.StageText:
                 case GameEventScriptBytecodeOpCode.StageTag:
                     if (!TryLoadStageConstant(instruction, out stagedArgument))
@@ -4026,9 +4030,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.LoadFloat:
             {
                 var number = instruction.F64;
-                value = instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage
-                    ? BytecodeVmValue.Percentage(number)
-                    : double.IsNaN(number)
+                value = double.IsNaN(number)
                     ? BytecodeVmValue.Reference(GesFloatNaN())
                     : double.IsPositiveInfinity(number)
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
@@ -4037,6 +4039,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                             : BytecodeVmValue.Float(number, DecodeNumericUnit(instruction.UnitAndFlags));
                 return true;
             }
+
+            case GameEventScriptBytecodeOpCode.LoadPercentage:
+                value = BytecodeVmValue.Percentage(instruction.F64);
+                return true;
 
             case GameEventScriptBytecodeOpCode.LoadText:
                 if (!TryReadStringPool(instruction.C_U16, out var text))
@@ -4097,15 +4103,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StageFloat:
             {
                 var number = instruction.F64;
-                value = instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage
-                    ? BytecodeVmValue.Percentage(number)
-                    : double.IsNaN(number)
-                        ? BytecodeVmValue.Reference(GesFloatNaN())
-                        : double.IsPositiveInfinity(number)
-                            ? BytecodeVmValue.Reference(GesFloatInfinity())
-                            : double.IsNegativeInfinity(number)
-                                ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
-                                : BytecodeVmValue.Float(number, DecodeNumericUnit(instruction.UnitAndFlags));
+                value = double.IsNaN(number)
+                    ? BytecodeVmValue.Reference(GesFloatNaN())
+                    : double.IsPositiveInfinity(number)
+                        ? BytecodeVmValue.Reference(GesFloatInfinity())
+                        : double.IsNegativeInfinity(number)
+                            ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
+                            : BytecodeVmValue.Float(number, DecodeNumericUnit(instruction.UnitAndFlags));
+                return true;
+            }
+
+            case GameEventScriptBytecodeOpCode.StagePercentage:
+            {
+                var number = instruction.F64;
+                value = BytecodeVmValue.Percentage(number);
                 return true;
             }
 
@@ -4566,6 +4577,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
         out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.CastUnit)
+        {
+            var unit = DecodeNumericUnit(instruction.UnitAndFlags);
+            if (!unit.HasValue)
+            {
+                return false;
+            }
+
+            value = BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(input.ToGameEventScriptValue(), unit.Value));
+            return true;
+        }
+
         if (!TryGetCastBuiltinTypeName(instruction.OpCode, out var typeName) &&
             (instruction.OpCode != GameEventScriptBytecodeOpCode.CastCustom ||
              !TryReadStringPool(instruction.C_U16, out typeName)))
@@ -4582,6 +4605,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
         out bool value)
     {
         value = false;
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckUnit)
+        {
+            var unit = DecodeNumericUnit(instruction.UnitAndFlags);
+            if (!unit.HasValue)
+            {
+                return false;
+            }
+
+            value = IsValueOfUnit(input, unit.Value);
+            return true;
+        }
+
         if (!TryGetTypeCheckBuiltinTypeName(instruction.OpCode, out var typeName) &&
             (instruction.OpCode != GameEventScriptBytecodeOpCode.TypeCheckCustom ||
              !TryReadStringPool(instruction.C_U16, out typeName)))
@@ -4592,6 +4627,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = IsValueOfType(input, typeName);
         return true;
     }
+
+    private static bool IsValueOfUnit(BytecodeVmValue value, GameEventScriptNumericUnit unit)
+        => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == unit ||
+           (value.ReferenceValue?.IsNumericUnit(unit) ?? false);
 
     private static bool IsValueOfType(BytecodeVmValue value, string? typeName)
     {
@@ -4606,12 +4645,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
             "percentage" => value.Kind == BytecodeVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
-            "degree" => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == GameEventScriptNumericUnit.Degree ||
-                        (value.ReferenceValue?.IsNumericUnit(GameEventScriptNumericUnit.Degree) ?? false),
-            "meter" => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == GameEventScriptNumericUnit.Meter ||
-                       (value.ReferenceValue?.IsNumericUnit(GameEventScriptNumericUnit.Meter) ?? false),
-            "second" => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == GameEventScriptNumericUnit.Second ||
-                        (value.ReferenceValue?.IsNumericUnit(GameEventScriptNumericUnit.Second) ?? false),
+            "degree" => IsValueOfUnit(value, GameEventScriptNumericUnit.Degree),
+            "meter" => IsValueOfUnit(value, GameEventScriptNumericUnit.Meter),
+            "second" => IsValueOfUnit(value, GameEventScriptNumericUnit.Second),
             "vector" => value.ReferenceValue?.IsVector() ?? false,
             "point" => value.ReferenceValue?.IsPoint() ?? false,
             "float" => value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float or BytecodeVmValueKind.Percentage ||
@@ -5882,9 +5918,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastFloat => "float",
             GameEventScriptBytecodeOpCode.CastNumber => "number",
             GameEventScriptBytecodeOpCode.CastPercentage => "percentage",
-            GameEventScriptBytecodeOpCode.CastDegree => "degree",
-            GameEventScriptBytecodeOpCode.CastMeter => "meter",
-            GameEventScriptBytecodeOpCode.CastSecond => "second",
             GameEventScriptBytecodeOpCode.CastVector => "vector",
             GameEventScriptBytecodeOpCode.CastPoint => "point",
             GameEventScriptBytecodeOpCode.CastUuid => "uuid",
@@ -5914,9 +5947,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TypeCheckTag => "tag",
             GameEventScriptBytecodeOpCode.TypeCheckText => "text",
             GameEventScriptBytecodeOpCode.TypeCheckPercentage => "percentage",
-            GameEventScriptBytecodeOpCode.TypeCheckDegree => "degree",
-            GameEventScriptBytecodeOpCode.TypeCheckMeter => "meter",
-            GameEventScriptBytecodeOpCode.TypeCheckSecond => "second",
             GameEventScriptBytecodeOpCode.TypeCheckVector => "vector",
             GameEventScriptBytecodeOpCode.TypeCheckPoint => "point",
             GameEventScriptBytecodeOpCode.TypeCheckFloat => "float",
@@ -5946,9 +5976,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastFloat or
             GameEventScriptBytecodeOpCode.CastNumber or
             GameEventScriptBytecodeOpCode.CastPercentage or
-            GameEventScriptBytecodeOpCode.CastDegree or
-            GameEventScriptBytecodeOpCode.CastMeter or
-            GameEventScriptBytecodeOpCode.CastSecond or
+            GameEventScriptBytecodeOpCode.CastUnit or
             GameEventScriptBytecodeOpCode.CastVector or
             GameEventScriptBytecodeOpCode.CastPoint or
             GameEventScriptBytecodeOpCode.CastUuid or
@@ -5972,6 +6000,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.LoadFalse or
             GameEventScriptBytecodeOpCode.LoadInteger or
             GameEventScriptBytecodeOpCode.LoadFloat or
+            GameEventScriptBytecodeOpCode.LoadPercentage or
             GameEventScriptBytecodeOpCode.LoadText or
             GameEventScriptBytecodeOpCode.LoadTag or
             GameEventScriptBytecodeOpCode.LoadHandler;
@@ -5981,9 +6010,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TypeCheckTag or
             GameEventScriptBytecodeOpCode.TypeCheckText or
             GameEventScriptBytecodeOpCode.TypeCheckPercentage or
-            GameEventScriptBytecodeOpCode.TypeCheckDegree or
-            GameEventScriptBytecodeOpCode.TypeCheckMeter or
-            GameEventScriptBytecodeOpCode.TypeCheckSecond or
+            GameEventScriptBytecodeOpCode.TypeCheckUnit or
             GameEventScriptBytecodeOpCode.TypeCheckVector or
             GameEventScriptBytecodeOpCode.TypeCheckPoint or
             GameEventScriptBytecodeOpCode.TypeCheckFloat or

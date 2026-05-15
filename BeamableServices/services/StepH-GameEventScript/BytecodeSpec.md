@@ -163,8 +163,9 @@ instruction word are encoded by typed load opcodes:
   plus optional numeric unit in `UnitAndFlags`.
 - `LoadFloat` stores IEEE 754 double bits in the overlapped `F64` payload, plus
   optional numeric unit in `UnitAndFlags`. `NaN`, `Infinity`, and `-Infinity`
-  are represented by their IEEE bit patterns. `UnitAndFlags=Percentage` makes
-  the same opcode load a percentage ratio.
+  are represented by their IEEE bit patterns.
+- `LoadPercentage` stores a percentage ratio in `F64` and must not carry unit
+  flags. Percentage is a dedicated value kind, not a bytecode unit.
 - `LoadText` and `LoadTag` store a `StringPool` index in `C`.
 - `LoadHandler` stores a `UShortListPool` message-shape index in `A`. The shape
   list is `[messageNameStringIndex, argumentNameStringIndex...]`.
@@ -197,21 +198,20 @@ room for likely game-domain units:
 | `1` | degree | Angles, headings, rotations. |
 | `2` | meter | Positions, distances, ranges, radii. |
 | `3` | second | Durations, cooldowns, tick time. |
-| `4` | ratio / percent | Chances, multipliers, resistance; `%` literals store ratios. |
-| `5` | meter per second | Speed and velocity magnitude. |
-| `6` | meter per second squared | Acceleration. |
-| `7` | kilogram | Mass, load, inertia. |
-| `8` | newton | Force, thrust, recoil. |
-| `9` | joule | Energy, battery charge, heat energy. |
-| `10` | watt | Power, generator output, energy consumption over time. |
-| `11` | volt | Voltage for electrotechnical systems. |
-| `12` | ampere | Current, charge flow, overload/thermal balancing. |
-| `13` | hertz | Frequency, fire rate, polling, radio cadence. |
-| `14` | bit | Information amount. |
-| `15` | byte | Storage amount. |
-| `16` | bit per second | Bandwidth and communication throughput. |
-| `17` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
-| `18..31` | reserved | Future built-in or domain units. |
+| `4` | meter per second | Speed and velocity magnitude. |
+| `5` | meter per second squared | Acceleration. |
+| `6` | kilogram | Mass, load, inertia. |
+| `7` | newton | Force, thrust, recoil. |
+| `8` | joule | Energy, battery charge, heat energy. |
+| `9` | watt | Power, generator output, energy consumption over time. |
+| `10` | volt | Voltage for electrotechnical systems. |
+| `11` | ampere | Current, charge flow, overload/thermal balancing. |
+| `12` | hertz | Frequency, fire rate, polling, radio cadence. |
+| `13` | bit | Information amount. |
+| `14` | byte | Storage amount. |
+| `15` | bit per second | Bandwidth and communication throughput. |
+| `16` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
+| `17..31` | reserved | Future built-in or domain units. |
 
 The compiler must only emit units supported by the current runtime. The extended
 map is a binary-format target so future unit additions do not need to reshape
@@ -517,6 +517,7 @@ for `pc`-based execution.
 - `LoadFalse dst`
 - `LoadInteger dst i64 unitAndFlags`
 - `LoadFloat dst f64 unitAndFlags`
+- `LoadPercentage dst f64`
 - `LoadText dst stringIndex`
 - `LoadTag dst stringIndex`
 - `LoadHandler dst messageNameIndex namedArgumentLayoutIndex`
@@ -525,11 +526,14 @@ for `pc`-based execution.
 - `StageNothing`/`StageTrue`/`StageFalse`
 - `StageInteger i64 unitAndFlags`
 - `StageFloat f64 unitAndFlags`
+- `StagePercentage f64`
 - `StageText stringIndex`
 - `StageTag stringIndex`
 - `CastBoolean`/`CastInteger`/`CastFloat`/etc. `dst src`
+- `CastUnit dst src unitAndFlags`
 - `CastCustom dst src nameIndex`
 - `TypeCheckBoolean`/`TypeCheckInteger`/etc. `dst src`
+- `TypeCheckUnit dst src unitAndFlags`
 - `TypeCheckCustom dst src nameIndex`
 
 `let` lowers to expression code that writes into a temporary or final slot,

@@ -6,7 +6,6 @@ namespace StepH.GameEventScript.Types;
 
 public enum GameEventScriptNumericUnit
 {
-    Percentage,
     Degree,
     Meter,
     Second
@@ -26,6 +25,33 @@ public static class GameEventScriptNumericUnits
             _ => false
         };
     }
+
+    public static bool TryParseQuantityName(string? quantityName, out GameEventScriptNumericUnit unit)
+    {
+        unit = default;
+        return quantityName switch
+        {
+            "degree" => Set(GameEventScriptNumericUnit.Degree, out unit),
+            "m" or "meter" => Set(GameEventScriptNumericUnit.Meter, out unit),
+            "s" or "second" => Set(GameEventScriptNumericUnit.Second, out unit),
+            _ => false
+        };
+    }
+
+    public static bool TryParseQuantityTypeName(string? typeName, out GameEventScriptNumericUnit unit)
+    {
+        unit = default;
+        return typeName is { } value &&
+               value.StartsWith("quantity:", StringComparison.Ordinal) &&
+               TryParseQuantityName(value["quantity:".Length..], out unit);
+    }
+
+    public static bool IsQuantityTypeName(string? typeName)
+        => typeName is { } value &&
+           value.StartsWith("quantity:", StringComparison.Ordinal);
+
+    public static string ToQuantityTypeName(this GameEventScriptNumericUnit unit)
+        => $"quantity:{unit.ToTypeName()}";
 
     public static string ToTypeName(this GameEventScriptNumericUnit unit)
         => unit switch

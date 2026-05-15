@@ -1180,6 +1180,18 @@ internal static class GesOptimizer
             return true;
         }
 
+        if (GameEventScriptNumericUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
+        {
+            converted = ConvertToNumericUnit(value, quantityUnit);
+            return true;
+        }
+
+        if (GameEventScriptNumericUnits.IsQuantityTypeName(declaredType))
+        {
+            converted = value;
+            return false;
+        }
+
         switch (declaredType)
         {
             case "nothing":

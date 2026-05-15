@@ -211,9 +211,13 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.LoadFloat:
                 AppendDoubleConstant(
                     builder,
-                    instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage ? "ratio" : "value",
+                    "value",
                     instruction);
                 AppendNumericUnit(builder, instruction.UnitAndFlags);
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadPercentage:
+                AppendDoubleConstant(builder, "ratio", instruction);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadText:
@@ -251,9 +255,13 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.StageFloat:
                 AppendDoubleConstant(
                     builder,
-                    instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage ? "ratio" : "value",
+                    "value",
                     instruction);
                 AppendNumericUnit(builder, instruction.UnitAndFlags);
+                break;
+
+            case GameEventScriptBytecodeOpCode.StagePercentage:
+                AppendDoubleConstant(builder, "ratio", instruction);
                 break;
 
             case GameEventScriptBytecodeOpCode.StageText:
@@ -638,9 +646,6 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeInstructionUnit.UnitSecond:
                 builder.Append(" unit=").Append(GameEventScriptNumericUnit.Second.ToTypeName());
                 break;
-            case GameEventScriptBytecodeInstructionUnit.Percentage:
-                builder.Append(" unit=percentage");
-                break;
         }
     }
 
@@ -674,6 +679,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.StageFalse or
             GameEventScriptBytecodeOpCode.StageInteger or
             GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StagePercentage or
             GameEventScriptBytecodeOpCode.StageText or
             GameEventScriptBytecodeOpCode.StageTag);
 
@@ -684,6 +690,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.StageFalse or
             GameEventScriptBytecodeOpCode.StageInteger or
             GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StagePercentage or
             GameEventScriptBytecodeOpCode.StageText or
             GameEventScriptBytecodeOpCode.StageTag;
 
@@ -819,9 +826,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CastFloat or
             GameEventScriptBytecodeOpCode.CastNumber or
             GameEventScriptBytecodeOpCode.CastPercentage or
-            GameEventScriptBytecodeOpCode.CastDegree or
-            GameEventScriptBytecodeOpCode.CastMeter or
-            GameEventScriptBytecodeOpCode.CastSecond or
+            GameEventScriptBytecodeOpCode.CastUnit or
             GameEventScriptBytecodeOpCode.CastVector or
             GameEventScriptBytecodeOpCode.CastPoint or
             GameEventScriptBytecodeOpCode.CastUuid or
@@ -844,9 +849,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.TypeCheckTag or
             GameEventScriptBytecodeOpCode.TypeCheckText or
             GameEventScriptBytecodeOpCode.TypeCheckPercentage or
-            GameEventScriptBytecodeOpCode.TypeCheckDegree or
-            GameEventScriptBytecodeOpCode.TypeCheckMeter or
-            GameEventScriptBytecodeOpCode.TypeCheckSecond or
+            GameEventScriptBytecodeOpCode.TypeCheckUnit or
             GameEventScriptBytecodeOpCode.TypeCheckVector or
             GameEventScriptBytecodeOpCode.TypeCheckPoint or
             GameEventScriptBytecodeOpCode.TypeCheckFloat or

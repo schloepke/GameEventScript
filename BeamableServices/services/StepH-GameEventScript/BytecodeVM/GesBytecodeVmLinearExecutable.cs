@@ -246,11 +246,15 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadInteger:
-                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: false, $"{context} numeric unit");
+                ValidateNumericUnit(instruction.UnitAndFlags, $"{context} numeric unit");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadFloat:
-                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: true, $"{context} numeric unit");
+                ValidateNumericUnit(instruction.UnitAndFlags, $"{context} numeric unit");
+                break;
+
+            case GameEventScriptBytecodeOpCode.LoadPercentage:
+                ValidateNoFlags(instruction.UnitAndFlags, $"{context} percentage flags");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadText:
@@ -279,11 +283,15 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.StageInteger:
-                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: false, $"{context} numeric unit");
+                ValidateNumericUnit(instruction.UnitAndFlags, $"{context} numeric unit");
                 break;
 
             case GameEventScriptBytecodeOpCode.StageFloat:
-                ValidateNumericUnit(instruction.UnitAndFlags, allowPercentage: true, $"{context} numeric unit");
+                ValidateNumericUnit(instruction.UnitAndFlags, $"{context} numeric unit");
+                break;
+
+            case GameEventScriptBytecodeOpCode.StagePercentage:
+                ValidateNoFlags(instruction.UnitAndFlags, $"{context} percentage flags");
                 break;
 
             case GameEventScriptBytecodeOpCode.StageText:
@@ -993,7 +1001,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
     }
 
-    private static void ValidateNumericUnit(byte value, bool allowPercentage, string context)
+    private static void ValidateNumericUnit(byte value, string context)
     {
         var unit = (GameEventScriptBytecodeInstructionUnit)value;
         if (unit is GameEventScriptBytecodeInstructionUnit.UnitNone or
@@ -1004,17 +1012,20 @@ internal sealed class GesBytecodeVmLinearExecutable
             return;
         }
 
-        if (allowPercentage && unit == GameEventScriptBytecodeInstructionUnit.Percentage)
-        {
-            return;
-        }
-
         if (!Enum.IsDefined(typeof(GameEventScriptBytecodeInstructionUnit), value))
         {
             throw InvalidBytecode($"{context} references unknown unit {value}.");
         }
 
         throw InvalidBytecode($"{context} cannot use unit '{unit}'.");
+    }
+
+    private static void ValidateNoFlags(byte value, string context)
+    {
+        if (value != 0)
+        {
+            throw InvalidBytecode($"{context} must be 0 but was {value}.");
+        }
     }
 
     private static InvalidOperationException InvalidBytecode(string message)
@@ -1050,6 +1061,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.StageFalse or
             GameEventScriptBytecodeOpCode.StageInteger or
             GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StagePercentage or
             GameEventScriptBytecodeOpCode.StageText or
             GameEventScriptBytecodeOpCode.StageTag);
 
@@ -1060,6 +1072,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.StageFalse or
             GameEventScriptBytecodeOpCode.StageInteger or
             GameEventScriptBytecodeOpCode.StageFloat or
+            GameEventScriptBytecodeOpCode.StagePercentage or
             GameEventScriptBytecodeOpCode.StageText or
             GameEventScriptBytecodeOpCode.StageTag;
 
@@ -1070,9 +1083,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastFloat or
             GameEventScriptBytecodeOpCode.CastNumber or
             GameEventScriptBytecodeOpCode.CastPercentage or
-            GameEventScriptBytecodeOpCode.CastDegree or
-            GameEventScriptBytecodeOpCode.CastMeter or
-            GameEventScriptBytecodeOpCode.CastSecond or
+            GameEventScriptBytecodeOpCode.CastUnit or
             GameEventScriptBytecodeOpCode.CastVector or
             GameEventScriptBytecodeOpCode.CastPoint or
             GameEventScriptBytecodeOpCode.CastUuid or
@@ -1095,9 +1106,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.TypeCheckTag or
             GameEventScriptBytecodeOpCode.TypeCheckText or
             GameEventScriptBytecodeOpCode.TypeCheckPercentage or
-            GameEventScriptBytecodeOpCode.TypeCheckDegree or
-            GameEventScriptBytecodeOpCode.TypeCheckMeter or
-            GameEventScriptBytecodeOpCode.TypeCheckSecond or
+            GameEventScriptBytecodeOpCode.TypeCheckUnit or
             GameEventScriptBytecodeOpCode.TypeCheckVector or
             GameEventScriptBytecodeOpCode.TypeCheckPoint or
             GameEventScriptBytecodeOpCode.TypeCheckFloat or

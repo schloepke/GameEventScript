@@ -127,10 +127,9 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt64 U64
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNone = 0
-  enum-field Percentage = 1
-  enum-field UnitDegree = 2
-  enum-field UnitMeter = 3
-  enum-field UnitSecond = 4
+  enum-field UnitDegree = 1
+  enum-field UnitMeter = 2
+  enum-field UnitSecond = 3
   enum-field UnitNothing = 255
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Nop = 0
@@ -142,6 +141,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field LoadText = 6
   enum-field LoadTag = 7
   enum-field MoveSlot = 8
+  enum-field LoadPercentage = 9
   enum-field Jump = 10
   enum-field JumpIfTrue = 11
   enum-field JumpIfFalse = 12
@@ -215,9 +215,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CastFloat = 83
   enum-field CastNumber = 84
   enum-field CastPercentage = 85
-  enum-field CastDegree = 86
-  enum-field CastMeter = 87
-  enum-field CastSecond = 88
+  enum-field CastUnit = 86
   enum-field CastVector = 89
   enum-field CastPoint = 90
   enum-field CastUuid = 91
@@ -239,9 +237,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field TypeCheckInteger = 114
   enum-field TypeCheckFloat = 115
   enum-field TypeCheckPercentage = 116
-  enum-field TypeCheckDegree = 117
-  enum-field TypeCheckMeter = 118
-  enum-field TypeCheckSecond = 119
+  enum-field TypeCheckUnit = 117
   enum-field TypeCheckVector = 120
   enum-field TypeCheckPoint = 121
   enum-field TypeCheckUuid = 122
@@ -307,6 +303,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field StageFloat = 203
   enum-field StageText = 204
   enum-field StageTag = 205
+  enum-field StagePercentage = 206
   enum-field PipelineIterator = 208
   enum-field PipelineCollectList = 209
   enum-field PipelineCollectSet = 210
@@ -690,6 +687,7 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Void SetIntegerOrNothing(System.Int64? value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetNothing()
   method System.Void SetObject(StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind kind, StepH.GameEventScript.BytecodeExecutor.IVmObject value)
+  method System.Void SetPercentage(System.Double ratio)
   method System.Void SetStringPointer(System.UInt16 pointer)
   method System.Void SetTagPointer(System.UInt16 pointer)
   property System.Boolean AsBooleanValue { get }
@@ -708,17 +706,18 @@ enum StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind
   enum-field Boolean = 1
   enum-field Integer = 2
   enum-field Float = 3
-  enum-field Dice = 4
-  enum-field StringPointer = 5
-  enum-field TagPointer = 6
-  enum-field DataPointer = 7
-  enum-field CodePointer = 8
-  enum-field TextObject = 9
-  enum-field ListObject = 10
-  enum-field DictionaryObject = 11
-  enum-field TagObject = 12
-  enum-field DiceObject = 13
-  enum-field Iterator = 14
+  enum-field Percentage = 4
+  enum-field Dice = 5
+  enum-field StringPointer = 6
+  enum-field TagPointer = 7
+  enum-field DataPointer = 8
+  enum-field CodePointer = 9
+  enum-field TextObject = 10
+  enum-field ListObject = 11
+  enum-field DictionaryObject = 12
+  enum-field TagObject = 13
+  enum-field DiceObject = 14
+  enum-field Iterator = 15
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
 static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper
@@ -1043,12 +1042,15 @@ sealed class StepH.GameEventScript.Types.GameEventScriptNothingValue
   method System.String AsText()
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
 enum StepH.GameEventScript.Types.GameEventScriptNumericUnit
-  enum-field Percentage = 0
-  enum-field Degree = 1
-  enum-field Meter = 2
-  enum-field Second = 3
+  enum-field Degree = 0
+  enum-field Meter = 1
+  enum-field Second = 2
 static class StepH.GameEventScript.Types.GameEventScriptNumericUnits
+  method static System.Boolean IsQuantityTypeName(System.String typeName)
+  method static System.Boolean TryParseQuantityName(System.String quantityName, StepH.GameEventScript.Types.GameEventScriptNumericUnit& unit)
+  method static System.Boolean TryParseQuantityTypeName(System.String typeName, StepH.GameEventScript.Types.GameEventScriptNumericUnit& unit)
   method static System.Boolean TryParseTypeName(System.String typeName, StepH.GameEventScript.Types.GameEventScriptNumericUnit& unit)
+  method static System.String ToQuantityTypeName(StepH.GameEventScript.Types.GameEventScriptNumericUnit unit)
   method static System.String ToSuffix(StepH.GameEventScript.Types.GameEventScriptNumericUnit unit)
   method static System.String ToTypeName(StepH.GameEventScript.Types.GameEventScriptNumericUnit unit)
 sealed class StepH.GameEventScript.Types.GameEventScriptPercentageValue

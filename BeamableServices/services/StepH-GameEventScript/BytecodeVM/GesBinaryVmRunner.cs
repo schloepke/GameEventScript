@@ -196,9 +196,11 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadFloat:
-                    Set(instruction.Dest_U16, instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.Percentage
-                        ? GesBinaryVmValue.Percentage(instruction.F64)
-                        : GesBinaryVmValue.Float(instruction.F64, DecodeUnit(instruction.UnitAndFlags)));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Float(instruction.F64, DecodeUnit(instruction.UnitAndFlags)));
+                    break;
+
+                case GameEventScriptBytecodeOpCode.LoadPercentage:
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Percentage(instruction.F64));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadText:

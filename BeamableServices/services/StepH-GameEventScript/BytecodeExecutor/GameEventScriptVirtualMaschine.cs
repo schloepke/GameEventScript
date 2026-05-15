@@ -88,6 +88,9 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case LoadFloat:
                     Register(instruction.Dest_U16).SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
+                case LoadPercentage:
+                    Register(instruction.Dest_U16).SetPercentage(instruction.F64);
+                    break;
                 case LoadText:
                     Register(instruction.Dest_U16).SetStringPointer(instruction.A_U16);
                     break;
@@ -111,6 +114,9 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case StageFloat:
                     AddStageSlot().SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    break;
+                case StagePercentage:
+                    AddStageSlot().SetPercentage(instruction.F64);
                     break;
                 case StageText:
                     AddStageSlot().SetStringPointer(instruction.C_U16);
@@ -305,11 +311,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastPercentage:
                     break;
-                case CastDegree:
-                    break;
-                case CastMeter:
-                    break;
-                case CastSecond:
+                case CastUnit:
                     break;
                 case CastVector:
                     break;
@@ -353,11 +355,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case TypeCheckPercentage:
                     break;
-                case TypeCheckDegree:
-                    break;
-                case TypeCheckMeter:
-                    break;
-                case TypeCheckSecond:
+                case TypeCheckUnit:
                     break;
                 case TypeCheckVector:
                     break;

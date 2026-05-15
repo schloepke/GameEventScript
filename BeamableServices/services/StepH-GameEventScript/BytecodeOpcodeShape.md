@@ -120,21 +120,20 @@ The target UnitId map is:
 | `1` | degree | Angle, heading, field of view, rotation. |
 | `2` | meter | Position, distance, range, radius. |
 | `3` | second | Duration, cooldown, cast time, tick time. |
-| `4` | ratio / percent | Chance, multiplier, resistance; `%` literals store ratios. |
-| `5` | meter per second | Speed and velocity magnitude. |
-| `6` | meter per second squared | Acceleration. |
-| `7` | kilogram | Mass, inventory load, inertia. |
-| `8` | newton | Force, thrust, recoil. |
-| `9` | joule | Energy, battery charge, heat energy. |
-| `10` | watt | Power, generator output, consumption over time. |
-| `11` | volt | Voltage for electrotechnical systems. |
-| `12` | ampere | Current, charge flow, overload/thermal balancing. |
-| `13` | hertz | Frequency, fire rate, sensor polling, radio rate. |
-| `14` | bit | Information amount. |
-| `15` | byte | Storage amount. |
-| `16` | bit per second | Bandwidth and communication throughput. |
-| `17` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
-| `18..31` | reserved | Reserved for future built-in or domain units. |
+| `4` | meter per second | Speed and velocity magnitude. |
+| `5` | meter per second squared | Acceleration. |
+| `6` | kilogram | Mass, inventory load, inertia. |
+| `7` | newton | Force, thrust, recoil. |
+| `8` | joule | Energy, battery charge, heat energy. |
+| `9` | watt | Power, generator output, consumption over time. |
+| `10` | volt | Voltage for electrotechnical systems. |
+| `11` | ampere | Current, charge flow, overload/thermal balancing. |
+| `12` | hertz | Frequency, fire rate, sensor polling, radio rate. |
+| `13` | bit | Information amount. |
+| `14` | byte | Storage amount. |
+| `15` | bit per second | Bandwidth and communication throughput. |
+| `16` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
+| `17..31` | reserved | Reserved for future built-in or domain units. |
 
 Only the units implemented by the current runtime may be emitted by the
 compiler. The full map above is the portable binary target, not a promise that
@@ -152,8 +151,9 @@ every unit has DSL syntax today.
   layout index.
 - `LoadInteger` uses the overlapped `I64` payload and may use `UnitAndFlags`
   for numeric units.
-- `LoadFloat` uses the overlapped `F64` payload. `UnitAndFlags` carries `None`,
-  numeric units, or `Percentage`.
+- `LoadFloat` uses the overlapped `F64` payload. `UnitAndFlags` carries `None`
+  or a numeric unit. `LoadPercentage` uses the same `F64` payload with no unit
+  flags and creates the dedicated percentage value kind.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
   indices directly in `A_U16`, `B_U16`, `C_U16`, or `D_U16`.
 
@@ -189,11 +189,11 @@ runtime dispatch step.
 | 0x02 | `LoadTrue` | - | result slot | - | - | - | - | - | - | Loads boolean `true`. |
 | 0x03 | `LoadFalse` | - | result slot | - | - | - | - | - | - | Loads boolean `false`. |
 | 0x04 | `LoadInteger` | numeric unit | result slot | n/a | n/a | n/a | n/a | signed integer | - | Loads an inline signed `Int64`. |
-| 0x05 | `LoadFloat` | numeric unit / `Percentage` | result slot | n/a | n/a | n/a | n/a | - | float / ratio | Loads an inline IEEE-754 `Float64`; `Percentage` makes the value a percentage ratio. |
+| 0x05 | `LoadFloat` | numeric unit | result slot | n/a | n/a | n/a | n/a | - | float | Loads an inline IEEE-754 `Float64`. |
 | 0x06 | `LoadText` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a text literal. |
 | 0x07 | `LoadTag` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a tag literal. |
 | 0x08 | `MoveSlot` | - | result slot | source slot | - | - | - | - | - | Copies a slot value/reference; the source slot remains unchanged. |
-| 0x09 | reserved | - | - | - | - | - | - | - | - | Reserved; handler/call arguments are preloaded into frame slots. |
+| 0x09 | `LoadPercentage` | - | result slot | n/a | n/a | n/a | n/a | - | ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
 | 0x0A | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
 | 0x0B | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
 | 0x0C | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
@@ -269,9 +269,8 @@ runtime dispatch step.
 | 0x53 | `CastFloat` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x54 | `CastNumber` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x55 | `CastPercentage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x56 | `CastDegree` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x57 | `CastMeter` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x58 | `CastSecond` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
+| 0x56 | `CastUnit` | numeric unit | result slot | source slot | - | - | - | - | - | Converts to the unit carried in `UnitAndFlags`. |
+| 0x57..0x58 | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain casts. |
 | 0x59 | `CastVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x5A | `CastPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
 | 0x5B | `CastUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
@@ -297,9 +296,8 @@ runtime dispatch step.
 | 0x72 | `TypeCheckInteger` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x73 | `TypeCheckFloat` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x74 | `TypeCheckPercentage` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x75 | `TypeCheckDegree` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x76 | `TypeCheckMeter` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x77 | `TypeCheckSecond` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
+| 0x75 | `TypeCheckUnit` | numeric unit | result slot | source slot | - | - | - | - | - | Checks the unit carried in `UnitAndFlags`. |
+| 0x76..0x77 | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain type checks. |
 | 0x78 | `TypeCheckVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x79 | `TypeCheckPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
 | 0x7A | `TypeCheckUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
@@ -371,10 +369,11 @@ runtime dispatch step.
 | 0xC8 | `StageTrue` | - | - | - | - | - | - | - | - | Stages `true` as the next local call argument. |
 | 0xC9 | `StageFalse` | - | - | - | - | - | - | - | - | Stages `false` as the next local call argument. |
 | 0xCA | `StageInteger` | unit/flags | - | n/a | n/a | n/a | n/a | integer payload | n/a | Stages an inline integer argument. |
-| 0xCB | `StageFloat` | unit/flags | - | n/a | n/a | n/a | n/a | n/a | float payload | Stages an inline float/percentage argument. |
+| 0xCB | `StageFloat` | numeric unit | - | n/a | n/a | n/a | n/a | n/a | float payload | Stages an inline float argument. |
 | 0xCC | `StageText` | - | - | - | - | string index | - | - | - | Stages a text literal from `StringPool`. |
 | 0xCD | `StageTag` | - | - | - | - | string index | - | - | - | Stages a tag literal from `StringPool`. |
-| 0xCE..0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
+| 0xCE | `StagePercentage` | - | - | n/a | n/a | n/a | n/a | n/a | ratio | Stages an inline percentage ratio argument. |
+| 0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
 | 0xD0 | `PipelineIterator` | - | iterator slot | source iterator slot | next-entry address | helper item slot | capture slot-list index | - | - | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
 | 0xD1 | `PipelineCollectList` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a list. |
 | 0xD2 | `PipelineCollectSet` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a set. |

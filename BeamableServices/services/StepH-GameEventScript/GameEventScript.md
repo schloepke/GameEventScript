@@ -1136,7 +1136,7 @@ unitless double.
 :float(true)  // 1
 ```
 
-### Numeric units: `:degree`, `:meter`, and `:second`
+### Numeric quantities: `:quantity(...)`, `:degree`, `:meter`, and `:second`
 
 `degree`, `meter`, and `second` are scalar numeric units. They are not separate
 value kinds. Whole-number unit literals stay `:integer`; fractional unit
@@ -1150,18 +1150,28 @@ literals stay `:float`.
 15s
 ```
 
-The built-in unit type tags are:
+The explicit quantity type form is:
+
+- `:quantity(degree)`
+- `:quantity(m)` or `:quantity(meter)`
+- `:quantity(s)` or `:quantity(second)`
+
+The built-in unit type tags are sugar for those quantity forms:
 
 - `:degree`
 - `:meter`
 - `:second`
 
-`as :degree`, `as :meter`, and `as :second` apply a unit to a unitless number,
-keep a matching unit, and return `NaN` for incompatible units.
+`as :quantity(m)`, `as :degree`, `as :meter`, and `as :second` apply a unit to
+a unitless number, keep a matching unit, and return `NaN` for incompatible
+units. `is :quantity(m)` checks the unit. `:quantity(%)` is invalid;
+`:percentage` is a separate value kind, not a quantity unit.
 
 ```eventscript
 let heading as :degree be 450
 let distance as :meter be 100
+let sameDistance as :quantity(m) be 100
+let builtDistance be :quantity(m)(100)
 let rawHeading as :float be heading
 ```
 
@@ -2104,9 +2114,10 @@ The artifact exposes neutral bytecode data:
 Literal constants are encoded by typed linear load instructions instead of an
 object-shaped constant pool. `LoadInteger` uses the overlapped `I64` payload plus
 `UnitAndFlags`, `LoadFloat` uses the overlapped IEEE-754 `F64` payload plus
-`UnitAndFlags`, `LoadText`/`LoadTag` reference the `StringPool`, and
-booleans/nothing use dedicated opcodes. This preserves the exact constant kind
-in bytecode without storing runtime values.
+`UnitAndFlags`, `LoadPercentage` stores a percentage ratio in `F64`,
+`LoadText`/`LoadTag` reference the `StringPool`, and booleans/nothing use
+dedicated opcodes. This preserves the exact constant kind in bytecode without
+storing runtime values.
 
 `GameEventScriptBytecodeDumper.DumpBytecode(...)` can be used to inspect this
 structure during development. The dump is deterministic and diagnostic; it is not

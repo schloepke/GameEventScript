@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -1605,7 +1606,8 @@ internal static class GesValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "series" or
-            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "set" or "dice";
+            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "set" or "dice" ||
+            GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
     private static void ValidateRemovedOptionalType(
         ParsedScript parsedScriptContext,

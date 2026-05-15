@@ -55,19 +55,19 @@ public sealed class GameEventScriptBinaryTests
         var instruction = new GameEventScriptBytecodeInstruction(
             GameEventScriptBytecodeOpCode.LoadInteger,
             dest: 7,
-            unitAndFlags: (byte)GameEventScriptBytecodeInstructionUnit.Percentage);
+            unitAndFlags: (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter);
         instruction.I64 = 42;
 
         var json = JsonSerializer.Serialize(instruction);
 
         Assert.AreEqual(
-            """{"Opcode":"LoadInteger","Flags":"0x01","Dst":"0x0007","Parameter":"0x000000000000002A"}""",
+            """{"Opcode":"LoadInteger","Flags":"0x02","Dst":"0x0007","Parameter":"0x000000000000002A"}""",
             json);
 
         var decoded = JsonSerializer.Deserialize<GameEventScriptBytecodeInstruction>(json);
 
         Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, decoded.OpCode);
-        Assert.AreEqual((byte)GameEventScriptBytecodeInstructionUnit.Percentage, decoded.UnitAndFlags);
+        Assert.AreEqual((byte)GameEventScriptBytecodeInstructionUnit.UnitMeter, decoded.UnitAndFlags);
         Assert.AreEqual((ushort)7, decoded.Dest_U16);
         Assert.AreEqual(42L, decoded.I64);
     }

@@ -116,10 +116,9 @@ public enum GameEventScriptBinaryBindKind : byte
 public enum GameEventScriptBytecodeInstructionUnit : byte
 {
     UnitNone = 0,
-    Percentage = 1,
-    UnitDegree = 2,
-    UnitMeter = 3,
-    UnitSecond = 4,
+    UnitDegree = 1,
+    UnitMeter = 2,
+    UnitSecond = 3,
 
     UnitNothing = 255 // Special non-unit type for nothing / void helping to evaluate unions to nothing 
 }
@@ -182,6 +181,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     LoadText = 0x06,
     LoadTag = 0x07,
     MoveSlot = 0x08,
+    LoadPercentage = 0x09,
     Jump = 0x0A,
     JumpIfTrue = 0x0B,
     JumpIfFalse = 0x0C,
@@ -280,9 +280,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     CastFloat = 0x53,
     CastNumber = 0x54,
     CastPercentage = 0x55,
-    CastDegree = 0x56,
-    CastMeter = 0x57,
-    CastSecond = 0x58,
+    CastUnit = 0x56,
     CastVector = 0x59,
     CastPoint = 0x5A,
     CastUuid = 0x5B,
@@ -314,9 +312,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckInteger = 0x72,
     TypeCheckFloat = 0x73,
     TypeCheckPercentage = 0x74,
-    TypeCheckDegree = 0x75,
-    TypeCheckMeter = 0x76,
-    TypeCheckSecond = 0x77,
+    TypeCheckUnit = 0x75,
     TypeCheckVector = 0x78,
     TypeCheckPoint = 0x79,
     TypeCheckUuid = 0x7A,
@@ -407,6 +403,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     StageFloat = 0xCB,
     StageText = 0xCC,
     StageTag = 0xCD,
+    StagePercentage = 0xCE,
 
     #endregion
 

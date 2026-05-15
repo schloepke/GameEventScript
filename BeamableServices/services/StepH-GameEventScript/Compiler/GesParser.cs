@@ -2553,7 +2553,12 @@ internal sealed class GesParser
             lookahead++;
         }
 
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Identifier;
+        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != Identifier)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private bool IsTypeConstructorStart()
@@ -2622,7 +2627,53 @@ internal sealed class GesParser
 
         var typeToken = Advance();
         var typeName = typeToken.Text[1..];
+        if (string.Equals(typeName, "quantity", StringComparison.Ordinal) &&
+            Is(LeftParen) &&
+            IsQuantityTypeSpecifierAhead())
+        {
+            SkipNewLines();
+            Expect(LeftParen);
+            SkipNewLines();
+            var unitToken = Expect(Identifier);
+            SkipNewLines();
+            Expect(RightParen);
+            typeName = $"quantity:{unitToken.Text}";
+        }
+
         return typeName;
+    }
+
+    private bool IsQuantityTypeSpecifierAhead()
+    {
+        var lookahead = _index;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != LeftParen)
+        {
+            return false;
+        }
+
+        lookahead++;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != Identifier)
+        {
+            return false;
+        }
+
+        lookahead++;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == RightParen;
     }
 
     private void ExpectValueWord()

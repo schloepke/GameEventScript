@@ -24,6 +24,15 @@
     },
     {
       "kind": "compileError",
+      "name": "quantity rejects unknown unit names",
+      "script": "on Start {\n  let x be 100 as :quantity(foo)\n}",
+      "expectedError": {
+        "phase": "compilation",
+        "messageContains": "quantity:foo"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "invalid predicate predicate requires unary predicate",
       "script": "function wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
       "expectedError": {

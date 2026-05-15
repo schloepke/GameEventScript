@@ -17,6 +17,7 @@ public struct VmValue
         Boolean,
         Integer,
         Float,
+        Percentage,
         Dice,
         StringPointer,
         TagPointer,
@@ -92,6 +93,15 @@ public struct VmValue
         Unit = unit;
     }
 
+    public void SetPercentage(double ratio)
+    {
+        Kind = Percentage;
+        FloatValue = ratio;
+        IntegerValue = (long)ratio;
+        BooleanValue = ratio != 0.0;
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+    }
+
     public void SetFloatOrNothing(double? value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         if (value is null) SetNothing();
@@ -146,7 +156,7 @@ public struct VmValue
 
     public ushort? CodePointerOrNothing => Kind is CodePointer ? (ushort)IntegerValue : null;
     public long? IntegerValueOrNothing => Kind is Integer ? IntegerValue : null;
-    public double? FloatValueOrNothing => Kind is Float or Integer ? FloatValue : null;
+    public double? FloatValueOrNothing => Kind is Float or Integer or Percentage ? FloatValue : null;
     public bool? BooleanValueOrNothing => Kind is Boolean ? BooleanValue : null;
 
     public long AsIntegerValue => IntegerValue;

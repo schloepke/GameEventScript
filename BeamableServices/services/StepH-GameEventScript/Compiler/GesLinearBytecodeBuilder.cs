@@ -776,8 +776,8 @@ internal sealed class GesLinearBytecodeBuilder
             case TypeCheckExpressionNode typeCheck:
             {
                 var value = EmitSourceExpression(typeCheck.Value, context, state);
-                var opCode = ResolveTypeCheckOpCode(typeCheck.TypeName, out var nameIndex);
-                return EmitValueInstruction(state, opCode, a: value, c: nameIndex < 0 ? 0 : nameIndex);
+                var opCode = ResolveTypeCheckOpCode(typeCheck.TypeName, out var nameIndex, out var unitAndFlags);
+                return EmitValueInstruction(state, opCode, a: value, c: nameIndex < 0 ? 0 : nameIndex, unitAndFlags: unitAndFlags);
             }
 
             case MemberAccessExpressionNode memberAccess:
@@ -841,10 +841,9 @@ internal sealed class GesLinearBytecodeBuilder
                 return true;
 
             case PercentageLiteralExpressionNode percentage:
-                instructionAddress = EmitLoadFloatToSlot(
+                instructionAddress = EmitLoadPercentageToSlot(
                     destinationSlot,
-                    percentage.PercentValue / 100d,
-                    (byte)GameEventScriptBytecodeInstructionUnit.Percentage);
+                    percentage.PercentValue / 100d);
                 return true;
 
             case UnitFloatLiteralExpressionNode unitFloat:
@@ -953,10 +952,9 @@ internal sealed class GesLinearBytecodeBuilder
                     EncodeNumericUnitAndFlags(floatValue.Unit));
 
             case GameEventScriptPercentageValue percentage:
-                return EmitLoadFloat(
+                return EmitLoadPercentage(
                     state,
-                    percentage.Ratio,
-                    (byte)GameEventScriptBytecodeInstructionUnit.Percentage);
+                    percentage.Ratio);
 
             case GameEventScriptTextValue text:
                 return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadText, c: ResolveStringIndex(text.Value));
@@ -1043,9 +1041,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return true;
 
             case PercentageLiteralExpressionNode percentage:
-                instruction = new GameEventScriptBytecodeInstruction(
-                    GameEventScriptBytecodeOpCode.StageFloat,
-                    unitAndFlags: (byte)GameEventScriptBytecodeInstructionUnit.Percentage)
+                instruction = new GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode.StagePercentage)
                 {
                     F64 = percentage.PercentValue / 100d
                 };
@@ -1458,23 +1454,23 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourceTypeCast(TypeCastExpressionNode typeCast, SourceContext context, ExpressionState state)
     {
-        if (!TryGetCastOpCode(typeCast.TypeName, out var opCode))
+        if (!TryGetCastOpCode(typeCast.TypeName, out var opCode, out var unitAndFlags))
         {
             throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support type cast '{typeCast.TypeName}'.");
         }
 
         var value = EmitSourceExpression(typeCast.Value, context, state);
-        return EmitValueInstruction(state, opCode, a: value);
+        return EmitValueInstruction(state, opCode, a: value, unitAndFlags: unitAndFlags);
     }
 
     private int EmitSourceTypeConstructor(TypeConstructorExpressionNode typeConstructor, SourceContext context, ExpressionState state)
     {
         if (typeConstructor.Arguments.Count == 1 &&
             typeConstructor.Arguments[0].Label is null &&
-            TryGetCastOpCode(typeConstructor.TypeName, out var constructorCastOpCode))
+            TryGetCastOpCode(typeConstructor.TypeName, out var constructorCastOpCode, out var unitAndFlags))
         {
             var value = EmitSourceExpression(typeConstructor.Arguments[0].Expression, context, state);
-            return EmitValueInstruction(state, constructorCastOpCode, a: value);
+            return EmitValueInstruction(state, constructorCastOpCode, a: value, unitAndFlags: unitAndFlags);
         }
 
         var argumentNames = new string[typeConstructor.Arguments.Count];
@@ -2342,17 +2338,18 @@ internal sealed class GesLinearBytecodeBuilder
         GameEventScriptBytecodeOpCode opCode,
         int a = 0,
         int b = 0,
-        int c = 0)
+        int c = 0,
+        byte unitAndFlags = 0)
     {
         var dest = AllocateSlot(state);
-        Emit(CreateInstruction(opCode, dest: dest, a: a, b: b, c: c));
+        Emit(CreateInstruction(opCode, dest: dest, a: a, b: b, c: c, unitAndFlags: unitAndFlags));
         return dest;
     }
 
     private int EmitCastSlot(int destinationSlot, int sourceSlot, string? typeName)
     {
-        var opCode = ResolveCastOpCode(typeName, out var nameIndex);
-        return Emit(CreateInstruction(opCode, dest: destinationSlot, a: sourceSlot, c: nameIndex < 0 ? 0 : nameIndex));
+        var opCode = ResolveCastOpCode(typeName, out var nameIndex, out var unitAndFlags);
+        return Emit(CreateInstruction(opCode, dest: destinationSlot, a: sourceSlot, c: nameIndex < 0 ? 0 : nameIndex, unitAndFlags: unitAndFlags));
     }
 
     private int AllocateSlot(ExpressionState state)
@@ -2552,6 +2549,28 @@ internal sealed class GesLinearBytecodeBuilder
         return _code.Count - 1;
     }
 
+    private int EmitLoadPercentage(
+        ExpressionState state,
+        double ratio)
+    {
+        var dest = AllocateSlot(state);
+        EmitLoadPercentageToSlot(dest, ratio);
+        return dest;
+    }
+
+    private int EmitLoadPercentageToSlot(
+        int destinationSlot,
+        double ratio)
+    {
+        Emit(new GameEventScriptBytecodeInstruction(
+            GameEventScriptBytecodeOpCode.LoadPercentage,
+            dest: ToUShortOperand(destinationSlot, "destination operand"))
+        {
+            F64 = ratio
+        });
+        return _code.Count - 1;
+    }
+
     private static double EncodeFloatPayload(GameEventScriptFloatValue value)
     {
         if (value.IsNaNValue)
@@ -2579,25 +2598,37 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
-    private GameEventScriptBytecodeOpCode ResolveCastOpCode(string? typeName, out int nameIndex)
+    private GameEventScriptBytecodeOpCode ResolveCastOpCode(string? typeName, out int nameIndex, out byte unitAndFlags)
     {
+        unitAndFlags = 0;
         if (!string.IsNullOrEmpty(typeName) &&
-            TryGetCastOpCode(typeName, out var opCode))
+            TryGetCastOpCode(typeName, out var opCode, out unitAndFlags))
         {
             nameIndex = -1;
             return opCode;
+        }
+
+        if (GameEventScriptNumericUnits.IsQuantityTypeName(typeName))
+        {
+            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support quantity unit '{typeName}'.");
         }
 
         nameIndex = ResolveStringIndex(typeName);
         return GameEventScriptBytecodeOpCode.CastCustom;
     }
 
-    private GameEventScriptBytecodeOpCode ResolveTypeCheckOpCode(string typeName, out int nameIndex)
+    private GameEventScriptBytecodeOpCode ResolveTypeCheckOpCode(string typeName, out int nameIndex, out byte unitAndFlags)
     {
-        if (TryGetTypeCheckOpCode(typeName, out var opCode))
+        unitAndFlags = 0;
+        if (TryGetTypeCheckOpCode(typeName, out var opCode, out unitAndFlags))
         {
             nameIndex = -1;
             return opCode;
+        }
+
+        if (GameEventScriptNumericUnits.IsQuantityTypeName(typeName))
+        {
+            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support quantity unit '{typeName}'.");
         }
 
         nameIndex = ResolveStringIndex(typeName);
@@ -2663,8 +2694,16 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support unary operator '{operation.ToSourceText()}'.")
         };
 
-    private static bool TryGetCastOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode)
+    private static bool TryGetCastOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode, out byte unitAndFlags)
     {
+        unitAndFlags = 0;
+        if (TryGetQuantityUnit(typeName, out var unit))
+        {
+            opCode = GameEventScriptBytecodeOpCode.CastUnit;
+            unitAndFlags = EncodeNumericUnitAndFlags(unit);
+            return true;
+        }
+
         opCode = typeName switch
         {
             "nothing" => GameEventScriptBytecodeOpCode.CastNothing,
@@ -2673,9 +2712,6 @@ internal sealed class GesLinearBytecodeBuilder
             "float" => GameEventScriptBytecodeOpCode.CastFloat,
             "number" => GameEventScriptBytecodeOpCode.CastNumber,
             "percentage" => GameEventScriptBytecodeOpCode.CastPercentage,
-            "degree" => GameEventScriptBytecodeOpCode.CastDegree,
-            "meter" => GameEventScriptBytecodeOpCode.CastMeter,
-            "second" => GameEventScriptBytecodeOpCode.CastSecond,
             "vector" => GameEventScriptBytecodeOpCode.CastVector,
             "point" => GameEventScriptBytecodeOpCode.CastPoint,
             "uuid" => GameEventScriptBytecodeOpCode.CastUuid,
@@ -2694,20 +2730,25 @@ internal sealed class GesLinearBytecodeBuilder
             _ => default
         };
 
-        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "set" or "dice";
+        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "set" or "dice";
     }
 
-    private static bool TryGetTypeCheckOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode)
+    private static bool TryGetTypeCheckOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode, out byte unitAndFlags)
     {
+        unitAndFlags = 0;
+        if (TryGetQuantityUnit(typeName, out var unit))
+        {
+            opCode = GameEventScriptBytecodeOpCode.TypeCheckUnit;
+            unitAndFlags = EncodeNumericUnitAndFlags(unit);
+            return true;
+        }
+
         opCode = typeName switch
         {
             "nothing" => GameEventScriptBytecodeOpCode.TypeCheckNothing,
             "tag" => GameEventScriptBytecodeOpCode.TypeCheckTag,
             "text" => GameEventScriptBytecodeOpCode.TypeCheckText,
             "percentage" => GameEventScriptBytecodeOpCode.TypeCheckPercentage,
-            "degree" => GameEventScriptBytecodeOpCode.TypeCheckDegree,
-            "meter" => GameEventScriptBytecodeOpCode.TypeCheckMeter,
-            "second" => GameEventScriptBytecodeOpCode.TypeCheckSecond,
             "vector" => GameEventScriptBytecodeOpCode.TypeCheckVector,
             "point" => GameEventScriptBytecodeOpCode.TypeCheckPoint,
             "float" => GameEventScriptBytecodeOpCode.TypeCheckFloat,
@@ -2727,7 +2768,17 @@ internal sealed class GesLinearBytecodeBuilder
             _ => default
         };
 
-        return typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "set" or "dice";
+        return typeName is "nothing" or "tag" or "text" or "percentage" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "set" or "dice";
+    }
+
+    private static bool TryGetQuantityUnit(string typeName, out GameEventScriptNumericUnit unit)
+    {
+        if (GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out unit))
+        {
+            return true;
+        }
+
+        return GameEventScriptNumericUnits.TryParseTypeName(typeName, out unit);
     }
 
     private static GameEventScriptBytecodeOpCode ToBinaryOpCode(BinaryExpressionNode expression)

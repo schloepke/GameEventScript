@@ -30,7 +30,7 @@ public static class VmRegisterMapping
                 throw new NotImplementedException();
                 break;
             case Percentage:
-                destination.SetFloat(argument.AsNumber(), GameEventScriptBytecodeInstructionUnit.Percentage);
+                destination.SetPercentage(argument.AsNumber());
                 break;
             case Vector:
                 throw new NotImplementedException();
@@ -87,6 +87,7 @@ public static class VmRegisterMapping
     {
         VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.AsIntegerValue),
         VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.AsFloatValue),
+        VmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(a.AsFloatValue),
         VmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.AsBooleanValue),
         // FIXME this might not work here, since we need to binary to look up strings and tags
         _ => GameEventScriptValueFactory.GesNothing(),

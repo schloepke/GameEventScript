@@ -165,6 +165,14 @@
     },
     {
       "kind": "compileError",
+      "name": "quantity rejects percentage unit syntax",
+      "script": "on Start {\n  let x be 100 as :quantity(%)\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "predicate function and handler identifiers enforce casing",
       "script": "predicate Wounded(unit) means unit.hp < unit.maxHp\nfunction filter(Units) means Units\non Start(Target) {\n  emit Done\n}",
       "expectedError": {

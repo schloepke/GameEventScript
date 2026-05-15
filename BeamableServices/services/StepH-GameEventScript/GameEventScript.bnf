@@ -184,6 +184,7 @@ AnyCharButDoubleQuote ::= "[^\"]"
 TypeTag ::= ":text"
           | ":tag"
           | ":percentage"
+          | ":quantity" "(" UnitName ")"
           | ":degree"
           | ":meter"
           | ":second"
@@ -206,6 +207,8 @@ TypeTag ::= ":text"
           | ":dice"
           | ":nothing"
           | ":" TagName
+
+UnitName ::= "m" | "meter" | "s" | "second" | "degree"
 
 CollectionSelector ::= LookupSelector
                      | StructuredCollectionSelector

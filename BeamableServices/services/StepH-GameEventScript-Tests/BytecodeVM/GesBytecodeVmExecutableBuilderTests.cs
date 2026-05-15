@@ -71,7 +71,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, prolog.OpCode);
         Assert.AreEqual((ushort)0, prolog.A_U16);
-        Assert.IsFalse(compiled.Code.Any(instruction => (byte)instruction.OpCode == 0x09), "BindParameter must not be emitted.");
         Assert.IsFalse(compiled.Code.Any(instruction => (byte)instruction.OpCode == 0xA0), "EnterScope must not be emitted.");
 
         var dump = compiled.DumpBytecode();
@@ -106,6 +105,41 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
             instruction.Dest_U16 >= 0 &&
             instruction.A_U16 != instruction.B_U16));
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeUsesGenericUnitOpcodesAndDedicatedPercentageLoads()
+    {
+        const string script =
+            """
+            module Quantities
+
+            on Start(value) {
+              let distance be value as :quantity(m)
+              let isMeter be distance is :quantity(m)
+              let isSecond be distance is :quantity(s)
+              let ratio be 50%
+              emit Done(distance: distance, isMeter: isMeter, isSecond: isSecond, ratio: ratio)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CastUnit &&
+            instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckUnit &&
+            instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckUnit &&
+            instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.UnitSecond));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadPercentage));
+        Assert.IsFalse(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.LoadFloat &&
+            instruction.UnitAndFlags is not 0 and not (byte)GameEventScriptBytecodeInstructionUnit.UnitDegree and
+                not (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter and
+                not (byte)GameEventScriptBytecodeInstructionUnit.UnitSecond));
     }
 
     [TestMethod]

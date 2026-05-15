@@ -694,8 +694,8 @@ internal static class GesValidator
     {
         return unary.Operator switch
         {
-            "has value" or "empty" or "chance" => StaticExpressionInfo.Boolean,
-            "!" => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
+            GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
+            GesUnaryOperator.Not => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean
                 : StaticExpressionInfo.Unknown,
             _ => StaticExpressionInfo.Other()
@@ -711,13 +711,25 @@ internal static class GesValidator
     {
         return binary.Operator switch
         {
-            "=" or "==" or "<>" or "=~" or "<" or ">" or "<=" or ">=" or
-                "in" or "value in" or "starts with" or "ends with" => StaticExpressionInfo.Boolean,
-            "&" or "|" or "xor" or "->" => ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible &&
-                                           ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
+            GesBinaryOperator.Equal or
+                GesBinaryOperator.NotEqual or
+                GesBinaryOperator.ApproxEqual or
+                GesBinaryOperator.Less or
+                GesBinaryOperator.Greater or
+                GesBinaryOperator.LessOrEqual or
+                GesBinaryOperator.GreaterOrEqual or
+                GesBinaryOperator.Contains or
+                GesBinaryOperator.ContainsValue or
+                GesBinaryOperator.StartsWith or
+                GesBinaryOperator.EndsWith => StaticExpressionInfo.Boolean,
+            GesBinaryOperator.And or
+                GesBinaryOperator.Or or
+                GesBinaryOperator.Xor or
+                GesBinaryOperator.Implies => ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible &&
+                                             ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean
                 : StaticExpressionInfo.Unknown,
-            "default" => MergePredicateCompatibleResults(
+            GesBinaryOperator.Default => MergePredicateCompatibleResults(
                 ClassifyExpression(binary.Left, callables, typeDefinitions, declaredTypes, visitedCallables),
                 ClassifyExpression(binary.Right, callables, typeDefinitions, declaredTypes, visitedCallables)),
             _ => StaticExpressionInfo.Other()

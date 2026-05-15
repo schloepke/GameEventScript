@@ -599,10 +599,10 @@ Implication is right-associative at source level and uses the truth table for
 `not a or b`: false antecedent yields `true`; unknown participates as
 `nothing` unless the consequent resolves the result to `true`.
 
-The VM executes `and` and `or` laziness from the linear branch sequence.
-`ShortCircuitAnd` and `ShortCircuitOr` are lowering metadata and are not needed
-for runtime execution. `ShortCircuitImplies` can be emitted as the binary
-implication combine inside that branch sequence.
+The VM executes `and` and `or` laziness from the linear branch sequence; there
+are no dedicated `and`/`or` short-circuit opcodes in portable bytecode.
+`Implies` can be emitted as the binary implication combine inside that branch
+sequence.
 
 ### Control Flow
 

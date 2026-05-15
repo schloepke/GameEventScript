@@ -135,9 +135,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.And => [DST_U16_TargetSlot, A_U16_LeftSlot, B_U16_RightSlot],
             GameEventScriptBytecodeOpCode.Xor => [DST_U16_TargetSlot, A_U16_LeftSlot, B_U16_RightSlot],
             GameEventScriptBytecodeOpCode.UnaryNot => [DST_U16_TargetSlot, A_U16_OperandSlot],
-            GameEventScriptBytecodeOpCode.ShortCircuitOr => [],
-            GameEventScriptBytecodeOpCode.ShortCircuitAnd => [],
-            GameEventScriptBytecodeOpCode.ShortCircuitImplies => [DST_U16_TargetSlot, A_U16_LeftSlot, B_U16_RightSlot],
+            GameEventScriptBytecodeOpCode.Implies => [DST_U16_TargetSlot, A_U16_LeftSlot, B_U16_RightSlot],
 
             GameEventScriptBytecodeOpCode.UnaryHasValue => [DST_U16_TargetSlot, A_U16_OperandSlot],
             GameEventScriptBytecodeOpCode.Equal => [DST_U16_TargetSlot, A_U16_LeftSlot, B_U16_RightSlot],

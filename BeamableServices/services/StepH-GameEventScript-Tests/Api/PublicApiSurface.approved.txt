@@ -207,9 +207,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field UnaryKeys = 72
   enum-field UnaryValues = 73
   enum-field UnaryEntries = 74
-  enum-field ShortCircuitOr = 75
-  enum-field ShortCircuitAnd = 76
-  enum-field ShortCircuitImplies = 77
+  enum-field Implies = 77
   enum-field ReserveSlots = 78
   enum-field CastNothing = 80
   enum-field CastBoolean = 81

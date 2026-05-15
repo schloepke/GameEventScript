@@ -991,7 +991,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Xor:
             case GameEventScriptBytecodeOpCode.And:
             case GameEventScriptBytecodeOpCode.Power:
-            case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+            case GameEventScriptBytecodeOpCode.Implies:
             case GameEventScriptBytecodeOpCode.Equal:
             case GameEventScriptBytecodeOpCode.NotEqual:
             case GameEventScriptBytecodeOpCode.ApproxEqual:
@@ -4395,7 +4395,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return EvaluateLogicalXor(left, right);
             case GameEventScriptBytecodeOpCode.And:
                 return EvaluateLogicalAnd(left, right);
-            case GameEventScriptBytecodeOpCode.ShortCircuitImplies:
+            case GameEventScriptBytecodeOpCode.Implies:
                 return EvaluateLogicalImplies(left, right);
         }
 
@@ -4844,7 +4844,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Or => "|",
             GameEventScriptBytecodeOpCode.Xor => "xor",
             GameEventScriptBytecodeOpCode.And => "&",
-            GameEventScriptBytecodeOpCode.ShortCircuitImplies => "->",
+            GameEventScriptBytecodeOpCode.Implies => "->",
             GameEventScriptBytecodeOpCode.Power => "^",
             GameEventScriptBytecodeOpCode.Equal => "=",
             GameEventScriptBytecodeOpCode.NotEqual => "<>",

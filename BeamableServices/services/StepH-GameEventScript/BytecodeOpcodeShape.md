@@ -169,7 +169,7 @@ runtime dispatch step.
 | `0x10` | Generic boolean/comparison/arithmetic/default operations |
 | `0x20` | Primitive integer fast paths |
 | `0x30` | Unary, random, dice, range value operations |
-| `0x40` | Collection/text operations, projections, short-circuit markers |
+| `0x40` | Collection/text operations, projections, implication |
 | `0x50` | Primitive/domain casts |
 | `0x60` | Collection/message/reference casts |
 | `0x70` | Primitive/domain type checks |
@@ -259,9 +259,8 @@ runtime dispatch step.
 | 0x48 | `UnaryKeys` | - | result slot | operand slot | - | - | - | - | - | Map/record keys projection. |
 | 0x49 | `UnaryValues` | - | result slot | operand slot | - | - | - | - | - | Map/record values projection. |
 | 0x4A | `UnaryEntries` | - | result slot | operand slot | - | - | - | - | - | Map/record entries projection. |
-| 0x4B | `ShortCircuitOr` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `Or`. |
-| 0x4C | `ShortCircuitAnd` | - | - | - | - | - | - | - | - | Lowering marker only; runtime uses jumps plus `And`. |
-| 0x4D | `ShortCircuitImplies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
+| 0x4B..0x4C | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text, frame, or logic operations. |
+| 0x4D | `Implies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
 | 0x4E | `ReserveSlots` | - | - | additional local slot count | - | - | - | - | - | Adds `A_U16` active local slots to the current frame. Entry prologs reserve only locals beyond preloaded arguments. |
 | 0x4F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text, frame, or short-circuit operations. |
 | 0x50 | `CastNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |

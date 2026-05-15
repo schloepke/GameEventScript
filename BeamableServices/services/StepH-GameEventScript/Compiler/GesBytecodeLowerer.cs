@@ -402,7 +402,7 @@ internal static class GesBytecodeLowerer
             case UnaryExpressionNode unary:
                 if (!IsKnownUnaryOperator(unary.Operator))
                 {
-                    failureReason = $"Unary operator '{unary.Operator}' is not currently supported.";
+                    failureReason = $"Unary operator '{unary.Operator.ToSourceText()}' is not currently supported.";
                     return false;
                 }
 
@@ -547,7 +547,7 @@ internal static class GesBytecodeLowerer
             case BinaryExpressionNode binary:
                 if (!IsKnownBinaryOperator(binary.Operator))
                 {
-                    failureReason = $"Binary operator '{binary.Operator}' is not currently supported.";
+                    failureReason = $"Binary operator '{binary.Operator.ToSourceText()}' is not currently supported.";
                     return false;
                 }
 
@@ -702,17 +702,11 @@ internal static class GesBytecodeLowerer
         }
     }
 
-    private static bool IsKnownBinaryOperator(string operation)
-        => operation is "+" or "-" or "*" or "/" or "div" or "mod" or "rem" or "^" or
-            "=" or "==" or "<>" or "=~" or "<" or ">" or "<=" or ">=" or
-            "&" or "|" or "xor" or "->" or "default" or "in" or "value in" or
-            "starts with" or "ends with" or
-            "intersect" or "combine" or "merge" or "except" or "zip";
+    private static bool IsKnownBinaryOperator(GesBinaryOperator operation)
+        => Enum.IsDefined(typeof(GesBinaryOperator), operation);
 
-    private static bool IsKnownUnaryOperator(string operation)
-        => operation is "-" or "!" or "has value" or "empty" or
-            "len" or "chance" or "keys" or "values" or "entries" or
-            "abs" or "ln";
+    private static bool IsKnownUnaryOperator(GesUnaryOperator operation)
+        => Enum.IsDefined(typeof(GesUnaryOperator), operation);
 
     private static bool IsKnownVariadicTaggedOperator(string operation)
         => operation is "min" or "max";

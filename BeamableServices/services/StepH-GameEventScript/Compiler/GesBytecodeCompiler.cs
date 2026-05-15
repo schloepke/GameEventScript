@@ -487,7 +487,7 @@ internal static class GesBytecodeCompiler
                     return;
 
                 case UnaryExpressionNode unary:
-                    AddString(unary.Operator);
+                    AddString(unary.Operator.ToSourceText());
                     CollectSourceExpressionMetadata(unary.Operand);
                     return;
 

@@ -290,11 +290,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case UnaryEntries:
                     break;
-                case ShortCircuitOr:
-                    break;
-                case ShortCircuitAnd:
-                    break;
-                case ShortCircuitImplies:
+                case Implies:
                     break;
                 case CastNothing:
                     break;

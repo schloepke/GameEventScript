@@ -254,7 +254,7 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     #endregion
 
-    #region Collection/text operations, projections, short-circuit markers
+    #region Collection/text operations, projections, implication
 
     Contains = 0x40,
     ContainsValue = 0x41,
@@ -267,9 +267,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     UnaryKeys = 0x48,
     UnaryValues = 0x49,
     UnaryEntries = 0x4A,
-    ShortCircuitOr = 0x4B,
-    ShortCircuitAnd = 0x4C,
-    ShortCircuitImplies = 0x4D,
+    Implies = 0x4D,
     ReserveSlots = 0x4E,
 
     #endregion

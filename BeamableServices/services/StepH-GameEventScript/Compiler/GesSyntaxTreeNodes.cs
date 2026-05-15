@@ -101,6 +101,109 @@ internal sealed record ExpressionStatementNode(ExpressionNode Expression) : Stat
 
 // Expression nodes
 
+internal enum GesUnaryOperator
+{
+    Negate,
+    Not,
+    HasValue,
+    Empty,
+    Length,
+    Chance,
+    Keys,
+    Values,
+    Entries,
+    Abs,
+    NaturalLog
+}
+
+internal enum GesBinaryOperator
+{
+    Or,
+    Xor,
+    And,
+    Implies,
+    Equal,
+    NotEqual,
+    ApproxEqual,
+    Less,
+    Greater,
+    LessOrEqual,
+    GreaterOrEqual,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    IntegerDivide,
+    Modulo,
+    Remainder,
+    Power,
+    Default,
+    Contains,
+    ContainsValue,
+    StartsWith,
+    EndsWith,
+    Intersect,
+    Combine,
+    Merge,
+    Except,
+    Zip
+}
+
+internal static class GesOperatorText
+{
+    public static string ToSourceText(this GesUnaryOperator op)
+        => op switch
+        {
+            GesUnaryOperator.Negate => "-",
+            GesUnaryOperator.Not => "!",
+            GesUnaryOperator.HasValue => "has value",
+            GesUnaryOperator.Empty => "empty",
+            GesUnaryOperator.Length => "len",
+            GesUnaryOperator.Chance => "chance",
+            GesUnaryOperator.Keys => "keys",
+            GesUnaryOperator.Values => "values",
+            GesUnaryOperator.Entries => "entries",
+            GesUnaryOperator.Abs => "abs",
+            GesUnaryOperator.NaturalLog => "ln",
+            _ => op.ToString()
+        };
+
+    public static string ToSourceText(this GesBinaryOperator op)
+        => op switch
+        {
+            GesBinaryOperator.Or => "|",
+            GesBinaryOperator.Xor => "xor",
+            GesBinaryOperator.And => "&",
+            GesBinaryOperator.Implies => "->",
+            GesBinaryOperator.Equal => "=",
+            GesBinaryOperator.NotEqual => "<>",
+            GesBinaryOperator.ApproxEqual => "=~",
+            GesBinaryOperator.Less => "<",
+            GesBinaryOperator.Greater => ">",
+            GesBinaryOperator.LessOrEqual => "<=",
+            GesBinaryOperator.GreaterOrEqual => ">=",
+            GesBinaryOperator.Add => "+",
+            GesBinaryOperator.Subtract => "-",
+            GesBinaryOperator.Multiply => "*",
+            GesBinaryOperator.Divide => "/",
+            GesBinaryOperator.IntegerDivide => "div",
+            GesBinaryOperator.Modulo => "mod",
+            GesBinaryOperator.Remainder => "rem",
+            GesBinaryOperator.Power => "^",
+            GesBinaryOperator.Default => "default",
+            GesBinaryOperator.Contains => "in",
+            GesBinaryOperator.ContainsValue => "value in",
+            GesBinaryOperator.StartsWith => "starts with",
+            GesBinaryOperator.EndsWith => "ends with",
+            GesBinaryOperator.Intersect => "intersect",
+            GesBinaryOperator.Combine => "combine",
+            GesBinaryOperator.Merge => "merge",
+            GesBinaryOperator.Except => "except",
+            GesBinaryOperator.Zip => "zip",
+            _ => op.ToString()
+        };
+}
+
 internal sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 internal sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
 internal sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<ParameterNode> ParameterList) : ExpressionNode
@@ -141,7 +244,7 @@ internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> I
 internal sealed record SetLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 internal sealed record MapLiteralExpressionNode(IReadOnlyList<MapEntryNode> Entries) : ExpressionNode;
 internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNode;
-internal sealed record UnaryExpressionNode(string Operator, ExpressionNode Operand) : ExpressionNode;
+internal sealed record UnaryExpressionNode(GesUnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
 internal sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 internal sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
 internal sealed record RangeExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression) : ExpressionNode;
@@ -151,7 +254,7 @@ internal sealed record DiceExpressionNode(int DiceCount, int SideCount) : Expres
 internal sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, IterationSourceNode Source, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
 internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;
-internal sealed record BinaryExpressionNode(ExpressionNode Left, string Operator, ExpressionNode Right) : ExpressionNode;
+internal sealed record BinaryExpressionNode(ExpressionNode Left, GesBinaryOperator Operator, ExpressionNode Right) : ExpressionNode;
 internal sealed record PredicateCallExpressionNode(ExpressionNode Value, string PredicateName) : ExpressionNode;
 internal sealed record ExtensionPredicateExpressionNode(ExpressionNode Value, string ExtensionName, string FunctionName) : ExpressionNode;
 internal sealed record TypeCheckExpressionNode(ExpressionNode Value, string TypeName) : ExpressionNode;

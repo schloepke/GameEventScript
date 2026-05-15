@@ -75,28 +75,28 @@ internal enum GesTokenKind
     RightBracket,
     Colon,
     Underscore,
-    Arrow,
+    OperatorImplication,
     ProjectionArrow,
-    Or,
-    Xor,
-    And,
-    Equal,
-    NotEqual,
-    ApproxEqual,
-    Less,
-    Greater,
-    LessOrEqual,
-    GreaterOrEqual,
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    IntegerDivide,
-    Modulo,
-    Remainder,
-    Power,
+    OperatorOr,
+    OperatorXor,
+    OperatorAnd,
+    OperatorEqual,
+    OperatorNotEqual,
+    OperatorApproxEqual,
+    OperatorLess,
+    OperatorGreater,
+    OperatorLessOrEqual,
+    OperatorGreaterOrEqual,
+    OperatorPlus,
+    OperatorMinus,
+    OperatorMultiply,
+    OperatorDivide,
+    OperatorIntegerDivide,
+    OperatorModulo,
+    OperatorRemainder,
+    OperatorPower,
     SuperscriptInteger,
-    Not
+    OperatorNot
 }
 
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "")
@@ -280,13 +280,13 @@ internal sealed class GesLexer
             "ends" => new GesToken(GesTokenKind.Ends, text, line, column, endLine, endColumn),
             "with" => new GesToken(GesTokenKind.With, text, line, column, endLine, endColumn),
             "is" => new GesToken(GesTokenKind.Is, text, line, column, endLine, endColumn),
-            "or" => new GesToken(GesTokenKind.Or, text, line, column, endLine, endColumn),
-            "xor" => new GesToken(GesTokenKind.Xor, text, line, column, endLine, endColumn),
-            "and" => new GesToken(GesTokenKind.And, text, line, column, endLine, endColumn),
-            "div" => new GesToken(GesTokenKind.IntegerDivide, text, line, column, endLine, endColumn),
-            "mod" => new GesToken(GesTokenKind.Modulo, text, line, column, endLine, endColumn),
-            "rem" => new GesToken(GesTokenKind.Remainder, text, line, column, endLine, endColumn),
-            "not" => new GesToken(GesTokenKind.Not, text, line, column, endLine, endColumn),
+            "or" => new GesToken(GesTokenKind.OperatorOr, text, line, column, endLine, endColumn),
+            "xor" => new GesToken(GesTokenKind.OperatorXor, text, line, column, endLine, endColumn),
+            "and" => new GesToken(GesTokenKind.OperatorAnd, text, line, column, endLine, endColumn),
+            "div" => new GesToken(GesTokenKind.OperatorIntegerDivide, text, line, column, endLine, endColumn),
+            "mod" => new GesToken(GesTokenKind.OperatorModulo, text, line, column, endLine, endColumn),
+            "rem" => new GesToken(GesTokenKind.OperatorRemainder, text, line, column, endLine, endColumn),
+            "not" => new GesToken(GesTokenKind.OperatorNot, text, line, column, endLine, endColumn),
             "to" => new GesToken(GesTokenKind.To, text, line, column, endLine, endColumn),
             "true" => new GesToken(GesTokenKind.True, text, line, column, endLine, endColumn),
             "false" => new GesToken(GesTokenKind.False, text, line, column, endLine, endColumn),
@@ -498,19 +498,19 @@ internal sealed class GesLexer
         {
             case '<' when next == '>':
                 Advance();
-                return CreateToken(GesTokenKind.NotEqual, "<>", line, column);
+                return CreateToken(GesTokenKind.OperatorNotEqual, "<>", line, column);
             case '=' when next == '~':
                 Advance();
-                return CreateToken(GesTokenKind.ApproxEqual, "=~", line, column);
+                return CreateToken(GesTokenKind.OperatorApproxEqual, "=~", line, column);
             case '<' when next == '=':
                 Advance();
-                return CreateToken(GesTokenKind.LessOrEqual, "<=", line, column);
+                return CreateToken(GesTokenKind.OperatorLessOrEqual, "<=", line, column);
             case '>' when next == '=':
                 Advance();
-                return CreateToken(GesTokenKind.GreaterOrEqual, ">=", line, column);
+                return CreateToken(GesTokenKind.OperatorGreaterOrEqual, ">=", line, column);
             case '-' when next == '>':
                 Advance();
-                return CreateToken(GesTokenKind.Arrow, "->", line, column);
+                return CreateToken(GesTokenKind.OperatorImplication, "->", line, column);
             case '=' when next == '>':
                 Advance();
                 return CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column);
@@ -528,20 +528,20 @@ internal sealed class GesLexer
                     ']' => CreateToken(GesTokenKind.RightBracket, "]", line, column),
                     ':' => CreateToken(GesTokenKind.Colon, ":", line, column),
                     '_' => CreateToken(GesTokenKind.Underscore, "_", line, column),
-                    '=' => CreateToken(GesTokenKind.Equal, "=", line, column),
-                    '<' => CreateToken(GesTokenKind.Less, "<", line, column),
-                    '>' => CreateToken(GesTokenKind.Greater, ">", line, column),
-                    '|' => CreateToken(GesTokenKind.Or, "|", line, column),
-                    '^' => CreateToken(GesTokenKind.Power, "^", line, column),
-                    '&' => CreateToken(GesTokenKind.And, "&", line, column),
-                    '+' => CreateToken(GesTokenKind.Plus, "+", line, column),
-                    '-' => CreateToken(GesTokenKind.Minus, "-", line, column),
-                    '*' => CreateToken(GesTokenKind.Multiply, "*", line, column),
-                    '/' => CreateToken(GesTokenKind.Divide, "/", line, column),
-                    '\u00B7' => CreateToken(GesTokenKind.Multiply, "*", line, column),
-                    '\u00D7' => CreateToken(GesTokenKind.Multiply, "*", line, column),
-                    '\u00F7' => CreateToken(GesTokenKind.Divide, "/", line, column),
-                    '\u2212' => CreateToken(GesTokenKind.Minus, "-", line, column),
+                    '=' => CreateToken(GesTokenKind.OperatorEqual, "=", line, column),
+                    '<' => CreateToken(GesTokenKind.OperatorLess, "<", line, column),
+                    '>' => CreateToken(GesTokenKind.OperatorGreater, ">", line, column),
+                    '|' => CreateToken(GesTokenKind.OperatorOr, "|", line, column),
+                    '^' => CreateToken(GesTokenKind.OperatorPower, "^", line, column),
+                    '&' => CreateToken(GesTokenKind.OperatorAnd, "&", line, column),
+                    '+' => CreateToken(GesTokenKind.OperatorPlus, "+", line, column),
+                    '-' => CreateToken(GesTokenKind.OperatorMinus, "-", line, column),
+                    '*' => CreateToken(GesTokenKind.OperatorMultiply, "*", line, column),
+                    '/' => CreateToken(GesTokenKind.OperatorDivide, "/", line, column),
+                    '\u00B7' => CreateToken(GesTokenKind.OperatorMultiply, "*", line, column),
+                    '\u00D7' => CreateToken(GesTokenKind.OperatorMultiply, "*", line, column),
+                    '\u00F7' => CreateToken(GesTokenKind.OperatorDivide, "/", line, column),
+                    '\u2212' => CreateToken(GesTokenKind.OperatorMinus, "-", line, column),
                     '\u221E' => CreateToken(GesTokenKind.Tag, ":infinity", line, column),
                     '\u220F' => CreateToken(GesTokenKind.Tag, ":pi", line, column),
                     '\u2107' => CreateToken(GesTokenKind.Tag, ":e", line, column),
@@ -549,26 +549,26 @@ internal sealed class GesLexer
                     '\u03C6' => CreateToken(GesTokenKind.Tag, ":phi", line, column),
                     '\u221A' => CreateToken(GesTokenKind.Tag, ":sqrt", line, column),
                     '\u221B' => CreateToken(GesTokenKind.Tag, ":cbrt", line, column),
-                    '\u2227' => CreateToken(GesTokenKind.And, "&", line, column),
-                    '\u2228' => CreateToken(GesTokenKind.Or, "|", line, column),
+                    '\u2227' => CreateToken(GesTokenKind.OperatorAnd, "&", line, column),
+                    '\u2228' => CreateToken(GesTokenKind.OperatorOr, "|", line, column),
                     '\u2208' => CreateToken(GesTokenKind.In, "in", line, column),
                     '\u2209' => CreateToken(GesTokenKind.NotIn, "not in", line, column),
-                    '\u2295' => CreateToken(GesTokenKind.Xor, "xor", line, column),
-                    '\u22C5' => CreateToken(GesTokenKind.Multiply, "*", line, column),
-                    '\u2264' => CreateToken(GesTokenKind.LessOrEqual, "<=", line, column),
-                    '\u2265' => CreateToken(GesTokenKind.GreaterOrEqual, ">=", line, column),
-                    '\u00AC' => CreateToken(GesTokenKind.Not, "!", line, column),
-                    '\u2260' => CreateToken(GesTokenKind.NotEqual, "<>", line, column),
-                    '\u2248' => CreateToken(GesTokenKind.ApproxEqual, "=~", line, column),
-                    '\u2245' => CreateToken(GesTokenKind.ApproxEqual, "=~", line, column),
-                    '\u2192' => CreateToken(GesTokenKind.Arrow, "->", line, column),
-                    '\u21D2' => CreateToken(GesTokenKind.Arrow, "->", line, column),
+                    '\u2295' => CreateToken(GesTokenKind.OperatorXor, "xor", line, column),
+                    '\u22C5' => CreateToken(GesTokenKind.OperatorMultiply, "*", line, column),
+                    '\u2264' => CreateToken(GesTokenKind.OperatorLessOrEqual, "<=", line, column),
+                    '\u2265' => CreateToken(GesTokenKind.OperatorGreaterOrEqual, ">=", line, column),
+                    '\u00AC' => CreateToken(GesTokenKind.OperatorNot, "!", line, column),
+                    '\u2260' => CreateToken(GesTokenKind.OperatorNotEqual, "<>", line, column),
+                    '\u2248' => CreateToken(GesTokenKind.OperatorApproxEqual, "=~", line, column),
+                    '\u2245' => CreateToken(GesTokenKind.OperatorApproxEqual, "=~", line, column),
+                    '\u2192' => CreateToken(GesTokenKind.OperatorImplication, "->", line, column),
+                    '\u21D2' => CreateToken(GesTokenKind.OperatorImplication, "->", line, column),
                     '\u21A6' => CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column),
                     '\u00B2' => CreateToken(GesTokenKind.SuperscriptInteger, "2", line, column),
                     '\u00B3' => CreateToken(GesTokenKind.SuperscriptInteger, "3", line, column),
                     '%' => CreateToken(GesTokenKind.Illegal, "%", line, column),
-                    '!' => CreateToken(GesTokenKind.Not, "!", line, column),
-                    '~' => CreateToken(GesTokenKind.Not, "~", line, column),
+                    '!' => CreateToken(GesTokenKind.OperatorNot, "!", line, column),
+                    '~' => CreateToken(GesTokenKind.OperatorNot, "~", line, column),
                     _ => CreateToken(GesTokenKind.Illegal, ch.ToString(), line, column)
                 };
         }

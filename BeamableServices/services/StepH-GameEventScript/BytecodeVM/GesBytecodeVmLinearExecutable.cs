@@ -230,8 +230,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
-            case GameEventScriptBytecodeOpCode.ShortCircuitOr:
-            case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
                 break;
 
             case GameEventScriptBytecodeOpCode.ReleaseSlots:
@@ -1025,8 +1023,6 @@ internal sealed class GesBytecodeVmLinearExecutable
     private static bool HasDestination(GameEventScriptBytecodeOpCode opCode)
         => opCode is not (
             GameEventScriptBytecodeOpCode.Nop or
-            GameEventScriptBytecodeOpCode.ShortCircuitOr or
-            GameEventScriptBytecodeOpCode.ShortCircuitAnd or
             GameEventScriptBytecodeOpCode.ReserveSlots or
             GameEventScriptBytecodeOpCode.Jump or
             GameEventScriptBytecodeOpCode.JumpIfTrue or
@@ -1127,7 +1123,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.Xor or
             GameEventScriptBytecodeOpCode.And or
             GameEventScriptBytecodeOpCode.Power or
-            GameEventScriptBytecodeOpCode.ShortCircuitImplies or
+            GameEventScriptBytecodeOpCode.Implies or
             GameEventScriptBytecodeOpCode.Equal or
             GameEventScriptBytecodeOpCode.NotEqual or
             GameEventScriptBytecodeOpCode.ApproxEqual or

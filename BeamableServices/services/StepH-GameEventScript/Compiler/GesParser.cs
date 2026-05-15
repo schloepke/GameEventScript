@@ -47,14 +47,20 @@ internal sealed class GesParser
         return new GesParser(tokens, moduleName, resolvedSourceName, initialErrors).ParseScript();
     }
 
-    private static readonly HashSet<string> CollectionCombineOperators = new(StringComparer.Ordinal)
+    private static bool TryGetCollectionCombineOperator(string text, out GesBinaryOperator op)
     {
-        "intersect",
-        "combine",
-        "merge",
-        "except",
-        "zip"
-    };
+        op = text switch
+        {
+            "intersect" => GesBinaryOperator.Intersect,
+            "combine" => GesBinaryOperator.Combine,
+            "merge" => GesBinaryOperator.Merge,
+            "except" => GesBinaryOperator.Except,
+            "zip" => GesBinaryOperator.Zip,
+            _ => default
+        };
+
+        return text is "intersect" or "combine" or "merge" or "except" or "zip";
+    }
 
     private sealed class GameEventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
     {
@@ -272,7 +278,7 @@ internal sealed class GesParser
         {
             ExpectWord("between");
             minimumExpression = ParseEqualityExpression();
-            Expect(And);
+            Expect(OperatorAnd);
             maximumExpression = ParseEqualityExpression();
             SkipNewLines();
         }
@@ -637,7 +643,7 @@ internal sealed class GesParser
         ExpectWord("of");
         SkipNewLines();
         arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
-        while (Match(And))
+        while (Match(OperatorAnd))
         {
             SkipNewLines();
             arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
@@ -760,7 +766,7 @@ internal sealed class GesParser
                     break;
                 }
 
-                Match(Or);
+                Match(OperatorOr);
                 SkipNewLines();
 
                 var branchValue = ParseImplicationExpression();
@@ -784,14 +790,14 @@ internal sealed class GesParser
     private ExpressionNode ParseImplicationExpression()
     {
         var expression = ParseDefaultExpression();
-        if (!Match(Arrow))
+        if (!Match(OperatorImplication))
         {
             return expression;
         }
 
         SkipNewLines();
         var right = ParseImplicationExpression();
-        return WithRange(new BinaryExpressionNode(expression, "->", right), expression, right);
+        return WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Implies, right), expression, right);
     }
 
     private ExpressionNode ParseDefaultExpression()
@@ -801,10 +807,9 @@ internal sealed class GesParser
         while (Current.Kind == Tag && string.Equals(Current.Text, ":default", StringComparison.Ordinal))
         {
             Advance();
-            var op = "default";
             SkipNewLines();
             var right = ParseCollectionCombineExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Default, right), expression, right);
         }
 
         return expression;
@@ -815,9 +820,8 @@ internal sealed class GesParser
         var expression = ParseOrExpression();
 
         while (Current.Kind == Tag &&
-               CollectionCombineOperators.Contains(Current.Text[1..]))
+               TryGetCollectionCombineOperator(Current.Text[1..], out var op))
         {
-            var op = Current.Text[1..];
             Advance();
             SkipNewLines();
             var right = ParseOrExpression();
@@ -831,12 +835,11 @@ internal sealed class GesParser
     {
         var expression = ParseXorExpression();
 
-        while (Match(Or))
+        while (Match(OperatorOr))
         {
-            var op = "|";
             SkipNewLines();
             var right = ParseXorExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Or, right), expression, right);
         }
 
         return expression;
@@ -846,12 +849,11 @@ internal sealed class GesParser
     {
         var expression = ParseAndExpression();
 
-        while (Match(Xor))
+        while (Match(OperatorXor))
         {
-            var op = "xor";
             SkipNewLines();
             var right = ParseAndExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Xor, right), expression, right);
         }
 
         return expression;
@@ -861,12 +863,11 @@ internal sealed class GesParser
     {
         var expression = ParseEqualityExpression();
 
-        while (Match(And))
+        while (Match(OperatorAnd))
         {
-            var op = "&";
             SkipNewLines();
             var right = ParseEqualityExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.And, right), expression, right);
         }
 
         return expression;
@@ -876,12 +877,17 @@ internal sealed class GesParser
     {
         var expression = ParseMembershipExpression();
 
-        while (Match(Equal, NotEqual, ApproxEqual))
+        while (Match(OperatorEqual, OperatorNotEqual, OperatorApproxEqual))
         {
-            var op = Previous.Text;
+            var op = Previous.Kind switch
+            {
+                OperatorEqual => GesBinaryOperator.Equal,
+                OperatorNotEqual => GesBinaryOperator.NotEqual,
+                _ => GesBinaryOperator.ApproxEqual
+            };
             SkipNewLines();
             var right = ParseMembershipExpression();
-            expression = new BinaryExpressionNode(expression, op, right);
+            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
         }
 
         return expression;
@@ -897,16 +903,15 @@ internal sealed class GesParser
             {
                 SkipNewLines();
                 ExpectValueWord();
-                expression = WithRange(new UnaryExpressionNode("has value", expression), expression);
+                expression = WithRange(new UnaryExpressionNode(GesUnaryOperator.HasValue, expression), expression);
                 continue;
             }
 
             if (Match(In))
             {
-                var op = Previous.Text;
                 SkipNewLines();
                 var right = ParseTypeOperationExpression();
-                expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Contains, right), expression, right);
                 continue;
             }
 
@@ -914,8 +919,8 @@ internal sealed class GesParser
             {
                 SkipNewLines();
                 var right = ParseTypeOperationExpression();
-                var membership = WithRange(new BinaryExpressionNode(expression, "in", right), expression, right);
-                expression = WithRange(new UnaryExpressionNode("!", membership), membership);
+                var membership = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Contains, right), expression, right);
+                expression = WithRange(new UnaryExpressionNode(GesUnaryOperator.Not, membership), membership);
                 continue;
             }
 
@@ -924,10 +929,9 @@ internal sealed class GesParser
                 Advance();
                 SkipNewLines();
                 Expect(In);
-                var op = "value in";
                 SkipNewLines();
                 var right = ParseTypeOperationExpression();
-                expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.ContainsValue, right), expression, right);
                 continue;
             }
 
@@ -935,10 +939,9 @@ internal sealed class GesParser
             {
                 SkipNewLines();
                 Expect(With);
-                var op = "starts with";
                 SkipNewLines();
                 var right = ParseTypeOperationExpression();
-                expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.StartsWith, right), expression, right);
                 continue;
             }
 
@@ -946,10 +949,9 @@ internal sealed class GesParser
             {
                 SkipNewLines();
                 Expect(With);
-                var op = "ends with";
                 SkipNewLines();
                 var right = ParseTypeOperationExpression();
-                expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.EndsWith, right), expression, right);
                 continue;
             }
 
@@ -1060,7 +1062,7 @@ internal sealed class GesParser
 
                 if (Match(Empty))
                 {
-                    expression = WithRange(new UnaryExpressionNode("empty", expression), expression);
+                    expression = WithRange(new UnaryExpressionNode(GesUnaryOperator.Empty, expression), expression);
                     continue;
                 }
 
@@ -1071,7 +1073,7 @@ internal sealed class GesParser
                     {
                         SkipNewLines();
                         var right = ParseRelationalComparisonOperand();
-                        expression = WithRange(new BinaryExpressionNode(expression, ">=", right), expression, right);
+                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, right), expression, right);
                         continue;
                     }
 
@@ -1079,7 +1081,7 @@ internal sealed class GesParser
                     {
                         SkipNewLines();
                         var right = ParseRelationalComparisonOperand();
-                        expression = WithRange(new BinaryExpressionNode(expression, "<=", right), expression, right);
+                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.LessOrEqual, right), expression, right);
                         continue;
                     }
 
@@ -1096,18 +1098,18 @@ internal sealed class GesParser
 
                 var threshold = ParseRelationalComparisonOperand();
                 SkipNewLines();
-                if (Match(Or))
+                if (Match(OperatorOr))
                 {
                     SkipNewLines();
                     if (MatchWord("less"))
                     {
-                        expression = WithRange(new BinaryExpressionNode(expression, "<=", threshold), expression, threshold);
+                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.LessOrEqual, threshold), expression, threshold);
                         continue;
                     }
 
                     if (MatchWord("more") || MatchWord("greater"))
                     {
-                        expression = WithRange(new BinaryExpressionNode(expression, ">=", threshold), expression, threshold);
+                        expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, threshold), expression, threshold);
                         continue;
                     }
 
@@ -1115,7 +1117,7 @@ internal sealed class GesParser
                     throw new GameEventScriptParseException($"Expected less, more or greater but found {token.Text}", token.Line, token.Column);
                 }
 
-                expression = WithRange(new BinaryExpressionNode(expression, "=", threshold), expression, threshold);
+                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Equal, threshold), expression, threshold);
                 continue;
             }
 
@@ -1140,9 +1142,15 @@ internal sealed class GesParser
     {
         var expression = ParseAdditiveExpression();
 
-        while (Match(Less, Greater, LessOrEqual, GreaterOrEqual))
+        while (Match(OperatorLess, OperatorGreater, OperatorLessOrEqual, OperatorGreaterOrEqual))
         {
-            var op = Previous.Text;
+            var op = Previous.Kind switch
+            {
+                OperatorLess => GesBinaryOperator.Less,
+                OperatorGreater => GesBinaryOperator.Greater,
+                OperatorLessOrEqual => GesBinaryOperator.LessOrEqual,
+                _ => GesBinaryOperator.GreaterOrEqual
+            };
             SkipNewLines();
             var right = ParseAdditiveExpression();
             expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
@@ -1155,9 +1163,11 @@ internal sealed class GesParser
     {
         var expression = ParseMultiplicativeExpression();
 
-        while (Match(Plus, Minus))
+        while (Match(OperatorPlus, OperatorMinus))
         {
-            var op = Previous.Text;
+            var op = Previous.Kind == OperatorPlus
+                ? GesBinaryOperator.Add
+                : GesBinaryOperator.Subtract;
             SkipNewLines();
             var right = ParseMultiplicativeExpression();
             expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
@@ -1172,9 +1182,16 @@ internal sealed class GesParser
 
         while (true)
         {
-            if (Match(Multiply, Divide, IntegerDivide, Modulo, Remainder))
+            if (Match(OperatorMultiply, OperatorDivide, OperatorIntegerDivide, OperatorModulo, OperatorRemainder))
             {
-                var op = Previous.Text;
+                var op = Previous.Kind switch
+                {
+                    OperatorMultiply => GesBinaryOperator.Multiply,
+                    OperatorDivide => GesBinaryOperator.Divide,
+                    OperatorIntegerDivide => GesBinaryOperator.IntegerDivide,
+                    OperatorModulo => GesBinaryOperator.Modulo,
+                    _ => GesBinaryOperator.Remainder
+                };
                 SkipNewLines();
                 var right = ParseUnaryExpression();
                 expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
@@ -1186,7 +1203,7 @@ internal sealed class GesParser
                 AreAdjacent(Previous, Current))
             {
                 var right = ParseUnaryExpression();
-                expression = WithRange(new BinaryExpressionNode(expression, "*", right), expression, right);
+                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Multiply, right), expression, right);
                 continue;
             }
 
@@ -1200,18 +1217,18 @@ internal sealed class GesParser
     {
         var expression = ParsePowerBaseExpression();
 
-        if (Match(Power))
+        if (Match(OperatorPower))
         {
             SkipNewLines();
             var right = ParseUnaryExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, "^", right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Power, right), expression, right);
         }
         else if (Match(SuperscriptInteger))
         {
             var exponentToken = Previous;
             var exponent = long.Parse(exponentToken.Text, CultureInfo.InvariantCulture);
             var right = WithRange(new IntegerLiteralExpressionNode(exponent), exponentToken);
-            expression = WithRange(new BinaryExpressionNode(expression, "^", right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Power, right), expression, right);
         }
 
         return expression;
@@ -1230,12 +1247,12 @@ internal sealed class GesParser
     private ExpressionNode ParseUnaryExpression()
     {
         SkipNewLines();
-        if (Match(Minus))
+        if (Match(OperatorMinus))
         {
             var opToken = Previous;
             SkipNewLines();
             var negativeOperand = ParseUnaryExpression();
-            return WithRange(new UnaryExpressionNode("-", negativeOperand), opToken, Previous);
+            return WithRange(new UnaryExpressionNode(GesUnaryOperator.Negate, negativeOperand), opToken, Previous);
         }
 
         if (Match(Has))
@@ -1245,7 +1262,7 @@ internal sealed class GesParser
             ExpectValueWord();
             SkipNewLines();
             var hasValueOperand = ParseUnaryExpression();
-            return WithRange(new UnaryExpressionNode("has value", hasValueOperand), opToken, Previous);
+            return WithRange(new UnaryExpressionNode(GesUnaryOperator.HasValue, hasValueOperand), opToken, Previous);
         }
 
         if (Match(Empty))
@@ -1253,12 +1270,12 @@ internal sealed class GesParser
             var opToken = Previous;
             SkipNewLines();
             var emptyOperand = ParseUnaryExpression();
-            return WithRange(new UnaryExpressionNode("empty", emptyOperand), opToken, Previous);
+            return WithRange(new UnaryExpressionNode(GesUnaryOperator.Empty, emptyOperand), opToken, Previous);
         }
 
-        if (!Match(Not))
+        if (!Match(OperatorNot))
         {
-            if (!TryParseTaggedUnaryOperator(out var taggedOperator))
+            if (!TryParseTaggedUnaryOperator(out var taggedOperator, out var rootExponent))
             {
                 return ParsePowerExpression();
             }
@@ -1266,7 +1283,7 @@ internal sealed class GesParser
             var taggedToken = Previous;
             SkipNewLines();
             var taggedOperand = ParseUnaryExpression();
-            if (TryCreateRootPowerExpression(taggedOperator, taggedOperand, taggedToken, out var rootExpression))
+            if (TryCreateRootPowerExpression(rootExponent, taggedOperand, taggedToken, out var rootExpression))
             {
                 return rootExpression;
             }
@@ -1275,16 +1292,9 @@ internal sealed class GesParser
         }
 
         var startToken = Previous;
-        var op = Previous.Text;
-        if (string.Equals(op, "not", StringComparison.Ordinal) ||
-            string.Equals(op, "~", StringComparison.Ordinal))
-        {
-            op = "!";
-        }
-
         SkipNewLines();
         var operand = ParseUnaryExpression();
-        return WithRange(new UnaryExpressionNode(op, operand), startToken, Previous);
+        return WithRange(new UnaryExpressionNode(GesUnaryOperator.Not, operand), startToken, Previous);
     }
 
     private ExpressionNode ParsePowerBaseExpression()
@@ -1312,31 +1322,46 @@ internal sealed class GesParser
         return ParsePostfixExpression();
     }
 
-    private bool TryParseTaggedUnaryOperator(out string op)
+    private bool TryParseTaggedUnaryOperator(out GesUnaryOperator op, out double? rootExponent)
     {
-        op = string.Empty;
+        op = default;
+        rootExponent = null;
         if (Current.Kind != Tag)
         {
             return false;
         }
 
-        op = Current.Text switch
+        switch (Current.Text)
         {
-            ":len" => "len",
-            ":chance" => "chance",
-            ":keys" => "keys",
-            ":values" => "values",
-            ":entries" => "entries",
-            ":abs" => "abs",
-            ":ln" => "ln",
-            ":sqrt" => "sqrt",
-            ":cbrt" => "cbrt",
-            _ => string.Empty
-        };
-
-        if (string.IsNullOrEmpty(op))
-        {
-            return false;
+            case ":len":
+                op = GesUnaryOperator.Length;
+                break;
+            case ":chance":
+                op = GesUnaryOperator.Chance;
+                break;
+            case ":keys":
+                op = GesUnaryOperator.Keys;
+                break;
+            case ":values":
+                op = GesUnaryOperator.Values;
+                break;
+            case ":entries":
+                op = GesUnaryOperator.Entries;
+                break;
+            case ":abs":
+                op = GesUnaryOperator.Abs;
+                break;
+            case ":ln":
+                op = GesUnaryOperator.NaturalLog;
+                break;
+            case ":sqrt":
+                rootExponent = SquareRootExponent;
+                break;
+            case ":cbrt":
+                rootExponent = CubeRootExponent;
+                break;
+            default:
+                return false;
         }
 
         Advance();
@@ -1344,29 +1369,22 @@ internal sealed class GesParser
     }
 
     private bool TryCreateRootPowerExpression(
-        string taggedOperator,
+        double? rootExponent,
         ExpressionNode operand,
         GesToken startToken,
         out ExpressionNode expression)
     {
-        var exponent = taggedOperator switch
-        {
-            "sqrt" => SquareRootExponent,
-            "cbrt" => CubeRootExponent,
-            _ => (double?)null
-        };
-
-        if (!exponent.HasValue)
+        if (!rootExponent.HasValue)
         {
             expression = operand;
             return false;
         }
 
-        var exponentNode = new FloatLiteralExpressionNode(exponent.Value)
+        var exponentNode = new FloatLiteralExpressionNode(rootExponent.Value)
         {
             SourceRange = CreateRange(startToken, Previous)
         };
-        expression = WithRange(new BinaryExpressionNode(operand, "^", exponentNode), startToken, Previous);
+        expression = WithRange(new BinaryExpressionNode(operand, GesBinaryOperator.Power, exponentNode), startToken, Previous);
         return true;
     }
 
@@ -2306,7 +2324,7 @@ internal sealed class GesParser
     {
         SkipNewLines();
         var items = new List<ExpressionNode> { ParseEqualityExpression() };
-        while (Match(And))
+        while (Match(OperatorAnd))
         {
             SkipNewLines();
             items.Add(ParseEqualityExpression());
@@ -2325,7 +2343,7 @@ internal sealed class GesParser
         SkipNewLines();
         var minimum = ParseEqualityExpression();
         SkipNewLines();
-        Expect(And);
+        Expect(OperatorAnd);
         SkipNewLines();
         var maximum = ParseEqualityExpression();
         return WithRange(new ClampExpressionNode(value, minimum, maximum), startToken);
@@ -2338,7 +2356,7 @@ internal sealed class GesParser
         ExpectWord("of");
         SkipNewLines();
         var arguments = new List<ExpressionNode> { ParseEqualityExpression() };
-        while (Match(And))
+        while (Match(OperatorAnd))
         {
             SkipNewLines();
             arguments.Add(ParseEqualityExpression());
@@ -2554,7 +2572,7 @@ internal sealed class GesParser
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or LeftBracket or LeftParen or Minus or Has or Empty or Not;
+        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()
     {

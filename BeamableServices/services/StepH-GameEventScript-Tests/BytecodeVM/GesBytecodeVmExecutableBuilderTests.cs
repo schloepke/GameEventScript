@@ -99,11 +99,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.JumpIfFalse));
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies &&
+            instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
             instruction.Dest_U16 >= 0 &&
             instruction.A_U16 == instruction.B_U16));
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies &&
+            instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
             instruction.Dest_U16 >= 0 &&
             instruction.A_U16 != instruction.B_U16));
     }

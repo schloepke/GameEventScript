@@ -896,7 +896,7 @@ internal sealed class GesLinearBytecodeBuilder
             }
 
             case BinaryExpressionNode binary
-                when binary.Operator is not ("|" or "&" or "->"):
+                when binary.Operator is not (GesBinaryOperator.Or or GesBinaryOperator.And or GesBinaryOperator.Implies):
             {
                 var left = EmitSourceExpression(binary.Left, context, state);
                 var right = EmitSourceExpression(binary.Right, context, state);
@@ -1288,14 +1288,7 @@ internal sealed class GesLinearBytecodeBuilder
         ExpressionState state,
         out int resultSlot)
     {
-        var opCode = binary.Operator switch
-        {
-            "|" => GameEventScriptBytecodeOpCode.ShortCircuitOr,
-            "&" => GameEventScriptBytecodeOpCode.ShortCircuitAnd,
-            "->" => GameEventScriptBytecodeOpCode.ShortCircuitImplies,
-            _ => (GameEventScriptBytecodeOpCode?)null
-        };
-        if (opCode is null)
+        if (binary.Operator is not (GesBinaryOperator.Or or GesBinaryOperator.And or GesBinaryOperator.Implies))
         {
             resultSlot = -1;
             return false;
@@ -1303,28 +1296,28 @@ internal sealed class GesLinearBytecodeBuilder
 
         var left = EmitSourceExpression(binary.Left, context, state);
         resultSlot = AllocateSlot(state);
-        if (opCode == GameEventScriptBytecodeOpCode.ShortCircuitImplies)
+        if (binary.Operator == GesBinaryOperator.Implies)
         {
-            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ShortCircuitImplies, dest: resultSlot, a: left, b: left));
+            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Implies, dest: resultSlot, a: left, b: left));
         }
         else
         {
             Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: resultSlot, a: left));
         }
 
-        var branch = opCode switch
+        var branch = binary.Operator switch
         {
-            GameEventScriptBytecodeOpCode.ShortCircuitOr => GameEventScriptBytecodeOpCode.JumpIfTrue,
-            GameEventScriptBytecodeOpCode.ShortCircuitAnd => GameEventScriptBytecodeOpCode.JumpIfFalse,
+            GesBinaryOperator.Or => GameEventScriptBytecodeOpCode.JumpIfTrue,
+            GesBinaryOperator.And => GameEventScriptBytecodeOpCode.JumpIfFalse,
             _ => GameEventScriptBytecodeOpCode.JumpIfFalse
         };
         var jump = Emit(CreateInstruction(branch, c: left));
         var right = EmitSourceExpression(binary.Right, context, state);
-        var combineOp = opCode switch
+        var combineOp = binary.Operator switch
         {
-            GameEventScriptBytecodeOpCode.ShortCircuitOr => GameEventScriptBytecodeOpCode.Or,
-            GameEventScriptBytecodeOpCode.ShortCircuitAnd => GameEventScriptBytecodeOpCode.And,
-            _ => GameEventScriptBytecodeOpCode.ShortCircuitImplies
+            GesBinaryOperator.Or => GameEventScriptBytecodeOpCode.Or,
+            GesBinaryOperator.And => GameEventScriptBytecodeOpCode.And,
+            _ => GameEventScriptBytecodeOpCode.Implies
         };
         Emit(CreateInstruction(combineOp, dest: resultSlot, a: left, b: right));
         PatchTarget(jump, _code.Count);
@@ -2653,21 +2646,21 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.Except or
             GameEventScriptBytecodeOpCode.Zip;
 
-    private static GameEventScriptBytecodeOpCode ToUnaryOpCode(string operation)
+    private static GameEventScriptBytecodeOpCode ToUnaryOpCode(GesUnaryOperator operation)
         => operation switch
         {
-            "-" => GameEventScriptBytecodeOpCode.UnaryNegate,
-            "!" => GameEventScriptBytecodeOpCode.UnaryNot,
-            "has value" => GameEventScriptBytecodeOpCode.UnaryHasValue,
-            "empty" => GameEventScriptBytecodeOpCode.UnaryEmpty,
-            "len" => GameEventScriptBytecodeOpCode.UnaryLength,
-            "chance" => GameEventScriptBytecodeOpCode.UnaryChance,
-            "keys" => GameEventScriptBytecodeOpCode.UnaryKeys,
-            "values" => GameEventScriptBytecodeOpCode.UnaryValues,
-            "entries" => GameEventScriptBytecodeOpCode.UnaryEntries,
-            "abs" => GameEventScriptBytecodeOpCode.UnaryAbs,
-            "ln" => GameEventScriptBytecodeOpCode.UnaryNaturalLog,
-            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support unary operator '{operation}'.")
+            GesUnaryOperator.Negate => GameEventScriptBytecodeOpCode.UnaryNegate,
+            GesUnaryOperator.Not => GameEventScriptBytecodeOpCode.UnaryNot,
+            GesUnaryOperator.HasValue => GameEventScriptBytecodeOpCode.UnaryHasValue,
+            GesUnaryOperator.Empty => GameEventScriptBytecodeOpCode.UnaryEmpty,
+            GesUnaryOperator.Length => GameEventScriptBytecodeOpCode.UnaryLength,
+            GesUnaryOperator.Chance => GameEventScriptBytecodeOpCode.UnaryChance,
+            GesUnaryOperator.Keys => GameEventScriptBytecodeOpCode.UnaryKeys,
+            GesUnaryOperator.Values => GameEventScriptBytecodeOpCode.UnaryValues,
+            GesUnaryOperator.Entries => GameEventScriptBytecodeOpCode.UnaryEntries,
+            GesUnaryOperator.Abs => GameEventScriptBytecodeOpCode.UnaryAbs,
+            GesUnaryOperator.NaturalLog => GameEventScriptBytecodeOpCode.UnaryNaturalLog,
+            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support unary operator '{operation.ToSourceText()}'.")
         };
 
     private static bool TryGetCastOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode)
@@ -2747,12 +2740,22 @@ internal sealed class GesLinearBytecodeBuilder
     private static bool ShouldPreferPrimitiveIntegerOp(BinaryExpressionNode expression)
         => expression.Operator switch
         {
-            "div" or "mod" or "rem" => IsIntegerCandidate(expression.Left) || IsIntegerCandidate(expression.Right),
-            "=" or "==" or "<>" or "<" or ">" or "<=" or ">=" => IsIntegerCandidate(expression.Left) && IsIntegerCandidate(expression.Right),
-            "+" or "-" or "*" or "/" => IsIntegerCandidate(expression.Left) &&
-                                          IsIntegerCandidate(expression.Right) &&
-                                          !HasExplicitNonIntegerNumeric(expression.Left) &&
-                                          !HasExplicitNonIntegerNumeric(expression.Right),
+            GesBinaryOperator.IntegerDivide or
+                GesBinaryOperator.Modulo or
+                GesBinaryOperator.Remainder => IsIntegerCandidate(expression.Left) || IsIntegerCandidate(expression.Right),
+            GesBinaryOperator.Equal or
+                GesBinaryOperator.NotEqual or
+                GesBinaryOperator.Less or
+                GesBinaryOperator.Greater or
+                GesBinaryOperator.LessOrEqual or
+                GesBinaryOperator.GreaterOrEqual => IsIntegerCandidate(expression.Left) && IsIntegerCandidate(expression.Right),
+            GesBinaryOperator.Add or
+                GesBinaryOperator.Subtract or
+                GesBinaryOperator.Multiply or
+                GesBinaryOperator.Divide => IsIntegerCandidate(expression.Left) &&
+                                            IsIntegerCandidate(expression.Right) &&
+                                            !HasExplicitNonIntegerNumeric(expression.Left) &&
+                                            !HasExplicitNonIntegerNumeric(expression.Right),
             _ => false
         };
 
@@ -2780,57 +2783,57 @@ internal sealed class GesLinearBytecodeBuilder
             _ => false
         };
 
-    private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(string operation)
+    private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(GesBinaryOperator operation)
         => operation switch
         {
-            "=" or "==" => GameEventScriptBytecodeOpCode.IntEqual,
-            "<>" => GameEventScriptBytecodeOpCode.IntNotEqual,
-            "<" => GameEventScriptBytecodeOpCode.IntLess,
-            ">" => GameEventScriptBytecodeOpCode.IntGreater,
-            "<=" => GameEventScriptBytecodeOpCode.IntLessOrEqual,
-            ">=" => GameEventScriptBytecodeOpCode.IntGreaterOrEqual,
-            "+" => GameEventScriptBytecodeOpCode.IntAdd,
-            "-" => GameEventScriptBytecodeOpCode.IntSubtract,
-            "*" => GameEventScriptBytecodeOpCode.IntMultiply,
-            "/" => GameEventScriptBytecodeOpCode.IntDivide,
-            "div" => GameEventScriptBytecodeOpCode.IntFloorDivide,
-            "mod" => GameEventScriptBytecodeOpCode.IntModulo,
-            "rem" => GameEventScriptBytecodeOpCode.IntRemainder,
+            GesBinaryOperator.Equal => GameEventScriptBytecodeOpCode.IntEqual,
+            GesBinaryOperator.NotEqual => GameEventScriptBytecodeOpCode.IntNotEqual,
+            GesBinaryOperator.Less => GameEventScriptBytecodeOpCode.IntLess,
+            GesBinaryOperator.Greater => GameEventScriptBytecodeOpCode.IntGreater,
+            GesBinaryOperator.LessOrEqual => GameEventScriptBytecodeOpCode.IntLessOrEqual,
+            GesBinaryOperator.GreaterOrEqual => GameEventScriptBytecodeOpCode.IntGreaterOrEqual,
+            GesBinaryOperator.Add => GameEventScriptBytecodeOpCode.IntAdd,
+            GesBinaryOperator.Subtract => GameEventScriptBytecodeOpCode.IntSubtract,
+            GesBinaryOperator.Multiply => GameEventScriptBytecodeOpCode.IntMultiply,
+            GesBinaryOperator.Divide => GameEventScriptBytecodeOpCode.IntDivide,
+            GesBinaryOperator.IntegerDivide => GameEventScriptBytecodeOpCode.IntFloorDivide,
+            GesBinaryOperator.Modulo => GameEventScriptBytecodeOpCode.IntModulo,
+            GesBinaryOperator.Remainder => GameEventScriptBytecodeOpCode.IntRemainder,
             _ => ToBinaryOpCode(operation)
         };
 
-    private static GameEventScriptBytecodeOpCode ToBinaryOpCode(string operation)
+    private static GameEventScriptBytecodeOpCode ToBinaryOpCode(GesBinaryOperator operation)
         => operation switch
         {
-            "|" => GameEventScriptBytecodeOpCode.Or,
-            "xor" => GameEventScriptBytecodeOpCode.Xor,
-            "&" => GameEventScriptBytecodeOpCode.And,
-            "->" => GameEventScriptBytecodeOpCode.ShortCircuitImplies,
-            "=" or "==" => GameEventScriptBytecodeOpCode.Equal,
-            "<>" => GameEventScriptBytecodeOpCode.NotEqual,
-            "=~" => GameEventScriptBytecodeOpCode.ApproxEqual,
-            "<" => GameEventScriptBytecodeOpCode.Less,
-            ">" => GameEventScriptBytecodeOpCode.Greater,
-            "<=" => GameEventScriptBytecodeOpCode.LessOrEqual,
-            ">=" => GameEventScriptBytecodeOpCode.GreaterOrEqual,
-            "+" => GameEventScriptBytecodeOpCode.Add,
-            "-" => GameEventScriptBytecodeOpCode.Subtract,
-            "*" => GameEventScriptBytecodeOpCode.Multiply,
-            "/" => GameEventScriptBytecodeOpCode.Divide,
-            "div" => GameEventScriptBytecodeOpCode.IntegerDivide,
-            "mod" => GameEventScriptBytecodeOpCode.Modulo,
-            "rem" => GameEventScriptBytecodeOpCode.Remainder,
-            "^" => GameEventScriptBytecodeOpCode.Power,
-            "default" => GameEventScriptBytecodeOpCode.Default,
-            "in" => GameEventScriptBytecodeOpCode.Contains,
-            "value in" => GameEventScriptBytecodeOpCode.ContainsValue,
-            "starts with" => GameEventScriptBytecodeOpCode.StartsWith,
-            "ends with" => GameEventScriptBytecodeOpCode.EndsWith,
-            "intersect" => GameEventScriptBytecodeOpCode.Intersect,
-            "combine" or "merge" => GameEventScriptBytecodeOpCode.Combine,
-            "except" => GameEventScriptBytecodeOpCode.Except,
-            "zip" => GameEventScriptBytecodeOpCode.Zip,
-            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support binary operator '{operation}'.")
+            GesBinaryOperator.Or => GameEventScriptBytecodeOpCode.Or,
+            GesBinaryOperator.Xor => GameEventScriptBytecodeOpCode.Xor,
+            GesBinaryOperator.And => GameEventScriptBytecodeOpCode.And,
+            GesBinaryOperator.Implies => GameEventScriptBytecodeOpCode.Implies,
+            GesBinaryOperator.Equal => GameEventScriptBytecodeOpCode.Equal,
+            GesBinaryOperator.NotEqual => GameEventScriptBytecodeOpCode.NotEqual,
+            GesBinaryOperator.ApproxEqual => GameEventScriptBytecodeOpCode.ApproxEqual,
+            GesBinaryOperator.Less => GameEventScriptBytecodeOpCode.Less,
+            GesBinaryOperator.Greater => GameEventScriptBytecodeOpCode.Greater,
+            GesBinaryOperator.LessOrEqual => GameEventScriptBytecodeOpCode.LessOrEqual,
+            GesBinaryOperator.GreaterOrEqual => GameEventScriptBytecodeOpCode.GreaterOrEqual,
+            GesBinaryOperator.Add => GameEventScriptBytecodeOpCode.Add,
+            GesBinaryOperator.Subtract => GameEventScriptBytecodeOpCode.Subtract,
+            GesBinaryOperator.Multiply => GameEventScriptBytecodeOpCode.Multiply,
+            GesBinaryOperator.Divide => GameEventScriptBytecodeOpCode.Divide,
+            GesBinaryOperator.IntegerDivide => GameEventScriptBytecodeOpCode.IntegerDivide,
+            GesBinaryOperator.Modulo => GameEventScriptBytecodeOpCode.Modulo,
+            GesBinaryOperator.Remainder => GameEventScriptBytecodeOpCode.Remainder,
+            GesBinaryOperator.Power => GameEventScriptBytecodeOpCode.Power,
+            GesBinaryOperator.Default => GameEventScriptBytecodeOpCode.Default,
+            GesBinaryOperator.Contains => GameEventScriptBytecodeOpCode.Contains,
+            GesBinaryOperator.ContainsValue => GameEventScriptBytecodeOpCode.ContainsValue,
+            GesBinaryOperator.StartsWith => GameEventScriptBytecodeOpCode.StartsWith,
+            GesBinaryOperator.EndsWith => GameEventScriptBytecodeOpCode.EndsWith,
+            GesBinaryOperator.Intersect => GameEventScriptBytecodeOpCode.Intersect,
+            GesBinaryOperator.Combine or GesBinaryOperator.Merge => GameEventScriptBytecodeOpCode.Combine,
+            GesBinaryOperator.Except => GameEventScriptBytecodeOpCode.Except,
+            GesBinaryOperator.Zip => GameEventScriptBytecodeOpCode.Zip,
+            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support binary operator '{operation.ToSourceText()}'.")
         };
 
     private enum PipelineIteratorEntryKind

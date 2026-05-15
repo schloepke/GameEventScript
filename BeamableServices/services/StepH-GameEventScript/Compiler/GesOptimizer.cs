@@ -651,7 +651,7 @@ internal static class GesOptimizer
 
         switch (unary.Operator)
         {
-            case "-":
+            case GesUnaryOperator.Negate:
                 if (operand.IsNothing())
                 {
                     value = GameEventScriptNothingValue.Instance;
@@ -700,7 +700,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptFloat(NegateNumeric(numeric));
                 return true;
-            case "!":
+            case GesUnaryOperator.Not:
                 if (operand.IsNothing())
                 {
                     value = GameEventScriptNothingValue.Instance;
@@ -715,13 +715,13 @@ internal static class GesOptimizer
 
                 value = GameEventScriptValueFactory.GesBoolean(!unwrappedBool.AsBoolean());
                 return true;
-            case "has value":
+            case GesUnaryOperator.HasValue:
                 value = GameEventScriptValueFactory.GesBoolean(operand.HasSemanticValue());
                 return true;
-            case "empty":
+            case GesUnaryOperator.Empty:
                 value = GameEventScriptValueFactory.GesBoolean(operand.IsSemanticallyEmpty());
                 return true;
-            case "abs":
+            case GesUnaryOperator.Abs:
                 if (GesValueOperations.TryEvaluatePointUnary(operand, "abs", out value))
                 {
                     return true;
@@ -734,7 +734,7 @@ internal static class GesOptimizer
 
                 value = GameEventScriptNothingValue.Instance;
                 return false;
-            case "ln":
+            case GesUnaryOperator.NaturalLog:
                 value = EvaluateNaturalLogUnary(operand);
                 return true;
             default:
@@ -821,7 +821,7 @@ internal static class GesOptimizer
             return false;
         }
 
-        if (binary.Operator == "default")
+        if (binary.Operator == GesBinaryOperator.Default)
         {
             if (!leftRaw.HasSemanticValue())
             {
@@ -842,16 +842,16 @@ internal static class GesOptimizer
 
         switch (binary.Operator)
         {
-            case "|":
+            case GesBinaryOperator.Or:
                 value = EvaluateLogicalOr(leftRaw, rightRaw);
                 return true;
-            case "xor":
+            case GesBinaryOperator.Xor:
                 value = EvaluateLogicalXor(leftRaw, rightRaw);
                 return true;
-            case "&":
+            case GesBinaryOperator.And:
                 value = EvaluateLogicalAnd(leftRaw, rightRaw);
                 return true;
-            case "->":
+            case GesBinaryOperator.Implies:
                 value = EvaluateLogicalImplies(leftRaw, rightRaw);
                 return true;
         }
@@ -870,28 +870,28 @@ internal static class GesOptimizer
 
         switch (binary.Operator)
         {
-            case "=":
+            case GesBinaryOperator.Equal:
                 value = GameEventScriptValueFactory.GesBoolean(GesValueOperations.AreEqual(left, right));
                 return true;
-            case "<>":
+            case GesBinaryOperator.NotEqual:
                 value = GameEventScriptValueFactory.GesBoolean(!GesValueOperations.AreEqual(left, right));
                 return true;
-            case "=~":
+            case GesBinaryOperator.ApproxEqual:
                 value = GameEventScriptValueFactory.GesBoolean(GesValueOperations.AreApproximatelyEqual(left, right));
                 return true;
-            case "<":
+            case GesBinaryOperator.Less:
                 value = EvaluateNumericComparison(left, right, comparison => comparison < 0);
                 return true;
-            case ">":
+            case GesBinaryOperator.Greater:
                 value = EvaluateNumericComparison(left, right, comparison => comparison > 0);
                 return true;
-            case "<=":
+            case GesBinaryOperator.LessOrEqual:
                 value = EvaluateNumericComparison(left, right, comparison => comparison <= 0);
                 return true;
-            case ">=":
+            case GesBinaryOperator.GreaterOrEqual:
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
-            case "+":
+            case GesBinaryOperator.Add:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "+", right, out value))
                 {
                     return true;
@@ -926,7 +926,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptNumericResult(left, "+", right, AddNumeric(leftNumeric, rightNumeric));
                 return true;
-            case "-":
+            case GesBinaryOperator.Subtract:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "-", right, out value))
                 {
                     return true;
@@ -961,7 +961,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptNumericResult(left, "-", right, SubtractNumeric(leftMinus, rightMinus));
                 return true;
-            case "*":
+            case GesBinaryOperator.Multiply:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "*", right, out value))
                 {
                     return true;
@@ -996,7 +996,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptNumericResult(left, "*", right, MultiplyNumeric(leftMultiply, rightMultiply));
                 return true;
-            case "/":
+            case GesBinaryOperator.Divide:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "/", right, out value))
                 {
                     return true;
@@ -1026,7 +1026,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptFloat(DivideNumeric(leftDivide, rightDivide));
                 return true;
-            case "mod":
+            case GesBinaryOperator.Modulo:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "mod", right, out value))
                 {
                     return true;
@@ -1056,7 +1056,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptNumericResult(left, "mod", right, ModuloNumeric(leftModulo, rightModulo));
                 return true;
-            case "div":
+            case GesBinaryOperator.IntegerDivide:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "div", right, out value))
                 {
                     return true;
@@ -1086,7 +1086,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptNumericResult(left, "div", right, IntegerDivideNumeric(leftIntegerDivide, rightIntegerDivide));
                 return true;
-            case "rem":
+            case GesBinaryOperator.Remainder:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "rem", right, out value))
                 {
                     return true;
@@ -1116,7 +1116,7 @@ internal static class GesOptimizer
 
                 value = ToGameEventScriptNumericResult(left, "rem", right, RemainderNumeric(leftRemainder, rightRemainder));
                 return true;
-            case "^":
+            case GesBinaryOperator.Power:
                 if (GesValueOperations.TryEvaluateUnitBinary(left, "^", right, out value))
                 {
                     return true;

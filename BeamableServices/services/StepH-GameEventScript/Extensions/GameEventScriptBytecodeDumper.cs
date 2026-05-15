@@ -182,8 +182,6 @@ public static class GameEventScriptBytecodeDumper
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.Nop:
-            case GameEventScriptBytecodeOpCode.ShortCircuitOr:
-            case GameEventScriptBytecodeOpCode.ShortCircuitAnd:
                 break;
 
             case GameEventScriptBytecodeOpCode.ReserveSlots:
@@ -649,8 +647,6 @@ public static class GameEventScriptBytecodeDumper
     private static bool HasDestination(GameEventScriptBytecodeOpCode opCode)
         => opCode is not (
             GameEventScriptBytecodeOpCode.Nop or
-            GameEventScriptBytecodeOpCode.ShortCircuitOr or
-            GameEventScriptBytecodeOpCode.ShortCircuitAnd or
             GameEventScriptBytecodeOpCode.ReserveSlots or
             GameEventScriptBytecodeOpCode.Jump or
             GameEventScriptBytecodeOpCode.JumpIfTrue or

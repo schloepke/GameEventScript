@@ -26,6 +26,8 @@ public sealed class BytecodeExecutorTests
             
             on Start(value) {
                 let short be value is high and value is low
+                let implies_1 be value is high -> value is low
+                let implies_2 be value is high -> not low(value)
                 let x be value + 2
                 if value is high {
                     publish Done(total: x)

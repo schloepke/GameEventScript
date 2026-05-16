@@ -241,7 +241,6 @@ internal sealed record UnitIntegerLiteralExpressionNode(long Value, string UnitN
 internal sealed record UnitFloatLiteralExpressionNode(double Value, string UnitName) : ExpressionNode;
 internal sealed record TextLiteralExpressionNode(string Value) : ExpressionNode;
 internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
-internal sealed record SetLiteralExpressionNode(IReadOnlyList<ExpressionNode> Items) : ExpressionNode;
 internal sealed record MapLiteralExpressionNode(IReadOnlyList<MapEntryNode> Entries) : ExpressionNode;
 internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNode;
 internal sealed record UnaryExpressionNode(GesUnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;

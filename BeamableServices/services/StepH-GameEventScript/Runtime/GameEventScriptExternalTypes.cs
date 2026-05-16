@@ -579,7 +579,6 @@ internal static class GameEventScriptExternalTypeNames
             GameEventScriptValueKind.Ref => "ref",
             GameEventScriptValueKind.List => "list",
             GameEventScriptValueKind.Map => "map",
-            GameEventScriptValueKind.Set => "set",
             GameEventScriptValueKind.Dice => "dice",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown GameEventScript value kind.")
         };
@@ -611,7 +610,6 @@ internal static class GameEventScriptExternalTypeNames
             "ref" => (GameEventScriptValueKind.Ref, null),
             "list" => (GameEventScriptValueKind.List, null),
             "map" => (GameEventScriptValueKind.Map, null),
-            "set" => (GameEventScriptValueKind.Set, null),
             "dice" => (GameEventScriptValueKind.Dice, null),
             _ => (null, null)
         };
@@ -764,7 +762,6 @@ internal static class GameEventScriptExternalTypeValueConverter
             "ref" => value.IsRef() ? value : GesNothing(),
             "map" => GesMap(value.AsMap()),
             "list" => GesList(value.AsList()),
-            "set" => GesSet(value.AsSet()),
             _ => value
         };
     }

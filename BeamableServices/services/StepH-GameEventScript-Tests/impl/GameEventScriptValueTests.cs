@@ -19,19 +19,14 @@ public class GameEventScriptValueScenarios
         {
             ["a"] = 1d
         };
-        var sourceSet = new HashSet<GameEventScriptValue> { 1d, 2d };
-
         var listValue = GesList(sourceList);
         var dictionaryValue = GesMap(sourceDictionary);
-        var setValue = GesSet(sourceSet);
 
         sourceList.Add(3d);
         sourceDictionary["b"] = 2d;
-        sourceSet.Add(3d);
 
         Assert.HasCount(2, listValue.AsList());
         Assert.HasCount(1, dictionaryValue.AsMap());
-        Assert.HasCount(2, setValue.AsSet());
     }
 
     [TestMethod]
@@ -46,11 +41,6 @@ public class GameEventScriptValueScenarios
         var dictionaryView = dictionaryValue.AsMap();
         Assert.ThrowsExactly<NotSupportedException>(() => ((IDictionary<string, GameEventScriptValue>)dictionaryView)["b"] = 2d);
         Assert.HasCount(1, dictionaryValue.AsMap());
-
-        var setValue = GesSet([1d, 2d]);
-        var setCopy = setValue.AsSet();
-        setCopy.Add(3d);
-        Assert.HasCount(2, setValue.AsSet());
     }
 
     [TestMethod]
@@ -60,7 +50,6 @@ public class GameEventScriptValueScenarios
         Assert.AreSame(GesNothing(), GesMaybe(null));
         Assert.AreSame(GesList(null), GesList(Array.Empty<GameEventScriptValue>()));
         Assert.AreSame(GesMap(null), GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
-        Assert.AreSame(GesSet(null), GesSet(Array.Empty<GameEventScriptValue>()));
         Assert.AreSame(GesDice((GameEventScriptDiceValue?)null), GameEventScriptDiceValue.Create(Array.Empty<int>()));
         Assert.AreSame(GesMessage(GameEventScriptMessage.Empty), GesMessage(GameEventScriptMessage.Empty));
         Assert.AreSame(GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])), GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])));
@@ -252,26 +241,6 @@ public class GameEventScriptValueScenarios
         Assert.AreEqual(-2d, GesValueOperations.ModuloNumeric(seven, minusThree).Value);
         Assert.AreEqual(-1d, GesValueOperations.RemainderNumeric(minusSeven, three).Value);
         Assert.AreEqual(1d, GesValueOperations.RemainderNumeric(seven, minusThree).Value);
-    }
-
-    [TestMethod]
-    public void SetsStayCanonicallySorted()
-    {
-        var setValue = GesSet([GesFloat(3d), GesText("z"), GesInteger(1), GesText("a"), GesBoolean(false), GesFloat(2d)]);
-
-        var ordered = setValue.AsSet().ToArray();
-
-        string[] expected = ["1", "2", "3", "a", "z", "False"];
-        CollectionAssert.AreEqual(
-            expected,
-            ordered.Select(v => v switch
-            {
-                { Kind: GameEventScriptValueKind.Text } => v.AsText(),
-                { Kind: GameEventScriptValueKind.Float } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Kind: GameEventScriptValueKind.Integer } => v.AsInteger().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Kind: GameEventScriptValueKind.Boolean } => v.AsBoolean().ToString(),
-                _ => v.ToString()
-            }).ToArray());
     }
 
     [TestMethod]

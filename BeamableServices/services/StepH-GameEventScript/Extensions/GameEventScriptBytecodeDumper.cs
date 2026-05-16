@@ -325,7 +325,6 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderList:
-            case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
@@ -416,7 +415,6 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
-            case GameEventScriptBytecodeOpCode.BuildSet:
                 AppendSlotListPoolIndex(builder, "items", module, instruction.A_U16);
                 break;
 
@@ -460,7 +458,6 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
-            case GameEventScriptBytecodeOpCode.PipelineCollectSet:
             case GameEventScriptBytecodeOpCode.PipelineFirst:
             case GameEventScriptBytecodeOpCode.PipelineLast:
             case GameEventScriptBytecodeOpCode.PipelineSingle:
@@ -840,7 +837,6 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CastMessage or
             GameEventScriptBytecodeOpCode.CastHandler or
             GameEventScriptBytecodeOpCode.CastMap or
-            GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastCustom;
 
@@ -864,7 +860,6 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.TypeCheckHandler or
             GameEventScriptBytecodeOpCode.TypeCheckRef or
             GameEventScriptBytecodeOpCode.TypeCheckMap or
-            GameEventScriptBytecodeOpCode.TypeCheckSet or
             GameEventScriptBytecodeOpCode.TypeCheckDice or
             GameEventScriptBytecodeOpCode.TypeCheckCustom;
 

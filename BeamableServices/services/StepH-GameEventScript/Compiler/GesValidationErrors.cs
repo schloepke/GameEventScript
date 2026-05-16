@@ -250,7 +250,6 @@ internal sealed class GesValidationErrors
                                                        .FirstOrDefault(node => node is not null) ??
                                                    FindNodeInExpression(guarded.OtherwiseExpression, symbol),
             ListLiteralExpressionNode list => FindNodeInExpressions(list.Items, symbol),
-            SetLiteralExpressionNode set => FindNodeInExpressions(set.Items, symbol),
             MapLiteralExpressionNode dictionary => dictionary.Entries
                 .Select(entry => FindNodeInExpression(entry.Value, symbol))
                 .FirstOrDefault(node => node is not null),

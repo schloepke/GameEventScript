@@ -26,8 +26,6 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateReadOnlyList(AsEnumerable());
 
-    public override ISet<GameEventScriptValue> AsSet() => TryConvertToSet(out var value) ? value.AsSet() : new SortedSet<GameEventScriptValue>(StableComparer);
-
     public override bool HasSemanticValue() => GetLength() > 0;
 
     public override bool IsSemanticallyEmpty() => GetLength() == 0;
@@ -113,12 +111,6 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
         value = GesList(AsEnumerable());
-        return true;
-    }
-
-    internal override bool TryConvertToSet(out GameEventScriptValue value)
-    {
-        value = GesSet(AsEnumerable());
         return true;
     }
 

@@ -1431,7 +1431,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start {
               let reversed be [1, 2, 3][:reverse]
               let filteredReversed be [1, 2, 3, 4][:filter value where value > 1][:reverse]
-              let invalidReverse be :set[1, 2][:reverse]
+              let invalidReverse be 123[:reverse]
               let score be (reversed[1] + filteredReversed[3]) + 5
               emit Done(score: score, replacement: 6, invalidReverse: invalidReverse)
             }
@@ -1472,7 +1472,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start {
               let reversed be [1, 2, 3][:reverse]
               let filteredReversed be [1, 2, 3, 4][:filter value where value > 1][:reverse]
-              let invalidReverse be :set[1, 2][:reverse]
+              let invalidReverse be 123[:reverse]
               let score be (reversed[1] + filteredReversed[3]) + 5
               emit Done(score: score, replacement: 6, invalidReverse: invalidReverse)
             }
@@ -1515,7 +1515,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let ascending be [3, 1, 2][:sort ascending]
               let descending be [3, 1, 2][:sort descending]
               let prefixed be [1, 2, 3, 4][:filter value where value > 1][:select value => value * -1][:sort ascending]
-              let sortedSet be :set[3, 1, 2][:sort descending]
+              let sortedSet be [3, 1, 2][:sort descending]
               let score be (ascending[1] + descending[1] + prefixed[1] + sortedSet[1]) + 5
               emit Done(score: score, replacement: 6)
             }
@@ -1556,7 +1556,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let ascending be [3, 1, 2][:sort ascending]
               let descending be [3, 1, 2][:sort descending]
               let prefixed be [1, 2, 3, 4][:filter value where value > 1][:select value => value * -1][:sort ascending]
-              let sortedSet be :set[3, 1, 2][:sort descending]
+              let sortedSet be [3, 1, 2][:sort descending]
               let score be (ascending[1] + descending[1] + prefixed[1] + sortedSet[1]) + 5
               emit Done(score: score, replacement: 6)
             }
@@ -1599,7 +1599,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let ascending be units[:order by unit => unit.priority ascending]
               let descending be units[:order by unit => unit.priority descending]
               let prefixed be units[:filter unit where unit.priority > 1][:order by unit => unit.value descending]
-              let orderedSet be :set[3, 1, 2][:order by item => item descending]
+              let orderedSet be [3, 1, 2][:order by item => item descending]
               let score be (ascending[1].value + descending[1].value + prefixed[1].value + orderedSet[1]) + 5
               emit Done(score: score, replacement: 6)
             }
@@ -1641,7 +1641,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let ascending be units[:order by unit => unit.priority ascending]
               let descending be units[:order by unit => unit.priority descending]
               let prefixed be units[:filter unit where unit.priority > 1][:order by unit => unit.value descending]
-              let orderedSet be :set[3, 1, 2][:order by item => item descending]
+              let orderedSet be [3, 1, 2][:order by item => item descending]
               let score be (ascending[1].value + descending[1].value + prefixed[1].value + orderedSet[1]) + 5
               emit Done(score: score, replacement: 6)
             }
@@ -1686,7 +1686,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let highestTwo be values[:take highest 2]
               let droppedLowest be values[:drop lowest 1]
               let prefixed be values[:filter value where value > 1][:take lowest 2]
-              let setTaken be :set[1, 2, 3][:take highest 2]
+              let setTaken be [1, 2, 3][:take highest 2]
               let score be (firstTwo[2] + withoutLast[3] + highestTwo[1] + droppedLowest[1] + prefixed[2] + setTaken[1]) + 5
               emit Done(score: score, replacement: 6)
             }
@@ -1730,7 +1730,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let highestTwo be values[:take highest 2]
               let droppedLowest be values[:drop lowest 1]
               let prefixed be values[:filter value where value > 1][:take lowest 2]
-              let setTaken be :set[1, 2, 3][:take highest 2]
+              let setTaken be [1, 2, 3][:take highest 2]
               let score be (firstTwo[2] + withoutLast[3] + highestTwo[1] + droppedLowest[1] + prefixed[2] + setTaken[1]) + 5
               emit Done(score: score, replacement: 6)
             }
@@ -1771,7 +1771,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start {
               let shuffled be [1, 2, 3, 4][:shuffle]
               let prefixed be [1, 2, 3, 4][:filter value where value > 1][:shuffle]
-              let invalidShuffle be :set[1, 2, 3][:shuffle]
+              let invalidShuffle be 123[:shuffle]
               let score be (:len shuffled + :len prefixed) + 5
               emit Done(score: score, replacement: 6, invalidShuffle: invalidShuffle)
             }
@@ -1812,7 +1812,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             on Start {
               let shuffled be [1, 2, 3, 4][:shuffle]
               let prefixed be [1, 2, 3, 4][:filter value where value > 1][:shuffle]
-              let invalidShuffle be :set[1, 2, 3][:shuffle]
+              let invalidShuffle be 123[:shuffle]
               let score be (:len shuffled + :len prefixed) + 5
               emit Done(score: score, replacement: 6, invalidShuffle: invalidShuffle)
             }
@@ -2142,7 +2142,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let single be [1, 2, 3, 4][:draw 1]
               let hand be [1, 2, 3, 4][:draw 3]
               let prefixed be [1, 2, 3, 4][:filter value where value > 1][:draw 2]
-              let invalidDraw be :set[1, 2, 3][:draw 1]
+              let invalidDraw be 123[:draw 1]
               let score be (single + hand[3] + prefixed[2]) + 5
               emit Done(score: score, replacement: 6, invalidDraw: invalidDraw)
             }
@@ -2184,7 +2184,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let single be [1, 2, 3, 4][:draw 1]
               let hand be [1, 2, 3, 4][:draw 3]
               let prefixed be [1, 2, 3, 4][:filter value where value > 1][:draw 2]
-              let invalidDraw be :set[1, 2, 3][:draw 1]
+              let invalidDraw be 123[:draw 1]
               let score be (single + hand[3] + prefixed[2]) + 5
               emit Done(score: score, replacement: 6, invalidDraw: invalidDraw)
             }

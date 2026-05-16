@@ -456,7 +456,7 @@ A `let` may declare a target type:
 ```eventscript
 let hp as :float be '12.5'
 let heading as :degree be 450
-let tags as :set be [1, 2, 2, 3]
+let tags as :list be [1, 2, 2, 3]
 ```
 
 Typed `let` applies the same conversion semantics as `value as :type`.
@@ -887,7 +887,7 @@ values is empty
 The main predicates are:
 
 - `nothing` has no value and is empty.
-- Empty text, list, map, set, dice, and range have no value and
+- Empty text, list, map, dice, and range have no value and
   are empty.
 - `NaN` and infinity have no semantic value, but are not considered empty.
 - `0` and `false` are valid values.
@@ -1001,7 +1001,6 @@ Types are written as tags. Built-in public type tags are:
 - `:ref`
 - `:list`
 - `:map`
-- `:set`
 - `:dice`
 
 Custom record types are also written as tags, for example `:gauge`.
@@ -1485,10 +1484,12 @@ Maps use text keys. Literal keys are written without quotes.
 
 ```eventscript
 [name: 'Ada', hp: 10]
+[enemy:, visible:] // same as [enemy: true, visible: true]
 [:]
 ```
 
-Lookup can use text, tags, variables, or member syntax.
+Lookup can use text keys, tag keys, variables that evaluate to text or tags, or
+member syntax. Dynamic lookup with any other key type returns `nothing`.
 
 ```eventscript
 let unit be [name: 'Ada', hp: 10]
@@ -1498,18 +1499,8 @@ unit[:name]
 unit.name
 ```
 
-Missing keys return `nothing`.
-
-### `:set`
-
-Sets are immutable, deduplicated, and ordered by the stable GameEventScript value
-order.
-
-```eventscript
-:set[1, 2, 2, 3] // set containing 1, 2, 3
-```
-
-Sets are useful for membership checks and set operations.
+Missing keys return `nothing`. Key-only entries are useful for tag/string flag
+maps and membership checks.
 
 ### `:dice`
 
@@ -1598,13 +1589,12 @@ position[:y]
 
 ### Generated collections
 
-Generated collections produce lists or sets from ranges or iterable values.
+Generated collections produce lists from ranges or iterable values.
 
 ```eventscript
 let squares be :list[:select item from 1 to 5 => item * item]
 let evens be :list[:select item from 1 to 10 where item mod 2 = 0 => item]
 let doubled be :list[:select item in values => item * 2]
-let residues be :set[:select item in values where item > 3 => item mod 2]
 ```
 
 Use `from ... to ... [step ...]` directly inside generated collections. Do not
@@ -1816,14 +1806,6 @@ Maps:
 [name: 'Ada'] :merge [hp: 10]
 [name: 'Ada', hp: 5] :merge [hp: 10] // right side wins
 [a: 1, b: 2] :intersect [b: 9]       // [b: 2]
-```
-
-Sets:
-
-```eventscript
-:set[1, 2] :merge :set[2, 3]
-:set[1, 2, 3] :intersect :set[2, 4]
-:set[1, 2, 3] :except :set[2]
 ```
 
 Unsupported combinations evaluate to `nothing`.
@@ -2271,7 +2253,7 @@ When a runtime budget is reached, execution stops leniently and a
 `RuntimeLimitReached` diagnostic is recorded when diagnostics are available.
 
 Range lookup and range containment can be checked without materializing the
-whole range. Materializing a range as a list or set is subject to range limits.
+whole range. Materializing a range as a list is subject to range limits.
 
 ## Practical Examples
 

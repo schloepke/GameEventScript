@@ -103,7 +103,6 @@ internal static class GesCollectionOperations
         {
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
             _ => GameEventScriptNothingValue.Instance
         };
@@ -113,7 +112,6 @@ internal static class GesCollectionOperations
     {
         return target.Kind switch
         {
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesSet(items),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),

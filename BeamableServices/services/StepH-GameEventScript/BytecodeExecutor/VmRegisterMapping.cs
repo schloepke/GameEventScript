@@ -71,9 +71,6 @@ public static class VmRegisterMapping
             case Map:
                 throw new NotImplementedException();
                 break;
-            case Set:
-                throw new NotImplementedException();
-                break;
             case Dice:
                 throw new NotImplementedException();
                 break;

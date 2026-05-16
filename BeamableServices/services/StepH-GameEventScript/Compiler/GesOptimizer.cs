@@ -208,10 +208,6 @@ internal static class GesOptimizer
             {
                 Items = list.Items.Select(item => OptimizeExpression(item, knownTypeNames)).ToArray()
             },
-            SetLiteralExpressionNode set => set with
-            {
-                Items = set.Items.Select(item => OptimizeExpression(item, knownTypeNames)).ToArray()
-            },
             MapLiteralExpressionNode dictionary => dictionary with
             {
                 Entries = dictionary.Entries.Select(entry => entry with
@@ -481,23 +477,6 @@ internal static class GesOptimizer
                 }
 
                 value = GameEventScriptValueFactory.GesList(items);
-                return true;
-            }
-            case SetLiteralExpressionNode setLiteral:
-            {
-                var items = new List<GameEventScriptValue>(setLiteral.Items.Count);
-                foreach (var itemExpression in setLiteral.Items)
-                {
-                    if (!TryEvaluateConstant(itemExpression, out var item))
-                    {
-                        value = GameEventScriptNothingValue.Instance;
-                        return false;
-                    }
-
-                    items.Add(item);
-                }
-
-                value = GameEventScriptValueFactory.GesSet(items);
                 return true;
             }
             case MapLiteralExpressionNode dictionaryLiteral:
@@ -1251,9 +1230,6 @@ internal static class GesOptimizer
             case "map":
                 converted = GameEventScriptValueFactory.GesMap(value.AsMap());
                 return true;
-            case "set":
-                converted = GameEventScriptValueFactory.GesSet(value.AsSet());
-                return true;
             case "dice":
                 converted = GameEventScriptValueFactory.GesDice(value.AsDice());
                 return true;
@@ -1986,23 +1962,6 @@ internal static class GesOptimizer
                 }
 
                 expression = new ListLiteralExpressionNode(items);
-                return true;
-            }
-            case GameEventScriptValueKind.Set:
-            {
-                var items = new List<ExpressionNode>();
-                foreach (var item in value.AsSet())
-                {
-                    if (!TryConvertValueToLiteral(item, out var itemLiteral))
-                    {
-                        expression = default!;
-                        return false;
-                    }
-
-                    items.Add(itemLiteral);
-                }
-
-                expression = new SetLiteralExpressionNode(items);
                 return true;
             }
             case GameEventScriptValueKind.Map:

@@ -92,8 +92,6 @@ public sealed class GameEventScriptSeriesValue : GameEventScriptValue
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateReadOnlyList(new[] { FirstTerm });
 
-    public override ISet<GameEventScriptValue> AsSet() => new SortedSet<GameEventScriptValue>(AsList(), StableComparer);
-
     public override GameEventScriptDiceValue AsDice() => TryConvertToDice(out var value) ? value.AsDice() : GameEventScriptDiceValue.Empty;
 
     public override bool HasSemanticValue() => FirstTerm.HasSemanticValue();
@@ -116,12 +114,6 @@ public sealed class GameEventScriptSeriesValue : GameEventScriptValue
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
         value = GesList(AsList());
-        return true;
-    }
-
-    internal override bool TryConvertToSet(out GameEventScriptValue value)
-    {
-        value = GesSet(AsSet());
         return true;
     }
 

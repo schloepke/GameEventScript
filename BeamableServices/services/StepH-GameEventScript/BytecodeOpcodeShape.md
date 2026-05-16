@@ -288,7 +288,7 @@ runtime dispatch step.
 | 0x68 | `CastMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x69 | `CastHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x6A | `CastMap` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x6B | `CastSet` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
+| 0x6B | reserved | - | - | - | - | - | - | - | - | Removed set cast slot. |
 | 0x6C | `CastDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
 | 0x6D..0x6F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
 | 0x70 | `TypeCheckNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
@@ -315,7 +315,7 @@ runtime dispatch step.
 | 0x86 | `TypeCheckHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x87 | `TypeCheckRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x88 | `TypeCheckMap` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x89 | `TypeCheckSet` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
+| 0x89 | reserved | - | - | - | - | - | - | - | - | Removed set type-check slot. |
 | 0x8A | `TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
 | 0x8B..0x8F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference type checks. |
 | 0x90 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
@@ -325,7 +325,7 @@ runtime dispatch step.
 | 0x94 | `IndexedAccess` | - | result slot | target slot | index slot | - | - | - | - | Direct indexed lookup. |
 | 0x95 | `BuildList` | - | result slot | item slot-list `UShortListPool` index | - | - | - | - | - | Builds a list from slot-list operands. |
 | 0x96 | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access operations. |
-| 0x97 | `BuildSet` | - | result slot | item slot-list `UShortListPool` index | - | - | - | - | - | Builds a set from slot-list operands. |
+| 0x97 | reserved | - | - | - | - | - | - | - | - | Removed set construction slot. |
 | 0x98 | `BuildMap` | - | result slot | key name-list `UShortListPool` index | value slot-list `UShortListPool` index | - | - | - | - | Builds a map from key names and value slots. |
 | 0x99 | `BuildMessage` | - | result slot | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Builds a message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x9A | `BindHandler` | - | result slot | operand slot-list `UShortListPool` index | argument name-list `UShortListPool` index | - | - | - | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
@@ -349,9 +349,9 @@ runtime dispatch step.
 | 0xB4 | `IteratorNext` | - | item slot | iterator slot | no-more target address | - | - | - | - | Writes the next item and continues, or jumps to `B_U16` when exhausted. |
 | 0xB5 | `IteratorClose` | - | - | iterator slot | - | - | - | - | - | Disposes/closes a VM-internal iterator. |
 | 0xB6 | `CollectionBuilderList` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal list builder. |
-| 0xB7 | `CollectionBuilderSet` | - | builder slot | - | - | - | - | - | - | Creates a VM-internal set builder. |
+| 0xB7 | reserved | - | - | - | - | - | - | - | - | Removed set builder slot. |
 | 0xB8 | `CollectionBuilderAdd` | - | - | builder slot | item slot | - | - | - | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xB9 | `CollectionBuilderFinish` | - | result slot | builder slot | - | - | - | - | - | Materializes the builder as a list or set. |
+| 0xB9 | `CollectionBuilderFinish` | - | result slot | builder slot | - | - | - | - | - | Materializes the builder as a list. |
 | 0xBA | `IteratorReduce` | - | accumulator/result slot | iterator slot | item binding slot | reducer entry address | - | - | - | Empty -> `nothing`; one item -> item; otherwise reducer combines accumulator and item. |
 | 0xBB | `IteratorReduceOrDefault` | - | accumulator/result slot | iterator slot | default slot | item binding slot | reducer entry address | - | - | Empty -> default; one item -> item; otherwise reducer combines accumulator and item. |
 | 0xBC | `IteratorFold` | - | accumulator/result slot | iterator slot | seed slot | item binding slot | reducer entry address | - | - | Starts with seed and runs reducer for every item. |
@@ -376,7 +376,7 @@ runtime dispatch step.
 | 0xCF | reserved | - | - | - | - | - | - | - | - | Reserved for future call opcodes. |
 | 0xD0 | `PipelineIterator` | - | iterator slot | source iterator slot | next-entry address | helper item slot | capture slot-list index | - | - | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
 | 0xD1 | `PipelineCollectList` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a list. |
-| 0xD2 | `PipelineCollectSet` | - | result slot | iterator slot | - | - | - | - | - | Materializes an iterator as a set. |
+| 0xD2 | reserved | - | - | - | - | - | - | - | - | Removed pipeline set materializer slot. |
 | 0xD3 | `PipelineFirst` | - | result slot | iterator slot | - | - | - | - | - | Returns the first element or `nothing`. |
 | 0xD4 | `PipelineLast` | - | result slot | iterator slot | - | - | - | - | - | Returns the last element or `nothing`. |
 | 0xD5 | `PipelineSingle` | - | result slot | iterator slot | - | - | - | - | - | Returns the only element or `nothing`. |

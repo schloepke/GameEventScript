@@ -61,6 +61,8 @@ internal static class GesValidator
         _ = options;
         foreach (var typeDefinition in parsedScript.TypeDefinitions)
         {
+            ValidateRemovedType(parsedScript, typeDefinition.Name, typeDefinition, errors);
+
             foreach (var field in typeDefinition.Fields)
             {
                 ValidateIdentifierCase(
@@ -987,12 +989,12 @@ internal static class GesValidator
                     continue;
 
                 case TypeCheckExpressionNode typeCheck:
-                    ValidateRemovedOptionalType(parsedScriptContext, typeCheck.TypeName, typeCheck, errors);
+                    ValidateRemovedType(parsedScriptContext, typeCheck.TypeName, typeCheck, errors);
                     expression = typeCheck.Value;
                     continue;
 
                 case TypeCastExpressionNode typeCast:
-                    ValidateRemovedOptionalType(parsedScriptContext, typeCast.TypeName, typeCast, errors);
+                    ValidateRemovedType(parsedScriptContext, typeCast.TypeName, typeCast, errors);
                     expression = typeCast.Value;
                     continue;
 
@@ -1007,14 +1009,6 @@ internal static class GesValidator
 
                 case ListLiteralExpressionNode list:
                     foreach (var item in list.Items)
-                    {
-                        ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
-                    }
-
-                    return;
-
-                case SetLiteralExpressionNode set:
-                    foreach (var item in set.Items)
                     {
                         ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
                     }
@@ -1606,27 +1600,37 @@ internal static class GesValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
             "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "series" or
-            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "set" or "dice" ||
+            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "dice" ||
             GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
-    private static void ValidateRemovedOptionalType(
+    private static void ValidateRemovedType(
         ParsedScript parsedScriptContext,
         string typeName,
         ScriptNode sourceNode,
         GesValidationErrors errors)
     {
-        if (!string.Equals(typeName, "optional", StringComparison.Ordinal))
+        if (string.Equals(typeName, "optional", StringComparison.Ordinal))
         {
+            errors.Add(
+                parsedScriptContext,
+                "Type ':optional' has been removed; use ':nothing' to represent absence.",
+                typeName,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                sourceNode);
             return;
         }
 
-        errors.Add(
-            parsedScriptContext,
-            "Type ':optional' has been removed; use ':nothing' to represent absence.",
-            typeName,
-            GameEventScriptSymbolKind.Type,
-            GameEventScriptCompileErrorKind.InvalidTypeConstructor,
-            sourceNode);
+        if (string.Equals(typeName, "set", StringComparison.Ordinal))
+        {
+            errors.Add(
+                parsedScriptContext,
+                "Type ':set' has been removed; use lists or key-only maps.",
+                typeName,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                sourceNode);
+        }
     }
 
     private static void AddTypeConstructorError(

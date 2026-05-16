@@ -737,7 +737,6 @@ compiler-assigned iterator slot.
 ### Values and Containers
 
 - `BuildList dst itemSlotListIndex`
-- `BuildSet dst itemSlotListIndex`
 - `BuildMap dst keyNameListIndex valueSlotListIndex`
 - `BuildMessage dst messageShapeIndex argumentSlotListIndex`
 - `BindHandler dst operandSlotListIndex argumentNameListIndex`
@@ -769,7 +768,7 @@ Required portable value families:
 - numeric units: `:degree`, `:meter`, `:second`
 - vectors: `:vector`
 - points: `:point`
-- containers: `:series`, `:range`, `:list`, `:map`, `:set`, `:dice`
+- containers: `:series`, `:range`, `:list`, `:map`, `:dice`
 - runtime values: `:message`, `:handler`, `:envelope`, `:ref`
 - custom record and external types
 
@@ -810,14 +809,14 @@ bus, broadcaster, or parent dispatcher later.
 
 `with` attaches envelope tags to the message. Tags are not part of
 `SignatureId`, not part of handler parameter binding, and are normalized to a
-set while preserving first-seen order. A tag expression may evaluate to a single
-tag or to a list/set of tags.
+unique ordered tag list while preserving first-seen order. A tag expression may
+evaluate to a single tag or to a list of tags.
 
 Handlers may declare static tag filters:
 
 - `matching :a, :b`: all required tags must be present.
 - `without :x, :y`: none of the excluded tags may be present.
-- no filter: any tag set matches as long as the message signature matches, or
+- no filter: any tag list matches as long as the message signature matches, or
   the message name matches for `MessageEnvelope` handlers.
 
 Publishing and emitting are distinct opcodes. Static message literals use a
@@ -876,14 +875,13 @@ Core streaming shape:
 ```text
 CollectionIterator source -> iterator
 PipelineIterator transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
-PipelineCollectList/Set dst iterator
+PipelineCollectList dst iterator
 PipelineFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
 IteratorReduce dst iterator itemBindingSlot reducerEntry
 IteratorReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry
 IteratorFold dst iterator seedSlot itemBindingSlot reducerEntry
 CollectionBuilderList builder
-CollectionBuilderSet builder
 CollectionBuilderAdd builder item
 CollectionBuilderFinish dst builder
 ```

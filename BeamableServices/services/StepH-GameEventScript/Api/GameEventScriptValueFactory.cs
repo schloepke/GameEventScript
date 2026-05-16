@@ -278,14 +278,6 @@ public static class GameEventScriptValueFactory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static GameEventScriptValue GesCustomType(string typeName, IReadOnlyDictionary<string, GameEventScriptValue>? values) => GameEventScriptMapValue.Create(typeName, values);
 
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a set of values.
-    /// </summary>
-    /// <param name="values">The collection of <see cref="GameEventScriptValue"/> elements to include in the set. Can be null to create an empty set.</param>
-    /// <returns>A new <see cref="GameEventScriptSetValue"/> instance containing the specified values.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesSet(IEnumerable<GameEventScriptValue>? values) => GameEventScriptSetValue.Create(values);
-
     private static IEnumerable<GameEventScriptValue> EnumerateValues(GameEventScriptValue? source)
     {
         source ??= GesNothing();

@@ -372,19 +372,6 @@ internal static class GesBytecodeLowerer
                 failureReason = string.Empty;
                 return true;
 
-            case SetLiteralExpressionNode set:
-                for (var itemIndex = 0; itemIndex < set.Items.Count; itemIndex++)
-                {
-                    if (!TryValidateExpression(set.Items[itemIndex], callables, out failureReason))
-                    {
-                        failureReason = $"Set item {itemIndex}: {failureReason}";
-                        return false;
-                    }
-                }
-
-                failureReason = string.Empty;
-                return true;
-
             case MapLiteralExpressionNode dictionary:
                 for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
                 {
@@ -721,7 +708,7 @@ internal static class GesBytecodeLowerer
             "vector" or "point" or
             "boolean" or "integer" or "float" or "number" or
             "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or
-            "map" or "set" or "dice" ||
+            "map" or "dice" ||
             !string.IsNullOrWhiteSpace(typeName);
 
     private static bool TryValidateIterationSource(
@@ -1264,14 +1251,6 @@ internal static class GesBytecodeLowerer
 
                 case ListLiteralExpressionNode list:
                     foreach (var item in list.Items)
-                    {
-                        CollectExpression(item);
-                    }
-
-                    break;
-
-                case SetLiteralExpressionNode set:
-                    foreach (var item in set.Items)
                     {
                         CollectExpression(item);
                     }

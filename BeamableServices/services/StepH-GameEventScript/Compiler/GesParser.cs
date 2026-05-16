@@ -1796,9 +1796,12 @@ internal sealed class GesParser
             return ParseCollectionFactoryExpression("list");
         }
 
-        if (MatchTag(":set"))
+        if (Current.Kind == Tag &&
+            string.Equals(Current.Text, ":set", StringComparison.Ordinal) &&
+            IsNextSignificantToken(LeftBracket))
         {
-            return ParseCollectionFactoryExpression("set");
+            var setToken = Current;
+            throw new GameEventScriptParseException("Type ':set' has been removed; use lists or key-only maps.", setToken);
         }
 
         if (Match(GesTokenKind.Float))
@@ -1990,24 +1993,6 @@ internal sealed class GesParser
             return expression;
         }
 
-        if (collectionType == "set")
-        {
-            var items = new List<ExpressionNode>();
-            if (!Is(RightBracket))
-            {
-                items.Add(ParseExpression());
-                while (Match(Comma))
-                {
-                    SkipNewLines();
-                    items.Add(ParseExpression());
-                }
-            }
-
-            SkipNewLines();
-            var endToken = Expect(RightBracket);
-            return WithRange(new SetLiteralExpressionNode(items), startToken, endToken);
-        }
-
         var token = Current;
         throw new GameEventScriptParseException($"Expected :select but found {token.Text}", token.Line, token.Column);
     }
@@ -2081,7 +2066,10 @@ internal sealed class GesParser
         var startToken = Current;
         var key = ExpectIdentifier();
         Expect(Colon);
-        var value = ParseExpression();
+        SkipNewLines();
+        var value = Is(Comma) || Is(RightBracket)
+            ? WithRange(new BooleanLiteralExpressionNode(true), startToken)
+            : ParseExpression();
         return WithRange(new MapEntryNode(key, value), startToken);
     }
 
@@ -2485,6 +2473,17 @@ internal sealed class GesParser
     }
 
     private bool Is(GesTokenKind kind) => Current.Kind == kind;
+
+    private bool IsNextSignificantToken(GesTokenKind kind)
+    {
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count && _tokens[lookahead].Kind == kind;
+    }
 
     private bool IsSeededRandomStatementStart()
     {

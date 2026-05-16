@@ -93,8 +93,6 @@ internal static class GameEventScriptConformanceValueCodec
                 return GameEventScriptValueFactory.GesList(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeValue));
             case ":map":
                 return GameEventScriptValueFactory.GesMap(DecodeEntries(element));
-            case ":set":
-                return GameEventScriptValueFactory.GesSet(RequireArray(element, "items", "set items").EnumerateArray().Select(DecodeValue));
             case ":dice":
                 return GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
             case ":range":
@@ -184,7 +182,6 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Point => ToPointJson((GameEventScriptPointValue)value),
             GameEventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
             GameEventScriptValueKind.Map => new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) },
-            GameEventScriptValueKind.Set => new JsonObject { ["type"] = ":set", ["items"] = ToValueArrayJson(value.AsSet().OrderBy(item => item, GameEventScriptValue.StableComparer)) },
             GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
             GameEventScriptValueKind.Range => ToRangeJson(value),
             GameEventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GameEventScriptMessage>(value, "Value")) },

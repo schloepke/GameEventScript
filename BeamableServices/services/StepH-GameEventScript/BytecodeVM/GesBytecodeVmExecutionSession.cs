@@ -600,15 +600,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
-                if (!DefineSlot(instruction.Dest_U16, BytecodeVmValue.CollectionBuilder(BytecodeVmCollectionBuilder.Set())))
-                {
-                    return false;
-                }
-
-                pc++;
-                return true;
-
             case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
                 if (!TryExecuteCollectionBuilderAdd(instruction))
                 {
@@ -1098,10 +1089,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return TryCreatePipelineIterator(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
-                return TryExecutePipelineCollect(instruction, isSet: false);
-
-            case GameEventScriptBytecodeOpCode.PipelineCollectSet:
-                return TryExecutePipelineCollect(instruction, isSet: true);
+                return TryExecutePipelineCollect(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineFirst:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.First);
@@ -1250,7 +1238,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             case GameEventScriptBytecodeOpCode.BuildList:
-            case GameEventScriptBytecodeOpCode.BuildSet:
             {
                 if (!TryRentLinearOperands(instruction.A_U16, out var collectionOperands, out var collectionOperandCount))
                 {
@@ -1259,12 +1246,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 try
                 {
-                    var value = instruction.OpCode switch
-                    {
-                        GameEventScriptBytecodeOpCode.BuildList => BuildListValue(collectionOperands, 0, collectionOperandCount),
-                        _ => BuildSetValue(collectionOperands, 0, collectionOperandCount)
-                    };
-                    return DefineSlot(instruction.Dest_U16, value);
+                    return DefineSlot(instruction.Dest_U16, BuildListValue(collectionOperands, 0, collectionOperandCount));
                 }
                 finally
                 {
@@ -2631,7 +2613,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecutePipelineCollect(GameEventScriptBytecodeInstruction instruction, bool isSet)
+    private bool TryExecutePipelineCollect(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.A_U16, out var iterator, out _, out var items))
         {
@@ -2647,9 +2629,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         iterator.Dispose();
         return DefineSlot(
             instruction.Dest_U16,
-            BytecodeVmValue.Reference(isSet
-                ? GameEventScriptValueFactory.GesSet(items)
-                : GameEventScriptValueFactory.GesList(items)));
+            BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(items)));
     }
 
     private bool TryExecutePipelineElement(GameEventScriptBytecodeInstruction instruction, PipelineElementMode mode)
@@ -3994,7 +3974,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return;
         }
 
-        if (value.IsList() || value.IsSet())
+        if (value.IsList())
         {
             foreach (var item in value.AsEnumerable())
             {
@@ -4193,17 +4173,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(items));
-    }
-
-    private static BytecodeVmValue BuildSetValue(BytecodeVmValue[] inputs, int start, int count)
-    {
-        var items = new GameEventScriptValue[count];
-        for (var itemIndex = 0; itemIndex < count; itemIndex++)
-        {
-            items[itemIndex] = inputs[start + itemIndex].ToGameEventScriptValue();
-        }
-
-        return BytecodeVmValue.Reference(GameEventScriptValueFactory.GesSet(items));
     }
 
     private static BytecodeVmValue BuildMapValue(BytecodeVmValue[] inputs, int start, int count, string[]? names)
@@ -4667,7 +4636,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                          (handlerValue.Kind == GameEventScriptValueKind.Handler || GesMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
             "ref" => value.ReferenceValue?.IsRef() ?? false,
             "map" => value.ReferenceValue?.IsMap() ?? false,
-            "set" => value.ReferenceValue?.IsSet() ?? false,
             "dice" => value.ReferenceValue?.IsDice() ?? false,
             _ => value.ReferenceValue is { } customValue &&
                  customValue.TryGetCustomTypeName(out var customTypeName) &&
@@ -5074,7 +5042,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptValueKind.Range => EvaluateRangeLength(operand),
             GameEventScriptValueKind.List => GesInteger(operand.AsList().Count),
             GameEventScriptValueKind.Map => GesInteger(operand.AsMap().Count),
-            GameEventScriptValueKind.Set => GesInteger(operand.AsSet().Count),
             GameEventScriptValueKind.Dice => GesInteger(operand.AsDice().Rolls.Count),
             _ => GameEventScriptNothingValue.Instance
         };
@@ -5751,9 +5718,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 ? input
                 : BytecodeVmValue.Nothing,
             "map" => BytecodeVmValue.Reference(GesMap(boxed.AsMap())),
-            "set" => TryCheckMaterializedValue(boxed, "Set conversion would materialize more range items than allowed.")
-                ? BytecodeVmValue.Reference(GesSet(boxed.AsSet()))
-                : BytecodeVmValue.Nothing,
             "dice" => BytecodeVmValue.Reference(GesDice(boxed.AsDice())),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
                 ? BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(boxed, typeDefinition))
@@ -5931,7 +5895,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastMessage => "message",
             GameEventScriptBytecodeOpCode.CastHandler => "handler",
             GameEventScriptBytecodeOpCode.CastMap => "map",
-            GameEventScriptBytecodeOpCode.CastSet => "set",
             GameEventScriptBytecodeOpCode.CastDice => "dice",
             _ => string.Empty
         };
@@ -5961,7 +5924,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TypeCheckHandler => "handler",
             GameEventScriptBytecodeOpCode.TypeCheckRef => "ref",
             GameEventScriptBytecodeOpCode.TypeCheckMap => "map",
-            GameEventScriptBytecodeOpCode.TypeCheckSet => "set",
             GameEventScriptBytecodeOpCode.TypeCheckDice => "dice",
             _ => string.Empty
         };
@@ -5990,7 +5952,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.CastMessage or
             GameEventScriptBytecodeOpCode.CastHandler or
             GameEventScriptBytecodeOpCode.CastMap or
-            GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastCustom;
 
@@ -6025,7 +5986,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TypeCheckHandler or
             GameEventScriptBytecodeOpCode.TypeCheckRef or
             GameEventScriptBytecodeOpCode.TypeCheckMap or
-            GameEventScriptBytecodeOpCode.TypeCheckSet or
             GameEventScriptBytecodeOpCode.TypeCheckDice or
             GameEventScriptBytecodeOpCode.TypeCheckCustom;
 
@@ -6596,7 +6556,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(selectedItems),
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesList(selectedItems),
             _ => GameEventScriptNothingValue.Instance
         };
     }
@@ -6605,7 +6564,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         return target.Kind switch
         {
-            GameEventScriptValueKind.Set => GameEventScriptValueFactory.GesSet(items),
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
@@ -6619,7 +6577,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             GameEventScriptValueKind.Dice or
             GameEventScriptValueKind.List or
-            GameEventScriptValueKind.Set or
             GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
             _ => GameEventScriptNothingValue.Instance
         };
@@ -8564,13 +8521,11 @@ internal sealed class BytecodeVmPipelineIterator(
     }
 }
 
-internal sealed class BytecodeVmCollectionBuilder(bool isSet)
+internal sealed class BytecodeVmCollectionBuilder
 {
     private readonly List<GameEventScriptValue> _items = [];
 
-    public static BytecodeVmCollectionBuilder List() => new(isSet: false);
-
-    public static BytecodeVmCollectionBuilder Set() => new(isSet: true);
+    public static BytecodeVmCollectionBuilder List() => new();
 
     public int Count => _items.Count;
 
@@ -8578,7 +8533,5 @@ internal sealed class BytecodeVmCollectionBuilder(bool isSet)
         => _items.Add(value.ToGameEventScriptValue());
 
     public BytecodeVmValue Finish()
-        => BytecodeVmValue.Reference(isSet
-            ? GameEventScriptValueFactory.GesSet(_items)
-            : GameEventScriptValueFactory.GesList(_items));
+        => BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(_items));
 }

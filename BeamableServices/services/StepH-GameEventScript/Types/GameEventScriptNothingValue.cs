@@ -28,8 +28,6 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
 
     public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => GameEventScriptMapValue.EmptyView;
 
-    public override ISet<GameEventScriptValue> AsSet() => new SortedSet<GameEventScriptValue>(StableComparer);
-
     public override GameEventScriptDiceValue AsDice() => GameEventScriptDiceValue.Empty;
 
     public override bool HasSemanticValue() => false;
@@ -69,12 +67,6 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
     internal override bool TryConvertToMap(out GameEventScriptValue value)
     {
         value = GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
-        return true;
-    }
-
-    internal override bool TryConvertToSet(out GameEventScriptValue value)
-    {
-        value = GesSet([]);
         return true;
     }
 

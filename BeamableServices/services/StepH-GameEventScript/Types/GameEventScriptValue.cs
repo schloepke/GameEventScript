@@ -28,7 +28,6 @@ public enum GameEventScriptValueKind
     Ref,
     List,
     Map,
-    Set,
     Dice
 }
 
@@ -58,7 +57,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsSeries() => Kind == GameEventScriptValueKind.Series;
     public bool IsList() => Kind == GameEventScriptValueKind.List;
     public bool IsMap() => Kind == GameEventScriptValueKind.Map;
-    public bool IsSet() => Kind == GameEventScriptValueKind.Set;
     public bool IsDice() => Kind == GameEventScriptValueKind.Dice;
     public bool IsRange() => Kind == GameEventScriptValueKind.Range;
     public bool IsMessage() => Kind == GameEventScriptValueKind.Message;
@@ -83,8 +81,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => GameEventScriptMapValue.EmptyView;
 
-    public virtual ISet<GameEventScriptValue> AsSet() => new SortedSet<GameEventScriptValue>(StableComparer);
-
     public virtual GameEventScriptDiceValue AsDice() => GameEventScriptDiceValue.Empty;
 
     public virtual bool HasSemanticValue() => true;
@@ -98,10 +94,13 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             return GameEventScriptNothingValue.Instance;
         }
 
-        var key = selector.AsText();
-        if (!string.IsNullOrEmpty(key) && TryGetMapMember(key, out var value))
+        if (selector.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag)
         {
-            return value;
+            var key = selector.AsText();
+            if (!string.IsNullOrEmpty(key) && TryGetMapMember(key, out var value))
+            {
+                return value;
+            }
         }
 
         return LookupCore(selector);
@@ -209,7 +208,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Ref => ":Ref",
             GameEventScriptValueKind.List => ":List",
             GameEventScriptValueKind.Map => ":Map",
-            GameEventScriptValueKind.Set => ":Set",
             GameEventScriptValueKind.Dice => ":Dice",
             _ => Kind.ToString()
         };
@@ -235,7 +233,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Handler => $"handler {((GameEventScriptHandlerValue)this).Signature.SignatureId}",
             GameEventScriptValueKind.Ref => AsText(),
             GameEventScriptValueKind.List => $"[{string.Join(", ", AsList().Select(x => x.ToString()))}]",
-            GameEventScriptValueKind.Set => $"set[{string.Join(", ", AsSet().Select(x => x.ToString()))}]",
             GameEventScriptValueKind.Map => $"map[{string.Join(", ", AsMap().Select(x => $"{x.Key}: {x.Value}"))}]",
             GameEventScriptValueKind.Dice => $"dice[{string.Join(", ", AsDice().Rolls)}]",
             _ => Kind.ToString()
@@ -295,7 +292,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                                             ((GameEventScriptRefValue)this).IdValue.Equals(((GameEventScriptRefValue)other).IdValue),
             GameEventScriptValueKind.List => AsList().SequenceEqual(other.AsList()),
             GameEventScriptValueKind.Map => EqualsDictionary(AsMap(), other.AsMap()),
-            GameEventScriptValueKind.Set => AsSet().SetEquals(other.AsSet()),
             GameEventScriptValueKind.Dice => AsDice().Rolls.SequenceEqual(other.AsDice().Rolls),
             _ => false
         };
@@ -396,9 +392,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 }
 
                 break;
-            case GameEventScriptValueKind.Set:
-                foreach (var item in AsSet().OrderBy(x => x, StableComparer)) hash.Add(item);
-                break;
             case GameEventScriptValueKind.Dice:
                 foreach (var roll in AsDice().Rolls) hash.Add(roll);
                 break;
@@ -437,9 +430,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Handler => 11,
             GameEventScriptValueKind.List => 12,
             GameEventScriptValueKind.Map => 13,
-            GameEventScriptValueKind.Set => 14,
-            GameEventScriptValueKind.Dice => 15,
-            GameEventScriptValueKind.Ref => 16,
+            GameEventScriptValueKind.Dice => 14,
+            GameEventScriptValueKind.Ref => 15,
             _ => 8
         };
     }
@@ -635,7 +627,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Ref => CompareRef((GameEventScriptRefValue)left, (GameEventScriptRefValue)right),
                 GameEventScriptValueKind.List => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Map => CompareDictionary(left.AsMap(), right.AsMap()),
-                GameEventScriptValueKind.Set => CompareSequence(left.AsSet().OrderBy(x => x, StableComparer).ToArray(), right.AsSet().OrderBy(x => x, StableComparer).ToArray()),
                 GameEventScriptValueKind.Dice => CompareDice(left.AsDice(), right.AsDice()),
                 _ => left.Kind.CompareTo(right.Kind)
             };
@@ -724,12 +715,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     }
 
     internal virtual bool TryConvertToMap(out GameEventScriptValue value)
-    {
-        value = default!;
-        return false;
-    }
-
-    internal virtual bool TryConvertToSet(out GameEventScriptValue value)
     {
         value = default!;
         return false;

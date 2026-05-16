@@ -226,7 +226,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:quantity\((?:m|meter|s|second|degree)\)|nothing|text|boolean|uuid|integer|float|number|percentage|degree|meter|second|vector|point|series|range|message|handler|envelope|ref|list|map|set|dice)(?=$|[^A-Za-z0-9_])</string>
+					<string>:(?:quantity\((?:m|meter|s|second|degree)\)|nothing|text|boolean|uuid|integer|float|number|percentage|degree|meter|second|vector|point|series|range|message|handler|envelope|ref|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript</string>
 				</dict>

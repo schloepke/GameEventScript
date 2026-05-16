@@ -31,8 +31,6 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => Items;
 
-    public override ISet<GameEventScriptValue> AsSet() => TryConvertToSet(out var value) ? value.AsSet() : new SortedSet<GameEventScriptValue>(StableComparer);
-
     public override GameEventScriptDiceValue AsDice() => TryConvertToDice(out var value) ? value.AsDice() : GameEventScriptDiceValue.Empty;
 
     public override IEnumerable<GameEventScriptValue> AsEnumerable() => Items;
@@ -46,12 +44,6 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
     internal override bool TryConvertToList(out GameEventScriptValue value)
     {
         value = this;
-        return true;
-    }
-
-    internal override bool TryConvertToSet(out GameEventScriptValue value)
-    {
-        value = GesSet(Items);
         return true;
     }
 

@@ -59,7 +59,9 @@ public sealed class GameEventScriptMapValue : GameEventScriptValue
 
     public override bool IsSemanticallyEmpty() => VisibleView.Count == 0;
 
-    public override bool Contains(GameEventScriptValue needle) => VisibleView.ContainsKey(needle.AsText());
+    public override bool Contains(GameEventScriptValue needle)
+        => needle.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+            VisibleView.ContainsKey(needle.AsText());
 
     public override bool ContainsValue(GameEventScriptValue needle) => VisibleView.Values.Any(value => value.Equals(needle));
 

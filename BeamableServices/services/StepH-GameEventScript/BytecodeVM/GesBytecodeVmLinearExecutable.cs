@@ -392,7 +392,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
-            case GameEventScriptBytecodeOpCode.PipelineCollectSet:
             case GameEventScriptBytecodeOpCode.PipelineFirst:
             case GameEventScriptBytecodeOpCode.PipelineLast:
             case GameEventScriptBytecodeOpCode.PipelineSingle:
@@ -480,7 +479,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderList:
-            case GameEventScriptBytecodeOpCode.CollectionBuilderSet:
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
@@ -551,7 +549,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
-            case GameEventScriptBytecodeOpCode.BuildSet:
                 ValidateSlotListIndex(module, instruction.A_U16, $"{context} item slots");
                 break;
 
@@ -1097,7 +1094,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastMessage or
             GameEventScriptBytecodeOpCode.CastHandler or
             GameEventScriptBytecodeOpCode.CastMap or
-            GameEventScriptBytecodeOpCode.CastSet or
             GameEventScriptBytecodeOpCode.CastDice or
             GameEventScriptBytecodeOpCode.CastCustom;
 
@@ -1121,7 +1117,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.TypeCheckHandler or
             GameEventScriptBytecodeOpCode.TypeCheckRef or
             GameEventScriptBytecodeOpCode.TypeCheckMap or
-            GameEventScriptBytecodeOpCode.TypeCheckSet or
             GameEventScriptBytecodeOpCode.TypeCheckDice or
             GameEventScriptBytecodeOpCode.TypeCheckCustom;
 

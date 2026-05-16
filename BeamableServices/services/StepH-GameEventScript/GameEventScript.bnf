@@ -203,7 +203,6 @@ TypeTag ::= ":text"
           | ":series"
           | ":list"
           | ":dictionary"
-          | ":set"
           | ":dice"
           | ":nothing"
           | ":" TagName
@@ -263,7 +262,6 @@ DictionaryCollectionSelector ::= ":dictionary" Identifier "by" Expression [ Proj
 SortCollectionSelector ::= ":sort" SortDirection
 OrderByCollectionSelector ::= ":order" "by" Identifier ProjectionArrow Expression SortDirection
 GeneratedListExpression ::= ":list" "[" GeneratedCollectionSelector "]"
-GeneratedSetExpression ::= ":set" "[" GeneratedCollectionSelector "]"
 GeneratedCollectionSelector ::= ":select" Identifier ( RangeIterationSource | "in" CollectionIterationExpression ) [ "where" Expression ] ProjectionArrow Expression
 ProjectionArrow ::= "=>" | "↦"
 SortDirection ::= "ascending" | "descending"
@@ -290,7 +288,6 @@ DiceExpression ::= ":dice" Number "d" Number
 
 BracketLiteral ::= ListLiteral | DictionaryLiteral
 ListLiteral ::= "[" [ ExpressionList ] "]"
-SetLiteral ::= ":set" "[" [ ExpressionList ] "]"
 DictionaryLiteral ::= "[" ":" "]"
                     | "[" DictionaryEntry { "," DictionaryEntry } "]"
-DictionaryEntry ::= Identifier ":" Expression
+DictionaryEntry ::= Identifier ":" [ Expression ]

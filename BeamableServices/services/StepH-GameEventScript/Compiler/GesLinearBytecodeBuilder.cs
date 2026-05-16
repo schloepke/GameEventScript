@@ -596,12 +596,9 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourceGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection, SourceContext context, ExpressionState state)
     {
-        var builderOpCode = generatedCollection.CollectionType switch
-        {
-            "list" => GameEventScriptBytecodeOpCode.CollectionBuilderList,
-            "set" => GameEventScriptBytecodeOpCode.CollectionBuilderSet,
-            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support generated collection type '{generatedCollection.CollectionType}'.")
-        };
+        var builderOpCode = generatedCollection.CollectionType == "list"
+            ? GameEventScriptBytecodeOpCode.CollectionBuilderList
+            : throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support generated collection type '{generatedCollection.CollectionType}'.");
 
         var builderSlot = AllocateSlot(state);
         Emit(CreateInstruction(builderOpCode, dest: builderSlot));
@@ -709,9 +706,6 @@ internal sealed class GesLinearBytecodeBuilder
 
             case ListLiteralExpressionNode list:
                 return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.BuildList, list.Items, null, context, state);
-
-            case SetLiteralExpressionNode set:
-                return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.BuildSet, set.Items, null, context, state);
 
             case MapLiteralExpressionNode dictionary:
                 return EmitSourceDictionary(dictionary, context, state);
@@ -1627,13 +1621,11 @@ internal sealed class GesLinearBytecodeBuilder
             case SelectSelectorNode select:
                 return EmitPipelineCollect(
                     EmitPipelineIterator(iteratorSlot, select.Identifier, select.Projection, PipelineIteratorEntryKind.Select, context, state),
-                    isSet: false,
                     state);
 
             case FilterSelectorNode filter:
                 return EmitPipelineCollect(
                     EmitPipelineIterator(iteratorSlot, filter.Identifier, filter.Predicate, PipelineIteratorEntryKind.Filter, context, state),
-                    isSet: false,
                     state);
 
             case PredicateSelectorNode predicate:
@@ -1803,10 +1795,10 @@ internal sealed class GesLinearBytecodeBuilder
         }
     }
 
-    private int EmitPipelineCollect(int iteratorSlot, bool isSet, ExpressionState state)
+    private int EmitPipelineCollect(int iteratorSlot, ExpressionState state)
         => EmitValueInstruction(
             state,
-            isSet ? GameEventScriptBytecodeOpCode.PipelineCollectSet : GameEventScriptBytecodeOpCode.PipelineCollectList,
+            GameEventScriptBytecodeOpCode.PipelineCollectList,
             a: iteratorSlot);
 
     private int EmitPipelineEntryTerminal(
@@ -2725,12 +2717,11 @@ internal sealed class GesLinearBytecodeBuilder
             "message" => GameEventScriptBytecodeOpCode.CastMessage,
             "handler" => GameEventScriptBytecodeOpCode.CastHandler,
             "map" => GameEventScriptBytecodeOpCode.CastMap,
-            "set" => GameEventScriptBytecodeOpCode.CastSet,
             "dice" => GameEventScriptBytecodeOpCode.CastDice,
             _ => default
         };
 
-        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "set" or "dice";
+        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "dice";
     }
 
     private static bool TryGetTypeCheckOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode, out byte unitAndFlags)
@@ -2763,12 +2754,11 @@ internal sealed class GesLinearBytecodeBuilder
             "handler" => GameEventScriptBytecodeOpCode.TypeCheckHandler,
             "ref" => GameEventScriptBytecodeOpCode.TypeCheckRef,
             "map" => GameEventScriptBytecodeOpCode.TypeCheckMap,
-            "set" => GameEventScriptBytecodeOpCode.TypeCheckSet,
             "dice" => GameEventScriptBytecodeOpCode.TypeCheckDice,
             _ => default
         };
 
-        return typeName is "nothing" or "tag" or "text" or "percentage" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "set" or "dice";
+        return typeName is "nothing" or "tag" or "text" or "percentage" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "dice";
     }
 
     private static bool TryGetQuantityUnit(string typeName, out GameEventScriptNumericUnit unit)
@@ -3004,14 +2994,6 @@ internal sealed class GesLinearBytecodeBuilder
 
             case ListLiteralExpressionNode list:
                 foreach (var item in list.Items)
-                {
-                    CollectReferencedIdentifiers(item, identifiers, bound);
-                }
-
-                break;
-
-            case SetLiteralExpressionNode set:
-                foreach (var item in set.Items)
                 {
                     CollectReferencedIdentifiers(item, identifiers, bound);
                 }
@@ -3411,9 +3393,6 @@ internal sealed class GesLinearBytecodeBuilder
 
             case ListLiteralExpressionNode list:
                 return list.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
-
-            case SetLiteralExpressionNode set:
-                return set.Items.Any(item => ExpressionReferencesIdentifier(item, identifier));
 
             case MapLiteralExpressionNode dictionary:
                 return dictionary.Entries.Any(entry => ExpressionReferencesIdentifier(entry.Value, identifier));

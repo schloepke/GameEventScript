@@ -19,7 +19,7 @@ public sealed class GameEventScriptBinary(
 {
     public GameEventScriptBinaryHeader Header { get; } = header;
     public string ModuleName { get; } = moduleName;
-    public GameEventScriptTextTable TextConstantTable { get; } = textConstantTable;
+    public GameEventScriptTextTable TextConstantTable = textConstantTable;
     public GameEventScriptUInt16Table Uint16ConstantTable { get; } = uint16ConstantTable;
     public GameEventScriptBinaryBindTable BindTable { get; } = bindTable;
     public GameEventScriptBytecodeInstruction[] InstructionTable { get; } = instructionTable;
@@ -300,7 +300,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     CastMessage = 0x68,
     CastHandler = 0x69,
     CastMap = 0x6A,
-    CastSet = 0x6B,
     CastDice = 0x6C,
 
     #endregion
@@ -332,7 +331,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     TypeCheckHandler = 0x86,
     TypeCheckRef = 0x87,
     TypeCheckMap = 0x88,
-    TypeCheckSet = 0x89,
     TypeCheckDice = 0x8A,
 
     #endregion
@@ -344,7 +342,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     MemberAccess = 0x93,
     IndexedAccess = 0x94,
     BuildList = 0x95,
-    BuildSet = 0x97,
     BuildMap = 0x98,
     BuildMessage = 0x99,
     BindHandler = 0x9A,
@@ -375,7 +372,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     IteratorNext = 0xB4,
     IteratorClose = 0xB5,
     CollectionBuilderList = 0xB6,
-    CollectionBuilderSet = 0xB7,
     CollectionBuilderAdd = 0xB8,
     CollectionBuilderFinish = 0xB9,
     IteratorReduce = 0xBA,
@@ -411,7 +407,6 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     PipelineIterator = 0xD0,
     PipelineCollectList = 0xD1,
-    PipelineCollectSet = 0xD2,
     PipelineFirst = 0xD3,
     PipelineLast = 0xD4,
     PipelineSingle = 0xD5,

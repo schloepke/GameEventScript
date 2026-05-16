@@ -2,13 +2,66 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
+using static StepH.GameEventScript.BytecodeExecutor.VmValue;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 public static class VmRegisterCompare
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void VmEmpty(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Nothing:
+                dst.SetBoolean(true);
+                break;
+            case Integer or Float or Percentage or VmValueKind.Boolean:
+                dst.SetBoolean(false);
+                break;
+            case StringPointer:
+                dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length == 0);
+                break;
+            case TextObject or ListObject or DictionaryObject or SetObject or TagObject or DiceObject when a.ObjectValue is IVmValueObject objectValue:
+                dst.SetBoolean(objectValue.Length == 0);
+                break;
+            // Fixme: Special handling for series, uuid, ref, external type
+            default:
+                dst.SetBoolean(true);
+                break;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void VmHasValue(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Nothing:
+                dst.SetBoolean(false);
+                break;
+            case Integer or VmValueKind.Boolean:
+                dst.SetBoolean(true);
+                break;
+            case Float or Percentage:
+                dst.SetBoolean(!double.IsNaN(dst.AsFloatValue) || !double.IsInfinity(dst.AsFloatValue) || !double.IsNegativeInfinity(dst.AsFloatValue));
+                break;
+            case StringPointer or TagPointer:
+                dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length > 0);
+                break;
+            case TextObject or ListObject or DictionaryObject or SetObject or TagObject or DiceObject when a.ObjectValue is IVmValueObject objectValue:
+                dst.SetBoolean(objectValue.Length > 0);
+                break;
+            // Fixme: Special handling for series, uuid, ref, external type
+            default:
+                dst.SetBoolean(false);
+                break;
+        }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void VmEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
@@ -77,7 +130,7 @@ public static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsFloatValue < b.AsFloatValue);
         }
-        else if (a.Kind is VmValue.VmValueKind.Boolean && b.Kind is VmValue.VmValueKind.Boolean)
+        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
             dst.SetBoolean(a.IsFalse && b.IsTrue);
         }
@@ -98,7 +151,7 @@ public static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsFloatValue > b.AsFloatValue);
         }
-        else if (a.Kind is VmValue.VmValueKind.Boolean && b.Kind is VmValue.VmValueKind.Boolean)
+        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
             dst.SetBoolean(a.IsTrue && b.IsFalse);
         }
@@ -119,7 +172,7 @@ public static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsFloatValue <= b.AsFloatValue);
         }
-        else if (a.Kind is VmValue.VmValueKind.Boolean && b.Kind is VmValue.VmValueKind.Boolean)
+        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
             dst.SetBoolean(a.IsFalse && b.IsTrue || a.AsBooleanValue == b.AsBooleanValue);
         }
@@ -140,7 +193,7 @@ public static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsFloatValue >= b.AsFloatValue);
         }
-        else if (a.Kind is VmValue.VmValueKind.Boolean && b.Kind is VmValue.VmValueKind.Boolean)
+        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
             dst.SetBoolean(a.IsTrue && b.IsFalse || a.AsBooleanValue == b.AsBooleanValue);
             return;

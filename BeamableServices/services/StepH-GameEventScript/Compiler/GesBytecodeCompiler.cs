@@ -469,14 +469,6 @@ internal static class GesBytecodeCompiler
 
                     return;
 
-                case SetLiteralExpressionNode set:
-                    foreach (var item in set.Items)
-                    {
-                        CollectSourceExpressionMetadata(item);
-                    }
-
-                    return;
-
                 case MapLiteralExpressionNode dictionary:
                     foreach (var entry in dictionary.Entries)
                     {

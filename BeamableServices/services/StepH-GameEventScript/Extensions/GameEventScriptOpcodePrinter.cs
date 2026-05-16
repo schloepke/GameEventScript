@@ -221,7 +221,6 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CastMessage => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.CastHandler => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.CastMap => [DST_U16_TargetSlot, A_U16_SourceSlot],
-            GameEventScriptBytecodeOpCode.CastSet => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.CastDice => [DST_U16_TargetSlot, A_U16_SourceSlot],
 
             GameEventScriptBytecodeOpCode.TypeCheckNothing => [DST_U16_TargetSlot, A_U16_SourceSlot],
@@ -244,7 +243,6 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.TypeCheckHandler => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.TypeCheckRef => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.TypeCheckMap => [DST_U16_TargetSlot, A_U16_SourceSlot],
-            GameEventScriptBytecodeOpCode.TypeCheckSet => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.TypeCheckDice => [DST_U16_TargetSlot, A_U16_SourceSlot],
 
             GameEventScriptBytecodeOpCode.LoadHandler => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex],
@@ -252,7 +250,6 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.MemberAccess => [DST_U16_TargetSlot, A_U16_SourceSlot, C_U16_StringPoolIndex],
             GameEventScriptBytecodeOpCode.IndexedAccess => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_IndexSlot],
             GameEventScriptBytecodeOpCode.BuildList => [DST_U16_TargetSlot, A_U16_ItemSlotListIndex],
-            GameEventScriptBytecodeOpCode.BuildSet => [DST_U16_TargetSlot, A_U16_ItemSlotListIndex],
             GameEventScriptBytecodeOpCode.BuildMap => [DST_U16_TargetSlot, A_U16_KeyNameListIndex, B_U16_ValueSlotListIndex],
             GameEventScriptBytecodeOpCode.BuildMessage => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],
             GameEventScriptBytecodeOpCode.BindHandler => [DST_U16_TargetSlot, A_U16_OperandSlotListIndex, B_U16_ArgumentNameListIndex],
@@ -275,7 +272,6 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.IteratorNext => [DST_U16_TargetSlot, A_U16_IteratorSlot, B_U16_TargetAddress],
             GameEventScriptBytecodeOpCode.IteratorClose => [A_U16_IteratorSlot],
             GameEventScriptBytecodeOpCode.CollectionBuilderList => [DST_U16_TargetSlot],
-            GameEventScriptBytecodeOpCode.CollectionBuilderSet => [DST_U16_TargetSlot],
             GameEventScriptBytecodeOpCode.CollectionBuilderAdd => [A_U16_BuilderSlot, B_U16_ItemSlot],
             GameEventScriptBytecodeOpCode.CollectionBuilderFinish => [DST_U16_TargetSlot, A_U16_BuilderSlot],
             GameEventScriptBytecodeOpCode.IteratorReduce => [DST_U16_TargetSlot, A_U16_IteratorSlot, B_U16_ItemBindingSlot, C_U16_ReducerEntryAddress],
@@ -287,7 +283,6 @@ public class GameEventScriptOpcodePrinter
 
             GameEventScriptBytecodeOpCode.PipelineIterator => [DST_U16_TargetSlot, A_U16_SourceIteratorSlot, B_U16_NextEntryAddress, C_U16_ItemBindingSlot, D_U16_CaptureSlotListIndex],
             GameEventScriptBytecodeOpCode.PipelineCollectList => [DST_U16_TargetSlot, A_U16_IteratorSlot],
-            GameEventScriptBytecodeOpCode.PipelineCollectSet => [DST_U16_TargetSlot, A_U16_IteratorSlot],
             GameEventScriptBytecodeOpCode.PipelineFirst => [DST_U16_TargetSlot, A_U16_IteratorSlot],
             GameEventScriptBytecodeOpCode.PipelineLast => [DST_U16_TargetSlot, A_U16_IteratorSlot],
             GameEventScriptBytecodeOpCode.PipelineSingle => [DST_U16_TargetSlot, A_U16_IteratorSlot],

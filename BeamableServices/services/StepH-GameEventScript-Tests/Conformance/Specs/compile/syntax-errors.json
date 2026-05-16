@@ -173,6 +173,22 @@
     },
     {
       "kind": "compileError",
+      "name": "set literal syntax is rejected",
+      "script": "on Start {\n  let x be :set[1, 2]\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "generated set syntax is rejected",
+      "script": "on Start {\n  let x be :set[:select item from 1 to 3 => item]\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "predicate function and handler identifiers enforce casing",
       "script": "predicate Wounded(unit) means unit.hp < unit.maxHp\nfunction filter(Units) means Units\non Start(Target) {\n  emit Done\n}",
       "expectedError": {

@@ -1,9 +1,9 @@
 sealed class StepH.GameEventScript.Api.GameEventScriptBinary
   ctor GameEventScriptBinary(StepH.GameEventScript.Api.GameEventScriptBinaryHeader header, System.String moduleName, StepH.GameEventScript.Api.GameEventScriptTextTable textConstantTable, StepH.GameEventScript.Api.GameEventScriptUInt16Table uint16ConstantTable, StepH.GameEventScript.Api.GameEventScriptBinaryBindTable bindTable, StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction[] instructionTable)
+  field StepH.GameEventScript.Api.GameEventScriptTextTable TextConstantTable
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindTable BindTable { get }
   property StepH.GameEventScript.Api.GameEventScriptBinaryHeader Header { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction[] InstructionTable { get }
-  property StepH.GameEventScript.Api.GameEventScriptTextTable TextConstantTable { get }
   property StepH.GameEventScript.Api.GameEventScriptUInt16Table Uint16ConstantTable { get }
   property System.String ModuleName { get }
 enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
@@ -230,7 +230,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CastMessage = 104
   enum-field CastHandler = 105
   enum-field CastMap = 106
-  enum-field CastSet = 107
   enum-field CastDice = 108
   enum-field TypeCheckNothing = 112
   enum-field TypeCheckBoolean = 113
@@ -252,14 +251,12 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field TypeCheckHandler = 134
   enum-field TypeCheckRef = 135
   enum-field TypeCheckMap = 136
-  enum-field TypeCheckSet = 137
   enum-field TypeCheckDice = 138
   enum-field LoadHandler = 144
   enum-field TypeConstructor = 145
   enum-field MemberAccess = 147
   enum-field IndexedAccess = 148
   enum-field BuildList = 149
-  enum-field BuildSet = 151
   enum-field BuildMap = 152
   enum-field BuildMessage = 153
   enum-field BindHandler = 154
@@ -280,7 +277,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field IteratorNext = 180
   enum-field IteratorClose = 181
   enum-field CollectionBuilderList = 182
-  enum-field CollectionBuilderSet = 183
   enum-field CollectionBuilderAdd = 184
   enum-field CollectionBuilderFinish = 185
   enum-field IteratorReduce = 186
@@ -306,7 +302,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field StagePercentage = 206
   enum-field PipelineIterator = 208
   enum-field PipelineCollectList = 209
-  enum-field PipelineCollectSet = 210
   enum-field PipelineFirst = 211
   enum-field PipelineLast = 212
   enum-field PipelineSingle = 213
@@ -569,7 +564,6 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSeconds(System.Double seconds)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSeries(StepH.GameEventScript.Api.IGameEventScriptSeries series)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSeries(System.String signatureId, System.Func<System.Int64, StepH.GameEventScript.Types.GameEventScriptValue> termProvider)
-  method static StepH.GameEventScript.Types.GameEventScriptValue GesSet(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> values)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesTag(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesText(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesUuid(System.Int64 high, System.Int64 low)
@@ -588,14 +582,18 @@ interface StepH.GameEventScript.BytecodeExecutor.IVmIterator
   method System.Boolean HasNext()
   method System.Boolean TryNext(StepH.GameEventScript.BytecodeExecutor.VmValue& value)
 interface StepH.GameEventScript.BytecodeExecutor.IVmObject
+interface StepH.GameEventScript.BytecodeExecutor.IVmValueObject
+  property System.Int32 Length { get }
 class StepH.GameEventScript.BytecodeExecutor.VmDictionaryObject
   ctor VmDictionaryObject(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.BytecodeExecutor.VmValue> entries)
+  property System.Int32 Length { get }
 class StepH.GameEventScript.BytecodeExecutor.VmIntegerRangeIterator
   ctor VmIntegerRangeIterator(System.Int64 from, System.Int64 to, System.Int64 step)
   method System.Boolean HasNext()
   method System.Boolean TryNext(StepH.GameEventScript.BytecodeExecutor.VmValue& value)
 class StepH.GameEventScript.BytecodeExecutor.VmListObject
   ctor VmListObject(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.BytecodeExecutor.VmValue> items)
+  property System.Int32 Length { get }
 static class StepH.GameEventScript.BytecodeExecutor.VmRegisterBooleanLogic
   method static System.Void VmAnd(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
   method static System.Void VmNot(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a)
@@ -603,9 +601,11 @@ static class StepH.GameEventScript.BytecodeExecutor.VmRegisterBooleanLogic
   method static System.Void VmXor(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
 static class StepH.GameEventScript.BytecodeExecutor.VmRegisterCompare
   method static System.Void VmApproxEqual(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
+  method static System.Void VmEmpty(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.Api.GameEventScriptTextTable& textTable)
   method static System.Void VmEqual(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
   method static System.Void VmGreater(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
   method static System.Void VmGreaterOrEqual(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
+  method static System.Void VmHasValue(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.Api.GameEventScriptTextTable& textTable)
   method static System.Void VmLess(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
   method static System.Void VmLessOrEqual(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
   method static System.Void VmNotEqual(StepH.GameEventScript.BytecodeExecutor.VmValue& dst, StepH.GameEventScript.BytecodeExecutor.VmValue& a, StepH.GameEventScript.BytecodeExecutor.VmValue& b)
@@ -675,6 +675,7 @@ enum StepH.GameEventScript.BytecodeExecutor.VmState.StateValue
   enum-field Error = 4
 class StepH.GameEventScript.BytecodeExecutor.VmTextObject
   ctor VmTextObject(System.String text)
+  property System.Int32 Length { get }
 struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Boolean IsUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit requiredUnit)
   method System.Void SetBoolean(System.Boolean value)
@@ -715,9 +716,10 @@ enum StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind
   enum-field TextObject = 10
   enum-field ListObject = 11
   enum-field DictionaryObject = 12
-  enum-field TagObject = 13
-  enum-field DiceObject = 14
-  enum-field Iterator = 15
+  enum-field SetObject = 13
+  enum-field TagObject = 14
+  enum-field DiceObject = 15
+  enum-field Iterator = 16
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
 static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper
@@ -1002,7 +1004,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptListValue
   method System.Boolean IsSemanticallyEmpty()
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
-  method System.Collections.Generic.ISet<StepH.GameEventScript.Types.GameEventScriptValue> AsSet()
   method static StepH.GameEventScript.Types.GameEventScriptListValue Create(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> values)
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptMapValue
@@ -1036,7 +1037,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptNothingValue
   method System.Boolean IsSemanticallyEmpty()
   method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsMap()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
-  method System.Collections.Generic.ISet<StepH.GameEventScript.Types.GameEventScriptValue> AsSet()
   method System.Double AsNumber()
   method System.Int64 AsInteger()
   method System.String AsText()
@@ -1083,7 +1083,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptRangeValue
   method System.Boolean IsSemanticallyEmpty()
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
-  method System.Collections.Generic.ISet<StepH.GameEventScript.Types.GameEventScriptValue> AsSet()
   method System.String AsText()
   method static StepH.GameEventScript.Types.GameEventScriptRangeValue Create(System.Int64 from, System.Int64 to, System.Int64 step)
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
@@ -1115,7 +1114,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptSeriesValue
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> Take(System.Int32 count)
-  method System.Collections.Generic.ISet<StepH.GameEventScript.Types.GameEventScriptValue> AsSet()
   method System.Double AsNumber()
   method System.Int64 AsInteger()
   method System.String AsText()
@@ -1129,18 +1127,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptSeriesValue
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Int64 Offset { get }
   property System.String SignatureId { get }
-sealed class StepH.GameEventScript.Types.GameEventScriptSetValue
-  field static StepH.GameEventScript.Types.GameEventScriptSetValue Empty
-  method StepH.GameEventScript.Types.GameEventScriptDiceValue AsDice()
-  method System.Boolean Contains(StepH.GameEventScript.Types.GameEventScriptValue needle)
-  method System.Boolean HasSemanticValue()
-  method System.Boolean IsSemanticallyEmpty()
-  method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
-  method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
-  method System.Collections.Generic.ISet<StepH.GameEventScript.Types.GameEventScriptValue> AsSet()
-  method static StepH.GameEventScript.Types.GameEventScriptSetValue Create(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> values, System.Collections.Generic.IComparer<StepH.GameEventScript.Types.GameEventScriptValue> comparer)
-  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
-  property System.Collections.Generic.SortedSet<StepH.GameEventScript.Types.GameEventScriptValue> Items { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptTagValue
   field static StepH.GameEventScript.Types.GameEventScriptTagValue Empty
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
@@ -1206,7 +1192,6 @@ abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method System.Boolean IsRef()
   method System.Boolean IsSemanticallyEmpty()
   method System.Boolean IsSeries()
-  method System.Boolean IsSet()
   method System.Boolean IsTag()
   method System.Boolean IsText()
   method System.Boolean IsUuid()
@@ -1219,7 +1204,6 @@ abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
   method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsMap()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
-  method System.Collections.Generic.ISet<StepH.GameEventScript.Types.GameEventScriptValue> AsSet()
   method System.Double AsNumber()
   method System.Int32 CompareTo(StepH.GameEventScript.Types.GameEventScriptValue other)
   method System.Int32 GetHashCode()
@@ -1253,8 +1237,7 @@ enum StepH.GameEventScript.Types.GameEventScriptValueKind
   enum-field Ref = 14
   enum-field List = 15
   enum-field Map = 16
-  enum-field Set = 17
-  enum-field Dice = 18
+  enum-field Dice = 17
 sealed class StepH.GameEventScript.Types.GameEventScriptVectorValue
   field static StepH.GameEventScript.Types.GameEventScriptVectorValue Zero
   method System.Boolean AsBoolean()

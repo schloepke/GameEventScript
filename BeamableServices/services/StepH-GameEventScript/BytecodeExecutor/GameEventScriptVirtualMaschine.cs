@@ -51,6 +51,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
         var stageRegisterIndex = _vmState.RegisterFrameStart + _vmState.RegisterFrameLength + _vmState.StagedArgumentCount++;
         if (stageRegisterIndex >= _vmState.RegisterSlots.Length) 
         {
+            // FIXME: Here we might want to let the register frame grow.
             _vmState.RaiseError("Cannot add more staged arguments than available register slots.");
         }
         return ref _vmState.RegisterSlots[stageRegisterIndex];
@@ -248,8 +249,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).VmNot(ref Register(instruction.A_U16));
                     break;
                 case UnaryHasValue:
+                    Register(instruction.Dest_U16).VmHasValue(ref Register(instruction.A_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryEmpty:
+                    Register(instruction.Dest_U16).VmEmpty(ref Register(instruction.A_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryLength:
                     break;
@@ -341,8 +344,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastMap:
                     break;
-                case CastSet:
-                    break;
                 case CastDice:
                     break;
                 case TypeCheckNothing:
@@ -385,8 +386,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case TypeCheckMap:
                     break;
-                case TypeCheckSet:
-                    break;
                 case TypeCheckDice:
                     break;
                 case LoadHandler:
@@ -398,8 +397,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case IndexedAccess:
                     break;
                 case BuildList:
-                    break;
-                case BuildSet:
                     break;
                 case BuildMap:
                     break;
@@ -448,8 +445,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CollectionBuilderList:
                     break;
-                case CollectionBuilderSet:
-                    break;
                 case CollectionBuilderAdd:
                     break;
                 case CollectionBuilderFinish:
@@ -484,8 +479,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PipelineIterator:
                     break;
                 case PipelineCollectList:
-                    break;
-                case PipelineCollectSet:
                     break;
                 case PipelineFirst:
                     break;

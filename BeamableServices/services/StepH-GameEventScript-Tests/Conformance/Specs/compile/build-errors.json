@@ -397,6 +397,28 @@
     },
     {
       "kind": "compileError",
+      "name": "set cast is rejected",
+      "script": "on Start(value) {\n  let invalid be value as :set\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "set",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "set type check is rejected",
+      "script": "on Start(value) {\n  let invalid be value is :set\n}",
+      "expectedError": {
+        "phase": "build",
+        "kind": "InvalidTypeConstructor",
+        "symbol": "set",
+        "symbolKind": "Type"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "undeliverable endpoint rejects normal parameter syntax",
       "script": "on undeliverable(message as :message) {\n}",
       "expectedError": {

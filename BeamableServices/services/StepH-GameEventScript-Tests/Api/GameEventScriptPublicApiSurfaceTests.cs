@@ -11,7 +11,14 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     public void PublicApiSurfaceMatchesApprovedSnapshot()
     {
         var actual = BuildPublicSurfaceSnapshot();
-        var expected = File.ReadAllText(FindApprovedSnapshotPath());
+        var approvedPath = FindApprovedSnapshotPath();
+        var receivedPath = Path.Combine(
+            Path.GetDirectoryName(approvedPath) ?? throw new DirectoryNotFoundException("Approved snapshot directory was not found."),
+            "PublicApiSurface.received.txt");
+
+        File.WriteAllText(receivedPath, actual);
+
+        var expected = File.ReadAllText(approvedPath);
 
         Assert.AreEqual(expected, actual);
     }

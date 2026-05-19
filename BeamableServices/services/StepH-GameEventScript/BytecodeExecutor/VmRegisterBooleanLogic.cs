@@ -74,5 +74,24 @@ public static class VmRegisterBooleanLogic
         dst.SetNothing();
     }
 
+    public static void VmChance(ref this VmValue dst, ref VmValue a, ref VmState state)
+    {
+        var x = a.AsNumberValue;
+        switch (x)
+        {
+            case <= 0:
+                dst.SetBoolean(false);
+                break;
+            case >= 1:
+                dst.SetBoolean(true);
+                break;
+            case double.NaN:
+                dst.SetNothing();
+                break;
+            default:
+                dst.SetBoolean(state.RandomGenerator.NextInclusiveFloat(0, 1.0) < x);
+                break;
+        }
+    }
 
 }

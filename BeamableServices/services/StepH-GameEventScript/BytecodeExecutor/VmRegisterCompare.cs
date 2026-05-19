@@ -22,10 +22,13 @@ public static class VmRegisterCompare
             case Integer or Float or Percentage or VmValueKind.Boolean:
                 dst.SetBoolean(false);
                 break;
-            case StringPointer:
+            case Text or Tag when a.IsStoragePointer():
                 dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length == 0);
                 break;
-            case TextObject or ListObject or DictionaryObject or SetObject or TagObject or DiceObject when a.ObjectValue is IVmValueObject objectValue:
+            case Text or Tag when a.IsStorageObject() && a.ObjectValue is string text :
+                dst.SetBoolean(text.Length == 0);
+                break;
+            case List or Map or Dice when a.ObjectValue is IVmLengthAccess objectValue:
                 dst.SetBoolean(objectValue.Length == 0);
                 break;
             // Fixme: Special handling for series, uuid, ref, external type
@@ -49,10 +52,13 @@ public static class VmRegisterCompare
             case Float or Percentage:
                 dst.SetBoolean(!double.IsNaN(dst.AsFloatValue) || !double.IsInfinity(dst.AsFloatValue) || !double.IsNegativeInfinity(dst.AsFloatValue));
                 break;
-            case StringPointer or TagPointer:
+            case Text or Tag when a.IsStoragePointer():
                 dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length > 0);
                 break;
-            case TextObject or ListObject or DictionaryObject or SetObject or TagObject or DiceObject when a.ObjectValue is IVmValueObject objectValue:
+            case Text or Tag when a.IsStorageObject() && a.ObjectValue is string text:
+                dst.SetBoolean(text.Length > 0);
+                break;
+            case Text or List or Map or  Tag or Dice when a.ObjectValue is IVmLengthAccess objectValue:
                 dst.SetBoolean(objectValue.Length > 0);
                 break;
             // Fixme: Special handling for series, uuid, ref, external type

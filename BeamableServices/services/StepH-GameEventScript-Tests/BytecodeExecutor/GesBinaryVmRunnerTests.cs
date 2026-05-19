@@ -25,6 +25,7 @@ public sealed class BytecodeExecutorTests
             function divide(_ dividend, _ divisor) means dividend / divisor
             
             on Start(value) {
+                let someDice be :dice 4d6
                 let someList be [1, :b, 'hello', 0.7m]
                 let someMap be [a: 3, b: 'Jelly', c: 3.3m, d: :pi]
                 let someFlags be [enemy:, visible:, armed:]
@@ -46,7 +47,24 @@ public sealed class BytecodeExecutorTests
                 }
             }
             """;
+        const string script2 =
+            """
+            module BinaryExecutor
 
+            function time(_ x) means x * 2
+            function calc(_ x) means x * 3
+            
+            on Start(value) {
+                let a be 10
+                let b be 20
+                let c be time(a)
+                let d be calc(b)
+                for x from 0 to 5 {
+                    let e be d * x
+                }
+            }
+            """;
+        
         var compiled = GameEventScriptManager.Compile(script);
         var binary = compiled.ToGameEventScriptBinary();
         var published = new List<GameEventScriptMessage>();

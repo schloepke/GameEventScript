@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
@@ -11,28 +12,26 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
-[StructLayout(LayoutKind.Explicit, Size = 12)]
+[StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct VmValue
 {
     public enum VmValueKind : byte
     {
         Nothing,
+        DataPointer,
+        CodePointer,
         Boolean,
         Integer,
         Float,
         Percentage,
         Dice,
-        StringPointer,
-        TagPointer,
-        DataPointer,
-        CodePointer,
-        TextObject,
-        ListObject,
-        DictionaryObject,
-        SetObject,
-        TagObject,
-        DiceObject,
-        Iterator
+        Text,
+        List,
+        Map,
+        Tag,
+        Iterator,
+        Reference,
+        Uuid
     }
 
     [Flags]
@@ -46,19 +45,13 @@ public struct VmValue
         StoragePointer = 1 << 2,
         StorageObject = 1 << 3,
     }
-    
-    [FieldOffset(16)]
-    internal VmValueKind Kind;
-    [FieldOffset(17)]
-    internal GameEventScriptBytecodeInstructionUnit Unit;
-    [FieldOffset(18)]
-    internal VmValueFlags Flags;
-    [FieldOffset(0)]
-    internal long IntegerValue;
-    [FieldOffset(0)]
-    internal double FloatValue;
-    [FieldOffset(8)]
-    internal IVmObject? ObjectValue;
+
+    [FieldOffset(16)] internal VmValueKind Kind;
+    [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
+    [FieldOffset(18)] internal VmValueFlags Flags;
+    [FieldOffset(0)] internal long IntegerValue;
+    [FieldOffset(0)] internal double FloatValue;
+    [FieldOffset(8)] internal object? ObjectValue;
 
     public bool IsTrue => IntegerValue != 0;
     public bool IsFalse => IntegerValue == 0 && Kind is not Nothing;
@@ -67,6 +60,11 @@ public struct VmValue
     public bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
     public bool HasUnit => Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsStoragePointer() => (Flags & VmValueFlags.StoragePointer) != 0;
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsStorageObject() => (Flags & VmValueFlags.StoragePointer) != 0;
+    
     public void SetNothing()
     {
         Kind = Nothing;
@@ -78,6 +76,7 @@ public struct VmValue
     public void SetBoolean(bool value)
     {
         Kind = VmValueKind.Boolean;
+        Flags = VmValueFlags.None;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = value ? 1 : 0;
         ObjectValue = null;
@@ -92,6 +91,7 @@ public struct VmValue
     public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Integer;
+        Flags = VmValueFlags.None;
         Unit = unit;
         IntegerValue = value;
         ObjectValue = null;
@@ -106,6 +106,7 @@ public struct VmValue
     public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Float;
+        Flags = VmValueFlags.None;
         Unit = unit;
         FloatValue = value;
         ObjectValue = null;
@@ -114,6 +115,7 @@ public struct VmValue
     public void SetPercentage(double ratio)
     {
         Kind = Percentage;
+        Flags = VmValueFlags.None;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         FloatValue = ratio;
         ObjectValue = null;
@@ -128,6 +130,7 @@ public struct VmValue
     public void SetDataPointer(ushort pointer)
     {
         Kind = DataPointer;
+        Flags = VmValueFlags.StoragePointer;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         FloatValue = 0;
@@ -136,7 +139,8 @@ public struct VmValue
 
     public void SetStringPointer(ushort pointer)
     {
-        Kind = StringPointer;
+        Kind = Text;
+        Flags = VmValueFlags.StoragePointer;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -144,7 +148,8 @@ public struct VmValue
 
     public void SetTagPointer(ushort pointer)
     {
-        Kind = TagPointer;
+        Kind = Tag;
+        Flags = VmValueFlags.StoragePointer;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -153,14 +158,16 @@ public struct VmValue
     public void SetCodePointer(ushort pointer)
     {
         Kind = CodePointer;
+        Flags = VmValueFlags.StoragePointer;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
     }
-    
-    public void SetObject(VmValueKind kind, IVmObject value)
+
+    public void SetObject(VmValueKind kind, object value)
     {
         Kind = kind;
+        Flags = VmValueFlags.StorageObject;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = 0;
         ObjectValue = value;
@@ -181,60 +188,4 @@ public struct VmValue
         Integer => IntegerValue,
         _ => double.NaN,
     };
-    
-}
-
-public interface IVmObject
-{
-}
-
-public interface IVmValueObject : IVmObject
-{
-    int Length { get; }
-}
-
-public class VmTextObject(string text) : IVmValueObject
-{
-    internal string Text = text;
-    public int Length { get; } = text.Length;
-}
-
-public class VmListObject(IReadOnlyList<VmValue> items) : IVmValueObject
-{
-    internal IReadOnlyList<VmValue> Items = items;
-    public int Length { get; } = items.Count;
-}
-
-public class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : IVmValueObject
-{
-    internal IReadOnlyDictionary<string, VmValue> Entries = entries;
-    public int Length { get; } = entries.Count;
-}
-
-public interface IVmIterator : IVmObject
-{
-    public bool HasNext();
-    public bool TryNext(ref VmValue value);
-}
-
-public class VmIntegerRangeIterator(long from, long to, long step) : IVmIterator
-{
-    private long current = from;
-    private long end = to;
-    private long step = step;
-
-    public bool HasNext() => step switch
-    {
-        > 0 => current <= end,
-        < 0 => current >= end,
-        _ => false
-    };
-
-    public bool TryNext(ref VmValue value)
-    {
-        if (!HasNext()) return false;
-        value.SetInteger(current);
-        current += step;
-        return true;
-    }
 }

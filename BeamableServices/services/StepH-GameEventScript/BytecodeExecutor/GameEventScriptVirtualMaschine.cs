@@ -17,49 +17,9 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref VmValue Register(ushort index) => ref _vmState.RegisterSlots[index + _vmState.RegisterFrameStart];
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AddLocalSlots(ushort slotCount)
-    {
-        var requiredTotalSlots = _vmState.RegisterFrameStart + slotCount;
-        if (requiredTotalSlots > _vmState.RegisterSlots.Length)
-        {
-            // FIXME: Here we might want to let the register frame grow.
-            _vmState.RaiseError("Not enough slots in register frame.");
-        }
-        else
-        {
-            _vmState.RegisterFrameLength += slotCount;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void RemoveLocalSlots(ushort slotCount)
-    {
-        if (_vmState.RegisterFrameLength < slotCount)
-        {
-            // FIXME: Here we might want to let the register frame grow.
-            _vmState.RaiseError("Inconsistent register frame length. Cannot remove more slots than are available.");
-        }
-        else
-        {
-            _vmState.RegisterFrameLength -= slotCount;
-        }
-    }
-
-    private ref VmValue AddStageSlot()
-    {
-        var stageRegisterIndex = _vmState.RegisterFrameStart + _vmState.RegisterFrameLength + _vmState.StagedArgumentCount++;
-        if (stageRegisterIndex >= _vmState.RegisterSlots.Length) 
-        {
-            // FIXME: Here we might want to let the register frame grow.
-            _vmState.RaiseError("Cannot add more staged arguments than available register slots.");
-        }
-        return ref _vmState.RegisterSlots[stageRegisterIndex];
-    }
-
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
     {
-        if (!_vmState.PrepareMessage(message)) return false;
+        if (!_vmState.PrepareMessage(message, context)) return false;
         _vmState.State = VmState.StateValue.Running;
         while (_vmState.State == VmState.StateValue.Running)
         {
@@ -69,10 +29,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Nop:
                     break;
                 case ReserveSlots:
-                    AddLocalSlots(instruction.A_U16);
+                    _vmState.AddLocalSlots(instruction.A_U16);
                     break;
                 case ReleaseSlots:
-                    RemoveLocalSlots(instruction.A_U16);
+                    _vmState.RemoveLocalSlots(instruction.A_U16);
                     break;
                 case LoadNothing:
                     Register(instruction.Dest_U16).SetNothing();
@@ -99,31 +59,31 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).SetTagPointer(instruction.A_U16);
                     break;
                 case StageRegister:
-                    AddStageSlot() = Register(instruction.A_U16);
+                    _vmState.StageRegister(instruction.A_U16);
                     break;
                 case StageNothing:
-                    AddStageSlot().SetNothing();
+                    _vmState.StageNothing();
                     break;
                 case StageTrue:
-                    AddStageSlot().SetBoolean(true);
+                    _vmState.StageBoolean(true);
                     break;
                 case StageFalse:
-                    AddStageSlot().SetBoolean(false);
+                    _vmState.StageBoolean(false);
                     break;
                 case StageInteger:
-                    AddStageSlot().SetInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.StageInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case StageFloat:
-                    AddStageSlot().SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.StageFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case StagePercentage:
-                    AddStageSlot().SetPercentage(instruction.F64);
+                    _vmState.StagePercentage(instruction.F64);
                     break;
                 case StageText:
-                    AddStageSlot().SetStringPointer(instruction.C_U16);
+                    _vmState.StageTextConstant(instruction.C_U16);
                     break;
                 case StageTag:
-                    AddStageSlot().SetTagPointer(instruction.C_U16);
+                    _vmState.StageTagConstant(instruction.C_U16);
                     break;
                 case MoveSlot:
                     Register(instruction.Dest_U16) = Register(instruction.A_U16);
@@ -255,24 +215,33 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).VmEmpty(ref Register(instruction.A_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryLength:
+                    Register(instruction.Dest_U16).VmLength(ref Register(instruction.A_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryChance:
+                    Register(instruction.Dest_U16).VmChance(ref Register(instruction.A_U16), ref _vmState);
                     break;
                 case UnaryAbs:
+                    Register(instruction.Dest_U16).VmAbs(ref Register(instruction.A_U16));
                     break;
                 case UnaryNaturalLog:
+                    Register(instruction.Dest_U16).VmNaturalLog(ref Register(instruction.A_U16));
                     break;
                 case Clamp:
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
                     break;
                 case Dice:
+                    Register(instruction.Dest_U16).VmDice(instruction.A_U16, instruction.B_U16, ref _vmState);
                     break;
                 case RandomPush:
+                    var seed = Register(instruction.A_U16);
+                    _vmState.PushRandom(seed.Kind == VmValue.VmValueKind.Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.AsIntegerValue) : _vmState.RandomGenerator);
                     break;
                 case RandomPushConstant:
+                    _vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed((int)instruction.I64));
                     break;
                 case RandomPop:
+                    _vmState.PopRandom();
                     break;
                 case GameEventScriptBytecodeOpCode.Range:
                     break;
@@ -425,6 +394,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PublishMessageValueWithTags:
                     break;
                 case RangeIterator:
+                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.A_U16, instruction.B_U16, instruction.C_U16));
                     break;
                 case RangeIteratorWithStep:
                     break;
@@ -434,14 +404,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CollectionIterator:
                     break;
                 case IteratorNext:
-                    var iterator = Register(instruction.A_U16);
-                    if (!(iterator is { Kind: VmValue.VmValueKind.Iterator, ObjectValue: IVmIterator it } && it.TryNext(ref Register(instruction.Dest_U16))))
-                    {
-                        _vmState.JumpAddress(instruction.B_U16);
-                    }
-
+                    Register(instruction.Dest_U16).VmIteratorNext(ref Register(instruction.A_U16), instruction.B_U16, ref _vmState);
                     break;
                 case IteratorClose:
+                    Register(instruction.A_U16).VmIteratorClose();
                     break;
                 case CollectionBuilderList:
                     break;

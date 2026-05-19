@@ -1,11 +1,10 @@
 using System;
 using System.Runtime.CompilerServices;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-internal static class VmRegisterArithmetic
+internal static class VmRegisterMath
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b)
@@ -163,4 +162,42 @@ internal static class VmRegisterArithmetic
                 break;
         }
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void VmAbs(ref this VmValue dst, ref VmValue a)
+    {
+        switch (a.Kind)
+        {
+            case VmValue.VmValueKind.Integer:
+                dst.SetInteger(Math.Abs(a.AsIntegerValue), a.Unit);
+                break;
+            case VmValue.VmValueKind.Float or VmValue.VmValueKind.Percentage:
+                dst.SetFloat(Math.Abs(a.AsFloatValue), a.Unit);
+                break;
+            default:
+                dst.SetNothing();
+                break;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void VmNaturalLog(ref this VmValue dst, ref VmValue a)
+    {
+        if(a.Kind is VmValue.VmValueKind.Nothing)
+        {
+            dst.SetNothing();
+        }
+        else if (a.HasUnit)
+        {
+            dst.SetFloat(double.NaN);
+        }
+        else
+        {
+            var x = a.AsNumberValue;
+            if (double.IsNaN(x) || x < 0d || double.IsNegativeInfinity(x)) dst.SetFloat (double.NaN);
+            else if (double.IsPositiveInfinity(x)) dst.SetFloat(double.PositiveInfinity);
+            else dst.SetFloat(Math.Log(x));
+        }
+    }
+
 }

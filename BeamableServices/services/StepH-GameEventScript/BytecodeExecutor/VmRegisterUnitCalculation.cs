@@ -2,7 +2,6 @@
 
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -10,12 +9,10 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public static class VmRegisterUnitCalculation
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HasSameUnit(ref VmValue a, ref VmValue b)
-        => a.Unit == b.Unit;
+    public static bool HasSameUnit(ref VmValue a, ref VmValue b) => a.Unit == b.Unit;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptBytecodeInstructionUnit DecodeNumericUnit(byte unitAndFlags)
-        => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F);
+    public static GameEventScriptBytecodeInstructionUnit DecodeNumericUnit(byte unitAndFlags) => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)

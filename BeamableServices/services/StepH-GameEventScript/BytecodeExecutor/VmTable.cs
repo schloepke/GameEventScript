@@ -296,7 +296,7 @@ internal sealed class VmTableBuilder
     }
 }
 
-internal sealed class VmTable : IVmValueObject
+internal sealed class VmTable : IVmLengthAccess
 {
     private readonly VmTableIndex?[] _indexes;
 

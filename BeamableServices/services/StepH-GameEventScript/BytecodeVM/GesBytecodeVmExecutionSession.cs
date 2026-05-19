@@ -4739,6 +4739,30 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.UnaryNaturalLog => BytecodeVmValue.FromGameEventScriptValue(EvaluateNaturalLogUnary(boxed)),
             _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown unary opcode '{opCode}'.")
         };
+
+        GameEventScriptValue EvaluateChanceUnary(GameEventScriptValue operand)
+        {
+            var percentage = ConvertToPercentage(operand);
+            if (!percentage.IsPercentage())
+            {
+                return GesBoolean(false);
+            }
+
+            var ratio = percentage.AsNumber();
+            if (ratio <= 0d)
+            {
+                return GesBoolean(false);
+            }
+
+            if (ratio >= 1d)
+            {
+                return GesBoolean(true);
+            }
+
+            return TryNextInclusiveFloat(0d, 1d, out var randomValue)
+                ? GesBoolean(randomValue < ratio)
+                : GesBoolean(false);
+        }
     }
 
     private bool TryEvaluateVariadicOperation(
@@ -5073,30 +5097,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return GesInteger(count);
-    }
-
-    private GameEventScriptValue EvaluateChanceUnary(GameEventScriptValue operand)
-    {
-        var percentage = ConvertToPercentage(operand);
-        if (!percentage.IsPercentage())
-        {
-            return GesBoolean(false);
-        }
-
-        var ratio = percentage.AsNumber();
-        if (ratio <= 0d)
-        {
-            return GesBoolean(false);
-        }
-
-        if (ratio >= 1d)
-        {
-            return GesBoolean(true);
-        }
-
-        return TryNextInclusiveFloat(0d, 1d, out var randomValue)
-            ? GesBoolean(randomValue < ratio)
-            : GesBoolean(false);
     }
 
     private static GameEventScriptValue EvaluateAbsUnary(GameEventScriptValue operand)

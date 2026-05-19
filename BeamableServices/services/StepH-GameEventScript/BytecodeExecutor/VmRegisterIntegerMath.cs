@@ -8,7 +8,7 @@ using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public static class VmRegisterIntegerArithmetic
+public static class VmRegisterIntegerMath
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void VmIntegerAdd(ref this VmValue dst, ref VmValue a, ref VmValue b)

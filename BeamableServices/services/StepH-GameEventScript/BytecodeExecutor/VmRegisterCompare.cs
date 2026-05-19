@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
@@ -9,10 +7,10 @@ using static StepH.GameEventScript.BytecodeExecutor.VmValue;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public static class VmRegisterCompare
+internal static class VmRegisterCompare
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmEmpty(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
+    internal static void VmEmpty(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -39,7 +37,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmHasValue(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
+    internal static void VmHasValue(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -69,7 +67,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
@@ -86,7 +84,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmNotEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmNotEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
@@ -103,7 +101,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmApproxEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmApproxEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
@@ -126,7 +124,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
         {
@@ -147,7 +145,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
         {
@@ -168,7 +166,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
         {
@@ -189,7 +187,7 @@ public static class VmRegisterCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
         {

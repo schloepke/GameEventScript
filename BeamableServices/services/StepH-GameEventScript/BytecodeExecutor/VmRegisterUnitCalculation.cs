@@ -1,21 +1,19 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public static class VmRegisterUnitCalculation
+internal static class VmRegisterUnitCalculation
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool HasSameUnit(ref VmValue a, ref VmValue b) => a.Unit == b.Unit;
+    internal static bool HasSameUnit(ref VmValue a, ref VmValue b) => a.Unit == b.Unit;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptBytecodeInstructionUnit DecodeNumericUnit(byte unitAndFlags) => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F);
+    internal static GameEventScriptBytecodeInstructionUnit DecodeNumericUnit(byte unitAndFlags) => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.Unit == b.Unit)
         {
@@ -28,7 +26,7 @@ public static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryProductUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TryProductUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.HasUnit && b.HasUnit)
         {
@@ -41,7 +39,7 @@ public static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryQuotientUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TryQuotientUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         switch (a.HasUnit)
         {
@@ -58,7 +56,7 @@ public static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPowerUnit(ref VmValue value, double exponent, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TryPowerUnit(ref VmValue value, double exponent, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (!value.HasUnit || exponent == 0.0)
         {
@@ -66,6 +64,7 @@ public static class VmRegisterUnitCalculation
             return true;
         }
 
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (exponent == 1.0)
         {
             unit = value.Unit;

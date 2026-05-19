@@ -5,24 +5,24 @@ using System.Collections.Generic;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public interface IVmIndexAccess<T>
+internal interface IVmIndexAccess<T>
 {
-    bool TryGet(int index, out T value);
+    internal bool TryGet(int index, out T value);
 }
 
-public interface IVmKeyAccess<T>
+internal interface IVmKeyAccess<T>
 {
-    bool TryGet(string key, out T value);
+    internal bool TryGet(string key, out T value);
 }
 
-public interface IVmLengthAccess
+internal interface IVmLengthAccess
 {
-    int Length { get; }
+    internal int Length { get; }
 }
 
-public class VmListObject(int size) : IVmLengthAccess, IVmIndexAccess<VmValue>
+internal class VmListObject(int size) : IVmLengthAccess, IVmIndexAccess<VmValue>
 {
-    public static readonly VmListObject Empty = new(0);
+    internal static readonly VmListObject Empty = new(0);
     
     internal VmValue[] Items = new VmValue[size];
     public int Length => Items.Length;
@@ -40,7 +40,7 @@ public class VmListObject(int size) : IVmLengthAccess, IVmIndexAccess<VmValue>
     }
 }
 
-public class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : IVmLengthAccess, IVmKeyAccess<VmValue>
+internal class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : IVmLengthAccess, IVmKeyAccess<VmValue>
 {
     public int Length => entries.Count;
 
@@ -56,7 +56,7 @@ public class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : 
     }
 }
 
-public class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, IVmIndexAccess<double>, IVmKeyAccess<double>
+internal class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, IVmIndexAccess<double>, IVmKeyAccess<double>
 {
     public int Length => 3;
 
@@ -99,19 +99,19 @@ public class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, IVm
     }
 }
 
-public interface IVmIterator
+internal interface IVmIterator
 {
     public bool TryNext(ref VmValue value);
 }
 
-public class VmIntegerRangeIterator(long from, long to, long step) : IVmIterator, IDisposable
+internal class VmIntegerRangeIterator(long from, long to, long step) : IVmIterator, IDisposable
 {
     private long _current = from;
-    private bool disposed = false;
+    private bool _disposed = false;
 
     public bool TryNext(ref VmValue value)
     {
-        if(disposed)
+        if(_disposed)
         {
             // A disposed iterator cannot be used again and results in an error / nothing. This might be a bug in the VM itself so maybe we result in error halt?
             value.SetNothing();
@@ -130,6 +130,6 @@ public class VmIntegerRangeIterator(long from, long to, long step) : IVmIterator
 
     public void Dispose()
     {
-        disposed = true;
+        _disposed = true;
     }
 }

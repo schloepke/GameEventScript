@@ -1,13 +1,14 @@
 using System;
 using System.Runtime.CompilerServices;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
+using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterMath
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (TrySameUnit(ref a, ref b, out var unit))
         {
@@ -27,7 +28,7 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmSubtract(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmSubtract(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (TrySameUnit(ref a, ref b, out var unit))
         {
@@ -47,7 +48,7 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmMultiply(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmMultiply(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (TryProductUnit(ref a, ref b, out var unit))
         {
@@ -67,7 +68,7 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmDivide(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmDivide(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (TryQuotientUnit(ref a, ref b, out var unit))
         {
@@ -87,7 +88,7 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmPower(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmPower(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var right = b.AsNumberValue;
         if (!double.IsNaN(right))
@@ -107,7 +108,7 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmModulo(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmModulo(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (TrySameUnit(ref a, ref b, out var unit))
         {
@@ -127,7 +128,7 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmRemainder(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmRemainder(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (TrySameUnit(ref a, ref b, out var unit))
         {
@@ -147,14 +148,14 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmNegate(ref this VmValue dst, ref VmValue a)
+    internal static void VmNegate(ref this VmValue dst, ref VmValue a)
     {
         switch (a.Kind)
         {
-            case VmValue.VmValueKind.Integer:
+            case Integer:
                 dst.SetInteger(-a.AsIntegerValue, a.Unit);
                 break;
-            case VmValue.VmValueKind.Float:
+            case Float or Percentage:
                 dst.SetFloat(-a.AsFloatValue, a.Unit);
                 break;
             default:
@@ -164,14 +165,14 @@ internal static class VmRegisterMath
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmAbs(ref this VmValue dst, ref VmValue a)
+    internal static void VmAbs(ref this VmValue dst, ref VmValue a)
     {
         switch (a.Kind)
         {
-            case VmValue.VmValueKind.Integer:
+            case Integer:
                 dst.SetInteger(Math.Abs(a.AsIntegerValue), a.Unit);
                 break;
-            case VmValue.VmValueKind.Float or VmValue.VmValueKind.Percentage:
+            case Float or Percentage:
                 dst.SetFloat(Math.Abs(a.AsFloatValue), a.Unit);
                 break;
             default:
@@ -181,9 +182,9 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmNaturalLog(ref this VmValue dst, ref VmValue a)
+    internal static void VmNaturalLog(ref this VmValue dst, ref VmValue a)
     {
-        if(a.Kind is VmValue.VmValueKind.Nothing)
+        if(a.Kind is Nothing)
         {
             dst.SetNothing();
         }

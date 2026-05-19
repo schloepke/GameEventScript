@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
@@ -9,14 +7,14 @@ using static StepH.GameEventScript.Types.GameEventScriptValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public static class VmRegisterMapping
+internal static class VmRegisterMapping
 {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmDefault(ref this VmValue dst, ref VmValue a, ref VmValue b) => dst = a.Kind == VmValueKind.Nothing ? b : a;
+    internal static void VmDefault(ref this VmValue dst, ref VmValue a, ref VmValue b) => dst = a.Kind == VmValueKind.Nothing ? b : a;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
+    internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
     {
         switch (argument.Kind)
         {
@@ -80,7 +78,7 @@ public static class VmRegisterMapping
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
+    internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
         VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.AsIntegerValue),
         VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.AsFloatValue),

@@ -1,15 +1,12 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
-using System;
 using System.Runtime.CompilerServices;
 using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public static class VmRegisterIntegerCompare
+internal static class VmRegisterIntegerCompare
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmIntegerEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmIntegerEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind != Integer || b.Kind != Integer)
         {
@@ -21,7 +18,7 @@ public static class VmRegisterIntegerCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmIntegerNotEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmIntegerNotEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind != Integer || b.Kind != Integer)
         {
@@ -33,7 +30,7 @@ public static class VmRegisterIntegerCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmIntegerLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmIntegerLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind != Integer || b.Kind != Integer || a.Unit != b.Unit)
         {
@@ -45,7 +42,7 @@ public static class VmRegisterIntegerCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmIntegerGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmIntegerGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind != Integer || b.Kind != Integer || a.Unit != b.Unit)
         {
@@ -57,7 +54,7 @@ public static class VmRegisterIntegerCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmIntegerLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmIntegerLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind != Integer || b.Kind != Integer || a.Unit != b.Unit)
         {
@@ -69,7 +66,7 @@ public static class VmRegisterIntegerCompare
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmIntegerGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmIntegerGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind != Integer || b.Kind != Integer || a.Unit != b.Unit)
         {

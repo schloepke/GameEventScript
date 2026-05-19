@@ -1,14 +1,11 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
-using System;
 using System.Runtime.CompilerServices;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
-public static class VmRegisterBooleanLogic
+internal static class VmRegisterBooleanLogic
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
@@ -28,7 +25,7 @@ public static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
@@ -48,7 +45,7 @@ public static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var x = a.BooleanValueOrNothing;
         var y = b.BooleanValueOrNothing;
@@ -62,7 +59,7 @@ public static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void VmNot(ref this VmValue dst, ref VmValue a)
+    internal static void VmNot(ref this VmValue dst, ref VmValue a)
     {
         var x = a.BooleanValueOrNothing;
         if (x.HasValue)
@@ -74,7 +71,8 @@ public static class VmRegisterBooleanLogic
         dst.SetNothing();
     }
 
-    public static void VmChance(ref this VmValue dst, ref VmValue a, ref VmState state)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmChance(ref this VmValue dst, ref VmValue a, ref VmState state)
     {
         var x = a.AsNumberValue;
         switch (x)

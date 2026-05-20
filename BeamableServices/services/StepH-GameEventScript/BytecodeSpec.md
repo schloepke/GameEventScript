@@ -359,8 +359,8 @@ is a portable layout convention and may be used by validators, dumpers, or
 future decoders. The current groups are:
 
 ```text
-0x00 Group 1: control flow, frame slots, local calls, handler binding, access, emit/publish
-0x10 Group 1 continuation: move, casts, checks, member/index access, message operations
+0x00 Group 1: no-op, frame slots, jumps, calls, returns, emit operations
+0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
 0x20 Group 2: loads, argument staging, type construction
 0x30 Group 2 continuation and reserved tail
 0x40 Group 3: boolean, comparison, implication, presence checks

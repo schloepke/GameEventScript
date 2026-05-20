@@ -184,42 +184,42 @@ at a `0x_0` boundary; larger families may span multiple 16-value pages. The VM
 dispatches on the complete byte value; the high nibble is a format convention,
 not a second runtime dispatch step.
 
-### Group 1 - Control, Calls, Access, Messages
+### Group 1 - Control, Calls, Messages, Types, Access
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0x00 | `Nop` | - | - | - | - | - | No operation. |
-| 0x01 | `Jump` | - | - | - | `TargetAddress` | - | Unconditional branch. |
-| 0x02 | `JumpIfTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsTrue()`. |
-| 0x03 | `JumpIfFalse` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsFalse()`. |
-| 0x04 | `JumpIfNotTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `!X.IsTrue()`, including `nothing`. |
-| 0x05 | `SlotLocals` | - | - | `Count` | - | - | Adds `Count > 0` active local slots or releases `-Count` slots when `Count < 0`. Entry prologs reserve only locals beyond preloaded arguments. |
-| 0x06 | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
-| 0x07 | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
-| 0x08 | `Call` | - | result slot | - | `EntryAddress`=callable | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. |
-| 0x09 | `CallPredicate` | - | result slot | - | `EntryAddress`=predicate | - | Enters a VM-owned predicate call frame and normalizes the result to boolean or `nothing`. Arguments are the contiguous staged sequence immediately before the call. |
-| 0x0A | `CallStandard` | - | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
-| 0x0B | `CallStandardPredicate` | - | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension and normalizes the result to boolean or `nothing`. |
-| 0x0C | `CallExternal` | - | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension. |
-| 0x0D | `CallExternalPredicate` | - | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension and normalizes the result to boolean or `nothing`. |
-| 0x0E | `BindHandler` | - | result slot | `SecondaryListIndex`=operand slots | `ListIndex`=argument names | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
-| 0x0F | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
-| 0x10 | `Cast` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. |
-| 0x11 | `CastCustom` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
-| 0x12 | `CastUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x13 | `TypeCheck` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `TypeCheckCustom`. |
-| 0x14 | `TypeCheckCustom` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
-| 0x15 | `CheckUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x16 | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
-| 0x17 | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
-| 0x18 | `EmitMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Emits a statically shaped message without tags. |
-| 0x19 | `EmitMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Emits a statically shaped message with tags. |
-| 0x1A | `PublishMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
-| 0x1B | `PublishMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
-| 0x1C | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
-| 0x1D | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Emits a dynamic message value with tags. |
-| 0x1E | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
-| 0x1F | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Publishes a dynamic message value with tags. |
+| 0x01 | `SlotLocals` | - | - | `Count` | - | - | Adds `Count > 0` active local slots or releases `-Count` slots when `Count < 0`. Entry prologs reserve only locals beyond preloaded arguments. |
+| 0x02 | `Jump` | - | - | - | `TargetAddress` | - | Unconditional branch. |
+| 0x03 | `JumpIfTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsTrue()`. |
+| 0x04 | `JumpIfFalse` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsFalse()`. |
+| 0x05 | `JumpIfNotTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `!X.IsTrue()`, including `nothing`. |
+| 0x06 | `Call` | - | result slot | - | `EntryAddress`=callable | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. |
+| 0x07 | `CallPredicate` | - | result slot | - | `EntryAddress`=predicate | - | Enters a VM-owned predicate call frame and normalizes the result to boolean or `nothing`. Arguments are the contiguous staged sequence immediately before the call. |
+| 0x08 | `CallStandard` | - | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
+| 0x09 | `CallStandardPredicate` | - | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension and normalizes the result to boolean or `nothing`. |
+| 0x0A | `CallExternal` | - | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension. |
+| 0x0B | `CallExternalPredicate` | - | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension and normalizes the result to boolean or `nothing`. |
+| 0x0C | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
+| 0x0D | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
+| 0x0E | `EmitMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Emits a statically shaped message without tags. |
+| 0x0F | `EmitMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Emits a statically shaped message with tags. |
+| 0x10 | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
+| 0x11 | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Emits a dynamic message value with tags. |
+| 0x12 | `PublishMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
+| 0x13 | `PublishMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
+| 0x14 | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
+| 0x15 | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Publishes a dynamic message value with tags. |
+| 0x16 | `Cast` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. |
+| 0x17 | `CastCustom` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
+| 0x18 | `CastUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x19 | `TypeCheck` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `TypeCheckCustom`. |
+| 0x1A | `TypeCheckCustom` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
+| 0x1B | `CheckUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x1C | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
+| 0x1D | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
+| 0x1E | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
+| 0x1F | `BindHandler` | - | result slot | `SecondaryListIndex`=operand slots | `ListIndex`=argument names | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
 
 ### Group 2 - Loads, Argument Staging, Type Construction
 

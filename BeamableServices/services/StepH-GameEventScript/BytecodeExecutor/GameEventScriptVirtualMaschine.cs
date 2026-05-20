@@ -29,15 +29,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Nop:
                     break;
                 case SlotLocals:
-                    if (instruction.Count > 0)
-                    {
-                        _vmState.AddLocalSlots((ushort)instruction.Count);
-                    }
-                    else if (instruction.Count < 0)
-                    {
-                        _vmState.RemoveLocalSlots((ushort)-instruction.Count);
-                    }
-
+                    _vmState.ModifyLocalSlots(instruction.Count);
                     break;
                 case LoadNothing:
                     Register(instruction.DestinationSlot).SetNothing();

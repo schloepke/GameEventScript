@@ -230,31 +230,33 @@ internal struct VmState
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void AddLocalSlots(ushort slotCount)
+    internal void ModifyLocalSlots(short slotCount)
     {
-        var requiredTotalSlots = RegisterFrameStart + slotCount;
-        if (requiredTotalSlots > RegisterSlots.Length)
+        switch (slotCount)
         {
-            // FIXME: Here we might want to let the register frame grow.
-            RaiseError("Not enough slots in register frame.");
-        }
-        else
-        {
-            RegisterFrameLength += slotCount;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void RemoveLocalSlots(ushort slotCount)
-    {
-        if (RegisterFrameLength < slotCount)
-        {
-            // FIXME: Here we might want to let the register frame grow.
-            RaiseError("Inconsistent register frame length. Cannot remove more slots than are available.");
-        }
-        else
-        {
-            RegisterFrameLength -= slotCount;
+            case > 0:
+                var requiredTotalSlots = RegisterFrameStart + slotCount;
+                if (requiredTotalSlots > RegisterSlots.Length)
+                {
+                    // FIXME: Here we might want to let the register frame grow.
+                    RaiseError("Not enough slots in register frame.");
+                }
+                else
+                {
+                    RegisterFrameLength += (ushort)slotCount;
+                }
+                break;
+            case < 0:
+                var tempSlotCount = -slotCount;
+                if (RegisterFrameLength < tempSlotCount)
+                {
+                    RaiseError("Inconsistent register frame length. Cannot remove more slots than are available.");
+                }
+                else
+                {
+                    RegisterFrameLength -= (ushort)tempSlotCount;
+                }
+                break;
         }
     }
 

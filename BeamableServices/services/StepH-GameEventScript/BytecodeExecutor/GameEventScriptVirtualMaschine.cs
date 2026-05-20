@@ -80,10 +80,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.StagePercentage(instruction.F64);
                     break;
                 case StageText:
-                    _vmState.StageTextConstant(instruction.C_U16);
+                    _vmState.StageTextConstant(instruction.A_U16);
                     break;
                 case StageTag:
-                    _vmState.StageTagConstant(instruction.C_U16);
+                    _vmState.StageTagConstant(instruction.A_U16);
                     break;
                 case MoveSlot:
                     Register(instruction.Dest_U16) = Register(instruction.X_U16);
@@ -227,7 +227,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).VmNaturalLog(ref Register(instruction.X_U16));
                     break;
                 case Clamp:
-                    Register(instruction.Dest_U16).VmClamp(ref Register(instruction.X_U16), ref Register(instruction.Y_U16), ref Register(instruction.C_U16));
+                    Register(instruction.Dest_U16).VmClamp(ref Register(instruction.X_U16), ref Register(instruction.Y_U16), ref Register(instruction.A_U16));
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
                     Register(instruction.Dest_U16).VmRandom(ref Register(instruction.X_U16), ref Register(instruction.Y_U16), _vmState.RandomGenerator);
@@ -329,12 +329,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 
                 case RangeIterator:
-                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.X_U16, instruction.Y_U16, instruction.C_U16));
+                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.X_U16, instruction.Y_U16, instruction.A_U16));
                     break;
                 case RangeIteratorWithStep:
                     break;
                 case RangeIteratorShort:
-                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.X_U16, instruction.Y_U16, instruction.C_U16));
+                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.X_U16, instruction.Y_U16, instruction.A_U16));
                     break;
                 case CollectionIterator:
                     break;

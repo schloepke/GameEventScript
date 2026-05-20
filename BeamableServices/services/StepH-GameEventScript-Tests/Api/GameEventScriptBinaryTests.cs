@@ -52,11 +52,13 @@ public sealed class GameEventScriptBinaryTests
     [TestMethod]
     public void BytecodeInstructionSerializesAsPortableHexWord()
     {
-        var instruction = new GameEventScriptBytecodeInstruction(
-            GameEventScriptBytecodeOpCode.LoadInteger,
-            dest: 7,
-            unitAndFlags: (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter);
-        instruction.I64 = 42;
+        var instruction = new GameEventScriptBytecodeInstruction
+        {
+            OpCode = GameEventScriptBytecodeOpCode.LoadInteger,
+            Dest_U16 = 7,
+            UnitAndFlags = (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter,
+            I64 = 42
+        };
 
         var json = JsonSerializer.Serialize(instruction);
 

@@ -151,17 +151,17 @@ public enum GameEventScriptBytecodeTypeKind : ushort
 
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
 [StructLayout(LayoutKind.Explicit, Size = 16)]
-public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort x = 0, ushort y = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
+public struct GameEventScriptBytecodeInstruction
 {
-    [FieldOffset(0)] public GameEventScriptBytecodeOpCode OpCode = opCode;
+    [FieldOffset(0)] public GameEventScriptBytecodeOpCode OpCode;
 
-    [FieldOffset(1)] public readonly byte UnitAndFlags = unitAndFlags;
+    [FieldOffset(1)] public byte UnitAndFlags;
 
     [FieldOffset(2)] public ushort ResultSlot;
     [FieldOffset(2)] public ushort DestinationSlot;
-    [FieldOffset(2)] public readonly ushort Dest_U16 = dest;
+    [FieldOffset(2)] public ushort Dest_U16;
     
-    [FieldOffset(4)] public ushort X_U16 = x;
+    [FieldOffset(4)] public ushort X_U16;
     [FieldOffset(4)] public short X_I16;
     [FieldOffset(4)] public uint X_U32;
     [FieldOffset(4)] public uint X_I32;
@@ -169,17 +169,23 @@ public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode o
     [FieldOffset(4)] public ushort XSlot;
     [FieldOffset(4)] public ushort StringIndex;
 
-    [FieldOffset(6)] public ushort Y_U16 = y;
+    [FieldOffset(6)] public ushort Y_U16;
     [FieldOffset(6)] public short Y_I16;
     [FieldOffset(4)] public ushort TargetAddress;
     [FieldOffset(6)] public ushort YSlot;
     [FieldOffset(6)] public ushort EntryAddress;
     [FieldOffset(6)] public ushort ListIndex;
 
-    [FieldOffset(8)] public ushort C_U16 = c;
-    [FieldOffset(8)] public short C_I16;
+    [FieldOffset(8)] public ushort A_U16;
+    [FieldOffset(8)] public short A_I16;
 
-    [FieldOffset(10)] public ushort D_U16 = d;
+    [FieldOffset(10)] public ushort B_U16;
+    [FieldOffset(10)] public short B_I16;
+
+    [FieldOffset(10)] public ushort C_U16;
+    [FieldOffset(10)] public short C_I16;
+
+    [FieldOffset(10)] public ushort D_U16;
     [FieldOffset(10)] public short D_I16;
 
     [FieldOffset(8)] public long I64;

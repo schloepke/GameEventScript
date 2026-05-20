@@ -160,16 +160,16 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var direct = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageWithTags);
         Assert.IsLessThan(compiled.UShortListPool.Count, direct.X_U16);
         Assert.IsLessThan(compiled.UShortListPool.Count, direct.Y_U16);
-        Assert.IsLessThan(compiled.UShortListPool.Count, direct.C_U16);
+        Assert.IsLessThan(compiled.UShortListPool.Count, direct.A_U16);
         var shape = compiled.UShortListPool[direct.X_U16].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, shape);
         Assert.HasCount(1, compiled.OutboundMessageSignatures);
         Assert.AreEqual(direct.X_U16, compiled.OutboundMessageSignatures[0]);
         Assert.HasCount(1, compiled.UShortListPool[direct.Y_U16]);
-        Assert.HasCount(1, compiled.UShortListPool[direct.C_U16]);
+        Assert.HasCount(1, compiled.UShortListPool[direct.A_U16]);
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageValueWithTags &&
-            instruction.C_U16 < compiled.UShortListPool.Count));
+            instruction.A_U16 < compiled.UShortListPool.Count));
         var build = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildMessage);
         var buildShape = compiled.UShortListPool[build.X_U16].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, buildShape);
@@ -1967,8 +1967,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
-                                   replacements.TryGetValue(instruction.C_U16, out var replacement)
-                ? instruction with { C_U16 = (ushort)replacement }
+                                   replacements.TryGetValue(instruction.A_U16, out var replacement)
+                ? instruction with { A_U16 = (ushort)replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2017,8 +2017,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
-                                   replacements.TryGetValue(instruction.C_U16, out var replacement)
-                ? instruction with { C_U16 = (ushort)replacement }
+                                   replacements.TryGetValue(instruction.A_U16, out var replacement)
+                ? instruction with { A_U16 = (ushort)replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);

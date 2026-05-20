@@ -122,7 +122,7 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.JumpIfTrue:
                 case GameEventScriptBytecodeOpCode.JumpIfFalse:
                 case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                    maxSlot = Math.Max(maxSlot, instruction.C_U16);
+                    maxSlot = Math.Max(maxSlot, instruction.A_U16);
                     break;
             }
         }
@@ -215,7 +215,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.Cast:
-                    Set(instruction.Dest_U16, CastValue(Get(instruction.X_U16), (GameEventScriptBytecodeTypeKind)instruction.Y_U16, instruction.C_U16));
+                    Set(instruction.Dest_U16, CastValue(Get(instruction.X_U16), (GameEventScriptBytecodeTypeKind)instruction.Y_U16, instruction.A_U16));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastUnit:
@@ -223,7 +223,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.TypeCheck:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.X_U16), (GameEventScriptBytecodeTypeKind)instruction.Y_U16, instruction.C_U16)));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.X_U16), (GameEventScriptBytecodeTypeKind)instruction.Y_U16, instruction.A_U16)));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CheckUnit:
@@ -263,7 +263,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.JumpIfTrue:
-                    if (Get(instruction.C_U16).IsTrue())
+                    if (Get(instruction.A_U16).IsTrue())
                     {
                         _pc = instruction.X_U16;
                     }
@@ -271,7 +271,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.JumpIfFalse:
-                    if (Get(instruction.C_U16).IsFalse())
+                    if (Get(instruction.A_U16).IsFalse())
                     {
                         _pc = instruction.X_U16;
                     }
@@ -279,7 +279,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                    if (!Get(instruction.C_U16).IsTrue())
+                    if (!Get(instruction.A_U16).IsTrue())
                     {
                         _pc = instruction.X_U16;
                     }

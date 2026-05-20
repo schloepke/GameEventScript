@@ -98,9 +98,14 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
             throw new JsonException("A bytecode instruction requires a Parameter property.");
         }
 
-        var instruction = new GameEventScriptBytecodeInstruction(opcode.Value, dst.Value, x, y, unitAndFlags: flags.Value);
-        instruction.U64 = parameter.Value;
-        return instruction;
+        return new GameEventScriptBytecodeInstruction {
+            OpCode = opcode.Value,
+            Dest_U16 = dst.Value,
+            X_U16 = x,
+            Y_U16 = y,
+            UnitAndFlags = flags.Value,
+            U64 = parameter.Value
+        };
     }
 
     public override void Write(Utf8JsonWriter writer, GameEventScriptBytecodeInstruction value, JsonSerializerOptions options)

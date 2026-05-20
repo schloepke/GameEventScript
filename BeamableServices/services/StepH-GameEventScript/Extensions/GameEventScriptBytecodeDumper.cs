@@ -221,11 +221,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadText:
-                AppendPoolIndex(builder, "text", module.StringPool, instruction.C_U16);
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadTag:
-                AppendPoolIndex(builder, "tag", module.StringPool, instruction.C_U16);
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
@@ -265,11 +265,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.StageText:
-                AppendPoolIndex(builder, "text", module.StringPool, instruction.C_U16);
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.StageTag:
-                AppendPoolIndex(builder, "tag", module.StringPool, instruction.C_U16);
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
@@ -280,7 +280,7 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
                 AppendAddress(builder, "target", instruction.X_U16);
-                AppendSlot(builder, "cond", instruction.C_U16);
+                AppendSlot(builder, "cond", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPush:
@@ -302,13 +302,13 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
                 AppendSlot(builder, "from", instruction.X_U16);
                 AppendSlot(builder, "to", instruction.Y_U16);
-                AppendSlot(builder, "step", instruction.C_U16);
+                AppendSlot(builder, "step", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.RangeIteratorShort:
                 AppendSignedImmediate(builder, "from", instruction.X_I16);
                 AppendSignedImmediate(builder, "to", instruction.Y_I16);
-                AppendSignedImmediate(builder, "step", instruction.C_I16);
+                AppendSignedImmediate(builder, "step", instruction.A_I16);
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionIterator:
@@ -379,7 +379,7 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
                 AppendIndex(builder, "shape", instruction.X_U16);
                 AppendIndex(builder, "args", instruction.Y_U16);
-                AppendIndex(builder, "tags", instruction.C_U16);
+                AppendIndex(builder, "tags", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValue:
@@ -390,7 +390,7 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
                 AppendSlot(builder, "src", instruction.X_U16);
-                AppendIndex(builder, "tags", instruction.C_U16);
+                AppendIndex(builder, "tags", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.Range:
@@ -401,13 +401,13 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.RangeWithStep:
                 AppendSlot(builder, "from", instruction.X_U16);
                 AppendSlot(builder, "to", instruction.Y_U16);
-                AppendSlot(builder, "step", instruction.C_U16);
+                AppendSlot(builder, "step", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.TypeConstructor:
                 AppendPoolIndex(builder, "type", module.StringPool, instruction.X_U16);
                 AppendStringListPoolIndex(builder, "names", module, instruction.Y_U16);
-                AppendSlotListPoolIndex(builder, "args", module, instruction.C_U16);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
@@ -449,8 +449,8 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.PipelineIterator:
                 AppendSlot(builder, "source", instruction.X_U16);
                 AppendAddress(builder, "entry", instruction.Y_U16);
-                AppendSlot(builder, "item", instruction.C_U16);
-                AppendSlotListPoolIndex(builder, "captures", module, instruction.D_U16);
+                AppendSlot(builder, "item", instruction.A_U16);
+                AppendSlotListPoolIndex(builder, "captures", module, instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
@@ -470,21 +470,21 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.IteratorReduce:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendSlot(builder, "item", instruction.Y_U16);
-                AppendAddress(builder, "reducer", instruction.C_U16);
+                AppendAddress(builder, "reducer", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendSlot(builder, "default", instruction.Y_U16);
-                AppendSlot(builder, "item", instruction.C_U16);
-                AppendAddress(builder, "reducer", instruction.D_U16);
+                AppendSlot(builder, "item", instruction.A_U16);
+                AppendAddress(builder, "reducer", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.IteratorFold:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendSlot(builder, "seed", instruction.Y_U16);
-                AppendSlot(builder, "item", instruction.C_U16);
-                AppendAddress(builder, "reducer", instruction.D_U16);
+                AppendSlot(builder, "item", instruction.A_U16);
+                AppendAddress(builder, "reducer", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
@@ -501,14 +501,14 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendSlot(builder, "item", instruction.Y_U16);
-                AppendAddress(builder, "entry", instruction.C_U16);
+                AppendAddress(builder, "entry", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineMapValue:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendSlot(builder, "item", instruction.Y_U16);
-                AppendAddress(builder, "keyEntry", instruction.C_U16);
-                AppendAddress(builder, "valueEntry", instruction.D_U16);
+                AppendAddress(builder, "keyEntry", instruction.A_U16);
+                AppendAddress(builder, "valueEntry", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineTakeFirst:
@@ -529,8 +529,8 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendIndex(builder, "count", instruction.Y_U16);
-                AppendSlot(builder, "item", instruction.C_U16);
-                AppendAddress(builder, "weightEntry", instruction.D_U16);
+                AppendSlot(builder, "item", instruction.A_U16);
+                AppendAddress(builder, "weightEntry", instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
@@ -543,7 +543,7 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
                 AppendSlot(builder, "iterator", instruction.X_U16);
                 AppendIndex(builder, "count", instruction.Y_U16);
-                AppendAddress(builder, "faceEntry", instruction.C_U16);
+                AppendAddress(builder, "faceEntry", instruction.A_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
@@ -576,14 +576,14 @@ public static class GameEventScriptBytecodeDumper
             default:
                 AppendSlot(builder, "a", instruction.X_U16);
                 AppendSlot(builder, "b", instruction.Y_U16);
-                AppendSlot(builder, "c", instruction.C_U16);
+                AppendSlot(builder, "c", instruction.A_U16);
                 break;
         }
 
         switch (instruction.OpCode)
         {
             case GameEventScriptBytecodeOpCode.MemberAccess:
-                AppendPoolIndex(builder, "member", module.StringPool, instruction.C_U16);
+                AppendPoolIndex(builder, "member", module.StringPool, instruction.A_U16);
                 break;
             default:
                 break;
@@ -827,7 +827,7 @@ public static class GameEventScriptBytecodeDumper
         builder.Append(" kind=").Append(typeKind);
         if (typeKind == GameEventScriptBytecodeTypeKind.Custom)
         {
-            AppendPoolIndex(builder, "type", module.StringPool, instruction.C_U16);
+            AppendPoolIndex(builder, "type", module.StringPool, instruction.A_U16);
         }
     }
 

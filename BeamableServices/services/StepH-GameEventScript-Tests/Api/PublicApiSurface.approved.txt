@@ -104,15 +104,18 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
   enum-field MessageEnvelope = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
-  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.UInt16 dest, System.UInt16 x, System.UInt16 y, System.UInt16 c, System.UInt16 d, System.Byte unitAndFlags)
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
   field System.Byte UnitAndFlags
   field System.Double F64
+  field System.Int16 A_I16
+  field System.Int16 B_I16
   field System.Int16 C_I16
   field System.Int16 D_I16
   field System.Int16 X_I16
   field System.Int16 Y_I16
   field System.Int64 I64
+  field System.UInt16 A_U16
+  field System.UInt16 B_U16
   field System.UInt16 C_U16
   field System.UInt16 ConditionSlot
   field System.UInt16 D_U16

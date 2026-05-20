@@ -178,13 +178,27 @@ public struct VmValue
     public double? FloatValueOrNothing => Kind is Float or Integer or Percentage ? FloatValue : null;
     public bool? BooleanValueOrNothing => Kind is VmValueKind.Boolean ? IntegerValue != 0 : null;
 
-    public long AsIntegerValue => IntegerValue;
-    public double AsFloatValue => FloatValue;
     public bool AsBooleanValue => IntegerValue != 0;
 
+    public bool TryGetInteger(out long intValue)
+    {
+        switch(Kind)
+        {
+            case Integer:
+                intValue = IntegerValue;
+                return true;
+            case Float or Percentage:
+                intValue = (long)FloatValue;
+                return true;
+            default:
+                intValue = 0;
+                return false;
+        };   
+    }
+    
     public double AsNumberValue => Kind switch
     {
-        Float => FloatValue,
+        Float or Percentage => FloatValue,
         Integer => IntegerValue,
         _ => double.NaN,
     };

@@ -227,15 +227,17 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).VmNaturalLog(ref Register(instruction.A_U16));
                     break;
                 case Clamp:
+                    Register(instruction.Dest_U16).VmClamp(ref Register(instruction.A_U16), ref Register(instruction.B_U16), ref Register(instruction.C_U16));
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
+                    Register(instruction.Dest_U16).VmRandom(ref Register(instruction.A_U16), ref Register(instruction.B_U16), _vmState.RandomGenerator);
                     break;
                 case Dice:
                     Register(instruction.Dest_U16).VmDice(instruction.A_U16, instruction.B_U16, ref _vmState);
                     break;
                 case RandomPush:
                     var seed = Register(instruction.A_U16);
-                    _vmState.PushRandom(seed.Kind == VmValue.VmValueKind.Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.AsIntegerValue) : _vmState.RandomGenerator);
+                    _vmState.PushRandom(seed.Kind == VmValue.VmValueKind.Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.IntegerValue) : _vmState.RandomGenerator);
                     break;
                 case RandomPushConstant:
                     _vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed((int)instruction.I64));
@@ -245,6 +247,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case GameEventScriptBytecodeOpCode.Range:
                     break;
+
+                case Implies:
+                    break;
+                
                 case RangeWithStep:
                     break;
                 case Contains:
@@ -263,14 +269,14 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Zip:
                     break;
+
                 case UnaryKeys:
                     break;
                 case UnaryValues:
                     break;
                 case UnaryEntries:
                     break;
-                case Implies:
-                    break;
+
                 case CastNothing:
                     break;
                 case CastBoolean:
@@ -315,6 +321,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastDice:
                     break;
+                
                 case TypeCheckNothing:
                     break;
                 case TypeCheckBoolean:
@@ -361,10 +368,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case TypeConstructor:
                     break;
+                
                 case MemberAccess:
                     break;
                 case IndexedAccess:
                     break;
+                
                 case BuildList:
                     break;
                 case BuildMap:
@@ -375,6 +384,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Variadic:
                     break;
+                
                 case EmitMessage:
                     VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.A_U16), binary.Uint16ConstantTable.Resolve(instruction.B_U16), false, context);
                     break;
@@ -393,6 +403,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case PublishMessageValueWithTags:
                     break;
+                
                 case RangeIterator:
                     Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.A_U16, instruction.B_U16, instruction.C_U16));
                     break;

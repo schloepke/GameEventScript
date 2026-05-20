@@ -582,6 +582,7 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Boolean IsStorageObject()
   method System.Boolean IsStoragePointer()
   method System.Boolean IsUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit requiredUnit)
+  method System.Boolean TryGetInteger(System.Int64& intValue)
   method System.Void SetBoolean(System.Boolean value)
   method System.Void SetBooleanOrNothing(System.Boolean? value)
   method System.Void SetCodePointer(System.UInt16 pointer)
@@ -601,10 +602,8 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   property System.Boolean IsNotTrue { get }
   property System.Boolean IsTrue { get }
   property System.Boolean? BooleanValueOrNothing { get }
-  property System.Double AsFloatValue { get }
   property System.Double AsNumberValue { get }
   property System.Double? FloatValueOrNothing { get }
-  property System.Int64 AsIntegerValue { get }
   property System.Int64? IntegerValueOrNothing { get }
   property System.UInt16? CodePointerOrNothing { get }
 enum StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueFlags

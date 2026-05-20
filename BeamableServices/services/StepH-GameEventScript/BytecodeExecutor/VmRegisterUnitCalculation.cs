@@ -26,6 +26,19 @@ internal static class VmRegisterUnitCalculation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool TrySameUnit(ref VmValue a, ref VmValue b, ref VmValue c, out GameEventScriptBytecodeInstructionUnit unit)
+    {
+        if (a.Unit == b.Unit && b.Unit == c.Unit)
+        {
+            unit = a.Unit;
+            return true;
+        }
+
+        unit = UnitNone;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool TryProductUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.HasUnit && b.HasUnit)

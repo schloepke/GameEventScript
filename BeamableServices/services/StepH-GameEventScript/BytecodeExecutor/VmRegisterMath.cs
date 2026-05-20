@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
 
@@ -10,21 +11,24 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (TrySameUnit(ref a, ref b, out var unit))
+        switch (a.Kind)
         {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right))
-                {
-                    dst.SetFloat(left + right, unit);
-                    return;
-                }
-            }
+            case Integer when b.Kind is Integer:
+                if (TrySameUnit(ref a, ref b, out var unit)) dst.SetInteger(a.IntegerValue + b.IntegerValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Percentage when b.Kind is Float or Percentage:
+                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue + b.FloatValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Percentage or Integer when b.Kind is Float or Percentage or Integer:
+                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue + b.AsNumberValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            default:
+                dst.SetNothing();
+                return;
         }
-
-        dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -153,27 +157,27 @@ internal static class VmRegisterMath
         switch (a.Kind)
         {
             case Integer:
-                dst.SetInteger(-a.AsIntegerValue, a.Unit);
+                dst.SetInteger(-a.IntegerValue, a.Unit);
                 break;
             case Float or Percentage:
-                dst.SetFloat(-a.AsFloatValue, a.Unit);
+                dst.SetFloat(-a.FloatValue, a.Unit);
                 break;
             default:
                 dst.SetNothing();
                 break;
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmAbs(ref this VmValue dst, ref VmValue a)
     {
         switch (a.Kind)
         {
             case Integer:
-                dst.SetInteger(Math.Abs(a.AsIntegerValue), a.Unit);
+                dst.SetInteger(Math.Abs(a.IntegerValue), a.Unit);
                 break;
             case Float or Percentage:
-                dst.SetFloat(Math.Abs(a.AsFloatValue), a.Unit);
+                dst.SetFloat(Math.Abs(a.FloatValue), a.Unit);
                 break;
             default:
                 dst.SetNothing();
@@ -184,7 +188,7 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmNaturalLog(ref this VmValue dst, ref VmValue a)
     {
-        if(a.Kind is Nothing)
+        if (a.Kind is Nothing)
         {
             dst.SetNothing();
         }
@@ -195,10 +199,61 @@ internal static class VmRegisterMath
         else
         {
             var x = a.AsNumberValue;
-            if (double.IsNaN(x) || x < 0d || double.IsNegativeInfinity(x)) dst.SetFloat (double.NaN);
+            if (double.IsNaN(x) || x < 0d || double.IsNegativeInfinity(x)) dst.SetFloat(double.NaN);
             else if (double.IsPositiveInfinity(x)) dst.SetFloat(double.PositiveInfinity);
             else dst.SetFloat(Math.Log(x));
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmClamp(ref this VmValue dst, ref VmValue value, ref VmValue min, ref VmValue max)
+    {
+        if (TrySameUnit(ref value, ref min, ref max, out var unit))
+        {
+            if (value.Kind is Integer && min.Kind is Integer && max.Kind is Integer)
+            {
+                dst.SetInteger(Math.Clamp(value.IntegerValue, min.IntegerValue, max.IntegerValue), unit);
+            }
+            else
+            {
+                var x = value.AsNumberValue;
+                var a = min.AsNumberValue;
+                var b = max.AsNumberValue;
+                if (double.IsNaN(x) || double.IsNaN(a) || double.IsNaN(b)) dst.SetNothing();
+                else dst.SetFloat(Math.Clamp(x, a, b), unit);
+            }
+        }
+        else
+        {
+            dst.SetFloat(double.NaN);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmRandom(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptRandomGenerator randomGenerator)
+    {
+        switch (from.Kind)
+        {
+            case Integer when to.Kind is Integer:
+                if (TrySameUnit(ref from, ref to, out var unit)) dst.SetInteger(randomGenerator.NextInclusiveInt((int)from.IntegerValue, (int)to.IntegerValue), unit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Float or Integer or Percentage when to.Kind is Float or Integer or Percentage:
+            {
+                if (TrySameUnit(ref from, ref to, out unit))
+                {
+                    var a = from.FloatValue;
+                    var b = to.FloatValue;
+                    if (double.IsNaN(a) || double.IsNaN(b)) dst.SetFloat(double.NaN);
+                    else dst.SetFloat(randomGenerator.NextInclusiveFloat(a, b), unit);
+                }
+                else dst.SetFloat(double.NaN);
+
+                break;
+            }
+            default:
+                dst.SetNothing();
+                break;
+        }
+    }
 }

@@ -48,7 +48,7 @@ internal static class VmRegisterCompare
                 dst.SetBoolean(true);
                 break;
             case Float or Percentage:
-                dst.SetBoolean(!double.IsNaN(dst.AsFloatValue) || !double.IsInfinity(dst.AsFloatValue) || !double.IsNegativeInfinity(dst.AsFloatValue));
+                dst.SetBoolean(!double.IsNaN(a.AsNumberValue) || !double.IsInfinity(a.AsNumberValue) || !double.IsNegativeInfinity(a.AsNumberValue));
                 break;
             case Text or Tag when a.IsStoragePointer():
                 dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length > 0);
@@ -113,8 +113,8 @@ internal static class VmRegisterCompare
         }
         else if (a.Kind is Float or Integer || b.Kind is Float or Integer)
         {
-            var aFloat = a.AsFloatValue;
-            var bFloat = b.AsFloatValue;
+            var aFloat = a.AsNumberValue;
+            var bFloat = b.AsNumberValue;
             dst.SetBoolean(aFloat == bFloat || Math.Abs(aFloat - bFloat) <= Math.Max(Math.Abs(aFloat), Math.Abs(bFloat)) * 1e-12);
         }
         else
@@ -132,7 +132,7 @@ internal static class VmRegisterCompare
         }
         else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
         {
-            dst.SetBoolean(a.AsFloatValue < b.AsFloatValue);
+            dst.SetBoolean(a.AsNumberValue < b.AsNumberValue);
         }
         else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
@@ -153,7 +153,7 @@ internal static class VmRegisterCompare
         }
         else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
         {
-            dst.SetBoolean(a.AsFloatValue > b.AsFloatValue);
+            dst.SetBoolean(a.AsNumberValue > b.AsNumberValue);
         }
         else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
@@ -174,7 +174,7 @@ internal static class VmRegisterCompare
         }
         else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
         {
-            dst.SetBoolean(a.AsFloatValue <= b.AsFloatValue);
+            dst.SetBoolean(a.AsNumberValue <= b.AsNumberValue);
         }
         else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {
@@ -195,7 +195,7 @@ internal static class VmRegisterCompare
         }
         else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
         {
-            dst.SetBoolean(a.AsFloatValue >= b.AsFloatValue);
+            dst.SetBoolean(a.AsNumberValue >= b.AsNumberValue);
         }
         else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
         {

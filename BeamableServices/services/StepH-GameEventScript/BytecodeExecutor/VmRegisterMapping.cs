@@ -80,9 +80,9 @@ internal static class VmRegisterMapping
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
-        VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.AsIntegerValue),
-        VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.AsFloatValue),
-        VmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(a.AsFloatValue),
+        VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue),
+        VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.FloatValue),
+        VmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
         VmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.AsBooleanValue),
         // FIXME this might not work here, since we need to binary to look up strings and tags
         _ => GameEventScriptValueFactory.GesNothing(),

@@ -698,6 +698,7 @@ internal static class GesValidator
         return unary.Operator switch
         {
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
+            GesUnaryOperator.Negate => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
             GesUnaryOperator.Not => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean
                 : StaticExpressionInfo.Unknown,

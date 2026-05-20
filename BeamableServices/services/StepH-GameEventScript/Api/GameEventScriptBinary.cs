@@ -158,39 +158,44 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(1)] public byte UnitAndFlags;
 
     [FieldOffset(2)] public ushort DestinationSlot;
+    [FieldOffset(2)] public ushort MessageDestination;
     
     [FieldOffset(4)] public ushort X_U16;
-    [FieldOffset(4)] public short X_I16;
-    [FieldOffset(4)] public uint X_U32;
-    [FieldOffset(4)] public uint X_I32;
+    [FieldOffset(4)] public short ImmediateX;
     [FieldOffset(4)] public ushort ConditionSlot;
     [FieldOffset(4)] public ushort XSlot;
     [FieldOffset(4)] public ushort StringIndex;
-    [FieldOffset(4)] public ushort Count;
+    [FieldOffset(4)] public ushort SecondaryListIndex;
+    [FieldOffset(4)] public short Count;
 
     [FieldOffset(6)] public ushort Y_U16;
-    [FieldOffset(6)] public short Y_I16;
+    [FieldOffset(6)] public short ImmediateY;
     [FieldOffset(6)] public ushort TargetAddress;
     [FieldOffset(6)] public ushort YSlot;
     [FieldOffset(6)] public ushort EntryAddress;
     [FieldOffset(6)] public ushort ListIndex;
 
-    [FieldOffset(8)] public ushort A_U16;
-    [FieldOffset(8)] public short A_I16;
+    #region Extra Payload for some opcodes
+    
+    [FieldOffset(8)] public ulong Payload;
+    
+    [FieldOffset(8)] public ushort AU;
+    [FieldOffset(8)] public short AS;
 
-    [FieldOffset(10)] public ushort B_U16;
-    [FieldOffset(10)] public short B_I16;
+    [FieldOffset(10)] public ushort BU;
+    [FieldOffset(10)] public short BS;
 
-    [FieldOffset(12)] public ushort C_U16;
-    [FieldOffset(12)] public short C_I16;
+    [FieldOffset(12)] public ushort CU;
+    [FieldOffset(12)] public short CS;
 
-    [FieldOffset(14)] public ushort D_U16;
-    [FieldOffset(14)] public short D_I16;
+    [FieldOffset(14)] public ushort DU;
+    [FieldOffset(14)] public short DS;
 
     [FieldOffset(8)] public long I64;
-    [FieldOffset(8)] public ulong U64;
 
     [FieldOffset(8)] public double F64;
+    
+    #endregion
 }
 
 public enum GameEventScriptBytecodeOpCode : byte
@@ -202,32 +207,33 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfTrue = 0x02,
     JumpIfFalse = 0x03,
     JumpIfNotTrue = 0x04,
-    ReserveSlots = 0x05,
-    ReleaseSlots = 0x06,
-    ReturnVoid = 0x07,
-    ReturnValue = 0x08,
-    Call = 0x09,
-    CallPredicate = 0x0A,
-    CallStandard = 0x0B,
-    CallStandardPredicate = 0x0C,
-    CallExternal = 0x0D,
-    CallExternalPredicate = 0x0E,
-    BindHandler = 0x0F,
-    MoveSlot = 0x10,
-    Cast = 0x11,
+    SlotLocals = 0x05,
+    ReturnVoid = 0x06,
+    ReturnValue = 0x07,
+    Call = 0x08,
+    CallPredicate = 0x09,
+    CallStandard = 0x0A,
+    CallStandardPredicate = 0x0B,
+    CallExternal = 0x0C,
+    CallExternalPredicate = 0x0D,
+    BindHandler = 0x0E,
+    MoveSlot = 0x0F,
+    Cast = 0x10,
+    CastCustom = 0x11,
     CastUnit = 0x12,
     TypeCheck = 0x13,
-    CheckUnit = 0x14,
-    MemberAccess = 0x15,
-    IndexedAccess = 0x16,
-    EmitMessage = 0x17,
-    EmitMessageWithTags = 0x18,
-    PublishMessage = 0x19,
-    PublishMessageWithTags = 0x1A,
-    EmitMessageValue = 0x1B,
-    EmitMessageValueWithTags = 0x1C,
-    PublishMessageValue = 0x1D,
-    PublishMessageValueWithTags = 0x1E,
+    TypeCheckCustom = 0x14,
+    CheckUnit = 0x15,
+    MemberAccess = 0x16,
+    IndexedAccess = 0x17,
+    EmitMessage = 0x18,
+    EmitMessageWithTags = 0x19,
+    PublishMessage = 0x1A,
+    PublishMessageWithTags = 0x1B,
+    EmitMessageValue = 0x1C,
+    EmitMessageValueWithTags = 0x1D,
+    PublishMessageValue = 0x1E,
+    PublishMessageValueWithTags = 0x1F,
 
     #endregion
 

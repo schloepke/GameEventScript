@@ -264,7 +264,7 @@ The executable code should contain explicit coercion instructions so the program
 counter and dump show where normalization happens:
 
 ```text
-@0000 ReserveSlots locals+=localCount
+@0000 SlotLocals locals+=localCount
 @0001 Cast dst=s0 src=s0 kind=Custom type=:unit
 @0002 Cast dst=s1 src=s1 kind=Integer
 ```
@@ -309,8 +309,9 @@ Instruction
   DestinationSlot
   X_U16, Y_U16
   X_I16, Y_I16
-  C_U16, D_U16
-  C_I16, D_I16
+  Count
+  A_U16, B_U16, C_U16, D_U16
+  A_I16, B_I16, C_I16, D_I16
   I64, U64, F64
 ```
 
@@ -320,19 +321,22 @@ Operands are interpreted by opcode:
 - `X_U16`, `Y_U16`: primary-word slots, branch targets, pool indices, or small
   unsigned immediates.
 - `X_I16`, `Y_I16`: compact signed immediates in the primary word.
-- `C_U16`, `D_U16`, `C_I16`, `D_I16`: payload-word 16-bit views for wider
-  opcodes.
-- `I64`, `U64`, `F64`: aligned payload-word literal views for integer,
-  unsigned seed, and double/float loads.
+- `Count`: signed local slot delta alias over `X_I16`.
+- `A_U16`, `B_U16`, `C_U16`, `D_U16`, plus signed `*_I16` views:
+  payload-word 16-bit views for wider opcodes.
+- `I64`, `U64`, `F64`: aligned payload-word literal views for signed integer
+  payloads, raw unsigned payload bits, and double/float loads.
 - Branch opcodes use the primary fields documented by their opcode shape.
 - Iterator and pipeline terminal opcodes document their own slot, immediate, and
   helper-entry fields explicitly. They do not use sentinel operands for absent
   parameters.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
   indices directly in `X_U16`, `Y_U16`, `C_U16`, or `D_U16`.
-- `ReserveSlots X_U16` (`Count` alias) is the required prolog instruction for every executable
-  entry address. It adds local slots beyond the arguments already present in
-  the frame. The bind/export tables do not carry this internal execution value.
+- `SlotLocals Count` is the required prolog instruction for every executable
+  entry address. Entry prologs use a non-negative signed count and add local
+  slots beyond the arguments already present in the frame. Negative counts are
+  only valid for normal scope exits. The bind/export tables do not carry this
+  internal execution value.
 
 Unused instruction fields are undefined and ignored. The instruction word does
 not use sentinel operands for optional operands. Optional forms are represented
@@ -380,7 +384,7 @@ payload object:
 `Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot,
 `X` and `Y` are the raw primary operands, and `Parameter` is the raw unsigned
 64-bit payload word covering bytes `8..15`. For literal instructions the
-payload carries `I64`, `U64`, or the IEEE-754 `F64` bit pattern.
+payload carries `I64`, raw `U64`, or the IEEE-754 `F64` bit pattern.
 
 Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/slot lists, `StringPool`
@@ -430,7 +434,7 @@ operation-local debug state such as selector index or item index.
 ## Entry Tables
 
 Handlers and callables are metadata over the shared code segment. Their
-`EntryAddress` points at a `ReserveSlots` prolog instruction. The instruction
+`EntryAddress` points at a `SlotLocals` prolog instruction. The instruction
 immediately after the prolog is the first executable body instruction. Handler
 and callable arguments are already present in slots `0..n-1` when their frame
 starts.
@@ -457,9 +461,9 @@ CallableEntry
   ReturnSlot
 ```
 
-The local reserve count is intentionally not part of the bind/export metadata.
-It is encoded as `ReserveSlots X_U16` (`Count`) at the entry address because it is a VM
-execution detail needed equally by exported handlers/callables and private
+The local slot count is intentionally not part of the bind/export metadata. It
+is encoded as non-negative `SlotLocals Count` at the entry address because it is
+a VM execution detail needed equally by exported handlers/callables and private
 helper entries.
 
 `ExactSignature` handlers subscribe by `SignatureId`. `MessageEnvelope` handlers
@@ -531,15 +535,17 @@ for `pc`-based execution.
 - `StageText stringIndex`
 - `StageTag stringIndex`
 - `Cast dst src typeKind`
+- `CastCustom dst src typeNameIndex`
 - `CastUnit dst src unitAndFlags`
 - `TypeCheck dst src typeKind`
+- `TypeCheckCustom dst src typeNameIndex`
 - `CheckUnit dst src unitAndFlags`
 
 `Cast` and `TypeCheck` use `Y_U16` as `GameEventScriptBytecodeTypeKind`.
-Built-in types are direct kind operands. Custom/external types use
-`Y_U16=Custom` and `C_U16` as the type-name `StringPool` index. Units are not
-declared type kinds: unit casts and checks use `CastUnit`/`CheckUnit` with the
-target unit in `UnitAndFlags`.
+Built-in types are direct kind operands. Custom/external record types use
+`CastCustom`/`TypeCheckCustom` with `Y_U16` as the type-name `StringPool` index.
+Units are not declared type kinds: unit casts and checks use
+`CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
@@ -548,17 +554,16 @@ the preloaded argument slots.
 
 ### Scopes
 
-- `ReserveSlots X_U16`
-- `ReleaseSlots X_U16`
+- `SlotLocals Count`
 
-Scopes are explicit local slot deltas. `ReserveSlots` extends the same frame by
-`X_U16` additional local slots. Slot addresses stay absolute in the current
-frame, so reserving two locals from active slots `s0..s3` exposes `s0..s5`.
-`ReleaseSlots X_U16` clears and releases that exact number of slots. Existing
+Scopes are explicit signed local slot deltas. `SlotLocals Count` extends the
+same frame by `Count` slots when `Count > 0`, and clears/releases `-Count`
+slots when `Count < 0`. Slot addresses stay absolute in the current frame, so
+reserving two locals from active slots `s0..s3` exposes `s0..s5`. Existing
 parent slots remain visible and are not rolled back by scope exit. The compiler
-must emit matching counts for normal exits; `ReturnValue` and `ReturnVoid`
-discard the whole active frame, so no `ReleaseSlots` is needed immediately
-before a return.
+must emit matching deltas for normal exits; `ReturnValue` and `ReturnVoid`
+discard the whole active frame, so no negative `SlotLocals` is needed
+immediately before a return.
 
 ### Arithmetic and Logic
 
@@ -710,30 +715,30 @@ Loops should be compiled to explicit loop control instructions and jumps.
 Range loop shape:
 
 ```text
-@0200 ReserveSlots locals+=loopLocalCount
+@0200 SlotLocals locals+=loopLocalCount
 @0201 RangeIteratorShort dst=sIterator from=1 to=20 step=1
 @0202 IteratorNext dst=sItem iterator=sIterator noMore=@0210
-@0203 ReserveSlots locals+=iterationLocalCount
+@0203 SlotLocals locals+=iterationLocalCount
 @0204 MoveSlot dst=sIdentifier src=sItem
 @0205 ...
-@0208 ReleaseSlots locals-=iterationLocalCount
+@0208 SlotLocals locals-=iterationLocalCount
 @0209 Jump @0202
 @0210 IteratorClose iterator=sIterator
-@0211 ReleaseSlots locals-=loopLocalCount
+@0211 SlotLocals locals-=loopLocalCount
 ```
 
 Collection loop shape:
 
 ```text
-@0300 ReserveSlots locals+=loopLocalCount
+@0300 SlotLocals locals+=loopLocalCount
 @0301 CollectionIterator dst=sIterator source=sValues
 @0302 IteratorNext dst=sItem iterator=sIterator noMore=@0310
-@0303 ReserveSlots locals+=iterationLocalCount
+@0303 SlotLocals locals+=iterationLocalCount
 @0304 ...
-@0308 ReleaseSlots locals-=iterationLocalCount
+@0308 SlotLocals locals-=iterationLocalCount
 @0309 Jump @0302
 @0310 IteratorClose iterator=sIterator
-@0311 ReleaseSlots locals-=loopLocalCount
+@0311 SlotLocals locals-=loopLocalCount
 ```
 
 Loop runtime state is stored in the VM-internal iterator value held by the
@@ -745,14 +750,14 @@ compiler-assigned iterator slot.
 - `BuildMap dst keyNameListIndex valueSlotListIndex`
 - `BuildMessage dst messageShapeIndex argumentSlotListIndex`
 - `BindHandler dst operandSlotListIndex argumentNameListIndex`
-- `MemberAccess dst targetSlot nameIndex`
-- `IndexedAccess dst targetSlot selectorSlot`
+- `MemberAccess dst nameIndex objectSlot`
+- `IndexedAccess dst selectorSlot objectSlot`
 - `Range dst fromSlot toSlot`
 - `RangeWithStep dst fromSlot toSlot stepSlot`
 - `Dice dst count sides`
 - `Random dst fromSlot toSlot`
 - `RandomPush seedSlot`
-- `RandomPushConstant seedU64`
+- `RandomPushConstant seedI64`
 - `RandomPop`
 - `TypeConstructor dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
 
@@ -761,10 +766,10 @@ List indexes reference `UShortListPool`; name lists and message shapes contain
 `StringPool` indexes, while slot lists contain frame slot indexes.
 Seeded random no longer has a side table or helper expression opcode. The
 lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
-Constant seeds are unitless `U64`; signed integer literals are mapped by their
-two's-complement bit pattern. Dynamic seeds must be statically visible as
-unitless `:integer`, usually by declaring the value as `:integer` or writing an
-explicit `as :integer` cast.
+Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
+are valid source literals. Dynamic seeds must be statically visible as unitless
+`:integer`, usually by declaring the value as `:integer` or writing an explicit
+`as :integer` cast.
 
 Required portable value families:
 
@@ -825,9 +830,12 @@ Handlers may declare static tag filters:
   the message name matches for `MessageEnvelope` handlers.
 
 Publishing and emitting are distinct opcodes. Static message literals use a
-message shape and argument slot lists from `UShortListPool`; dynamic message
-values use the message slot. Tagged forms use distinct `*WithTags` opcodes with
-a concrete tag slot-list index. A message shape is encoded as
+message shape and argument slot lists from `UShortListPool`; direct
+`EmitMessage*`/`PublishMessage*` opcodes store the shape in `MessageDestination`,
+the argument list in `ListIndex`, and tagged forms store the tag slot-list in
+`SecondaryListIndex`. Dynamic message values use the message slot. Tagged
+forms use distinct `*WithTags` opcodes with a concrete tag slot-list index. A
+message shape is encoded as
 `[messageNameStringIndex, argumentNameStringIndex...]`. Zero-argument messages
 use a concrete empty argument-list entry in `UShortListPool`.
 
@@ -942,20 +950,20 @@ Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
 CollectionBuilderList/Set builder
-ReserveSlots locals+=collectionLocalCount
+SlotLocals locals+=collectionLocalCount
 RangeIterator* / CollectionIterator iterator
 loop:
   IteratorNext item iterator noMore
-  ReserveSlots locals+=iterationLocalCount
+  SlotLocals locals+=iterationLocalCount
   MoveSlot identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
   CollectionBuilderAdd builder projected
-  ReleaseSlots locals-=iterationLocalCount
+  SlotLocals locals-=iterationLocalCount
   Jump loop
 noMore:
 IteratorClose iterator
-ReleaseSlots locals-=collectionLocalCount
+SlotLocals locals-=collectionLocalCount
 CollectionBuilderFinish dst builder
 ```
 
@@ -1033,13 +1041,13 @@ slot operands:
 ```text
 code[26]
 @0000 L_handler_Start:
-@0000 ReserveSlots locals+=5
-@0001 ReserveSlots locals+=1
+@0000 SlotLocals locals+=5
+@0001 SlotLocals locals+=1
 @0003 CollectionIterator dst=s2 source=s0
 @0004 IteratorNext dst=s3 iterator=s2 noMore=@0010
 @0005 ...
 @0010 IteratorClose iterator=s2
-@0011 ReleaseSlots locals-=1
+@0011 SlotLocals locals-=1
 @0012 ReturnVoid
 ```
 
@@ -1052,7 +1060,7 @@ handler DamageTaken(unit, amount)
     amount -> s1 as :integer
 
 @0000 L_handler_DamageTaken:
-@0000 ReserveSlots locals+=localCount
+@0000 SlotLocals locals+=localCount
 @0001 Cast dst=s0 src=s0 kind=Custom type=:unit
 @0002 Cast dst=s1 src=s1 kind=Integer
 @0003 ...

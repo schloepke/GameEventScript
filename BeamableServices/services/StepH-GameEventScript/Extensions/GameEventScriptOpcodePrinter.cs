@@ -13,6 +13,7 @@ public class GameEventScriptOpcodePrinter
     internal enum OpcodeOperands
     {
         DST_U16_TargetSlot,
+        DST_U16_MessageDestination,
 
         A_U16_SourceSlot,
         B_U16_SourceSlot,
@@ -26,11 +27,15 @@ public class GameEventScriptOpcodePrinter
         A_U16_MessageSlot,
         A_U16_BuilderSlot,
         B_U16_ItemSlot,
+        X_U16_IndexSlot,
+        Y_U16_ObjectSlot,
         A_U16_CollectionSlot,
         A_U16_IteratorSlot,
         A_U16_SourceIteratorSlot,
         A_U16_SeriesSlot,
         B_U16_IndexSlot,
+        X_U16_SecondaryListIndex,
+        Y_U16_ListIndex,
         B_U16_DefaultSlot,
         B_U16_SeedSlot,
         B_U16_NeedleSlot,
@@ -38,10 +43,9 @@ public class GameEventScriptOpcodePrinter
         C_U16_ItemBindingSlot,
 
         A_U16_Count,
-        X_U16_Count,
+        X_I16_Count,
+        Y_I16_Immediate,
         B_U16_Count,
-        A_U16_DiceCountImmediate,
-        B_U16_DiceSideCountImmediate,
 
         A_U16_TargetAddress,
         B_U16_TargetAddress,
@@ -68,7 +72,6 @@ public class GameEventScriptOpcodePrinter
         C_I16_StepImmediate,
 
         I64_IntegerImmediate,
-        U64_UnsignedIntegerImmediate,
         F64_FloatImmediate,
         UnitAndFlags_Unit,
 
@@ -76,6 +79,7 @@ public class GameEventScriptOpcodePrinter
         X_U16_StringPoolIndex,
         C_U16_StringPoolIndex,
         B_U16_TypeKind,
+        B_U16_CustomTypeNameIndex,
         C_U16_CustomTypeNameIndex,
 
         A_U16_MessageShapeListIndex,
@@ -187,9 +191,9 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.UnaryNaturalLog => [DST_U16_TargetSlot, A_U16_OperandSlot],
             GameEventScriptBytecodeOpCode.Clamp => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_SourceSlot, C_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.Random => [DST_U16_TargetSlot, A_U16_FromSlot, B_U16_ToSlot],
-            GameEventScriptBytecodeOpCode.Dice => [DST_U16_TargetSlot, A_U16_DiceCountImmediate, B_U16_DiceSideCountImmediate],
+            GameEventScriptBytecodeOpCode.Dice => [DST_U16_TargetSlot, X_I16_Count, Y_I16_Immediate],
             GameEventScriptBytecodeOpCode.RandomPush => [A_U16_SourceSlot],
-            GameEventScriptBytecodeOpCode.RandomPushConstant => [U64_UnsignedIntegerImmediate],
+            GameEventScriptBytecodeOpCode.RandomPushConstant => [I64_IntegerImmediate],
             GameEventScriptBytecodeOpCode.RandomPop => [],
             GameEventScriptBytecodeOpCode.Range => [DST_U16_TargetSlot, A_U16_FromSlot, B_U16_ToSlot],
             GameEventScriptBytecodeOpCode.RangeWithStep => [DST_U16_TargetSlot, A_U16_FromSlot, B_U16_ToSlot, C_U16_StepSlot],
@@ -207,29 +211,28 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.UnaryKeys => [DST_U16_TargetSlot, A_U16_OperandSlot],
             GameEventScriptBytecodeOpCode.UnaryValues => [DST_U16_TargetSlot, A_U16_OperandSlot],
             GameEventScriptBytecodeOpCode.UnaryEntries => [DST_U16_TargetSlot, A_U16_OperandSlot],
-            GameEventScriptBytecodeOpCode.ReserveSlots => [X_U16_Count],
+            GameEventScriptBytecodeOpCode.SlotLocals => [X_I16_Count],
 
-            GameEventScriptBytecodeOpCode.Cast when IsCustomTypeInstruction(instruction) => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind, C_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.Cast => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind],
+            GameEventScriptBytecodeOpCode.CastCustom => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.CastUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
-            GameEventScriptBytecodeOpCode.TypeCheck when IsCustomTypeInstruction(instruction) => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind, C_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.TypeCheck => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind],
+            GameEventScriptBytecodeOpCode.TypeCheckCustom => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.CheckUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
 
             GameEventScriptBytecodeOpCode.LoadHandler => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex],
             GameEventScriptBytecodeOpCode.TypeConstructor => [DST_U16_TargetSlot, A_U16_TypeNameIndex, B_U16_ArgumentNameListIndex, C_U16_ArgumentSlotListIndex],
-            GameEventScriptBytecodeOpCode.MemberAccess => [DST_U16_TargetSlot, A_U16_SourceSlot, C_U16_StringPoolIndex],
-            GameEventScriptBytecodeOpCode.IndexedAccess => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_IndexSlot],
+            GameEventScriptBytecodeOpCode.MemberAccess => [DST_U16_TargetSlot, X_U16_StringPoolIndex, Y_U16_ObjectSlot],
+            GameEventScriptBytecodeOpCode.IndexedAccess => [DST_U16_TargetSlot, X_U16_IndexSlot, Y_U16_ObjectSlot],
             GameEventScriptBytecodeOpCode.BuildList => [DST_U16_TargetSlot, A_U16_ItemSlotListIndex],
             GameEventScriptBytecodeOpCode.BuildMap => [DST_U16_TargetSlot, A_U16_KeyNameListIndex, B_U16_ValueSlotListIndex],
             GameEventScriptBytecodeOpCode.BuildMessage => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],
             GameEventScriptBytecodeOpCode.BindHandler => [DST_U16_TargetSlot, A_U16_OperandSlotListIndex, B_U16_ArgumentNameListIndex],
 
-            GameEventScriptBytecodeOpCode.ReleaseSlots => [X_U16_Count],
-            GameEventScriptBytecodeOpCode.EmitMessage => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],
-            GameEventScriptBytecodeOpCode.EmitMessageWithTags => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex, C_U16_TagSlotListIndex],
-            GameEventScriptBytecodeOpCode.PublishMessage => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],
-            GameEventScriptBytecodeOpCode.PublishMessageWithTags => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex, C_U16_TagSlotListIndex],
+            GameEventScriptBytecodeOpCode.EmitMessage => [DST_U16_MessageDestination, Y_U16_ListIndex],
+            GameEventScriptBytecodeOpCode.EmitMessageWithTags => [DST_U16_MessageDestination, X_U16_SecondaryListIndex, Y_U16_ListIndex],
+            GameEventScriptBytecodeOpCode.PublishMessage => [DST_U16_MessageDestination, Y_U16_ListIndex],
+            GameEventScriptBytecodeOpCode.PublishMessageWithTags => [DST_U16_MessageDestination, X_U16_SecondaryListIndex, Y_U16_ListIndex],
             GameEventScriptBytecodeOpCode.EmitMessageValue => [A_U16_MessageSlot],
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags => [A_U16_MessageSlot, C_U16_TagSlotListIndex],
             GameEventScriptBytecodeOpCode.PublishMessageValue => [A_U16_MessageSlot],
@@ -296,7 +299,4 @@ public class GameEventScriptOpcodePrinter
             _ => throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null)
         };
     }
-
-    private static bool IsCustomTypeInstruction(GameEventScriptBytecodeInstruction instruction)
-        => (GameEventScriptBytecodeTypeKind)instruction.Y_U16 == GameEventScriptBytecodeTypeKind.Custom;
 }

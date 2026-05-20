@@ -107,31 +107,31 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
   field System.Byte UnitAndFlags
   field System.Double F64
-  field System.Int16 A_I16
-  field System.Int16 B_I16
-  field System.Int16 C_I16
-  field System.Int16 D_I16
-  field System.Int16 X_I16
-  field System.Int16 Y_I16
+  field System.Int16 AS
+  field System.Int16 BS
+  field System.Int16 CS
+  field System.Int16 Count
+  field System.Int16 DS
+  field System.Int16 ImmediateX
+  field System.Int16 ImmediateY
   field System.Int64 I64
-  field System.UInt16 A_U16
-  field System.UInt16 B_U16
-  field System.UInt16 C_U16
+  field System.UInt16 AU
+  field System.UInt16 BU
+  field System.UInt16 CU
   field System.UInt16 ConditionSlot
-  field System.UInt16 Count
-  field System.UInt16 D_U16
+  field System.UInt16 DU
   field System.UInt16 DestinationSlot
   field System.UInt16 EntryAddress
   field System.UInt16 ListIndex
+  field System.UInt16 MessageDestination
+  field System.UInt16 SecondaryListIndex
   field System.UInt16 StringIndex
   field System.UInt16 TargetAddress
   field System.UInt16 XSlot
   field System.UInt16 X_U16
   field System.UInt16 YSlot
   field System.UInt16 Y_U16
-  field System.UInt32 X_I32
-  field System.UInt32 X_U32
-  field System.UInt64 U64
+  field System.UInt64 Payload
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNone = 0
   enum-field UnitDegree = 1
@@ -144,32 +144,33 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field JumpIfTrue = 2
   enum-field JumpIfFalse = 3
   enum-field JumpIfNotTrue = 4
-  enum-field ReserveSlots = 5
-  enum-field ReleaseSlots = 6
-  enum-field ReturnVoid = 7
-  enum-field ReturnValue = 8
-  enum-field Call = 9
-  enum-field CallPredicate = 10
-  enum-field CallStandard = 11
-  enum-field CallStandardPredicate = 12
-  enum-field CallExternal = 13
-  enum-field CallExternalPredicate = 14
-  enum-field BindHandler = 15
-  enum-field MoveSlot = 16
-  enum-field Cast = 17
+  enum-field SlotLocals = 5
+  enum-field ReturnVoid = 6
+  enum-field ReturnValue = 7
+  enum-field Call = 8
+  enum-field CallPredicate = 9
+  enum-field CallStandard = 10
+  enum-field CallStandardPredicate = 11
+  enum-field CallExternal = 12
+  enum-field CallExternalPredicate = 13
+  enum-field BindHandler = 14
+  enum-field MoveSlot = 15
+  enum-field Cast = 16
+  enum-field CastCustom = 17
   enum-field CastUnit = 18
   enum-field TypeCheck = 19
-  enum-field CheckUnit = 20
-  enum-field MemberAccess = 21
-  enum-field IndexedAccess = 22
-  enum-field EmitMessage = 23
-  enum-field EmitMessageWithTags = 24
-  enum-field PublishMessage = 25
-  enum-field PublishMessageWithTags = 26
-  enum-field EmitMessageValue = 27
-  enum-field EmitMessageValueWithTags = 28
-  enum-field PublishMessageValue = 29
-  enum-field PublishMessageValueWithTags = 30
+  enum-field TypeCheckCustom = 20
+  enum-field CheckUnit = 21
+  enum-field MemberAccess = 22
+  enum-field IndexedAccess = 23
+  enum-field EmitMessage = 24
+  enum-field EmitMessageWithTags = 25
+  enum-field PublishMessage = 26
+  enum-field PublishMessageWithTags = 27
+  enum-field EmitMessageValue = 28
+  enum-field EmitMessageValueWithTags = 29
+  enum-field PublishMessageValue = 30
+  enum-field PublishMessageValueWithTags = 31
   enum-field LoadNothing = 32
   enum-field LoadTrue = 33
   enum-field LoadFalse = 34

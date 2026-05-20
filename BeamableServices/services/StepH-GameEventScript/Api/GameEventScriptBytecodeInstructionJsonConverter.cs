@@ -104,7 +104,7 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
             XSlot = x,
             YSlot = y,
             UnitAndFlags = flags.Value,
-            U64 = parameter.Value
+            Payload = parameter.Value
         };
     }
 
@@ -116,7 +116,7 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
         writer.WriteString(DstPropertyName, FormatHex(value.DestinationSlot, 4));
         writer.WriteString(XPropertyName, FormatHex(value.XSlot, 4));
         writer.WriteString(YPropertyName, FormatHex(value.YSlot, 4));
-        writer.WriteString(ParameterPropertyName, FormatHex(value.U64, 16));
+        writer.WriteString(ParameterPropertyName, FormatHex(value.Payload, 16));
         writer.WriteEndObject();
     }
 

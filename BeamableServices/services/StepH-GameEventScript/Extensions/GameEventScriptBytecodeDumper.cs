@@ -403,7 +403,7 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
                 AppendSlot(builder, "src", instruction.XSlot);
-                AppendIndex(builder, "tags", instruction.AU);
+                AppendIndex(builder, "tags", instruction.ListIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.Range:

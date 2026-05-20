@@ -169,7 +169,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(1, compiled.UShortListPool[direct.SecondaryListIndex]);
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageValueWithTags &&
-            instruction.AU < compiled.UShortListPool.Count));
+            instruction.ListIndex < compiled.UShortListPool.Count));
         var build = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage);
         var buildShape = compiled.UShortListPool[build.SecondaryListIndex].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, buildShape);

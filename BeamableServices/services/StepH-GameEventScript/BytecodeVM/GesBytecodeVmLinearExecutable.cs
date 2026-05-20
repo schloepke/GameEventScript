@@ -337,7 +337,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
                 ValidateSlot(module, instruction.XSlot, $"{context} message slot");
-                ValidateSlotListIndex(module, instruction.AU, $"{context} tag slot list");
+                ValidateSlotListIndex(module, instruction.ListIndex, $"{context} tag slot list");
                 break;
 
             case GameEventScriptBytecodeOpCode.RangeIterator:

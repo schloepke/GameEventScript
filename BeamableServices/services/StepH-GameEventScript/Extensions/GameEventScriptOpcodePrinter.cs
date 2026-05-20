@@ -99,8 +99,6 @@ public class GameEventScriptOpcodePrinter
         B_U16_ValueSlotListIndex,
 
         C_U16_ArgumentSlotListIndex,
-        C_U16_TagSlotListIndex,
-
         D_U16_CaptureSlotListIndex
     }
 
@@ -234,9 +232,9 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.PublishMessage => [DST_U16_MessageDestination, ListIndex],
             GameEventScriptBytecodeOpCode.PublishMessageWithTags => [DST_U16_MessageDestination, SecondaryListIndex, ListIndex],
             GameEventScriptBytecodeOpCode.EmitMessageValue => [A_U16_MessageSlot],
-            GameEventScriptBytecodeOpCode.EmitMessageValueWithTags => [A_U16_MessageSlot, C_U16_TagSlotListIndex],
+            GameEventScriptBytecodeOpCode.EmitMessageValueWithTags => [A_U16_MessageSlot, ListIndex],
             GameEventScriptBytecodeOpCode.PublishMessageValue => [A_U16_MessageSlot],
-            GameEventScriptBytecodeOpCode.PublishMessageValueWithTags => [A_U16_MessageSlot, C_U16_TagSlotListIndex],
+            GameEventScriptBytecodeOpCode.PublishMessageValueWithTags => [A_U16_MessageSlot, ListIndex],
 
             GameEventScriptBytecodeOpCode.RangeIterator => [DST_U16_TargetSlot, A_U16_FromSlot, B_U16_ToSlot],
             GameEventScriptBytecodeOpCode.RangeIteratorWithStep => [DST_U16_TargetSlot, A_U16_FromSlot, B_U16_ToSlot, C_U16_StepSlot],

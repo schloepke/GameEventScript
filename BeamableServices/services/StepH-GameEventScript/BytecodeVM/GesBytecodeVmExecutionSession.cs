@@ -491,7 +491,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
-                if (!TryPublishLinearMessageValue(PublishKind.Emit, ResolveSlot(instruction.XSlot), instruction.AU))
+                if (!TryPublishLinearMessageValue(PublishKind.Emit, ResolveSlot(instruction.XSlot), instruction.ListIndex))
                 {
                     return false;
                 }
@@ -509,7 +509,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
-                if (!TryPublishLinearMessageValue(PublishKind.Publish, ResolveSlot(instruction.XSlot), instruction.AU))
+                if (!TryPublishLinearMessageValue(PublishKind.Publish, ResolveSlot(instruction.XSlot), instruction.ListIndex))
                 {
                     return false;
                 }

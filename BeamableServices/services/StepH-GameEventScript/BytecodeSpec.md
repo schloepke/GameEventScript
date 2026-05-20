@@ -840,9 +840,9 @@ Publishing and emitting are distinct opcodes. Static message literals use a
 message shape and argument slot lists from `UShortListPool`; direct
 `EmitMessage*`/`PublishMessage*` opcodes store the shape in `MessageDestination`,
 the argument list in `ListIndex`, and tagged forms store the tag slot-list in
-`SecondaryListIndex`. Dynamic message values use the message slot. Tagged
-forms use distinct `*WithTags` opcodes with a concrete tag slot-list index. A
-message shape is encoded as
+`SecondaryListIndex`. Dynamic message values use the message slot in `XSlot`;
+tagged dynamic forms store their concrete tag slot-list index in `ListIndex`.
+The message shape is encoded as
 `[messageNameStringIndex, argumentNameStringIndex...]`. Zero-argument messages
 use a concrete empty argument-list entry in `UShortListPool`.
 

@@ -541,7 +541,7 @@ internal sealed class GesLinearBytecodeBuilder
         Emit(CreateInstruction(
             messageValueOpCode,
             a: messageSlot,
-            c: tagSlotListIndex));
+            b: tagSlotListIndex));
     }
 
     private void EmitSourceIf(IfStatementNode ifStatement, SourceContext context)

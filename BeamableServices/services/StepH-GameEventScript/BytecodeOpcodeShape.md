@@ -217,9 +217,9 @@ not a second runtime dispatch step.
 | 0x1A | `PublishMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
 | 0x1B | `PublishMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
 | 0x1C | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
-| 0x1D | `EmitMessageValueWithTags` | - | - | `XSlot`=message | - | `AU`=tag slot-list `UShortListPool` index | Emits a dynamic message value with tags. |
+| 0x1D | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Emits a dynamic message value with tags. |
 | 0x1E | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
-| 0x1F | `PublishMessageValueWithTags` | - | - | `XSlot`=message | - | `AU`=tag slot-list `UShortListPool` index | Publishes a dynamic message value with tags. |
+| 0x1F | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Publishes a dynamic message value with tags. |
 
 ### Group 2 - Loads, Argument Staging, Type Construction
 

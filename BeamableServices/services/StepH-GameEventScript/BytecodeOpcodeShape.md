@@ -170,10 +170,10 @@ runtime dispatch step.
 | `0x20` | Primitive integer fast paths |
 | `0x30` | Unary, random, dice, range value operations |
 | `0x40` | Collection/text operations, projections, implication |
-| `0x50` | Primitive/domain casts |
-| `0x60` | Collection/message/reference casts |
-| `0x70` | Primitive/domain type checks |
-| `0x80` | Collection/message/reference type checks |
+| `0x50` | Generic declared-type and unit casts |
+| `0x60` | Reserved former cast space |
+| `0x70` | Generic declared-type and unit checks |
+| `0x80` | Reserved former type-check space |
 | `0x90` | Construction, access, handlers, predicates, calls |
 | `0xA0` | Scopes and message emit/publish operations |
 | `0xB0` | Iterators, collection builders, reduction, and series operations |
@@ -259,65 +259,17 @@ runtime dispatch step.
 | 0x48 | `UnaryKeys` | - | result slot | operand slot | - | - | - | - | - | Map/record keys projection. |
 | 0x49 | `UnaryValues` | - | result slot | operand slot | - | - | - | - | - | Map/record values projection. |
 | 0x4A | `UnaryEntries` | - | result slot | operand slot | - | - | - | - | - | Map/record entries projection. |
-| 0x4B..0x4C | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text, frame, or logic operations. |
+| 0x4B | `Min` | - | result slot | left slot | right slot | - | - | - | - | Binary extrema reduce step. |
+| 0x4C | `Max` | - | result slot | left slot | right slot | - | - | - | - | Binary extrema reduce step. |
 | 0x4D | `Implies` | - | result slot | antecedent slot | consequent slot | - | - | - | - | Binary implication combine. |
 | 0x4E | `ReserveSlots` | - | - | additional local slot count | - | - | - | - | - | Adds `A_U16` active local slots to the current frame. Entry prologs reserve only locals beyond preloaded arguments. |
 | 0x4F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/text, frame, or short-circuit operations. |
-| 0x50 | `CastNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x51 | `CastBoolean` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x52 | `CastInteger` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x53 | `CastFloat` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x54 | `CastNumber` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x55 | `CastPercentage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x56 | `CastUnit` | numeric unit | result slot | source slot | - | - | - | - | - | Converts to the unit carried in `UnitAndFlags`. |
-| 0x57..0x58 | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain casts. |
-| 0x59 | `CastVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x5A | `CastPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x5B | `CastUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion. |
-| 0x5C | reserved | - | - | - | - | - | - | - | - | Removed optional cast slot. |
-| 0x5D | `CastCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Declared-type conversion for custom record/external types. |
-| 0x5E..0x5F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain casts. |
-| 0x60 | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
-| 0x61 | `CastSeries` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x62 | `CastEnvelope` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x63 | `CastRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x64 | `CastTag` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x65 | `CastText` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x66 | `CastList` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x67 | `CastRange` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x68 | `CastMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x69 | `CastHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x6A | `CastMap` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x6B | reserved | - | - | - | - | - | - | - | - | Removed set cast slot. |
-| 0x6C | `CastDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in declared-type conversion for collection/domain values. |
-| 0x6D..0x6F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference casts. |
-| 0x70 | `TypeCheckNothing` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x71 | `TypeCheckBoolean` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x72 | `TypeCheckInteger` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x73 | `TypeCheckFloat` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x74 | `TypeCheckPercentage` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x75 | `TypeCheckUnit` | numeric unit | result slot | source slot | - | - | - | - | - | Checks the unit carried in `UnitAndFlags`. |
-| 0x76..0x77 | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain type checks. |
-| 0x78 | `TypeCheckVector` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x79 | `TypeCheckPoint` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x7A | `TypeCheckUuid` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x7B | reserved | - | - | - | - | - | - | - | - | Removed optional type-check slot. |
-| 0x7C | `TypeCheckTag` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x7D | `TypeCheckText` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate. |
-| 0x7E | `TypeCheckCustom` | - | result slot | source slot | - | `StringPool` index | - | - | - | Type predicate for custom record/external types. |
-| 0x7F | reserved | - | - | - | - | - | - | - | - | Reserved for future primitive/domain type checks. |
-| 0x80 | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference type checks. |
-| 0x81 | `TypeCheckSeries` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x82 | `TypeCheckEnvelope` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x83 | `TypeCheckList` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x84 | `TypeCheckRange` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x85 | `TypeCheckMessage` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x86 | `TypeCheckHandler` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x87 | `TypeCheckRef` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x88 | `TypeCheckMap` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x89 | reserved | - | - | - | - | - | - | - | - | Removed set type-check slot. |
-| 0x8A | `TypeCheckDice` | - | result slot | source slot | - | - | - | - | - | Direct built-in type predicate for collection/domain values. |
-| 0x8B..0x8F | reserved | - | - | - | - | - | - | - | - | Reserved for future collection/message/reference type checks. |
+| 0x50 | `Cast` | - | result slot | source slot | `GameEventScriptBytecodeTypeKind` | custom type `StringPool` index only when kind is `Custom` | - | - | - | Converts `A_U16` to the declared built-in/custom type. Built-ins use `B_U16`; custom types use `B_U16=Custom` plus `C_U16`. |
+| 0x51 | `CastUnit` | target numeric unit | result slot | source slot | - | - | - | - | - | Converts `A_U16` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x52..0x6F | reserved | - | - | - | - | - | - | - | - | Reserved former specialized cast opcode range. |
+| 0x70 | `TypeCheck` | - | result slot | source slot | `GameEventScriptBytecodeTypeKind` | custom type `StringPool` index only when kind is `Custom` | - | - | - | Writes whether `A_U16` has the declared built-in/custom type. Built-ins use `B_U16`; custom types use `B_U16=Custom` plus `C_U16`. |
+| 0x71 | `CheckUnit` | target numeric unit | result slot | source slot | - | - | - | - | - | Writes whether `A_U16` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x72..0x8F | reserved | - | - | - | - | - | - | - | - | Reserved former specialized type-check opcode range. |
 | 0x90 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x91 | `TypeConstructor` | - | result slot | type name `StringPool` index | argument name-list `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | Constructs a record/external value from named argument slots. |
 | 0x92 | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access expansion. |
@@ -329,7 +281,7 @@ runtime dispatch step.
 | 0x98 | `BuildMap` | - | result slot | key name-list `UShortListPool` index | value slot-list `UShortListPool` index | - | - | - | - | Builds a map from key names and value slots. |
 | 0x99 | `BuildMessage` | - | result slot | message shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Builds a message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x9A | `BindHandler` | - | result slot | operand slot-list `UShortListPool` index | argument name-list `UShortListPool` index | - | - | - | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
-| 0x9B | `Variadic` | - | result slot | operation name `StringPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Evaluates a variadic operator over slot-list operands. |
+| 0x9B | reserved | - | - | - | - | - | - | - | - | Removed variadic construction/access slot; `:min`/`:max` lower to `Min`/`Max` reduce chains. |
 | 0x9C..0x9F | reserved | - | - | - | - | - | - | - | - | Reserved for future construction/access operations. |
 | 0xA0 | reserved | - | - | - | - | - | - | - | - | Reserved; scope growth uses `ReserveSlots`. |
 | 0xA1 | `ReleaseSlots` | - | - | removed local slot count | - | - | - | - | - | Clears and removes `A_U16` active local slots from the current frame. |
@@ -423,7 +375,7 @@ runtime dispatch step.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `Variadic`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `CallStandard*`, `CallExternal*` |
 | `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message

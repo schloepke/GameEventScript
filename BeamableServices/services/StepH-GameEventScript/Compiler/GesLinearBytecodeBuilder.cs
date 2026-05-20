@@ -770,8 +770,8 @@ internal sealed class GesLinearBytecodeBuilder
             case TypeCheckExpressionNode typeCheck:
             {
                 var value = EmitSourceExpression(typeCheck.Value, context, state);
-                var opCode = ResolveTypeCheckOpCode(typeCheck.TypeName, out var nameIndex, out var unitAndFlags);
-                return EmitValueInstruction(state, opCode, a: value, c: nameIndex < 0 ? 0 : nameIndex, unitAndFlags: unitAndFlags);
+                var operand = ResolveDeclaredTypeOperand(typeCheck.TypeName);
+                return EmitValueInstruction(state, operand.TypeCheckOpCode, a: value, b: operand.TypeKind, c: operand.CustomTypeNameIndex, unitAndFlags: operand.UnitAndFlags);
             }
 
             case MemberAccessExpressionNode memberAccess:
@@ -1172,19 +1172,26 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourceVariadic(VariadicTaggedExpressionNode variadic, SourceContext context, ExpressionState state)
     {
-        var argumentSlots = new int[variadic.Arguments.Count];
-        for (var index = 0; index < variadic.Arguments.Count; index++)
+        if (variadic.Arguments.Count == 0)
         {
-            argumentSlots[index] = EmitSourceExpression(variadic.Arguments[index], context, state);
+            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadNothing);
         }
 
-        var operatorIndex = ResolveStringIndex(variadic.Operator);
-        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
-        return EmitValueInstruction(
-            state,
-            GameEventScriptBytecodeOpCode.Variadic,
-            a: operatorIndex,
-            b: argumentSlotListIndex);
+        var opCode = variadic.Operator switch
+        {
+            "min" => GameEventScriptBytecodeOpCode.Min,
+            "max" => GameEventScriptBytecodeOpCode.Max,
+            _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support variadic operator '{variadic.Operator}'.")
+        };
+
+        var current = EmitSourceExpression(variadic.Arguments[0], context, state);
+        for (var index = 1; index < variadic.Arguments.Count; index++)
+        {
+            var next = EmitSourceExpression(variadic.Arguments[index], context, state);
+            current = EmitValueInstruction(state, opCode, current, next);
+        }
+
+        return current;
     }
 
     private int EmitSourceRange(RangeExpressionNode range, SourceContext context, ExpressionState state)
@@ -1448,23 +1455,25 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourceTypeCast(TypeCastExpressionNode typeCast, SourceContext context, ExpressionState state)
     {
-        if (!TryGetCastOpCode(typeCast.TypeName, out var opCode, out var unitAndFlags))
+        if (!IsBuiltInCastType(typeCast.TypeName))
         {
             throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support type cast '{typeCast.TypeName}'.");
         }
 
         var value = EmitSourceExpression(typeCast.Value, context, state);
-        return EmitValueInstruction(state, opCode, a: value, unitAndFlags: unitAndFlags);
+        var operand = ResolveDeclaredTypeOperand(typeCast.TypeName);
+        return EmitValueInstruction(state, operand.CastOpCode, a: value, b: operand.TypeKind, c: operand.CustomTypeNameIndex, unitAndFlags: operand.UnitAndFlags);
     }
 
     private int EmitSourceTypeConstructor(TypeConstructorExpressionNode typeConstructor, SourceContext context, ExpressionState state)
     {
         if (typeConstructor.Arguments.Count == 1 &&
             typeConstructor.Arguments[0].Label is null &&
-            TryGetCastOpCode(typeConstructor.TypeName, out var constructorCastOpCode, out var unitAndFlags))
+            IsBuiltInCastType(typeConstructor.TypeName))
         {
             var value = EmitSourceExpression(typeConstructor.Arguments[0].Expression, context, state);
-            return EmitValueInstruction(state, constructorCastOpCode, a: value, unitAndFlags: unitAndFlags);
+            var operand = ResolveDeclaredTypeOperand(typeConstructor.TypeName);
+            return EmitValueInstruction(state, operand.CastOpCode, a: value, b: operand.TypeKind, c: operand.CustomTypeNameIndex, unitAndFlags: operand.UnitAndFlags);
         }
 
         var argumentNames = new string[typeConstructor.Arguments.Count];
@@ -2340,8 +2349,8 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitCastSlot(int destinationSlot, int sourceSlot, string? typeName)
     {
-        var opCode = ResolveCastOpCode(typeName, out var nameIndex, out var unitAndFlags);
-        return Emit(CreateInstruction(opCode, dest: destinationSlot, a: sourceSlot, c: nameIndex < 0 ? 0 : nameIndex, unitAndFlags: unitAndFlags));
+        var operand = ResolveDeclaredTypeOperand(typeName);
+        return Emit(CreateInstruction(operand.CastOpCode, dest: destinationSlot, a: sourceSlot, b: operand.TypeKind, c: operand.CustomTypeNameIndex, unitAndFlags: operand.UnitAndFlags));
     }
 
     private int AllocateSlot(ExpressionState state)
@@ -2590,41 +2599,39 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
-    private GameEventScriptBytecodeOpCode ResolveCastOpCode(string? typeName, out int nameIndex, out byte unitAndFlags)
+    private (GameEventScriptBytecodeOpCode CastOpCode, GameEventScriptBytecodeOpCode TypeCheckOpCode, ushort TypeKind, ushort CustomTypeNameIndex, byte UnitAndFlags) ResolveDeclaredTypeOperand(string? typeName)
     {
-        unitAndFlags = 0;
-        if (!string.IsNullOrEmpty(typeName) &&
-            TryGetCastOpCode(typeName, out var opCode, out unitAndFlags))
+        if (string.IsNullOrWhiteSpace(typeName))
         {
-            nameIndex = -1;
-            return opCode;
+            throw new GameEventScriptCompileException("GameEventScript bytecode lowerer requires a declared type name operand.");
         }
 
-        if (GameEventScriptNumericUnits.IsQuantityTypeName(typeName))
+        if (TryGetQuantityUnit(typeName, out var unit))
         {
-            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support quantity unit '{typeName}'.");
+            return (
+                GameEventScriptBytecodeOpCode.CastUnit,
+                GameEventScriptBytecodeOpCode.CheckUnit,
+                0,
+                0,
+                EncodeNumericUnitAndFlags(unit));
         }
 
-        nameIndex = ResolveStringIndex(typeName);
-        return GameEventScriptBytecodeOpCode.CastCustom;
-    }
-
-    private GameEventScriptBytecodeOpCode ResolveTypeCheckOpCode(string typeName, out int nameIndex, out byte unitAndFlags)
-    {
-        unitAndFlags = 0;
-        if (TryGetTypeCheckOpCode(typeName, out var opCode, out unitAndFlags))
+        if (TryGetBytecodeTypeKind(typeName, out var typeKind))
         {
-            nameIndex = -1;
-            return opCode;
+            return (
+                GameEventScriptBytecodeOpCode.Cast,
+                GameEventScriptBytecodeOpCode.TypeCheck,
+                (ushort)typeKind,
+                0,
+                0);
         }
 
-        if (GameEventScriptNumericUnits.IsQuantityTypeName(typeName))
-        {
-            throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support quantity unit '{typeName}'.");
-        }
-
-        nameIndex = ResolveStringIndex(typeName);
-        return GameEventScriptBytecodeOpCode.TypeCheckCustom;
+        return (
+            GameEventScriptBytecodeOpCode.Cast,
+            GameEventScriptBytecodeOpCode.TypeCheck,
+            (ushort)GameEventScriptBytecodeTypeKind.Custom,
+            ToUShortOperand(ResolveStringIndex(typeName), "custom type name string-pool operand"),
+            0);
     }
 
     private static bool IsBinary(GameEventScriptBytecodeOpCode opCode)
@@ -2667,7 +2674,9 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.Intersect or
             GameEventScriptBytecodeOpCode.Combine or
             GameEventScriptBytecodeOpCode.Except or
-            GameEventScriptBytecodeOpCode.Zip;
+            GameEventScriptBytecodeOpCode.Zip or
+            GameEventScriptBytecodeOpCode.Min or
+            GameEventScriptBytecodeOpCode.Max;
 
     private static GameEventScriptBytecodeOpCode ToUnaryOpCode(GesUnaryOperator operation)
         => operation switch
@@ -2686,79 +2695,40 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support unary operator '{operation.ToSourceText()}'.")
         };
 
-    private static bool TryGetCastOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode, out byte unitAndFlags)
+    private static bool IsBuiltInCastType(string typeName)
     {
-        unitAndFlags = 0;
-        if (TryGetQuantityUnit(typeName, out var unit))
-        {
-            opCode = GameEventScriptBytecodeOpCode.CastUnit;
-            unitAndFlags = EncodeNumericUnitAndFlags(unit);
-            return true;
-        }
-
-        opCode = typeName switch
-        {
-            "nothing" => GameEventScriptBytecodeOpCode.CastNothing,
-            "boolean" => GameEventScriptBytecodeOpCode.CastBoolean,
-            "integer" => GameEventScriptBytecodeOpCode.CastInteger,
-            "float" => GameEventScriptBytecodeOpCode.CastFloat,
-            "number" => GameEventScriptBytecodeOpCode.CastNumber,
-            "percentage" => GameEventScriptBytecodeOpCode.CastPercentage,
-            "vector" => GameEventScriptBytecodeOpCode.CastVector,
-            "point" => GameEventScriptBytecodeOpCode.CastPoint,
-            "uuid" => GameEventScriptBytecodeOpCode.CastUuid,
-            "series" => GameEventScriptBytecodeOpCode.CastSeries,
-            "envelope" => GameEventScriptBytecodeOpCode.CastEnvelope,
-            "ref" => GameEventScriptBytecodeOpCode.CastRef,
-            "tag" => GameEventScriptBytecodeOpCode.CastTag,
-            "text" => GameEventScriptBytecodeOpCode.CastText,
-            "list" => GameEventScriptBytecodeOpCode.CastList,
-            "range" => GameEventScriptBytecodeOpCode.CastRange,
-            "message" => GameEventScriptBytecodeOpCode.CastMessage,
-            "handler" => GameEventScriptBytecodeOpCode.CastHandler,
-            "map" => GameEventScriptBytecodeOpCode.CastMap,
-            "dice" => GameEventScriptBytecodeOpCode.CastDice,
-            _ => default
-        };
-
-        return typeName is "nothing" or "boolean" or "integer" or "float" or "number" or "percentage" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" or "tag" or "text" or "list" or "range" or "message" or "handler" or "map" or "dice";
+        return TryGetQuantityUnit(typeName, out _) ||
+               TryGetBytecodeTypeKind(typeName, out _);
     }
 
-    private static bool TryGetTypeCheckOpCode(string typeName, out GameEventScriptBytecodeOpCode opCode, out byte unitAndFlags)
+    private static bool TryGetBytecodeTypeKind(string typeName, out GameEventScriptBytecodeTypeKind typeKind)
     {
-        unitAndFlags = 0;
-        if (TryGetQuantityUnit(typeName, out var unit))
+        typeKind = typeName switch
         {
-            opCode = GameEventScriptBytecodeOpCode.TypeCheckUnit;
-            unitAndFlags = EncodeNumericUnitAndFlags(unit);
-            return true;
-        }
-
-        opCode = typeName switch
-        {
-            "nothing" => GameEventScriptBytecodeOpCode.TypeCheckNothing,
-            "tag" => GameEventScriptBytecodeOpCode.TypeCheckTag,
-            "text" => GameEventScriptBytecodeOpCode.TypeCheckText,
-            "percentage" => GameEventScriptBytecodeOpCode.TypeCheckPercentage,
-            "vector" => GameEventScriptBytecodeOpCode.TypeCheckVector,
-            "point" => GameEventScriptBytecodeOpCode.TypeCheckPoint,
-            "float" => GameEventScriptBytecodeOpCode.TypeCheckFloat,
-            "integer" => GameEventScriptBytecodeOpCode.TypeCheckInteger,
-            "boolean" => GameEventScriptBytecodeOpCode.TypeCheckBoolean,
-            "uuid" => GameEventScriptBytecodeOpCode.TypeCheckUuid,
-            "series" => GameEventScriptBytecodeOpCode.TypeCheckSeries,
-            "envelope" => GameEventScriptBytecodeOpCode.TypeCheckEnvelope,
-            "list" => GameEventScriptBytecodeOpCode.TypeCheckList,
-            "range" => GameEventScriptBytecodeOpCode.TypeCheckRange,
-            "message" => GameEventScriptBytecodeOpCode.TypeCheckMessage,
-            "handler" => GameEventScriptBytecodeOpCode.TypeCheckHandler,
-            "ref" => GameEventScriptBytecodeOpCode.TypeCheckRef,
-            "map" => GameEventScriptBytecodeOpCode.TypeCheckMap,
-            "dice" => GameEventScriptBytecodeOpCode.TypeCheckDice,
-            _ => default
+            "nothing" => GameEventScriptBytecodeTypeKind.Nothing,
+            "boolean" => GameEventScriptBytecodeTypeKind.Boolean,
+            "integer" => GameEventScriptBytecodeTypeKind.Integer,
+            "float" => GameEventScriptBytecodeTypeKind.Float,
+            "number" => GameEventScriptBytecodeTypeKind.Number,
+            "percentage" => GameEventScriptBytecodeTypeKind.Percentage,
+            "vector" => GameEventScriptBytecodeTypeKind.Vector,
+            "point" => GameEventScriptBytecodeTypeKind.Point,
+            "uuid" => GameEventScriptBytecodeTypeKind.Uuid,
+            "series" => GameEventScriptBytecodeTypeKind.Series,
+            "envelope" => GameEventScriptBytecodeTypeKind.Envelope,
+            "ref" => GameEventScriptBytecodeTypeKind.Ref,
+            "tag" => GameEventScriptBytecodeTypeKind.Tag,
+            "text" => GameEventScriptBytecodeTypeKind.Text,
+            "list" => GameEventScriptBytecodeTypeKind.List,
+            "range" => GameEventScriptBytecodeTypeKind.Range,
+            "message" => GameEventScriptBytecodeTypeKind.Message,
+            "handler" => GameEventScriptBytecodeTypeKind.Handler,
+            "map" => GameEventScriptBytecodeTypeKind.Map,
+            "dice" => GameEventScriptBytecodeTypeKind.Dice,
+            _ => GameEventScriptBytecodeTypeKind.Invalid
         };
 
-        return typeName is "nothing" or "tag" or "text" or "percentage" or "vector" or "point" or "float" or "integer" or "boolean" or "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or "ref" or "map" or "dice";
+        return typeKind != GameEventScriptBytecodeTypeKind.Invalid;
     }
 
     private static bool TryGetQuantityUnit(string typeName, out GameEventScriptNumericUnit unit)

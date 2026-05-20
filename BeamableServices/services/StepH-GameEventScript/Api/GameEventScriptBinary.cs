@@ -123,6 +123,32 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
     UnitNothing = 255 // Special non-unit type for nothing / void helping to evaluate unions to nothing 
 }
 
+public enum GameEventScriptBytecodeTypeKind : ushort
+{
+    Invalid = 0,
+    Nothing = 1,
+    Boolean = 2,
+    Integer = 3,
+    Float = 4,
+    Number = 5,
+    Percentage = 6,
+    Vector = 7,
+    Point = 8,
+    Uuid = 9,
+    Series = 10,
+    Envelope = 11,
+    Ref = 12,
+    Tag = 13,
+    Text = 14,
+    List = 15,
+    Range = 16,
+    Message = 17,
+    Handler = 18,
+    Map = 19,
+    Dice = 20,
+    Custom = 0xFFFF
+}
+
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
 [StructLayout(LayoutKind.Explicit, Size = 12)]
 public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort a = 0, ushort b = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
@@ -267,71 +293,19 @@ public enum GameEventScriptBytecodeOpCode : byte
     UnaryKeys = 0x48,
     UnaryValues = 0x49,
     UnaryEntries = 0x4A,
+    Min = 0x4B,
+    Max = 0x4C,
     Implies = 0x4D,
     ReserveSlots = 0x4E,
 
     #endregion
 
-    #region Primitive/domain casts
+    #region Declared type casts and checks
 
-    CastNothing = 0x50,
-    CastBoolean = 0x51,
-    CastInteger = 0x52,
-    CastFloat = 0x53,
-    CastNumber = 0x54,
-    CastPercentage = 0x55,
-    CastUnit = 0x56,
-    CastVector = 0x59,
-    CastPoint = 0x5A,
-    CastUuid = 0x5B,
-    CastCustom = 0x5D,
-
-    #endregion
-
-    #region Collection/message/reference casts
-
-    CastSeries = 0x61,
-    CastEnvelope = 0x62,
-    CastRef = 0x63,
-    CastTag = 0x64,
-    CastText = 0x65,
-    CastList = 0x66,
-    CastRange = 0x67,
-    CastMessage = 0x68,
-    CastHandler = 0x69,
-    CastMap = 0x6A,
-    CastDice = 0x6C,
-
-    #endregion
-
-    #region Primitive/domain type checks
-
-    TypeCheckNothing = 0x70,
-    TypeCheckBoolean = 0x71,
-    TypeCheckInteger = 0x72,
-    TypeCheckFloat = 0x73,
-    TypeCheckPercentage = 0x74,
-    TypeCheckUnit = 0x75,
-    TypeCheckVector = 0x78,
-    TypeCheckPoint = 0x79,
-    TypeCheckUuid = 0x7A,
-    TypeCheckTag = 0x7C,
-    TypeCheckText = 0x7D,
-    TypeCheckCustom = 0x7E,
-
-    #endregion
-
-    #region Collection/message/reference type checks
-
-    TypeCheckSeries = 0x81,
-    TypeCheckEnvelope = 0x82,
-    TypeCheckList = 0x83,
-    TypeCheckRange = 0x84,
-    TypeCheckMessage = 0x85,
-    TypeCheckHandler = 0x86,
-    TypeCheckRef = 0x87,
-    TypeCheckMap = 0x88,
-    TypeCheckDice = 0x8A,
+    Cast = 0x50,
+    CastUnit = 0x51,
+    TypeCheck = 0x70,
+    CheckUnit = 0x71,
 
     #endregion
 
@@ -345,7 +319,6 @@ public enum GameEventScriptBytecodeOpCode : byte
     BuildMap = 0x98,
     BuildMessage = 0x99,
     BindHandler = 0x9A,
-    Variadic = 0x9B,
 
     #endregion
 

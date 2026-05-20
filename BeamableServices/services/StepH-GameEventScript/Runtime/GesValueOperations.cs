@@ -75,6 +75,28 @@ internal static class GesValueOperations
         return best;
     }
 
+    public static GameEventScriptValue EvaluateMinMax(GameEventScriptValue left, GameEventScriptValue right, bool isMax)
+    {
+        if (TryCoerceNumericForOperation(left, out var leftNumber) &&
+            TryCoerceNumericForOperation(right, out var rightNumber))
+        {
+            if (!HaveCompatibleNumericUnits(left, right) ||
+                !TryCompareNumeric(rightNumber, leftNumber, out var numericComparison))
+            {
+                return GameEventScriptValueFactory.GesFloatNaN();
+            }
+
+            return (isMax && numericComparison > 0) || (!isMax && numericComparison < 0)
+                ? right
+                : left;
+        }
+
+        var comparison = GameEventScriptValue.StableComparer.Compare(right, left);
+        return (isMax && comparison > 0) || (!isMax && comparison < 0)
+            ? right
+            : left;
+    }
+
     public static bool TryCombineWithPlus(GameEventScriptValue left, GameEventScriptValue right, out GameEventScriptValue value)
     {
         if (left.Kind == GameEventScriptValueKind.Map && right.Kind == GameEventScriptValueKind.Map)

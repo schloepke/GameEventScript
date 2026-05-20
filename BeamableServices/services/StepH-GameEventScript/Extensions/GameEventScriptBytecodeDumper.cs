@@ -354,6 +354,7 @@ public static class GameEventScriptBytecodeDumper
 
             case var opCode when IsCastInstruction(opCode) || IsTypeCheckInstruction(opCode):
                 AppendSlot(builder, "src", instruction.A_U16);
+                AppendDeclaredTypeOperand(builder, module, instruction);
                 break;
 
             case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -401,11 +402,6 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "from", instruction.A_U16);
                 AppendSlot(builder, "to", instruction.B_U16);
                 AppendSlot(builder, "step", instruction.C_U16);
-                break;
-
-            case GameEventScriptBytecodeOpCode.Variadic:
-                AppendPoolIndex(builder, "operation", module.StringPool, instruction.A_U16);
-                AppendSlotListPoolIndex(builder, "args", module, instruction.B_U16);
                 break;
 
             case GameEventScriptBytecodeOpCode.TypeConstructor:
@@ -588,9 +584,6 @@ public static class GameEventScriptBytecodeDumper
         {
             case GameEventScriptBytecodeOpCode.MemberAccess:
                 AppendPoolIndex(builder, "member", module.StringPool, instruction.C_U16);
-                break;
-            case GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.TypeCheckCustom:
-                AppendPoolIndex(builder, "type", module.StringPool, instruction.C_U16);
                 break;
             default:
                 break;
@@ -817,51 +810,26 @@ public static class GameEventScriptBytecodeDumper
     private static string FormatAddress(int value) => value < 0 ? "none" : value.ToString("0000", CultureInfo.InvariantCulture);
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.CastNothing or
-            GameEventScriptBytecodeOpCode.CastBoolean or
-            GameEventScriptBytecodeOpCode.CastInteger or
-            GameEventScriptBytecodeOpCode.CastFloat or
-            GameEventScriptBytecodeOpCode.CastNumber or
-            GameEventScriptBytecodeOpCode.CastPercentage or
-            GameEventScriptBytecodeOpCode.CastUnit or
-            GameEventScriptBytecodeOpCode.CastVector or
-            GameEventScriptBytecodeOpCode.CastPoint or
-            GameEventScriptBytecodeOpCode.CastUuid or
-            GameEventScriptBytecodeOpCode.CastSeries or
-            GameEventScriptBytecodeOpCode.CastEnvelope or
-            GameEventScriptBytecodeOpCode.CastRef or
-            GameEventScriptBytecodeOpCode.CastTag or
-            GameEventScriptBytecodeOpCode.CastText or
-            GameEventScriptBytecodeOpCode.CastList or
-            GameEventScriptBytecodeOpCode.CastRange or
-            GameEventScriptBytecodeOpCode.CastMessage or
-            GameEventScriptBytecodeOpCode.CastHandler or
-            GameEventScriptBytecodeOpCode.CastMap or
-            GameEventScriptBytecodeOpCode.CastDice or
-            GameEventScriptBytecodeOpCode.CastCustom;
+        => opCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheckNothing or
-            GameEventScriptBytecodeOpCode.TypeCheckTag or
-            GameEventScriptBytecodeOpCode.TypeCheckText or
-            GameEventScriptBytecodeOpCode.TypeCheckPercentage or
-            GameEventScriptBytecodeOpCode.TypeCheckUnit or
-            GameEventScriptBytecodeOpCode.TypeCheckVector or
-            GameEventScriptBytecodeOpCode.TypeCheckPoint or
-            GameEventScriptBytecodeOpCode.TypeCheckFloat or
-            GameEventScriptBytecodeOpCode.TypeCheckInteger or
-            GameEventScriptBytecodeOpCode.TypeCheckBoolean or
-            GameEventScriptBytecodeOpCode.TypeCheckUuid or
-            GameEventScriptBytecodeOpCode.TypeCheckSeries or
-            GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
-            GameEventScriptBytecodeOpCode.TypeCheckList or
-            GameEventScriptBytecodeOpCode.TypeCheckRange or
-            GameEventScriptBytecodeOpCode.TypeCheckMessage or
-            GameEventScriptBytecodeOpCode.TypeCheckHandler or
-            GameEventScriptBytecodeOpCode.TypeCheckRef or
-            GameEventScriptBytecodeOpCode.TypeCheckMap or
-            GameEventScriptBytecodeOpCode.TypeCheckDice or
-            GameEventScriptBytecodeOpCode.TypeCheckCustom;
+        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or GameEventScriptBytecodeOpCode.CheckUnit;
+
+    private static void AppendDeclaredTypeOperand(StringBuilder builder, GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
+    {
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastUnit or GameEventScriptBytecodeOpCode.CheckUnit)
+        {
+            AppendNumericUnit(builder, instruction.UnitAndFlags);
+            return;
+        }
+
+        var typeKind = (GameEventScriptBytecodeTypeKind)instruction.B_U16;
+        builder.Append(" kind=").Append(typeKind);
+        if (typeKind == GameEventScriptBytecodeTypeKind.Custom)
+        {
+            AppendPoolIndex(builder, "type", module.StringPool, instruction.C_U16);
+        }
+    }
 
     private static void AppendPool(StringBuilder builder, string name, IReadOnlyList<string> values)
     {

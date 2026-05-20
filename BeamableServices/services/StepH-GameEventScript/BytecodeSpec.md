@@ -24,7 +24,7 @@ contiguous staged argument sequences. Local calls use direct `Call`
 instructions with target entry addresses and contiguous staged argument
 sequences. Extension calls use direct
 `CallStandard*` or `CallExternal*` instructions with argument slot lists.
-Variadic operators, type constructors, local builders, message literals,
+Extrema reduce operators, type constructors, local builders, message literals,
 handler binding, casts, type checks, member access, and seeded-random
 expressions are layout-free direct instructions.
 
@@ -264,8 +264,8 @@ counter and dump show where normalization happens:
 
 ```text
 @0000 ReserveSlots locals+=localCount
-@0001 CastCustom dst=s0 src=s0 type=:unit
-@0002 CastInteger dst=s1 src=s1
+@0001 Cast dst=s0 src=s0 kind=Custom type=:unit
+@0002 Cast dst=s1 src=s1 kind=Integer
 ```
 
 Handler arguments are preloaded into slots `0..n-1` before the entry starts.
@@ -529,12 +529,16 @@ for `pc`-based execution.
 - `StagePercentage f64`
 - `StageText stringIndex`
 - `StageTag stringIndex`
-- `CastBoolean`/`CastInteger`/`CastFloat`/etc. `dst src`
+- `Cast dst src typeKind`
 - `CastUnit dst src unitAndFlags`
-- `CastCustom dst src nameIndex`
-- `TypeCheckBoolean`/`TypeCheckInteger`/etc. `dst src`
-- `TypeCheckUnit dst src unitAndFlags`
-- `TypeCheckCustom dst src nameIndex`
+- `TypeCheck dst src typeKind`
+- `CheckUnit dst src unitAndFlags`
+
+`Cast` and `TypeCheck` use `B_U16` as `GameEventScriptBytecodeTypeKind`.
+Built-in types are direct kind operands. Custom/external types use
+`B_U16=Custom` and `C_U16` as the type-name `StringPool` index. Units are not
+declared type kinds: unit casts and checks use `CastUnit`/`CheckUnit` with the
+target unit in `UnitAndFlags`.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
@@ -576,9 +580,9 @@ Required operations:
 - `Contains`, `ContainsValue`
 - `StartsWith`, `EndsWith`
 - `Intersect`, `Combine`, `Except`, `Zip`
+- `Min`, `Max`
 - direct unary opcodes such as `UnaryNegate`, `UnaryNot`, `UnaryLength`,
   `UnaryAbs`, and `UnaryNaturalLog`
-- `Variadic`
 - `Clamp`
 
 Logical operations use three-valued truth tables with `nothing` as unknown.
@@ -1048,8 +1052,8 @@ handler DamageTaken(unit, amount)
 
 @0000 L_handler_DamageTaken:
 @0000 ReserveSlots locals+=localCount
-@0001 CastCustom dst=s0 src=s0 type=:unit
-@0002 CastInteger dst=s1 src=s1
+@0001 Cast dst=s0 src=s0 kind=Custom type=:unit
+@0002 Cast dst=s1 src=s1 kind=Integer
 @0003 ...
 @0004 ...
 ```

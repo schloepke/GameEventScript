@@ -484,7 +484,6 @@ internal static class GesBytecodeCompiler
                     return;
 
                 case VariadicTaggedExpressionNode variadic:
-                    AddString(variadic.Operator);
                     foreach (var argument in variadic.Arguments)
                     {
                         CollectSourceExpressionMetadata(argument);

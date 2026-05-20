@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 
@@ -78,10 +79,10 @@ internal sealed class GesBinaryVmRunner
             {
                 case GameEventScriptBytecodeOpCode.MoveSlot:
                 case GameEventScriptBytecodeOpCode.ReturnValue:
-                case GameEventScriptBytecodeOpCode.CastInteger:
-                case GameEventScriptBytecodeOpCode.CastFloat:
-                case GameEventScriptBytecodeOpCode.CastBoolean:
-                case GameEventScriptBytecodeOpCode.CastText:
+                case GameEventScriptBytecodeOpCode.Cast:
+                case GameEventScriptBytecodeOpCode.CastUnit:
+                case GameEventScriptBytecodeOpCode.TypeCheck:
+                case GameEventScriptBytecodeOpCode.CheckUnit:
                     maxSlot = Math.Max(maxSlot, instruction.A_U16);
                     break;
 
@@ -103,6 +104,8 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.GreaterOrEqual:
                 case GameEventScriptBytecodeOpCode.Less:
                 case GameEventScriptBytecodeOpCode.LessOrEqual:
+                case GameEventScriptBytecodeOpCode.Min:
+                case GameEventScriptBytecodeOpCode.Max:
                 case GameEventScriptBytecodeOpCode.IntAdd:
                 case GameEventScriptBytecodeOpCode.IntSubtract:
                 case GameEventScriptBytecodeOpCode.IntMultiply:
@@ -211,20 +214,20 @@ internal sealed class GesBinaryVmRunState
                     Set(instruction.Dest_U16, GesBinaryVmValue.Tag(_binary.TextConstantTable.Resolve(checked((ushort)instruction.A_U32))));
                     break;
 
-                case GameEventScriptBytecodeOpCode.CastInteger:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Integer(Get(instruction.A_U16).AsInteger()));
+                case GameEventScriptBytecodeOpCode.Cast:
+                    Set(instruction.Dest_U16, CastValue(Get(instruction.A_U16), (GameEventScriptBytecodeTypeKind)instruction.B_U16, instruction.C_U16));
                     break;
 
-                case GameEventScriptBytecodeOpCode.CastFloat:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Float(Get(instruction.A_U16).AsNumber()));
+                case GameEventScriptBytecodeOpCode.CastUnit:
+                    Set(instruction.Dest_U16, CastUnit(Get(instruction.A_U16), DecodeUnit(instruction.UnitAndFlags)));
                     break;
 
-                case GameEventScriptBytecodeOpCode.CastBoolean:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(Get(instruction.A_U16).IsTrue()));
+                case GameEventScriptBytecodeOpCode.TypeCheck:
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.A_U16), (GameEventScriptBytecodeTypeKind)instruction.B_U16, instruction.C_U16)));
                     break;
 
-                case GameEventScriptBytecodeOpCode.CastText:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Text(Get(instruction.A_U16).ToGameEventScriptValue().AsText()));
+                case GameEventScriptBytecodeOpCode.CheckUnit:
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.A_U16), DecodeUnit(instruction.UnitAndFlags))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.IntAdd:
@@ -250,6 +253,8 @@ internal sealed class GesBinaryVmRunState
                 case GameEventScriptBytecodeOpCode.GreaterOrEqual:
                 case GameEventScriptBytecodeOpCode.Less:
                 case GameEventScriptBytecodeOpCode.LessOrEqual:
+                case GameEventScriptBytecodeOpCode.Min:
+                case GameEventScriptBytecodeOpCode.Max:
                     Set(instruction.Dest_U16, EvaluateGenericBinary(instruction.OpCode, Get(instruction.A_U16), Get(instruction.B_U16)));
                     break;
 
@@ -349,6 +354,47 @@ internal sealed class GesBinaryVmRunState
             : _context.Emit(message);
     }
 
+    private GesBinaryVmValue CastValue(GesBinaryVmValue value, GameEventScriptBytecodeTypeKind typeKind, ushort customTypeNameIndex)
+        => typeKind switch
+        {
+            GameEventScriptBytecodeTypeKind.Integer => GesBinaryVmValue.Integer(value.AsInteger()),
+            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Number => GesBinaryVmValue.Float(value.AsNumber()),
+            GameEventScriptBytecodeTypeKind.Boolean => GesBinaryVmValue.Boolean(value.IsTrue()),
+            GameEventScriptBytecodeTypeKind.Text => GesBinaryVmValue.Text(value.ToGameEventScriptValue().AsText()),
+            GameEventScriptBytecodeTypeKind.Custom => GesBinaryVmValue.FromGameEventScriptValue(value.ToGameEventScriptValue()),
+            _ => GesBinaryVmValue.FromGameEventScriptValue(value.ToGameEventScriptValue())
+        };
+
+    private bool IsValueOfType(GesBinaryVmValue value, GameEventScriptBytecodeTypeKind typeKind, ushort customTypeNameIndex)
+        => typeKind switch
+        {
+            GameEventScriptBytecodeTypeKind.Nothing => value.Kind == GesBinaryVmValueKind.Nothing,
+            GameEventScriptBytecodeTypeKind.Integer => value.Kind == GesBinaryVmValueKind.Integer,
+            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Number => value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float or GesBinaryVmValueKind.Percentage,
+            GameEventScriptBytecodeTypeKind.Boolean => value.Kind == GesBinaryVmValueKind.Boolean,
+            GameEventScriptBytecodeTypeKind.Text => value.Kind == GesBinaryVmValueKind.Text,
+            GameEventScriptBytecodeTypeKind.Tag => value.Kind == GesBinaryVmValueKind.Tag,
+            GameEventScriptBytecodeTypeKind.Percentage => value.Kind == GesBinaryVmValueKind.Percentage,
+            GameEventScriptBytecodeTypeKind.Custom => value.ToGameEventScriptValue().TryGetCustomTypeName(out var customTypeName) &&
+                                                      string.Equals(customTypeName, _binary.TextConstantTable.Resolve(customTypeNameIndex), StringComparison.Ordinal),
+            _ => false
+        };
+
+    private static GesBinaryVmValue CastUnit(GesBinaryVmValue value, GameEventScriptNumericUnit? unit)
+        => unit.HasValue
+            ? value.Kind switch
+            {
+                GesBinaryVmValueKind.Integer => GesBinaryVmValue.Integer(value.IntegerValue, unit),
+                GesBinaryVmValueKind.Float => GesBinaryVmValue.Float(value.NumberValue, unit),
+                _ => GesBinaryVmValue.Nothing
+            }
+            : GesBinaryVmValue.Nothing;
+
+    private static bool IsValueOfUnit(GesBinaryVmValue value, GameEventScriptNumericUnit? unit)
+        => unit.HasValue &&
+           value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float &&
+           value.Unit == unit.Value;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private GesBinaryVmValue Get(int slot)
         => (uint)slot < (uint)_slots.Length ? _slots[slot] : GesBinaryVmValue.Nothing;
@@ -388,6 +434,14 @@ internal sealed class GesBinaryVmRunState
         {
             var equal = Equals(left.ToGameEventScriptValue(), right.ToGameEventScriptValue());
             return GesBinaryVmValue.Boolean(opCode == GameEventScriptBytecodeOpCode.Equal ? equal : !equal);
+        }
+
+        if (opCode is GameEventScriptBytecodeOpCode.Min or GameEventScriptBytecodeOpCode.Max)
+        {
+            return GesBinaryVmValue.FromGameEventScriptValue(GesValueOperations.EvaluateMinMax(
+                left.ToGameEventScriptValue(),
+                right.ToGameEventScriptValue(),
+                isMax: opCode == GameEventScriptBytecodeOpCode.Max));
         }
 
         if (left.Kind == GesBinaryVmValueKind.Integer &&

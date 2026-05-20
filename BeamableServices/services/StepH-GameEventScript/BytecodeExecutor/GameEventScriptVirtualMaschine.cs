@@ -269,6 +269,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Zip:
                     break;
+                case Min:
+                    break;
+                case Max:
+                    break;
 
                 case UnaryKeys:
                     break;
@@ -277,98 +281,20 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case UnaryEntries:
                     break;
 
-                case CastNothing:
-                    break;
-                case CastBoolean:
-                    break;
-                case CastInteger:
-                    break;
-                case CastFloat:
-                    break;
-                case CastNumber:
-                    break;
-                case CastPercentage:
+                case Cast:
                     break;
                 case CastUnit:
                     break;
-                case CastVector:
+
+                case TypeCheck:
                     break;
-                case CastPoint:
-                    break;
-                case CastUuid:
-                    break;
-                case CastCustom:
-                    break;
-                case CastSeries:
-                    break;
-                case CastEnvelope:
-                    break;
-                case CastRef:
-                    break;
-                case CastTag:
-                    break;
-                case CastText:
-                    break;
-                case CastList:
-                    break;
-                case CastRange:
-                    break;
-                case CastMessage:
-                    break;
-                case CastHandler:
-                    break;
-                case CastMap:
-                    break;
-                case CastDice:
-                    break;
-                
-                case TypeCheckNothing:
-                    break;
-                case TypeCheckBoolean:
-                    break;
-                case TypeCheckInteger:
-                    break;
-                case TypeCheckFloat:
-                    break;
-                case TypeCheckPercentage:
-                    break;
-                case TypeCheckUnit:
-                    break;
-                case TypeCheckVector:
-                    break;
-                case TypeCheckPoint:
-                    break;
-                case TypeCheckUuid:
-                    break;
-                case TypeCheckTag:
-                    break;
-                case TypeCheckText:
-                    break;
-                case TypeCheckCustom:
-                    break;
-                case TypeCheckSeries:
-                    break;
-                case TypeCheckEnvelope:
-                    break;
-                case TypeCheckList:
-                    break;
-                case TypeCheckRange:
-                    break;
-                case TypeCheckMessage:
-                    break;
-                case TypeCheckHandler:
-                    break;
-                case TypeCheckRef:
-                    break;
-                case TypeCheckMap:
-                    break;
-                case TypeCheckDice:
+                case CheckUnit:
                     break;
                 case LoadHandler:
                     break;
+                
                 case TypeConstructor:
                     break;
-                
                 case MemberAccess:
                     break;
                 case IndexedAccess:
@@ -381,8 +307,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case BuildMessage:
                     break;
                 case BindHandler:
-                    break;
-                case Variadic:
                     break;
                 
                 case EmitMessage:

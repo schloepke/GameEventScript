@@ -207,51 +207,14 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field UnaryKeys = 72
   enum-field UnaryValues = 73
   enum-field UnaryEntries = 74
+  enum-field Min = 75
+  enum-field Max = 76
   enum-field Implies = 77
   enum-field ReserveSlots = 78
-  enum-field CastNothing = 80
-  enum-field CastBoolean = 81
-  enum-field CastInteger = 82
-  enum-field CastFloat = 83
-  enum-field CastNumber = 84
-  enum-field CastPercentage = 85
-  enum-field CastUnit = 86
-  enum-field CastVector = 89
-  enum-field CastPoint = 90
-  enum-field CastUuid = 91
-  enum-field CastCustom = 93
-  enum-field CastSeries = 97
-  enum-field CastEnvelope = 98
-  enum-field CastRef = 99
-  enum-field CastTag = 100
-  enum-field CastText = 101
-  enum-field CastList = 102
-  enum-field CastRange = 103
-  enum-field CastMessage = 104
-  enum-field CastHandler = 105
-  enum-field CastMap = 106
-  enum-field CastDice = 108
-  enum-field TypeCheckNothing = 112
-  enum-field TypeCheckBoolean = 113
-  enum-field TypeCheckInteger = 114
-  enum-field TypeCheckFloat = 115
-  enum-field TypeCheckPercentage = 116
-  enum-field TypeCheckUnit = 117
-  enum-field TypeCheckVector = 120
-  enum-field TypeCheckPoint = 121
-  enum-field TypeCheckUuid = 122
-  enum-field TypeCheckTag = 124
-  enum-field TypeCheckText = 125
-  enum-field TypeCheckCustom = 126
-  enum-field TypeCheckSeries = 129
-  enum-field TypeCheckEnvelope = 130
-  enum-field TypeCheckList = 131
-  enum-field TypeCheckRange = 132
-  enum-field TypeCheckMessage = 133
-  enum-field TypeCheckHandler = 134
-  enum-field TypeCheckRef = 135
-  enum-field TypeCheckMap = 136
-  enum-field TypeCheckDice = 138
+  enum-field Cast = 80
+  enum-field CastUnit = 81
+  enum-field TypeCheck = 112
+  enum-field CheckUnit = 113
   enum-field LoadHandler = 144
   enum-field TypeConstructor = 145
   enum-field MemberAccess = 147
@@ -260,7 +223,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field BuildMap = 152
   enum-field BuildMessage = 153
   enum-field BindHandler = 154
-  enum-field Variadic = 155
   enum-field ReleaseSlots = 161
   enum-field EmitMessage = 162
   enum-field EmitMessageWithTags = 163
@@ -351,6 +313,29 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinitio
   property System.Int32 MinimumEntryAddress { get set }
   property System.String Name { get }
   property System.String TypeName { get }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
+  enum-field Invalid = 0
+  enum-field Nothing = 1
+  enum-field Boolean = 2
+  enum-field Integer = 3
+  enum-field Float = 4
+  enum-field Number = 5
+  enum-field Percentage = 6
+  enum-field Vector = 7
+  enum-field Point = 8
+  enum-field Uuid = 9
+  enum-field Series = 10
+  enum-field Envelope = 11
+  enum-field Ref = 12
+  enum-field Tag = 13
+  enum-field Text = 14
+  enum-field List = 15
+  enum-field Range = 16
+  enum-field Message = 17
+  enum-field Handler = 18
+  enum-field Map = 19
+  enum-field Dice = 20
+  enum-field Custom = 65535
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileError
   ctor GameEventScriptCompileError(System.String Message, System.String ModuleName, System.String Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind, StepH.GameEventScript.Api.GameEventScriptCompileErrorKind Kind, StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation)
   method StepH.GameEventScript.Api.GameEventScriptCompileError <Clone>$()

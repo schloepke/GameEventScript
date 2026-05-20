@@ -108,7 +108,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeUsesGenericUnitOpcodesAndDedicatedPercentageLoads()
+    public void PublicLinearBytecodeUsesGenericCastTypeCheckOpcodesAndDedicatedPercentageLoads()
     {
         const string script =
             """
@@ -129,10 +129,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             instruction.OpCode == GameEventScriptBytecodeOpCode.CastUnit &&
             instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter));
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckUnit &&
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CheckUnit &&
             instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter));
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckUnit &&
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CheckUnit &&
             instruction.UnitAndFlags == (byte)GameEventScriptBytecodeInstructionUnit.UnitSecond));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadPercentage));
         Assert.IsFalse(compiled.Code.Any(instruction =>

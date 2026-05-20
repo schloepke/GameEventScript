@@ -536,11 +536,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.B_U16, $"{context} index slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.Variadic:
-                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} operation name");
-                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
-                break;
-
             case GameEventScriptBytecodeOpCode.TypeConstructor:
                 ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} type name");
                 ValidateStringListIndex(module, instruction.B_U16, $"{context} argument names");
@@ -597,10 +592,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 if (IsCastInstruction(instruction.OpCode))
                 {
                     ValidateSlot(module, instruction.A_U16, $"{context} source slot");
-                    if (instruction.OpCode == GameEventScriptBytecodeOpCode.CastCustom)
-                    {
-                        ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} custom type name");
-                    }
+                    ValidateCastOrTypeCheckOperand(module, instruction, $"{context} type operand");
 
                     break;
                 }
@@ -608,10 +600,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 if (IsTypeCheckInstruction(instruction.OpCode))
                 {
                     ValidateSlot(module, instruction.A_U16, $"{context} source slot");
-                    if (instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckCustom)
-                    {
-                        ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} custom type name");
-                    }
+                    ValidateCastOrTypeCheckOperand(module, instruction, $"{context} type operand");
 
                     break;
                 }
@@ -921,6 +910,34 @@ internal sealed class GesBytecodeVmLinearExecutable
         return prolog.A_U16;
     }
 
+    private static void ValidateCastOrTypeCheckOperand(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction, string context)
+    {
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastUnit or GameEventScriptBytecodeOpCode.CheckUnit)
+        {
+            ValidateNumericUnit(instruction.UnitAndFlags, $"{context} unit");
+            if ((GameEventScriptBytecodeInstructionUnit)instruction.UnitAndFlags == GameEventScriptBytecodeInstructionUnit.UnitNone)
+            {
+                throw InvalidBytecode($"{context} unit must not be UnitNone.");
+            }
+
+            return;
+        }
+
+        ValidateNoFlags(instruction.UnitAndFlags, $"{context} flags");
+        var typeKind = (GameEventScriptBytecodeTypeKind)instruction.B_U16;
+        if (typeKind == GameEventScriptBytecodeTypeKind.Custom)
+        {
+            ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} custom type name");
+            return;
+        }
+
+        if (!Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), typeKind) ||
+            typeKind == GameEventScriptBytecodeTypeKind.Invalid)
+        {
+            throw InvalidBytecode($"{context} references unknown type kind {instruction.B_U16}.");
+        }
+    }
+
     private static void ValidateSlot(GameEventScriptCompiled module, int slot, string context)
     {
         if (slot < 0 || slot >= module.MaxFrameSlots)
@@ -1074,51 +1091,10 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.StageTag;
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.CastNothing or
-            GameEventScriptBytecodeOpCode.CastBoolean or
-            GameEventScriptBytecodeOpCode.CastInteger or
-            GameEventScriptBytecodeOpCode.CastFloat or
-            GameEventScriptBytecodeOpCode.CastNumber or
-            GameEventScriptBytecodeOpCode.CastPercentage or
-            GameEventScriptBytecodeOpCode.CastUnit or
-            GameEventScriptBytecodeOpCode.CastVector or
-            GameEventScriptBytecodeOpCode.CastPoint or
-            GameEventScriptBytecodeOpCode.CastUuid or
-            GameEventScriptBytecodeOpCode.CastSeries or
-            GameEventScriptBytecodeOpCode.CastEnvelope or
-            GameEventScriptBytecodeOpCode.CastRef or
-            GameEventScriptBytecodeOpCode.CastTag or
-            GameEventScriptBytecodeOpCode.CastText or
-            GameEventScriptBytecodeOpCode.CastList or
-            GameEventScriptBytecodeOpCode.CastRange or
-            GameEventScriptBytecodeOpCode.CastMessage or
-            GameEventScriptBytecodeOpCode.CastHandler or
-            GameEventScriptBytecodeOpCode.CastMap or
-            GameEventScriptBytecodeOpCode.CastDice or
-            GameEventScriptBytecodeOpCode.CastCustom;
+        => opCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheckNothing or
-            GameEventScriptBytecodeOpCode.TypeCheckTag or
-            GameEventScriptBytecodeOpCode.TypeCheckText or
-            GameEventScriptBytecodeOpCode.TypeCheckPercentage or
-            GameEventScriptBytecodeOpCode.TypeCheckUnit or
-            GameEventScriptBytecodeOpCode.TypeCheckVector or
-            GameEventScriptBytecodeOpCode.TypeCheckPoint or
-            GameEventScriptBytecodeOpCode.TypeCheckFloat or
-            GameEventScriptBytecodeOpCode.TypeCheckInteger or
-            GameEventScriptBytecodeOpCode.TypeCheckBoolean or
-            GameEventScriptBytecodeOpCode.TypeCheckUuid or
-            GameEventScriptBytecodeOpCode.TypeCheckSeries or
-            GameEventScriptBytecodeOpCode.TypeCheckEnvelope or
-            GameEventScriptBytecodeOpCode.TypeCheckList or
-            GameEventScriptBytecodeOpCode.TypeCheckRange or
-            GameEventScriptBytecodeOpCode.TypeCheckMessage or
-            GameEventScriptBytecodeOpCode.TypeCheckHandler or
-            GameEventScriptBytecodeOpCode.TypeCheckRef or
-            GameEventScriptBytecodeOpCode.TypeCheckMap or
-            GameEventScriptBytecodeOpCode.TypeCheckDice or
-            GameEventScriptBytecodeOpCode.TypeCheckCustom;
+        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or GameEventScriptBytecodeOpCode.CheckUnit;
 
     private static bool IsBinarySlotInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.Or or
@@ -1161,7 +1137,9 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.Intersect or
             GameEventScriptBytecodeOpCode.Combine or
             GameEventScriptBytecodeOpCode.Except or
-            GameEventScriptBytecodeOpCode.Zip;
+            GameEventScriptBytecodeOpCode.Zip or
+            GameEventScriptBytecodeOpCode.Min or
+            GameEventScriptBytecodeOpCode.Max;
 }
 
 internal sealed class GesBytecodeVmLinearHandlerEntry(

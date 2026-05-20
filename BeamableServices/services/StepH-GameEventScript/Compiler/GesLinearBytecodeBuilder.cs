@@ -963,7 +963,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitValueInstruction(
                     state,
                     GameEventScriptBytecodeOpCode.LoadHandler,
-                    a: ResolveMessageShapeIndex(handler.Signature.Name, labels));
+                    b: ResolveMessageShapeIndex(handler.Signature.Name, labels));
             }
 
             default:
@@ -1086,7 +1086,7 @@ internal sealed class GesLinearBytecodeBuilder
         var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
         return EmitValueInstruction(
             state,
-            GameEventScriptBytecodeOpCode.BuildMessage,
+            GameEventScriptBytecodeOpCode.LoadMessage,
             a: messageShapeIndex,
             b: argumentSlotListIndex);
     }
@@ -1143,7 +1143,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var itemSlotListIndex = ResolveSlotListIndex(itemSlots);
-        return EmitValueInstruction(state, opCode, a: itemSlotListIndex);
+        return EmitValueInstruction(state, opCode, b: itemSlotListIndex);
     }
 
     private int EmitSourceDictionary(MapLiteralExpressionNode dictionary, SourceContext context, ExpressionState state)

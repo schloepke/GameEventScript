@@ -112,100 +112,100 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.ReturnValue(instruction.XSlot);
                     break;
                 case Or:
-                    Register(instruction.DestinationSlot).VmOr(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmOr(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case And:
-                    Register(instruction.DestinationSlot).VmAnd(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmAnd(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Xor:
-                    Register(instruction.DestinationSlot).VmXor(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmXor(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Equal:
-                    Register(instruction.DestinationSlot).VmEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case NotEqual:
-                    Register(instruction.DestinationSlot).VmNotEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmNotEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case ApproxEqual:
-                    Register(instruction.DestinationSlot).VmApproxEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmApproxEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Less:
-                    Register(instruction.DestinationSlot).VmLess(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmLess(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Greater:
-                    Register(instruction.DestinationSlot).VmGreater(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmGreater(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case LessOrEqual:
-                    Register(instruction.DestinationSlot).VmLessOrEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmLessOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case GreaterOrEqual:
-                    Register(instruction.DestinationSlot).VmGreaterOrEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmGreaterOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Add:
-                    Register(instruction.DestinationSlot).VmAdd(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmAdd(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Subtract:
-                    Register(instruction.DestinationSlot).VmSubtract(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmSubtract(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Multiply:
-                    Register(instruction.DestinationSlot).VmMultiply(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmMultiply(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Divide:
-                    Register(instruction.DestinationSlot).VmDivide(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Power:
-                    Register(instruction.DestinationSlot).VmPower(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmPower(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Default:
-                    Register(instruction.DestinationSlot).VmDefault(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmDefault(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntEqual:
-                    Register(instruction.DestinationSlot).VmIntegerEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntNotEqual:
-                    Register(instruction.DestinationSlot).VmIntegerNotEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerNotEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntLess:
-                    Register(instruction.DestinationSlot).VmIntegerLess(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerLess(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntGreater:
-                    Register(instruction.DestinationSlot).VmIntegerGreater(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerGreater(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntLessOrEqual:
-                    Register(instruction.DestinationSlot).VmIntegerLessOrEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerLessOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntGreaterOrEqual:
-                    Register(instruction.DestinationSlot).VmIntegerGreaterOrEqual(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerGreaterOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntAdd:
-                    Register(instruction.DestinationSlot).VmIntegerAdd(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerAdd(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntSubtract:
-                    Register(instruction.DestinationSlot).VmIntegerSubtract(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerSubtract(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntMultiply:
-                    Register(instruction.DestinationSlot).VmIntegerMultiply(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerMultiply(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntDivide:
-                    Register(instruction.DestinationSlot).VmIntegerDivide(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntFloorDivide:
-                    Register(instruction.DestinationSlot).VmIntegerFloorDivide(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerFloorDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntModulo:
-                    Register(instruction.DestinationSlot).VmIntegerModulo(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerModulo(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntRemainder:
-                    Register(instruction.DestinationSlot).VmIntegerRemainder(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerRemainder(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case IntegerDivide:
-                    Register(instruction.DestinationSlot).VmIntegerDivide(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmIntegerDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Modulo:
-                    Register(instruction.DestinationSlot).VmModulo(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmModulo(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case Remainder:
-                    Register(instruction.DestinationSlot).VmRemainder(ref Register(instruction.XSlot), ref Register(instruction.Y_U16));
+                    Register(instruction.DestinationSlot).VmRemainder(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
                     break;
                 case UnaryNegate:
                     Register(instruction.DestinationSlot).VmNegate(ref Register(instruction.XSlot));
@@ -232,10 +232,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.DestinationSlot).VmNaturalLog(ref Register(instruction.XSlot));
                     break;
                 case Clamp:
-                    Register(instruction.DestinationSlot).VmClamp(ref Register(instruction.XSlot), ref Register(instruction.Y_U16), ref Register(instruction.AU));
+                    Register(instruction.DestinationSlot).VmClamp(ref Register(instruction.XSlot), ref Register(instruction.YSlot), ref Register(instruction.AU));
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
-                    Register(instruction.DestinationSlot).VmRandom(ref Register(instruction.XSlot), ref Register(instruction.Y_U16), _vmState.RandomGenerator);
+                    Register(instruction.DestinationSlot).VmRandom(ref Register(instruction.XSlot), ref Register(instruction.YSlot), _vmState.RandomGenerator);
                     break;
                 case Dice:
                     Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
@@ -313,7 +313,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case BuildMap:
                     break;
-                case BuildMessage:
+                case LoadMessage:
                     break;
                 case BindHandler:
                     break;
@@ -338,7 +338,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 
                 case RangeIterator:
-                    Register(instruction.DestinationSlot).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.XSlot, instruction.Y_U16, instruction.AU));
+                    Register(instruction.DestinationSlot).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.XSlot, instruction.YSlot, instruction.AU));
                     break;
                 case RangeIteratorWithStep:
                     break;
@@ -348,7 +348,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CollectionIterator:
                     break;
                 case IteratorNext:
-                    Register(instruction.DestinationSlot).VmIteratorNext(ref Register(instruction.XSlot), instruction.Y_U16, ref _vmState);
+                    Register(instruction.DestinationSlot).VmIteratorNext(ref Register(instruction.XSlot), instruction.TargetAddress, ref _vmState);
                     break;
                 case IteratorClose:
                     Register(instruction.XSlot).VmIteratorClose();

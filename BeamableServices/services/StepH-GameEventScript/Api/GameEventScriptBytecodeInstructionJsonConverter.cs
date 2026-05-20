@@ -60,11 +60,11 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
             {
                 dst = checked((ushort)ReadUnsigned(ref reader, DstPropertyName, ushort.MaxValue));
             }
-            else if (IsProperty(propertyName, XPropertyName, "X_U16", "x"))
+            else if (IsProperty(propertyName, XPropertyName, "x"))
             {
                 x = checked((ushort)ReadUnsigned(ref reader, XPropertyName, ushort.MaxValue));
             }
-            else if (IsProperty(propertyName, YPropertyName, "Y_U16", "y"))
+            else if (IsProperty(propertyName, YPropertyName, "y"))
             {
                 y = checked((ushort)ReadUnsigned(ref reader, YPropertyName, ushort.MaxValue));
             }

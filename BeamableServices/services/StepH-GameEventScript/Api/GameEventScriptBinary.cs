@@ -160,20 +160,20 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(2)] public ushort DestinationSlot;
     [FieldOffset(2)] public ushort MessageDestination;
     
-    [FieldOffset(4)] public ushort X_U16;
     [FieldOffset(4)] public short ImmediateX;
     [FieldOffset(4)] public ushort ConditionSlot;
     [FieldOffset(4)] public ushort XSlot;
     [FieldOffset(4)] public ushort StringIndex;
     [FieldOffset(4)] public ushort SecondaryListIndex;
+    [FieldOffset(4)] public ushort ExternalReferenceIndex;
     [FieldOffset(4)] public short Count;
 
-    [FieldOffset(6)] public ushort Y_U16;
     [FieldOffset(6)] public short ImmediateY;
     [FieldOffset(6)] public ushort TargetAddress;
     [FieldOffset(6)] public ushort YSlot;
     [FieldOffset(6)] public ushort EntryAddress;
     [FieldOffset(6)] public ushort ListIndex;
+    [FieldOffset(6)] public ushort TypeOperand;
 
     #region Extra Payload for some opcodes
     
@@ -248,16 +248,17 @@ public enum GameEventScriptBytecodeOpCode : byte
     LoadText = 0x26,
     LoadTag = 0x27,
     LoadHandler = 0x28,
-    StageRegister = 0x29,
-    StageNothing = 0x2A,
-    StageTrue = 0x2B,
-    StageFalse = 0x2C,
-    StageInteger = 0x2D,
-    StageFloat = 0x2E,
-    StageText = 0x2F,
-    StageTag = 0x30,
-    StagePercentage = 0x31,
-    TypeConstructor = 0x32,
+    LoadMessage = 0x29,
+    StageRegister = 0x2A,
+    StageNothing = 0x2B,
+    StageTrue = 0x2C,
+    StageFalse = 0x2D,
+    StageInteger = 0x2E,
+    StageFloat = 0x2F,
+    StageText = 0x30,
+    StageTag = 0x31,
+    StagePercentage = 0x32,
+    TypeConstructor = 0x33,
 
     #endregion
 
@@ -354,7 +355,6 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     BuildList = 0xA0,
     BuildMap = 0xA1,
-    BuildMessage = 0xA2,
     CollectionBuilderList = 0xA3,
     CollectionBuilderAdd = 0xA4,
     CollectionBuilderFinish = 0xA5,

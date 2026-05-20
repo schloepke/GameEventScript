@@ -42,7 +42,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         StringAssert.Contains(first, "SlotLocals");
         StringAssert.Contains(first, "LoadInteger");
         StringAssert.Contains(first, "MoveSlot");
-        StringAssert.Contains(first, "BuildMessage");
+        StringAssert.Contains(first, "LoadMessage");
         StringAssert.Contains(first, "EmitMessage");
         Assert.IsFalse(first.Contains("maxStackDepth", StringComparison.Ordinal));
         Assert.IsFalse(first.Contains("nestedExpression", StringComparison.Ordinal));
@@ -99,11 +99,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
             instruction.DestinationSlot >= 0 &&
-            instruction.XSlot == instruction.Y_U16));
+            instruction.XSlot == instruction.YSlot));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
             instruction.DestinationSlot >= 0 &&
-            instruction.XSlot != instruction.Y_U16));
+            instruction.XSlot != instruction.YSlot));
     }
 
     [TestMethod]
@@ -170,10 +170,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageValueWithTags &&
             instruction.AU < compiled.UShortListPool.Count));
-        var build = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.BuildMessage);
-        var buildShape = compiled.UShortListPool[build.X_U16].Select(index => compiled.StringPool[index]).ToArray();
+        var build = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage);
+        var buildShape = compiled.UShortListPool[build.SecondaryListIndex].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, buildShape);
-        Assert.HasCount(1, compiled.UShortListPool[build.Y_U16]);
+        Assert.HasCount(1, compiled.UShortListPool[build.ListIndex]);
     }
 
     [TestMethod]
@@ -297,7 +297,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator &&
-            instruction.Y_U16 > 0));
+            instruction.EntryAddress > 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineCollectList));
     }
@@ -337,7 +337,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
         Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
             instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessage or GameEventScriptBytecodeOpCode.EmitMessageWithTags &&
-            instruction.X_U16 < compiled.UShortListPool.Count));
+            instruction.MessageDestination < compiled.UShortListPool.Count));
     }
 
     [TestMethod]
@@ -357,7 +357,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
         Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.EntryAddress);
-        Assert.AreEqual((ushort)0, predicateInstruction.X_U16);
+        Assert.AreEqual((ushort)0, predicateInstruction.XSlot);
 
         var predicateIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 2].OpCode);
@@ -381,7 +381,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
         var callInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
         Assert.AreEqual(compiled.Callables["add"].EntryAddress, callInstruction.EntryAddress);
-        Assert.AreEqual((ushort)0, callInstruction.X_U16);
+        Assert.AreEqual((ushort)0, callInstruction.XSlot);
 
         var callIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageInteger, compiled.Code[callIndex - 2].OpCode);
@@ -413,8 +413,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.HasCount(0, compiled.ExternalReferences);
         foreach (var instruction in standardCalls)
         {
-            var shape = compiled.UShortListPool[instruction.X_U16];
-            var argumentSlots = compiled.UShortListPool[instruction.Y_U16];
+            var shape = compiled.UShortListPool[instruction.SecondaryListIndex];
+            var argumentSlots = compiled.UShortListPool[instruction.ListIndex];
             Assert.IsGreaterThanOrEqualTo(2, shape.Count);
             Assert.HasCount(shape.Count - 2, argumentSlots);
         }
@@ -440,11 +440,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.HasCount(2, compiled.ExternalReferences);
         Assert.HasCount(
-            compiled.ExternalReferences[functionCall.X_U16].ArgumentLabels.Count,
-            compiled.UShortListPool[functionCall.Y_U16]);
+            compiled.ExternalReferences[functionCall.ExternalReferenceIndex].ArgumentLabels.Count,
+            compiled.UShortListPool[functionCall.ListIndex]);
         Assert.HasCount(
-            compiled.ExternalReferences[predicateCall.X_U16].ArgumentLabels.Count,
-            compiled.UShortListPool[predicateCall.Y_U16]);
+            compiled.ExternalReferences[predicateCall.ExternalReferenceIndex].ArgumentLabels.Count,
+            compiled.UShortListPool[predicateCall.ListIndex]);
     }
 
     [TestMethod]
@@ -462,7 +462,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
-        var entryAddress = selector.Y_U16;
+        var entryAddress = selector.EntryAddress;
         Assert.IsGreaterThanOrEqualTo(0, entryAddress);
         Assert.IsTrue(compiled.Code
             .Skip(entryAddress)
@@ -488,7 +488,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var selector = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
-        var helperEntry = selector.Y_U16;
+        var helperEntry = selector.EntryAddress;
 
         Assert.AreEqual(GameEventScriptBytecodeOpCode.SlotLocals, compiled.Code[helperEntry].OpCode);
         Assert.AreEqual((short)1, compiled.Code[helperEntry].Count);
@@ -509,7 +509,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
-        var entryAddress = selector.Y_U16;
+        var entryAddress = selector.EntryAddress;
         Assert.IsGreaterThanOrEqualTo(0, entryAddress);
 
         var originalConstant = 1L;
@@ -555,7 +555,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineIterator);
-        var entryAddress = selector.Y_U16;
+        var entryAddress = selector.EntryAddress;
         Assert.IsGreaterThanOrEqualTo(0, entryAddress);
 
         var originalConstant = 5L;

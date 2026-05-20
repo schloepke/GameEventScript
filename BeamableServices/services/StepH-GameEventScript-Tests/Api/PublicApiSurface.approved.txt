@@ -122,15 +122,15 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 DU
   field System.UInt16 DestinationSlot
   field System.UInt16 EntryAddress
+  field System.UInt16 ExternalReferenceIndex
   field System.UInt16 ListIndex
   field System.UInt16 MessageDestination
   field System.UInt16 SecondaryListIndex
   field System.UInt16 StringIndex
   field System.UInt16 TargetAddress
+  field System.UInt16 TypeOperand
   field System.UInt16 XSlot
-  field System.UInt16 X_U16
   field System.UInt16 YSlot
-  field System.UInt16 Y_U16
   field System.UInt64 Payload
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNone = 0
@@ -180,16 +180,17 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field LoadText = 38
   enum-field LoadTag = 39
   enum-field LoadHandler = 40
-  enum-field StageRegister = 41
-  enum-field StageNothing = 42
-  enum-field StageTrue = 43
-  enum-field StageFalse = 44
-  enum-field StageInteger = 45
-  enum-field StageFloat = 46
-  enum-field StageText = 47
-  enum-field StageTag = 48
-  enum-field StagePercentage = 49
-  enum-field TypeConstructor = 50
+  enum-field LoadMessage = 41
+  enum-field StageRegister = 42
+  enum-field StageNothing = 43
+  enum-field StageTrue = 44
+  enum-field StageFalse = 45
+  enum-field StageInteger = 46
+  enum-field StageFloat = 47
+  enum-field StageText = 48
+  enum-field StageTag = 49
+  enum-field StagePercentage = 50
+  enum-field TypeConstructor = 51
   enum-field Or = 64
   enum-field And = 65
   enum-field Xor = 66
@@ -266,7 +267,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field PipelineIterator = 154
   enum-field BuildList = 160
   enum-field BuildMap = 161
-  enum-field BuildMessage = 162
   enum-field CollectionBuilderList = 163
   enum-field CollectionBuilderAdd = 164
   enum-field CollectionBuilderFinish = 165

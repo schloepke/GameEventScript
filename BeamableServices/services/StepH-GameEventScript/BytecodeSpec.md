@@ -142,11 +142,13 @@ GameEventScriptBytecodeInstruction
   OpCode
   UnitAndFlags
   DestinationSlot
-  X_U16/Y_U16
-  X_I16/Y_I16
-  C_U16/D_U16
-  C_I16/D_I16
-  I64/U64/F64
+  XSlot/YSlot
+  ConditionSlot/TargetAddress/EntryAddress
+  StringIndex/ListIndex/SecondaryListIndex/ExternalReferenceIndex/TypeOperand
+  ImmediateX/ImmediateY/Count
+  AU, BU, CU, DU
+  AS, BS, CS, DS
+  I64/Payload/F64
 ```
 
 `MaxFrameSlots` is the maximum local slot count needed by any handler or
@@ -307,31 +309,36 @@ Instruction
   OpCode
   UnitAndFlags
   DestinationSlot
-  X_U16, Y_U16
-  X_I16, Y_I16
+  XSlot, YSlot
+  ConditionSlot, TargetAddress, EntryAddress
+  StringIndex, ListIndex, SecondaryListIndex, ExternalReferenceIndex, TypeOperand
   Count
-  A_U16, B_U16, C_U16, D_U16
-  A_I16, B_I16, C_I16, D_I16
-  I64, U64, F64
+  ImmediateX, ImmediateY
+  AU, BU, CU, DU
+  AS, BS, CS, DS
+  I64, Payload, F64
 ```
 
 Operands are interpreted by opcode:
 
 - `DestinationSlot`: destination slot for value-producing instructions.
-- `X_U16`, `Y_U16`: primary-word slots, branch targets, pool indices, or small
-  unsigned immediates.
-- `X_I16`, `Y_I16`: compact signed immediates in the primary word.
-- `Count`: signed local slot delta alias over `X_I16`.
-- `A_U16`, `B_U16`, `C_U16`, `D_U16`, plus signed `*_I16` views:
+- `XSlot`, `YSlot`: primary-word slot operands.
+- `ConditionSlot`, `TargetAddress`, `EntryAddress`: primary-word control-flow aliases.
+- `StringIndex`, `ListIndex`, `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`:
+  primary-word pool/table or type operands.
+- `ImmediateX`, `ImmediateY`: compact signed immediates in the primary word.
+- `Count`: signed local slot delta alias over `ImmediateX`.
+- `AU`, `BU`, `CU`, `DU`, plus signed `AS`, `BS`, `CS`, `DS` views:
   payload-word 16-bit views for wider opcodes.
-- `I64`, `U64`, `F64`: aligned payload-word literal views for signed integer
-  payloads, raw unsigned payload bits, and double/float loads.
+- `I64`, `Payload`, `F64`: aligned payload-word literal views for signed
+  integer payloads, raw unsigned payload bits, and double/float loads.
 - Branch opcodes use the primary fields documented by their opcode shape.
 - Iterator and pipeline terminal opcodes document their own slot, immediate, and
   helper-entry fields explicitly. They do not use sentinel operands for absent
   parameters.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
-  indices directly in `X_U16`, `Y_U16`, `C_U16`, or `D_U16`.
+  indices directly through aliases such as `StringIndex`, `ListIndex`,
+  `SecondaryListIndex`, `AU`, or `BU`.
 - `SlotLocals Count` is the required prolog instruction for every executable
   entry address. Entry prologs use a non-negative signed count and add local
   slots beyond the arguments already present in the frame. Negative counts are
@@ -384,7 +391,7 @@ payload object:
 `Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot,
 `X` and `Y` are the raw primary operands, and `Parameter` is the raw unsigned
 64-bit payload word covering bytes `8..15`. For literal instructions the
-payload carries `I64`, raw `U64`, or the IEEE-754 `F64` bit pattern.
+payload carries `I64`, raw `Payload`, or the IEEE-754 `F64` bit pattern.
 
 Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/slot lists, `StringPool`
@@ -392,7 +399,7 @@ names, bind tables, and optional debug/diagnostic layouts.
 
 An instruction that produces a `nothing` value writes it to `DestinationSlot`. Returning
 without a value uses `ReturnVoid`; returning a slot value uses
-`ReturnValue X_U16` (`XSlot` alias). There is no implicit push. There are no operand-stack `Pop` or
+`ReturnValue XSlot`. There is no implicit push. There are no operand-stack `Pop` or
 `Duplicate` instructions in the portable target model.
 
 ## Execution Model
@@ -541,9 +548,9 @@ for `pc`-based execution.
 - `TypeCheckCustom dst src typeNameIndex`
 - `CheckUnit dst src unitAndFlags`
 
-`Cast` and `TypeCheck` use `Y_U16` as `GameEventScriptBytecodeTypeKind`.
+`Cast` and `TypeCheck` use `TypeOperand` as `GameEventScriptBytecodeTypeKind`.
 Built-in types are direct kind operands. Custom/external record types use
-`CastCustom`/`TypeCheckCustom` with `Y_U16` as the type-name `StringPool` index.
+`CastCustom`/`TypeCheckCustom` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
 
@@ -748,7 +755,7 @@ compiler-assigned iterator slot.
 
 - `BuildList dst itemSlotListIndex`
 - `BuildMap dst keyNameListIndex valueSlotListIndex`
-- `BuildMessage dst messageShapeIndex argumentSlotListIndex`
+- `LoadMessage dst messageShapeIndex argumentSlotListIndex`
 - `BindHandler dst operandSlotListIndex argumentNameListIndex`
 - `MemberAccess dst nameIndex objectSlot`
 - `IndexedAccess dst selectorSlot objectSlot`
@@ -901,7 +908,7 @@ CollectionBuilderFinish dst builder
 
 `PipelineIterator` is a lazy one-time adapter over another VM iterator. Its
 helper entry runs as an isolated helper frame: the current source item is bound
-to helper-local slot `C_U16` (normally slot `0`), and `D_U16` references a
+to helper-local slot `AU` (normally slot `0`), and `BU` references a
 `UShortListPool` entry containing caller-frame capture slots copied when the
 iterator is created. Captures are exposed to the helper in order starting at
 slot `1`. `ReturnValue` yields the returned value. `ReturnVoid` means "no

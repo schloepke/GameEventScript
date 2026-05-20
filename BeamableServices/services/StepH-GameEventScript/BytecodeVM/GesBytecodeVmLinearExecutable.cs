@@ -233,11 +233,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.ReleaseSlots:
-                ValidateFrameSlotCount(module, instruction.A_U16, $"{context} removed local slot count");
+                ValidateFrameSlotCount(module, instruction.X_U16, $"{context} removed local slot count");
                 break;
 
             case GameEventScriptBytecodeOpCode.ReserveSlots:
-                ValidateFrameSlotCount(module, instruction.A_U16, $"{context} slot count");
+                ValidateFrameSlotCount(module, instruction.X_U16, $"{context} slot count");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadNothing:
@@ -266,15 +266,15 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
-                ValidateMessageShape(module, instruction.A_U16, $"{context} handler shape");
+                ValidateMessageShape(module, instruction.X_U16, $"{context} handler shape");
                 break;
 
             case GameEventScriptBytecodeOpCode.MoveSlot:
-                ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} source slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.StageRegister:
-                ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} source slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.StageNothing:
@@ -303,55 +303,55 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
-                ValidateAddress(module, code, instruction.A_U16, $"{context} target");
+                ValidateAddress(module, code, instruction.X_U16, $"{context} target");
                 break;
 
             case GameEventScriptBytecodeOpCode.JumpIfTrue:
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
                 ValidateSlot(module, instruction.C_U16, $"{context} condition slot");
-                ValidateAddress(module, code, instruction.A_U16, $"{context} target");
+                ValidateAddress(module, code, instruction.X_U16, $"{context} target");
                 break;
 
             case GameEventScriptBytecodeOpCode.ReturnVoid:
                 break;
 
             case GameEventScriptBytecodeOpCode.ReturnValue:
-                ValidateSlot(module, instruction.A_U16, $"{context} return slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} return slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessage:
             case GameEventScriptBytecodeOpCode.PublishMessage:
-                ValidateMessageShape(module, instruction.A_U16, $"{context} message shape");
-                ValidateMessageArgumentSlotList(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidateMessageShape(module, instruction.X_U16, $"{context} message shape");
+                ValidateMessageArgumentSlotList(module, instruction.X_U16, instruction.Y_U16, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
-                ValidateMessageShape(module, instruction.A_U16, $"{context} message shape");
-                ValidateMessageArgumentSlotList(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidateMessageShape(module, instruction.X_U16, $"{context} message shape");
+                ValidateMessageArgumentSlotList(module, instruction.X_U16, instruction.Y_U16, $"{context} argument slots");
                 ValidateSlotListIndex(module, instruction.C_U16, $"{context} tag slot list");
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValue:
             case GameEventScriptBytecodeOpCode.PublishMessageValue:
-                ValidateSlot(module, instruction.A_U16, $"{context} message slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} message slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageValueWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageValueWithTags:
-                ValidateSlot(module, instruction.A_U16, $"{context} message slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} message slot");
                 ValidateSlotListIndex(module, instruction.C_U16, $"{context} tag slot list");
                 break;
 
             case GameEventScriptBytecodeOpCode.RangeIterator:
-                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} to slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
-                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} to slot");
                 ValidateSlot(module, instruction.C_U16, $"{context} step slot");
                 break;
 
@@ -359,20 +359,20 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionIterator:
-                ValidateSlot(module, instruction.A_U16, $"{context} collection slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} collection slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.IteratorNext:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
-                ValidateAddress(module, code, instruction.B_U16, $"{context} no-more target");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
+                ValidateAddress(module, code, instruction.Y_U16, $"{context} no-more target");
                 break;
 
             case GameEventScriptBytecodeOpCode.IteratorClose:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPush:
-                ValidateSlot(module, instruction.A_U16, $"{context} seed slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} seed slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPushConstant:
@@ -380,13 +380,13 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.MemberAccess:
-                ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} source slot");
                 ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} member name");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineIterator:
-                ValidateSlot(module, instruction.A_U16, $"{context} source iterator slot");
-                ValidateEntryAddress(module, code, instruction.B_U16, $"{context} iterator entry");
+                ValidateSlot(module, instruction.X_U16, $"{context} source iterator slot");
+                ValidateEntryAddress(module, code, instruction.Y_U16, $"{context} iterator entry");
                 ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
                 ValidateSlotListIndex(module, instruction.D_U16, $"{context} capture slot list");
                 break;
@@ -422,19 +422,19 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
             case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
             case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.IteratorReduce:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.C_U16, $"{context} reducer entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
             case GameEventScriptBytecodeOpCode.IteratorFold:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} seed/default slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} seed/default slot");
                 ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.D_U16, $"{context} reducer entry");
                 break;
@@ -444,55 +444,55 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
             case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
             case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.C_U16, $"{context} entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineMapValue:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} item binding slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.C_U16, $"{context} key entry");
                 ValidateEntryAddress(module, code, instruction.D_U16, $"{context} value entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
                 ValidateSlot(module, instruction.C_U16, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.D_U16, $"{context} weight entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
             case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
-                ValidateSlot(module, instruction.A_U16, $"{context} iterator slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} iterator slot");
                 ValidateEntryAddress(module, code, instruction.C_U16, $"{context} face entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.SeriesTerm:
-                ValidateSlot(module, instruction.A_U16, $"{context} series slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} index slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} series slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} index slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.SeriesTake:
             case GameEventScriptBytecodeOpCode.SeriesDrop:
-                ValidateSlot(module, instruction.A_U16, $"{context} series slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} series slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderList:
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
-                ValidateSlot(module, instruction.A_U16, $"{context} collection builder slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} collection item slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} collection builder slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} collection item slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
-                ValidateSlot(module, instruction.A_U16, $"{context} collection builder slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} collection builder slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.Dice:
-                ValidateNonNegative(instruction.A_U16, $"{context} dice count");
-                ValidateNonNegative(instruction.B_U16, $"{context} dice sides");
+                ValidateNonNegative(instruction.X_U16, $"{context} dice count");
+                ValidateNonNegative(instruction.Y_U16, $"{context} dice sides");
                 break;
 
             case GameEventScriptBytecodeOpCode.UnaryNegate:
@@ -506,92 +506,92 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.UnaryEntries:
             case GameEventScriptBytecodeOpCode.UnaryAbs:
             case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
-                ValidateSlot(module, instruction.A_U16, $"{context} operand slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} operand slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.Range:
-                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} to slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.RangeWithStep:
-                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} to slot");
                 ValidateSlot(module, instruction.C_U16, $"{context} step slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.Clamp:
-                ValidateSlot(module, instruction.A_U16, $"{context} value slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} minimum slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} value slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} minimum slot");
                 ValidateSlot(module, instruction.C_U16, $"{context} maximum slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.Random:
-                ValidateSlot(module, instruction.A_U16, $"{context} from slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} to slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} from slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} to slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.IndexedAccess:
-                ValidateSlot(module, instruction.A_U16, $"{context} source slot");
-                ValidateSlot(module, instruction.B_U16, $"{context} index slot");
+                ValidateSlot(module, instruction.X_U16, $"{context} source slot");
+                ValidateSlot(module, instruction.Y_U16, $"{context} index slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.TypeConstructor:
-                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} type name");
-                ValidateStringListIndex(module, instruction.B_U16, $"{context} argument names");
+                ValidateIndex(module.StringPool.Count, instruction.X_U16, $"{context} type name");
+                ValidateStringListIndex(module, instruction.Y_U16, $"{context} argument names");
                 ValidateSlotListIndex(module, instruction.C_U16, $"{context} argument slots");
-                ValidateMatchingListCounts(module, instruction.B_U16, instruction.C_U16, $"{context} type constructor arguments");
+                ValidateMatchingListCounts(module, instruction.Y_U16, instruction.C_U16, $"{context} type constructor arguments");
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
-                ValidateSlotListIndex(module, instruction.A_U16, $"{context} item slots");
+                ValidateSlotListIndex(module, instruction.X_U16, $"{context} item slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildMap:
-                ValidateStringListIndex(module, instruction.A_U16, $"{context} keys");
-                ValidateSlotListIndex(module, instruction.B_U16, $"{context} value slots");
-                ValidateMatchingListCounts(module, instruction.A_U16, instruction.B_U16, $"{context} map entries");
+                ValidateStringListIndex(module, instruction.X_U16, $"{context} keys");
+                ValidateSlotListIndex(module, instruction.Y_U16, $"{context} value slots");
+                ValidateMatchingListCounts(module, instruction.X_U16, instruction.Y_U16, $"{context} map entries");
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildMessage:
-                ValidateMessageShape(module, instruction.A_U16, $"{context} message shape");
-                ValidateMessageArgumentSlotList(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidateMessageShape(module, instruction.X_U16, $"{context} message shape");
+                ValidateMessageArgumentSlotList(module, instruction.X_U16, instruction.Y_U16, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.BindHandler:
-                ValidateSlotListIndex(module, instruction.A_U16, $"{context} operand slots");
-                ValidateStringListIndex(module, instruction.B_U16, $"{context} argument names");
-                ValidateBindHandlerLists(module, instruction.A_U16, instruction.B_U16, $"{context} bound handler arguments");
+                ValidateSlotListIndex(module, instruction.X_U16, $"{context} operand slots");
+                ValidateStringListIndex(module, instruction.Y_U16, $"{context} argument names");
+                ValidateBindHandlerLists(module, instruction.X_U16, instruction.Y_U16, $"{context} bound handler arguments");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallStandard:
             case GameEventScriptBytecodeOpCode.CallStandardPredicate:
-                ValidateExtensionShape(module, instruction.A_U16, $"{context} standard extension shape");
-                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
-                ValidateExtensionShapeArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidateExtensionShape(module, instruction.X_U16, $"{context} standard extension shape");
+                ValidateSlotListIndex(module, instruction.Y_U16, $"{context} argument slots");
+                ValidateExtensionShapeArgumentSlots(module, instruction.X_U16, instruction.Y_U16, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallExternal:
             case GameEventScriptBytecodeOpCode.CallExternalPredicate:
-                ValidateIndex(module.ExternalReferences.Count, instruction.A_U16, $"{context} external reference");
-                ValidateSlotListIndex(module, instruction.B_U16, $"{context} argument slots");
-                ValidateExternalReferenceArgumentSlots(module, instruction.A_U16, instruction.B_U16, $"{context} argument slots");
+                ValidateIndex(module.ExternalReferences.Count, instruction.X_U16, $"{context} external reference");
+                ValidateSlotListIndex(module, instruction.Y_U16, $"{context} argument slots");
+                ValidateExternalReferenceArgumentSlots(module, instruction.X_U16, instruction.Y_U16, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.Call:
-                ValidateEntryAddress(module, code, instruction.A_U16, $"{context} callable entry");
-                ValidateCallableEntry(module, instruction.A_U16, $"{context} callable entry");
+                ValidateEntryAddress(module, code, instruction.X_U16, $"{context} callable entry");
+                ValidateCallableEntry(module, instruction.X_U16, $"{context} callable entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallPredicate:
-                ValidateEntryAddress(module, code, instruction.A_U16, $"{context} predicate entry");
-                ValidatePredicateCallEntry(module, instruction.A_U16, $"{context} predicate entry");
+                ValidateEntryAddress(module, code, instruction.X_U16, $"{context} predicate entry");
+                ValidatePredicateCallEntry(module, instruction.X_U16, $"{context} predicate entry");
                 break;
 
             default:
                 if (IsCastInstruction(instruction.OpCode))
                 {
-                    ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                    ValidateSlot(module, instruction.X_U16, $"{context} source slot");
                     ValidateCastOrTypeCheckOperand(module, instruction, $"{context} type operand");
 
                     break;
@@ -599,7 +599,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
                 if (IsTypeCheckInstruction(instruction.OpCode))
                 {
-                    ValidateSlot(module, instruction.A_U16, $"{context} source slot");
+                    ValidateSlot(module, instruction.X_U16, $"{context} source slot");
                     ValidateCastOrTypeCheckOperand(module, instruction, $"{context} type operand");
 
                     break;
@@ -607,8 +607,8 @@ internal sealed class GesBytecodeVmLinearExecutable
 
                 if (IsBinarySlotInstruction(instruction.OpCode))
                 {
-                    ValidateSlot(module, instruction.A_U16, $"{context} left slot");
-                    ValidateSlot(module, instruction.B_U16, $"{context} right slot");
+                    ValidateSlot(module, instruction.X_U16, $"{context} left slot");
+                    ValidateSlot(module, instruction.Y_U16, $"{context} right slot");
                     break;
                 }
 
@@ -751,10 +751,10 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static int GetExpectedStagedArgumentCount(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
     {
-        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == instruction.A_U16);
+        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == instruction.X_U16);
         if (callable is null)
         {
-            throw InvalidBytecode($"{instruction.OpCode} references unknown callable entry address {instruction.A_U16}.");
+            throw InvalidBytecode($"{instruction.OpCode} references unknown callable entry address {instruction.X_U16}.");
         }
 
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate &&
@@ -906,8 +906,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             throw InvalidBytecode($"{context} must start with ReserveSlots.");
         }
 
-        ValidateFrameSlotCount(module, prolog.A_U16, $"{context} ReserveSlots count");
-        return prolog.A_U16;
+        ValidateFrameSlotCount(module, prolog.X_U16, $"{context} ReserveSlots count");
+        return prolog.X_U16;
     }
 
     private static void ValidateCastOrTypeCheckOperand(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction, string context)
@@ -924,7 +924,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
 
         ValidateNoFlags(instruction.UnitAndFlags, $"{context} flags");
-        var typeKind = (GameEventScriptBytecodeTypeKind)instruction.B_U16;
+        var typeKind = (GameEventScriptBytecodeTypeKind)instruction.Y_U16;
         if (typeKind == GameEventScriptBytecodeTypeKind.Custom)
         {
             ValidateIndex(module.StringPool.Count, instruction.C_U16, $"{context} custom type name");
@@ -934,7 +934,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (!Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), typeKind) ||
             typeKind == GameEventScriptBytecodeTypeKind.Invalid)
         {
-            throw InvalidBytecode($"{context} references unknown type kind {instruction.B_U16}.");
+            throw InvalidBytecode($"{context} references unknown type kind {instruction.Y_U16}.");
         }
     }
 

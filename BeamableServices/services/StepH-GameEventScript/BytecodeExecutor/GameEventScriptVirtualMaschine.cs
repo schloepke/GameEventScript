@@ -29,10 +29,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Nop:
                     break;
                 case ReserveSlots:
-                    _vmState.AddLocalSlots(instruction.A_U16);
+                    _vmState.AddLocalSlots(instruction.X_U16);
                     break;
                 case ReleaseSlots:
-                    _vmState.RemoveLocalSlots(instruction.A_U16);
+                    _vmState.RemoveLocalSlots(instruction.X_U16);
                     break;
                 case LoadNothing:
                     Register(instruction.Dest_U16).SetNothing();
@@ -53,13 +53,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     Register(instruction.Dest_U16).SetPercentage(instruction.F64);
                     break;
                 case LoadText:
-                    Register(instruction.Dest_U16).SetStringPointer(instruction.A_U16);
+                    Register(instruction.Dest_U16).SetStringPointer(instruction.X_U16);
                     break;
                 case LoadTag:
-                    Register(instruction.Dest_U16).SetTagPointer(instruction.A_U16);
+                    Register(instruction.Dest_U16).SetTagPointer(instruction.X_U16);
                     break;
                 case StageRegister:
-                    _vmState.StageRegister(instruction.A_U16);
+                    _vmState.StageRegister(instruction.X_U16);
                     break;
                 case StageNothing:
                     _vmState.StageNothing();
@@ -86,157 +86,157 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.StageTagConstant(instruction.C_U16);
                     break;
                 case MoveSlot:
-                    Register(instruction.Dest_U16) = Register(instruction.A_U16);
+                    Register(instruction.Dest_U16) = Register(instruction.X_U16);
                     break;
                 case Jump:
-                    _vmState.JumpAddress(instruction.Target_U16);
+                    _vmState.JumpAddress(instruction.TargetAddress);
                     break;
                 case JumpIfTrue:
-                    if (Register(instruction.Condition_U16).IsTrue) _vmState.JumpAddress(instruction.Target_U16);
+                    if (Register(instruction.ConditionSlot).IsTrue) _vmState.JumpAddress(instruction.TargetAddress);
                     break;
                 case JumpIfFalse:
-                    if (Register(instruction.Condition_U16).IsFalse) _vmState.JumpAddress(instruction.Target_U16);
+                    if (Register(instruction.ConditionSlot).IsFalse) _vmState.JumpAddress(instruction.TargetAddress);
                     break;
                 case JumpIfNotTrue:
-                    if (Register(instruction.Condition_U16).IsNotTrue) _vmState.JumpAddress(instruction.Target_U16);
+                    if (Register(instruction.ConditionSlot).IsNotTrue) _vmState.JumpAddress(instruction.TargetAddress);
                     break;
                 case ReturnVoid:
                     _vmState.ReturnVoid();
                     break;
                 case ReturnValue:
-                    _vmState.ReturnValue(instruction.A_U16);
+                    _vmState.ReturnValue(instruction.X_U16);
                     break;
                 case Or:
-                    Register(instruction.Dest_U16).VmOr(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmOr(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case And:
-                    Register(instruction.Dest_U16).VmAnd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmAnd(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Xor:
-                    Register(instruction.Dest_U16).VmXor(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmXor(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Equal:
-                    Register(instruction.Dest_U16).VmEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case NotEqual:
-                    Register(instruction.Dest_U16).VmNotEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmNotEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case ApproxEqual:
-                    Register(instruction.Dest_U16).VmApproxEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmApproxEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Less:
-                    Register(instruction.Dest_U16).VmLess(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmLess(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Greater:
-                    Register(instruction.Dest_U16).VmGreater(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmGreater(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case LessOrEqual:
-                    Register(instruction.Dest_U16).VmLessOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmLessOrEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case GreaterOrEqual:
-                    Register(instruction.Dest_U16).VmGreaterOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmGreaterOrEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Add:
-                    Register(instruction.Dest_U16).VmAdd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmAdd(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Subtract:
-                    Register(instruction.Dest_U16).VmSubtract(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmSubtract(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Multiply:
-                    Register(instruction.Dest_U16).VmMultiply(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmMultiply(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Divide:
-                    Register(instruction.Dest_U16).VmDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmDivide(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Power:
-                    Register(instruction.Dest_U16).VmPower(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmPower(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Default:
-                    Register(instruction.Dest_U16).VmDefault(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmDefault(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntEqual:
-                    Register(instruction.Dest_U16).VmIntegerEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntNotEqual:
-                    Register(instruction.Dest_U16).VmIntegerNotEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerNotEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntLess:
-                    Register(instruction.Dest_U16).VmIntegerLess(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerLess(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntGreater:
-                    Register(instruction.Dest_U16).VmIntegerGreater(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerGreater(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntLessOrEqual:
-                    Register(instruction.Dest_U16).VmIntegerLessOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerLessOrEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntGreaterOrEqual:
-                    Register(instruction.Dest_U16).VmIntegerGreaterOrEqual(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerGreaterOrEqual(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntAdd:
-                    Register(instruction.Dest_U16).VmIntegerAdd(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerAdd(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntSubtract:
-                    Register(instruction.Dest_U16).VmIntegerSubtract(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerSubtract(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntMultiply:
-                    Register(instruction.Dest_U16).VmIntegerMultiply(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerMultiply(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntDivide:
-                    Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntFloorDivide:
-                    Register(instruction.Dest_U16).VmIntegerFloorDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerFloorDivide(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntModulo:
-                    Register(instruction.Dest_U16).VmIntegerModulo(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerModulo(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntRemainder:
-                    Register(instruction.Dest_U16).VmIntegerRemainder(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerRemainder(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case IntegerDivide:
-                    Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmIntegerDivide(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Modulo:
-                    Register(instruction.Dest_U16).VmModulo(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmModulo(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case Remainder:
-                    Register(instruction.Dest_U16).VmRemainder(ref Register(instruction.A_U16), ref Register(instruction.B_U16));
+                    Register(instruction.Dest_U16).VmRemainder(ref Register(instruction.X_U16), ref Register(instruction.Y_U16));
                     break;
                 case UnaryNegate:
-                    Register(instruction.Dest_U16).VmNegate(ref Register(instruction.A_U16));
+                    Register(instruction.Dest_U16).VmNegate(ref Register(instruction.X_U16));
                     break;
                 case UnaryNot:
-                    Register(instruction.Dest_U16).VmNot(ref Register(instruction.A_U16));
+                    Register(instruction.Dest_U16).VmNot(ref Register(instruction.X_U16));
                     break;
                 case UnaryHasValue:
-                    Register(instruction.Dest_U16).VmHasValue(ref Register(instruction.A_U16), ref binary.TextConstantTable);
+                    Register(instruction.Dest_U16).VmHasValue(ref Register(instruction.X_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryEmpty:
-                    Register(instruction.Dest_U16).VmEmpty(ref Register(instruction.A_U16), ref binary.TextConstantTable);
+                    Register(instruction.Dest_U16).VmEmpty(ref Register(instruction.X_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryLength:
-                    Register(instruction.Dest_U16).VmLength(ref Register(instruction.A_U16), ref binary.TextConstantTable);
+                    Register(instruction.Dest_U16).VmLength(ref Register(instruction.X_U16), ref binary.TextConstantTable);
                     break;
                 case UnaryChance:
-                    Register(instruction.Dest_U16).VmChance(ref Register(instruction.A_U16), ref _vmState);
+                    Register(instruction.Dest_U16).VmChance(ref Register(instruction.X_U16), ref _vmState);
                     break;
                 case UnaryAbs:
-                    Register(instruction.Dest_U16).VmAbs(ref Register(instruction.A_U16));
+                    Register(instruction.Dest_U16).VmAbs(ref Register(instruction.X_U16));
                     break;
                 case UnaryNaturalLog:
-                    Register(instruction.Dest_U16).VmNaturalLog(ref Register(instruction.A_U16));
+                    Register(instruction.Dest_U16).VmNaturalLog(ref Register(instruction.X_U16));
                     break;
                 case Clamp:
-                    Register(instruction.Dest_U16).VmClamp(ref Register(instruction.A_U16), ref Register(instruction.B_U16), ref Register(instruction.C_U16));
+                    Register(instruction.Dest_U16).VmClamp(ref Register(instruction.X_U16), ref Register(instruction.Y_U16), ref Register(instruction.C_U16));
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
-                    Register(instruction.Dest_U16).VmRandom(ref Register(instruction.A_U16), ref Register(instruction.B_U16), _vmState.RandomGenerator);
+                    Register(instruction.Dest_U16).VmRandom(ref Register(instruction.X_U16), ref Register(instruction.Y_U16), _vmState.RandomGenerator);
                     break;
                 case Dice:
-                    Register(instruction.Dest_U16).VmDice(instruction.A_U16, instruction.B_U16, ref _vmState);
+                    Register(instruction.Dest_U16).VmDice(instruction.X_U16, instruction.Y_U16, ref _vmState);
                     break;
                 case RandomPush:
-                    var seed = Register(instruction.A_U16);
+                    var seed = Register(instruction.X_U16);
                     _vmState.PushRandom(seed.Kind == VmValue.VmValueKind.Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.IntegerValue) : _vmState.RandomGenerator);
                     break;
                 case RandomPushConstant:
@@ -310,12 +310,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 
                 case EmitMessage:
-                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.A_U16), binary.Uint16ConstantTable.Resolve(instruction.B_U16), false, context);
+                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.X_U16), binary.Uint16ConstantTable.Resolve(instruction.Y_U16), false, context);
                     break;
                 case EmitMessageWithTags:
                     break;
                 case PublishMessage:
-                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.A_U16), binary.Uint16ConstantTable.Resolve(instruction.B_U16), true, context);
+                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.X_U16), binary.Uint16ConstantTable.Resolve(instruction.Y_U16), true, context);
                     break;
                 case PublishMessageWithTags:
                     break;
@@ -329,20 +329,20 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 
                 case RangeIterator:
-                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.A_U16, instruction.B_U16, instruction.C_U16));
+                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.X_U16, instruction.Y_U16, instruction.C_U16));
                     break;
                 case RangeIteratorWithStep:
                     break;
                 case RangeIteratorShort:
-                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.A_U16, instruction.B_U16, instruction.C_U16));
+                    Register(instruction.Dest_U16).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.X_U16, instruction.Y_U16, instruction.C_U16));
                     break;
                 case CollectionIterator:
                     break;
                 case IteratorNext:
-                    Register(instruction.Dest_U16).VmIteratorNext(ref Register(instruction.A_U16), instruction.B_U16, ref _vmState);
+                    Register(instruction.Dest_U16).VmIteratorNext(ref Register(instruction.X_U16), instruction.Y_U16, ref _vmState);
                     break;
                 case IteratorClose:
-                    Register(instruction.A_U16).VmIteratorClose();
+                    Register(instruction.X_U16).VmIteratorClose();
                     break;
                 case CollectionBuilderList:
                     break;
@@ -363,10 +363,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case SeriesDrop:
                     break;
                 case Call:
-                    _vmState.CallAddress(instruction.Target_U16, instruction.Dest_U16);
+                    _vmState.CallAddress(instruction.TargetAddress, instruction.Dest_U16);
                     break;
                 case CallPredicate:
-                    _vmState.CallAddress(instruction.Target_U16, instruction.Dest_U16);
+                    _vmState.CallAddress(instruction.TargetAddress, instruction.Dest_U16);
                     Register(instruction.Dest_U16).Kind = VmValue.VmValueKind.Boolean;
                     break;
                 case CallStandard:

@@ -150,277 +150,249 @@ public enum GameEventScriptBytecodeTypeKind : ushort
 }
 
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
-[StructLayout(LayoutKind.Explicit, Size = 12)]
-public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort a = 0, ushort b = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
+[StructLayout(LayoutKind.Explicit, Size = 16)]
+public struct GameEventScriptBytecodeInstruction(GameEventScriptBytecodeOpCode opCode, ushort dest = 0, ushort x = 0, ushort y = 0, ushort c = 0, ushort d = 0, byte unitAndFlags = 0)
 {
     [FieldOffset(0)] public GameEventScriptBytecodeOpCode OpCode = opCode;
 
     [FieldOffset(1)] public readonly byte UnitAndFlags = unitAndFlags;
 
+    [FieldOffset(2)] public ushort ResultSlot;
+    [FieldOffset(2)] public ushort DestinationSlot;
     [FieldOffset(2)] public readonly ushort Dest_U16 = dest;
+    
+    [FieldOffset(4)] public ushort X_U16 = x;
+    [FieldOffset(4)] public short X_I16;
+    [FieldOffset(4)] public uint X_U32;
+    [FieldOffset(4)] public uint X_I32;
+    [FieldOffset(8)] public ushort ConditionSlot;
+    [FieldOffset(4)] public ushort XSlot;
+    [FieldOffset(4)] public ushort StringIndex;
 
-    [FieldOffset(4)] public ushort Target_U16;
-
-    [FieldOffset(8)] public ushort Condition_U16;
-
-    [FieldOffset(4)] public ushort A_U16 = a;
-
-    [FieldOffset(6)] public ushort B_U16 = b;
+    [FieldOffset(6)] public ushort Y_U16 = y;
+    [FieldOffset(6)] public short Y_I16;
+    [FieldOffset(4)] public ushort TargetAddress;
+    [FieldOffset(6)] public ushort YSlot;
+    [FieldOffset(6)] public ushort EntryAddress;
+    [FieldOffset(6)] public ushort ListIndex;
 
     [FieldOffset(8)] public ushort C_U16 = c;
-
-    [FieldOffset(10)] public ushort D_U16 = d;
-
-    [FieldOffset(4)] public short A_I16;
-
-    [FieldOffset(6)] public short B_I16;
-
     [FieldOffset(8)] public short C_I16;
 
+    [FieldOffset(10)] public ushort D_U16 = d;
     [FieldOffset(10)] public short D_I16;
 
-    [FieldOffset(4)] public int A_I32;
+    [FieldOffset(8)] public long I64;
+    [FieldOffset(8)] public ulong U64;
 
-    [FieldOffset(8)] public int B_I32;
-
-    [FieldOffset(4)] public uint A_U32;
-
-    [FieldOffset(8)] public uint B_U32;
-
-    [FieldOffset(4)] public long I64;
-
-    [FieldOffset(4)] public ulong U64;
-
-    [FieldOffset(4)] public double F64;
+    [FieldOffset(8)] public double F64;
 }
 
 public enum GameEventScriptBytecodeOpCode : byte
 {
-    #region Core loads, slot movement, branches, returns
+    #region Group 1 - control, calls, access, messages
 
     Nop = 0x00,
-    LoadNothing = 0x01,
-    LoadTrue = 0x02,
-    LoadFalse = 0x03,
-    LoadInteger = 0x04,
-    LoadFloat = 0x05,
-    LoadText = 0x06,
-    LoadTag = 0x07,
-    MoveSlot = 0x08,
-    LoadPercentage = 0x09,
-    Jump = 0x0A,
-    JumpIfTrue = 0x0B,
-    JumpIfFalse = 0x0C,
-    JumpIfNotTrue = 0x0D,
-    ReturnVoid = 0x0E,
-    ReturnValue = 0x0F,
+    Jump = 0x01,
+    JumpIfTrue = 0x02,
+    JumpIfFalse = 0x03,
+    JumpIfNotTrue = 0x04,
+    ReserveSlots = 0x05,
+    ReleaseSlots = 0x06,
+    ReturnVoid = 0x07,
+    ReturnValue = 0x08,
+    Call = 0x09,
+    CallPredicate = 0x0A,
+    CallStandard = 0x0B,
+    CallStandardPredicate = 0x0C,
+    CallExternal = 0x0D,
+    CallExternalPredicate = 0x0E,
+    BindHandler = 0x0F,
+    MoveSlot = 0x10,
+    Cast = 0x11,
+    CastUnit = 0x12,
+    TypeCheck = 0x13,
+    CheckUnit = 0x14,
+    MemberAccess = 0x15,
+    IndexedAccess = 0x16,
+    EmitMessage = 0x17,
+    EmitMessageWithTags = 0x18,
+    PublishMessage = 0x19,
+    PublishMessageWithTags = 0x1A,
+    EmitMessageValue = 0x1B,
+    EmitMessageValueWithTags = 0x1C,
+    PublishMessageValue = 0x1D,
+    PublishMessageValueWithTags = 0x1E,
 
     #endregion
 
-    #region Generic boolean/comparison/arithmetic/default operations
+    #region Group 2 - loads, staging, type construction
 
-    Or = 0x10,
-    And = 0x11,
-    Xor = 0x12,
-    Equal = 0x13,
-    NotEqual = 0x14,
-    ApproxEqual = 0x15,
-    Less = 0x16,
-    Greater = 0x17,
-    LessOrEqual = 0x18,
-    GreaterOrEqual = 0x19,
-    Add = 0x1A,
-    Subtract = 0x1B,
-    Multiply = 0x1C,
-    Divide = 0x1D,
-    Power = 0x1E,
-    Default = 0x1F,
-
-    #endregion
-
-    #region Primitive integer fast paths
-
-    IntEqual = 0x20,
-    IntNotEqual = 0x21,
-    IntLess = 0x22,
-    IntGreater = 0x23,
-    IntLessOrEqual = 0x24,
-    IntGreaterOrEqual = 0x25,
-    IntAdd = 0x26,
-    IntSubtract = 0x27,
-    IntMultiply = 0x28,
-    IntDivide = 0x29,
-    IntFloorDivide = 0x2A,
-    IntModulo = 0x2B,
-    IntRemainder = 0x2C,
-    IntegerDivide = 0x2D,
-    Modulo = 0x2E,
-    Remainder = 0x2F,
+    LoadNothing = 0x20,
+    LoadTrue = 0x21,
+    LoadFalse = 0x22,
+    LoadInteger = 0x23,
+    LoadFloat = 0x24,
+    LoadPercentage = 0x25,
+    LoadText = 0x26,
+    LoadTag = 0x27,
+    LoadHandler = 0x28,
+    StageRegister = 0x29,
+    StageNothing = 0x2A,
+    StageTrue = 0x2B,
+    StageFalse = 0x2C,
+    StageInteger = 0x2D,
+    StageFloat = 0x2E,
+    StageText = 0x2F,
+    StageTag = 0x30,
+    StagePercentage = 0x31,
+    TypeConstructor = 0x32,
 
     #endregion
 
-    #region Unary, random, dice, range value operations
+    #region Group 3 - boolean, comparison, presence
 
-    UnaryNegate = 0x30,
-    UnaryNot = 0x31,
-    UnaryHasValue = 0x32,
-    UnaryEmpty = 0x33,
-    UnaryLength = 0x34,
-    UnaryChance = 0x35,
-    UnaryAbs = 0x36,
-    UnaryNaturalLog = 0x37,
-    Clamp = 0x38,
-    Random = 0x39,
-    Dice = 0x3A,
-    RandomPush = 0x3B,
-    RandomPushConstant = 0x3C,
-    RandomPop = 0x3D,
-    Range = 0x3E,
-    RangeWithStep = 0x3F,
-
-    #endregion
-
-    #region Collection/text operations, projections, implication
-
-    Contains = 0x40,
-    ContainsValue = 0x41,
-    StartsWith = 0x42,
-    EndsWith = 0x43,
-    Intersect = 0x44,
-    Combine = 0x45,
-    Except = 0x46,
-    Zip = 0x47,
-    UnaryKeys = 0x48,
-    UnaryValues = 0x49,
-    UnaryEntries = 0x4A,
-    Min = 0x4B,
-    Max = 0x4C,
-    Implies = 0x4D,
-    ReserveSlots = 0x4E,
+    Or = 0x40,
+    And = 0x41,
+    Xor = 0x42,
+    Implies = 0x43,
+    UnaryNot = 0x44,
+    UnaryHasValue = 0x45,
+    UnaryEmpty = 0x46,
+    Equal = 0x47,
+    NotEqual = 0x48,
+    ApproxEqual = 0x49,
+    Less = 0x4A,
+    Greater = 0x4B,
+    LessOrEqual = 0x4C,
+    GreaterOrEqual = 0x4D,
+    IntEqual = 0x4E,
+    IntNotEqual = 0x4F,
+    IntLess = 0x50,
+    IntGreater = 0x51,
+    IntLessOrEqual = 0x52,
+    IntGreaterOrEqual = 0x53,
+    Default = 0x54,
 
     #endregion
 
-    #region Declared type casts and checks
+    #region Group 4 - math and random
 
-    Cast = 0x50,
-    CastUnit = 0x51,
-    TypeCheck = 0x70,
-    CheckUnit = 0x71,
-
-    #endregion
-
-    #region Construction, access, handlers, predicates, calls
-
-    LoadHandler = 0x90,
-    TypeConstructor = 0x91,
-    MemberAccess = 0x93,
-    IndexedAccess = 0x94,
-    BuildList = 0x95,
-    BuildMap = 0x98,
-    BuildMessage = 0x99,
-    BindHandler = 0x9A,
-
-    #endregion
-
-    #region Scopes and message emit/publish operations
-
-    ReleaseSlots = 0xA1,
-    EmitMessage = 0xA2,
-    EmitMessageWithTags = 0xA3,
-    PublishMessage = 0xA4,
-    PublishMessageWithTags = 0xA5,
-    EmitMessageValue = 0xA6,
-    EmitMessageValueWithTags = 0xA7,
-    PublishMessageValue = 0xA8,
-    PublishMessageValueWithTags = 0xA9,
+    Add = 0x60,
+    Subtract = 0x61,
+    Multiply = 0x62,
+    Divide = 0x63,
+    Power = 0x64,
+    IntegerDivide = 0x65,
+    Modulo = 0x66,
+    Remainder = 0x67,
+    IntAdd = 0x68,
+    IntSubtract = 0x69,
+    IntMultiply = 0x6A,
+    IntDivide = 0x6B,
+    IntFloorDivide = 0x6C,
+    IntModulo = 0x6D,
+    IntRemainder = 0x6E,
+    Min = 0x6F,
+    Max = 0x70,
+    UnaryNegate = 0x71,
+    UnaryAbs = 0x72,
+    UnaryNaturalLog = 0x73,
+    UnaryChance = 0x74,
+    Clamp = 0x75,
+    Random = 0x76,
+    RandomPush = 0x77,
+    RandomPushConstant = 0x78,
+    RandomPop = 0x79,
 
     #endregion
 
-    #region Iterators and collection builders
+    #region Group 5 - text, collection, iterators
 
-    RangeIterator = 0xB0,
-    RangeIteratorWithStep = 0xB1,
-    RangeIteratorShort = 0xB2,
-    CollectionIterator = 0xB3,
-    IteratorNext = 0xB4,
-    IteratorClose = 0xB5,
-    CollectionBuilderList = 0xB6,
-    CollectionBuilderAdd = 0xB8,
-    CollectionBuilderFinish = 0xB9,
-    IteratorReduce = 0xBA,
-    IteratorReduceOrDefault = 0xBB,
-    IteratorFold = 0xBC,
-    SeriesTerm = 0xBD,
-    SeriesTake = 0xBE,
-    SeriesDrop = 0xBF,
-
-    #endregion
-
-    #region Calls
-
-    Call = 0xC0,
-    CallPredicate = 0xC1,
-    CallStandard = 0xC2,
-    CallStandardPredicate = 0xC3,
-    CallExternal = 0xC4,
-    CallExternalPredicate = 0xC5,
-    StageRegister = 0xC6,
-    StageNothing = 0xC7,
-    StageTrue = 0xC8,
-    StageFalse = 0xC9,
-    StageInteger = 0xCA,
-    StageFloat = 0xCB,
-    StageText = 0xCC,
-    StageTag = 0xCD,
-    StagePercentage = 0xCE,
+    UnaryLength = 0x80,
+    StartsWith = 0x81,
+    EndsWith = 0x82,
+    Contains = 0x83,
+    ContainsValue = 0x84,
+    Intersect = 0x85,
+    Combine = 0x86,
+    Except = 0x87,
+    Zip = 0x88,
+    UnaryKeys = 0x89,
+    UnaryValues = 0x8A,
+    UnaryEntries = 0x8B,
+    Range = 0x8C,
+    RangeWithStep = 0x8D,
+    RangeIterator = 0x8E,
+    RangeIteratorWithStep = 0x8F,
+    RangeIteratorShort = 0x90,
+    CollectionIterator = 0x91,
+    IteratorNext = 0x92,
+    IteratorClose = 0x93,
+    IteratorReduce = 0x94,
+    IteratorReduceOrDefault = 0x95,
+    IteratorFold = 0x96,
+    SeriesTerm = 0x97,
+    SeriesTake = 0x98,
+    SeriesDrop = 0x99,
+    PipelineIterator = 0x9A,
 
     #endregion
 
-    #region Pipeline operations
+    #region Group 6 - collection and value building
 
-    PipelineIterator = 0xD0,
-    PipelineCollectList = 0xD1,
-    PipelineFirst = 0xD3,
-    PipelineLast = 0xD4,
-    PipelineSingle = 0xD5,
-    PipelineHasAny = 0xD6,
-    PipelineHasAll = 0xD7,
-    PipelineContainsSingle = 0xD8,
-    PipelineContainsAny = 0xD9,
-    PipelineContainsAll = 0xDA,
-    PipelineMap = 0xDB,
-    PipelineMapValue = 0xDC,
-    PipelineDistinct = 0xDD,
-    PipelineDistinctBy = 0xDE,
-    PipelineGroupBy = 0xDF,
+    BuildList = 0xA0,
+    BuildMap = 0xA1,
+    BuildMessage = 0xA2,
+    CollectionBuilderList = 0xA3,
+    CollectionBuilderAdd = 0xA4,
+    CollectionBuilderFinish = 0xA5,
+    Dice = 0xA6,
 
-    PipelineReverse = 0xE0,
-    PipelineSortAscending = 0xE1,
-    PipelineSortDescending = 0xE2,
-    PipelineOrderByAscending = 0xE3,
-    PipelineOrderByDescending = 0xE4,
-    PipelineTakeFirst = 0xE5,
-    PipelineTakeLast = 0xE6,
-    PipelineTakeHighest = 0xE7,
-    PipelineTakeLowest = 0xE8,
-    PipelineDropFirst = 0xE9,
-    PipelineDropLast = 0xEA,
-    PipelineDropHighest = 0xEB,
-    PipelineDropLowest = 0xEC,
-    PipelineShuffle = 0xED,
-    PipelineDraw = 0xEE,
-    PipelineChoose = 0xEF,
+    #endregion
 
-    PipelineChooseRandom = 0xF0,
-    PipelineChooseWeighted = 0xF1,
-    PipelineDicePatternCountAny = 0xF2,
-    PipelineDicePatternCountFace = 0xF3,
-    PipelineDicePatternFullHouse = 0xF4,
-    PipelineDicePatternStraight = 0xF5,
-    PipelineTakePatternCountAny = 0xF6,
-    PipelineTakePatternCountFace = 0xF7,
-    PipelineTakePatternFullHouse = 0xF8,
-    PipelineTakePatternStraight = 0xF9
+    #region Group 7 - pipeline terminals and transforms
+
+    PipelineCollectList = 0xB0,
+    PipelineFirst = 0xB1,
+    PipelineLast = 0xB2,
+    PipelineSingle = 0xB3,
+    PipelineHasAny = 0xB4,
+    PipelineHasAll = 0xB5,
+    PipelineContainsSingle = 0xB6,
+    PipelineContainsAny = 0xB7,
+    PipelineContainsAll = 0xB8,
+    PipelineMap = 0xB9,
+    PipelineMapValue = 0xBA,
+    PipelineDistinct = 0xBB,
+    PipelineDistinctBy = 0xBC,
+    PipelineGroupBy = 0xBD,
+    PipelineReverse = 0xBE,
+    PipelineSortAscending = 0xBF,
+    PipelineSortDescending = 0xC0,
+    PipelineOrderByAscending = 0xC1,
+    PipelineOrderByDescending = 0xC2,
+    PipelineTakeFirst = 0xC3,
+    PipelineTakeLast = 0xC4,
+    PipelineTakeHighest = 0xC5,
+    PipelineTakeLowest = 0xC6,
+    PipelineDropFirst = 0xC7,
+    PipelineDropLast = 0xC8,
+    PipelineDropHighest = 0xC9,
+    PipelineDropLowest = 0xCA,
+    PipelineShuffle = 0xCB,
+    PipelineDraw = 0xCC,
+    PipelineChoose = 0xCD,
+    PipelineChooseRandom = 0xCE,
+    PipelineChooseWeighted = 0xCF,
+    PipelineDicePatternCountAny = 0xD0,
+    PipelineDicePatternCountFace = 0xD1,
+    PipelineDicePatternFullHouse = 0xD2,
+    PipelineDicePatternStraight = 0xD3,
+    PipelineTakePatternCountAny = 0xD4,
+    PipelineTakePatternCountFace = 0xD5,
+    PipelineTakePatternFullHouse = 0xD6,
+    PipelineTakePatternStraight = 0xD7
 
     #endregion
 }

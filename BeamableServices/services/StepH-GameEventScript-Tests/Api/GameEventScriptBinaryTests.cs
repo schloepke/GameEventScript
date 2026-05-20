@@ -61,7 +61,7 @@ public sealed class GameEventScriptBinaryTests
         var json = JsonSerializer.Serialize(instruction);
 
         Assert.AreEqual(
-            """{"Opcode":"LoadInteger","Flags":"0x02","Dst":"0x0007","Parameter":"0x000000000000002A"}""",
+            """{"Opcode":"LoadInteger","Flags":"0x02","Dst":"0x0007","X":"0x0000","Y":"0x0000","Parameter":"0x000000000000002A"}""",
             json);
 
         var decoded = JsonSerializer.Deserialize<GameEventScriptBytecodeInstruction>(json);
@@ -92,6 +92,8 @@ public sealed class GameEventScriptBinaryTests
         StringAssert.Contains(json, "\"Opcode\":");
         StringAssert.Contains(json, "\"Flags\":");
         StringAssert.Contains(json, "\"Dst\":");
+        StringAssert.Contains(json, "\"X\":");
+        StringAssert.Contains(json, "\"Y\":");
         StringAssert.Contains(json, "\"Parameter\":");
         Assert.IsFalse(json.Contains("A_U16", StringComparison.Ordinal), "Instruction JSON must not expose overlapped typed fields.");
     }

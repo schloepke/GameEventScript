@@ -123,7 +123,7 @@ internal sealed class GesLinearBytecodeBuilder
 
             _code[address] = _code[address] with
             {
-                A_U16 = ToUShortOperand(callable.EntryAddress, "callable entry address")
+                X_U16 = ToUShortOperand(callable.EntryAddress, "callable entry address")
             };
         }
 
@@ -320,7 +320,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         _code[address] = _code[address] with
         {
-            A_U16 = ToUShortOperand(Math.Max(0, count), "local slot reserve count")
+            X_U16 = ToUShortOperand(Math.Max(0, count), "local slot reserve count")
         };
     }
 
@@ -2241,8 +2241,8 @@ internal sealed class GesLinearBytecodeBuilder
                 var instruction = new GameEventScriptBytecodeInstruction(
                     GameEventScriptBytecodeOpCode.RangeIteratorShort,
                     dest: ToUShortOperand(iteratorSlot, "iterator slot"));
-                instruction.A_I16 = from;
-                instruction.B_I16 = to;
+                instruction.X_I16 = from;
+                instruction.Y_I16 = to;
                 instruction.C_I16 = step;
                 Emit(instruction);
                 return iteratorSlot;
@@ -2382,20 +2382,20 @@ internal sealed class GesLinearBytecodeBuilder
     }
 
     private void PatchTarget(int address, int target)
-        => _code[address] = _code[address] with { A_U16 = ToUShortOperand(target, "target address") };
+        => _code[address] = _code[address] with { X_U16 = ToUShortOperand(target, "target address") };
 
     private void PatchA(int address, int value)
-        => _code[address] = _code[address] with { A_U16 = ToUShortOperand(value, "operand") };
+        => _code[address] = _code[address] with { X_U16 = ToUShortOperand(value, "operand") };
 
     private void PatchTargets(int address, int target, int target2)
         => _code[address] = _code[address] with
         {
-            A_U16 = ToUShortOperand(target, "target address"),
-            B_U16 = ToUShortOperand(target2, "target address")
+            X_U16 = ToUShortOperand(target, "target address"),
+            Y_U16 = ToUShortOperand(target2, "target address")
         };
 
     private void PatchB(int address, int value)
-        => _code[address] = _code[address] with { B_U16 = ToUShortOperand(value, "operand") };
+        => _code[address] = _code[address] with { Y_U16 = ToUShortOperand(value, "operand") };
 
     private void PatchC(int address, int value)
         => _code[address] = _code[address] with { C_U16 = ToUShortOperand(value, "operand") };

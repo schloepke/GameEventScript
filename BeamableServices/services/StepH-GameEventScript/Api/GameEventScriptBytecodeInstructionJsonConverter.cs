@@ -12,6 +12,8 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
     private const string OpcodePropertyName = "Opcode";
     private const string FlagsPropertyName = "Flags";
     private const string DstPropertyName = "Dst";
+    private const string XPropertyName = "X";
+    private const string YPropertyName = "Y";
     private const string ParameterPropertyName = "Parameter";
 
     public override GameEventScriptBytecodeInstruction Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -24,6 +26,8 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
         GameEventScriptBytecodeOpCode? opcode = null;
         byte? flags = null;
         ushort? dst = null;
+        ushort x = 0;
+        ushort y = 0;
         ulong? parameter = null;
 
         while (reader.Read())
@@ -56,6 +60,14 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
             {
                 dst = checked((ushort)ReadUnsigned(ref reader, DstPropertyName, ushort.MaxValue));
             }
+            else if (IsProperty(propertyName, XPropertyName, "X_U16", "x"))
+            {
+                x = checked((ushort)ReadUnsigned(ref reader, XPropertyName, ushort.MaxValue));
+            }
+            else if (IsProperty(propertyName, YPropertyName, "Y_U16", "y"))
+            {
+                y = checked((ushort)ReadUnsigned(ref reader, YPropertyName, ushort.MaxValue));
+            }
             else if (IsProperty(propertyName, ParameterPropertyName, "Payload", "U64", "parameter", "payload", "u64"))
             {
                 parameter = ReadUnsigned(ref reader, ParameterPropertyName, ulong.MaxValue);
@@ -86,7 +98,7 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
             throw new JsonException("A bytecode instruction requires a Parameter property.");
         }
 
-        var instruction = new GameEventScriptBytecodeInstruction(opcode.Value, dst.Value, unitAndFlags: flags.Value);
+        var instruction = new GameEventScriptBytecodeInstruction(opcode.Value, dst.Value, x, y, unitAndFlags: flags.Value);
         instruction.U64 = parameter.Value;
         return instruction;
     }
@@ -97,6 +109,8 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
         writer.WriteString(OpcodePropertyName, FormatOpcode(value.OpCode));
         writer.WriteString(FlagsPropertyName, FormatHex(value.UnitAndFlags, 2));
         writer.WriteString(DstPropertyName, FormatHex(value.Dest_U16, 4));
+        writer.WriteString(XPropertyName, FormatHex(value.X_U16, 4));
+        writer.WriteString(YPropertyName, FormatHex(value.Y_U16, 4));
         writer.WriteString(ParameterPropertyName, FormatHex(value.U64, 16));
         writer.WriteEndObject();
     }

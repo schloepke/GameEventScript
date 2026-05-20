@@ -292,5 +292,5 @@ public class GameEventScriptOpcodePrinter
     }
 
     private static bool IsCustomTypeInstruction(GameEventScriptBytecodeInstruction instruction)
-        => (GameEventScriptBytecodeTypeKind)instruction.B_U16 == GameEventScriptBytecodeTypeKind.Custom;
+        => (GameEventScriptBytecodeTypeKind)instruction.Y_U16 == GameEventScriptBytecodeTypeKind.Custom;
 }

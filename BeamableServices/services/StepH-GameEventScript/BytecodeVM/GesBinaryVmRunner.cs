@@ -83,13 +83,13 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.CastUnit:
                 case GameEventScriptBytecodeOpCode.TypeCheck:
                 case GameEventScriptBytecodeOpCode.CheckUnit:
-                    maxSlot = Math.Max(maxSlot, instruction.A_U16);
+                    maxSlot = Math.Max(maxSlot, instruction.X_U16);
                     break;
 
                 case GameEventScriptBytecodeOpCode.ReserveSlots:
-                    if (instruction.A_U16 > 0)
+                    if (instruction.X_U16 > 0)
                     {
-                        maxSlot = Math.Max(maxSlot, instruction.A_U16 - 1);
+                        maxSlot = Math.Max(maxSlot, instruction.X_U16 - 1);
                     }
 
                     break;
@@ -116,7 +116,7 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.IntLessOrEqual:
                 case GameEventScriptBytecodeOpCode.IntEqual:
                 case GameEventScriptBytecodeOpCode.IntNotEqual:
-                    maxSlot = Math.Max(maxSlot, Math.Max(instruction.A_U16, instruction.B_U16));
+                    maxSlot = Math.Max(maxSlot, Math.Max(instruction.X_U16, instruction.Y_U16));
                     break;
 
                 case GameEventScriptBytecodeOpCode.JumpIfTrue:
@@ -179,7 +179,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.MoveSlot:
-                    Set(instruction.Dest_U16, Get(instruction.A_U16));
+                    Set(instruction.Dest_U16, Get(instruction.X_U16));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadNothing:
@@ -207,27 +207,27 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadText:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Text(_binary.TextConstantTable.Resolve(checked((ushort)instruction.A_U32))));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Text(_binary.TextConstantTable.Resolve(checked((ushort)instruction.X_U32))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadTag:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Tag(_binary.TextConstantTable.Resolve(checked((ushort)instruction.A_U32))));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Tag(_binary.TextConstantTable.Resolve(checked((ushort)instruction.X_U32))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Cast:
-                    Set(instruction.Dest_U16, CastValue(Get(instruction.A_U16), (GameEventScriptBytecodeTypeKind)instruction.B_U16, instruction.C_U16));
+                    Set(instruction.Dest_U16, CastValue(Get(instruction.X_U16), (GameEventScriptBytecodeTypeKind)instruction.Y_U16, instruction.C_U16));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastUnit:
-                    Set(instruction.Dest_U16, CastUnit(Get(instruction.A_U16), DecodeUnit(instruction.UnitAndFlags)));
+                    Set(instruction.Dest_U16, CastUnit(Get(instruction.X_U16), DecodeUnit(instruction.UnitAndFlags)));
                     break;
 
                 case GameEventScriptBytecodeOpCode.TypeCheck:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.A_U16), (GameEventScriptBytecodeTypeKind)instruction.B_U16, instruction.C_U16)));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.X_U16), (GameEventScriptBytecodeTypeKind)instruction.Y_U16, instruction.C_U16)));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CheckUnit:
-                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.A_U16), DecodeUnit(instruction.UnitAndFlags))));
+                    Set(instruction.Dest_U16, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.X_U16), DecodeUnit(instruction.UnitAndFlags))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.IntAdd:
@@ -240,7 +240,7 @@ internal sealed class GesBinaryVmRunState
                 case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
                 case GameEventScriptBytecodeOpCode.IntLess:
                 case GameEventScriptBytecodeOpCode.IntLessOrEqual:
-                    Set(instruction.Dest_U16, EvaluatePrimitiveInteger(instruction.OpCode, Get(instruction.A_U16), Get(instruction.B_U16)));
+                    Set(instruction.Dest_U16, EvaluatePrimitiveInteger(instruction.OpCode, Get(instruction.X_U16), Get(instruction.Y_U16)));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Add:
@@ -255,17 +255,17 @@ internal sealed class GesBinaryVmRunState
                 case GameEventScriptBytecodeOpCode.LessOrEqual:
                 case GameEventScriptBytecodeOpCode.Min:
                 case GameEventScriptBytecodeOpCode.Max:
-                    Set(instruction.Dest_U16, EvaluateGenericBinary(instruction.OpCode, Get(instruction.A_U16), Get(instruction.B_U16)));
+                    Set(instruction.Dest_U16, EvaluateGenericBinary(instruction.OpCode, Get(instruction.X_U16), Get(instruction.Y_U16)));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Jump:
-                    _pc = instruction.A_U16;
+                    _pc = instruction.X_U16;
                     break;
 
                 case GameEventScriptBytecodeOpCode.JumpIfTrue:
                     if (Get(instruction.C_U16).IsTrue())
                     {
-                        _pc = instruction.A_U16;
+                        _pc = instruction.X_U16;
                     }
 
                     break;
@@ -273,7 +273,7 @@ internal sealed class GesBinaryVmRunState
                 case GameEventScriptBytecodeOpCode.JumpIfFalse:
                     if (Get(instruction.C_U16).IsFalse())
                     {
-                        _pc = instruction.A_U16;
+                        _pc = instruction.X_U16;
                     }
 
                     break;
@@ -281,7 +281,7 @@ internal sealed class GesBinaryVmRunState
                 case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
                     if (!Get(instruction.C_U16).IsTrue())
                     {
-                        _pc = instruction.A_U16;
+                        _pc = instruction.X_U16;
                     }
 
                     break;
@@ -332,8 +332,8 @@ internal sealed class GesBinaryVmRunState
 
     private bool PublishMessage(GameEventScriptBytecodeInstruction instruction, bool publish)
     {
-        var shape = _binary.Uint16ConstantTable.Resolve(instruction.A_U16);
-        var argumentSlots = _binary.Uint16ConstantTable.Resolve(instruction.B_U16);
+        var shape = _binary.Uint16ConstantTable.Resolve(instruction.X_U16);
+        var argumentSlots = _binary.Uint16ConstantTable.Resolve(instruction.Y_U16);
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
         {
             return false;

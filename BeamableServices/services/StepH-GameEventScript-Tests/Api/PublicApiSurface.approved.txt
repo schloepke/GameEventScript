@@ -104,26 +104,31 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
   enum-field MessageEnvelope = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
-  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.UInt16 dest, System.UInt16 a, System.UInt16 b, System.UInt16 c, System.UInt16 d, System.Byte unitAndFlags)
+  ctor GameEventScriptBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode opCode, System.UInt16 dest, System.UInt16 x, System.UInt16 y, System.UInt16 c, System.UInt16 d, System.Byte unitAndFlags)
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
   field System.Byte UnitAndFlags
   field System.Double F64
-  field System.Int16 A_I16
-  field System.Int16 B_I16
   field System.Int16 C_I16
   field System.Int16 D_I16
-  field System.Int32 A_I32
-  field System.Int32 B_I32
+  field System.Int16 X_I16
+  field System.Int16 Y_I16
   field System.Int64 I64
-  field System.UInt16 A_U16
-  field System.UInt16 B_U16
   field System.UInt16 C_U16
-  field System.UInt16 Condition_U16
+  field System.UInt16 ConditionSlot
   field System.UInt16 D_U16
   field System.UInt16 Dest_U16
-  field System.UInt16 Target_U16
-  field System.UInt32 A_U32
-  field System.UInt32 B_U32
+  field System.UInt16 DestinationSlot
+  field System.UInt16 EntryAddress
+  field System.UInt16 ListIndex
+  field System.UInt16 ResultSlot
+  field System.UInt16 StringIndex
+  field System.UInt16 TargetAddress
+  field System.UInt16 XSlot
+  field System.UInt16 X_U16
+  field System.UInt16 YSlot
+  field System.UInt16 Y_U16
+  field System.UInt32 X_I32
+  field System.UInt32 X_U32
   field System.UInt64 U64
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNone = 0
@@ -133,176 +138,176 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNothing = 255
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Nop = 0
-  enum-field LoadNothing = 1
-  enum-field LoadTrue = 2
-  enum-field LoadFalse = 3
-  enum-field LoadInteger = 4
-  enum-field LoadFloat = 5
-  enum-field LoadText = 6
-  enum-field LoadTag = 7
-  enum-field MoveSlot = 8
-  enum-field LoadPercentage = 9
-  enum-field Jump = 10
-  enum-field JumpIfTrue = 11
-  enum-field JumpIfFalse = 12
-  enum-field JumpIfNotTrue = 13
-  enum-field ReturnVoid = 14
-  enum-field ReturnValue = 15
-  enum-field Or = 16
-  enum-field And = 17
-  enum-field Xor = 18
-  enum-field Equal = 19
-  enum-field NotEqual = 20
-  enum-field ApproxEqual = 21
-  enum-field Less = 22
-  enum-field Greater = 23
-  enum-field LessOrEqual = 24
-  enum-field GreaterOrEqual = 25
-  enum-field Add = 26
-  enum-field Subtract = 27
-  enum-field Multiply = 28
-  enum-field Divide = 29
-  enum-field Power = 30
-  enum-field Default = 31
-  enum-field IntEqual = 32
-  enum-field IntNotEqual = 33
-  enum-field IntLess = 34
-  enum-field IntGreater = 35
-  enum-field IntLessOrEqual = 36
-  enum-field IntGreaterOrEqual = 37
-  enum-field IntAdd = 38
-  enum-field IntSubtract = 39
-  enum-field IntMultiply = 40
-  enum-field IntDivide = 41
-  enum-field IntFloorDivide = 42
-  enum-field IntModulo = 43
-  enum-field IntRemainder = 44
-  enum-field IntegerDivide = 45
-  enum-field Modulo = 46
-  enum-field Remainder = 47
-  enum-field UnaryNegate = 48
-  enum-field UnaryNot = 49
-  enum-field UnaryHasValue = 50
-  enum-field UnaryEmpty = 51
-  enum-field UnaryLength = 52
-  enum-field UnaryChance = 53
-  enum-field UnaryAbs = 54
-  enum-field UnaryNaturalLog = 55
-  enum-field Clamp = 56
-  enum-field Random = 57
-  enum-field Dice = 58
-  enum-field RandomPush = 59
-  enum-field RandomPushConstant = 60
-  enum-field RandomPop = 61
-  enum-field Range = 62
-  enum-field RangeWithStep = 63
-  enum-field Contains = 64
-  enum-field ContainsValue = 65
-  enum-field StartsWith = 66
-  enum-field EndsWith = 67
-  enum-field Intersect = 68
-  enum-field Combine = 69
-  enum-field Except = 70
-  enum-field Zip = 71
-  enum-field UnaryKeys = 72
-  enum-field UnaryValues = 73
-  enum-field UnaryEntries = 74
-  enum-field Min = 75
-  enum-field Max = 76
-  enum-field Implies = 77
-  enum-field ReserveSlots = 78
-  enum-field Cast = 80
-  enum-field CastUnit = 81
-  enum-field TypeCheck = 112
-  enum-field CheckUnit = 113
-  enum-field LoadHandler = 144
-  enum-field TypeConstructor = 145
-  enum-field MemberAccess = 147
-  enum-field IndexedAccess = 148
-  enum-field BuildList = 149
-  enum-field BuildMap = 152
-  enum-field BuildMessage = 153
-  enum-field BindHandler = 154
-  enum-field ReleaseSlots = 161
-  enum-field EmitMessage = 162
-  enum-field EmitMessageWithTags = 163
-  enum-field PublishMessage = 164
-  enum-field PublishMessageWithTags = 165
-  enum-field EmitMessageValue = 166
-  enum-field EmitMessageValueWithTags = 167
-  enum-field PublishMessageValue = 168
-  enum-field PublishMessageValueWithTags = 169
-  enum-field RangeIterator = 176
-  enum-field RangeIteratorWithStep = 177
-  enum-field RangeIteratorShort = 178
-  enum-field CollectionIterator = 179
-  enum-field IteratorNext = 180
-  enum-field IteratorClose = 181
-  enum-field CollectionBuilderList = 182
-  enum-field CollectionBuilderAdd = 184
-  enum-field CollectionBuilderFinish = 185
-  enum-field IteratorReduce = 186
-  enum-field IteratorReduceOrDefault = 187
-  enum-field IteratorFold = 188
-  enum-field SeriesTerm = 189
-  enum-field SeriesTake = 190
-  enum-field SeriesDrop = 191
-  enum-field Call = 192
-  enum-field CallPredicate = 193
-  enum-field CallStandard = 194
-  enum-field CallStandardPredicate = 195
-  enum-field CallExternal = 196
-  enum-field CallExternalPredicate = 197
-  enum-field StageRegister = 198
-  enum-field StageNothing = 199
-  enum-field StageTrue = 200
-  enum-field StageFalse = 201
-  enum-field StageInteger = 202
-  enum-field StageFloat = 203
-  enum-field StageText = 204
-  enum-field StageTag = 205
-  enum-field StagePercentage = 206
-  enum-field PipelineIterator = 208
-  enum-field PipelineCollectList = 209
-  enum-field PipelineFirst = 211
-  enum-field PipelineLast = 212
-  enum-field PipelineSingle = 213
-  enum-field PipelineHasAny = 214
-  enum-field PipelineHasAll = 215
-  enum-field PipelineContainsSingle = 216
-  enum-field PipelineContainsAny = 217
-  enum-field PipelineContainsAll = 218
-  enum-field PipelineMap = 219
-  enum-field PipelineMapValue = 220
-  enum-field PipelineDistinct = 221
-  enum-field PipelineDistinctBy = 222
-  enum-field PipelineGroupBy = 223
-  enum-field PipelineReverse = 224
-  enum-field PipelineSortAscending = 225
-  enum-field PipelineSortDescending = 226
-  enum-field PipelineOrderByAscending = 227
-  enum-field PipelineOrderByDescending = 228
-  enum-field PipelineTakeFirst = 229
-  enum-field PipelineTakeLast = 230
-  enum-field PipelineTakeHighest = 231
-  enum-field PipelineTakeLowest = 232
-  enum-field PipelineDropFirst = 233
-  enum-field PipelineDropLast = 234
-  enum-field PipelineDropHighest = 235
-  enum-field PipelineDropLowest = 236
-  enum-field PipelineShuffle = 237
-  enum-field PipelineDraw = 238
-  enum-field PipelineChoose = 239
-  enum-field PipelineChooseRandom = 240
-  enum-field PipelineChooseWeighted = 241
-  enum-field PipelineDicePatternCountAny = 242
-  enum-field PipelineDicePatternCountFace = 243
-  enum-field PipelineDicePatternFullHouse = 244
-  enum-field PipelineDicePatternStraight = 245
-  enum-field PipelineTakePatternCountAny = 246
-  enum-field PipelineTakePatternCountFace = 247
-  enum-field PipelineTakePatternFullHouse = 248
-  enum-field PipelineTakePatternStraight = 249
+  enum-field Jump = 1
+  enum-field JumpIfTrue = 2
+  enum-field JumpIfFalse = 3
+  enum-field JumpIfNotTrue = 4
+  enum-field ReserveSlots = 5
+  enum-field ReleaseSlots = 6
+  enum-field ReturnVoid = 7
+  enum-field ReturnValue = 8
+  enum-field Call = 9
+  enum-field CallPredicate = 10
+  enum-field CallStandard = 11
+  enum-field CallStandardPredicate = 12
+  enum-field CallExternal = 13
+  enum-field CallExternalPredicate = 14
+  enum-field BindHandler = 15
+  enum-field MoveSlot = 16
+  enum-field Cast = 17
+  enum-field CastUnit = 18
+  enum-field TypeCheck = 19
+  enum-field CheckUnit = 20
+  enum-field MemberAccess = 21
+  enum-field IndexedAccess = 22
+  enum-field EmitMessage = 23
+  enum-field EmitMessageWithTags = 24
+  enum-field PublishMessage = 25
+  enum-field PublishMessageWithTags = 26
+  enum-field EmitMessageValue = 27
+  enum-field EmitMessageValueWithTags = 28
+  enum-field PublishMessageValue = 29
+  enum-field PublishMessageValueWithTags = 30
+  enum-field LoadNothing = 32
+  enum-field LoadTrue = 33
+  enum-field LoadFalse = 34
+  enum-field LoadInteger = 35
+  enum-field LoadFloat = 36
+  enum-field LoadPercentage = 37
+  enum-field LoadText = 38
+  enum-field LoadTag = 39
+  enum-field LoadHandler = 40
+  enum-field StageRegister = 41
+  enum-field StageNothing = 42
+  enum-field StageTrue = 43
+  enum-field StageFalse = 44
+  enum-field StageInteger = 45
+  enum-field StageFloat = 46
+  enum-field StageText = 47
+  enum-field StageTag = 48
+  enum-field StagePercentage = 49
+  enum-field TypeConstructor = 50
+  enum-field Or = 64
+  enum-field And = 65
+  enum-field Xor = 66
+  enum-field Implies = 67
+  enum-field UnaryNot = 68
+  enum-field UnaryHasValue = 69
+  enum-field UnaryEmpty = 70
+  enum-field Equal = 71
+  enum-field NotEqual = 72
+  enum-field ApproxEqual = 73
+  enum-field Less = 74
+  enum-field Greater = 75
+  enum-field LessOrEqual = 76
+  enum-field GreaterOrEqual = 77
+  enum-field IntEqual = 78
+  enum-field IntNotEqual = 79
+  enum-field IntLess = 80
+  enum-field IntGreater = 81
+  enum-field IntLessOrEqual = 82
+  enum-field IntGreaterOrEqual = 83
+  enum-field Default = 84
+  enum-field Add = 96
+  enum-field Subtract = 97
+  enum-field Multiply = 98
+  enum-field Divide = 99
+  enum-field Power = 100
+  enum-field IntegerDivide = 101
+  enum-field Modulo = 102
+  enum-field Remainder = 103
+  enum-field IntAdd = 104
+  enum-field IntSubtract = 105
+  enum-field IntMultiply = 106
+  enum-field IntDivide = 107
+  enum-field IntFloorDivide = 108
+  enum-field IntModulo = 109
+  enum-field IntRemainder = 110
+  enum-field Min = 111
+  enum-field Max = 112
+  enum-field UnaryNegate = 113
+  enum-field UnaryAbs = 114
+  enum-field UnaryNaturalLog = 115
+  enum-field UnaryChance = 116
+  enum-field Clamp = 117
+  enum-field Random = 118
+  enum-field RandomPush = 119
+  enum-field RandomPushConstant = 120
+  enum-field RandomPop = 121
+  enum-field UnaryLength = 128
+  enum-field StartsWith = 129
+  enum-field EndsWith = 130
+  enum-field Contains = 131
+  enum-field ContainsValue = 132
+  enum-field Intersect = 133
+  enum-field Combine = 134
+  enum-field Except = 135
+  enum-field Zip = 136
+  enum-field UnaryKeys = 137
+  enum-field UnaryValues = 138
+  enum-field UnaryEntries = 139
+  enum-field Range = 140
+  enum-field RangeWithStep = 141
+  enum-field RangeIterator = 142
+  enum-field RangeIteratorWithStep = 143
+  enum-field RangeIteratorShort = 144
+  enum-field CollectionIterator = 145
+  enum-field IteratorNext = 146
+  enum-field IteratorClose = 147
+  enum-field IteratorReduce = 148
+  enum-field IteratorReduceOrDefault = 149
+  enum-field IteratorFold = 150
+  enum-field SeriesTerm = 151
+  enum-field SeriesTake = 152
+  enum-field SeriesDrop = 153
+  enum-field PipelineIterator = 154
+  enum-field BuildList = 160
+  enum-field BuildMap = 161
+  enum-field BuildMessage = 162
+  enum-field CollectionBuilderList = 163
+  enum-field CollectionBuilderAdd = 164
+  enum-field CollectionBuilderFinish = 165
+  enum-field Dice = 166
+  enum-field PipelineCollectList = 176
+  enum-field PipelineFirst = 177
+  enum-field PipelineLast = 178
+  enum-field PipelineSingle = 179
+  enum-field PipelineHasAny = 180
+  enum-field PipelineHasAll = 181
+  enum-field PipelineContainsSingle = 182
+  enum-field PipelineContainsAny = 183
+  enum-field PipelineContainsAll = 184
+  enum-field PipelineMap = 185
+  enum-field PipelineMapValue = 186
+  enum-field PipelineDistinct = 187
+  enum-field PipelineDistinctBy = 188
+  enum-field PipelineGroupBy = 189
+  enum-field PipelineReverse = 190
+  enum-field PipelineSortAscending = 191
+  enum-field PipelineSortDescending = 192
+  enum-field PipelineOrderByAscending = 193
+  enum-field PipelineOrderByDescending = 194
+  enum-field PipelineTakeFirst = 195
+  enum-field PipelineTakeLast = 196
+  enum-field PipelineTakeHighest = 197
+  enum-field PipelineTakeLowest = 198
+  enum-field PipelineDropFirst = 199
+  enum-field PipelineDropLast = 200
+  enum-field PipelineDropHighest = 201
+  enum-field PipelineDropLowest = 202
+  enum-field PipelineShuffle = 203
+  enum-field PipelineDraw = 204
+  enum-field PipelineChoose = 205
+  enum-field PipelineChooseRandom = 206
+  enum-field PipelineChooseWeighted = 207
+  enum-field PipelineDicePatternCountAny = 208
+  enum-field PipelineDicePatternCountFace = 209
+  enum-field PipelineDicePatternFullHouse = 210
+  enum-field PipelineDicePatternStraight = 211
+  enum-field PipelineTakePatternCountAny = 212
+  enum-field PipelineTakePatternCountFace = 213
+  enum-field PipelineTakePatternFullHouse = 214
+  enum-field PipelineTakePatternStraight = 215
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }

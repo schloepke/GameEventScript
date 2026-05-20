@@ -142,10 +142,10 @@ GameEventScriptBytecodeInstruction
   OpCode
   UnitAndFlags
   Dest_U16
-  A_U16/B_U16/C_U16/D_U16
-  A_I16/B_I16/C_I16/D_I16
-  A_I32/B_I32
-  A_U32/B_U32
+  X_U16/Y_U16
+  X_I16/Y_I16
+  C_U16/D_U16
+  C_I16/D_I16
   I64/U64/F64
 ```
 
@@ -298,39 +298,38 @@ Predicates:
 ## Instruction Shape
 
 The portable instruction is compact and allocation-free to execute. The public
-instruction word is a 12-byte explicit-layout value with typed overlapping
-views:
+instruction word is currently a 16-byte explicit-layout value: an 8-byte primary
+word plus an aligned 8-byte payload word.
 
 ```text
 Instruction
   OpCode
   UnitAndFlags
   Dest_U16
-  A_U16, B_U16, C_U16, D_U16
-  A_I16, B_I16, C_I16, D_I16
-  A_I32, B_I32
-  A_U32, B_U32
+  X_U16, Y_U16
+  X_I16, Y_I16
+  C_U16, D_U16
+  C_I16, D_I16
   I64, U64, F64
 ```
 
 Operands are interpreted by opcode:
 
 - `Dest_U16`: destination slot for value-producing instructions.
-- `A_U16`, `B_U16`, `C_U16`, `D_U16`: slots, branch targets, pool indices, or
-  small unsigned immediates.
-- `A_I16`, `B_I16`, `C_I16`, `D_I16`: compact signed immediates for opcodes
-  that explicitly document signed 16-bit operands.
-- `A_I32`/`B_I32` and `A_U32`/`B_U32`: reserved compact 32-bit immediate views.
-- `I64`, `U64`, `F64`: inline literal payloads for integer, unsigned seed, and
-  double/float loads.
-- Branch opcodes use `A_U16` as the target address and conditional jumps use
-  `C_U16` as the condition slot.
+- `X_U16`, `Y_U16`: primary-word slots, branch targets, pool indices, or small
+  unsigned immediates.
+- `X_I16`, `Y_I16`: compact signed immediates in the primary word.
+- `C_U16`, `D_U16`, `C_I16`, `D_I16`: payload-word 16-bit views for wider
+  opcodes.
+- `I64`, `U64`, `F64`: aligned payload-word literal views for integer,
+  unsigned seed, and double/float loads.
+- Branch opcodes use the primary fields documented by their opcode shape.
 - Iterator and pipeline terminal opcodes document their own slot, immediate, and
   helper-entry fields explicitly. They do not use sentinel operands for absent
   parameters.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
-  indices directly in `A_U16`, `B_U16`, `C_U16`, or `D_U16`.
-- `ReserveSlots A_U16` is the required prolog instruction for every executable
+  indices directly in `X_U16`, `Y_U16`, `C_U16`, or `D_U16`.
+- `ReserveSlots X_U16` is the required prolog instruction for every executable
   entry address. It adds local slots beyond the arguments already present in
   the frame. The bind/export tables do not carry this internal execution value.
 
@@ -341,45 +340,46 @@ by distinct opcodes such as `ReturnVoid` and
 still define its own optional `-1` fields where the table schema explicitly
 allows them.
 
-Opcode values are grouped in 16-value blocks by operation family. The VM still
-dispatches directly on the full opcode byte; the group nibble is a portable
-layout convention and may be used by validators, dumpers, or future decoders.
-The current groups are:
+Opcode values are grouped in aligned operation-family blocks. Every family
+starts at a `0x_0` boundary, and larger families may span multiple 16-value
+pages. The VM still dispatches directly on the full opcode byte; the high nibble
+is a portable layout convention and may be used by validators, dumpers, or
+future decoders. The current groups are:
 
 ```text
-0x00 core loads, slot movement, branches, returns
-0x10 generic boolean, comparison, arithmetic, and default operations
-0x20 primitive integer fast-path operations
-0x30 unary, random, dice, and range value operations
-0x40 collection/text operations, key/value projections, short-circuit/frame markers
-0x50 primitive/domain casts
-0x60 collection/message/reference casts
-0x70 primitive/domain type checks
-0x80 collection/message/reference type checks
-0x90 construction, access, handlers, predicates, calls
-0xA0 scopes and message emit/publish operations
-0xB0 iterators, collection builders, reduction, and series operations
-0xC0 calls
-0xD0 pipeline iterator, materializer, and collection terminals
-0xE0 pipeline materializing, ordering, and slicing terminals
-0xF0 pipeline random and pattern terminals
+0x00 Group 1: control flow, frame slots, local calls, handler binding, access, emit/publish
+0x10 Group 1 continuation: move, casts, checks, member/index access, message operations
+0x20 Group 2: loads, argument staging, type construction
+0x30 Group 2 continuation and reserved tail
+0x40 Group 3: boolean, comparison, implication, presence checks
+0x50 Group 3 integer comparison fast-path tail and reserved space
+0x60 Group 4: math, integer arithmetic fast paths, random
+0x70 Group 4 continuation and reserved tail
+0x80 Group 5: text/collection operators, range/iterator setup
+0x90 Group 5 iterator next/close/reduce/fold, series, PipelineIterator
+0xA0 Group 6: collection and value building
+0xB0 Group 7: pipeline materializers, transforms, membership terminals
+0xC0 Group 7 pipeline ordering, slicing, random terminals
+0xD0 Group 7 pipeline dice/pattern terminals
+0xE0 reserved for future pipeline, extension, or VM opcodes
+0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
 
 The exhaustive opcode field map lives in `BytecodeOpcodeShape.md`. That table
 lists every currently defined opcode as its own row. Unused address ranges are
 marked as `reserved` ranges.
 
-For JSON transport, instructions serialize as a normalized four-field object:
+For JSON transport, instructions serialize as a normalized primary-word plus
+payload object:
 
 ```json
-{ "Opcode": "LoadInteger", "Flags": "0x00", "Dst": "0x0007", "Parameter": "0x000000000000002A" }
+{ "Opcode": "LoadInteger", "Flags": "0x00", "Dst": "0x0007", "X": "0x0000", "Y": "0x0000", "Parameter": "0x000000000000002A" }
 ```
 
-`Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot, and
-`Parameter` is the raw unsigned 64-bit payload covering bytes `4..11`. For
-slot/index/target instructions the payload packs `A`, `B`, `C`, and `D` into
-successive 16-bit lanes. For literal instructions the same payload carries
-`I64`, `U64`, or the IEEE-754 `F64` bit pattern.
+`Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot,
+`X` and `Y` are the raw primary operands, and `Parameter` is the raw unsigned
+64-bit payload word covering bytes `8..15`. For literal instructions the
+payload carries `I64`, `U64`, or the IEEE-754 `F64` bit pattern.
 
 Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/slot lists, `StringPool`
@@ -387,7 +387,7 @@ names, bind tables, and optional debug/diagnostic layouts.
 
 An instruction that produces a `nothing` value writes it to `Dest_U16`. Returning
 without a value uses `ReturnVoid`; returning a slot value uses
-`ReturnValue A_U16`. There is no implicit push. There are no operand-stack `Pop` or
+`ReturnValue X_U16`. There is no implicit push. There are no operand-stack `Pop` or
 `Duplicate` instructions in the portable target model.
 
 ## Execution Model
@@ -457,7 +457,7 @@ CallableEntry
 ```
 
 The local reserve count is intentionally not part of the bind/export metadata.
-It is encoded as `ReserveSlots A_U16` at the entry address because it is a VM
+It is encoded as `ReserveSlots X_U16` at the entry address because it is a VM
 execution detail needed equally by exported handlers/callables and private
 helper entries.
 
@@ -534,9 +534,9 @@ for `pc`-based execution.
 - `TypeCheck dst src typeKind`
 - `CheckUnit dst src unitAndFlags`
 
-`Cast` and `TypeCheck` use `B_U16` as `GameEventScriptBytecodeTypeKind`.
+`Cast` and `TypeCheck` use `Y_U16` as `GameEventScriptBytecodeTypeKind`.
 Built-in types are direct kind operands. Custom/external types use
-`B_U16=Custom` and `C_U16` as the type-name `StringPool` index. Units are not
+`Y_U16=Custom` and `C_U16` as the type-name `StringPool` index. Units are not
 declared type kinds: unit casts and checks use `CastUnit`/`CheckUnit` with the
 target unit in `UnitAndFlags`.
 
@@ -547,13 +547,13 @@ the preloaded argument slots.
 
 ### Scopes
 
-- `ReserveSlots A_U16`
-- `ReleaseSlots A_U16`
+- `ReserveSlots X_U16`
+- `ReleaseSlots X_U16`
 
 Scopes are explicit local slot deltas. `ReserveSlots` extends the same frame by
-`A_U16` additional local slots. Slot addresses stay absolute in the current
+`X_U16` additional local slots. Slot addresses stay absolute in the current
 frame, so reserving two locals from active slots `s0..s3` exposes `s0..s5`.
-`ReleaseSlots A_U16` clears and releases that exact number of slots. Existing
+`ReleaseSlots X_U16` clears and releases that exact number of slots. Existing
 parent slots remain visible and are not rolled back by scope exit. The compiler
 must emit matching counts for normal exits; `ReturnValue` and `ReturnVoid`
 discard the whole active frame, so no `ReleaseSlots` is needed immediately

@@ -176,7 +176,7 @@ public static class GameEventScriptBytecodeDumper
     {
         if (HasDestination(instruction.OpCode))
         {
-            AppendSlot(builder, "dst", instruction.Dest_U16);
+            AppendSlot(builder, "dst", instruction.DestinationSlot);
         }
 
         switch (instruction.OpCode)
@@ -185,11 +185,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.ReserveSlots:
-                AppendIndex(builder, "locals+=", instruction.X_U16);
+                AppendIndex(builder, "locals+=", instruction.Count);
                 break;
 
             case GameEventScriptBytecodeOpCode.ReleaseSlots:
-                AppendIndex(builder, "locals-=", instruction.X_U16);
+                AppendIndex(builder, "locals-=", instruction.Count);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadNothing:
@@ -221,11 +221,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadText:
-                AppendPoolIndex(builder, "text", module.StringPool, instruction.A_U16);
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.StringIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadTag:
-                AppendPoolIndex(builder, "tag", module.StringPool, instruction.A_U16);
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.StringIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
@@ -265,22 +265,22 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.StageText:
-                AppendPoolIndex(builder, "text", module.StringPool, instruction.A_U16);
+                AppendPoolIndex(builder, "text", module.StringPool, instruction.StringIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.StageTag:
-                AppendPoolIndex(builder, "tag", module.StringPool, instruction.A_U16);
+                AppendPoolIndex(builder, "tag", module.StringPool, instruction.StringIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
-                AppendAddress(builder, "target", instruction.X_U16);
+                AppendAddress(builder, "target", instruction.TargetAddress);
                 break;
 
             case GameEventScriptBytecodeOpCode.JumpIfTrue:
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                AppendAddress(builder, "target", instruction.X_U16);
-                AppendSlot(builder, "cond", instruction.A_U16);
+                AppendAddress(builder, "target", instruction.TargetAddress);
+                AppendSlot(builder, "cond", instruction.ConditionSlot);
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomPush:
@@ -443,7 +443,7 @@ public static class GameEventScriptBytecodeDumper
 
             case GameEventScriptBytecodeOpCode.Call:
             case GameEventScriptBytecodeOpCode.CallPredicate:
-                AppendAddress(builder, "target", instruction.X_U16);
+                AppendAddress(builder, "target", instruction.EntryAddress);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineIterator:

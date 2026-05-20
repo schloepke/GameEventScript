@@ -56,7 +56,7 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
             {
                 flags = checked((byte)ReadUnsigned(ref reader, FlagsPropertyName, byte.MaxValue));
             }
-            else if (IsProperty(propertyName, DstPropertyName, "Dest", "Dest_U16", "dest", "dst"))
+            else if (IsProperty(propertyName, DstPropertyName, "Dest", "DestinationSlot", "dest", "dst"))
             {
                 dst = checked((ushort)ReadUnsigned(ref reader, DstPropertyName, ushort.MaxValue));
             }
@@ -100,9 +100,9 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
 
         return new GameEventScriptBytecodeInstruction {
             OpCode = opcode.Value,
-            Dest_U16 = dst.Value,
-            X_U16 = x,
-            Y_U16 = y,
+            DestinationSlot = dst.Value,
+            XSlot = x,
+            YSlot = y,
             UnitAndFlags = flags.Value,
             U64 = parameter.Value
         };
@@ -113,9 +113,9 @@ internal sealed class GameEventScriptBytecodeInstructionJsonConverter : JsonConv
         writer.WriteStartObject();
         writer.WriteString(OpcodePropertyName, FormatOpcode(value.OpCode));
         writer.WriteString(FlagsPropertyName, FormatHex(value.UnitAndFlags, 2));
-        writer.WriteString(DstPropertyName, FormatHex(value.Dest_U16, 4));
-        writer.WriteString(XPropertyName, FormatHex(value.X_U16, 4));
-        writer.WriteString(YPropertyName, FormatHex(value.Y_U16, 4));
+        writer.WriteString(DstPropertyName, FormatHex(value.DestinationSlot, 4));
+        writer.WriteString(XPropertyName, FormatHex(value.XSlot, 4));
+        writer.WriteString(YPropertyName, FormatHex(value.YSlot, 4));
         writer.WriteString(ParameterPropertyName, FormatHex(value.U64, 16));
         writer.WriteEndObject();
     }

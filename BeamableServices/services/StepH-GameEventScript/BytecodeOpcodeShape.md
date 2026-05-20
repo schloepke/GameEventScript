@@ -18,18 +18,22 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(0)]  public GameEventScriptBytecodeOpCode OpCode; // byte-backed
     [FieldOffset(1)]  public byte UnitAndFlags;
 
-    [FieldOffset(2)]  public ushort Dest_U16;
+    [FieldOffset(2)]  public ushort DestinationSlot;
     [FieldOffset(4)]  public ushort X_U16;
     [FieldOffset(6)]  public ushort Y_U16;
 
     [FieldOffset(4)]  public short X_I16;
     [FieldOffset(6)]  public short Y_I16;
 
-    [FieldOffset(8)]  public ushort C_U16;
-    [FieldOffset(10)] public ushort D_U16;
+    [FieldOffset(8)]  public ushort A_U16;
+    [FieldOffset(10)] public ushort B_U16;
+    [FieldOffset(12)] public ushort C_U16;
+    [FieldOffset(14)] public ushort D_U16;
 
-    [FieldOffset(8)]  public short C_I16;
-    [FieldOffset(10)] public short D_I16;
+    [FieldOffset(8)]  public short A_I16;
+    [FieldOffset(10)] public short B_I16;
+    [FieldOffset(12)] public short C_I16;
+    [FieldOffset(14)] public short D_I16;
 
     [FieldOffset(8)]  public long I64;
     [FieldOffset(8)]  public ulong U64;
@@ -43,12 +47,13 @@ The byte layout is:
 | --- | --- | --- | --- |
 | `0` | `OpCode` | `OpCode` | Opcode tag, backed by `byte`. |
 | `1` | `UnitAndFlags` | `UnitAndFlags` | Low 5 bits carry the numeric unit id; high 3 bits are reserved flags. |
-| `2..3` | `Dest_U16` | `Dest_U16` | Destination/result slot or primary operation destination. |
+| `2..3` | `DestinationSlot` | `DestinationSlot` | Destination/result slot or primary operation destination. |
 | `4..5` | `X_U16` / `X_I16` | `X_U16` | First primary operand. |
 | `6..7` | `Y_U16` / `Y_I16` | `Y_U16` | Second primary operand, often an entry/target address or secondary slot. |
-| `8..9` | `C_U16` / `C_I16` | `I64`/`U64`/`F64` bytes `0..1` | Payload word bytes `0..1`, or first payload 16-bit operand. |
-| `10..11` | `D_U16` / `D_I16` | `I64`/`U64`/`F64` bytes `2..3` | Payload word bytes `2..3`, or second payload 16-bit operand. |
-| `12..15` | payload bytes | `I64`/`U64`/`F64` bytes `4..7` | Remaining payload word bytes. |
+| `8..9` | `A_U16` / `A_I16` | `I64`/`U64`/`F64` bytes `0..1` | Payload word bytes `0..1`, or first payload 16-bit operand. |
+| `10..11` | `B_U16` / `B_I16` | `I64`/`U64`/`F64` bytes `2..3` | Payload word bytes `2..3`, or second payload 16-bit operand. |
+| `12..13` | `C_U16` / `C_I16` | `I64`/`U64`/`F64` bytes `4..5` | Payload word bytes `4..5`, or third payload 16-bit operand. |
+| `14..15` | `D_U16` / `D_I16` | `I64`/`U64`/`F64` bytes `6..7` | Payload word bytes `6..7`, or fourth payload 16-bit operand. |
 
 The instruction word has no sentinel for "unused". Unused fields are
 undefined/ignored. Only the fields documented for a specific opcode may be read
@@ -74,7 +79,7 @@ view instead of exposing the overlapping runtime fields:
 - `Opcode` is the enum name. Numeric byte values and hex byte strings are also
   accepted while reading.
 - `Flags` is the raw `UnitAndFlags` byte as hex.
-- `Dst` is the raw `Dest_U16` slot as hex.
+- `Dst` is the raw `DestinationSlot` slot as hex.
 - `X` and `Y` are the raw primary 16-bit operands as hex.
 - `Parameter` is the raw unsigned 64-bit payload word at bytes `8..15` as hex.
   Signed payload views use the same bits as two's-complement values.
@@ -82,7 +87,7 @@ view instead of exposing the overlapping runtime fields:
 
 ## Operand Views
 
-- **Primary unsigned 16-bit operand view:** most instructions use `Dest_U16`,
+- **Primary unsigned 16-bit operand view:** most instructions use `DestinationSlot`,
   `X_U16`, and `Y_U16`. Examples: slots, branch targets, side-table indexes,
   dice immediates, and message-shape/list indexes.
 - **Primary signed 16-bit operand view:** `X_I16` and `Y_I16` are available for
@@ -142,7 +147,7 @@ every unit has DSL syntax today.
 
 ## Conventions
 
-- `Dest_U16` is the destination frame slot for value-producing instructions.
+- `DestinationSlot` is the destination frame slot for value-producing instructions.
 - `X_U16` and `Y_U16` in the opcode table are primary-word unsigned 16-bit
   fields. Payload fields are documented explicitly where an opcode needs them.
 - Unused instruction fields are intentionally not specified.
@@ -182,19 +187,19 @@ not a second runtime dispatch step.
 | `0xE0` | Reserved for future pipeline, extension, or VM opcodes |
 | `0xF0` | Reserved for future pipeline, extension, or VM opcodes |
 
-| Hex | Opcode | UnitAndFlags | Dest_U16 | X_U16 | Y_U16 | C_U16 | D_U16 | I64/U64 | F64 | Notes |
+| Hex | Opcode | UnitAndFlags | DestinationSlot | X_U16 | Y_U16 | C_U16 | D_U16 | I64/U64 | F64 | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0x00 | `Nop` | - | - | - | - | - | - | - | - | No operation. |
-| 0x01 | `Jump` | - | - | target address | - | - | - | - | - | Unconditional branch. |
-| 0x02 | `JumpIfTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsTrue()`. |
-| 0x03 | `JumpIfFalse` | - | - | target address | - | condition slot | - | - | - | Branches when `C_U16.IsFalse()`. |
-| 0x04 | `JumpIfNotTrue` | - | - | target address | - | condition slot | - | - | - | Branches when `!C_U16.IsTrue()`, including `nothing`. |
+| 0x01 | `Jump` | - | - | - | target address | - | - | - | - | Unconditional branch. |
+| 0x02 | `JumpIfTrue` | - | - | condition slot | target address | - | - | - | - | Branches when `X_U16.IsTrue()`. |
+| 0x03 | `JumpIfFalse` | - | - | condition slot | target address | - | - | - | - | Branches when `X_U16.IsFalse()`. |
+| 0x04 | `JumpIfNotTrue` | - | - | condition slot | target address | - | - | - | - | Branches when `!X_U16.IsTrue()`, including `nothing`. |
 | 0x05 | `ReserveSlots` | - | - | additional local slot count | - | - | - | - | - | Adds `X_U16` active local slots to the current frame. Entry prologs reserve only locals beyond preloaded arguments. |
 | 0x06 | `ReleaseSlots` | - | - | removed local slot count | - | - | - | - | - | Clears and removes `X_U16` active local slots from the current frame. |
 | 0x07 | `ReturnVoid` | - | - | - | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
 | 0x08 | `ReturnValue` | - | - | return slot | - | - | - | - | - | Returns the value in `X_U16` from the current frame. |
-| 0x09 | `Call` | - | result slot | callable entry address | - | - | - | - | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. |
-| 0x0A | `CallPredicate` | - | result slot | predicate entry address | - | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. Arguments are the contiguous staged sequence immediately before the call. |
+| 0x09 | `Call` | - | result slot | - | callable entry address | - | - | - | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. |
+| 0x0A | `CallPredicate` | - | result slot | - | predicate entry address | - | - | - | - | Enters a VM-owned predicate call frame and normalizes the result to `boolean | nothing`. Arguments are the contiguous staged sequence immediately before the call. |
 | 0x0B | `CallStandard` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
 | 0x0C | `CallStandardPredicate` | - | result slot | extension shape `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a built-in standard extension and normalizes the result to `boolean | nothing`. |
 | 0x0D | `CallExternal` | - | result slot | `ExternalReferences` index | argument slot-list `UShortListPool` index | - | - | - | - | Calls a dynamically bound host extension. |
@@ -222,8 +227,8 @@ not a second runtime dispatch step.
 | 0x23 | `LoadInteger` | numeric unit | result slot | n/a | n/a | n/a | n/a | signed integer | - | Loads an inline signed `Int64`. |
 | 0x24 | `LoadFloat` | numeric unit | result slot | n/a | n/a | n/a | n/a | - | float | Loads an inline IEEE-754 `Float64`. |
 | 0x25 | `LoadPercentage` | - | result slot | n/a | n/a | n/a | n/a | - | ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
-| 0x26 | `LoadText` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a text literal. |
-| 0x27 | `LoadTag` | - | result slot | - | - | `StringPool` index | - | - | - | Loads a tag literal. |
+| 0x26 | `LoadText` | - | result slot | `StringPool` index | - | - | - | - | - | Loads a text literal. |
+| 0x27 | `LoadTag` | - | result slot | `StringPool` index | - | - | - | - | - | Loads a tag literal. |
 | 0x28 | `LoadHandler` | - | result slot | message shape `UShortListPool` index | - | - | - | - | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x29 | `StageRegister` | - | - | source slot | - | - | - | - | - | Stages a register value as the next local call argument. |
 | 0x2A | `StageNothing` | - | - | - | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
@@ -231,8 +236,8 @@ not a second runtime dispatch step.
 | 0x2C | `StageFalse` | - | - | - | - | - | - | - | - | Stages `false` as the next local call argument. |
 | 0x2D | `StageInteger` | numeric unit | - | n/a | n/a | n/a | n/a | integer payload | n/a | Stages an inline integer argument. |
 | 0x2E | `StageFloat` | numeric unit | - | n/a | n/a | n/a | n/a | n/a | float payload | Stages an inline float argument. |
-| 0x2F | `StageText` | - | - | - | - | string index | - | - | - | Stages a text literal from `StringPool`. |
-| 0x30 | `StageTag` | - | - | - | - | string index | - | - | - | Stages a tag literal from `StringPool`. |
+| 0x2F | `StageText` | - | - | string index | - | - | - | - | - | Stages a text literal from `StringPool`. |
+| 0x30 | `StageTag` | - | - | string index | - | - | - | - | - | Stages a tag literal from `StringPool`. |
 | 0x31 | `StagePercentage` | - | - | n/a | n/a | n/a | n/a | n/a | ratio | Stages an inline percentage ratio argument. |
 | 0x32 | `TypeConstructor` | - | result slot | type name `StringPool` index | argument name-list `UShortListPool` index | argument slot-list `UShortListPool` index | - | - | - | Constructs a record/external value from named argument slots. |
 | 0x33..0x3F | reserved | - | - | - | - | - | - | - | - | Reserved tail of Group 2. |

@@ -81,7 +81,7 @@ public static class GameEventScriptBinaryDumper
                 .Append(' ')
                 .Append(instruction.OpCode)
                 .Append(" flags=0x").Append(instruction.UnitAndFlags.ToString("X2", CultureInfo.InvariantCulture))
-                .Append(" dst=0x").Append(instruction.Dest_U16.ToString("X4", CultureInfo.InvariantCulture))
+                .Append(" dst=0x").Append(instruction.DestinationSlot.ToString("X4", CultureInfo.InvariantCulture))
                 .Append(" payload=0x").Append(instruction.U64.ToString("X16", CultureInfo.InvariantCulture))
                 .AppendLine();
         }

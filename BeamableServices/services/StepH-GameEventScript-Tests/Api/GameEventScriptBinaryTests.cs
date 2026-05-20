@@ -55,7 +55,7 @@ public sealed class GameEventScriptBinaryTests
         var instruction = new GameEventScriptBytecodeInstruction
         {
             OpCode = GameEventScriptBytecodeOpCode.LoadInteger,
-            Dest_U16 = 7,
+            DestinationSlot = 7,
             UnitAndFlags = (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter,
             I64 = 42
         };
@@ -70,7 +70,7 @@ public sealed class GameEventScriptBinaryTests
 
         Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, decoded.OpCode);
         Assert.AreEqual((byte)GameEventScriptBytecodeInstructionUnit.UnitMeter, decoded.UnitAndFlags);
-        Assert.AreEqual((ushort)7, decoded.Dest_U16);
+        Assert.AreEqual((ushort)7, decoded.DestinationSlot);
         Assert.AreEqual(42L, decoded.I64);
     }
 

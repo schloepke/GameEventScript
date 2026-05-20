@@ -118,12 +118,11 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 B_U16
   field System.UInt16 C_U16
   field System.UInt16 ConditionSlot
+  field System.UInt16 Count
   field System.UInt16 D_U16
-  field System.UInt16 Dest_U16
   field System.UInt16 DestinationSlot
   field System.UInt16 EntryAddress
   field System.UInt16 ListIndex
-  field System.UInt16 ResultSlot
   field System.UInt16 StringIndex
   field System.UInt16 TargetAddress
   field System.UInt16 XSlot

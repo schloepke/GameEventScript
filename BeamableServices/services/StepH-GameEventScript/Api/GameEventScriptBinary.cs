@@ -157,21 +157,20 @@ public struct GameEventScriptBytecodeInstruction
 
     [FieldOffset(1)] public byte UnitAndFlags;
 
-    [FieldOffset(2)] public ushort ResultSlot;
     [FieldOffset(2)] public ushort DestinationSlot;
-    [FieldOffset(2)] public ushort Dest_U16;
     
     [FieldOffset(4)] public ushort X_U16;
     [FieldOffset(4)] public short X_I16;
     [FieldOffset(4)] public uint X_U32;
     [FieldOffset(4)] public uint X_I32;
-    [FieldOffset(8)] public ushort ConditionSlot;
+    [FieldOffset(4)] public ushort ConditionSlot;
     [FieldOffset(4)] public ushort XSlot;
     [FieldOffset(4)] public ushort StringIndex;
+    [FieldOffset(4)] public ushort Count;
 
     [FieldOffset(6)] public ushort Y_U16;
     [FieldOffset(6)] public short Y_I16;
-    [FieldOffset(4)] public ushort TargetAddress;
+    [FieldOffset(6)] public ushort TargetAddress;
     [FieldOffset(6)] public ushort YSlot;
     [FieldOffset(6)] public ushort EntryAddress;
     [FieldOffset(6)] public ushort ListIndex;
@@ -182,11 +181,11 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(10)] public ushort B_U16;
     [FieldOffset(10)] public short B_I16;
 
-    [FieldOffset(10)] public ushort C_U16;
-    [FieldOffset(10)] public short C_I16;
+    [FieldOffset(12)] public ushort C_U16;
+    [FieldOffset(12)] public short C_I16;
 
-    [FieldOffset(10)] public ushort D_U16;
-    [FieldOffset(10)] public short D_I16;
+    [FieldOffset(14)] public ushort D_U16;
+    [FieldOffset(14)] public short D_I16;
 
     [FieldOffset(8)] public long I64;
     [FieldOffset(8)] public ulong U64;

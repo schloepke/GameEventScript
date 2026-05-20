@@ -38,12 +38,14 @@ public class GameEventScriptOpcodePrinter
         C_U16_ItemBindingSlot,
 
         A_U16_Count,
+        X_U16_Count,
         B_U16_Count,
         A_U16_DiceCountImmediate,
         B_U16_DiceSideCountImmediate,
 
         A_U16_TargetAddress,
         B_U16_TargetAddress,
+        Y_U16_TargetAddress,
         B_U16_NextEntryAddress,
         C_U16_TargetAddress,
         C_U16_EntryAddress,
@@ -56,6 +58,7 @@ public class GameEventScriptOpcodePrinter
         D_U16_WeightEntryAddress,
 
         C_U16_ConditionSlot,
+        X_U16_ConditionSlot,
 
         A_U16_FromSlot,
         B_U16_ToSlot,
@@ -70,6 +73,7 @@ public class GameEventScriptOpcodePrinter
         UnitAndFlags_Unit,
 
         A_U16_StringPoolIndex,
+        X_U16_StringPoolIndex,
         C_U16_StringPoolIndex,
         B_U16_TypeKind,
         C_U16_CustomTypeNameIndex,
@@ -83,6 +87,8 @@ public class GameEventScriptOpcodePrinter
         A_U16_StandardExtensionShapeListIndex,
         A_U16_CallableEntryAddress,
         A_U16_PredicateEntryAddress,
+        Y_U16_CallableEntryAddress,
+        Y_U16_PredicateEntryAddress,
 
         B_U16_ArgumentNameListIndex,
         B_U16_ArgumentSlotListIndex,
@@ -99,12 +105,12 @@ public class GameEventScriptOpcodePrinter
         return instruction.OpCode switch
         {
             GameEventScriptBytecodeOpCode.Nop => [],
-            GameEventScriptBytecodeOpCode.Jump => [A_U16_TargetAddress],
-            GameEventScriptBytecodeOpCode.JumpIfTrue => [A_U16_TargetAddress, C_U16_ConditionSlot],
-            GameEventScriptBytecodeOpCode.JumpIfFalse => [A_U16_TargetAddress, C_U16_ConditionSlot],
-            GameEventScriptBytecodeOpCode.JumpIfNotTrue => [A_U16_TargetAddress, C_U16_ConditionSlot],
-            GameEventScriptBytecodeOpCode.Call => [DST_U16_TargetSlot, A_U16_CallableEntryAddress],
-            GameEventScriptBytecodeOpCode.CallPredicate => [DST_U16_TargetSlot, A_U16_PredicateEntryAddress],
+            GameEventScriptBytecodeOpCode.Jump => [Y_U16_TargetAddress],
+            GameEventScriptBytecodeOpCode.JumpIfTrue => [Y_U16_TargetAddress, X_U16_ConditionSlot],
+            GameEventScriptBytecodeOpCode.JumpIfFalse => [Y_U16_TargetAddress, X_U16_ConditionSlot],
+            GameEventScriptBytecodeOpCode.JumpIfNotTrue => [Y_U16_TargetAddress, X_U16_ConditionSlot],
+            GameEventScriptBytecodeOpCode.Call => [DST_U16_TargetSlot, Y_U16_CallableEntryAddress],
+            GameEventScriptBytecodeOpCode.CallPredicate => [DST_U16_TargetSlot, Y_U16_PredicateEntryAddress],
             GameEventScriptBytecodeOpCode.ReturnVoid => [],
             GameEventScriptBytecodeOpCode.ReturnValue => [A_U16_ReturnSlot],
             GameEventScriptBytecodeOpCode.CallStandard => [DST_U16_TargetSlot, A_U16_StandardExtensionShapeListIndex, B_U16_ArgumentSlotListIndex],
@@ -118,8 +124,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.LoadInteger => [DST_U16_TargetSlot, I64_IntegerImmediate],
             GameEventScriptBytecodeOpCode.LoadFloat => [DST_U16_TargetSlot, F64_FloatImmediate],
             GameEventScriptBytecodeOpCode.LoadPercentage => [DST_U16_TargetSlot, F64_FloatImmediate],
-            GameEventScriptBytecodeOpCode.LoadText => [DST_U16_TargetSlot, C_U16_StringPoolIndex],
-            GameEventScriptBytecodeOpCode.LoadTag => [DST_U16_TargetSlot, C_U16_StringPoolIndex],
+            GameEventScriptBytecodeOpCode.LoadText => [DST_U16_TargetSlot, X_U16_StringPoolIndex],
+            GameEventScriptBytecodeOpCode.LoadTag => [DST_U16_TargetSlot, X_U16_StringPoolIndex],
 
             GameEventScriptBytecodeOpCode.StageRegister => [A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.StageNothing => [],
@@ -128,8 +134,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StageInteger => [I64_IntegerImmediate],
             GameEventScriptBytecodeOpCode.StageFloat => [F64_FloatImmediate],
             GameEventScriptBytecodeOpCode.StagePercentage => [F64_FloatImmediate],
-            GameEventScriptBytecodeOpCode.StageText => [C_U16_StringPoolIndex],
-            GameEventScriptBytecodeOpCode.StageTag => [C_U16_StringPoolIndex],
+            GameEventScriptBytecodeOpCode.StageText => [X_U16_StringPoolIndex],
+            GameEventScriptBytecodeOpCode.StageTag => [X_U16_StringPoolIndex],
 
             GameEventScriptBytecodeOpCode.MoveSlot => [DST_U16_TargetSlot, A_U16_SourceSlot],
 
@@ -201,7 +207,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.UnaryKeys => [DST_U16_TargetSlot, A_U16_OperandSlot],
             GameEventScriptBytecodeOpCode.UnaryValues => [DST_U16_TargetSlot, A_U16_OperandSlot],
             GameEventScriptBytecodeOpCode.UnaryEntries => [DST_U16_TargetSlot, A_U16_OperandSlot],
-            GameEventScriptBytecodeOpCode.ReserveSlots => [A_U16_Count],
+            GameEventScriptBytecodeOpCode.ReserveSlots => [X_U16_Count],
 
             GameEventScriptBytecodeOpCode.Cast when IsCustomTypeInstruction(instruction) => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind, C_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.Cast => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind],
@@ -219,7 +225,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.BuildMessage => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],
             GameEventScriptBytecodeOpCode.BindHandler => [DST_U16_TargetSlot, A_U16_OperandSlotListIndex, B_U16_ArgumentNameListIndex],
 
-            GameEventScriptBytecodeOpCode.ReleaseSlots => [A_U16_Count],
+            GameEventScriptBytecodeOpCode.ReleaseSlots => [X_U16_Count],
             GameEventScriptBytecodeOpCode.EmitMessage => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],
             GameEventScriptBytecodeOpCode.EmitMessageWithTags => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex, C_U16_TagSlotListIndex],
             GameEventScriptBytecodeOpCode.PublishMessage => [A_U16_MessageShapeListIndex, B_U16_ArgumentSlotListIndex],

@@ -224,7 +224,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
         if (HasDestination(instruction.OpCode))
         {
-            ValidateSlot(module, instruction.Dest_U16, $"{context} destination slot");
+            ValidateSlot(module, instruction.DestinationSlot, $"{context} destination slot");
         }
 
         switch (instruction.OpCode)
@@ -233,11 +233,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.ReleaseSlots:
-                ValidateFrameSlotCount(module, instruction.X_U16, $"{context} removed local slot count");
+                ValidateFrameSlotCount(module, instruction.Count, $"{context} removed local slot count");
                 break;
 
             case GameEventScriptBytecodeOpCode.ReserveSlots:
-                ValidateFrameSlotCount(module, instruction.X_U16, $"{context} slot count");
+                ValidateFrameSlotCount(module, instruction.Count, $"{context} slot count");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadNothing:
@@ -258,11 +258,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadText:
-                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} text");
+                ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} text");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadTag:
-                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} tag");
+                ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} tag");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadHandler:
@@ -295,22 +295,22 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.StageText:
-                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} text");
+                ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} text");
                 break;
 
             case GameEventScriptBytecodeOpCode.StageTag:
-                ValidateIndex(module.StringPool.Count, instruction.A_U16, $"{context} tag");
+                ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} tag");
                 break;
 
             case GameEventScriptBytecodeOpCode.Jump:
-                ValidateAddress(module, code, instruction.X_U16, $"{context} target");
+                ValidateAddress(module, code, instruction.TargetAddress, $"{context} target");
                 break;
 
             case GameEventScriptBytecodeOpCode.JumpIfTrue:
             case GameEventScriptBytecodeOpCode.JumpIfFalse:
             case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                ValidateSlot(module, instruction.A_U16, $"{context} condition slot");
-                ValidateAddress(module, code, instruction.X_U16, $"{context} target");
+                ValidateSlot(module, instruction.ConditionSlot, $"{context} condition slot");
+                ValidateAddress(module, code, instruction.TargetAddress, $"{context} target");
                 break;
 
             case GameEventScriptBytecodeOpCode.ReturnVoid:
@@ -579,13 +579,13 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.Call:
-                ValidateEntryAddress(module, code, instruction.X_U16, $"{context} callable entry");
-                ValidateCallableEntry(module, instruction.X_U16, $"{context} callable entry");
+                ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} callable entry");
+                ValidateCallableEntry(module, instruction.EntryAddress, $"{context} callable entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallPredicate:
-                ValidateEntryAddress(module, code, instruction.X_U16, $"{context} predicate entry");
-                ValidatePredicateCallEntry(module, instruction.X_U16, $"{context} predicate entry");
+                ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} predicate entry");
+                ValidatePredicateCallEntry(module, instruction.EntryAddress, $"{context} predicate entry");
                 break;
 
             default:
@@ -751,10 +751,10 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static int GetExpectedStagedArgumentCount(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
     {
-        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == instruction.X_U16);
+        var callable = module.Callables.Values.FirstOrDefault(candidate => candidate.EntryAddress == instruction.EntryAddress);
         if (callable is null)
         {
-            throw InvalidBytecode($"{instruction.OpCode} references unknown callable entry address {instruction.X_U16}.");
+            throw InvalidBytecode($"{instruction.OpCode} references unknown callable entry address {instruction.EntryAddress}.");
         }
 
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate &&
@@ -906,8 +906,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             throw InvalidBytecode($"{context} must start with ReserveSlots.");
         }
 
-        ValidateFrameSlotCount(module, prolog.X_U16, $"{context} ReserveSlots count");
-        return prolog.X_U16;
+        ValidateFrameSlotCount(module, prolog.Count, $"{context} ReserveSlots count");
+        return prolog.Count;
     }
 
     private static void ValidateCastOrTypeCheckOperand(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction, string context)

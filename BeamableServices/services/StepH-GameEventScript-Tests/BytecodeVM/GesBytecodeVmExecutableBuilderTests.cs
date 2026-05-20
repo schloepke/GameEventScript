@@ -48,7 +48,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsFalse(first.Contains("nestedExpression", StringComparison.Ordinal));
         Assert.IsNotEmpty(compiled.Code);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, compiled.Code[compiled.Handlers["Start"][0].EntryAddress].OpCode);
-        Assert.IsGreaterThanOrEqualTo(1, compiled.Code[compiled.Handlers["Start"][0].EntryAddress].X_U16);
+        Assert.IsGreaterThanOrEqualTo(1, compiled.Code[compiled.Handlers["Start"][0].EntryAddress].Count);
         Assert.IsGreaterThanOrEqualTo(compiled.Handlers["Start"][0].EntryAddress, 0);
         Assert.IsFalse(first.Contains("EvaluateExpression", StringComparison.Ordinal));
     }
@@ -98,11 +98,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.JumpIfFalse));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
-            instruction.Dest_U16 >= 0 &&
+            instruction.DestinationSlot >= 0 &&
             instruction.X_U16 == instruction.Y_U16));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
-            instruction.Dest_U16 >= 0 &&
+            instruction.DestinationSlot >= 0 &&
             instruction.X_U16 != instruction.Y_U16));
     }
 
@@ -328,10 +328,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(compiled.MaxFrameSlots, executable.LinearExecutable.MaxFrameSlots);
         Assert.AreEqual(handler.EntryAddress, linearHandler.EntryAddress);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, executable.LinearExecutable.Code[linearHandler.EntryAddress].OpCode);
-        Assert.AreEqual(executable.LinearExecutable.Code[linearHandler.EntryAddress].X_U16, linearHandler.LocalSlotCount);
+        Assert.AreEqual(executable.LinearExecutable.Code[linearHandler.EntryAddress].Count, linearHandler.LocalSlotCount);
         Assert.AreEqual(callable.EntryAddress, linearCallable.EntryAddress);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.ReserveSlots, executable.LinearExecutable.Code[linearCallable.EntryAddress].OpCode);
-        Assert.AreEqual(executable.LinearExecutable.Code[linearCallable.EntryAddress].X_U16, linearCallable.LocalSlotCount);
+        Assert.AreEqual(executable.LinearExecutable.Code[linearCallable.EntryAddress].Count, linearCallable.LocalSlotCount);
         Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
         Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
             instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessage or GameEventScriptBytecodeOpCode.EmitMessageWithTags &&
@@ -354,8 +354,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
-        Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.X_U16);
-        Assert.AreEqual((ushort)0, predicateInstruction.Y_U16);
+        Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.EntryAddress);
+        Assert.AreEqual((ushort)0, predicateInstruction.X_U16);
 
         var predicateIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 2].OpCode);
@@ -378,8 +378,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var compiled = GameEventScriptManager.Compile(script);
         var callInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
-        Assert.AreEqual(compiled.Callables["add"].EntryAddress, callInstruction.X_U16);
-        Assert.AreEqual((ushort)0, callInstruction.Y_U16);
+        Assert.AreEqual(compiled.Callables["add"].EntryAddress, callInstruction.EntryAddress);
+        Assert.AreEqual((ushort)0, callInstruction.X_U16);
 
         var callIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Call);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageInteger, compiled.Code[callIndex - 2].OpCode);
@@ -1967,8 +1967,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
-                                   replacements.TryGetValue(instruction.A_U16, out var replacement)
-                ? instruction with { A_U16 = (ushort)replacement }
+                                   replacements.TryGetValue(instruction.StringIndex, out var replacement)
+                ? instruction with { StringIndex = (ushort)replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);
@@ -2017,8 +2017,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         };
         var code = compiled.Code
             .Select(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.LoadText &&
-                                   replacements.TryGetValue(instruction.A_U16, out var replacement)
-                ? instruction with { A_U16 = (ushort)replacement }
+                                   replacements.TryGetValue(instruction.StringIndex, out var replacement)
+                ? instruction with { StringIndex = (ushort)replacement }
                 : instruction)
             .ToArray();
         var rewritten = RebuildCompiledArtifactFromPublicData(compiled, code);

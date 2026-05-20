@@ -141,7 +141,7 @@ GameEventScriptCompiled
 GameEventScriptBytecodeInstruction
   OpCode
   UnitAndFlags
-  Dest_U16
+  DestinationSlot
   X_U16/Y_U16
   X_I16/Y_I16
   C_U16/D_U16
@@ -166,7 +166,8 @@ instruction word are encoded by typed load opcodes:
   are represented by their IEEE bit patterns.
 - `LoadPercentage` stores a percentage ratio in `F64` and must not carry unit
   flags. Percentage is a dedicated value kind, not a bytecode unit.
-- `LoadText` and `LoadTag` store a `StringPool` index in `C`.
+- `LoadText` and `LoadTag` store a `StringPool` index in the primary `X`
+  operand.
 - `LoadHandler` stores a `UShortListPool` message-shape index in `A`. The shape
   list is `[messageNameStringIndex, argumentNameStringIndex...]`.
 
@@ -305,7 +306,7 @@ word plus an aligned 8-byte payload word.
 Instruction
   OpCode
   UnitAndFlags
-  Dest_U16
+  DestinationSlot
   X_U16, Y_U16
   X_I16, Y_I16
   C_U16, D_U16
@@ -315,7 +316,7 @@ Instruction
 
 Operands are interpreted by opcode:
 
-- `Dest_U16`: destination slot for value-producing instructions.
+- `DestinationSlot`: destination slot for value-producing instructions.
 - `X_U16`, `Y_U16`: primary-word slots, branch targets, pool indices, or small
   unsigned immediates.
 - `X_I16`, `Y_I16`: compact signed immediates in the primary word.
@@ -329,7 +330,7 @@ Operands are interpreted by opcode:
   parameters.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
   indices directly in `X_U16`, `Y_U16`, `C_U16`, or `D_U16`.
-- `ReserveSlots X_U16` is the required prolog instruction for every executable
+- `ReserveSlots X_U16` (`Count` alias) is the required prolog instruction for every executable
   entry address. It adds local slots beyond the arguments already present in
   the frame. The bind/export tables do not carry this internal execution value.
 
@@ -385,9 +386,9 @@ Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/slot lists, `StringPool`
 names, bind tables, and optional debug/diagnostic layouts.
 
-An instruction that produces a `nothing` value writes it to `Dest_U16`. Returning
+An instruction that produces a `nothing` value writes it to `DestinationSlot`. Returning
 without a value uses `ReturnVoid`; returning a slot value uses
-`ReturnValue X_U16`. There is no implicit push. There are no operand-stack `Pop` or
+`ReturnValue X_U16` (`XSlot` alias). There is no implicit push. There are no operand-stack `Pop` or
 `Duplicate` instructions in the portable target model.
 
 ## Execution Model
@@ -457,7 +458,7 @@ CallableEntry
 ```
 
 The local reserve count is intentionally not part of the bind/export metadata.
-It is encoded as `ReserveSlots X_U16` at the entry address because it is a VM
+It is encoded as `ReserveSlots X_U16` (`Count`) at the entry address because it is a VM
 execution detail needed equally by exported handlers/callables and private
 helper entries.
 
@@ -561,7 +562,7 @@ before a return.
 
 ### Arithmetic and Logic
 
-Binary operations read source slots and write `Dest_U16`:
+Binary operations read source slots and write `DestinationSlot`:
 
 ```text
 Add dst=s3 left=s1 right=s2
@@ -900,7 +901,7 @@ yielded item"; the adapter continues with the next source item until the source
 iterator itself is exhausted. For normal call frames, `ReturnVoid` is mapped to
 DSL `nothing`; for pipeline iterators it is control flow.
 
-Reducer entries use `Dest_U16` as the current accumulator slot and the
+Reducer entries use `DestinationSlot` as the current accumulator slot and the
 instruction item binding slot as the current element. A reducer `ReturnValue`
 replaces the accumulator. A reducer `ReturnVoid` replaces the accumulator with
 DSL `nothing`.

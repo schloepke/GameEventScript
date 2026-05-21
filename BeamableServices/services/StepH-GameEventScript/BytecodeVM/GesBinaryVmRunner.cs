@@ -21,7 +21,7 @@ internal sealed class GesBinaryVmRunner
         _frameSlotCount = Math.Max(1, ComputeFrameSlotCount(_code));
     }
 
-    public bool RunHandler(GameEventScriptMessage message, GameEventScriptContext context)
+    public bool RunHandler(GameEventScriptMessage message, GameEventScriptSession context)
     {
         if (!TryLookupHandler(message, out var handler))
         {
@@ -139,7 +139,7 @@ internal sealed class GesBinaryVmRunState
 {
     private readonly GameEventScriptBinary _binary;
     private readonly GameEventScriptBytecodeInstruction[] _code;
-    private readonly GameEventScriptContext _context;
+    private readonly GameEventScriptSession _context;
     private readonly GameEventScriptBinaryBindEntry _handler;
     private readonly GameEventScriptMessage _message;
     private readonly GesBinaryVmValue[] _slots;
@@ -150,7 +150,7 @@ internal sealed class GesBinaryVmRunState
         GameEventScriptBinary binary,
         GameEventScriptBytecodeInstruction[] code,
         int frameSlotCount,
-        GameEventScriptContext context,
+        GameEventScriptSession context,
         GameEventScriptBinaryBindEntry handler,
         GameEventScriptMessage message)
     {

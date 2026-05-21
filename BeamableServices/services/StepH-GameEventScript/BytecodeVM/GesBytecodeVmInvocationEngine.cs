@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.BytecodeVM;
 
 internal static class GesBytecodeVmInvocationEngine
 {
-    public static void InvokeMessage(GesBytecodeVmExecutable compiledScript, GameEventScriptContext context, GameEventScriptMessage message)
+    public static void InvokeMessage(GesBytecodeVmExecutable compiledScript, GameEventScriptSession context, GameEventScriptMessage message)
     {
         var exactHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.DispatchIndex, message);
         var envelopeHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.MessageEnvelopeDispatchIndex, message.Name);
@@ -22,7 +22,7 @@ internal static class GesBytecodeVmInvocationEngine
         }
     }
 
-    public static void InvokeHandler(GesBytecodeVmExecutable compiledScript, GameEventScriptContext context, GesBytecodeVmCompiledHandler handler, GameEventScriptMessage message)
+    public static void InvokeHandler(GesBytecodeVmExecutable compiledScript, GameEventScriptSession context, GesBytecodeVmCompiledHandler handler, GameEventScriptMessage message)
     {
         GesBytecodeVmExecutionSession.InvokeHandler(compiledScript, context, handler, message.Arguments);
     }

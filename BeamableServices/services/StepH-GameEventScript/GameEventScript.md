@@ -783,13 +783,17 @@ Core host concepts:
 - `GameEventScriptCompiled`: compiled module data.
 - `GameEventScriptBinary`: portable binary-oriented representation.
 - `GameEventScriptHost`: dispatch host with local queue and publish hook.
+- `GameEventScriptSession`: mutable runtime state created from a loaded host;
+  it owns the active queue, context, random stream, runtime budget and active
+  fibers.
 - `GameEventScriptRuntimeLimits`: execution, loop, range, dice, and queue limits.
 - `GameEventScriptDiagnosticTraceCollector`: optional diagnostics collector.
 
 The runtime resolves handlers by signature and tag filters. Exact-signature
-handlers and envelope handlers can both observe the same message. Published
-messages are sent through the host publish hook; emitted messages stay in the
-local dispatch queue.
+handlers and envelope handlers can both observe the same message. A loaded host
+creates sessions with `StartSession()`. Published messages are sent through the
+host publish hook; emitted messages stay in the session dispatch queue. The host
+also exposes convenience publish/update methods for existing integrations.
 
 ## Errors and Limits
 

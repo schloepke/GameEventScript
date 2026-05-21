@@ -82,11 +82,11 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = NormalPriority)
+    public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
         => Subscribe(Create(!string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message must not be null or whitespace", nameof(message)),
             parameterNames ?? throw new ArgumentNullException(nameof(parameterNames))), handler, priority);
 
-    public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = NormalPriority)
+    public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
     {
         Register(
             signature ?? throw new ArgumentNullException(nameof(signature)),
@@ -97,7 +97,7 @@ public sealed class GameEventScriptHost
 
     public GameEventScriptHost Subscribe(
         GameEventScriptMessageSignature signature,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        Action<GameEventScriptMessage, GameEventScriptSession> handler,
         IReadOnlyCollection<string>? matchingTags,
         IReadOnlyCollection<string>? withoutTags = null,
         int priority = NormalPriority)
@@ -131,6 +131,9 @@ public sealed class GameEventScriptHost
         RegisterMany(handlerEntries, priority);
         return this;
     }
+
+    public GameEventScriptSession StartSession()
+        => CreateLiveState(_dispatchMode).Session;
 
     public bool Publish(GameEventScriptMessage message)
     {
@@ -182,7 +185,7 @@ public sealed class GameEventScriptHost
             return false;
         }
 
-        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         if (!TryEnqueueInvocations(state, message))
         {
             return false;
@@ -214,7 +217,7 @@ public sealed class GameEventScriptHost
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
-        var state = new GameEventScriptHostRunState(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         var accepted = TryEnqueueInvocations(state, message);
         return new GameEventScriptRun(DrainSlice, state, accepted);
     }
@@ -224,7 +227,19 @@ public sealed class GameEventScriptHost
     #region Internals
 
     private GameEventScriptHostRunState CreateLiveState(GameEventScriptDispatchMode dispatchMode)
-        => new(_random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        => new(this, dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+
+    internal bool TryEnqueueSessionInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
+        => TryEnqueueInvocations(state, message);
+
+    internal void DrainSessionToCompletion(GameEventScriptHostRunState state)
+        => DrainToCompletion(state);
+
+    internal void DrainSessionOneToCompletion(GameEventScriptHostRunState state)
+        => DrainOneToCompletion(state);
+
+    internal GameEventScriptRunStepResult DrainSessionSlice(GameEventScriptHostRunState state, int maxOpcodes)
+        => DrainSlice(state, maxOpcodes);
 
     private void ResetManualStateIfCompletedAndIdle()
     {
@@ -286,13 +301,13 @@ public sealed class GameEventScriptHost
     private void Register(
         GameEventScriptMessageSignature signature,
         int priority,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler)
+        Action<GameEventScriptMessage, GameEventScriptSession> handler)
         => Register(signature, priority, handler, [], []);
 
     private void Register(
         GameEventScriptMessageSignature signature,
         int priority,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        Action<GameEventScriptMessage, GameEventScriptSession> handler,
         IReadOnlyCollection<string>? matchingTags,
         IReadOnlyCollection<string>? withoutTags)
     {
@@ -303,7 +318,7 @@ public sealed class GameEventScriptHost
     }
 
     private void RegisterMany(
-        IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptContext> Handler)> handlers,
+        IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptSession> Handler)> handlers,
         int priority)
     {
         lock (_dispatchGate)
@@ -333,7 +348,7 @@ public sealed class GameEventScriptHost
     private void RegisterLocked(
         GameEventScriptMessageSignature signature,
         int priority,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        Action<GameEventScriptMessage, GameEventScriptSession> handler,
         IReadOnlyCollection<string>? matchingTags = null,
         IReadOnlyCollection<string>? withoutTags = null)
     {
@@ -387,7 +402,7 @@ public sealed class GameEventScriptHost
 
     private void DrainToCompletion(GameEventScriptHostRunState state)
     {
-        while (!state.IsCompletedAndIdle && !state.Context.RuntimeBudget.IsExhausted)
+        while (!state.IsCompletedAndIdle && !state.Session.RuntimeBudget.IsExhausted)
         {
             DrainSlice(state, int.MaxValue, stopAfterStartedEventCount: null, allowSynchronousScriptFastPath: true);
         }
@@ -401,7 +416,7 @@ public sealed class GameEventScriptHost
             DrainSlice(state, int.MaxValue, stopAfterStartedEventCount: startedEventCount + 1, allowSynchronousScriptFastPath: true);
         }
         while (!state.IsCompletedAndIdle &&
-               !state.Context.RuntimeBudget.IsExhausted &&
+               !state.Session.RuntimeBudget.IsExhausted &&
                (state.HasActiveDispatch || state.StartedEventCount <= startedEventCount));
     }
 
@@ -418,7 +433,7 @@ public sealed class GameEventScriptHost
     {
         state.BeginStep();
         var remainingOpcodes = maxOpcodes;
-        while (remainingOpcodes > 0 && !state.Context.RuntimeBudget.IsExhausted)
+        while (remainingOpcodes > 0 && !state.Session.RuntimeBudget.IsExhausted)
         {
             if (!state.HasActiveDispatch)
             {
@@ -492,11 +507,11 @@ public sealed class GameEventScriptHost
             {
                 if (allowSynchronousScriptFastPath)
                 {
-                    subscription.ScriptExecutable.InvokeHandler(subscription.ScriptHandler, state.ActiveMessage, state.Context);
+                    subscription.ScriptExecutable.InvokeHandler(subscription.ScriptHandler, state.ActiveMessage, state.Session);
                 }
                 else
                 {
-                    var fiber = GesBytecodeVmExecutionSession.CreateFiber(subscription.ScriptExecutable, state.Context, subscription.ScriptHandler, state.ActiveMessage.Arguments);
+                    var fiber = GesBytecodeVmExecutionSession.CreateFiber(subscription.ScriptExecutable, state.Session, subscription.ScriptHandler, state.ActiveMessage.Arguments);
                     state.SetActiveScriptFiber(fiber);
                     var executed = RunScriptFiberSlice(state, fiber, remainingOpcodes);
                     if (!fiber.IsCompleted)
@@ -509,7 +524,7 @@ public sealed class GameEventScriptHost
             }
             else
             {
-                subscription.Handler!(state.ActiveMessage, state.Context);
+                subscription.Handler!(state.ActiveMessage, state.Session);
             }
         }
         catch (GameEventScriptFatalRuntimeException)
@@ -712,7 +727,7 @@ public sealed class GameEventScriptHost
         GameEventScriptBytecodeHandlerDispatchKind DispatchKind,
         int Priority,
         long RegistrationOrder,
-        Action<GameEventScriptMessage, GameEventScriptContext>? Handler,
+        Action<GameEventScriptMessage, GameEventScriptSession>? Handler,
         GesBytecodeVmExecutable? ScriptExecutable,
         GesBytecodeVmCompiledHandler? ScriptHandler,
         IReadOnlyList<string> RequiredTags,
@@ -758,6 +773,9 @@ internal sealed class GameEventScriptHostRunState
     private long _totalExecutedOpcodes;
 
     public GameEventScriptHostRunState(
+        GameEventScriptHost host,
+        GameEventScriptDispatchMode dispatchMode,
+        GameEventScriptDispatcher dispatcher,
         GameEventScriptRandomGenerator random,
         IGameEventScriptDiagnosticCollector? diagnosticCollector,
         Action<GameEventScriptMessage>? publishedMessageObserver,
@@ -773,10 +791,10 @@ internal sealed class GameEventScriptHostRunState
         _queuePublisher = queuePublisher ?? ((_, _) => false);
         _publishHook = publishHook;
         PublishedMessageObserver = publishedMessageObserver;
-        Context = new GameEventScriptContext(random, EmitInternal, diagnosticCollector, runtimeLimits, extensionRegistry, PublishInternal);
+        Session = new GameEventScriptSession(host, this, dispatchMode, dispatcher, random, EmitInternal, diagnosticCollector, runtimeLimits, extensionRegistry, PublishInternal);
     }
 
-    public GameEventScriptContext Context { get; }
+    public GameEventScriptSession Session { get; }
 
     public GameEventScriptMessage? ActiveMessage { get; private set; }
 
@@ -828,7 +846,7 @@ internal sealed class GameEventScriptHostRunState
 
     public GameEventScriptRunStepResult CreateStepResult()
     {
-        var state = Context.RuntimeBudget.IsExhausted
+        var state = Session.RuntimeBudget.IsExhausted
             ? GameEventScriptRunState.RuntimeLimitReached
             : IsCompletedAndIdle
                 ? GameEventScriptRunState.Completed
@@ -852,7 +870,7 @@ internal sealed class GameEventScriptHostRunState
         {
             if (_maxQueuedMessagesPerRun > 0 && _queue.Count >= _maxQueuedMessagesPerRun)
             {
-                Context.RuntimeBudget.ReportLimit(
+                Session.RuntimeBudget.ReportLimit(
                     nameof(GameEventScriptRuntimeLimits.MaxQueuedMessagesPerRun),
                     $"Message queue limit reached. Dropped '{message.Name}'.",
                     _maxQueuedMessagesPerRun);
@@ -912,7 +930,7 @@ internal sealed class GameEventScriptHostRunState
         => ActiveScriptFiber = null;
 
     public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
-        => Context.RecordDiagnostic(kind, name, arguments, detail);
+        => Session.RecordDiagnostic(kind, name, arguments, detail);
 
     private bool EmitInternal(GameEventScriptMessage message)
     {

@@ -35,7 +35,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private readonly GesBytecodeVmExecutable _compiledScript;
-    private readonly GameEventScriptContext _context;
+    private readonly GameEventScriptSession _context;
     private readonly GesRuntimeBudget _runtimeBudget;
     private readonly IReadOnlyDictionary<string, int> _slots;
     private BytecodeVmValue[] _locals;
@@ -52,7 +52,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private GesBytecodeVmExecutionSession(
         GesBytecodeVmExecutable compiledScript,
-        GameEventScriptContext context,
+        GameEventScriptSession context,
         IReadOnlyDictionary<string, int> slots,
         int localSlotCount,
         bool diagnosticsEnabled)
@@ -72,7 +72,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     public static void InvokeHandler(
         GesBytecodeVmExecutable compiledScript,
-        GameEventScriptContext context,
+        GameEventScriptSession context,
         GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {

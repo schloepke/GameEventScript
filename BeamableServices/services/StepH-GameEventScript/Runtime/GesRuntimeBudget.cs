@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
+internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEventScriptRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;

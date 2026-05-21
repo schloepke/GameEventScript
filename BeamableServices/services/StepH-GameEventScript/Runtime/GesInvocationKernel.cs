@@ -19,7 +19,7 @@ internal static class GesInvocationKernel
     public static IReadOnlyList<THandler> GetMatchingHandlers<THandler>(IReadOnlyDictionary<string, IReadOnlyList<THandler>> dispatchIndex, string key)
         => dispatchIndex.TryGetValue(key, out var matchingHandlers) ? matchingHandlers : [];
 
-    public static void RecordDiagnostic(GameEventScriptContext context, bool diagnosticsEnabled, GameEventScriptDiagnosticEventKind kind, string name,
+    public static void RecordDiagnostic(GameEventScriptSession context, bool diagnosticsEnabled, GameEventScriptDiagnosticEventKind kind, string name,
         IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
     {
         if (!diagnosticsEnabled) return;

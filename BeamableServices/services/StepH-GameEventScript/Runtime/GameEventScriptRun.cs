@@ -35,7 +35,7 @@ public sealed class GameEventScriptRun : IDisposable
         _accepted = accepted;
     }
 
-    public bool IsCompleted => _canceled || !_accepted || _state.IsCompletedAndIdle || _state.Context.RuntimeBudget.IsExhausted;
+    public bool IsCompleted => _canceled || !_accepted || _state.IsCompletedAndIdle || _state.Session.RuntimeBudget.IsExhausted;
 
     public int PendingMessageCount => _state.PendingMessageCount;
 

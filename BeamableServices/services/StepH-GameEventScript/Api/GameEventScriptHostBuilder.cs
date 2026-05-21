@@ -79,7 +79,7 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
-    /// Configures the hook used when scripts or C# handlers call <see cref="GameEventScriptContext.Publish(GameEventScriptMessage)"/>.
+    /// Configures the hook used when scripts or C# handlers call <see cref="GameEventScriptSession.Publish(GameEventScriptMessage)"/>.
     /// When no hook is configured, publish falls back to local emit behavior.
     /// </summary>
     /// <param name="publishHook">The publish hook to invoke for outbound published messages.</param>

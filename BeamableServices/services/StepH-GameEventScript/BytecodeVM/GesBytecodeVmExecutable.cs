@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.BytecodeVM;
 
 internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCollection
 {
-    private readonly IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptContext> Handler)> _messageHandlers;
+    private readonly IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptSession> Handler)> _messageHandlers;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _dispatchIndex;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _messageEnvelopeDispatchIndex;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
@@ -44,7 +44,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
             handler => handler.DeclarationOrder);
         _messageHandlers = CompiledHandlers
             .Where(handler => handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.ExactSignature)
-            .Select(handler => (handler.Definition, (Action<GameEventScriptMessage, GameEventScriptContext>)((message, context) => InvokeHandler(handler, message, context))))
+            .Select(handler => (handler.Definition, (Action<GameEventScriptMessage, GameEventScriptSession>)((message, context) => InvokeHandler(handler, message, context))))
             .ToArray();
     }
 
@@ -70,13 +70,13 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
 
     internal IGameEventScriptExternalTypeRegistry ExternalTypeRegistry => _externalTypeRegistry;
 
-    IEnumerable<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptContext> Handler)> IGameEventScriptMessageHandlerCollection.Handlers
+    IEnumerable<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptSession> Handler)> IGameEventScriptMessageHandlerCollection.Handlers
         => _messageHandlers;
 
-    public void Invoke(GameEventScriptMessage message, GameEventScriptContext context)
+    public void Invoke(GameEventScriptMessage message, GameEventScriptSession context)
         => GesBytecodeVmInvocationEngine.InvokeMessage(this, context, message);
 
-    internal void InvokeHandler(GesBytecodeVmCompiledHandler handler, GameEventScriptMessage message, GameEventScriptContext context)
+    internal void InvokeHandler(GesBytecodeVmCompiledHandler handler, GameEventScriptMessage message, GameEventScriptSession context)
         => GesBytecodeVmInvocationEngine.InvokeHandler(this, context, handler, message);
 
     internal void BindExtensions(IGameEventScriptExtensionRegistry registry)

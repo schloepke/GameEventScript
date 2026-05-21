@@ -3,6 +3,7 @@ using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
 using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Extensions;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests.BytecodeExecutor;
@@ -69,7 +70,7 @@ public sealed class BytecodeExecutorTests
         var compiled = GameEventScriptManager.Compile(script);
         var binary = compiled.ToGameEventScriptBinary();
         var published = new List<GameEventScriptMessage>();
-        var context = new GameEventScriptContext(
+        var context = new GameEventScriptSession(
             GameEventScriptRandomGenerator.FromSeed(1),
             message =>
             {

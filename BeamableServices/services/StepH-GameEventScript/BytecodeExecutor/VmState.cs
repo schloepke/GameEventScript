@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -80,7 +81,7 @@ internal struct VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool PrepareMessage(GameEventScriptMessage message, GameEventScriptContext context)
+    internal bool PrepareMessage(GameEventScriptMessage message, GameEventScriptSession context)
     {
         if (State != StateValue.Initialized) return RaiseError("Handler can only be loaded when the VM is initialized.");
         var signatureId = message.SignatureId;

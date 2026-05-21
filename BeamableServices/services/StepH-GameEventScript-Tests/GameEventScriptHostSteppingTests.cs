@@ -9,6 +9,44 @@ namespace StepH_GameEventScript_Tests;
 public sealed class GameEventScriptHostSteppingTests
 {
     [TestMethod]
+    public void SessionPublishesAndStepsThroughItsOwnQueue()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, context) =>
+        {
+            calls.Add("start");
+            context.Emit("Next");
+        });
+        host.Subscribe("Next", [], (_, _) => calls.Add("next"));
+
+        var session = host.StartSession();
+
+        Assert.IsTrue(session.Dispatch(Create("Start")));
+        var step = session.Update(100);
+
+        Assert.AreEqual(GameEventScriptRunState.Completed, step.State);
+        CollectionAssert.AreEqual(new[] { "start", "next" }, calls);
+    }
+
+    [TestMethod]
+    public void SessionKeepsOneContextAcrossMultipleDispatches()
+    {
+        var contexts = new List<GameEventScriptSession>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, context) => contexts.Add(context));
+
+        var session = host.StartSession();
+
+        Assert.IsTrue(session.DispatchToCompletion(Create("Start")));
+        Assert.IsTrue(session.DispatchToCompletion(Create("Start")));
+
+        Assert.HasCount(2, contexts);
+        Assert.AreSame(contexts[0], contexts[1]);
+        Assert.AreSame(contexts[0], session);
+    }
+
+    [TestMethod]
     public void PublishCapturesSubscriptionSnapshotAtPublishTime()
     {
         var calls = new List<string>();

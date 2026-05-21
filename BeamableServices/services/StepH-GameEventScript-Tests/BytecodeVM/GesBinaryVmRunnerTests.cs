@@ -1,6 +1,7 @@
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeVM;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests.BytecodeVM;
@@ -23,7 +24,7 @@ public sealed class GesBinaryVmRunnerTests
 
         var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
         var published = new List<GameEventScriptMessage>();
-        var context = new GameEventScriptContext(
+        var context = new GameEventScriptSession(
             GameEventScriptRandomGenerator.FromSeed(1),
             message =>
             {
@@ -60,7 +61,7 @@ public sealed class GesBinaryVmRunnerTests
         var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
         var emitted = new List<GameEventScriptMessage>();
         var published = new List<GameEventScriptMessage>();
-        var context = new GameEventScriptContext(
+        var context = new GameEventScriptSession(
             GameEventScriptRandomGenerator.FromSeed(1),
             message =>
             {

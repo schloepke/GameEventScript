@@ -3,6 +3,7 @@ using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 
@@ -100,7 +101,7 @@ public sealed class GameEventScriptJsonConformanceTests
             var step = test.Steps[stepIndex];
             var emitted = new List<GameEventScriptMessage>();
             var published = new List<GameEventScriptMessage>();
-            var context = new GameEventScriptContext(
+            var context = new GameEventScriptSession(
                 random,
                 message =>
                 {

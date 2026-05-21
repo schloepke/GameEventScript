@@ -72,13 +72,13 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     public GameEventScriptNumericUnit? ReturnUnit { get; }
 }
 
-public sealed class GameEventScriptExtensionContext(GameEventScriptContext runtimeContext)
+public sealed class GameEventScriptExtensionContext(GameEventScriptSession runtimeSession)
 {
-    public GameEventScriptContext RuntimeContext { get; } = runtimeContext ?? throw new ArgumentNullException(nameof(runtimeContext));
+    public GameEventScriptSession RuntimeSession { get; } = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
 
-    public GameEventScriptRandomGenerator Random => RuntimeContext.Random;
+    public GameEventScriptRandomGenerator Random => RuntimeSession.Random;
 
-    public GameEventScriptRuntimeLimits RuntimeLimits => RuntimeContext.RuntimeLimits;
+    public GameEventScriptRuntimeLimits RuntimeLimits => RuntimeSession.RuntimeLimits;
 }
 
 public readonly struct GameEventScriptFastValue

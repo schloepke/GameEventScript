@@ -10,7 +10,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 {
     internal static Fiber CreateFiber(
         GesBytecodeVmExecutable compiledScript,
-        GameEventScriptContext context,
+        GameEventScriptSession context,
         GesBytecodeVmCompiledHandler handler,
         IReadOnlyDictionary<string, GameEventScriptValue> args)
     {

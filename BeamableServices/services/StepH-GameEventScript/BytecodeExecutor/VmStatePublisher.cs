@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -8,7 +9,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmStatePublisher
 {
     
-    private static bool VmPublishMessage(ref this VmState vmState, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptContext context)
+    private static bool VmPublishMessage(ref this VmState vmState, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession context)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
         var messageName = vmState.Binary.TextConstantTable.Resolve(shape[0]);

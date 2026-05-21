@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
@@ -14,8 +13,13 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
 {
     private VmState _vmState = new(binary, registerSize, stackSize);
-
-    public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
+    
+    public void Initialize(GameEventScriptSession context) 
+    {
+        
+    }
+    
+    public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession context)
     {
         if (!_vmState.PrepareMessage(message, context)) return false;
         _vmState.State = VmState.StateValue.Running;
@@ -474,7 +478,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
         return true;
     }
 
-    private bool VmPublishMessage(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptContext context)
+    private bool VmPublishMessage(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession context)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
         var messageName = binary.TextConstantTable.Resolve(shape[0]);
@@ -490,7 +494,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
         return publish ? context.Publish(message) : context.Emit(message);
     }
 
-    private bool VmPublishMessageWithTags(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptContext context)
+    private bool VmPublishMessageWithTags(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession context)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
         var messageName = binary.TextConstantTable.Resolve(shape[0]);

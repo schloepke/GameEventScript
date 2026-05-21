@@ -572,7 +572,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         var loopAddress = _code.Count;
         var nextInstruction = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.IteratorNext,
+            GameEventScriptBytecodeOpCode.StreamNext,
             dest: identifierSlot,
             a: iteratorSlot));
         if (forStatement.Body.IsBlock)
@@ -591,7 +591,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         var endAddress = _code.Count;
         PatchB(nextInstruction, endAddress);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.IteratorClose, a: iteratorSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StreamClose, a: iteratorSlot));
         EndScope(outerScopeAddress);
     }
 
@@ -613,7 +613,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         var loopAddress = _code.Count;
         var nextInstruction = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.IteratorNext,
+            GameEventScriptBytecodeOpCode.StreamNext,
             dest: itemSlot,
             a: iteratorSlot));
         var iterationScopeAddress = BeginScope(state.NextSlot);
@@ -639,7 +639,7 @@ internal sealed class GesLinearBytecodeBuilder
 
         var endAddress = _code.Count;
         PatchB(nextInstruction, endAddress);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.IteratorClose, a: iteratorSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StreamClose, a: iteratorSlot));
         EndScope(outerScopeAddress);
 
         var resultSlot = AllocateSlot(state);
@@ -1958,7 +1958,7 @@ internal sealed class GesLinearBytecodeBuilder
         var itemSlot = AllocateSlot(state);
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.IteratorFold,
+            GameEventScriptBytecodeOpCode.StreamFold,
             dest: resultSlot,
             a: iteratorSlot,
             b: seedSlot,
@@ -1979,7 +1979,7 @@ internal sealed class GesLinearBytecodeBuilder
         var itemSlot = AllocateSlot(state);
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.IteratorReduceOrDefault,
+            GameEventScriptBytecodeOpCode.StreamReduceOrDefault,
             dest: resultSlot,
             a: iteratorSlot,
             b: defaultSlot,
@@ -2001,7 +2001,7 @@ internal sealed class GesLinearBytecodeBuilder
         var itemSlot = AllocateSlot(state);
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.IteratorFold,
+            GameEventScriptBytecodeOpCode.StreamFold,
             dest: resultSlot,
             a: iteratorSlot,
             b: zeroSlot,
@@ -2035,7 +2035,7 @@ internal sealed class GesLinearBytecodeBuilder
         var itemSlot = identifierSlot;
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.IteratorReduce,
+            GameEventScriptBytecodeOpCode.StreamReduce,
             dest: resultSlot,
             a: iteratorSlot,
             b: itemSlot));
@@ -2661,6 +2661,15 @@ internal sealed class GesLinearBytecodeBuilder
                 EncodeNumericUnitAndFlags(unit));
         }
 
+        if (string.Equals(typeName, "number", StringComparison.Ordinal))
+        {
+            return (
+                GameEventScriptBytecodeOpCode.CastNumeric,
+                GameEventScriptBytecodeOpCode.TypeCheckNumeric,
+                0,
+                0);
+        }
+
         if (TryGetBytecodeTypeKind(typeName, out var typeKind))
         {
             return (
@@ -2752,7 +2761,6 @@ internal sealed class GesLinearBytecodeBuilder
             "boolean" => GameEventScriptBytecodeTypeKind.Boolean,
             "integer" => GameEventScriptBytecodeTypeKind.Integer,
             "float" => GameEventScriptBytecodeTypeKind.Float,
-            "number" => GameEventScriptBytecodeTypeKind.Number,
             "percentage" => GameEventScriptBytecodeTypeKind.Percentage,
             "vector" => GameEventScriptBytecodeTypeKind.Vector,
             "point" => GameEventScriptBytecodeTypeKind.Point,

@@ -2,10 +2,9 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -14,25 +13,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct VmValue
 {
-    public enum VmValueKind : byte
-    {
-        Nothing,
-        DataPointer,
-        CodePointer,
-        Boolean,
-        Integer,
-        Float,
-        Percentage,
-        Dice,
-        Text,
-        List,
-        Map,
-        Tag,
-        Iterator,
-        Reference,
-        Uuid
-    }
-
     [Flags]
     public enum VmValueFlags : byte
     {
@@ -42,40 +22,41 @@ public struct VmValue
         IsFalse = 1 << 1,
 
         StoragePointer = 1 << 2,
-        StorageObject = 1 << 3,
+        StorageObject = 1 << 3
     }
 
-    [FieldOffset(16)] internal VmValueKind Kind;
+    [FieldOffset(16)] internal GameEventScriptBytecodeTypeKind Kind;
     [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
     [FieldOffset(18)] internal VmValueFlags Flags;
     [FieldOffset(0)] internal long IntegerValue;
     [FieldOffset(0)] internal double FloatValue;
     [FieldOffset(8)] internal object? ObjectValue;
 
-    public bool IsTrue => IntegerValue != 0;
-    public bool IsFalse => IntegerValue == 0 && Kind is not Nothing;
-    public bool IsNotTrue => IntegerValue != 0;
+    public bool IsTrue => (Flags & VmValueFlags.IsTrue) != 0;
+    public bool IsFalse => (Flags & VmValueFlags.IsFalse) != 0;
+    public bool IsNotTrue => (Flags & VmValueFlags.IsTrue) == 0;
+    
+    public bool IsNothing => Kind is Nothing;
+    public bool IsNotNothing => Kind is not Nothing;
 
     public bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
     public bool HasUnit => Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsStoragePointer() => (Flags & VmValueFlags.StoragePointer) != 0;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsStorageObject() => (Flags & VmValueFlags.StoragePointer) != 0;
+    public bool IsStoragePointer => (Flags & VmValueFlags.StoragePointer) != 0;
+    public bool IsStorageObject => (Flags & VmValueFlags.StorageObject) != 0;
     
     public void SetNothing()
     {
         Kind = Nothing;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNothing;
+        Flags = VmValueFlags.None;
         IntegerValue = 0;
         ObjectValue = null;
     }
 
     public void SetBoolean(bool value)
     {
-        Kind = VmValueKind.Boolean;
-        Flags = VmValueFlags.None;
+        Kind = GameEventScriptBytecodeTypeKind.Boolean;
+        Flags = value ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = value ? 1 : 0;
         ObjectValue = null;
@@ -90,7 +71,7 @@ public struct VmValue
     public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Integer;
-        Flags = VmValueFlags.None;
+        Flags = value != 0 ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
         Unit = unit;
         IntegerValue = value;
         ObjectValue = null;
@@ -105,7 +86,7 @@ public struct VmValue
     public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Float;
-        Flags = VmValueFlags.None;
+        Flags = value != 0 && double.IsFinite(value) && !double.IsNaN(value) ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
         Unit = unit;
         FloatValue = value;
         ObjectValue = null;
@@ -114,7 +95,7 @@ public struct VmValue
     public void SetPercentage(double ratio)
     {
         Kind = Percentage;
-        Flags = VmValueFlags.None;
+        Flags = ratio != 0 && double.IsFinite(ratio) && !double.IsNaN(ratio) ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         FloatValue = ratio;
         ObjectValue = null;
@@ -126,20 +107,10 @@ public struct VmValue
         else SetFloat(value.Value, unit);
     }
 
-    public void SetDataPointer(ushort pointer)
-    {
-        Kind = DataPointer;
-        Flags = VmValueFlags.StoragePointer;
-        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
-        IntegerValue = pointer;
-        FloatValue = 0;
-        ObjectValue = null;
-    }
-
     public void SetStringPointer(ushort pointer)
     {
         Kind = Text;
-        Flags = VmValueFlags.StoragePointer;
+        Flags = VmValueFlags.StoragePointer | VmValueFlags.IsTrue;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -148,36 +119,20 @@ public struct VmValue
     public void SetTagPointer(ushort pointer)
     {
         Kind = Tag;
-        Flags = VmValueFlags.StoragePointer;
+        Flags = VmValueFlags.StoragePointer | VmValueFlags.IsTrue;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
     }
 
-    public void SetCodePointer(ushort pointer)
-    {
-        Kind = CodePointer;
-        Flags = VmValueFlags.StoragePointer;
-        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
-        IntegerValue = pointer;
-        ObjectValue = null;
-    }
-
-    public void SetObject(VmValueKind kind, object value)
+    public void SetObject(GameEventScriptBytecodeTypeKind kind, object value)
     {
         Kind = kind;
-        Flags = VmValueFlags.StorageObject;
+        Flags = VmValueFlags.StorageObject | VmValueFlags.IsTrue;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = 0;
         ObjectValue = value;
     }
-
-    public ushort? CodePointerOrNothing => Kind is CodePointer ? (ushort)IntegerValue : null;
-    public long? IntegerValueOrNothing => Kind is Integer ? IntegerValue : null;
-    public double? FloatValueOrNothing => Kind is Float or Integer or Percentage ? FloatValue : null;
-    public bool? BooleanValueOrNothing => Kind is VmValueKind.Boolean ? IntegerValue != 0 : null;
-
-    public bool AsBooleanValue => IntegerValue != 0;
 
     public bool TryGetInteger(out long intValue)
     {

@@ -55,6 +55,7 @@ public sealed class BytecodeExecutorTests
             function calc(_ x) means x * 3
             
             on Start(value) {
+                let myHandler be Success(param)
                 let a be 10
                 let b be 20
                 let c be time(a)

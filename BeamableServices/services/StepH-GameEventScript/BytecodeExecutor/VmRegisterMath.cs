@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
-using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 

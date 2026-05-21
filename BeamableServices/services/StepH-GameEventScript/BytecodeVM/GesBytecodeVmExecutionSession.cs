@@ -97,11 +97,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineIterator:
                 return allowPipeline && CanExecuteLinearEntry(instruction.EntryAddress, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.IteratorReduce:
+            case GameEventScriptBytecodeOpCode.StreamReduce:
                 return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
-            case GameEventScriptBytecodeOpCode.IteratorFold:
+            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
+            case GameEventScriptBytecodeOpCode.StreamFold:
                 return allowPipeline && CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
@@ -581,10 +581,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.IteratorNext:
+            case GameEventScriptBytecodeOpCode.StreamNext:
                 return TryExecuteIteratorNext(instruction, ref pc);
 
-            case GameEventScriptBytecodeOpCode.IteratorClose:
+            case GameEventScriptBytecodeOpCode.StreamClose:
                 CloseIterator(ResolveSlot(instruction.XSlot));
                 if (!DefineSlot(instruction.XSlot, BytecodeVmValue.Nothing))
                 {
@@ -1112,13 +1112,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
                 return TryExecutePipelineHasAll(instruction);
 
-            case GameEventScriptBytecodeOpCode.IteratorReduce:
+            case GameEventScriptBytecodeOpCode.StreamReduce:
                 return TryExecuteIteratorReduce(instruction, IteratorReduceMode.Reduce);
 
-            case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
+            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
                 return TryExecuteIteratorReduce(instruction, IteratorReduceMode.ReduceOrDefault);
 
-            case GameEventScriptBytecodeOpCode.IteratorFold:
+            case GameEventScriptBytecodeOpCode.StreamFold:
                 return TryExecuteIteratorReduce(instruction, IteratorReduceMode.Fold);
 
             case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
@@ -4543,6 +4543,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.CastNumeric)
+        {
+            value = BytecodeVmValue.FromGameEventScriptValue(ConvertToNumber(input.ToGameEventScriptValue()));
+            return true;
+        }
+
         if (instruction.OpCode is not (GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CastCustom) ||
             !TryGetDeclaredTypeName(instruction, out var typeName))
         {
@@ -4566,6 +4572,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             value = IsValueOfUnit(input, unit);
+            return true;
+        }
+
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckNumeric)
+        {
+            value = IsValueNumeric(input);
             return true;
         }
 
@@ -4598,7 +4610,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeTypeKind.Boolean => "boolean",
             GameEventScriptBytecodeTypeKind.Integer => "integer",
             GameEventScriptBytecodeTypeKind.Float => "float",
-            GameEventScriptBytecodeTypeKind.Number => "number",
             GameEventScriptBytecodeTypeKind.Percentage => "percentage",
             GameEventScriptBytecodeTypeKind.Vector => "vector",
             GameEventScriptBytecodeTypeKind.Point => "point",
@@ -5713,7 +5724,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "vector" => BytecodeVmValue.Reference(ConvertToVector(boxed)),
             "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
-            "float" or "number" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloat(boxed)),
+            "float" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloat(boxed)),
             "uuid" => BytecodeVmValue.FromGameEventScriptValue(ConvertToUuid(boxed)),
             "series" => boxed.IsSeries()
                 ? input
@@ -5775,7 +5786,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 value = BytecodeVmValue.Integer(GameEventScriptValue.ToIntegerPercentage(input.Number));
                 return true;
             case "float":
-            case "number":
                 return TryConvertPrimitiveToFloat(input, out value);
             case "percentage":
                 return TryConvertPrimitiveToPercentage(input, out value);
@@ -5895,7 +5905,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
            _runtimeBudget.TryCheckRangeLength(length, detail);
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.CastUnit;
+        => opCode is GameEventScriptBytecodeOpCode.Cast or
+            GameEventScriptBytecodeOpCode.CastNumeric or
+            GameEventScriptBytecodeOpCode.CastCustom or
+            GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsInlineConstantInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.LoadNothing or
@@ -5909,7 +5922,62 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.LoadHandler;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or GameEventScriptBytecodeOpCode.TypeCheckCustom or GameEventScriptBytecodeOpCode.CheckUnit;
+        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or
+            GameEventScriptBytecodeOpCode.TypeCheckNumeric or
+            GameEventScriptBytecodeOpCode.TypeCheckCustom or
+            GameEventScriptBytecodeOpCode.CheckUnit;
+
+    private static bool IsValueNumeric(BytecodeVmValue value)
+    {
+        if (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float or BytecodeVmValueKind.Percentage)
+        {
+            return true;
+        }
+
+        return value.ReferenceValue is { } reference &&
+               GesValueOperations.TryCoerceNumericForOperation(reference, out _);
+    }
+
+    private static GameEventScriptValue ConvertToNumber(GameEventScriptValue value)
+    {
+        if (value.IsInteger())
+        {
+            return value;
+        }
+
+        var unit = GameEventScriptValue.TryGetNumericUnit(value, out var numericUnit)
+            ? numericUnit
+            : (GameEventScriptNumericUnit?)null;
+
+        if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (number.IsNaN)
+        {
+            return GesFloatNaN();
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return GesFloatInfinity();
+        }
+
+        if (number.IsNegativeInfinity)
+        {
+            return GesFloatNegativeInfinity();
+        }
+
+        if (number.Value >= long.MinValue &&
+            number.Value <= long.MaxValue &&
+            number.Value == Math.Truncate(number.Value))
+        {
+            return GesInteger((long)number.Value, unit);
+        }
+
+        return GesFloat(number.Value, unit);
+    }
 
     private static GameEventScriptValue ConvertToFloat(GameEventScriptValue value)
     {

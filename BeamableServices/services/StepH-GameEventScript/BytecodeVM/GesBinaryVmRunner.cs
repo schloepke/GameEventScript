@@ -82,7 +82,9 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.Cast:
                 case GameEventScriptBytecodeOpCode.CastCustom:
                 case GameEventScriptBytecodeOpCode.CastUnit:
+                case GameEventScriptBytecodeOpCode.CastNumeric:
                 case GameEventScriptBytecodeOpCode.TypeCheck:
+                case GameEventScriptBytecodeOpCode.TypeCheckNumeric:
                 case GameEventScriptBytecodeOpCode.TypeCheckCustom:
                 case GameEventScriptBytecodeOpCode.CheckUnit:
                     maxSlot = Math.Max(maxSlot, instruction.XSlot);
@@ -227,8 +229,16 @@ internal sealed class GesBinaryVmRunState
                     Set(instruction.DestinationSlot, CastUnit(Get(instruction.XSlot), DecodeUnit(instruction.UnitAndFlags)));
                     break;
 
+                case GameEventScriptBytecodeOpCode.CastNumeric:
+                    Set(instruction.DestinationSlot, CastNumeric(Get(instruction.XSlot)));
+                    break;
+
                 case GameEventScriptBytecodeOpCode.TypeCheck:
                     Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.XSlot), (GameEventScriptBytecodeTypeKind)instruction.TypeOperand)));
+                    break;
+
+                case GameEventScriptBytecodeOpCode.TypeCheckNumeric:
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueNumeric(Get(instruction.XSlot))));
                     break;
 
                 case GameEventScriptBytecodeOpCode.TypeCheckCustom:
@@ -367,7 +377,7 @@ internal sealed class GesBinaryVmRunState
         => typeKind switch
         {
             GameEventScriptBytecodeTypeKind.Integer => GesBinaryVmValue.Integer(value.AsInteger()),
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Number => GesBinaryVmValue.Float(value.AsNumber()),
+            GameEventScriptBytecodeTypeKind.Float => GesBinaryVmValue.Float(value.AsNumber()),
             GameEventScriptBytecodeTypeKind.Boolean => GesBinaryVmValue.Boolean(value.IsTrue()),
             GameEventScriptBytecodeTypeKind.Text => GesBinaryVmValue.Text(value.ToGameEventScriptValue().AsText()),
             _ => GesBinaryVmValue.FromGameEventScriptValue(value.ToGameEventScriptValue())
@@ -381,13 +391,57 @@ internal sealed class GesBinaryVmRunState
         {
             GameEventScriptBytecodeTypeKind.Nothing => value.Kind == GesBinaryVmValueKind.Nothing,
             GameEventScriptBytecodeTypeKind.Integer => value.Kind == GesBinaryVmValueKind.Integer,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Number => value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float or GesBinaryVmValueKind.Percentage,
+            GameEventScriptBytecodeTypeKind.Float => value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float or GesBinaryVmValueKind.Percentage,
             GameEventScriptBytecodeTypeKind.Boolean => value.Kind == GesBinaryVmValueKind.Boolean,
             GameEventScriptBytecodeTypeKind.Text => value.Kind == GesBinaryVmValueKind.Text,
             GameEventScriptBytecodeTypeKind.Tag => value.Kind == GesBinaryVmValueKind.Tag,
             GameEventScriptBytecodeTypeKind.Percentage => value.Kind == GesBinaryVmValueKind.Percentage,
             _ => false
         };
+
+    private static GesBinaryVmValue CastNumeric(GesBinaryVmValue value)
+    {
+        var boxed = value.ToGameEventScriptValue();
+        var unit = GameEventScriptValue.TryGetNumericUnit(boxed, out var numericUnit)
+            ? numericUnit
+            : (GameEventScriptNumericUnit?)null;
+
+        if (!GesValueOperations.TryCoerceNumericForOperation(boxed, out var number))
+        {
+            return GesBinaryVmValue.Nothing;
+        }
+
+        if (number.IsNaN)
+        {
+            return GesBinaryVmValue.Float(double.NaN);
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return GesBinaryVmValue.Float(double.PositiveInfinity);
+        }
+
+        if (number.IsNegativeInfinity)
+        {
+            return GesBinaryVmValue.Float(double.NegativeInfinity);
+        }
+
+        return number.Value >= long.MinValue &&
+               number.Value <= long.MaxValue &&
+               number.Value == Math.Truncate(number.Value)
+            ? GesBinaryVmValue.Integer((long)number.Value, unit)
+            : GesBinaryVmValue.Float(number.Value, unit);
+    }
+
+    private static bool IsValueNumeric(GesBinaryVmValue value)
+    {
+        if (value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float or GesBinaryVmValueKind.Percentage)
+        {
+            return true;
+        }
+
+        return GesValueOperations.TryCoerceNumericForOperation(value.ToGameEventScriptValue(), out _);
+    }
 
     private bool IsValueOfCustomType(GesBinaryVmValue value, ushort customTypeNameIndex)
         => value.ToGameEventScriptValue().TryGetCustomTypeName(out var customTypeName) &&

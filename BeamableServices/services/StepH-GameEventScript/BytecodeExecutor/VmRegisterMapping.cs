@@ -2,8 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.BytecodeExecutor.VmValue;
-using static StepH.GameEventScript.Types.GameEventScriptValueKind;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -11,7 +10,7 @@ internal static class VmRegisterMapping
 {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmDefault(ref this VmValue dst, ref VmValue a, ref VmValue b) => dst = a.Kind == VmValueKind.Nothing ? b : a;
+    internal static void VmDefault(ref this VmValue dst, ref VmValue a, ref VmValue b) => dst = a.Kind == Nothing ? b : a;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
@@ -21,19 +20,19 @@ internal static class VmRegisterMapping
             case GameEventScriptValueKind.Nothing:
                 destination.SetNothing();
                 break;
-            case Tag:
+            case GameEventScriptValueKind.Tag:
                 throw new NotImplementedException();
                 break;
-            case Text:
+            case GameEventScriptValueKind.Text:
                 throw new NotImplementedException();
                 break;
-            case Percentage:
+            case GameEventScriptValueKind.Percentage:
                 destination.SetPercentage(argument.AsNumber());
                 break;
-            case Vector:
+            case GameEventScriptValueKind.Vector:
                 throw new NotImplementedException();
                 break;
-            case Point:
+            case GameEventScriptValueKind.Point:
                 throw new NotImplementedException();
                 break;
             case GameEventScriptValueKind.Float:
@@ -45,31 +44,31 @@ internal static class VmRegisterMapping
             case GameEventScriptValueKind.Boolean:
                 destination.SetBoolean(argument.AsBoolean());
                 break;
-            case Uuid:
+            case GameEventScriptValueKind.Uuid:
                 throw new NotImplementedException();
                 break;
-            case Series:
+            case GameEventScriptValueKind.Series:
                 throw new NotImplementedException();
                 break;
             case GameEventScriptValueKind.Range:
                 throw new NotImplementedException();
                 break;
-            case Message:
+            case GameEventScriptValueKind.Message:
                 throw new NotImplementedException();
                 break;
-            case Handler:
+            case GameEventScriptValueKind.Handler:
                 throw new NotImplementedException();
                 break;
-            case Ref:
+            case GameEventScriptValueKind.Ref:
                 throw new NotImplementedException();
                 break;
-            case List:
+            case GameEventScriptValueKind.List:
                 throw new NotImplementedException();
                 break;
-            case Map:
+            case GameEventScriptValueKind.Map:
                 throw new NotImplementedException();
                 break;
-            case Dice:
+            case GameEventScriptValueKind.Dice:
                 throw new NotImplementedException();
                 break;
             default:
@@ -80,10 +79,10 @@ internal static class VmRegisterMapping
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
-        VmValueKind.Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue),
-        VmValueKind.Float => GameEventScriptValueFactory.GesFloat(a.FloatValue),
-        VmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
-        VmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.AsBooleanValue),
+        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue),
+        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue),
+        Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
+        GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
         // FIXME this might not work here, since we need to binary to look up strings and tags
         _ => GameEventScriptValueFactory.GesNothing(),
     };

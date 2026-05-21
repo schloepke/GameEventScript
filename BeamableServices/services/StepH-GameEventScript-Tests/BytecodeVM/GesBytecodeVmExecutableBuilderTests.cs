@@ -142,6 +142,31 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeLowersNumberToNumericOpcodes()
+    {
+        const string script =
+            """
+            module NumericSugar
+
+            on Start(value) {
+              let numeric be value as :number
+              let isNumeric be numeric is :number
+              emit Done(numeric: numeric, isNumeric: isNumeric)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.IsFalse(Enum.GetNames<GameEventScriptBytecodeTypeKind>().Contains("Number"));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CastNumeric));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckNumeric));
+        Assert.IsFalse(compiled.Code.Any(instruction =>
+            (instruction.OpCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.TypeCheck) &&
+            Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeOperand) &&
+            Enum.GetName(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeOperand) == "Number"));
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeStoresPublishMetadataInUShortListPool()
     {
         const string script =
@@ -194,8 +219,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
 
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIteratorShort));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamNext));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamClose));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant &&
             instruction.I64 == -7L));
@@ -222,8 +247,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIterator));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RangeIteratorWithStep));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CollectionIterator));
-        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorNext));
-        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.IteratorClose));
+        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamNext));
+        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamClose));
     }
 
     [TestMethod]

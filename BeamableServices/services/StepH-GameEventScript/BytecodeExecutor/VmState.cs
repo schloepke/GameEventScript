@@ -56,6 +56,9 @@ internal struct VmState
     internal readonly ushort CodeSegmentSize; 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         Binary = binary;
@@ -154,30 +157,6 @@ internal struct VmState
             RegisterFrameLength = RegisterFrameLength
         };
         InstructionPointer = address;
-        RegisterFrameStart += RegisterFrameLength;
-        RegisterFrameLength = StagedArgumentCount;
-        StagedArgumentCount = 0;
-        return RegisterFrameStart + RegisterFrameLength <= RegisterSlots.Length || RaiseError($"Register overflow");
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool CallAddressFromRegister(ushort registerIndex, ushort? resultRegister = null)
-    {
-        if (CallStackPointer >= CallStack.Length) return RaiseError("Stack overflow");
-        if (registerIndex >= RegisterFrameLength) return RaiseError($"Register overflow");
-        var register = RegisterSlots[registerIndex + RegisterFrameStart];
-        CallStack[CallStackPointer++] = new CallFrame
-        {
-            InstructionPointer = InstructionPointer,
-            ResultRegisterIndex = resultRegister,
-            RegisterFrameStart = RegisterFrameStart,
-            RegisterFrameLength = RegisterFrameLength
-        };
-        if (register.CodePointerOrNothing == null)
-        {
-            return RaiseError($"Illegal call: register {registerIndex} is not a code pointer.");
-        }
-        InstructionPointer = register.CodePointerOrNothing ?? throw new InvalidOperationException();
         RegisterFrameStart += RegisterFrameLength;
         RegisterFrameLength = StagedArgumentCount;
         StagedArgumentCount = 0;

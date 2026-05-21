@@ -26,15 +26,15 @@ public static class GameEventScriptBytecodeDumper
         builder.Append("diagnostics: ").AppendLine(module.Options.EnableDiagnostics ? "on" : "off");
         builder.Append("debugInfo: ").AppendLine(module.Options.EnableDebugInfo ? "on" : "off");
         builder.Append("maxFrameSlots: ").AppendLine(module.MaxFrameSlots.ToString(CultureInfo.InvariantCulture));
+        AppendHandlers(builder, module);
+        AppendCallables(builder, module);
+        AppendTypeDefinitions(builder, module);
         AppendPool(builder, "strings", module.StringPool);
         AppendUShortListPool(builder, module);
         AppendOutboundMessageSignatures(builder, module);
         AppendExternalReferences(builder, module);
-        AppendDebugSegment(builder, module);
         AppendCode(builder, module);
-        AppendCallables(builder, module);
-        AppendTypeDefinitions(builder, module);
-        AppendHandlers(builder, module);
+        AppendDebugSegment(builder, module);
         return builder.ToString();
     }
 
@@ -319,12 +319,12 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "collection", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorNext:
+            case GameEventScriptBytecodeOpCode.StreamNext:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 AppendAddress(builder, "noMore", instruction.TargetAddress);
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorClose:
+            case GameEventScriptBytecodeOpCode.StreamClose:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
@@ -480,20 +480,20 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorReduce:
+            case GameEventScriptBytecodeOpCode.StreamReduce:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 AppendSlot(builder, "item", instruction.YSlot);
                 AppendAddress(builder, "reducer", instruction.AU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
+            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 AppendSlot(builder, "default", instruction.YSlot);
                 AppendSlot(builder, "item", instruction.AU);
                 AppendAddress(builder, "reducer", instruction.BU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorFold:
+            case GameEventScriptBytecodeOpCode.StreamFold:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 AppendSlot(builder, "seed", instruction.YSlot);
                 AppendSlot(builder, "item", instruction.AU);
@@ -663,7 +663,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
             GameEventScriptBytecodeOpCode.CollectionBuilderAdd or
-            GameEventScriptBytecodeOpCode.IteratorClose or
+            GameEventScriptBytecodeOpCode.StreamClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
             GameEventScriptBytecodeOpCode.RandomPop or
@@ -814,13 +814,25 @@ public static class GameEventScriptBytecodeDumper
     private static string FormatAddress(int value) => value < 0 ? "none" : value.ToString("0000", CultureInfo.InvariantCulture);
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.CastUnit;
+        => opCode is GameEventScriptBytecodeOpCode.Cast or
+            GameEventScriptBytecodeOpCode.CastNumeric or
+            GameEventScriptBytecodeOpCode.CastCustom or
+            GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or GameEventScriptBytecodeOpCode.TypeCheckCustom or GameEventScriptBytecodeOpCode.CheckUnit;
+        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or
+            GameEventScriptBytecodeOpCode.TypeCheckNumeric or
+            GameEventScriptBytecodeOpCode.TypeCheckCustom or
+            GameEventScriptBytecodeOpCode.CheckUnit;
 
     private static void AppendDeclaredTypeOperand(StringBuilder builder, GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
     {
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.TypeCheckNumeric)
+        {
+            builder.Append(" kind=numeric");
+            return;
+        }
+
         if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastUnit or GameEventScriptBytecodeOpCode.CheckUnit)
         {
             AppendNumericUnit(builder, instruction.UnitAndFlags);

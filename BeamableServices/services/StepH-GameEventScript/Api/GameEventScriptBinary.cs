@@ -130,23 +130,24 @@ public enum GameEventScriptBytecodeTypeKind : ushort
     Boolean = 2,
     Integer = 3,
     Float = 4,
-    Number = 5,
-    Percentage = 6,
-    Vector = 7,
-    Point = 8,
-    Uuid = 9,
-    Series = 10,
-    Envelope = 11,
-    Ref = 12,
-    Tag = 13,
-    Text = 14,
-    List = 15,
-    Range = 16,
-    Message = 17,
-    Handler = 18,
-    Map = 19,
-    Dice = 20,
-    Custom = 0xFFFF
+    Percentage = 5,
+    Vector = 6,
+    Point = 7,
+    Uuid = 8,
+    Series = 9,
+    Envelope = 10,
+    Ref = 11,
+    Tag = 12,
+    Text = 13,
+    List = 14,
+    Range = 15,
+    Message = 16,
+    Handler = 17,
+    Map = 18,
+    Dice = 19,
+    Stream = 20,
+    
+    Custom = 0x7FFF,
 }
 
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
@@ -259,6 +260,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     StageTag = 0x31,
     StagePercentage = 0x32,
     TypeConstructor = 0x33,
+    CastNumeric = 0x34,
+    TypeCheckNumeric = 0x35,
 
     #endregion
 
@@ -319,7 +322,7 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     #endregion
 
-    #region Group 5 - text, collection, iterators
+    #region Group 5 - text, collection, streams
 
     UnaryLength = 0x80,
     StartsWith = 0x81,
@@ -339,11 +342,11 @@ public enum GameEventScriptBytecodeOpCode : byte
     RangeIteratorWithStep = 0x8F,
     RangeIteratorShort = 0x90,
     CollectionIterator = 0x91,
-    IteratorNext = 0x92,
-    IteratorClose = 0x93,
-    IteratorReduce = 0x94,
-    IteratorReduceOrDefault = 0x95,
-    IteratorFold = 0x96,
+    StreamNext = 0x92,
+    StreamClose = 0x93,
+    StreamReduce = 0x94,
+    StreamReduceOrDefault = 0x95,
+    StreamFold = 0x96,
     SeriesTerm = 0x97,
     SeriesTake = 0x98,
     SeriesDrop = 0x99,

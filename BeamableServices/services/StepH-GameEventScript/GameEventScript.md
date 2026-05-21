@@ -1135,6 +1135,10 @@ unitless double.
 :float(true)  // 1
 ```
 
+`:number(value)` and `as :number` are numeric coercions, not a separate value
+kind. Integral numeric results stay `:integer`; non-integral results become
+`:float`.
+
 ### Numeric quantities: `:quantity(...)`, `:degree`, `:meter`, and `:second`
 
 `degree`, `meter`, and `second` are scalar numeric units. They are not separate

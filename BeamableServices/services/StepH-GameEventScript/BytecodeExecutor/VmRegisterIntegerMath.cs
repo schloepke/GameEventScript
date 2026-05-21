@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;

@@ -1,9 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
-using static StepH.GameEventScript.BytecodeExecutor.VmValue;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -17,13 +16,13 @@ internal static class VmRegisterCompare
             case Nothing:
                 dst.SetBoolean(true);
                 break;
-            case Integer or Float or Percentage or VmValueKind.Boolean:
+            case Integer or Float or Percentage or GameEventScriptBytecodeTypeKind.Boolean:
                 dst.SetBoolean(false);
                 break;
-            case Text or Tag when a.IsStoragePointer():
-                dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length == 0);
+            case Text or Tag when a.IsStoragePointer:
+                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).Length == 0);
                 break;
-            case Text or Tag when a.IsStorageObject() && a.ObjectValue is string text :
+            case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text } :
                 dst.SetBoolean(text.Length == 0);
                 break;
             case List or Map or Dice when a.ObjectValue is IVmLengthAccess objectValue:
@@ -44,16 +43,16 @@ internal static class VmRegisterCompare
             case Nothing:
                 dst.SetBoolean(false);
                 break;
-            case Integer or VmValueKind.Boolean:
+            case Integer or GameEventScriptBytecodeTypeKind.Boolean:
                 dst.SetBoolean(true);
                 break;
             case Float or Percentage:
-                dst.SetBoolean(!double.IsNaN(a.AsNumberValue) || !double.IsInfinity(a.AsNumberValue) || !double.IsNegativeInfinity(a.AsNumberValue));
+                dst.SetBoolean(!(double.IsNaN(a.AsNumberValue) || double.IsInfinity(a.AsNumberValue)));
                 break;
-            case Text or Tag when a.IsStoragePointer():
-                dst.SetBoolean(textTable.Resolve((ushort)dst.IntegerValue).Length > 0);
+            case Text or Tag when a.IsStoragePointer:
+                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).Length > 0);
                 break;
-            case Text or Tag when a.IsStorageObject() && a.ObjectValue is string text:
+            case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
                 dst.SetBoolean(text.Length > 0);
                 break;
             case Text or List or Map or  Tag or Dice when a.ObjectValue is IVmLengthAccess objectValue:
@@ -134,7 +133,7 @@ internal static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsNumberValue < b.AsNumberValue);
         }
-        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
+        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
         {
             dst.SetBoolean(a.IsFalse && b.IsTrue);
         }
@@ -155,7 +154,7 @@ internal static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsNumberValue > b.AsNumberValue);
         }
-        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
+        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
         {
             dst.SetBoolean(a.IsTrue && b.IsFalse);
         }
@@ -176,9 +175,9 @@ internal static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsNumberValue <= b.AsNumberValue);
         }
-        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
+        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
         {
-            dst.SetBoolean(a.IsFalse && b.IsTrue || a.AsBooleanValue == b.AsBooleanValue);
+            dst.SetBoolean(a.IsFalse && b.IsTrue || a.IsTrue == b.IsTrue);
         }
         else
         {
@@ -197,9 +196,9 @@ internal static class VmRegisterCompare
         {
             dst.SetBoolean(a.AsNumberValue >= b.AsNumberValue);
         }
-        else if (a.Kind is VmValueKind.Boolean && b.Kind is VmValueKind.Boolean)
+        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
         {
-            dst.SetBoolean(a.IsTrue && b.IsFalse || a.AsBooleanValue == b.AsBooleanValue);
+            dst.SetBoolean(a.IsTrue && b.IsFalse || a.IsTrue == b.IsTrue);
             return;
         }
         else

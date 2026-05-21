@@ -99,12 +99,12 @@ internal class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, I
     }
 }
 
-internal interface IVmIterator
+internal interface IVmStream
 {
     public bool TryNext(ref VmValue value);
 }
 
-internal class VmIntegerRangeIterator(long from, long to, long step) : IVmIterator, IDisposable
+internal class VmIntegerRangeStream(long from, long to, long step) : IVmStream, IDisposable
 {
     private long _current = from;
     private bool _disposed = false;

@@ -191,6 +191,8 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field StageTag = 49
   enum-field StagePercentage = 50
   enum-field TypeConstructor = 51
+  enum-field CastNumeric = 52
+  enum-field TypeCheckNumeric = 53
   enum-field Or = 64
   enum-field And = 65
   enum-field Xor = 66
@@ -256,11 +258,11 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field RangeIteratorWithStep = 143
   enum-field RangeIteratorShort = 144
   enum-field CollectionIterator = 145
-  enum-field IteratorNext = 146
-  enum-field IteratorClose = 147
-  enum-field IteratorReduce = 148
-  enum-field IteratorReduceOrDefault = 149
-  enum-field IteratorFold = 150
+  enum-field StreamNext = 146
+  enum-field StreamClose = 147
+  enum-field StreamReduce = 148
+  enum-field StreamReduceOrDefault = 149
+  enum-field StreamFold = 150
   enum-field SeriesTerm = 151
   enum-field SeriesTake = 152
   enum-field SeriesDrop = 153
@@ -327,23 +329,23 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field Boolean = 2
   enum-field Integer = 3
   enum-field Float = 4
-  enum-field Number = 5
-  enum-field Percentage = 6
-  enum-field Vector = 7
-  enum-field Point = 8
-  enum-field Uuid = 9
-  enum-field Series = 10
-  enum-field Envelope = 11
-  enum-field Ref = 12
-  enum-field Tag = 13
-  enum-field Text = 14
-  enum-field List = 15
-  enum-field Range = 16
-  enum-field Message = 17
-  enum-field Handler = 18
-  enum-field Map = 19
-  enum-field Dice = 20
-  enum-field Custom = 65535
+  enum-field Percentage = 5
+  enum-field Vector = 6
+  enum-field Point = 7
+  enum-field Uuid = 8
+  enum-field Series = 9
+  enum-field Envelope = 10
+  enum-field Ref = 11
+  enum-field Tag = 12
+  enum-field Text = 13
+  enum-field List = 14
+  enum-field Range = 15
+  enum-field Message = 16
+  enum-field Handler = 17
+  enum-field Map = 18
+  enum-field Dice = 19
+  enum-field Stream = 20
+  enum-field Custom = 32767
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileError
   ctor GameEventScriptCompileError(System.String Message, System.String ModuleName, System.String Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind, StepH.GameEventScript.Api.GameEventScriptCompileErrorKind Kind, StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation)
   method StepH.GameEventScript.Api.GameEventScriptCompileError <Clone>$()
@@ -572,55 +574,34 @@ class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
   ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptContext context)
 struct StepH.GameEventScript.BytecodeExecutor.VmValue
-  method System.Boolean IsStorageObject()
-  method System.Boolean IsStoragePointer()
   method System.Boolean IsUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit requiredUnit)
   method System.Boolean TryGetInteger(System.Int64& intValue)
   method System.Void SetBoolean(System.Boolean value)
   method System.Void SetBooleanOrNothing(System.Boolean? value)
-  method System.Void SetCodePointer(System.UInt16 pointer)
-  method System.Void SetDataPointer(System.UInt16 pointer)
   method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetFloatOrNothing(System.Double? value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetIntegerOrNothing(System.Int64? value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetNothing()
-  method System.Void SetObject(StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind kind, System.Object value)
+  method System.Void SetObject(StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, System.Object value)
   method System.Void SetPercentage(System.Double ratio)
   method System.Void SetStringPointer(System.UInt16 pointer)
   method System.Void SetTagPointer(System.UInt16 pointer)
-  property System.Boolean AsBooleanValue { get }
   property System.Boolean HasUnit { get }
   property System.Boolean IsFalse { get }
+  property System.Boolean IsNotNothing { get }
   property System.Boolean IsNotTrue { get }
+  property System.Boolean IsNothing { get }
+  property System.Boolean IsStorageObject { get }
+  property System.Boolean IsStoragePointer { get }
   property System.Boolean IsTrue { get }
-  property System.Boolean? BooleanValueOrNothing { get }
   property System.Double AsNumberValue { get }
-  property System.Double? FloatValueOrNothing { get }
-  property System.Int64? IntegerValueOrNothing { get }
-  property System.UInt16? CodePointerOrNothing { get }
 enum StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueFlags
   enum-field None = 0
   enum-field IsTrue = 1
   enum-field IsFalse = 2
   enum-field StoragePointer = 4
   enum-field StorageObject = 8
-enum StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueKind
-  enum-field Nothing = 0
-  enum-field DataPointer = 1
-  enum-field CodePointer = 2
-  enum-field Boolean = 3
-  enum-field Integer = 4
-  enum-field Float = 5
-  enum-field Percentage = 6
-  enum-field Dice = 7
-  enum-field Text = 8
-  enum-field List = 9
-  enum-field Map = 10
-  enum-field Tag = 11
-  enum-field Iterator = 12
-  enum-field Reference = 13
-  enum-field Uuid = 14
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
 static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper

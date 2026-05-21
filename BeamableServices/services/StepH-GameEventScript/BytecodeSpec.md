@@ -542,9 +542,11 @@ for `pc`-based execution.
 - `StageText stringIndex`
 - `StageTag stringIndex`
 - `Cast dst src typeKind`
+- `CastNumeric dst src`
 - `CastCustom dst src typeNameIndex`
 - `CastUnit dst src unitAndFlags`
 - `TypeCheck dst src typeKind`
+- `TypeCheckNumeric dst src`
 - `TypeCheckCustom dst src typeNameIndex`
 - `CheckUnit dst src unitAndFlags`
 
@@ -553,6 +555,9 @@ Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`TypeCheckCustom` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
+`:number` is not a declared type kind. It lowers to `CastNumeric` or
+`TypeCheckNumeric`; numeric casts keep integral values as integers and use
+floats only when the value does not fit the integer representation.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.

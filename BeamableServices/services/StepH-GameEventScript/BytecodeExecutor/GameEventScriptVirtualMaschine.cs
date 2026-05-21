@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -13,9 +14,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
 {
     private VmState _vmState = new(binary, registerSize, stackSize);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ref VmValue Register(ushort index) => ref _vmState.RegisterSlots[index + _vmState.RegisterFrameStart];
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptContext context)
     {
@@ -31,29 +29,121 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case SlotLocals:
                     _vmState.ModifyLocalSlots(instruction.Count);
                     break;
+                case Jump:
+                    _vmState.JumpAddress(instruction.TargetAddress);
+                    break;
+                case JumpIfTrue:
+                    if (_vmState.Register(instruction.ConditionSlot).IsTrue) _vmState.JumpAddress(instruction.TargetAddress);
+                    break;
+                case JumpIfFalse:
+                    if (_vmState.Register(instruction.ConditionSlot).IsFalse) _vmState.JumpAddress(instruction.TargetAddress);
+                    break;
+                case JumpIfNotTrue:
+                    if (_vmState.Register(instruction.ConditionSlot).IsNotTrue) _vmState.JumpAddress(instruction.TargetAddress);
+                    break;
+                case Call:
+                    _vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot);
+                    break;
+                case CallPredicate:
+                    _vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot);
+                    _vmState.Register(instruction.DestinationSlot).Kind = GameEventScriptBytecodeTypeKind.Boolean;
+                    break;
+                case CallStandard:
+                    _vmState.Register(instruction.DestinationSlot).VmCallStandard(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    break;
+                case CallStandardPredicate:
+                    _vmState.Register(instruction.DestinationSlot).VmCallStandardPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    break;
+                case CallExternal:
+                    _vmState.Register(instruction.DestinationSlot).VmCallExternal(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    break;
+                case CallExternalPredicate:
+                    _vmState.Register(instruction.DestinationSlot).VmCallExternalPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    break;
+                case ReturnVoid:
+                    _vmState.ReturnVoid();
+                    break;
+                case ReturnValue:
+                    _vmState.ReturnValue(instruction.XSlot);
+                    break;
+                case EmitMessage:
+                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, context);
+                    break;
+                case EmitMessageWithTags:
+                    VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), 
+                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex),false, context);
+                    break;
+                case EmitMessageValue:
+                    // TODO: Add emit as soon as we can load a message from a slot
+                    break;
+                case EmitMessageValueWithTags:
+                    // TODO: Add emit as soon as we can load a message from a slot
+                    break;
+                case PublishMessage:
+                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, context);
+                    break;
+                case PublishMessageWithTags:
+                    VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), 
+                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, context);
+                    break;
+                case PublishMessageValue:
+                    // TODO: Add publish as soon as we can load a message from a slot
+                    break;
+                case PublishMessageValueWithTags:
+                    // TODO: Add publish as soon as we can load a message from a slot
+                    break;
+                case Cast:
+                    break;
+                case CastNumeric:
+                    break;
+                case CastCustom:
+                    break;
+                case CastUnit:
+                    break;
+                case TypeCheck:
+                    break;
+                case TypeCheckNumeric:
+                    break;
+                case TypeCheckCustom:
+                    break;
+                case CheckUnit:
+                    break;
+                case MoveSlot:
+                    _vmState.Register(instruction.DestinationSlot) = _vmState.Register(instruction.XSlot);
+                    break;
+                case MemberAccess:
+                    break;
+                case IndexedAccess:
+                    break;
+                case BindHandler:
+                    break;
                 case LoadNothing:
-                    Register(instruction.DestinationSlot).SetNothing();
+                    _vmState.Register(instruction.DestinationSlot).SetNothing();
                     break;
                 case LoadTrue:
-                    Register(instruction.DestinationSlot).SetBoolean(true);
+                    _vmState.Register(instruction.DestinationSlot).SetBoolean(true);
                     break;
                 case LoadFalse:
-                    Register(instruction.DestinationSlot).SetBoolean(false);
+                    _vmState.Register(instruction.DestinationSlot).SetBoolean(false);
                     break;
                 case LoadInteger:
-                    Register(instruction.DestinationSlot).SetInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.Register(instruction.DestinationSlot).SetInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case LoadFloat:
-                    Register(instruction.DestinationSlot).SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
                     break;
                 case LoadPercentage:
-                    Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
+                    _vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
                     break;
                 case LoadText:
-                    Register(instruction.DestinationSlot).SetStringPointer(instruction.StringIndex);
+                    _vmState.Register(instruction.DestinationSlot).SetStringPointer(instruction.StringIndex);
                     break;
                 case LoadTag:
-                    Register(instruction.DestinationSlot).SetTagPointer(instruction.StringIndex);
+                    _vmState.Register(instruction.DestinationSlot).SetTagPointer(instruction.StringIndex);
+                    break;
+                case LoadHandler:
+                    break;
+                case LoadMessage:
                     break;
                 case StageRegister:
                     _vmState.StageRegister(instruction.XSlot);
@@ -82,159 +172,141 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case StageTag:
                     _vmState.StageTagConstant(instruction.StringIndex);
                     break;
-                case MoveSlot:
-                    Register(instruction.DestinationSlot) = Register(instruction.XSlot);
-                    break;
-                case Jump:
-                    _vmState.JumpAddress(instruction.TargetAddress);
-                    break;
-                case JumpIfTrue:
-                    if (Register(instruction.ConditionSlot).IsTrue) _vmState.JumpAddress(instruction.TargetAddress);
-                    break;
-                case JumpIfFalse:
-                    if (Register(instruction.ConditionSlot).IsFalse) _vmState.JumpAddress(instruction.TargetAddress);
-                    break;
-                case JumpIfNotTrue:
-                    if (Register(instruction.ConditionSlot).IsNotTrue) _vmState.JumpAddress(instruction.TargetAddress);
-                    break;
-                case ReturnVoid:
-                    _vmState.ReturnVoid();
-                    break;
-                case ReturnValue:
-                    _vmState.ReturnValue(instruction.XSlot);
+                case TypeConstructor:
                     break;
                 case Or:
-                    Register(instruction.DestinationSlot).VmOr(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmOr(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case And:
-                    Register(instruction.DestinationSlot).VmAnd(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmAnd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case Xor:
-                    Register(instruction.DestinationSlot).VmXor(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmXor(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
-                case Equal:
-                    Register(instruction.DestinationSlot).VmEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case NotEqual:
-                    Register(instruction.DestinationSlot).VmNotEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case ApproxEqual:
-                    Register(instruction.DestinationSlot).VmApproxEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Less:
-                    Register(instruction.DestinationSlot).VmLess(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Greater:
-                    Register(instruction.DestinationSlot).VmGreater(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case LessOrEqual:
-                    Register(instruction.DestinationSlot).VmLessOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case GreaterOrEqual:
-                    Register(instruction.DestinationSlot).VmGreaterOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Add:
-                    Register(instruction.DestinationSlot).VmAdd(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Subtract:
-                    Register(instruction.DestinationSlot).VmSubtract(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Multiply:
-                    Register(instruction.DestinationSlot).VmMultiply(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Divide:
-                    Register(instruction.DestinationSlot).VmDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Power:
-                    Register(instruction.DestinationSlot).VmPower(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Default:
-                    Register(instruction.DestinationSlot).VmDefault(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntEqual:
-                    Register(instruction.DestinationSlot).VmIntegerEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntNotEqual:
-                    Register(instruction.DestinationSlot).VmIntegerNotEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntLess:
-                    Register(instruction.DestinationSlot).VmIntegerLess(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntGreater:
-                    Register(instruction.DestinationSlot).VmIntegerGreater(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntLessOrEqual:
-                    Register(instruction.DestinationSlot).VmIntegerLessOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntGreaterOrEqual:
-                    Register(instruction.DestinationSlot).VmIntegerGreaterOrEqual(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntAdd:
-                    Register(instruction.DestinationSlot).VmIntegerAdd(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntSubtract:
-                    Register(instruction.DestinationSlot).VmIntegerSubtract(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntMultiply:
-                    Register(instruction.DestinationSlot).VmIntegerMultiply(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntDivide:
-                    Register(instruction.DestinationSlot).VmIntegerDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntFloorDivide:
-                    Register(instruction.DestinationSlot).VmIntegerFloorDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntModulo:
-                    Register(instruction.DestinationSlot).VmIntegerModulo(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntRemainder:
-                    Register(instruction.DestinationSlot).VmIntegerRemainder(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case IntegerDivide:
-                    Register(instruction.DestinationSlot).VmIntegerDivide(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Modulo:
-                    Register(instruction.DestinationSlot).VmModulo(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case Remainder:
-                    Register(instruction.DestinationSlot).VmRemainder(ref Register(instruction.XSlot), ref Register(instruction.YSlot));
-                    break;
-                case UnaryNegate:
-                    Register(instruction.DestinationSlot).VmNegate(ref Register(instruction.XSlot));
+                case Implies:
+                    _vmState.Register(instruction.DestinationSlot).VmImplies(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case UnaryNot:
-                    Register(instruction.DestinationSlot).VmNot(ref Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmNot(ref _vmState.Register(instruction.XSlot));
                     break;
                 case UnaryHasValue:
-                    Register(instruction.DestinationSlot).VmHasValue(ref Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmHasValue(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryEmpty:
-                    Register(instruction.DestinationSlot).VmEmpty(ref Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmEmpty(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryLength:
-                    Register(instruction.DestinationSlot).VmLength(ref Register(instruction.XSlot), ref binary.TextConstantTable);
+                case Equal:
+                    _vmState.Register(instruction.DestinationSlot).VmEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
-                case UnaryChance:
-                    Register(instruction.DestinationSlot).VmChance(ref Register(instruction.XSlot), ref _vmState);
+                case NotEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmNotEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case ApproxEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmApproxEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Less:
+                    _vmState.Register(instruction.DestinationSlot).VmLess(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Greater:
+                    _vmState.Register(instruction.DestinationSlot).VmGreater(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case LessOrEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmLessOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case GreaterOrEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmGreaterOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntNotEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerNotEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntLess:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerLess(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntGreater:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerGreater(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntLessOrEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerLessOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntGreaterOrEqual:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerGreaterOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Default:
+                    _vmState.Register(instruction.DestinationSlot).VmDefault(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Add:
+                    _vmState.Register(instruction.DestinationSlot).VmAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Subtract:
+                    _vmState.Register(instruction.DestinationSlot).VmSubtract(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Multiply:
+                    _vmState.Register(instruction.DestinationSlot).VmMultiply(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Divide:
+                    _vmState.Register(instruction.DestinationSlot).VmDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Power:
+                    _vmState.Register(instruction.DestinationSlot).VmPower(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntegerDivide:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Modulo:
+                    _vmState.Register(instruction.DestinationSlot).VmModulo(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Remainder:
+                    _vmState.Register(instruction.DestinationSlot).VmRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntAdd:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntSubtract:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerSubtract(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntMultiply:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerMultiply(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntDivide:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntFloorDivide:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerFloorDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntModulo:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerModulo(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case IntRemainder:
+                    _vmState.Register(instruction.DestinationSlot).VmIntegerRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case Min:
+                    break;
+                case Max:
+                    break;
+                case UnaryNegate:
+                    _vmState.Register(instruction.DestinationSlot).VmNegate(ref _vmState.Register(instruction.XSlot));
                     break;
                 case UnaryAbs:
-                    Register(instruction.DestinationSlot).VmAbs(ref Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmAbs(ref _vmState.Register(instruction.XSlot));
                     break;
                 case UnaryNaturalLog:
-                    Register(instruction.DestinationSlot).VmNaturalLog(ref Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmNaturalLog(ref _vmState.Register(instruction.XSlot));
+                    break;
+                case UnaryChance:
+                    _vmState.Register(instruction.DestinationSlot).VmChance(ref _vmState.Register(instruction.XSlot), ref _vmState);
                     break;
                 case Clamp:
-                    Register(instruction.DestinationSlot).VmClamp(ref Register(instruction.XSlot), ref Register(instruction.YSlot), ref Register(instruction.AU));
+                    _vmState.Register(instruction.DestinationSlot).VmClamp(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU));
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
-                    Register(instruction.DestinationSlot).VmRandom(ref Register(instruction.XSlot), ref Register(instruction.YSlot), _vmState.RandomGenerator);
-                    break;
-                case Dice:
-                    Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
+                    _vmState.Register(instruction.DestinationSlot).VmRandom(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), _vmState.RandomGenerator);
                     break;
                 case RandomPush:
-                    var seed = Register(instruction.XSlot);
-                    _vmState.PushRandom(seed.Kind == VmValue.VmValueKind.Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.IntegerValue) : _vmState.RandomGenerator);
+                    var seed = _vmState.Register(instruction.XSlot);
+                    _vmState.PushRandom(seed.Kind == Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.IntegerValue) : _vmState.RandomGenerator);
                     break;
                 case RandomPushConstant:
                     _vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed((int)instruction.I64));
@@ -242,21 +314,16 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case RandomPop:
                     _vmState.PopRandom();
                     break;
-                case GameEventScriptBytecodeOpCode.Range:
-                    break;
-
-                case Implies:
-                    break;
-                
-                case RangeWithStep:
-                    break;
-                case Contains:
-                    break;
-                case ContainsValue:
+                case UnaryLength:
+                    _vmState.Register(instruction.DestinationSlot).VmLength(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case StartsWith:
                     break;
                 case EndsWith:
+                    break;
+                case Contains:
+                    break;
+                case ContainsValue:
                     break;
                 case Intersect:
                     break;
@@ -266,96 +333,37 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Zip:
                     break;
-                case Min:
-                    break;
-                case Max:
-                    break;
-
                 case UnaryKeys:
                     break;
                 case UnaryValues:
                     break;
                 case UnaryEntries:
                     break;
-
-                case Cast:
+                case GameEventScriptBytecodeOpCode.Range:
                     break;
-                case CastCustom:
+                case RangeWithStep:
                     break;
-                case CastUnit:
-                    break;
-
-                case TypeCheck:
-                    break;
-                case TypeCheckCustom:
-                    break;
-                case CheckUnit:
-                    break;
-                case LoadHandler:
-                    break;
-                
-                case TypeConstructor:
-                    break;
-                case MemberAccess:
-                    break;
-                case IndexedAccess:
-                    break;
-                
-                case BuildList:
-                    break;
-                case BuildMap:
-                    break;
-                case LoadMessage:
-                    break;
-                case BindHandler:
-                    break;
-                
-                case EmitMessage:
-                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, context);
-                    break;
-                case EmitMessageWithTags:
-                    break;
-                case PublishMessage:
-                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, context);
-                    break;
-                case PublishMessageWithTags:
-                    break;
-                case EmitMessageValue:
-                    break;
-                case EmitMessageValueWithTags:
-                    break;
-                case PublishMessageValue:
-                    break;
-                case PublishMessageValueWithTags:
-                    break;
-                
                 case RangeIterator:
-                    Register(instruction.DestinationSlot).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.XSlot, instruction.YSlot, instruction.AU));
+                    _vmState.Register(instruction.DestinationSlot).SetObject(Stream, new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
                     break;
                 case RangeIteratorWithStep:
                     break;
                 case RangeIteratorShort:
-                    Register(instruction.DestinationSlot).SetObject(VmValue.VmValueKind.Iterator, new VmIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                    _vmState.Register(instruction.DestinationSlot).SetObject(Stream, new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                     break;
                 case CollectionIterator:
                     break;
-                case IteratorNext:
-                    Register(instruction.DestinationSlot).VmIteratorNext(ref Register(instruction.XSlot), instruction.TargetAddress, ref _vmState);
+                case StreamNext:
+                    _vmState.Register(instruction.DestinationSlot).VmIteratorNext(ref _vmState.Register(instruction.XSlot), instruction.TargetAddress, ref _vmState);
                     break;
-                case IteratorClose:
-                    Register(instruction.XSlot).VmIteratorClose();
+                case StreamClose:
+                    _vmState.Register(instruction.XSlot).VmIteratorClose();
                     break;
-                case CollectionBuilderList:
+                case StreamReduce:
                     break;
-                case CollectionBuilderAdd:
+                case StreamReduceOrDefault:
                     break;
-                case CollectionBuilderFinish:
-                    break;
-                case IteratorReduce:
-                    break;
-                case IteratorReduceOrDefault:
-                    break;
-                case IteratorFold:
+                case StreamFold:
                     break;
                 case SeriesTerm:
                     break;
@@ -363,22 +371,20 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case SeriesDrop:
                     break;
-                case Call:
-                    _vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot);
-                    break;
-                case CallPredicate:
-                    _vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot);
-                    Register(instruction.DestinationSlot).Kind = VmValue.VmValueKind.Boolean;
-                    break;
-                case CallStandard:
-                    break;
-                case CallStandardPredicate:
-                    break;
-                case CallExternal:
-                    break;
-                case CallExternalPredicate:
-                    break;
                 case PipelineIterator:
+                    break;
+                case BuildList:
+                    break;
+                case BuildMap:
+                    break;
+                case CollectionBuilderList:
+                    break;
+                case CollectionBuilderAdd:
+                    break;
+                case CollectionBuilderFinish:
+                    break;
+                case GameEventScriptBytecodeOpCode.Dice:
+                    _vmState.Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
                     break;
                 case PipelineCollectList:
                     break;
@@ -468,7 +474,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
         return true;
     }
 
-
     private bool VmPublishMessage(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptContext context)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
@@ -478,10 +483,47 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
                 binary.TextConstantTable.Resolve(shape[index + 1]),
-                Register(argumentSlots[index]).ToGameEventScriptValue());
+                _vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
         }
 
         var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
         return publish ? context.Publish(message) : context.Emit(message);
+    }
+
+    private bool VmPublishMessageWithTags(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptContext context)
+    {
+        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
+        var messageName = binary.TextConstantTable.Resolve(shape[0]);
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
+        for (var index = 0; index < argumentSlots.Length; index++)
+        {
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
+                binary.TextConstantTable.Resolve(shape[index + 1]),
+                _vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+        }
+
+        var tags = new List<string>(tagSlots.Length);
+        for (var index = 0; index < tagSlots.Length; index++)
+        {
+            AddTagsToList(tags, _vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+        }
+
+        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);
+        return publish ? context.Publish(message) : context.Emit(message);
+    }
+
+    private static void AddTagsToList(List<string> tags, GameEventScriptValue value)
+    {
+        if (value.IsList())
+        {
+            foreach (var j in value.AsEnumerable())
+            {
+                AddTagsToList(tags, j);
+            }
+        }
+        else
+        {
+            tags.Add(value.AsText());
+        }
     }
 }

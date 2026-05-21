@@ -245,7 +245,9 @@ not a second runtime dispatch step.
 | 0x31 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
 | 0x32 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
 | 0x33 | `TypeConstructor` | - | result slot | `StringIndex`=type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a record/external value from named argument slots. |
-| 0x34..0x3F | reserved | - | - | - | - | - | Reserved tail of Group 2. |
+| 0x34 | `CastNumeric` | - | result slot | `XSlot`=source | - | - | Coerces `X` through the source-level `:number` construct. `:number` is not a type kind; integral values stay integer, otherwise the result is float. |
+| 0x35 | `TypeCheckNumeric` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a numeric value through the source-level `:number` construct. |
+| 0x36..0x3F | reserved | - | - | - | - | - | Reserved tail of Group 2. |
 
 ### Group 3 - Boolean, Comparison, Presence
 

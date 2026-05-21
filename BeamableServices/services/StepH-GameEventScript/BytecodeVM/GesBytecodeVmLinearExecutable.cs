@@ -358,12 +358,12 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} collection slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorNext:
+            case GameEventScriptBytecodeOpCode.StreamNext:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateAddress(module, code, instruction.TargetAddress, $"{context} no-more target");
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorClose:
+            case GameEventScriptBytecodeOpCode.StreamClose:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 break;
 
@@ -421,14 +421,14 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorReduce:
+            case GameEventScriptBytecodeOpCode.StreamReduce:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.AU, $"{context} reducer entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.IteratorReduceOrDefault:
-            case GameEventScriptBytecodeOpCode.IteratorFold:
+            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
+            case GameEventScriptBytecodeOpCode.StreamFold:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} seed/default slot");
                 ValidateSlot(module, instruction.AU, $"{context} item binding slot");
@@ -921,6 +921,12 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static void ValidateCastOrTypeCheckOperand(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction, string context)
     {
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.TypeCheckNumeric)
+        {
+            ValidateNoFlags(instruction.UnitAndFlags, $"{context} flags");
+            return;
+        }
+
         if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastUnit or GameEventScriptBytecodeOpCode.CheckUnit)
         {
             ValidateNumericUnit(instruction.UnitAndFlags, $"{context} unit");
@@ -1073,7 +1079,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
             GameEventScriptBytecodeOpCode.CollectionBuilderAdd or
-            GameEventScriptBytecodeOpCode.IteratorClose or
+            GameEventScriptBytecodeOpCode.StreamClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or
             GameEventScriptBytecodeOpCode.RandomPop or
@@ -1099,10 +1105,16 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.StageTag;
 
     private static bool IsCastInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.CastUnit;
+        => opCode is GameEventScriptBytecodeOpCode.Cast or
+            GameEventScriptBytecodeOpCode.CastNumeric or
+            GameEventScriptBytecodeOpCode.CastCustom or
+            GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or GameEventScriptBytecodeOpCode.TypeCheckCustom or GameEventScriptBytecodeOpCode.CheckUnit;
+        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or
+            GameEventScriptBytecodeOpCode.TypeCheckNumeric or
+            GameEventScriptBytecodeOpCode.TypeCheckCustom or
+            GameEventScriptBytecodeOpCode.CheckUnit;
 
     private static bool IsBinarySlotInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.Or or

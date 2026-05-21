@@ -218,18 +218,30 @@
 		<dict>
 			<key>patterns</key>
 			<array>
-				<dict>
-					<key>match</key>
-					<string>:tag\b</string>
-					<key>name</key>
-					<string>entity.other.attribute-name.tag.gameeventscript</string>
-				</dict>
-				<dict>
-					<key>match</key>
-					<string>:(?:quantity\((?:m|meter|s|second|degree)\)|nothing|text|boolean|uuid|integer|float|number|percentage|degree|meter|second|vector|point|series|range|message|handler|envelope|ref|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
-					<key>name</key>
-					<string>support.type.primitive.gameeventscript</string>
-				</dict>
+					<dict>
+						<key>match</key>
+						<string>:tag\b</string>
+						<key>name</key>
+						<string>entity.other.attribute-name.tag.gameeventscript</string>
+					</dict>
+					<dict>
+						<key>match</key>
+						<string>:(?:meter|second|seconds|degree)(?=$|[^A-Za-z0-9_.])</string>
+						<key>name</key>
+						<string>entity.other.attribute-name.tag.gameeventscript</string>
+					</dict>
+					<dict>
+						<key>match</key>
+						<string>\bnumeric\b</string>
+						<key>name</key>
+						<string>support.type.primitive.gameeventscript</string>
+					</dict>
+					<dict>
+						<key>match</key>
+						<string>:(?:quantity\((?:m|meter|s|second|degree|°)\)|nothing|text|boolean|uuid|integer|float|percentage|vector|point|series|range|message|handler|envelope|ref|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
+						<key>name</key>
+						<string>support.type.primitive.gameeventscript</string>
+					</dict>
 				<dict>
 					<key>match</key>
 					<string>:(?:integer\.(?:floor|ceil|truncate|halfEven|halfUp|halfDown)|degree\.(?:wrap|toRadians|fromRadians)|math\.[A-Za-z_][A-Za-z0-9_]*|series\.[A-Za-z_][A-Za-z0-9_]*)\b</string>

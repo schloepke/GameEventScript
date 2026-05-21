@@ -361,19 +361,19 @@ future decoders. The current groups are:
 ```text
 0x00 Group 1: no-op, frame slots, jumps, calls, returns, emit operations
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
-0x20 Group 2: loads, argument staging, type construction
-0x30 Group 2 continuation and reserved tail
-0x40 Group 3: boolean, comparison, implication, presence checks
-0x50 Group 3 integer comparison fast-path tail and reserved space
-0x60 Group 4: math, integer arithmetic fast paths, random
-0x70 Group 4 continuation and reserved tail
-0x80 Group 5: text/collection operators, range/iterator setup
-0x90 Group 5 iterator next/close/reduce/fold, series, PipelineIterator
-0xA0 Group 6: collection and value building
-0xB0 Group 7: pipeline materializers, transforms, membership terminals
-0xC0 Group 7 pipeline ordering, slicing, random terminals
-0xD0 Group 7 pipeline dice/pattern terminals
-0xE0 reserved for future pipeline, extension, or VM opcodes
+0x20 Group 1 numeric helper casts/checks and reserved tail
+0x30 Group 2: loads, argument staging, type construction
+0x40 Group 2 continuation and reserved tail
+0x50 Group 3: boolean, comparison, implication, presence checks
+0x60 Group 3 integer comparison fast-path tail and reserved space
+0x70 Group 4: math, integer arithmetic fast paths, random
+0x80 Group 4 continuation and reserved tail
+0x90 Group 5: text/collection operators, range/iterator setup
+0xA0 Group 5 stream next/close/reduce/fold, series, PipelineIterator
+0xB0 Group 6: collection and value building
+0xC0 Group 7: pipeline materializers, transforms, membership terminals
+0xD0 Group 7 pipeline ordering, slicing, random terminals
+0xE0 Group 7 pipeline dice/pattern terminals and reserved tail
 0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
 
@@ -542,21 +542,21 @@ for `pc`-based execution.
 - `StageText stringIndex`
 - `StageTag stringIndex`
 - `Cast dst src typeKind`
-- `CastNumeric dst src`
 - `CastCustom dst src typeNameIndex`
 - `CastUnit dst src unitAndFlags`
-- `TypeCheck dst src typeKind`
-- `TypeCheckNumeric dst src`
-- `TypeCheckCustom dst src typeNameIndex`
+- `CastNumeric dst src`
+- `CheckType dst src typeKind`
+- `CheckCustomType dst src typeNameIndex`
 - `CheckUnit dst src unitAndFlags`
+- `CheckNumeric dst src`
 
-`Cast` and `TypeCheck` use `TypeOperand` as `GameEventScriptBytecodeTypeKind`.
+`Cast` and `CheckType` use `TypeOperand` as `GameEventScriptBytecodeTypeKind`.
 Built-in types are direct kind operands. Custom/external record types use
-`CastCustom`/`TypeCheckCustom` with `TypeOperand` as the type-name `StringPool` index.
+`CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
-`:number` is not a declared type kind. It lowers to `CastNumeric` or
-`TypeCheckNumeric`; numeric casts keep integral values as integers and use
+`numeric` is not a declared type kind or `:` tag. It lowers to `CastNumeric` or
+`CheckNumeric`; numeric casts keep integral values as integers and use
 floats only when the value does not fit the integer representation.
 
 `let` lowers to expression code that writes into a temporary or final slot,
@@ -640,8 +640,8 @@ sequence.
 - `RangeIteratorWithStep dst from to step`
 - `RangeIteratorShort dst fromI16 toI16 stepI16`
 - `CollectionIterator dst collection`
-- `IteratorNext dst iterator noMoreTarget`
-- `IteratorClose iterator`
+- `StreamNext dst iterator noMoreTarget`
+- `StreamClose iterator`
 - `Call dst entryAddress`
 - `CallPredicate dst entryAddress`
 - `ReturnValue src`
@@ -670,7 +670,7 @@ only the first true branch value is evaluated, and otherwise code runs when no
 condition is true. The public bytecode has no `GuardedChoice` layout.
 
 `for` statements lower to normal linear iterator control flow. The source is
-evaluated once, an iterator is stored in a temporary slot, `IteratorNext` writes
+evaluated once, an iterator is stored in a temporary slot, `StreamNext` writes
 each item into an item slot and jumps to the close block when exhausted, and the
 body runs inside an iteration scope. Literal I16 ranges should use
 `RangeIteratorShort`; dynamic ranges and collection sources use the slot-based
@@ -729,13 +729,13 @@ Range loop shape:
 ```text
 @0200 SlotLocals locals+=loopLocalCount
 @0201 RangeIteratorShort dst=sIterator from=1 to=20 step=1
-@0202 IteratorNext dst=sItem iterator=sIterator noMore=@0210
+@0202 StreamNext dst=sItem iterator=sIterator noMore=@0210
 @0203 SlotLocals locals+=iterationLocalCount
 @0204 MoveSlot dst=sIdentifier src=sItem
 @0205 ...
 @0208 SlotLocals locals-=iterationLocalCount
 @0209 Jump @0202
-@0210 IteratorClose iterator=sIterator
+@0210 StreamClose iterator=sIterator
 @0211 SlotLocals locals-=loopLocalCount
 ```
 
@@ -744,12 +744,12 @@ Collection loop shape:
 ```text
 @0300 SlotLocals locals+=loopLocalCount
 @0301 CollectionIterator dst=sIterator source=sValues
-@0302 IteratorNext dst=sItem iterator=sIterator noMore=@0310
+@0302 StreamNext dst=sItem iterator=sIterator noMore=@0310
 @0303 SlotLocals locals+=iterationLocalCount
 @0304 ...
 @0308 SlotLocals locals-=iterationLocalCount
 @0309 Jump @0302
-@0310 IteratorClose iterator=sIterator
+@0310 StreamClose iterator=sIterator
 @0311 SlotLocals locals-=loopLocalCount
 ```
 
@@ -787,7 +787,7 @@ Required portable value families:
 
 - primitives: `:nothing`, `:tag`, `:text`, `:boolean`, `:uuid`
 - numeric: `:integer`, `:float`, `:percentage`
-- numeric units: `:degree`, `:meter`, `:second`
+- numeric quantities: `:quantity(degree)`/`:quantity(°)`, `:quantity(m)`, `:quantity(s)`
 - vectors: `:vector`
 - points: `:point`
 - containers: `:series`, `:range`, `:list`, `:map`, `:dice`
@@ -903,9 +903,9 @@ PipelineIterator transformedIterator sourceIterator nextEntry itemBindingSlot ca
 PipelineCollectList dst iterator
 PipelineFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
-IteratorReduce dst iterator itemBindingSlot reducerEntry
-IteratorReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry
-IteratorFold dst iterator seedSlot itemBindingSlot reducerEntry
+StreamReduce dst iterator itemBindingSlot reducerEntry
+StreamReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry
+StreamFold dst iterator seedSlot itemBindingSlot reducerEntry
 CollectionBuilderList builder
 CollectionBuilderAdd builder item
 CollectionBuilderFinish dst builder
@@ -928,13 +928,13 @@ DSL `nothing`.
 
 Generic reduction contracts:
 
-- `IteratorReduce`: empty iterator -> `nothing`; one item -> that item; two or
+- `StreamReduce`: empty iterator -> `nothing`; one item -> that item; two or
   more items -> first item is accumulator, reducer starts with the second item.
-- `IteratorReduceOrDefault`: empty iterator -> default slot; one item -> that
+- `StreamReduceOrDefault`: empty iterator -> default slot; one item -> that
   item; two or more items -> first item is accumulator, reducer starts with the
   second item. `:sum` uses this form so empty sum returns `0`, while non-empty
   sums preserve the first projected value's type/unit.
-- `IteratorFold`: empty iterator -> seed slot; otherwise seed is accumulator
+- `StreamFold`: empty iterator -> seed slot; otherwise seed is accumulator
   and the reducer runs for every item. `:count` and `:average` use this form.
 
 Fixed terminal opcodes cover materializers and operations that need full
@@ -965,7 +965,7 @@ CollectionBuilderList/Set builder
 SlotLocals locals+=collectionLocalCount
 RangeIterator* / CollectionIterator iterator
 loop:
-  IteratorNext item iterator noMore
+  StreamNext item iterator noMore
   SlotLocals locals+=iterationLocalCount
   MoveSlot identifier item
   optional predicate + JumpIfNotTrue skipProjection
@@ -974,7 +974,7 @@ loop:
   SlotLocals locals-=iterationLocalCount
   Jump loop
 noMore:
-IteratorClose iterator
+StreamClose iterator
 SlotLocals locals-=collectionLocalCount
 CollectionBuilderFinish dst builder
 ```
@@ -1056,9 +1056,9 @@ code[26]
 @0000 SlotLocals locals+=5
 @0001 SlotLocals locals+=1
 @0003 CollectionIterator dst=s2 source=s0
-@0004 IteratorNext dst=s3 iterator=s2 noMore=@0010
+@0004 StreamNext dst=s3 iterator=s2 noMore=@0010
 @0005 ...
-@0010 IteratorClose iterator=s2
+@0010 StreamClose iterator=s2
 @0011 SlotLocals locals-=1
 @0012 ReturnVoid
 ```

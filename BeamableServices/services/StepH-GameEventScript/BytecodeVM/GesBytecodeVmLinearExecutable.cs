@@ -921,7 +921,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static void ValidateCastOrTypeCheckOperand(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction, string context)
     {
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.TypeCheckNumeric)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.CheckNumeric)
         {
             ValidateNoFlags(instruction.UnitAndFlags, $"{context} flags");
             return;
@@ -939,7 +939,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
 
         ValidateNoFlags(instruction.UnitAndFlags, $"{context} flags");
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.TypeCheckCustom)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.CheckCustomType)
         {
             ValidateIndex(module.StringPool.Count, instruction.TypeOperand, $"{context} custom type name");
             return;
@@ -1111,9 +1111,9 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or
-            GameEventScriptBytecodeOpCode.TypeCheckNumeric or
-            GameEventScriptBytecodeOpCode.TypeCheckCustom or
+        => opCode is GameEventScriptBytecodeOpCode.CheckType or
+            GameEventScriptBytecodeOpCode.CheckNumeric or
+            GameEventScriptBytecodeOpCode.CheckCustomType or
             GameEventScriptBytecodeOpCode.CheckUnit;
 
     private static bool IsBinarySlotInstruction(GameEventScriptBytecodeOpCode opCode)

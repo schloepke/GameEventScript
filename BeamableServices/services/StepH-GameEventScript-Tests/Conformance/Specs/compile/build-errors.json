@@ -33,6 +33,23 @@
     },
     {
       "kind": "compileError",
+      "name": "number helper old type name is rejected",
+      "script": "on Start {\n  let x be 100 as :number\n}",
+      "expectedError": {
+        "messageContains": "number"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "guarded choice rejects tag otherwise",
+      "script": "on Start {\n  let x be 1 when true, :otherwise 0\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "messageContains": "Expected When"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "invalid predicate predicate requires unary predicate",
       "script": "function wounded(_ unit) means unit.hp < unit.maxHp\n\non Start(unit) {\n  let x be unit is wounded\n}",
       "expectedError": {
@@ -45,11 +62,11 @@
     {
       "kind": "compileError",
       "name": "predicate result rejects implicit numeric coercion",
-      "script": "predicate numeric(_ value) means value * 2\n\non Start {\n  emit Done\n}",
+      "script": "predicate numericResult(_ value) means value * 2\n\non Start {\n  emit Done\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidPredicate",
-        "symbol": "numeric",
+        "symbol": "numericResult",
         "symbolKind": "Predicate"
       }
     },

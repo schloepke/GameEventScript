@@ -229,7 +229,7 @@
     {
       "kind": "scriptApi",
       "name": "type constructors convert inline and construct units",
-      "script": "on Start {\n  let heading be :degree(180)\n  let distance be :meter(100)\n  let duration be :second(15)\n  let product be :float(90°) * :float(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  emit Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :degree)\n}",
+      "script": "on Start {\n  let heading be :quantity(°)(180)\n  let distance be :quantity(m)(100)\n  let duration be :quantity(s)(15)\n  let product be :float(90°) * :float(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  emit Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :quantity(°))\n}",
       "steps": [
         {
           "input": {
@@ -810,7 +810,7 @@
     {
       "kind": "scriptApi",
       "name": "degree literals preserve raw angles and wrap explicitly",
-      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :degree be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :float be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :degree)\n}",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :quantity(°) be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :float be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :quantity(°))\n}",
       "steps": [
         {
           "input": {
@@ -1037,7 +1037,7 @@
     {
       "kind": "scriptApi",
       "name": "numeric unit literals casts and strict arithmetic",
-      "script": "on Start {\n  let castMeter as :meter be 100\n  let rawMeter as :float be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :meter, isSecond: 15s is :second, isFloat: castMeter is :float, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
+      "script": "on Start {\n  let castMeter as :quantity(m) be 100\n  let rawMeter as :float be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :quantity(m), isSecond: 15s is :quantity(s), isFloat: castMeter is :float, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
       "steps": [
         {
           "input": {
@@ -1315,7 +1315,7 @@
     {
       "kind": "scriptApi",
       "name": "vector units are preserved in components and conversions",
-      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :float(position)\n  let rawPositionCast as :float be position\n  let remetered be :meter(rawPosition)\n  let sameMeter be :meter(position)\n  let wrongUnitVector be :second(position)\n  let wrongScalarUnit be :meter(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
+      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :float(position)\n  let rawPositionCast as :float be position\n  let remetered be :quantity(m)(rawPosition)\n  let sameMeter be :quantity(m)(position)\n  let wrongUnitVector be :quantity(s)(position)\n  let wrongScalarUnit be :quantity(m)(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
       "steps": [
         {
           "input": {
@@ -3008,7 +3008,7 @@
     {
       "kind": "scriptApi",
       "name": "type checks identify primitive custom and first class values",
-      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :integer, intIsFloat: integerValue is :float, percentIsFloat: percentValue is :float, degreeIsFloat: degreeValue is :float, degreeIsDegree: degreeValue is :degree, meterIsMeter: meterValue is :meter, secondIsSecond: secondValue is :second, textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :integer, intIsFloat: integerValue is :float, percentIsFloat: percentValue is :float, degreeIsFloat: degreeValue is :float, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
       "steps": [
         {
           "input": {
@@ -3053,7 +3053,7 @@
     {
       "kind": "scriptApi",
       "name": "quantity casts checks and constructors normalize numeric units",
-      "script": "record :quantity as {\n  value: :integer\n}\n\non Start {\n  let distance be 100 as :quantity(m)\n  let duration be :quantity(s)(5)\n  let heading be :quantity(degree)(90)\n  let custom be :quantity(value: 3)\n  emit Done(distance: distance, duration: duration, heading: heading, distanceIsMeter: distance is :quantity(m), distanceIsSecond: distance is :quantity(s), sugarIsMeter: distance is :meter, percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)\n}",
+      "script": "record :quantity as {\n  value: :integer\n}\n\non Start {\n  let distance be 100 as :quantity(m)\n  let duration be :quantity(s)(5)\n  let heading be :quantity(degree)(90)\n  let custom be :quantity(value: 3)\n  emit Done(distance: distance, duration: duration, heading: heading, distanceIsMeter: distance is :quantity(m), distanceIsSecond: distance is :quantity(s), symbolIsDegree: heading is :quantity(°), percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)\n}",
       "steps": [
         {
           "input": {
@@ -3068,10 +3068,56 @@
                 "heading": { "type": ":integer", "value": "90", "unit": ":degree" },
                 "distanceIsMeter": { "type": ":boolean", "value": true },
                 "distanceIsSecond": { "type": ":boolean", "value": false },
-                "sugarIsMeter": { "type": ":boolean", "value": true },
+                "symbolIsDegree": { "type": ":boolean", "value": true },
                 "percentageIsMeter": { "type": ":boolean", "value": false },
                 "customIsQuantity": { "type": ":boolean", "value": true },
                 "customValue": { "type": ":integer", "value": "3" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "old unit names remain ordinary tags",
+      "script": "on Start {\n  emit Done(meter: :meter, degree: :degree, seconds: :seconds)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start"
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "meter": { "type": ":tag", "value": "meter" },
+                "degree": { "type": ":tag", "value": "degree" },
+                "seconds": { "type": ":tag", "value": "seconds" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "numeric helper keyword casts and checks",
+      "script": "on Start {\n  let integerValue be 12.0 as numeric\n  let floatValue be 12.5 as numeric\n  emit Done(integerValue: integerValue, floatValue: floatValue, integerIsNumeric: integerValue is numeric, textIsNumeric: '12' is numeric, badTextIsNumeric: 'abc' is numeric)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start"
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "integerValue": { "type": ":integer", "value": "12" },
+                "floatValue": { "type": ":float", "value": "12.5" },
+                "integerIsNumeric": { "type": ":boolean", "value": true },
+                "textIsNumeric": { "type": ":boolean", "value": true },
+                "badTextIsNumeric": { "type": ":boolean", "value": false }
               }
             }
           ]

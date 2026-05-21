@@ -599,7 +599,7 @@ internal static class GameEventScriptExternalTypeNames
             "percentage" => (GameEventScriptValueKind.Percentage, null),
             "vector" => (GameEventScriptValueKind.Vector, null),
             "point" => (GameEventScriptValueKind.Point, null),
-            "float" or "number" => (GameEventScriptValueKind.Float, null),
+            "float" or "numeric" => (GameEventScriptValueKind.Float, null),
             "integer" => (GameEventScriptValueKind.Integer, null),
             "boolean" => (GameEventScriptValueKind.Boolean, null),
             "uuid" => (GameEventScriptValueKind.Uuid, null),
@@ -752,7 +752,7 @@ internal static class GameEventScriptExternalTypeValueConverter
             "meter" => GesMeter(value.AsNumber()),
             "second" => GesSeconds(value.AsNumber()),
             "integer" => GesInteger(value.AsInteger()),
-            "float" or "number" => GesFloat(value.AsNumber()),
+            "float" or "numeric" => GesFloat(value.AsNumber()),
             "boolean" => GesBoolean(value.AsBoolean()),
             "uuid" => value.IsUuid()
                 ? value

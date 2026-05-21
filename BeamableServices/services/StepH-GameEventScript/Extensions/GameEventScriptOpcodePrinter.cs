@@ -215,9 +215,9 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CastNumeric => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.CastCustom => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.CastUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
-            GameEventScriptBytecodeOpCode.TypeCheck => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind],
-            GameEventScriptBytecodeOpCode.TypeCheckNumeric => [DST_U16_TargetSlot, A_U16_SourceSlot],
-            GameEventScriptBytecodeOpCode.TypeCheckCustom => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_CustomTypeNameIndex],
+            GameEventScriptBytecodeOpCode.CheckType => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind],
+            GameEventScriptBytecodeOpCode.CheckNumeric => [DST_U16_TargetSlot, A_U16_SourceSlot],
+            GameEventScriptBytecodeOpCode.CheckCustomType => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.CheckUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
 
             GameEventScriptBytecodeOpCode.LoadHandler => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex],

@@ -19,7 +19,7 @@ public static class GameEventScriptNumericUnits
         unit = default;
         return typeName switch
         {
-            "degree" => Set(GameEventScriptNumericUnit.Degree, out unit),
+            "degree" or "\u00B0" => Set(GameEventScriptNumericUnit.Degree, out unit),
             "meter" => Set(GameEventScriptNumericUnit.Meter, out unit),
             "second" => Set(GameEventScriptNumericUnit.Second, out unit),
             _ => false

@@ -100,11 +100,11 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CastUnit:
                     break;
-                case TypeCheck:
+                case CheckType:
                     break;
-                case TypeCheckNumeric:
+                case CheckNumeric:
                     break;
-                case TypeCheckCustom:
+                case CheckCustomType:
                     break;
                 case CheckUnit:
                     break;

@@ -1185,14 +1185,8 @@ internal static class GesOptimizer
             case "percentage":
                 converted = ConvertToPercentage(value);
                 return true;
-            case "degree":
-                converted = ConvertToNumericUnit(value, GameEventScriptNumericUnit.Degree);
-                return true;
-            case "meter":
-                converted = ConvertToNumericUnit(value, GameEventScriptNumericUnit.Meter);
-                return true;
-            case "second":
-                converted = ConvertToNumericUnit(value, GameEventScriptNumericUnit.Second);
+            case "numeric":
+                converted = ConvertToNumber(value);
                 return true;
             case "vector":
                 converted = ConvertToVector(value);
@@ -1277,6 +1271,47 @@ internal static class GesOptimizer
         return unwrapped.IsNegativeInfinity()
             ? GameEventScriptValueFactory.GesFloatNegativeInfinity()
             : GameEventScriptValueFactory.GesFloatInfinity();
+    }
+
+    private static GameEventScriptValue ConvertToNumber(GameEventScriptValue value)
+    {
+        if (value.IsInteger())
+        {
+            return value;
+        }
+
+        var unit = GameEventScriptValue.TryGetNumericUnit(value, out var numericUnit)
+            ? numericUnit
+            : (GameEventScriptNumericUnit?)null;
+
+        if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number))
+        {
+            return GameEventScriptNothingValue.Instance;
+        }
+
+        if (number.IsNaN)
+        {
+            return GameEventScriptValueFactory.GesFloatNaN();
+        }
+
+        if (number.IsPositiveInfinity)
+        {
+            return GameEventScriptValueFactory.GesFloatInfinity();
+        }
+
+        if (number.IsNegativeInfinity)
+        {
+            return GameEventScriptValueFactory.GesFloatNegativeInfinity();
+        }
+
+        if (number.Value >= long.MinValue &&
+            number.Value <= long.MaxValue &&
+            number.Value == Math.Truncate(number.Value))
+        {
+            return GameEventScriptValueFactory.GesInteger((long)number.Value, unit);
+        }
+
+        return GameEventScriptValueFactory.GesFloat(number.Value, unit);
     }
 
     private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)

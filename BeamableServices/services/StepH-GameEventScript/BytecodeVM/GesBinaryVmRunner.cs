@@ -83,9 +83,9 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.CastCustom:
                 case GameEventScriptBytecodeOpCode.CastUnit:
                 case GameEventScriptBytecodeOpCode.CastNumeric:
-                case GameEventScriptBytecodeOpCode.TypeCheck:
-                case GameEventScriptBytecodeOpCode.TypeCheckNumeric:
-                case GameEventScriptBytecodeOpCode.TypeCheckCustom:
+                case GameEventScriptBytecodeOpCode.CheckType:
+                case GameEventScriptBytecodeOpCode.CheckNumeric:
+                case GameEventScriptBytecodeOpCode.CheckCustomType:
                 case GameEventScriptBytecodeOpCode.CheckUnit:
                     maxSlot = Math.Max(maxSlot, instruction.XSlot);
                     break;
@@ -233,15 +233,15 @@ internal sealed class GesBinaryVmRunState
                     Set(instruction.DestinationSlot, CastNumeric(Get(instruction.XSlot)));
                     break;
 
-                case GameEventScriptBytecodeOpCode.TypeCheck:
+                case GameEventScriptBytecodeOpCode.CheckType:
                     Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfType(Get(instruction.XSlot), (GameEventScriptBytecodeTypeKind)instruction.TypeOperand)));
                     break;
 
-                case GameEventScriptBytecodeOpCode.TypeCheckNumeric:
+                case GameEventScriptBytecodeOpCode.CheckNumeric:
                     Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueNumeric(Get(instruction.XSlot))));
                     break;
 
-                case GameEventScriptBytecodeOpCode.TypeCheckCustom:
+                case GameEventScriptBytecodeOpCode.CheckCustomType:
                     Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfCustomType(Get(instruction.XSlot), instruction.TypeOperand)));
                     break;
 

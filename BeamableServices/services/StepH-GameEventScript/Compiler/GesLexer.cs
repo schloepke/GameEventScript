@@ -46,6 +46,7 @@ internal enum GesTokenKind
     Ends,
     With,
     Is,
+    Numeric,
     To,
     SelectorAny,
     SelectorAll,
@@ -280,6 +281,7 @@ internal sealed class GesLexer
             "ends" => new GesToken(GesTokenKind.Ends, text, line, column, endLine, endColumn),
             "with" => new GesToken(GesTokenKind.With, text, line, column, endLine, endColumn),
             "is" => new GesToken(GesTokenKind.Is, text, line, column, endLine, endColumn),
+            "numeric" => new GesToken(GesTokenKind.Numeric, text, line, column, endLine, endColumn),
             "or" => new GesToken(GesTokenKind.OperatorOr, text, line, column, endLine, endColumn),
             "xor" => new GesToken(GesTokenKind.OperatorXor, text, line, column, endLine, endColumn),
             "and" => new GesToken(GesTokenKind.OperatorAnd, text, line, column, endLine, endColumn),
@@ -549,6 +551,7 @@ internal sealed class GesLexer
                     '\u03C6' => CreateToken(GesTokenKind.Tag, ":phi", line, column),
                     '\u221A' => CreateToken(GesTokenKind.Tag, ":sqrt", line, column),
                     '\u221B' => CreateToken(GesTokenKind.Tag, ":cbrt", line, column),
+                    '\u00B0' => CreateToken(GesTokenKind.Identifier, "degree", line, column),
                     '\u2227' => CreateToken(GesTokenKind.OperatorAnd, "&", line, column),
                     '\u2228' => CreateToken(GesTokenKind.OperatorOr, "|", line, column),
                     '\u2208' => CreateToken(GesTokenKind.In, "in", line, column),
@@ -615,7 +618,7 @@ internal sealed class GesLexer
 
     private static bool IsStructuralBoundary(char ch)
         => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
-            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or
+            '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or '\u00B0' or
             '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
             '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u2248' or '\u2245' or
             '\u2192' or '\u21D2' or '\u21A6' or '\u00B2' or '\u00B3';

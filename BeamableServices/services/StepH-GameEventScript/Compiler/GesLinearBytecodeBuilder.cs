@@ -2661,11 +2661,11 @@ internal sealed class GesLinearBytecodeBuilder
                 EncodeNumericUnitAndFlags(unit));
         }
 
-        if (string.Equals(typeName, "number", StringComparison.Ordinal))
+        if (string.Equals(typeName, "numeric", StringComparison.Ordinal))
         {
             return (
                 GameEventScriptBytecodeOpCode.CastNumeric,
-                GameEventScriptBytecodeOpCode.TypeCheckNumeric,
+                GameEventScriptBytecodeOpCode.CheckNumeric,
                 0,
                 0);
         }
@@ -2674,14 +2674,14 @@ internal sealed class GesLinearBytecodeBuilder
         {
             return (
                 GameEventScriptBytecodeOpCode.Cast,
-                GameEventScriptBytecodeOpCode.TypeCheck,
+                GameEventScriptBytecodeOpCode.CheckType,
                 (ushort)typeKind,
                 0);
         }
 
         return (
             GameEventScriptBytecodeOpCode.CastCustom,
-            GameEventScriptBytecodeOpCode.TypeCheckCustom,
+            GameEventScriptBytecodeOpCode.CheckCustomType,
             ToUShortOperand(ResolveStringIndex(typeName), "custom type name string-pool operand"),
             0);
     }
@@ -2749,7 +2749,8 @@ internal sealed class GesLinearBytecodeBuilder
 
     private static bool IsBuiltInCastType(string typeName)
     {
-        return TryGetQuantityUnit(typeName, out _) ||
+        return string.Equals(typeName, "numeric", StringComparison.Ordinal) ||
+               TryGetQuantityUnit(typeName, out _) ||
                TryGetBytecodeTypeKind(typeName, out _);
     }
 
@@ -2789,7 +2790,7 @@ internal sealed class GesLinearBytecodeBuilder
             return true;
         }
 
-        return GameEventScriptNumericUnits.TryParseTypeName(typeName, out unit);
+        return false;
     }
 
     private static GameEventScriptBytecodeOpCode ToBinaryOpCode(BinaryExpressionNode expression)
@@ -2838,10 +2839,14 @@ internal sealed class GesLinearBytecodeBuilder
             PercentageLiteralExpressionNode => true,
             UnitFloatLiteralExpressionNode => true,
             BinaryExpressionNode binary => HasExplicitNonIntegerNumeric(binary.Left) || HasExplicitNonIntegerNumeric(binary.Right),
-            TypeCastExpressionNode { TypeName: "float" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
-            TypeConstructorExpressionNode { TypeName: "float" or "number" or "percentage" or "degree" or "meter" or "second" } => true,
+            TypeCastExpressionNode typeCast => IsExplicitNonIntegerNumericType(typeCast.TypeName),
+            TypeConstructorExpressionNode typeConstructor => IsExplicitNonIntegerNumericType(typeConstructor.TypeName),
             _ => false
         };
+
+    private static bool IsExplicitNonIntegerNumericType(string typeName)
+        => typeName is "float" or "numeric" or "percentage" ||
+           GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
     private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(GesBinaryOperator operation)
         => operation switch

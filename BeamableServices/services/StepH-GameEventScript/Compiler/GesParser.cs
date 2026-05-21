@@ -1064,6 +1064,12 @@ internal sealed class GesParser
                     continue;
                 }
 
+                if (Match(Numeric))
+                {
+                    expression = ApplyIsNegation(WithRange(new TypeCheckExpressionNode(expression, "numeric"), expression), negated);
+                    continue;
+                }
+
                 if (Is(Tag))
                 {
                     var typeName = ParseTypeName();
@@ -2618,6 +2624,11 @@ internal sealed class GesParser
 
     private string ParseTypeName()
     {
+        if (Match(Numeric))
+        {
+            return "numeric";
+        }
+
         if (!Is(Tag))
         {
             var token = Current;
@@ -2626,6 +2637,11 @@ internal sealed class GesParser
 
         var typeToken = Advance();
         var typeName = typeToken.Text[1..];
+        if (string.Equals(typeName, "numeric", StringComparison.Ordinal))
+        {
+            throw new GameEventScriptParseException("The numeric type helper is a keyword; use numeric without ':'.", typeToken);
+        }
+
         if (string.Equals(typeName, "quantity", StringComparison.Ordinal) &&
             Is(LeftParen) &&
             IsQuantityTypeSpecifierAhead())

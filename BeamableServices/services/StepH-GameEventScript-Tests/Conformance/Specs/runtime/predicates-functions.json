@@ -173,7 +173,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates allow explicit boolean coercion while functions keep original value",
-      "script": "predicate numeric(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byPredicateCallTwo be numeric(2)\n  let byPredicateCallZero be numeric(0)\n  let byFunction be numericSelect(2)\n  let byPredicateOperator be 2 is numeric\n  emit Done(byPredicateCallTwo: byPredicateCallTwo, byPredicateCallZero: byPredicateCallZero, byFunction: byFunction, byPredicateOperator: byPredicateOperator)\n}",
+      "script": "predicate numericPredicate(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byPredicateCallTwo be numericPredicate(2)\n  let byPredicateCallZero be numericPredicate(0)\n  let byFunction be numericSelect(2)\n  let byPredicateOperator be 2 is numericPredicate\n  emit Done(byPredicateCallTwo: byPredicateCallTwo, byPredicateCallZero: byPredicateCallZero, byFunction: byFunction, byPredicateOperator: byPredicateOperator)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

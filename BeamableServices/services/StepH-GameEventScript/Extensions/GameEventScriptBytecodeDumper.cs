@@ -820,14 +820,14 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.CastUnit;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or
-            GameEventScriptBytecodeOpCode.TypeCheckNumeric or
-            GameEventScriptBytecodeOpCode.TypeCheckCustom or
+        => opCode is GameEventScriptBytecodeOpCode.CheckType or
+            GameEventScriptBytecodeOpCode.CheckNumeric or
+            GameEventScriptBytecodeOpCode.CheckCustomType or
             GameEventScriptBytecodeOpCode.CheckUnit;
 
     private static void AppendDeclaredTypeOperand(StringBuilder builder, GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction)
     {
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.TypeCheckNumeric)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.CheckNumeric)
         {
             builder.Append(" kind=numeric");
             return;
@@ -839,7 +839,7 @@ public static class GameEventScriptBytecodeDumper
             return;
         }
 
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.TypeCheckCustom)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.CheckCustomType)
         {
             AppendPoolIndex(builder, "type", module.StringPool, instruction.TypeOperand);
             return;

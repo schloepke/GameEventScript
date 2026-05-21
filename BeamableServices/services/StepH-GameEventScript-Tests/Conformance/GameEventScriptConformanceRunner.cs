@@ -118,6 +118,15 @@ internal static class GameEventScriptConformanceRunner
         return GesBytecodeVmExecutableBuilder.Build(CompileBytecode(test));
     }
 
+    internal static GameEventScriptCompiled CompileBytecodeForTest(GameEventScriptConformanceTest test)
+        => CompileBytecode(test);
+
+    internal static GameEventScriptRandomGenerator CreateRandomForTest(IReadOnlyList<string>? randomSequence)
+        => CreateRandom(randomSequence);
+
+    internal static GameEventScriptRuntimeLimits CreateRuntimeLimitsForTest(GameEventScriptRuntimeLimitsSpec? spec)
+        => CreateRuntimeLimits(spec);
+
     private static IEnumerable<GameEventScriptConformanceCase> EnumerateConformanceCases(string specDirectory)
     {
         foreach (var (file, suite, test) in EnumerateTests(specDirectory))

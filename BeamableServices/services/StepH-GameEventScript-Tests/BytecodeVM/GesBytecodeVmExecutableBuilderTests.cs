@@ -142,16 +142,16 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeLowersNumberToNumericOpcodes()
+    public void PublicLinearBytecodeLowersNumericHelperToNumericOpcodes()
     {
         const string script =
             """
             module NumericSugar
 
             on Start(value) {
-              let numeric be value as :number
-              let isNumeric be numeric is :number
-              emit Done(numeric: numeric, isNumeric: isNumeric)
+              let numericValue be value as numeric
+              let isNumeric be numericValue is numeric
+              emit Done(numericValue: numericValue, isNumeric: isNumeric)
             }
             """;
 
@@ -159,9 +159,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.IsFalse(Enum.GetNames<GameEventScriptBytecodeTypeKind>().Contains("Number"));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CastNumeric));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckNumeric));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CheckNumeric));
         Assert.IsFalse(compiled.Code.Any(instruction =>
-            (instruction.OpCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.TypeCheck) &&
+            (instruction.OpCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CheckType) &&
             Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeOperand) &&
             Enum.GetName(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeOperand) == "Number"));
     }

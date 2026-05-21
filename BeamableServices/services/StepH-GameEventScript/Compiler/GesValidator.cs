@@ -1599,8 +1599,8 @@ internal static class GesValidator
     }
 
     private static bool IsBuiltinConstructorType(string typeName)
-        => typeName is "nothing" or "tag" or "text" or "percentage" or "degree" or "meter" or "second" or
-            "vector" or "point" or "boolean" or "integer" or "float" or "number" or "uuid" or "series" or
+        => typeName is "nothing" or "tag" or "text" or "percentage" or
+            "vector" or "point" or "boolean" or "integer" or "float" or "numeric" or "uuid" or "series" or
             "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "dice" ||
             GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
@@ -1615,6 +1615,18 @@ internal static class GesValidator
             errors.Add(
                 parsedScriptContext,
                 "Type ':optional' has been removed; use ':nothing' to represent absence.",
+                typeName,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                sourceNode);
+            return;
+        }
+
+        if (string.Equals(typeName, "number", StringComparison.Ordinal))
+        {
+            errors.Add(
+                parsedScriptContext,
+                "Type ':number' has been removed; use numeric for numeric conversion and checks.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptCompileErrorKind.InvalidTypeConstructor,

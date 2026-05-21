@@ -4575,13 +4575,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        if (instruction.OpCode == GameEventScriptBytecodeOpCode.TypeCheckNumeric)
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.CheckNumeric)
         {
             value = IsValueNumeric(input);
             return true;
         }
 
-        if (instruction.OpCode is not (GameEventScriptBytecodeOpCode.TypeCheck or GameEventScriptBytecodeOpCode.TypeCheckCustom) ||
+        if (instruction.OpCode is not (GameEventScriptBytecodeOpCode.CheckType or GameEventScriptBytecodeOpCode.CheckCustomType) ||
             !TryGetDeclaredTypeName(instruction, out var typeName))
         {
             return false;
@@ -4593,7 +4593,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryGetDeclaredTypeName(GameEventScriptBytecodeInstruction instruction, out string typeName)
     {
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.TypeCheckCustom)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastCustom or GameEventScriptBytecodeOpCode.CheckCustomType)
         {
             return TryReadStringPool(instruction.TypeOperand, out typeName!);
         }
@@ -5922,9 +5922,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.LoadHandler;
 
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
-        => opCode is GameEventScriptBytecodeOpCode.TypeCheck or
-            GameEventScriptBytecodeOpCode.TypeCheckNumeric or
-            GameEventScriptBytecodeOpCode.TypeCheckCustom or
+        => opCode is GameEventScriptBytecodeOpCode.CheckType or
+            GameEventScriptBytecodeOpCode.CheckNumeric or
+            GameEventScriptBytecodeOpCode.CheckCustomType or
             GameEventScriptBytecodeOpCode.CheckUnit;
 
     private static bool IsValueNumeric(BytecodeVmValue value)

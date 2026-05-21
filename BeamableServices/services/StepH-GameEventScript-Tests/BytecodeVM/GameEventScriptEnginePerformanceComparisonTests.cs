@@ -25,7 +25,7 @@ public sealed class BytecodeVmPerformanceReportTests
           let average be values[:filter value where value is high][:select value => value + 5%][:average value => :integer.floor value]
           let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
           let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
-          let scaled as :meter be 100m + 5%
+          let scaled as :quantity(m) be 100m + 5%
           let folded be (15% + 15%) * 2
           let directOddScaled be values[:filter value where value mod 2 = 1][:select value => value * 2][:count value where value > 10]
           if scaled > 100m {

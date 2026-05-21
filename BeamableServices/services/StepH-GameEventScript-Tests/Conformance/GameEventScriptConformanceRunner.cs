@@ -32,6 +32,9 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
+    internal static IReadOnlyList<GameEventScriptConformanceCase> AllConformanceCases(string specDirectory)
+        => EnumerateConformanceCases(specDirectory).ToArray();
+
     internal static IEnumerable<GameEventScriptConformanceCase> EnumerateBytecodeVmScriptApiCases(string specDirectory)
     {
         foreach (var (file, suite, test) in EnumerateTests(specDirectory))

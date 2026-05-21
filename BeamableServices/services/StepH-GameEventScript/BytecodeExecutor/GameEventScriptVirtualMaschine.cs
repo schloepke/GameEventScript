@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -16,7 +17,15 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
     
     public void Initialize(GameEventScriptSession context) 
     {
-        
+        _vmState.Reset();
+        var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
+        if (!_vmState.HasMessageHandler(message))
+        {
+            return;
+        }
+
+        ExecuteMessage(message, context);
+        _vmState.Reset();
     }
     
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession context)

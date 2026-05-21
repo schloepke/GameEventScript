@@ -47,6 +47,43 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
+    public void SessionStartQueuesInitializationHandlersBeforeExternalMessages()
+    {
+        var bytecode = GameEventScriptBuilder.Create()
+            .AddScript(
+                """
+                on initialization {
+                  emit Ready
+                }
+
+                on Start {
+                  emit Started
+                }
+                """)
+            .Compile();
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .Build()
+            .Load(bytecode);
+        host.Subscribe("Ready", [], (_, _) => calls.Add("ready"));
+        host.Subscribe("Started", [], (_, _) => calls.Add("started"));
+
+        var session = host.StartSession();
+
+        Assert.IsTrue(session.DispatchToCompletion(Create("Start")));
+        CollectionAssert.AreEqual(new[] { "ready", "started" }, calls);
+    }
+
+    [TestMethod]
+    public void InitializationEndpointCannotBeDispatchedAsExternalMessage()
+    {
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        var session = host.StartSession();
+
+        Assert.IsFalse(session.Dispatch(Create("initialization")));
+    }
+
+    [TestMethod]
     public void PublishCapturesSubscriptionSnapshotAtPublishTime()
     {
         var calls = new List<string>();

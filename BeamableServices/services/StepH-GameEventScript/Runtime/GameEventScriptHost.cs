@@ -25,9 +25,11 @@ public sealed class GameEventScriptHost
     private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly Dictionary<string, MessageSubscription[]> _dispatchIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, MessageSubscription[]> _messageEnvelopeDispatchIndex = new(StringComparer.Ordinal);
+    private MessageSubscription[] _initializationSubscriptions = [];
     private readonly object _dispatchGate = new();
     private readonly object _pumpGate = new();
     private GameEventScriptHostRunState _liveState;
+    private bool _liveStateInitializationQueued;
     private bool _automaticDispatchScheduled;
     private long _nextRegistrationOrder;
 
@@ -133,7 +135,12 @@ public sealed class GameEventScriptHost
     }
 
     public GameEventScriptSession StartSession()
-        => CreateLiveState(_dispatchMode).Session;
+    {
+        var state = CreateLiveState(_dispatchMode);
+        EnqueueInitializationInvocations(state);
+        state.Session.ScheduleAutomaticDispatchIfNeeded();
+        return state.Session;
+    }
 
     public bool Publish(GameEventScriptMessage message)
     {
@@ -146,6 +153,7 @@ public sealed class GameEventScriptHost
         lock (_pumpGate)
         {
             ResetManualStateIfCompletedAndIdle();
+            EnqueueLiveStateInitializationIfNeeded();
             if (!TryEnqueueInvocations(_liveState, message))
             {
                 return false;
@@ -186,6 +194,7 @@ public sealed class GameEventScriptHost
         }
 
         var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        EnqueueInitializationInvocations(state);
         if (!TryEnqueueInvocations(state, message))
         {
             return false;
@@ -210,6 +219,7 @@ public sealed class GameEventScriptHost
         lock (_pumpGate)
         {
             ResetManualStateIfCompletedAndIdle();
+            EnqueueLiveStateInitializationIfNeeded();
         }
 
         return DrainSlice(_liveState, maxOpcodes);
@@ -218,6 +228,7 @@ public sealed class GameEventScriptHost
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
         var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        EnqueueInitializationInvocations(state);
         var accepted = TryEnqueueInvocations(state, message);
         return new GameEventScriptRun(DrainSlice, state, accepted);
     }
@@ -250,6 +261,18 @@ public sealed class GameEventScriptHost
         }
 
         _liveState = CreateLiveState(GameEventScriptDispatchMode.Manual);
+        _liveStateInitializationQueued = false;
+    }
+
+    private void EnqueueLiveStateInitializationIfNeeded()
+    {
+        if (_liveStateInitializationQueued)
+        {
+            return;
+        }
+
+        EnqueueInitializationInvocations(_liveState);
+        _liveStateInitializationQueued = true;
     }
 
     private void RunAutomaticDispatchSlice()
@@ -275,6 +298,7 @@ public sealed class GameEventScriptHost
                     if (_dispatchMode == GameEventScriptDispatchMode.Automatic)
                     {
                         _liveState = CreateLiveState(GameEventScriptDispatchMode.Automatic);
+                        _liveStateInitializationQueued = false;
                     }
                 }
             }
@@ -363,6 +387,12 @@ public sealed class GameEventScriptHost
             GameEventScriptMessage.NormalizeTags(matchingTags),
             GameEventScriptMessage.NormalizeTags(withoutTags));
 
+        if (GameEventScriptSystemEndpoints.IsInitializationName(subscription.Definition.Name))
+        {
+            _initializationSubscriptions = InsertSubscriptionByDispatchOrder(_initializationSubscriptions, subscription);
+            return;
+        }
+
         _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
             ? InsertSubscriptionByDispatchOrder(handlers, subscription)
             : [subscription];
@@ -384,6 +414,12 @@ public sealed class GameEventScriptHost
             handler,
             handler.RequiredTags,
             handler.ExcludedTags);
+
+        if (GameEventScriptSystemEndpoints.IsInitializationName(subscription.Definition.Name))
+        {
+            _initializationSubscriptions = InsertSubscriptionByDispatchOrder(_initializationSubscriptions, subscription);
+            return;
+        }
 
         if (handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope)
         {
@@ -571,6 +607,11 @@ public sealed class GameEventScriptHost
             return false;
         }
 
+        if (GameEventScriptSystemEndpoints.IsInitializationName(message.Name))
+        {
+            return false;
+        }
+
         var hasExactSubscriptions = TryGetSubscriptions(message.SignatureId, out var exactSubscriptions) &&
                                     exactSubscriptions.Length > 0;
         var hasEnvelopeSubscriptions = TryGetEnvelopeSubscriptions(message.Name, out var envelopeSubscriptions) &&
@@ -640,6 +681,31 @@ public sealed class GameEventScriptHost
         }
 
         return matched && accepted;
+    }
+
+    private void EnqueueInitializationInvocations(GameEventScriptHostRunState state)
+    {
+        MessageSubscription[] subscriptions;
+        lock (_dispatchGate)
+        {
+            subscriptions = _initializationSubscriptions;
+        }
+
+        if (subscriptions.Length == 0)
+        {
+            return;
+        }
+
+        var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
+        foreach (var subscription in subscriptions)
+        {
+            if (!subscription.MatchesTags(message))
+            {
+                continue;
+            }
+
+            state.Enqueue(new QueuedInvocation(message, subscription));
+        }
     }
 
     private static IEnumerable<MessageSubscription> EnumerateDispatchSubscriptions(

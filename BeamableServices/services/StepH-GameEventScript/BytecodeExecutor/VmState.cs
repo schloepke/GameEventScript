@@ -81,6 +81,10 @@ internal struct VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool HasMessageHandler(GameEventScriptMessage message)
+        => InboundMessageHandlers.ContainsKey(message.SignatureId);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool PrepareMessage(GameEventScriptMessage message, GameEventScriptSession context)
     {
         if (State != StateValue.Initialized) return RaiseError("Handler can only be loaded when the VM is initialized.");

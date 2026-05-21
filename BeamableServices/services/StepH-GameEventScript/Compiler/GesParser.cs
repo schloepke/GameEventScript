@@ -418,7 +418,7 @@ internal sealed class GesParser
         }
 
         if (Current.Kind == Identifier &&
-            GameEventScriptSystemEndpoints.IsUndeliverableName(Current.Text))
+            GameEventScriptSystemEndpoints.IsSystemEndpointName(Current.Text))
         {
             return Advance().Text;
         }

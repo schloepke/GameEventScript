@@ -191,7 +191,11 @@ internal static class GesValidator
 
         foreach (var handler in parsedScript.Handlers)
         {
-            if (GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message))
+            if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Message))
+            {
+                ValidateInitializationHandler(parsedScript, handler, errors);
+            }
+            else if (GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message))
             {
                 ValidateUndeliverableHandler(parsedScript, handler, errors);
             }
@@ -242,6 +246,36 @@ internal static class GesValidator
             {
                 ValidateStatementReferences(parsedScript, statement, callables, typeDefinitions, errors, handlerScope);
             }
+        }
+    }
+
+    private static void ValidateInitializationHandler(
+        ParsedScript parsedScript,
+        EventHandlerNode handler,
+        GesValidationErrors errors)
+    {
+        if (handler.DispatchKind != EventHandlerDispatchKind.ExactSignature ||
+            handler.ParameterList.Count != 0)
+        {
+            errors.Add(
+                parsedScript,
+                "System endpoint 'initialization' must use parameterless syntax",
+                handler.Message,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                handler);
+            return;
+        }
+
+        if (handler.MatchingTags.Count != 0 || handler.WithoutTags.Count != 0)
+        {
+            errors.Add(
+                parsedScript,
+                "System endpoint 'initialization' cannot use tag filters",
+                handler.Message,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                handler);
         }
     }
 

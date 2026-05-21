@@ -18,7 +18,7 @@ PredicateDefinition ::= "predicate" Identifier "(" [ ParameterList ] ")" "means"
 FunctionDefinition ::= "function" Identifier "(" [ ParameterList ] ")" "means" Expression
 
 EventHandler ::= "on" HandlerEndpoint [ HandlerBinding ] { HandlerTagFilter } "{" Separators [ Statement { StatementSeparator Statement } ] Separators "}"
-HandlerEndpoint ::= Message | "undeliverable"
+HandlerEndpoint ::= Message | "initialization" | "undeliverable"
 HandlerBinding ::= "(" [ ParameterList ] ")"
                  | "as" Identifier
 HandlerTagFilter ::= ( "matching" | "without" ) TagLiteral { "," TagLiteral }

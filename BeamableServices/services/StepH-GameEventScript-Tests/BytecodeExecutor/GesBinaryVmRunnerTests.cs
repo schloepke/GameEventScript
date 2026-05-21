@@ -92,5 +92,35 @@ public sealed class BytecodeExecutorTests
         Assert.AreEqual("Done", published[0].Name);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(42), published[0].Arguments["total"]);
     }
+
+    [TestMethod]
+    public void InitializeRunsInitializationHandler()
+    {
+        const string script =
+            """
+            module BinaryExecutor
+
+            on initialization {
+                emit Ready(value: 1)
+            }
+            """;
+
+        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
+        var emitted = new List<GameEventScriptMessage>();
+        var session = new GameEventScriptSession(
+            GameEventScriptRandomGenerator.FromSeed(1),
+            message =>
+            {
+                emitted.Add(message);
+                return true;
+            });
+
+        var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);
+        runner.Initialize(session);
+
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Ready", emitted[0].Name);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(1), emitted[0].Arguments["value"]);
+    }
     
 }

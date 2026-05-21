@@ -51,6 +51,7 @@ Top-level declarations are:
 - `function name(...) means expression`
 - `on Message(...) { ... }`
 - `on Message as envelope { ... }`
+- `on initialization { ... }`
 - `on undeliverable as envelope { ... }`
 
 The module declaration is optional. If it is omitted, the compiler creates a
@@ -129,6 +130,15 @@ The envelope currently contains:
 
 `undeliverable` is a system endpoint. It receives messages that were not
 otherwise dispatched, and it must use envelope binding:
+
+`initialization` is a parameterless system endpoint. It is queued when a host
+session starts and runs before later messages in that session:
+
+```ges
+on initialization {
+  emit Ready
+}
+```
 
 ```ges
 on undeliverable as envelope {

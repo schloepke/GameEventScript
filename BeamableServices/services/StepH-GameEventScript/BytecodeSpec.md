@@ -482,18 +482,24 @@ handlers, `SignatureId` still records the synthetic envelope parameter signature
 such as `Damage(envelope)`, but it is metadata and not the dispatch key.
 
 System endpoint entries use reserved lowercase names outside normal message
-casing and bind their envelope with explicit `as` syntax. The currently defined
-endpoint is:
+casing. The currently defined endpoints are:
 
 ```text
+initialization
 undeliverable as envelope
 ```
 
-It is encoded as a `MessageEnvelope` handler entry with message name
+`initialization` is encoded as an `ExactSignature` handler entry without
+arguments. It is not normal external dispatch input; the host queues all loaded
+initialization handlers directly when a `GameEventScriptSession` starts.
+
+`undeliverable` is encoded as a `MessageEnvelope` handler entry with message name
 `undeliverable`. It receives a map-backed `:envelope` value when no
 `ExactSignature` or `MessageEnvelope` handler could be queued for the original
 message after signature/name and tag filters were applied. System endpoints
-still use normal handler metadata, priority, declaration order, and tag filters.
+still use normal handler metadata, priority, and declaration order.
+`undeliverable` also supports tag filters; `initialization` is parameterless and
+does not use tag filters.
 
 Type definitions may reference code addresses for computed fields and clamps:
 

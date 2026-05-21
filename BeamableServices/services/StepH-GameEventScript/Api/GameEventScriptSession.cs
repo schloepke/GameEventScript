@@ -176,6 +176,44 @@ public sealed class GameEventScriptSession
         return new GameEventScriptRun(_host.DrainSessionSlice, State!, accepted);
     }
 
+    internal void ScheduleAutomaticDispatchIfNeeded()
+    {
+        EnsureHostBacked();
+        if (_dispatchMode != GameEventScriptDispatchMode.Automatic || State!.IsCompletedAndIdle)
+        {
+            return;
+        }
+
+        var shouldSchedule = false;
+        lock (_pumpGate)
+        {
+            if (!_automaticDispatchScheduled)
+            {
+                _automaticDispatchScheduled = true;
+                shouldSchedule = true;
+            }
+        }
+
+        if (!shouldSchedule)
+        {
+            return;
+        }
+
+        try
+        {
+            _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
+        }
+        catch
+        {
+            lock (_pumpGate)
+            {
+                _automaticDispatchScheduled = false;
+            }
+
+            throw;
+        }
+    }
+
     private void RunAutomaticDispatchSlice()
     {
         try

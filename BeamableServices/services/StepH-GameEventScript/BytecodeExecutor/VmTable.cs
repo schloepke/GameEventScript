@@ -12,8 +12,7 @@ internal enum VmTableColumnKind : byte
     Integer = 2,
     Float = 3,
     Text = 4,
-    Tag = 5,
-    Uuid = 6
+    Tag = 5
 }
 
 [Flags]
@@ -23,8 +22,6 @@ internal enum VmTableColumnFlags : byte
     Unique = 1,
     Indexed = 2
 }
-
-internal readonly record struct VmUuid128(ulong High, ulong Low);
 
 internal readonly record struct VmTableColumnDefinition(ushort NameIndex, VmTableColumnKind Kind, VmTableColumnFlags Flags = VmTableColumnFlags.None)
 {
@@ -78,7 +75,6 @@ internal sealed class VmTableData
         VmTableColumnKind.Float => 1,
         VmTableColumnKind.Text => 1,
         VmTableColumnKind.Tag => 1,
-        VmTableColumnKind.Uuid => 2,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
 }
@@ -155,7 +151,6 @@ internal readonly struct VmTableCell
     public static VmTableCell FromFloat(double value) => new(VmTableColumnKind.Float, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)));
     public static VmTableCell FromTextIndex(ushort value) => new(VmTableColumnKind.Text, value);
     public static VmTableCell FromTagIndex(ushort value) => new(VmTableColumnKind.Tag, value);
-    public static VmTableCell FromUuid(VmUuid128 value) => new(VmTableColumnKind.Uuid, value.High, value.Low);
 }
 
 internal sealed class VmTableBuilder
@@ -163,7 +158,6 @@ internal sealed class VmTableBuilder
     private readonly VmTableShape _shape;
     private readonly List<ulong>[] _columns;
     private readonly Dictionary<ulong, int>?[] _scalarIndexes;
-    private readonly Dictionary<VmUuid128, int>?[] _uuidIndexes;
     private int _rowCount;
 
     public VmTableBuilder(VmTableShape shape, int capacity = 0)
@@ -176,7 +170,6 @@ internal sealed class VmTableBuilder
         _shape = shape;
         _columns = new List<ulong>[shape.ColumnCount];
         _scalarIndexes = new Dictionary<ulong, int>?[shape.ColumnCount];
-        _uuidIndexes = new Dictionary<VmUuid128, int>?[shape.ColumnCount];
 
         for (var i = 0; i < _columns.Length; i++)
         {
@@ -188,14 +181,7 @@ internal sealed class VmTableBuilder
                 continue;
             }
 
-            if (column.Kind == VmTableColumnKind.Uuid)
-            {
-                _uuidIndexes[i] = new Dictionary<VmUuid128, int>();
-            }
-            else
-            {
-                _scalarIndexes[i] = new Dictionary<ulong, int>();
-            }
+            _scalarIndexes[i] = new Dictionary<ulong, int>();
         }
     }
 
@@ -272,11 +258,6 @@ internal sealed class VmTableBuilder
             return true;
         }
 
-        if (cell.Kind == VmTableColumnKind.Uuid)
-        {
-            return _uuidIndexes[columnIndex]?.ContainsKey(new VmUuid128(cell.A, cell.B)) != true;
-        }
-
         return _scalarIndexes[columnIndex]?.ContainsKey(cell.A) != true;
     }
 
@@ -284,15 +265,7 @@ internal sealed class VmTableBuilder
     {
         var target = _columns[columnIndex];
         target.Add(cell.A);
-        if (cell.Kind == VmTableColumnKind.Uuid)
-        {
-            target.Add(cell.B);
-            _uuidIndexes[columnIndex]?.Add(new VmUuid128(cell.A, cell.B), rowIndex);
-        }
-        else
-        {
-            _scalarIndexes[columnIndex]?.Add(cell.A, rowIndex);
-        }
+        _scalarIndexes[columnIndex]?.Add(cell.A, rowIndex);
     }
 }
 
@@ -335,20 +308,11 @@ internal sealed class VmTable : IVmLengthAccess
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort GetTagIndex(int rowIndex, int columnIndex) => checked((ushort)ReadScalar(rowIndex, columnIndex));
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public VmUuid128 GetUuid(int rowIndex, int columnIndex)
-    {
-        var offset = GetOffset(rowIndex, columnIndex);
-        return new VmUuid128(Data.Data[offset], Data.Data[offset + 1]);
-    }
-
     public bool TryFindBoolean(int columnIndex, bool value, out int rowIndex) => TryFindScalar(columnIndex, value ? 1UL : 0UL, out rowIndex);
     public bool TryFindInteger(int columnIndex, long value, out int rowIndex) => TryFindScalar(columnIndex, unchecked((ulong)value), out rowIndex);
     public bool TryFindFloat(int columnIndex, double value, out int rowIndex) => TryFindScalar(columnIndex, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)), out rowIndex);
     public bool TryFindTextIndex(int columnIndex, ushort value, out int rowIndex) => TryFindScalar(columnIndex, value, out rowIndex);
     public bool TryFindTagIndex(int columnIndex, ushort value, out int rowIndex) => TryFindScalar(columnIndex, value, out rowIndex);
-    public bool TryFindUuid(int columnIndex, VmUuid128 value, out int rowIndex) => GetIndex(columnIndex).TryFind(value, out rowIndex);
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ulong ReadScalar(int rowIndex, int columnIndex) => Data.Data[GetOffset(rowIndex, columnIndex)];
 
@@ -377,12 +341,10 @@ internal sealed class VmTable : IVmLengthAccess
     private sealed class VmTableIndex
     {
         private readonly Dictionary<ulong, int>? _scalarIndex;
-        private readonly Dictionary<VmUuid128, int>? _uuidIndex;
 
-        private VmTableIndex(Dictionary<ulong, int>? scalarIndex, Dictionary<VmUuid128, int>? uuidIndex)
+        private VmTableIndex(Dictionary<ulong, int>? scalarIndex)
         {
             _scalarIndex = scalarIndex;
-            _uuidIndex = uuidIndex;
         }
 
         public static VmTableIndex Build(VmTableData data, int columnIndex)
@@ -391,18 +353,6 @@ internal sealed class VmTable : IVmLengthAccess
             var width = VmTableData.GetColumnWidth(column.Kind);
             var offset = column.DataStart;
 
-            if (column.Kind == VmTableColumnKind.Uuid)
-            {
-                var uuidIndex = new Dictionary<VmUuid128, int>(checked((int)column.RowCount));
-                for (var row = 0; row < column.RowCount; row++)
-                {
-                    uuidIndex.TryAdd(new VmUuid128(data.Data[offset], data.Data[offset + 1]), checked((int)row));
-                    offset += width;
-                }
-
-                return new VmTableIndex(null, uuidIndex);
-            }
-
             var scalarIndex = new Dictionary<ulong, int>(checked((int)column.RowCount));
             for (var row = 0; row < column.RowCount; row++)
             {
@@ -410,7 +360,7 @@ internal sealed class VmTable : IVmLengthAccess
                 offset += width;
             }
 
-            return new VmTableIndex(scalarIndex, null);
+            return new VmTableIndex(scalarIndex);
         }
 
         public bool TryFind(ulong value, out int rowIndex)
@@ -419,10 +369,5 @@ internal sealed class VmTable : IVmLengthAccess
             return _scalarIndex?.TryGetValue(value, out rowIndex) == true;
         }
 
-        public bool TryFind(VmUuid128 value, out int rowIndex)
-        {
-            rowIndex = -1;
-            return _uuidIndex?.TryGetValue(value, out rowIndex) == true;
-        }
     }
 }

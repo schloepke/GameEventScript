@@ -44,6 +44,7 @@ public class GameEventScriptOpcodePrinter
         C_U16_ItemBindingSlot,
 
         A_U16_Count,
+        X_I16_Immediate,
         X_I16_Count,
         Y_I16_Immediate,
         B_U16_Count,
@@ -222,6 +223,8 @@ public class GameEventScriptOpcodePrinter
 
             GameEventScriptBytecodeOpCode.LoadHandler => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex],
             GameEventScriptBytecodeOpCode.TypeConstructor => [DST_U16_TargetSlot, A_U16_TypeNameIndex, B_U16_ArgumentNameListIndex, C_U16_ArgumentSlotListIndex],
+            GameEventScriptBytecodeOpCode.CreateVector => [DST_U16_TargetSlot, X_I16_Immediate],
+            GameEventScriptBytecodeOpCode.CreatePoint => [DST_U16_TargetSlot, X_I16_Immediate],
             GameEventScriptBytecodeOpCode.MemberAccess => [DST_U16_TargetSlot, StringIndex, YSlot_ObjectSlot],
             GameEventScriptBytecodeOpCode.IndexedAccess => [DST_U16_TargetSlot, XSlot_IndexSlot, YSlot_ObjectSlot],
             GameEventScriptBytecodeOpCode.BuildList => [DST_U16_TargetSlot, A_U16_ItemSlotListIndex],

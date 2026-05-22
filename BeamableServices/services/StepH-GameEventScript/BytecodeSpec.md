@@ -175,7 +175,7 @@ instruction word are encoded by typed load opcodes:
 
 Constants are concrete. For example `:integer 1`, `:float 1`, `1m`, and `1s`
 must remain distinct loads even if runtime operations can compare or coerce
-some of them. Larger constants such as `Uuid` or future vector/point literals
+some of them. Larger constants such as future vector/point literals
 should use a normalized data segment instead of reintroducing an object
 constant pool.
 
@@ -777,11 +777,17 @@ compiler-assigned iterator slot.
 - `RandomPush seedSlot`
 - `RandomPushConstant seedI64`
 - `RandomPop`
+- `CreateVector dst immediateX`
+- `CreatePoint dst immediateX`
 - `TypeConstructor dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
 
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
 `StringPool` indexes, while slot lists contain frame slot indexes.
+Vector and point constructors are fixed built-ins. Their source arguments are
+lowered into staged component values in canonical `x, y, z` order; `immediateX`
+stores the first staged component index (`0`, `1`, or `2`) so leading missing
+components do not need explicit zero stages.
 Seeded random no longer has a side table or helper expression opcode. The
 lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
@@ -791,22 +797,14 @@ are valid source literals. Dynamic seeds must be statically visible as unitless
 
 Required portable value families:
 
-- primitives: `:nothing`, `:tag`, `:text`, `:boolean`, `:uuid`
+- primitives: `:nothing`, `:tag`, `:text`, `:boolean`
 - numeric: `:integer`, `:float`, `:percentage`
 - numeric quantities: `:quantity(degree)`/`:quantity(°)`, `:quantity(m)`, `:quantity(s)`
 - vectors: `:vector`
 - points: `:point`
 - containers: `:series`, `:range`, `:list`, `:map`, `:dice`
-- runtime values: `:message`, `:handler`, `:envelope`, `:ref`
+- runtime values: `:message`, `:handler`, `:envelope`
 - custom record and external types
-
-UUIDs are RFC-compatible 128-bit binary values. They should compare by high/low
-bits and should be valid map/ref ids. Invalid non-comparison operations
-evaluate to `nothing`.
-
-Refs are immutable handles made from a target type name and id value. The target
-type must be a record type or an external type. The id should be a portable
-scalar, usually `:text` or `:uuid`.
 
 Series values are index-addressed, repeatable mathematical series. Supported
 operations are `:term`, `:take`, and `:drop`; unsupported lookup/selector

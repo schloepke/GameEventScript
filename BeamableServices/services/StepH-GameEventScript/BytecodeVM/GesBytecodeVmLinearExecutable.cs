@@ -189,6 +189,14 @@ internal sealed class GesBytecodeVmLinearExecutable
                 continue;
             }
 
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateVector or GameEventScriptBytecodeOpCode.CreatePoint)
+            {
+                ValidateSpatialStagedArgumentCount(instruction, stagedCount, address);
+                stagedCount = 0;
+                stageStartAddress = -1;
+                continue;
+            }
+
             if (instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate))
             {
                 throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} is interrupted by instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode}.");
@@ -207,6 +215,23 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (stagedCount != 0)
         {
             throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} has no following call.");
+        }
+    }
+
+    private static void ValidateSpatialStagedArgumentCount(
+        GameEventScriptBytecodeInstruction instruction,
+        int stagedCount,
+        int address)
+    {
+        if (instruction.ImmediateX is < 0 or > 2)
+        {
+            throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} has invalid component start {instruction.ImmediateX}.");
+        }
+
+        var maximum = 3 - instruction.ImmediateX;
+        if (stagedCount > maximum)
+        {
+            throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} can consume at most {maximum} staged component(s), but {stagedCount} argument(s) were staged.");
         }
     }
 
@@ -537,6 +562,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
                 ValidateSlotListIndex(module, instruction.AU, $"{context} argument slots");
                 ValidateMatchingListCounts(module, instruction.ListIndex, instruction.AU, $"{context} type constructor arguments");
+                break;
+
+            case GameEventScriptBytecodeOpCode.CreateVector:
+            case GameEventScriptBytecodeOpCode.CreatePoint:
+                ValidateSpatialComponentStart(instruction.ImmediateX, $"{context} component start");
                 break;
 
             case GameEventScriptBytecodeOpCode.BuildList:
@@ -1006,6 +1036,14 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (value < 0)
         {
             throw InvalidBytecode($"{context} must be non-negative but was {value}.");
+        }
+    }
+
+    private static void ValidateSpatialComponentStart(int value, string context)
+    {
+        if (value is < 0 or > 2)
+        {
+            throw InvalidBytecode($"{context} must be 0, 1, or 2 but was {value}.");
         }
     }
 

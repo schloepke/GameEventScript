@@ -317,7 +317,7 @@
     {
       "kind": "scriptApi",
       "name": "dynamic invalid seeded random seed still restores outer random scope",
-      "script": "on Start {\n  let bad as :integer be :uuid('550e8400-e29b-41d4-a716-446655440000')\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
+      "script": "on Start {\n  let bad as :integer be :nothing\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

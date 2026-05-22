@@ -369,13 +369,11 @@ The source language recognizes these built-in type tags:
 - `:quantity(m)`, `:quantity(meter)`, `:quantity(s)`, `:quantity(second)`, `:quantity(degree)`, `:quantity(°)`
 - `:vector`
 - `:point`
-- `:uuid`
 - `:series`
 - `:range`
 - `:message`
 - `:handler`
 - `:envelope`
-- `:ref`
 - `:tag`
 - `:text`
 - `:list`
@@ -450,14 +448,6 @@ let state be :active
 Tags are not empty. Tags and text can be used as map keys and member lookup
 selectors.
 
-### UUID
-
-UUID values use RFC-style text and are stored as 128-bit values:
-
-```ges
-let id be :uuid('00112233-4455-6677-8899-aabbccddeeff')
-```
-
 ### Vector and Point
 
 Vectors and points have `x`, `y`, and `z` numeric components plus an optional
@@ -512,16 +502,6 @@ Handler values are created with message-style parameter declarations:
 ```ges
 let callback be Done(value)
 ```
-
-### Ref
-
-Refs identify records or host external types by type and id:
-
-```ges
-let unitRef be :ref(type: :unit, id: unitId)
-```
-
-The id can be a UUID or non-empty text-like value.
 
 ### Presence and Emptiness
 

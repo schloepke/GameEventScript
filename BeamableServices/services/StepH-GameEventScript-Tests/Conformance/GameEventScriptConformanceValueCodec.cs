@@ -67,8 +67,6 @@ internal static class GameEventScriptConformanceValueCodec
                 return GameEventScriptValueFactory.GesTag(RequireString(element, "value", "tag value"));
             case ":boolean":
                 return GameEventScriptValueFactory.GesBoolean(RequireBoolean(element, "value", "boolean value"));
-            case ":uuid":
-                return GameEventScriptValueFactory.GesUuid(RequireString(element, "value", "uuid value"));
             case ":integer":
                 return GameEventScriptValueFactory.GesInteger(
                     RequireInt64(element, "value", "integer value"),
@@ -102,10 +100,6 @@ internal static class GameEventScriptConformanceValueCodec
                     TryGetProperty(element, "step", out var stepElement) ? ReadInt64(stepElement, "range step") : 1L);
             case ":message":
                 return GameEventScriptValueFactory.GesMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
-            case ":ref":
-                return GameEventScriptValueFactory.GesRef(
-                    RequireCanonicalTypeName(element, TryGetProperty(element, "refType", out _) ? "refType" : "targetType", "ref target type")[1..],
-                    RequireString(element, "id", "ref id"));
             default:
                 return GameEventScriptValueFactory.GesCustomType(type[1..], DecodeEntries(element));
         }
@@ -174,7 +168,6 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
             GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
             GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
-            GameEventScriptValueKind.Uuid => new JsonObject { ["type"] = ":uuid", ["value"] = value.AsText() },
             GameEventScriptValueKind.Integer => ToIntegerJson((GameEventScriptIntegerValue)value),
             GameEventScriptValueKind.Float => ToFloatJson((GameEventScriptFloatValue)value),
             GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
@@ -185,7 +178,6 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
             GameEventScriptValueKind.Range => ToRangeJson(value),
             GameEventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GameEventScriptMessage>(value, "Value")) },
-            GameEventScriptValueKind.Ref => ToRefJson((GameEventScriptRefValue)value),
             GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
             GameEventScriptValueKind.Series => throw new NotSupportedException("Series values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
@@ -385,14 +377,6 @@ internal static class GameEventScriptConformanceValueCodec
 
         return node;
     }
-
-    private static JsonObject ToRefJson(GameEventScriptRefValue value)
-        => new()
-        {
-            ["type"] = ":ref",
-            ["refType"] = ToCanonicalTypeName(value.TypeName),
-            ["id"] = value.Id
-        };
 
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;

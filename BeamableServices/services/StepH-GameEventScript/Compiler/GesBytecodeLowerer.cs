@@ -699,7 +699,7 @@ internal static class GesBytecodeLowerer
         => operation is "min" or "max";
 
     private static bool IsKnownTypeCast(string typeName)
-        => typeName is "boolean" or "integer" or "float" or "numeric" or "percentage" or "vector" or "point" or "uuid" or "series" or "envelope" or "ref" ||
+        => typeName is "boolean" or "integer" or "float" or "numeric" or "percentage" or "vector" or "point" or "series" or "envelope" ||
            GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
     private static bool IsKnownDeclaredType(string typeName)
@@ -707,7 +707,7 @@ internal static class GesBytecodeLowerer
             "percentage" or
             "vector" or "point" or
             "boolean" or "integer" or "float" or "numeric" or
-            "uuid" or "series" or "envelope" or "list" or "range" or "message" or "handler" or
+            "series" or "envelope" or "list" or "range" or "message" or "handler" or
             "map" or "dice" ||
             !string.IsNullOrWhiteSpace(typeName);
 

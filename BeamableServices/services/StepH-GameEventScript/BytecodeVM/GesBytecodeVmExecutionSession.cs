@@ -407,6 +407,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
+            case GameEventScriptBytecodeOpCode.CreateVector:
+            case GameEventScriptBytecodeOpCode.CreatePoint:
+            {
+                var spatial = EvaluateStagedSpatialConstructor(
+                    instruction.OpCode == GameEventScriptBytecodeOpCode.CreatePoint ? "point" : "vector",
+                    instruction.ImmediateX,
+                    stagedArguments);
+                stagedArguments = null;
+                if (!DefineSlot(instruction.DestinationSlot, spatial))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+            }
+
             case GameEventScriptBytecodeOpCode.Jump:
                 return TryMoveLinearPc(instruction.TargetAddress, endAddress, ref pc);
 
@@ -4602,10 +4619,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeTypeKind.Percentage => "percentage",
             GameEventScriptBytecodeTypeKind.Vector => "vector",
             GameEventScriptBytecodeTypeKind.Point => "point",
-            GameEventScriptBytecodeTypeKind.Uuid => "uuid",
             GameEventScriptBytecodeTypeKind.Series => "series",
             GameEventScriptBytecodeTypeKind.Envelope => "envelope",
-            GameEventScriptBytecodeTypeKind.Ref => "ref",
             GameEventScriptBytecodeTypeKind.Tag => "tag",
             GameEventScriptBytecodeTypeKind.Text => "text",
             GameEventScriptBytecodeTypeKind.List => "list",
@@ -4661,7 +4676,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                        (value.ReferenceValue?.IsNumber() ?? false),
             "integer" => value.Kind == BytecodeVmValueKind.Integer || (value.ReferenceValue?.IsInteger() ?? false),
             "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
-            "uuid" => value.ReferenceValue?.IsUuid() ?? false,
             "series" => value.ReferenceValue?.IsSeries() ?? false,
             "envelope" => value.ReferenceValue is { } envelopeValue &&
                           envelopeValue.TryGetCustomTypeName(out var envelopeTypeName) &&
@@ -4672,7 +4686,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                          (messageValue.Kind == GameEventScriptValueKind.Message || GesMessageValueCodec.TryReadMessageValue(messageValue, out _)),
             "handler" => value.ReferenceValue is { } handlerValue &&
                          (handlerValue.Kind == GameEventScriptValueKind.Handler || GesMessageValueCodec.TryReadHandlerValue(handlerValue, out _)),
-            "ref" => value.ReferenceValue?.IsRef() ?? false,
             "map" => value.ReferenceValue?.IsMap() ?? false,
             "dice" => value.ReferenceValue?.IsDice() ?? false,
             _ => value.ReferenceValue is { } customValue &&
@@ -4923,11 +4936,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateAddBinary(GameEventScriptValue left, GameEventScriptValue right)
     {
-        if (left.IsUuid() || right.IsUuid())
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
         if (GesValueOperations.TryEvaluatePointBinary(left, "+", right, out var point))
         {
             return point;
@@ -4971,11 +4979,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateNumericBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)
     {
-        if (left.IsUuid() || right.IsUuid())
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
         if (GesValueOperations.TryEvaluatePointBinary(left, operation, right, out var point))
         {
             return point;
@@ -5361,11 +5364,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return EvaluateSpatialConstructor(typeName, labels, inputs, start, count);
         }
 
-        if (typeName == "ref")
-        {
-            return EvaluateRefConstructor(labels, inputs, start, count);
-        }
-
         if (TryEvaluateExternalTypeConstructor(typeName, labels, inputs, start, count, out var externalValue))
         {
             return externalValue;
@@ -5398,145 +5396,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryConvertDeclaredType(typeName, inputs[start], out var converted)
             ? converted
             : BytecodeVmValue.Nothing;
-    }
-
-    private BytecodeVmValue EvaluateRefConstructor(
-        string[]? labels,
-        BytecodeVmValue[] inputs,
-        int start,
-        int count)
-    {
-        if (count == 1 &&
-            labels is { Length: > 0 } &&
-            string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-        {
-            return TryConvertDeclaredType("ref", inputs[start], out var converted)
-                ? converted
-                : BytecodeVmValue.Nothing;
-        }
-
-        if (count != 2 || labels is null || labels.Length < count)
-        {
-            return BytecodeVmValue.Nothing;
-        }
-
-        if (!TryGetRefConstructorArgumentIndexes(labels, count, out var typeIndex, out var idIndex))
-        {
-            return BytecodeVmValue.Nothing;
-        }
-
-        if (!TryReadRefTypeName(inputs[start + typeIndex].ToGameEventScriptValue(), out var targetTypeName) ||
-            !IsReferenceTargetType(targetTypeName))
-        {
-            return BytecodeVmValue.Nothing;
-        }
-
-        var idValue = NormalizeRefIdValue(inputs[start + idIndex].ToGameEventScriptValue());
-        return idValue.IsNothing()
-            ? BytecodeVmValue.Nothing
-            : BytecodeVmValue.Reference(GesRef(targetTypeName, idValue));
-    }
-
-    private static GameEventScriptValue NormalizeRefIdValue(GameEventScriptValue id)
-    {
-        if (id.IsNothing())
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        if (id.IsUuid())
-        {
-            return id;
-        }
-
-        var text = GesValueOperations.ToText(id).Trim();
-        return text.Length == 0
-            ? GameEventScriptNothingValue.Instance
-            : GesText(text);
-    }
-
-    private bool IsReferenceTargetType(string typeName)
-        => _compiledScript.TypeDefinitions.ContainsKey(typeName) ||
-           _compiledScript.ExternalTypeRegistry.Types.ContainsKey(typeName);
-
-    private static bool TryGetRefConstructorArgumentIndexes(
-        IReadOnlyList<string> labels,
-        int count,
-        out int typeIndex,
-        out int idIndex)
-    {
-        typeIndex = -1;
-        idIndex = -1;
-        for (var index = 0; index < count; index++)
-        {
-            var label = labels[index];
-            if (string.Equals(label, "type", StringComparison.Ordinal))
-            {
-                if (typeIndex >= 0)
-                {
-                    return false;
-                }
-
-                typeIndex = index;
-                continue;
-            }
-
-            if (string.Equals(label, "id", StringComparison.Ordinal))
-            {
-                if (idIndex >= 0)
-                {
-                    return false;
-                }
-
-                idIndex = index;
-                continue;
-            }
-
-            if (string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-            {
-                if (typeIndex < 0)
-                {
-                    typeIndex = index;
-                    continue;
-                }
-
-                if (idIndex < 0)
-                {
-                    idIndex = index;
-                    continue;
-                }
-            }
-
-            return false;
-        }
-
-        return typeIndex >= 0 && idIndex >= 0 && typeIndex != idIndex;
-    }
-
-    private static bool TryReadRefTypeName(GameEventScriptValue value, out string typeName)
-    {
-        typeName = value.Kind switch
-        {
-            GameEventScriptValueKind.Tag => value.AsText(),
-            GameEventScriptValueKind.Text => value.AsText(),
-            _ => string.Empty
-        };
-
-        typeName = NormalizeRefTargetTypeName(typeName);
-        return typeName.Length > 0;
-    }
-
-    private static string NormalizeRefTargetTypeName(string typeName)
-    {
-        if (string.IsNullOrWhiteSpace(typeName))
-        {
-            return string.Empty;
-        }
-
-        var normalized = typeName.Trim();
-        return normalized.StartsWith(":", StringComparison.Ordinal)
-            ? normalized[1..]
-            : normalized;
     }
 
     private bool TryEvaluateExternalTypeConstructor(
@@ -5666,6 +5525,73 @@ internal sealed partial class GesBytecodeVmExecutionSession
             : BytecodeVmValue.Nothing;
     }
 
+    private BytecodeVmValue EvaluateStagedSpatialConstructor(
+        string typeName,
+        int startComponent,
+        IReadOnlyList<BytecodeVmValue>? stagedArguments)
+    {
+        if (startComponent is < 0 or > 2)
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        var count = stagedArguments?.Count ?? 0;
+        if (count > 3 - startComponent)
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        if (startComponent == 0 && count == 1)
+        {
+            return TryConvertDeclaredType(typeName, stagedArguments![0], out var converted)
+                ? converted
+                : BytecodeVmValue.Nothing;
+        }
+
+        if (startComponent == 0 &&
+            count == 2 &&
+            TryCreateSpatialLift(
+                typeName,
+                stagedArguments![0].ToGameEventScriptValue(),
+                stagedArguments[1].ToGameEventScriptValue(),
+                out var lifted))
+        {
+            return BytecodeVmValue.FromGameEventScriptValue(lifted);
+        }
+
+        if (startComponent == 0)
+        {
+            var components = new GameEventScriptValue[count];
+            for (var index = 0; index < components.Length; index++)
+            {
+                components[index] = stagedArguments![index].ToGameEventScriptValue();
+            }
+
+            return TryCreateSpatialFromComponents(typeName, components, out var spatial)
+                ? BytecodeVmValue.FromGameEventScriptValue(spatial)
+                : BytecodeVmValue.Nothing;
+        }
+
+        var labeledComponents = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
+        for (var index = 0; index < count; index++)
+        {
+            labeledComponents[GetSpatialComponentLabel(startComponent + index)] = stagedArguments![index].ToGameEventScriptValue();
+        }
+
+        return TryCreateSpatialFromLabeledComponents(typeName, labeledComponents, out var labeledSpatial)
+            ? BytecodeVmValue.FromGameEventScriptValue(labeledSpatial)
+            : BytecodeVmValue.Nothing;
+    }
+
+    private static string GetSpatialComponentLabel(int componentIndex)
+        => componentIndex switch
+        {
+            0 => "x",
+            1 => "y",
+            2 => "z",
+            _ => string.Empty
+        };
+
     private static bool TryCreateSpatialFromComponents(string typeName, IReadOnlyList<GameEventScriptValue> components, out GameEventScriptValue value)
         => typeName == "point"
             ? GesValueOperations.TryCreatePointFromComponents(components, out value)
@@ -5683,13 +5609,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryConvertDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
     {
-        if (input.ReferenceValue?.IsUuid() == true &&
-            declaredType is not "uuid" and not "text")
-        {
-            value = BytecodeVmValue.Nothing;
-            return true;
-        }
-
         if (GameEventScriptNumericUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
         {
             value = BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(input.ToGameEventScriptValue(), quantityUnit));
@@ -5714,7 +5633,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "integer" => BytecodeVmValue.Integer(boxed.AsInteger()),
             "float" => BytecodeVmValue.FromGameEventScriptValue(ConvertToFloat(boxed)),
-            "uuid" => BytecodeVmValue.FromGameEventScriptValue(ConvertToUuid(boxed)),
             "series" => boxed.IsSeries()
                 ? input
                 : BytecodeVmValue.Nothing,
@@ -5736,9 +5654,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 : GesMessageValueCodec.TryReadHandlerValue(boxed, out var handler)
                     ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateHandlerValue(handler))
                     : BytecodeVmValue.Nothing,
-            "ref" => boxed.IsRef()
-                ? input
-                : BytecodeVmValue.Nothing,
             "map" => BytecodeVmValue.Reference(GesMap(boxed.AsMap())),
             "dice" => BytecodeVmValue.Reference(GesDice(boxed.AsDice())),
             _ => _compiledScript.TypeDefinitions.TryGetValue(declaredType, out var typeDefinition)
@@ -5983,18 +5898,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesValueOperations.TryCoerceNumericForOperation(value, out var number)
             ? GesValueOperations.ToGameEventScriptFloat(number)
             : GesFloatNaN();
-    }
-
-    private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)
-    {
-        if (value.IsUuid())
-        {
-            return value;
-        }
-
-        return GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(value), out var uuid)
-            ? uuid
-            : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
@@ -7320,11 +7223,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Add(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "+", right, out var integerResult))
         {
             return integerResult;
@@ -7392,11 +7290,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Subtract(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "-", right, out var integerResult))
         {
             return integerResult;
@@ -7456,11 +7349,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Multiply(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "*", right, out var integerResult))
         {
             return integerResult;
@@ -7519,11 +7407,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Divide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "/", right, out var integerResult))
         {
             return integerResult;
@@ -7582,11 +7465,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue IntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "div", right, out var integerResult))
         {
             return integerResult;
@@ -7638,11 +7516,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Modulo(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "mod", right, out var integerResult))
         {
             return integerResult;
@@ -7693,11 +7566,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Remainder(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (TryEvaluateIntegerBinary(left, "rem", right, out var integerResult))
         {
             return integerResult;
@@ -7748,11 +7616,6 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Power(in BytecodeVmValue left, in BytecodeVmValue right)
     {
-        if (HasUuidOperand(left, right))
-        {
-            return Nothing;
-        }
-
         if (GesValueOperations.TryEvaluateUnitBinary(left.ToGameEventScriptValue(), "^", right.ToGameEventScriptValue(), out var unitResult))
         {
             return FromGameEventScriptValue(unitResult);
@@ -8102,9 +7965,6 @@ internal readonly record struct BytecodeVmValue(
     private bool IsPercentageLike()
         => Kind == BytecodeVmValueKind.Percentage ||
            ReferenceValue is { } reference && reference.IsPercentage();
-
-    private static bool HasUuidOperand(in BytecodeVmValue left, in BytecodeVmValue right)
-        => left.ReferenceValue?.IsUuid() == true || right.ReferenceValue?.IsUuid() == true;
 
     private bool IsVectorLike()
         => ReferenceValue is GameEventScriptVectorValue;

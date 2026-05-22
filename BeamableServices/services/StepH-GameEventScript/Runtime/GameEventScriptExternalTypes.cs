@@ -571,12 +571,10 @@ internal static class GameEventScriptExternalTypeNames
             GameEventScriptValueKind.Float => unit?.ToTypeName() ?? "float",
             GameEventScriptValueKind.Integer => unit?.ToTypeName() ?? "integer",
             GameEventScriptValueKind.Boolean => "boolean",
-            GameEventScriptValueKind.Uuid => "uuid",
             GameEventScriptValueKind.Series => "series",
             GameEventScriptValueKind.Range => "range",
             GameEventScriptValueKind.Message => "message",
             GameEventScriptValueKind.Handler => "handler",
-            GameEventScriptValueKind.Ref => "ref",
             GameEventScriptValueKind.List => "list",
             GameEventScriptValueKind.Map => "map",
             GameEventScriptValueKind.Dice => "dice",
@@ -602,12 +600,10 @@ internal static class GameEventScriptExternalTypeNames
             "float" or "numeric" => (GameEventScriptValueKind.Float, null),
             "integer" => (GameEventScriptValueKind.Integer, null),
             "boolean" => (GameEventScriptValueKind.Boolean, null),
-            "uuid" => (GameEventScriptValueKind.Uuid, null),
             "series" => (GameEventScriptValueKind.Series, null),
             "range" => (GameEventScriptValueKind.Range, null),
             "message" => (GameEventScriptValueKind.Message, null),
             "handler" => (GameEventScriptValueKind.Handler, null),
-            "ref" => (GameEventScriptValueKind.Ref, null),
             "list" => (GameEventScriptValueKind.List, null),
             "map" => (GameEventScriptValueKind.Map, null),
             "dice" => (GameEventScriptValueKind.Dice, null),
@@ -737,11 +733,6 @@ internal static class GameEventScriptExternalTypeValueConverter
 
     private static GameEventScriptValue CoerceToDeclaredTypeCore(GameEventScriptValue value, string typeName)
     {
-        if (value.IsUuid() && typeName is not "uuid" and not "text")
-        {
-            return GesNothing();
-        }
-
         return typeName switch
         {
             "nothing" => GesNothing(),
@@ -754,12 +745,6 @@ internal static class GameEventScriptExternalTypeValueConverter
             "integer" => GesInteger(value.AsInteger()),
             "float" or "numeric" => GesFloat(value.AsNumber()),
             "boolean" => GesBoolean(value.AsBoolean()),
-            "uuid" => value.IsUuid()
-                ? value
-                : GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(value), out var uuid)
-                    ? uuid
-                    : GesNothing(),
-            "ref" => value.IsRef() ? value : GesNothing(),
             "map" => GesMap(value.AsMap()),
             "list" => GesList(value.AsList()),
             _ => value

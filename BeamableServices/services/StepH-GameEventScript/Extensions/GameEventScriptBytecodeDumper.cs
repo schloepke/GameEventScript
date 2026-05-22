@@ -423,6 +423,11 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlotListPoolIndex(builder, "args", module, instruction.AU);
                 break;
 
+            case GameEventScriptBytecodeOpCode.CreateVector:
+            case GameEventScriptBytecodeOpCode.CreatePoint:
+                AppendSignedImmediate(builder, "immediateX", instruction.ImmediateX);
+                break;
+
             case GameEventScriptBytecodeOpCode.BuildList:
                 AppendSlotListPoolIndex(builder, "items", module, instruction.ListIndex);
                 break;

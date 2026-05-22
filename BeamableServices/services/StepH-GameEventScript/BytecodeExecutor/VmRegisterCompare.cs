@@ -28,7 +28,7 @@ internal static class VmRegisterCompare
             case List or Map or Dice when a.ObjectValue is IVmLengthAccess objectValue:
                 dst.SetBoolean(objectValue.Length == 0);
                 break;
-            // Fixme: Special handling for series, uuid, ref, external type
+            // Fixme: Special handling for series and external type
             default:
                 dst.SetBoolean(true);
                 break;
@@ -58,7 +58,7 @@ internal static class VmRegisterCompare
             case Text or List or Map or  Tag or Dice when a.ObjectValue is IVmLengthAccess objectValue:
                 dst.SetBoolean(objectValue.Length > 0);
                 break;
-            // Fixme: Special handling for series, uuid, ref, external type
+            // Fixme: Special handling for series and external type
             default:
                 dst.SetBoolean(false);
                 break;

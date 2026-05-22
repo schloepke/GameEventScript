@@ -248,7 +248,9 @@ not a second runtime dispatch step.
 | 0x41 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
 | 0x42 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
 | 0x43 | `TypeConstructor` | - | result slot | `StringIndex`=type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a record/external value from named argument slots. |
-| 0x44..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 2. |
+| 0x44 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x45 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 2. |
 
 ### Group 3 - Boolean, Comparison, Presence
 

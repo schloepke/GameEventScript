@@ -143,23 +143,6 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesBoolean(bool value) => GameEventScriptBooleanValue.Create(value);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a UUID from canonical high and low bits.
-    /// </summary>
-    /// <param name="high">The first 64 bits in RFC string byte order.</param>
-    /// <param name="low">The last 64 bits in RFC string byte order.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the UUID value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesUuid(long high, long low) => GameEventScriptUuidValue.Create(high, low);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a UUID parsed from canonical RFC text.
-    /// </summary>
-    /// <param name="value">The UUID text in 8-4-4-4-12 hexadecimal form.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the UUID value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesUuid(string value) => GameEventScriptUuidValue.Parse(value);
-
-    /// <summary>
     /// Returns the given value, or <see cref="GameEventScriptNothingValue.Instance"/> when it is null.
     /// </summary>
     /// <param name="value">The maybe-present value.</param>
@@ -209,24 +192,6 @@ public static class GameEventScriptValueFactory
     /// <returns>A new <see cref="GameEventScriptValue"/> instance encapsulating the handler value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static GameEventScriptValue GesHandler(GameEventScriptMessageSignature signature) => GameEventScriptHandlerValue.Create(signature);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a typed reference.
-    /// </summary>
-    /// <param name="typeName">The referenced record or external type name. A leading colon is allowed.</param>
-    /// <param name="id">The stable reference id.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the typed reference.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesRef(string typeName, string id) => GameEventScriptRefValue.Create(typeName, id);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a typed reference.
-    /// </summary>
-    /// <param name="typeName">The referenced record or external type name. A leading colon is allowed.</param>
-    /// <param name="id">The stable reference id value.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the typed reference.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesRef(string typeName, GameEventScriptValue id) => GameEventScriptRefValue.Create(typeName, id);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a list of values derived from the provided source value.

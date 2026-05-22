@@ -1359,9 +1359,15 @@ internal static class GesValidator
             ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
         }
 
+        if (constructor.TypeName is "optional" or "number" or "set" or "uuid" or "ref")
+        {
+            ValidateRemovedType(parsedScriptContext, constructor.TypeName, constructor, errors);
+            return;
+        }
+
         if (IsBuiltinConstructorType(constructor.TypeName))
         {
-            ValidateBuiltinTypeConstructor(parsedScriptContext, constructor, typeDefinitions, errors);
+            ValidateBuiltinTypeConstructor(parsedScriptContext, constructor, errors);
             return;
         }
 
@@ -1393,7 +1399,6 @@ internal static class GesValidator
     private static void ValidateBuiltinTypeConstructor(
         ParsedScript parsedScriptContext,
         TypeConstructorExpressionNode constructor,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
         switch (constructor.TypeName)
@@ -1401,9 +1406,6 @@ internal static class GesValidator
             case "vector":
             case "point":
                 ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
-                return;
-            case "ref":
-                ValidateRefConstructor(parsedScriptContext, constructor, typeDefinitions, errors);
                 return;
             default:
                 if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
@@ -1417,127 +1419,6 @@ internal static class GesValidator
 
                 return;
         }
-    }
-
-    private static void ValidateRefConstructor(
-        ParsedScript parsedScriptContext,
-        TypeConstructorExpressionNode constructor,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
-    {
-        if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
-        {
-            return;
-        }
-
-        if (constructor.Arguments.Count != 2)
-        {
-            AddTypeConstructorError(
-                parsedScriptContext,
-                constructor.TypeName,
-                "Type constructor ':ref' expects a target type and id",
-                errors);
-            return;
-        }
-
-        if (!TryGetRefConstructorArgumentIndexes(constructor.Arguments, out var typeIndex, out var idIndex))
-        {
-            AddTypeConstructorError(
-                parsedScriptContext,
-                constructor.TypeName,
-                "Type constructor ':ref' expects arguments shaped as ':ref(:type, id: value)' or ':ref(type: :type, id: value)'",
-                errors);
-            return;
-        }
-
-        _ = idIndex;
-        var typeExpression = constructor.Arguments[typeIndex].Expression;
-        if (TryGetLiteralRefTargetTypeName(typeExpression, out var targetTypeName) &&
-            !typeDefinitions.ContainsKey(targetTypeName))
-        {
-            AddTypeConstructorError(
-                parsedScriptContext,
-                constructor.TypeName,
-                $"Type constructor ':ref' target ':{targetTypeName}' must be a record or external type",
-                errors);
-        }
-    }
-
-    private static bool TryGetRefConstructorArgumentIndexes(
-        IReadOnlyList<ArgumentNode> arguments,
-        out int typeIndex,
-        out int idIndex)
-    {
-        typeIndex = -1;
-        idIndex = -1;
-        for (var index = 0; index < arguments.Count; index++)
-        {
-            var label = arguments[index].Label ?? GameEventScriptMessageSignature.UnlabeledParameterName;
-            if (string.Equals(label, "type", StringComparison.Ordinal))
-            {
-                if (typeIndex >= 0)
-                {
-                    return false;
-                }
-
-                typeIndex = index;
-                continue;
-            }
-
-            if (string.Equals(label, "id", StringComparison.Ordinal))
-            {
-                if (idIndex >= 0)
-                {
-                    return false;
-                }
-
-                idIndex = index;
-                continue;
-            }
-
-            if (string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-            {
-                if (typeIndex < 0)
-                {
-                    typeIndex = index;
-                    continue;
-                }
-
-                if (idIndex < 0)
-                {
-                    idIndex = index;
-                    continue;
-                }
-            }
-
-            return false;
-        }
-
-        return typeIndex >= 0 && idIndex >= 0 && typeIndex != idIndex;
-    }
-
-    private static bool TryGetLiteralRefTargetTypeName(ExpressionNode expression, out string typeName)
-    {
-        typeName = expression switch
-        {
-            TagLiteralExpressionNode tag => tag.Name,
-            TextLiteralExpressionNode text => text.Value,
-            _ => string.Empty
-        };
-
-        if (string.IsNullOrWhiteSpace(typeName))
-        {
-            typeName = string.Empty;
-            return false;
-        }
-
-        typeName = typeName.Trim();
-        if (typeName.StartsWith(":", StringComparison.Ordinal))
-        {
-            typeName = typeName[1..];
-        }
-
-        return typeName.Length > 0;
     }
 
     private static void ValidateVectorConstructor(
@@ -1634,8 +1515,8 @@ internal static class GesValidator
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or
-            "vector" or "point" or "boolean" or "integer" or "float" or "numeric" or "uuid" or "series" or
-            "list" or "range" or "message" or "handler" or "envelope" or "ref" or "map" or "dice" ||
+            "vector" or "point" or "boolean" or "integer" or "float" or "numeric" or "series" or
+            "list" or "range" or "message" or "handler" or "envelope" or "map" or "dice" ||
             GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
     private static void ValidateRemovedType(
@@ -1673,6 +1554,30 @@ internal static class GesValidator
             errors.Add(
                 parsedScriptContext,
                 "Type ':set' has been removed; use lists or key-only maps.",
+                typeName,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                sourceNode);
+            return;
+        }
+
+        if (string.Equals(typeName, "uuid", StringComparison.Ordinal))
+        {
+            errors.Add(
+                parsedScriptContext,
+                "Type ':uuid' has been removed; use ':text' or ':integer' ids in scripts.",
+                typeName,
+                GameEventScriptSymbolKind.Type,
+                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                sourceNode);
+            return;
+        }
+
+        if (string.Equals(typeName, "ref", StringComparison.Ordinal))
+        {
+            errors.Add(
+                parsedScriptContext,
+                "Type ':ref' has been removed; future mutation handles will be table/agent based.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptCompileErrorKind.InvalidTypeConstructor,

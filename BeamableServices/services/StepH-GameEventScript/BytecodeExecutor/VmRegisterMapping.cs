@@ -44,9 +44,6 @@ internal static class VmRegisterMapping
             case GameEventScriptValueKind.Boolean:
                 destination.SetBoolean(argument.AsBoolean());
                 break;
-            case GameEventScriptValueKind.Uuid:
-                throw new NotImplementedException();
-                break;
             case GameEventScriptValueKind.Series:
                 throw new NotImplementedException();
                 break;
@@ -57,9 +54,6 @@ internal static class VmRegisterMapping
                 throw new NotImplementedException();
                 break;
             case GameEventScriptValueKind.Handler:
-                throw new NotImplementedException();
-                break;
-            case GameEventScriptValueKind.Ref:
                 throw new NotImplementedException();
                 break;
             case GameEventScriptValueKind.List:

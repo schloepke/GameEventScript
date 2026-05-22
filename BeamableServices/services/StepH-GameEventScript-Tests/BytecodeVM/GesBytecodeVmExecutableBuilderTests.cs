@@ -167,6 +167,33 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeUsesDedicatedSpatialCreationOpcodes()
+    {
+        const string script =
+            """
+            module SpatialCreation
+
+            on Start(value) {
+              let position be :vector(y: value, z: 3)
+              let target be :point(1, value)
+              emit Done(position: position, target: target)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CreateVector &&
+            instruction.ImmediateX == 1));
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CreatePoint &&
+            instruction.ImmediateX == 0));
+        Assert.IsFalse(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.TypeConstructor &&
+            compiled.StringPool[(int)instruction.StringIndex] is "vector" or "point"));
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeStoresPublishMetadataInUShortListPool()
     {
         const string script =

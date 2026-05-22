@@ -1484,6 +1484,12 @@ internal sealed class GesLinearBytecodeBuilder
 
     private int EmitSourceTypeConstructor(TypeConstructorExpressionNode typeConstructor, SourceContext context, ExpressionState state)
     {
+        if (IsSpatialConstructorType(typeConstructor.TypeName) &&
+            TryEmitSourceSpatialConstructor(typeConstructor, context, state, out var spatialSlot))
+        {
+            return spatialSlot;
+        }
+
         if (typeConstructor.Arguments.Count == 1 &&
             typeConstructor.Arguments[0].Label is null &&
             IsBuiltInCastType(typeConstructor.TypeName))
@@ -1511,6 +1517,90 @@ internal sealed class GesLinearBytecodeBuilder
             a: typeNameIndex,
             b: argumentNameListIndex,
             c: argumentSlotListIndex);
+    }
+
+    private bool TryEmitSourceSpatialConstructor(
+        TypeConstructorExpressionNode typeConstructor,
+        SourceContext context,
+        ExpressionState state,
+        out int resultSlot)
+    {
+        resultSlot = default;
+        if (!TryGetSpatialConstructorStageShape(typeConstructor.Arguments, out var startComponent, out var arguments))
+        {
+            return false;
+        }
+
+        foreach (var argument in arguments)
+        {
+            EmitStageArgument(PrepareStageArgument(argument.Expression, context, state));
+        }
+
+        var opCode = typeConstructor.TypeName == "point"
+            ? GameEventScriptBytecodeOpCode.CreatePoint
+            : GameEventScriptBytecodeOpCode.CreateVector;
+        var dest = AllocateSlot(state);
+        Emit(new GameEventScriptBytecodeInstruction
+        {
+            OpCode = opCode,
+            DestinationSlot = ToUShortOperand(dest, "destination operand"),
+            ImmediateX = ToShortOperand(startComponent, "spatial component start")
+        });
+        resultSlot = dest;
+        return true;
+    }
+
+    private static bool TryGetSpatialConstructorStageShape(
+        IReadOnlyList<ArgumentNode> sourceArguments,
+        out int startComponent,
+        out IReadOnlyList<ArgumentNode> stagedArguments)
+    {
+        startComponent = 0;
+        stagedArguments = sourceArguments;
+        if (sourceArguments.Count == 0)
+        {
+            return true;
+        }
+
+        var labeledCount = sourceArguments.Count(argument => argument.Label is not null);
+        if (labeledCount == 0)
+        {
+            return true;
+        }
+
+        if (labeledCount != sourceArguments.Count)
+        {
+            return false;
+        }
+
+        var firstComponent = GetSpatialComponentIndex(sourceArguments[0].Label);
+        var lastComponent = GetSpatialComponentIndex(sourceArguments[^1].Label);
+        if (firstComponent < 0 || lastComponent < 0)
+        {
+            return false;
+        }
+
+        if (lastComponent - firstComponent + 1 != sourceArguments.Count)
+        {
+            return false;
+        }
+
+        if (firstComponent == 0 && sourceArguments.Count == 1)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < sourceArguments.Count; index++)
+        {
+            if (GetSpatialComponentIndex(sourceArguments[index].Label) != firstComponent + index)
+            {
+                return false;
+            }
+        }
+
+        startComponent = firstComponent;
+        stagedArguments = sourceArguments;
+        return true;
     }
 
     private int EmitSourcePipeline(CollectionAccessExpressionNode collectionAccess, SourceContext context, ExpressionState state)
@@ -2809,6 +2899,18 @@ internal sealed class GesLinearBytecodeBuilder
                TryGetBytecodeTypeKind(typeName, out _);
     }
 
+    private static bool IsSpatialConstructorType(string typeName)
+        => typeName is "vector" or "point";
+
+    private static int GetSpatialComponentIndex(string? label)
+        => label switch
+        {
+            "x" => 0,
+            "y" => 1,
+            "z" => 2,
+            _ => -1
+        };
+
     private static bool TryGetBytecodeTypeKind(string typeName, out GameEventScriptBytecodeTypeKind typeKind)
     {
         typeKind = typeName switch
@@ -2820,10 +2922,8 @@ internal sealed class GesLinearBytecodeBuilder
             "percentage" => GameEventScriptBytecodeTypeKind.Percentage,
             "vector" => GameEventScriptBytecodeTypeKind.Vector,
             "point" => GameEventScriptBytecodeTypeKind.Point,
-            "uuid" => GameEventScriptBytecodeTypeKind.Uuid,
             "series" => GameEventScriptBytecodeTypeKind.Series,
             "envelope" => GameEventScriptBytecodeTypeKind.Envelope,
-            "ref" => GameEventScriptBytecodeTypeKind.Ref,
             "tag" => GameEventScriptBytecodeTypeKind.Tag,
             "text" => GameEventScriptBytecodeTypeKind.Text,
             "list" => GameEventScriptBytecodeTypeKind.List,

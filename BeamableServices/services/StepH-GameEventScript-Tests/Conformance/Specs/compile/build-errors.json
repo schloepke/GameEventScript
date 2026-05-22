@@ -240,7 +240,7 @@
     },
     {
       "kind": "compileError",
-      "name": "ref constructor requires record or external target type",
+      "name": "ref type has been removed",
       "script": "on Start {\n  let unitRef be :ref(:integer, id: 'unit-42')\n}",
       "expectedError": {
         "phase": "build",

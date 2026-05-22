@@ -1153,12 +1153,6 @@ internal static class GesOptimizer
 
     private static bool TryConvertConstantType(GameEventScriptValue value, string declaredType, ISet<string> knownTypeNames, out GameEventScriptValue converted)
     {
-        if (value.IsUuid() && declaredType is not "uuid" and not "text")
-        {
-            converted = GameEventScriptNothingValue.Instance;
-            return true;
-        }
-
         if (GameEventScriptNumericUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
         {
             converted = ConvertToNumericUnit(value, quantityUnit);
@@ -1197,9 +1191,6 @@ internal static class GesOptimizer
             case "boolean":
                 converted = GameEventScriptValueFactory.GesBoolean(value.AsBoolean());
                 return true;
-            case "uuid":
-                converted = ConvertToUuid(value);
-                return true;
             case "integer":
                 converted = GameEventScriptValueFactory.GesInteger(value.AsInteger());
                 return true;
@@ -1217,9 +1208,6 @@ internal static class GesOptimizer
                 return true;
             case "handler":
                 converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptNothingValue.Instance;
-                return true;
-            case "ref":
-                converted = value.IsRef() ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "map":
                 converted = GameEventScriptValueFactory.GesMap(value.AsMap());
@@ -1312,20 +1300,6 @@ internal static class GesOptimizer
         }
 
         return GameEventScriptValueFactory.GesFloat(number.Value, unit);
-    }
-
-    private static GameEventScriptValue ConvertToUuid(GameEventScriptValue value)
-    {
-        var unwrapped = value;
-
-        if (unwrapped.IsUuid())
-        {
-            return unwrapped;
-        }
-
-        return GameEventScriptUuidValue.TryParse(GesValueOperations.ToText(unwrapped), out var uuid)
-            ? uuid
-            : GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
@@ -1950,13 +1924,6 @@ internal static class GesOptimizer
                 return true;
             case GameEventScriptValueKind.Tag:
                 expression = new TagLiteralExpressionNode(value.AsText());
-                return true;
-            case GameEventScriptValueKind.Uuid:
-                expression = new TypeConstructorExpressionNode(
-                    "uuid",
-                    new ArgumentListNode([
-                        new ArgumentNode(null, new TextLiteralExpressionNode(value.AsText()))
-                    ]));
                 return true;
             case GameEventScriptValueKind.Vector:
             {

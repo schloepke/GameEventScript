@@ -87,4 +87,5 @@ internal static class VmRegisterUnitCalculation
         unit = UnitNone;
         return false;
     }
+
 }

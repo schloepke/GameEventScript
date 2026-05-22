@@ -125,7 +125,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetObject(GameEventScriptBytecodeTypeKind kind, object value)
+    public void SetObject(GameEventScriptBytecodeTypeKind kind, object value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = kind;
         Flags = VmValueFlags.StorageObject | VmValueFlags.IsTrue;
@@ -156,4 +156,15 @@ public struct VmValue
         Integer => IntegerValue,
         _ => double.NaN,
     };
+    
+    public double AsNumberValueWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
+    {
+        unit = Unit;
+        return Kind switch
+        {
+            Float or Percentage => FloatValue,
+            Integer => IntegerValue,
+            _ => double.NaN,
+        };
+    }
 }

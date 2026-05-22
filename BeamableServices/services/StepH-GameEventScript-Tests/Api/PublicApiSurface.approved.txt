@@ -582,6 +582,7 @@ class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
 struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Boolean IsUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit requiredUnit)
   method System.Boolean TryGetInteger(System.Int64& intValue)
+  method System.Double AsNumberValueWithUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
   method System.Void SetBoolean(System.Boolean value)
   method System.Void SetBooleanOrNothing(System.Boolean? value)
   method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
@@ -589,7 +590,7 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetIntegerOrNothing(System.Int64? value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetNothing()
-  method System.Void SetObject(StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, System.Object value)
+  method System.Void SetObject(StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, System.Object value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetPercentage(System.Double ratio)
   method System.Void SetStringPointer(System.UInt16 pointer)
   method System.Void SetTagPointer(System.UInt16 pointer)

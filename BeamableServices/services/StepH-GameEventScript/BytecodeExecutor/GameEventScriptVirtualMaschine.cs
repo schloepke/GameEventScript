@@ -189,12 +189,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case TypeConstructor:
                     break;
                 case CreateVector:
-                    _vmState.Register(instruction.DestinationSlot).SetObject(Vector, new VmFloatTriplet(0, 0, 0));
-                    _vmState.StagedArgumentCount = 0;
+                    _vmState.Register(instruction.DestinationSlot).VmCreateTripleFloat(instruction.ImmediateX, ref _vmState, Vector);
+                    _vmState.ClearStage();
                     break;
                 case CreatePoint:
-                    _vmState.Register(instruction.DestinationSlot).SetObject(Point, new VmFloatTriplet(0, 0, 0));
-                    _vmState.StagedArgumentCount = 0;
+                    _vmState.Register(instruction.DestinationSlot).VmCreateTripleFloat(instruction.ImmediateX, ref _vmState, Point);
+                    _vmState.ClearStage();
                     break;
                 case Or:
                     _vmState.Register(instruction.DestinationSlot).VmOr(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));

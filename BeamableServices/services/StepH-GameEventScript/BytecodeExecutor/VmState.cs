@@ -47,7 +47,7 @@ internal struct VmState
 
     internal ushort RegisterFrameStart = 0;
     internal ushort RegisterFrameLength = 0;
-    internal ushort StagedArgumentCount = 0;
+    internal ushort StageLength  { get; private set; } = 0;
     
     internal string? ErrorMessage { get; private set; } = null;
 
@@ -58,6 +58,9 @@ internal struct VmState
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref VmValue RegisterStaged(ushort index) =>  ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
@@ -163,8 +166,8 @@ internal struct VmState
         };
         InstructionPointer = address;
         RegisterFrameStart += RegisterFrameLength;
-        RegisterFrameLength = StagedArgumentCount;
-        StagedArgumentCount = 0;
+        RegisterFrameLength = StageLength;
+        StageLength = 0;
         return RegisterFrameStart + RegisterFrameLength <= RegisterSlots.Length || RaiseError($"Register overflow");
     }
 
@@ -243,11 +246,17 @@ internal struct VmState
                 break;
         }
     }
-
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ClearStage()
+    {
+        StageLength = 0;
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref VmValue AddStageSlot()
     {
-        var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StagedArgumentCount++;
+        var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength++;
         if (stageRegisterIndex >= RegisterSlots.Length) 
         {
             // FIXME: Here we might want to let the register frame grow.

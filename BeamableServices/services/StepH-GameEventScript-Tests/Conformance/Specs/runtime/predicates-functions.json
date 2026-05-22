@@ -14,9 +14,18 @@
               "unit": {
                 "type": ":map",
                 "entries": {
-                  "name": { "type": ":text", "value": "Ada" },
-                  "hp": { "type": ":integer", "value": "2" },
-                  "maxHp": { "type": ":integer", "value": "5" }
+                  "name": {
+                    "type": ":text",
+                    "value": "Ada"
+                  },
+                  "hp": {
+                    "type": ":integer",
+                    "value": "2"
+                  },
+                  "maxHp": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
               },
               "units": {
@@ -25,25 +34,52 @@
                   {
                     "type": ":map",
                     "entries": {
-                      "name": { "type": ":text", "value": "Ada" },
-                      "hp": { "type": ":integer", "value": "2" },
-                      "maxHp": { "type": ":integer", "value": "5" }
+                      "name": {
+                        "type": ":text",
+                        "value": "Ada"
+                      },
+                      "hp": {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "5"
+                      }
                     }
                   },
                   {
                     "type": ":map",
                     "entries": {
-                      "name": { "type": ":text", "value": "Bert" },
-                      "hp": { "type": ":integer", "value": "4" },
-                      "maxHp": { "type": ":integer", "value": "4" }
+                      "name": {
+                        "type": ":text",
+                        "value": "Bert"
+                      },
+                      "hp": {
+                        "type": ":integer",
+                        "value": "4"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "4"
+                      }
                     }
                   },
                   {
                     "type": ":map",
                     "entries": {
-                      "name": { "type": ":text", "value": "Cara" },
-                      "hp": { "type": ":integer", "value": "1" },
-                      "maxHp": { "type": ":integer", "value": "3" }
+                      "name": {
+                        "type": ":text",
+                        "value": "Cara"
+                      },
+                      "hp": {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "3"
+                      }
                     }
                   }
                 ]
@@ -54,11 +90,26 @@
             {
               "name": "Done",
               "args": {
-                "byCall": { "type": ":boolean", "value": true },
-                "byPredicate": { "type": ":boolean", "value": true },
-                "woundedCount": { "type": ":integer", "value": "2" },
-                "first": { "type": ":text", "value": "Ada" },
-                "second": { "type": ":text", "value": "Cara" }
+                "byCall": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "byPredicate": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "woundedCount": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "first": {
+                  "type": ":text",
+                  "value": "Ada"
+                },
+                "second": {
+                  "type": ":text",
+                  "value": "Cara"
+                }
               }
             }
           ]
@@ -77,7 +128,10 @@
               "unit": {
                 "type": ":map",
                 "entries": {
-                  "name": { "type": ":text", "value": "NoHp" }
+                  "name": {
+                    "type": ":text",
+                    "value": "NoHp"
+                  }
                 }
               },
               "units": {
@@ -86,15 +140,27 @@
                   {
                     "type": ":map",
                     "entries": {
-                      "name": { "type": ":text", "value": "NoHp" }
+                      "name": {
+                        "type": ":text",
+                        "value": "NoHp"
+                      }
                     }
                   },
                   {
                     "type": ":map",
                     "entries": {
-                      "name": { "type": ":text", "value": "Healthy" },
-                      "hp": { "type": ":integer", "value": "5" },
-                      "maxHp": { "type": ":integer", "value": "5" }
+                      "name": {
+                        "type": ":text",
+                        "value": "Healthy"
+                      },
+                      "hp": {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "5"
+                      }
                     }
                   }
                 ]
@@ -105,9 +171,16 @@
             {
               "name": "Done",
               "args": {
-                "byCall": { "type": ":nothing" },
-                "byPredicate": { "type": ":nothing" },
-                "woundedCount": { "type": ":integer", "value": "0" }
+                "byCall": {
+                  "type": ":nothing"
+                },
+                "byPredicate": {
+                  "type": ":nothing"
+                },
+                "woundedCount": {
+                  "type": ":integer",
+                  "value": "0"
+                }
               }
             }
           ]
@@ -123,18 +196,36 @@
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":integer", "value": "2" }
+              "value": {
+                "type": ":integer",
+                "value": "2"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "byWord": { "type": ":boolean", "value": true },
-                "byBang": { "type": ":boolean", "value": true },
-                "byType": { "type": ":boolean", "value": true },
-                "byEmpty": { "type": ":boolean", "value": true },
-                "byCompare": { "type": ":boolean", "value": false }
+                "byWord": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "byBang": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "byType": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "byEmpty": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "byCompare": {
+                  "type": ":boolean",
+                  "value": false
+                }
               }
             }
           ]
@@ -153,8 +244,14 @@
               "unit": {
                 "type": ":map",
                 "entries": {
-                  "alive": { "type": ":boolean", "value": true },
-                  "hidden": { "type": ":boolean", "value": false }
+                  "alive": {
+                    "type": ":boolean",
+                    "value": true
+                  },
+                  "hidden": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
               }
             }
@@ -163,7 +260,10 @@
             {
               "name": "Done",
               "args": {
-                "targetable": { "type": ":boolean", "value": true }
+                "targetable": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -176,15 +276,30 @@
       "script": "predicate numericPredicate(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byPredicateCallTwo be numericPredicate(2)\n  let byPredicateCallZero be numericPredicate(0)\n  let byFunction be numericSelect(2)\n  let byPredicateOperator be 2 is numericPredicate\n  emit Done(byPredicateCallTwo: byPredicateCallTwo, byPredicateCallZero: byPredicateCallZero, byFunction: byFunction, byPredicateOperator: byPredicateOperator)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "byPredicateCallTwo": { "type": ":boolean", "value": true },
-                "byPredicateCallZero": { "type": ":boolean", "value": false },
-                "byFunction": { "type": ":integer", "value": "4" },
-                "byPredicateOperator": { "type": ":boolean", "value": true }
+                "byPredicateCallTwo": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "byPredicateCallZero": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "byFunction": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "byPredicateOperator": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -200,16 +315,28 @@
           "input": {
             "name": "Start",
             "args": {
-              "left": { "type": ":integer", "value": "7" },
-              "right": { "type": ":integer", "value": "4" }
+              "left": {
+                "type": ":integer",
+                "value": "7"
+              },
+              "right": {
+                "type": ":integer",
+                "value": "4"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "ok": { "type": ":boolean", "value": true },
-                "reversed": { "type": ":boolean", "value": false }
+                "ok": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "reversed": {
+                  "type": ":boolean",
+                  "value": false
+                }
               }
             }
           ]
@@ -219,17 +346,23 @@
     {
       "kind": "scriptApi",
       "name": "typed handler callable and record parameters coerce inputs",
-      "script": "record :gauge as {\n  current: :integer\n}\n\npredicate high(value as :integer) means value > 2\nfunction boosted(_ value as :integer) means value + 1\n\non Start(value as :integer, hp as :gauge) {\n  emit Done(handlerValue: value + 1, ok: value is high, boosted: boosted(value), current: hp.current)\n}",
+      "script": "record :gauge as {\n  current: :number\n}\n\npredicate high(value as :number) means value > 2\nfunction boosted(_ value as :number) means value + 1\n\non Start(value as :number, hp as :gauge) {\n  emit Done(handlerValue: value + 1, ok: value is high, boosted: boosted(value), current: hp.current)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":float", "value": "2" },
+              "value": {
+                "type": ":float",
+                "value": "2"
+              },
               "hp": {
                 "type": ":map",
                 "entries": {
-                  "current": { "type": ":float", "value": "4" }
+                  "current": {
+                    "type": ":float",
+                    "value": "4"
+                  }
                 }
               }
             }
@@ -238,10 +371,22 @@
             {
               "name": "Done",
               "args": {
-                "handlerValue": { "type": ":integer", "value": "3" },
-                "ok": { "type": ":boolean", "value": false },
-                "boosted": { "type": ":integer", "value": "3" },
-                "current": { "type": ":integer", "value": "4" }
+                "handlerValue": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "ok": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "boosted": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "current": {
+                  "type": ":integer",
+                  "value": "4"
+                }
               }
             }
           ]
@@ -254,7 +399,7 @@
       "scripts": [
         {
           "sourceName": "shared.es",
-          "text": "module Shared\nrecord :gauge as {\n  current: :float,\n  maximum: :float\n}\n\npredicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]"
+          "text": "module Shared\nrecord :gauge as {\n  current: :number,\n  maximum: :number\n}\n\npredicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]"
         },
         {
           "sourceName": "runtime.es",
@@ -269,8 +414,14 @@
               "unit": {
                 "type": ":map",
                 "entries": {
-                  "hp": { "type": ":integer", "value": "2" },
-                  "maxHp": { "type": ":integer", "value": "5" }
+                  "hp": {
+                    "type": ":integer",
+                    "value": "2"
+                  },
+                  "maxHp": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
               },
               "units": {
@@ -279,15 +430,27 @@
                   {
                     "type": ":map",
                     "entries": {
-                      "hp": { "type": ":integer", "value": "2" },
-                      "maxHp": { "type": ":integer", "value": "5" }
+                      "hp": {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "5"
+                      }
                     }
                   },
                   {
                     "type": ":map",
                     "entries": {
-                      "hp": { "type": ":integer", "value": "5" },
-                      "maxHp": { "type": ":integer", "value": "5" }
+                      "hp": {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "5"
+                      }
                     }
                   }
                 ]
@@ -298,9 +461,18 @@
             {
               "name": "Done",
               "args": {
-                "anyWounded": { "type": ":boolean", "value": true },
-                "candidateCount": { "type": ":integer", "value": "1" },
-                "maximum": { "type": ":float", "value": "5" }
+                "anyWounded": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "candidateCount": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "maximum": {
+                  "type": ":integer",
+                  "value": "5"
+                }
               }
             }
           ]

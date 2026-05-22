@@ -268,6 +268,11 @@ internal static class GesOptimizer
     private static bool TryFoldConstantExpression(ExpressionNode expression, out ExpressionNode folded)
     {
         folded = expression;
+        if (expression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode)
+        {
+            return false;
+        }
+
         if (!TryEvaluateConstant(expression, out var value))
         {
             return false;
@@ -654,9 +659,9 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                if (unwrapped is GameEventScriptIntegerValue { Value: not long.MinValue } integer)
+                if (unwrapped is GameEventScriptNumberValue { IsIntegerValue: true, IntegerValue: not long.MinValue } integer)
                 {
-                    value = GameEventScriptValueFactory.GesInteger(-integer.Value, integer.Unit);
+                    value = GameEventScriptValueFactory.GesInteger(-integer.IntegerValue, integer.Unit);
                     return true;
                 }
 
@@ -672,7 +677,7 @@ internal static class GesOptimizer
                     return true;
                 }
 
-                value = ToGameEventScriptFloat(NegateNumeric(numeric));
+                value = ToGameEventScriptNumber(NegateNumeric(numeric));
                 return true;
             case GesUnaryOperator.Not:
                 if (operand.IsNothing())
@@ -978,7 +983,7 @@ internal static class GesOptimizer
                     return false;
                 }
 
-                value = ToGameEventScriptFloat(DivideNumeric(leftDivide, rightDivide));
+                value = ToGameEventScriptNumber(DivideNumeric(leftDivide, rightDivide));
                 return true;
             case GesBinaryOperator.Modulo:
                 if (GesValueOperations.TryEvaluatePointBinary(left, "mod", right, out value))
@@ -1179,6 +1184,7 @@ internal static class GesOptimizer
             case "percentage":
                 converted = ConvertToPercentage(value);
                 return true;
+            case "number":
             case "numeric":
                 converted = ConvertToNumber(value);
                 return true;
@@ -1190,12 +1196,6 @@ internal static class GesOptimizer
                 return true;
             case "boolean":
                 converted = GameEventScriptValueFactory.GesBoolean(value.AsBoolean());
-                return true;
-            case "integer":
-                converted = GameEventScriptValueFactory.GesInteger(value.AsInteger());
-                return true;
-            case "float":
-                converted = ConvertToFloat(value);
                 return true;
             case "list":
                 converted = GameEventScriptValueFactory.GesList(value.AsList());
@@ -1268,6 +1268,11 @@ internal static class GesOptimizer
             return value;
         }
 
+        if (value.IsSeries() && value.TryConvertToNumber(out var convertedSeries))
+        {
+            return ConvertToNumber(convertedSeries);
+        }
+
         var unit = GameEventScriptValue.TryGetNumericUnit(value, out var numericUnit)
             ? numericUnit
             : (GameEventScriptNumericUnit?)null;
@@ -1321,7 +1326,7 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        var ratio = unwrapped.Kind == GameEventScriptValueKind.Integer
+        var ratio = unwrapped.IsInteger()
             ? number / 100d
             : number > 1d || number < -1d
                 ? number / 100d
@@ -1343,14 +1348,14 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        if (unwrapped.Kind == GameEventScriptValueKind.Integer &&
+        if (unwrapped is GameEventScriptNumberValue { IsIntegerValue: true } &&
             TryCoerceNumeric(unwrapped, out var integerNumber, out var integerIsFinite) &&
             integerIsFinite)
         {
             return GameEventScriptValueFactory.GesInteger(GameEventScriptValue.ToIntegerSaturated(integerNumber), unit);
         }
 
-        if (unwrapped.Kind == GameEventScriptValueKind.Float &&
+        if (unwrapped.Kind == GameEventScriptValueKind.Number &&
             TryCoerceNumeric(unwrapped, out var number, out var isFinite) &&
             isFinite)
         {
@@ -1458,11 +1463,11 @@ internal static class GesOptimizer
 
         switch (value.Kind)
         {
-            case GameEventScriptValueKind.Integer:
+            case GameEventScriptValueKind.Number when value.IsInteger():
                 number = value.AsInteger();
                 isFinite = true;
                 return true;
-            case GameEventScriptValueKind.Float:
+            case GameEventScriptValueKind.Number:
                 if (!value.IsNaN() && !value.IsInfinity())
                 {
                     number = value.AsNumber();
@@ -1527,7 +1532,7 @@ internal static class GesOptimizer
             return TryCoerceNumericForOperation(convertedTag, out number);
         }
 
-        if (value.Kind == GameEventScriptValueKind.Float)
+        if (value.Kind == GameEventScriptValueKind.Number)
         {
             if (value.IsNaN())
             {
@@ -1544,12 +1549,6 @@ internal static class GesOptimizer
             }
 
             number = NumericValue.Finite(value.AsNumber());
-            return true;
-        }
-
-        if (value.Kind == GameEventScriptValueKind.Integer)
-        {
-            number = NumericValue.Finite(value.AsInteger());
             return true;
         }
 
@@ -1591,27 +1590,18 @@ internal static class GesOptimizer
             _ => GameEventScriptValueFactory.GesFloatNaN()
         };
 
+    private static GameEventScriptValue ToGameEventScriptNumber(NumericValue number)
+        => TryToInteger(number, out var integer)
+            ? GameEventScriptValueFactory.GesInteger(integer)
+            : ToGameEventScriptFloat(number);
+
     private static GameEventScriptValue ToGameEventScriptNumericResult(
         GameEventScriptValue left,
         string operation,
         GameEventScriptValue right,
         NumericValue number)
     {
-        if (operation == "div" &&
-            TryToInteger(number, out var quotient))
-        {
-            return GameEventScriptValueFactory.GesInteger(quotient);
-        }
-
-        if (operation is "+" or "-" or "*" or "mod" or "rem" &&
-            left.Kind == GameEventScriptValueKind.Integer &&
-            right.Kind == GameEventScriptValueKind.Integer &&
-            TryToInteger(number, out var integer))
-        {
-            return GameEventScriptValueFactory.GesInteger(integer);
-        }
-
-        return ToGameEventScriptFloat(number);
+        return ToGameEventScriptNumber(number);
     }
 
     private static bool TryCompareNumeric(NumericValue left, NumericValue right, out int comparison)
@@ -1900,19 +1890,19 @@ internal static class GesOptimizer
             case GameEventScriptValueKind.Boolean:
                 expression = new BooleanLiteralExpressionNode(value.AsBoolean());
                 return true;
-            case GameEventScriptValueKind.Integer:
-                expression = value is GameEventScriptIntegerValue { Unit: { } integerUnit }
+            case GameEventScriptValueKind.Number when value.IsInteger():
+                expression = value is GameEventScriptNumberValue { Unit: { } integerUnit }
                     ? new UnitIntegerLiteralExpressionNode(value.AsInteger(), integerUnit.ToTypeName())
                     : new IntegerLiteralExpressionNode(value.AsInteger());
                 return true;
-            case GameEventScriptValueKind.Float:
+            case GameEventScriptValueKind.Number:
                 if (value.IsNaN() || value.IsInfinity())
                 {
                     expression = default!;
                     return false;
                 }
 
-                expression = value is GameEventScriptFloatValue { Unit: { } unit }
+                expression = value is GameEventScriptNumberValue { Unit: { } unit }
                     ? new UnitFloatLiteralExpressionNode(value.AsNumber(), unit.ToTypeName())
                     : new FloatLiteralExpressionNode(value.AsNumber());
                 return true;

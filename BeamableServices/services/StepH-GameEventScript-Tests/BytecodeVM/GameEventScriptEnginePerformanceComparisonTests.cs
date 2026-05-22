@@ -18,7 +18,7 @@ public sealed class BytecodeVmPerformanceReportTests
         """
         module EnginePerformance
 
-        predicate high(value as :integer) means value >= 10
+        predicate high(value as :number) means value >= 10
 
         on Start(values) {
           let total be values[:filter value where value is high][:select value => value + 5%][:sum value => :integer.floor value]
@@ -35,7 +35,7 @@ public sealed class BytecodeVmPerformanceReportTests
             let myMessage be myHandler(message: 'hello', value: success)
             let myMessageDirect be Success(message: 'world', value: scaled)
           }
-          if folded is high {
+          if folded >= 50% {
             publish FoldedHigh(folded)
           }
           for item from 1 to 16 {

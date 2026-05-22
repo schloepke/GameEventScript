@@ -5,28 +5,45 @@
     {
       "kind": "scriptApi",
       "name": "compile diagnostics record handler bindings and published events",
-      "compileOptions": { "enableDiagnostics": true },
+      "compileOptions": {
+        "enableDiagnostics": true
+      },
       "script": "on Start(value) {\n  let score be value + 2\n  emit Done(result: score)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":float", "value": "5" }
+              "value": {
+                "type": ":float",
+                "value": "5"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "result": { "type": ":float", "value": "7" }
+                "result": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "ParameterBound", "name": "value" },
-            { "kind": "HandlerInvoked", "name": "Start" },
-            { "kind": "EventPublished", "name": "Done" }
+            {
+              "kind": "ParameterBound",
+              "name": "value"
+            },
+            {
+              "kind": "HandlerInvoked",
+              "name": "Start"
+            },
+            {
+              "kind": "EventPublished",
+              "name": "Done"
+            }
           ]
         }
       ]
@@ -34,33 +51,64 @@
     {
       "kind": "scriptApi",
       "name": "compile diagnostics record let and nothing evaluations",
-      "compileOptions": { "enableDiagnostics": true },
+      "compileOptions": {
+        "enableDiagnostics": true
+      },
       "script": "predicate high(value) means value > 3\n\non Start(value) {\n  let score be value + 2\n  let missingValue be missing\n  let isHigh be score is high\n  emit Done(score: score, missingValue: missingValue, isHigh: isHigh)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":integer", "value": "5" }
+              "value": {
+                "type": ":integer",
+                "value": "5"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "score": { "type": ":integer", "value": "7" },
-                "missingValue": { "type": ":nothing" },
-                "isHigh": { "type": ":boolean", "value": true }
+                "score": {
+                  "type": ":integer",
+                  "value": "7"
+                },
+                "missingValue": {
+                  "type": ":nothing"
+                },
+                "isHigh": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "ParameterBound", "name": "value" },
-            { "kind": "HandlerInvoked", "name": "Start" },
-            { "kind": "LetEvaluated", "name": "score" },
-            { "kind": "LetEvaluated", "name": "missingValue" },
-            { "kind": "ExpressionEvaluatedToNothing", "name": "missingValue" },
-            { "kind": "PredicateCalled", "name": "high" }
+            {
+              "kind": "ParameterBound",
+              "name": "value"
+            },
+            {
+              "kind": "HandlerInvoked",
+              "name": "Start"
+            },
+            {
+              "kind": "LetEvaluated",
+              "name": "score"
+            },
+            {
+              "kind": "LetEvaluated",
+              "name": "missingValue"
+            },
+            {
+              "kind": "ExpressionEvaluatedToNothing",
+              "name": "missingValue"
+            },
+            {
+              "kind": "PredicateCalled",
+              "name": "high"
+            }
           ]
         }
       ]
@@ -68,7 +116,9 @@
     {
       "kind": "scriptApi",
       "name": "compile diagnostics record predicate and function calls",
-      "compileOptions": { "enableDiagnostics": true },
+      "compileOptions": {
+        "enableDiagnostics": true
+      },
       "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byPredicate be wounded(unit)\n  let byFunction be woundedUnits(units)\n  emit Done(byPredicate: byPredicate, count: :len byFunction)\n}",
       "steps": [
         {
@@ -78,8 +128,14 @@
               "unit": {
                 "type": ":map",
                 "entries": {
-                  "hp": { "type": ":integer", "value": "2" },
-                  "maxHp": { "type": ":integer", "value": "5" }
+                  "hp": {
+                    "type": ":integer",
+                    "value": "2"
+                  },
+                  "maxHp": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
               },
               "units": {
@@ -88,8 +144,14 @@
                   {
                     "type": ":map",
                     "entries": {
-                      "hp": { "type": ":integer", "value": "2" },
-                      "maxHp": { "type": ":integer", "value": "5" }
+                      "hp": {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      "maxHp": {
+                        "type": ":integer",
+                        "value": "5"
+                      }
                     }
                   }
                 ]
@@ -100,15 +162,30 @@
             {
               "name": "Done",
               "args": {
-                "byPredicate": { "type": ":boolean", "value": true },
-                "count": { "type": ":integer", "value": "1" }
+                "byPredicate": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "count": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "PredicateCalled", "name": "wounded" },
-            { "kind": "FunctionCalled", "name": "woundedUnits" },
-            { "kind": "EventPublished", "name": "Done" }
+            {
+              "kind": "PredicateCalled",
+              "name": "wounded"
+            },
+            {
+              "kind": "FunctionCalled",
+              "name": "woundedUnits"
+            },
+            {
+              "kind": "EventPublished",
+              "name": "Done"
+            }
           ]
         }
       ]
@@ -116,30 +193,47 @@
     {
       "kind": "scriptApi",
       "name": "compile diagnostics can be disabled while host runtime diagnostics remain visible",
-      "compileOptions": { "enableDiagnostics": false },
+      "compileOptions": {
+        "enableDiagnostics": false
+      },
       "script": "on Start(value) {\n  emit Done(value: value)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":integer", "value": "3" }
+              "value": {
+                "type": ":integer",
+                "value": "3"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "value": { "type": ":integer", "value": "3" }
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             }
           ],
           "expectedDiagnostics": [
-            { "kind": "EventPublished", "name": "Done" }
+            {
+              "kind": "EventPublished",
+              "name": "Done"
+            }
           ],
           "unexpectedDiagnostics": [
-            { "kind": "HandlerInvoked", "name": "Start" },
-            { "kind": "ParameterBound", "name": "value" }
+            {
+              "kind": "HandlerInvoked",
+              "name": "Start"
+            },
+            {
+              "kind": "ParameterBound",
+              "name": "value"
+            }
           ]
         }
       ]

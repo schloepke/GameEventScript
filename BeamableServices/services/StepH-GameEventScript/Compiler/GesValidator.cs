@@ -547,14 +547,15 @@ internal static class GesValidator
             declaredTypes,
             new HashSet<string>(StringComparer.Ordinal));
         if (seedType.Kind == StaticExpressionKind.Other &&
-            string.Equals(seedType.TypeName, "integer", StringComparison.Ordinal))
+            (string.Equals(seedType.TypeName, "integer", StringComparison.Ordinal) ||
+             string.Equals(seedType.TypeName, "number", StringComparison.Ordinal)))
         {
             return;
         }
 
         errors.Add(
             parsedScriptContext,
-            "Seeded random seed must statically resolve to unitless :integer; cast dynamic seeds explicitly with 'as :integer'.",
+            "Seeded random seed must statically resolve to a unitless integer number; cast dynamic seeds explicitly with 'as :number'.",
             "random",
             GameEventScriptSymbolKind.Type,
             GameEventScriptCompileErrorKind.InvalidTypeConstructor,
@@ -1359,7 +1360,7 @@ internal static class GesValidator
             ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
         }
 
-        if (constructor.TypeName is "optional" or "number" or "set" or "uuid" or "ref")
+        if (constructor.TypeName is "optional" or "set" or "uuid" or "ref")
         {
             ValidateRemovedType(parsedScriptContext, constructor.TypeName, constructor, errors);
             return;
@@ -1515,7 +1516,7 @@ internal static class GesValidator
 
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or
-            "vector" or "point" or "boolean" or "integer" or "float" or "numeric" or "series" or
+            "vector" or "point" or "boolean" or "number" or "numeric" or "series" or
             "list" or "range" or "message" or "handler" or "envelope" or "map" or "dice" ||
             GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
 
@@ -1530,18 +1531,6 @@ internal static class GesValidator
             errors.Add(
                 parsedScriptContext,
                 "Type ':optional' has been removed; use ':nothing' to represent absence.",
-                typeName,
-                GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
-                sourceNode);
-            return;
-        }
-
-        if (string.Equals(typeName, "number", StringComparison.Ordinal))
-        {
-            errors.Add(
-                parsedScriptContext,
-                "Type ':number' has been removed; use numeric for numeric conversion and checks.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptCompileErrorKind.InvalidTypeConstructor,

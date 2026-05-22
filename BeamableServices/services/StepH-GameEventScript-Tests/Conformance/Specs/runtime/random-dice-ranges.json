@@ -191,7 +191,7 @@
     {
       "kind": "scriptApi",
       "name": "shuffle draw choose and seeded random scopes are deterministic",
-      "script": "on Start(enemies, seed as :integer) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
+      "script": "on Start(enemies, seed as :number) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
       "randomSequence": [
         "1",
         "0",
@@ -317,15 +317,21 @@
     {
       "kind": "scriptApi",
       "name": "dynamic invalid seeded random seed still restores outer random scope",
-      "script": "on Start {\n  let bad as :integer be :nothing\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
+      "script": "on Start {\n  let bad as :number be :nothing\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "valuePresent": { "type": ":boolean", "value": true }
+                "valuePresent": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -913,12 +919,25 @@
                   "type": ":integer",
                   "value": "4"
                 },
-                "kept": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    4
-                  ]
+                "base_1": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "base_2": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "base_3": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "base_4": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "diceTotal": {
+                  "type": ":integer",
+                  "value": "6"
                 },
                 "dropped": {
                   "type": ":dice",
@@ -926,6 +945,17 @@
                     6,
                     3,
                     2
+                  ]
+                },
+                "emptyDropLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "kept": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4
                   ]
                 },
                 "resorted": {
@@ -949,33 +979,9 @@
                     }
                   ]
                 },
-                "emptyDropLen": {
-                  "type": ":integer",
-                  "value": "0"
-                },
                 "takeTooManyLen": {
                   "type": ":integer",
                   "value": "4"
-                },
-                "diceTotal": {
-                  "type": ":float",
-                  "value": "6"
-                },
-                "base_1": {
-                  "type": ":integer",
-                  "value": "6"
-                },
-                "base_2": {
-                  "type": ":integer",
-                  "value": "5"
-                },
-                "base_3": {
-                  "type": ":integer",
-                  "value": "3"
-                },
-                "base_4": {
-                  "type": ":integer",
-                  "value": "2"
                 }
               }
             }

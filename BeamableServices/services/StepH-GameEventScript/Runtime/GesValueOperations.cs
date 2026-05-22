@@ -348,7 +348,7 @@ internal static class GesValueOperations
             return TryCoerceNumericForOperation(convertedTag, out number);
         }
 
-        if (value.Kind == GameEventScriptValueKind.Float)
+        if (value.Kind == GameEventScriptValueKind.Number)
         {
             if (value.IsNaN())
             {
@@ -365,12 +365,6 @@ internal static class GesValueOperations
             }
 
             number = NumericValue.Finite(value.AsNumber());
-            return true;
-        }
-
-        if (value.Kind == GameEventScriptValueKind.Integer)
-        {
-            number = NumericValue.Finite(value.AsInteger());
             return true;
         }
 
@@ -420,23 +414,9 @@ internal static class GesValueOperations
         };
     }
 
-    public static GameEventScriptValue ToGameEventScriptNumericResult(
-        GameEventScriptValue left,
-        string operation,
-        GameEventScriptValue right,
-        NumericValue number,
-        GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptValue ToGameEventScriptNumber(NumericValue number, GameEventScriptNumericUnit? unit = null)
     {
-        if (operation == "div" &&
-            TryToInteger(number, out var quotient))
-        {
-            return GameEventScriptValueFactory.GesInteger(quotient, unit);
-        }
-
-        if (operation is "+" or "-" or "*" or "mod" or "rem" or "^" &&
-            left.Kind == GameEventScriptValueKind.Integer &&
-            right.Kind == GameEventScriptValueKind.Integer &&
-            TryToInteger(number, out var integer))
+        if (TryToInteger(number, out var integer))
         {
             return GameEventScriptValueFactory.GesInteger(integer, unit);
         }
@@ -444,17 +424,30 @@ internal static class GesValueOperations
         return ToGameEventScriptFloat(number, unit);
     }
 
+    public static GameEventScriptValue ToGameEventScriptNumericResult(
+        GameEventScriptValue left,
+        string operation,
+        GameEventScriptValue right,
+        NumericValue number,
+        GameEventScriptNumericUnit? unit = null)
+    {
+        _ = left;
+        _ = operation;
+        _ = right;
+        return ToGameEventScriptNumber(number, unit);
+    }
+
     public static bool TryEvaluateIntegerBinary(GameEventScriptValue left, string operation, GameEventScriptValue right, out GameEventScriptValue value)
     {
-        if (left is not GameEventScriptIntegerValue leftIntegerValue ||
-            right is not GameEventScriptIntegerValue rightIntegerValue)
+        if (left is not GameEventScriptNumberValue { IsIntegerValue: true } leftIntegerValue ||
+            right is not GameEventScriptNumberValue { IsIntegerValue: true } rightIntegerValue)
         {
             value = GameEventScriptNothingValue.Instance;
             return false;
         }
 
-        var leftInteger = leftIntegerValue.Value;
-        var rightInteger = rightIntegerValue.Value;
+        var leftInteger = leftIntegerValue.IntegerValue;
+        var rightInteger = rightIntegerValue.IntegerValue;
         switch (operation)
         {
             case "+":
@@ -573,7 +566,7 @@ internal static class GesValueOperations
                 "+" => ToGameEventScriptPercentage(AddNumeric(leftNumber, rightNumber)),
                 "-" => ToGameEventScriptPercentage(SubtractNumeric(leftNumber, rightNumber)),
                 "*" => ToGameEventScriptPercentage(MultiplyNumeric(leftNumber, rightNumber)),
-                "/" => ToGameEventScriptFloat(DivideNumeric(leftNumber, rightNumber)),
+                "/" => ToGameEventScriptNumber(DivideNumeric(leftNumber, rightNumber)),
                 _ => GameEventScriptValueFactory.GesFloatNaN()
             };
             return true;
@@ -591,7 +584,7 @@ internal static class GesValueOperations
             var result = operation == "+"
                 ? AddNumeric(leftNumber, delta)
                 : SubtractNumeric(leftNumber, delta);
-            value = ToGameEventScriptFloat(result, leftHasUnit ? leftUnit : null);
+            value = ToGameEventScriptNumber(result, leftHasUnit ? leftUnit : null);
             return true;
         }
 
@@ -606,7 +599,7 @@ internal static class GesValueOperations
                 return true;
             }
 
-            value = ToGameEventScriptFloat(result, leftHasUnit ? leftUnit : null);
+            value = ToGameEventScriptNumber(result, leftHasUnit ? leftUnit : null);
             return true;
         }
 
@@ -615,7 +608,7 @@ internal static class GesValueOperations
             var result = DivideNumeric(leftNumber, rightNumber);
             value = leftIsPercentage
                 ? ToGameEventScriptPercentage(result)
-                : ToGameEventScriptFloat(result, leftHasUnit ? leftUnit : null);
+                : ToGameEventScriptNumber(result, leftHasUnit ? leftUnit : null);
             return true;
         }
 
@@ -1038,7 +1031,7 @@ internal static class GesValueOperations
             return GameEventScriptValueFactory.GesFloatNaN();
         }
 
-        if (operand.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer &&
+        if (operand.Kind is GameEventScriptValueKind.Number &&
             TryCoerceNumericForOperation(operand, out var number) &&
             number.IsFinite)
         {
@@ -1775,8 +1768,7 @@ internal static class GesValueOperations
         return value.Kind switch
         {
             GameEventScriptValueKind.Text => value.AsText(),
-            GameEventScriptValueKind.Float => value.ToString(),
-            GameEventScriptValueKind.Integer => value.ToString(),
+            GameEventScriptValueKind.Number => value.ToString(),
             GameEventScriptValueKind.Boolean => value.AsBoolean().ToString(),
             _ => value.ToString()
         };

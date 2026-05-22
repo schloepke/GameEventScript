@@ -111,7 +111,7 @@
               "name": "SeenByScript",
               "args": {
                 "value": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "5"
                 }
               }
@@ -270,7 +270,7 @@
               "name": "SeenByScript",
               "args": {
                 "value": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "5"
                 }
               }

@@ -115,6 +115,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case CheckNumeric:
                     break;
+                case CheckInteger:
+                    break;
+                case CheckFractional:
+                    break;
                 case CheckCustomType:
                     break;
                 case CheckUnit:

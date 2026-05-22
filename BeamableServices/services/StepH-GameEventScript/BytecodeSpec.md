@@ -173,10 +173,10 @@ instruction word are encoded by typed load opcodes:
 - `LoadHandler` stores a `UShortListPool` message-shape index in `A`. The shape
   list is `[messageNameStringIndex, argumentNameStringIndex...]`.
 
-Constants are concrete. For example `:integer 1`, `:float 1`, `1m`, and `1s`
-must remain distinct loads even if runtime operations can compare or coerce
-some of them. Larger constants such as future vector/point literals
-should use a normalized data segment instead of reintroducing an object
+Constants are concrete. For example `1`, `1.0`, `1m`, and `1s` remain distinct
+loads. Runtime operations and explicit `:number` casts may normalize finite
+integral results to integer values. Larger constants such as future vector/point
+literals should use a normalized data segment instead of reintroducing an object
 constant pool.
 
 ### Numeric Unit Encoding Target
@@ -226,7 +226,7 @@ Handlers, predicates, and functions may declare optional parameter type hints
 using the same `as :type` language as value coercion:
 
 ```eventscript
-on DamageTaken(unit as :unit, amount as :integer) {
+on DamageTaken(unit as :unit, amount as :number) {
     publish DamageApplied(unit: unit, amount: amount)
 }
 
@@ -555,15 +555,20 @@ for `pc`-based execution.
 - `CheckCustomType dst src typeNameIndex`
 - `CheckUnit dst src unitAndFlags`
 - `CheckNumeric dst src`
+- `CheckInteger dst src`
+- `CheckFractional dst src`
 
 `Cast` and `CheckType` use `TypeOperand` as `GameEventScriptBytecodeTypeKind`.
 Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
-`numeric` is not a declared type kind or `:` tag. It lowers to `CastNumeric` or
-`CheckNumeric`; numeric casts keep integral values as integers and use
-floats only when the value does not fit the integer representation.
+`:number` lowers to `CastNumeric`; numeric casts keep integral values as
+integers and use floats only when the value does not fit the integer
+representation. `is numeric`, `is integer`, and `is fractional` are source-level
+check constructs that lower to `CheckNumeric`, `CheckInteger`, and
+`CheckFractional`. `numeric`, `integer`, and `fractional` are not declared type
+kinds or `:` tags.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
@@ -790,14 +795,14 @@ components do not need explicit zero stages.
 Seeded random no longer has a side table or helper expression opcode. The
 lowerer emits `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
-are valid source literals. Dynamic seeds must be statically visible as unitless
-`:integer`, usually by declaring the value as `:integer` or writing an explicit
-`as :integer` cast.
+are valid source literals. Dynamic seeds must be statically visible as a
+unitless integer number, usually by declaring the value as `:number` or writing
+an explicit `as :number` cast.
 
 Required portable value families:
 
 - primitives: `:nothing`, `:tag`, `:text`, `:boolean`
-- numeric: `:integer`, `:float`, `:percentage`
+- numeric: `:number`, `:percentage`
 - numeric quantities: `:quantity(degree)`/`:quantity(°)`, `:quantity(m)`, `:quantity(s)`
 - vectors: `:vector`
 - points: `:point`
@@ -1072,7 +1077,7 @@ With typed parameters:
 handler DamageTaken(unit, amount)
   params:
     unit -> s0 as :unit
-    amount -> s1 as :integer
+    amount -> s1 as :number
 
 @0000 L_handler_DamageTaken:
 @0000 SlotLocals locals+=localCount

@@ -1070,6 +1070,18 @@ internal sealed class GesParser
                     continue;
                 }
 
+                if (MatchWord("integer"))
+                {
+                    expression = ApplyIsNegation(WithRange(new TypeCheckExpressionNode(expression, "numeric:integer"), expression), negated);
+                    continue;
+                }
+
+                if (MatchWord("fractional"))
+                {
+                    expression = ApplyIsNegation(WithRange(new TypeCheckExpressionNode(expression, "numeric:fractional"), expression), negated);
+                    continue;
+                }
+
                 if (Is(Tag))
                 {
                     var typeName = ParseTypeName();
@@ -2624,11 +2636,6 @@ internal sealed class GesParser
 
     private string ParseTypeName()
     {
-        if (Match(Numeric))
-        {
-            return "numeric";
-        }
-
         if (!Is(Tag))
         {
             var token = Current;

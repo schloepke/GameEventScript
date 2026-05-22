@@ -42,12 +42,13 @@ internal static class VmRegisterMapping
                 destination.SetObject(Point, new VmFloatTriplet(point.X, point.Y, point.Z), EncodeUnit(point.Unit));
                 break;
             }
-            case GameEventScriptValueKind.Float:
-                destination.SetFloat(argument.AsNumber());
+            case GameEventScriptValueKind.Number:
+            {
+                var unit = EncodeUnit(argument is GameEventScriptNumberValue number ? number.Unit : null);
+                if (argument.IsInteger()) destination.SetInteger(argument.AsInteger(), unit);
+                else destination.SetFloat(argument.AsNumber(), unit);
                 break;
-            case GameEventScriptValueKind.Integer:
-                destination.SetInteger(argument.AsInteger());
-                break;
+            }
             case GameEventScriptValueKind.Boolean:
                 destination.SetBoolean(argument.AsBoolean());
                 break;

@@ -61,6 +61,22 @@
             {
               "name": "Done",
               "args": {
+                "average": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "counted": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "highest": {
+                  "type": ":text",
+                  "value": "c"
+                },
+                "lowest": {
+                  "type": ":text",
+                  "value": "b"
+                },
                 "nameCount": {
                   "type": ":integer",
                   "value": "3"
@@ -72,22 +88,6 @@
                 "total": {
                   "type": ":integer",
                   "value": "6"
-                },
-                "counted": {
-                  "type": ":integer",
-                  "value": "2"
-                },
-                "average": {
-                  "type": ":float",
-                  "value": "2"
-                },
-                "highest": {
-                  "type": ":text",
-                  "value": "c"
-                },
-                "lowest": {
-                  "type": ":text",
-                  "value": "b"
                 }
               }
             }
@@ -365,13 +365,19 @@
                   {
                     "type": ":map",
                     "entries": {
-                      "points": { "type": ":integer", "value": "3" }
+                      "points": {
+                        "type": ":integer",
+                        "value": "3"
+                      }
                     }
                   },
                   {
                     "type": ":map",
                     "entries": {
-                      "points": { "type": ":integer", "value": "7" }
+                      "points": {
+                        "type": ":integer",
+                        "value": "7"
+                      }
                     }
                   }
                 ]
@@ -382,10 +388,22 @@
             {
               "name": "Done",
               "args": {
-                "anyKnownFalse": { "type": ":boolean", "value": false },
-                "allKnownFalse": { "type": ":boolean", "value": false },
-                "anyUnknown": { "type": ":boolean", "value": false },
-                "allUnknown": { "type": ":boolean", "value": false }
+                "anyKnownFalse": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "allKnownFalse": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "anyUnknown": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "allUnknown": {
+                  "type": ":boolean",
+                  "value": false
+                }
               }
             }
           ]

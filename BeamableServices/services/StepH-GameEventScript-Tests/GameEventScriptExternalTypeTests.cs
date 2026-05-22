@@ -150,9 +150,9 @@ public sealed class GameEventScriptExternalTypeTests
     {
         [GesConstruct]
         public AimValue(
-            [GesParam("bearing", GameEventScriptValueKind.Float, GameEventScriptNumericUnit.Degree)] double bearing,
-            [GesParam("range", GameEventScriptValueKind.Float, GameEventScriptNumericUnit.Meter)] double range,
-            [GesParam("steps", GameEventScriptValueKind.Integer, GameEventScriptNumericUnit.Meter)] int steps,
+            [GesParam("bearing", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Degree)] double bearing,
+            [GesParam("range", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Meter)] double range,
+            [GesParam("steps", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Meter)] int steps,
             [GesParam("direction", GameEventScriptValueKind.Vector, GameEventScriptNumericUnit.Meter)] GameEventScriptVectorValue direction)
         {
             Bearing = bearing;
@@ -162,38 +162,38 @@ public sealed class GameEventScriptExternalTypeTests
             Checksum = (int)(bearing + range + steps);
         }
 
-        [GesField("bearing", GameEventScriptValueKind.Float, GameEventScriptNumericUnit.Degree)]
+        [GesField("bearing", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Degree)]
         public double Bearing { get; }
 
-        [GesField("range", GameEventScriptValueKind.Float, GameEventScriptNumericUnit.Meter)]
+        [GesField("range", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Meter)]
         public double Range { get; }
 
-        [GesField("steps", GameEventScriptValueKind.Integer, GameEventScriptNumericUnit.Meter)]
+        [GesField("steps", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Meter)]
         public int Steps { get; }
 
         [GesField("direction", GameEventScriptValueKind.Vector, GameEventScriptNumericUnit.Meter)]
         public GameEventScriptVectorValue Direction { get; }
 
-        [GesField("checksum", GameEventScriptValueKind.Integer)]
+        [GesField("checksum", GameEventScriptValueKind.Number)]
         public int Checksum { get; }
     }
 
     [GesExtension("aim")]
     private static class AimExtensionFunctions
     {
-        [GesFunction("score", GameEventScriptValueKind.Integer)]
+        [GesFunction("score", GameEventScriptValueKind.Number)]
         public static long Score([GesParam("_", "aim")] AimValue aim) => aim.Checksum;
 
-        [GesFunction("lead", GameEventScriptValueKind.Float, GameEventScriptNumericUnit.Degree)]
-        public static double Lead([GesParam("heading", GameEventScriptValueKind.Float, GameEventScriptNumericUnit.Degree)] double heading)
+        [GesFunction("lead", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Degree)]
+        public static double Lead([GesParam("heading", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Degree)] double heading)
             => heading + 5d;
 
         [GesFunction("distance")]
-        public static (double, GameEventScriptNumericUnit) Distance([GesParam("value", GameEventScriptValueKind.Float)] double value)
+        public static (double, GameEventScriptNumericUnit) Distance([GesParam("value", GameEventScriptValueKind.Number)] double value)
             => (value, GameEventScriptNumericUnit.Meter);
 
-        [GesFunction("integerDistance", GameEventScriptValueKind.Integer, GameEventScriptNumericUnit.Meter)]
-        public static long IntegerDistance([GesParam("value", GameEventScriptValueKind.Integer, GameEventScriptNumericUnit.Meter)] long value)
+        [GesFunction("integerDistance", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Meter)]
+        public static long IntegerDistance([GesParam("value", GameEventScriptValueKind.Number, GameEventScriptNumericUnit.Meter)] long value)
             => value + 1;
     }
 
@@ -201,7 +201,7 @@ public sealed class GameEventScriptExternalTypeTests
     private static class BoxedExtensionFunctions
     {
         [GesFunction("value")]
-        public static GameEventScriptFastValue Value([GesParam("_", GameEventScriptValueKind.Float)] GameEventScriptValue value)
+        public static GameEventScriptFastValue Value([GesParam("_", GameEventScriptValueKind.Number)] GameEventScriptValue value)
             => GameEventScriptFastValue.FromGameEventScriptValue(value);
     }
 }

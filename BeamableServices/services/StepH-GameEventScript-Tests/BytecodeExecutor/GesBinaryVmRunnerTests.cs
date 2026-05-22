@@ -26,11 +26,6 @@ public sealed class BytecodeExecutorTests
             function divide(_ dividend, _ divisor) means dividend / divisor
             
             on Start(value) {
-                let intA be 10
-                let intB be 20.0
-                
-                let resultInt be intA + intB
-                
                 let someDice be :dice 4d6
                 let someList be [1, :b, 'hello', 0.7m]
                 let someMap be [a: 3, b: 'Jelly', c: 3.3m, d: :pi]

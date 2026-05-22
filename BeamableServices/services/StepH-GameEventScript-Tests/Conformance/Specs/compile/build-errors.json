@@ -33,14 +33,6 @@
     },
     {
       "kind": "compileError",
-      "name": "number helper old type name is rejected",
-      "script": "on Start {\n  let x be 100 as :number\n}",
-      "expectedError": {
-        "messageContains": "number"
-      }
-    },
-    {
-      "kind": "compileError",
       "name": "guarded choice rejects tag otherwise",
       "script": "on Start {\n  let x be 1 when true, :otherwise 0\n}",
       "expectedError": {
@@ -241,7 +233,7 @@
     {
       "kind": "compileError",
       "name": "ref type has been removed",
-      "script": "on Start {\n  let unitRef be :ref(:integer, id: 'unit-42')\n}",
+      "script": "on Start {\n  let unitRef be :ref(:number, id: 'unit-42')\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
@@ -353,7 +345,7 @@
     {
       "kind": "compileError",
       "name": "custom type constructor requires labels",
-      "script": "record :gauge as {\n  current: :float,\n  maximum: :float\n}\n\non Start {\n  let hp be :gauge(10, 20)\n}",
+      "script": "record :gauge as {\n  current: :number,\n  maximum: :number\n}\n\non Start {\n  let hp be :gauge(10, 20)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
@@ -364,7 +356,7 @@
     {
       "kind": "compileError",
       "name": "custom type constructor rejects unknown fields",
-      "script": "record :gauge as {\n  current: :float,\n  maximum: :float\n}\n\non Start {\n  let hp be :gauge(current: 10, unknown: 20)\n}",
+      "script": "record :gauge as {\n  current: :number,\n  maximum: :number\n}\n\non Start {\n  let hp be :gauge(current: 10, unknown: 20)\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
@@ -378,7 +370,7 @@
       "script": "on Start {\n  let value be :random with 5m 1\n  emit Done(value: value)\n}",
       "expectedError": {
         "phase": "build",
-        "messageContains": "unitless :integer"
+        "messageContains": "unitless integer number"
       }
     },
     {
@@ -387,7 +379,7 @@
       "script": "on Start(seed) {\n  let value be :random with seed 1\n  emit Done(value: value)\n}",
       "expectedError": {
         "phase": "build",
-        "messageContains": "as :integer"
+        "messageContains": "as :number"
       }
     },
     {

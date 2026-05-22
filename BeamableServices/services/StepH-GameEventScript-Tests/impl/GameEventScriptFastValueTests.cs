@@ -20,8 +20,8 @@ public sealed class GameEventScriptFastValueTests
         Assert.IsFalse(meter.IsReferenceBacked);
         Assert.IsFalse(percentage.IsReferenceBacked);
         Assert.AreEqual(GameEventScriptValueKind.Boolean, boolean.Kind);
-        Assert.AreEqual(GameEventScriptValueKind.Integer, integer.Kind);
-        Assert.AreEqual(GameEventScriptValueKind.Float, meter.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, integer.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, meter.Kind);
         Assert.AreEqual(GameEventScriptValueKind.Percentage, percentage.Kind);
         Assert.IsTrue(boolean.Boolean);
         Assert.AreEqual(42, integer.Integer);
@@ -88,7 +88,7 @@ public sealed class GameEventScriptFastValueTests
         Assert.IsTrue(nan.IsReferenceBacked);
         Assert.IsTrue(list.IsReferenceBacked);
         Assert.AreEqual(GameEventScriptValueKind.Text, text.Kind);
-        Assert.AreEqual(GameEventScriptValueKind.Float, nan.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, nan.Kind);
         Assert.AreEqual(GameEventScriptValueKind.List, list.Kind);
         Assert.AreEqual("hello", text.Text);
         Assert.IsTrue(nan.ToGameEventScriptValue().IsNaN());

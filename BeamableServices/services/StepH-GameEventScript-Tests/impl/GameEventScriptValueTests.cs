@@ -68,8 +68,7 @@ public class GameEventScriptValueScenarios
             values.Select(v => v switch
             {
                 { Kind: GameEventScriptValueKind.Text } => v.AsText(),
-                { Kind: GameEventScriptValueKind.Float } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
-                { Kind: GameEventScriptValueKind.Integer } => v.AsInteger().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                { Kind: GameEventScriptValueKind.Number } => v.AsNumber().ToString(System.Globalization.CultureInfo.InvariantCulture),
                 { Kind: GameEventScriptValueKind.Boolean } => v.AsBoolean().ToString(),
                 _ => v.ToString()
             }).ToArray());
@@ -94,7 +93,7 @@ public class GameEventScriptValueScenarios
         var distance = GesMeter(100d);
         var duration = GesSeconds(15d);
 
-        Assert.AreEqual(GameEventScriptValueKind.Float, over.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, over.Kind);
         Assert.AreEqual(450d, over.AsNumber());
         Assert.IsTrue(over.IsNumber());
         Assert.IsTrue(over.IsNumericUnit(GameEventScriptNumericUnit.Degree));
@@ -146,8 +145,8 @@ public class GameEventScriptValueScenarios
         Assert.AreNotEqual(unitVector, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitVector.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
         Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptVectorValue)unitVector).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitVector.AsMap()["x"]).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitVector.AsList()[1]).Unit);
+        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitVector.AsMap()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitVector.AsList()[1]).Unit);
         Assert.AreEqual("vector[x: 0m, y: 0m, z: 0m]", unitVector.ToString());
     }
 
@@ -175,8 +174,8 @@ public class GameEventScriptValueScenarios
         Assert.AreNotEqual(unitPoint, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitPoint.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
         Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptPointValue)unitPoint).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitPoint.AsMap()["x"]).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptFloatValue)unitPoint.AsList()[1]).Unit);
+        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitPoint.AsMap()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitPoint.AsList()[1]).Unit);
         Assert.AreEqual("point[x: 0m, y: 0m, z: 0m]", unitPoint.ToString());
     }
 
@@ -281,14 +280,14 @@ public class GameEventScriptValueScenarios
 
     private static void AssertFloat(double expected, GameEventScriptValue actual)
     {
-        Assert.AreEqual(GameEventScriptValueKind.Float, actual.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, actual.Kind);
         Assert.AreEqual(expected, actual.AsNumber());
         Assert.IsFalse(actual.HasNumericUnit());
     }
 
     private static void AssertNumericUnit(double expected, GameEventScriptNumericUnit unit, GameEventScriptValue actual)
     {
-        Assert.AreEqual(GameEventScriptValueKind.Float, actual.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, actual.Kind);
         Assert.AreEqual(expected, actual.AsNumber());
         Assert.IsTrue(actual.IsNumericUnit(unit));
     }
@@ -301,13 +300,13 @@ public class GameEventScriptValueScenarios
 
     private static void AssertNaN(GameEventScriptValue actual)
     {
-        Assert.AreEqual(GameEventScriptValueKind.Float, actual.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, actual.Kind);
         Assert.IsTrue(actual.IsNaN());
     }
 
     private static void AssertInfinity(GameEventScriptValue actual)
     {
-        Assert.AreEqual(GameEventScriptValueKind.Float, actual.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, actual.Kind);
         Assert.IsTrue(actual.IsInfinity());
         Assert.IsFalse(actual.IsNegativeInfinity());
     }

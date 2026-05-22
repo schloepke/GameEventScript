@@ -74,7 +74,7 @@ MembershipOperator ::= "in"
                      | "ends" "with"
 
 TypeOperationExpression ::= RelationalExpression { TypeOperation }
-TypeOperation ::= "is" [ NotOperator ] TypeReference
+TypeOperation ::= "is" [ NotOperator ] ( TypeReference | NumericCheck )
                 | "is" [ NotOperator ] "empty"
                 | "is" [ NotOperator ] "at" "least" AdditiveExpression
                 | "is" [ NotOperator ] "at" "most" AdditiveExpression
@@ -224,13 +224,11 @@ DiceCountWord ::= "three" | "four" | "five" | "six" | "seven"
 ObjectMatchPattern ::= "[" [ ObjectMatchEntry { "," ObjectMatchEntry } ] "]"
 ObjectMatchEntry ::= Identifier ":" ( Expression | ObjectMatchPattern )
 
-TypeReference ::= TypeTag | NumericTypeHelper
-NumericTypeHelper ::= "numeric"
+TypeReference ::= TypeTag
 TypeTag ::= BuiltinTypeTag | CustomTypeTag
 BuiltinTypeTag ::= ":nothing"
                  | ":boolean"
-                 | ":integer"
-                 | ":float"
+                 | ":number"
                  | ":percentage"
                  | ":quantity" "(" UnitName ")"
                  | ":vector"
@@ -247,6 +245,7 @@ BuiltinTypeTag ::= ":nothing"
                  | ":dice"
 CustomTypeTag ::= ":" TagName
 UnitName ::= "m" | "meter" | "s" | "second" | "degree" | "°"
+NumericCheck ::= "numeric" | "integer" | "fractional"
 
 ModuleName ::= Identifier | Message
 Message ::= UpperLetter { NameLetter }

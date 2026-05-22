@@ -188,7 +188,7 @@
     {
       "kind": "scriptApi",
       "name": "computed custom type fields are materialized",
-      "script": "record :gauge as {\n  current: :float clamped between 0 and maximum,\n  maximum: :float clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  emit Done(meter: hp, isMeter: hp is :gauge)\n}",
+      "script": "record :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  emit Done(meter: hp, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": {
@@ -199,26 +199,26 @@
             {
               "name": "Done",
               "args": {
+                "isMeter": {
+                  "type": ":boolean",
+                  "value": true
+                },
                 "meter": {
                   "type": ":gauge",
                   "entries": {
                     "current": {
-                      "type": ":float",
+                      "type": ":integer",
                       "value": "100"
                     },
                     "maximum": {
-                      "type": ":float",
+                      "type": ":integer",
                       "value": "100"
                     },
                     "percentage": {
                       "type": ":percentage",
-                      "value": "1"
+                      "value": "0.01"
                     }
                   }
-                },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": true
                 }
               }
             }
@@ -229,7 +229,7 @@
     {
       "kind": "scriptApi",
       "name": "type constructors convert inline and construct units",
-      "script": "on Start {\n  let heading be :quantity(°)(180)\n  let distance be :quantity(m)(100)\n  let duration be :quantity(s)(15)\n  let product be :float(90°) * :float(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  emit Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :quantity(°))\n}",
+      "script": "on Start {\n  let heading be :quantity(°)(180)\n  let distance be :quantity(m)(100)\n  let duration be :quantity(s)(15)\n  let product be :number(90°) * :number(100m)\n  let ratio be :percentage(25)\n  let textValue be :text(heading)\n  emit Done(heading: heading, distance: distance, duration: duration, product: product, ratio: ratio, textValue: textValue, headingIsDegree: heading is :quantity(°))\n}",
       "steps": [
         {
           "input": {
@@ -240,11 +240,6 @@
             {
               "name": "Done",
               "args": {
-                "heading": {
-                  "type": ":integer",
-                  "value": "180",
-                  "unit": ":degree"
-                },
                 "distance": {
                   "type": ":integer",
                   "value": "100",
@@ -255,9 +250,18 @@
                   "value": "15",
                   "unit": ":second"
                 },
+                "heading": {
+                  "type": ":integer",
+                  "value": "180",
+                  "unit": ":degree"
+                },
+                "headingIsDegree": {
+                  "type": ":boolean",
+                  "value": true
+                },
                 "product": {
                   "type": ":float",
-                  "value": "9000"
+                  "value": "NaN"
                 },
                 "ratio": {
                   "type": ":percentage",
@@ -266,10 +270,6 @@
                 "textValue": {
                   "type": ":text",
                   "value": "180°"
-                },
-                "headingIsDegree": {
-                  "type": ":boolean",
-                  "value": true
                 }
               }
             }
@@ -391,7 +391,7 @@
     {
       "kind": "scriptApi",
       "name": "custom type constructors apply clamp and computed fields",
-      "script": "record :gauge as {\n  current: :float clamped between 0 and maximum,\n  maximum: :float clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
+      "script": "record :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": {
@@ -402,34 +402,34 @@
             {
               "name": "Done",
               "args": {
-                "meter": {
-                  "type": ":gauge",
-                  "entries": {
-                    "current": {
-                      "type": ":float",
-                      "value": "100"
-                    },
-                    "maximum": {
-                      "type": ":float",
-                      "value": "100"
-                    },
-                    "percentage": {
-                      "type": ":percentage",
-                      "value": "1"
-                    }
-                  }
-                },
                 "current": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "100"
-                },
-                "percentage": {
-                  "type": ":percentage",
-                  "value": "1"
                 },
                 "isMeter": {
                   "type": ":boolean",
                   "value": true
+                },
+                "meter": {
+                  "type": ":gauge",
+                  "entries": {
+                    "current": {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    "maximum": {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    "percentage": {
+                      "type": ":percentage",
+                      "value": "0.01"
+                    }
+                  }
+                },
+                "percentage": {
+                  "type": ":percentage",
+                  "value": "0.01"
                 }
               }
             }
@@ -689,20 +689,44 @@
               "name": "Done",
               "args": {
                 "addToBase": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "105"
                 },
-                "subtractFromBase": {
-                  "type": ":float",
-                  "value": "95"
+                "divideBaseByPercent": {
+                  "type": ":integer",
+                  "value": "2000"
                 },
                 "multiplyBaseRight": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "5"
                 },
-                "divideBaseByPercent": {
+                "percentAdd": {
+                  "type": ":percentage",
+                  "value": "0.3"
+                },
+                "percentDivideScalar": {
+                  "type": ":percentage",
+                  "value": "0.05"
+                },
+                "percentDivideZero": {
                   "type": ":float",
-                  "value": "2000"
+                  "value": "Infinity"
+                },
+                "percentProduct": {
+                  "type": ":percentage",
+                  "value": "0.0225"
+                },
+                "percentRatio": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "percentScaleRight": {
+                  "type": ":percentage",
+                  "value": "0.3"
+                },
+                "percentSubtract": {
+                  "type": ":percentage",
+                  "value": "0.1"
                 },
                 "reverseAdd": {
                   "type": ":float",
@@ -712,37 +736,13 @@
                   "type": ":float",
                   "value": "NaN"
                 },
-                "percentAdd": {
-                  "type": ":percentage",
-                  "value": "0.30"
-                },
-                "percentSubtract": {
-                  "type": ":percentage",
-                  "value": "0.10"
-                },
-                "percentScaleRight": {
-                  "type": ":percentage",
-                  "value": "0.30"
-                },
-                "percentDivideScalar": {
-                  "type": ":percentage",
-                  "value": "0.05"
-                },
                 "scalarScaleLeft": {
                   "type": ":float",
-                  "value": "0.30"
+                  "value": "0.3"
                 },
-                "percentProduct": {
-                  "type": ":percentage",
-                  "value": "0.0225"
-                },
-                "percentRatio": {
-                  "type": ":float",
-                  "value": "1"
-                },
-                "percentDivideZero": {
-                  "type": ":float",
-                  "value": "Infinity"
+                "subtractFromBase": {
+                  "type": ":integer",
+                  "value": "95"
                 }
               }
             }
@@ -765,18 +765,13 @@
               "name": "Done",
               "args": {
                 "meterAddPercent": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "105",
                   "unit": ":meter"
                 },
-                "meterSubtractPercent": {
-                  "type": ":float",
-                  "value": "95",
-                  "unit": ":meter"
-                },
-                "meterMultiplyPercentRight": {
-                  "type": ":float",
-                  "value": "5",
+                "meterDividePercent": {
+                  "type": ":integer",
+                  "value": "2000",
                   "unit": ":meter"
                 },
                 "meterMultiplyPercentLeft": {
@@ -784,20 +779,25 @@
                   "value": "5",
                   "unit": ":meter"
                 },
-                "meterDividePercent": {
-                  "type": ":float",
-                  "value": "2000",
+                "meterMultiplyPercentRight": {
+                  "type": ":integer",
+                  "value": "5",
                   "unit": ":meter"
+                },
+                "meterSubtractPercent": {
+                  "type": ":integer",
+                  "value": "95",
+                  "unit": ":meter"
+                },
+                "percentDivideMeter": {
+                  "type": ":float",
+                  "value": "NaN"
                 },
                 "reverseMeterAdd": {
                   "type": ":float",
                   "value": "NaN"
                 },
                 "reverseMeterSubtract": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
-                "percentDivideMeter": {
                   "type": ":float",
                   "value": "NaN"
                 }
@@ -810,7 +810,7 @@
     {
       "kind": "scriptApi",
       "name": "degree literals preserve raw angles and wrap explicitly",
-      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :quantity(°) be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :float be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :quantity(°))\n}",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :quantity(°) be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :number be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :quantity(°))\n}",
       "steps": [
         {
           "input": {
@@ -821,21 +821,6 @@
             {
               "name": "Done",
               "args": {
-                "fromLiteral": {
-                  "type": ":integer",
-                  "value": "90",
-                  "unit": ":degree"
-                },
-                "overLiteral": {
-                  "type": ":integer",
-                  "value": "360",
-                  "unit": ":degree"
-                },
-                "floatLiteral": {
-                  "type": ":float",
-                  "value": "43.9",
-                  "unit": ":degree"
-                },
                 "addOpen": {
                   "type": ":integer",
                   "value": "450",
@@ -846,19 +831,57 @@
                   "value": "380",
                   "unit": ":degree"
                 },
-                "subtractOpen": {
+                "castOpen": {
                   "type": ":integer",
-                  "value": "-30",
+                  "value": "450",
                   "unit": ":degree"
+                },
+                "floatLiteral": {
+                  "type": ":float",
+                  "value": "43.9",
+                  "unit": ":degree"
+                },
+                "floatValue": {
+                  "type": ":float",
+                  "value": "43.9",
+                  "unit": ":degree"
+                },
+                "fromLiteral": {
+                  "type": ":integer",
+                  "value": "90",
+                  "unit": ":degree"
+                },
+                "isDegree": {
+                  "type": ":boolean",
+                  "value": true
                 },
                 "negOpen": {
                   "type": ":integer",
                   "value": "-90",
                   "unit": ":degree"
                 },
-                "castOpen": {
+                "overLiteral": {
                   "type": ":integer",
-                  "value": "450",
+                  "value": "360",
+                  "unit": ":degree"
+                },
+                "subtractOpen": {
+                  "type": ":integer",
+                  "value": "-30",
+                  "unit": ":degree"
+                },
+                "textValue": {
+                  "type": ":text",
+                  "value": "43.9°"
+                },
+                "wrapCast": {
+                  "type": ":float",
+                  "value": "90",
+                  "unit": ":degree"
+                },
+                "wrapLarge": {
+                  "type": ":float",
+                  "value": "280",
                   "unit": ":degree"
                 },
                 "wrapNegative": {
@@ -870,28 +893,6 @@
                   "type": ":float",
                   "value": "10",
                   "unit": ":degree"
-                },
-                "wrapLarge": {
-                  "type": ":float",
-                  "value": "280",
-                  "unit": ":degree"
-                },
-                "wrapCast": {
-                  "type": ":float",
-                  "value": "90",
-                  "unit": ":degree"
-                },
-                "textValue": {
-                  "type": ":text",
-                  "value": "43.9°"
-                },
-                "floatValue": {
-                  "type": ":float",
-                  "value": "43.9"
-                },
-                "isDegree": {
-                  "type": ":boolean",
-                  "value": true
                 }
               }
             }
@@ -917,52 +918,53 @@
                   "type": ":float",
                   "value": "NaN"
                 },
-                "subtractNumber": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
-                "addPercentRight": {
-                  "type": ":float",
-                  "value": "132",
-                  "unit": ":degree"
-                },
                 "addPercentLeft": {
                   "type": ":float",
                   "value": "NaN"
                 },
-                "subtractPercent": {
-                  "type": ":float",
-                  "value": "108",
+                "addPercentRight": {
+                  "type": ":integer",
+                  "value": "132",
                   "unit": ":degree"
                 },
-                "multiplyPercentRight": {
-                  "type": ":float",
-                  "value": "12",
-                  "unit": ":degree"
-                },
-                "multiplyPercentLeft": {
-                  "type": ":float",
-                  "value": "12",
-                  "unit": ":degree"
-                },
-                "multiplyFloat": {
-                  "type": ":float",
-                  "value": "6",
-                  "unit": ":degree"
+                "ceilDegree": {
+                  "type": ":integer",
+                  "value": "44"
                 },
                 "divideFloat": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "150",
                   "unit": ":degree"
                 },
                 "dividePercent": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "1200",
                   "unit": ":degree"
                 },
-                "wrappedDividePercent": {
+                "divideZero": {
                   "type": ":float",
-                  "value": "120",
+                  "value": "Infinity"
+                },
+                "floorDegree": {
+                  "type": ":integer",
+                  "value": "43"
+                },
+                "greaterDegree": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "lessMixed": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "maxDegree": {
+                  "type": ":integer",
+                  "value": "350",
+                  "unit": ":degree"
+                },
+                "minDegree": {
+                  "type": ":integer",
+                  "value": "10",
                   "unit": ":degree"
                 },
                 "moduloDegree": {
@@ -974,17 +976,28 @@
                   "type": ":float",
                   "value": "NaN"
                 },
-                "divideZero": {
-                  "type": ":float",
-                  "value": "Infinity"
-                },
                 "moduloZero": {
                   "type": ":float",
                   "value": "NaN"
                 },
-                "reverseSubtract": {
+                "multiplyFloat": {
+                  "type": ":integer",
+                  "value": "6",
+                  "unit": ":degree"
+                },
+                "multiplyPercentLeft": {
                   "type": ":float",
-                  "value": "NaN"
+                  "value": "12",
+                  "unit": ":degree"
+                },
+                "multiplyPercentRight": {
+                  "type": ":integer",
+                  "value": "12",
+                  "unit": ":degree"
+                },
+                "percentCompare": {
+                  "type": ":boolean",
+                  "value": false
                 },
                 "reverseDivide": {
                   "type": ":float",
@@ -994,39 +1007,27 @@
                   "type": ":float",
                   "value": "NaN"
                 },
-                "floorDegree": {
-                  "type": ":integer",
-                  "value": "43"
-                },
-                "ceilDegree": {
-                  "type": ":integer",
-                  "value": "44"
+                "reverseSubtract": {
+                  "type": ":float",
+                  "value": "NaN"
                 },
                 "roundEvenDegree": {
                   "type": ":integer",
                   "value": "42"
                 },
-                "minDegree": {
+                "subtractNumber": {
+                  "type": ":float",
+                  "value": "NaN"
+                },
+                "subtractPercent": {
                   "type": ":integer",
-                  "value": "10",
+                  "value": "108",
                   "unit": ":degree"
                 },
-                "maxDegree": {
-                  "type": ":integer",
-                  "value": "350",
+                "wrappedDividePercent": {
+                  "type": ":float",
+                  "value": "120",
                   "unit": ":degree"
-                },
-                "greaterDegree": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "lessMixed": {
-                  "type": ":boolean",
-                  "value": false
-                },
-                "percentCompare": {
-                  "type": ":boolean",
-                  "value": false
                 }
               }
             }
@@ -1037,7 +1038,7 @@
     {
       "kind": "scriptApi",
       "name": "numeric unit literals casts and strict arithmetic",
-      "script": "on Start {\n  let castMeter as :quantity(m) be 100\n  let rawMeter as :float be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :quantity(m), isSecond: 15s is :quantity(s), isFloat: castMeter is :float, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
+      "script": "on Start {\n  let castMeter as :quantity(m) be 100\n  let rawMeter as :number be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :quantity(m), isSecond: 15s is :quantity(s), isFloat: castMeter is :number, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
       "steps": [
         {
           "input": {
@@ -1048,9 +1049,23 @@
             {
               "name": "Done",
               "args": {
+                "castMeter": {
+                  "type": ":integer",
+                  "value": "100",
+                  "unit": ":meter"
+                },
                 "distance": {
                   "type": ":integer",
                   "value": "100",
+                  "unit": ":meter"
+                },
+                "divideSame": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "divideScalar": {
+                  "type": ":integer",
+                  "value": "50",
                   "unit": ":meter"
                 },
                 "duration": {
@@ -1058,14 +1073,9 @@
                   "value": "15",
                   "unit": ":second"
                 },
-                "castMeter": {
-                  "type": ":integer",
-                  "value": "100",
-                  "unit": ":meter"
-                },
-                "rawMeter": {
-                  "type": ":float",
-                  "value": "100"
+                "isFloat": {
+                  "type": ":boolean",
+                  "value": true
                 },
                 "isMeter": {
                   "type": ":boolean",
@@ -1075,22 +1085,19 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "isFloat": {
-                  "type": ":boolean",
-                  "value": true
+                "mixedAdd": {
+                  "type": ":float",
+                  "value": "NaN"
+                },
+                "rawMeter": {
+                  "type": ":integer",
+                  "value": "100",
+                  "unit": ":meter"
                 },
                 "sameAdd": {
                   "type": ":integer",
                   "value": "150",
                   "unit": ":meter"
-                },
-                "mixedAdd": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
-                "wrongAdd": {
-                  "type": ":float",
-                  "value": "NaN"
                 },
                 "scaleLeft": {
                   "type": ":integer",
@@ -1102,15 +1109,6 @@
                   "value": "200",
                   "unit": ":meter"
                 },
-                "divideScalar": {
-                  "type": ":float",
-                  "value": "50",
-                  "unit": ":meter"
-                },
-                "divideSame": {
-                  "type": ":float",
-                  "value": "4"
-                },
                 "unitModulo": {
                   "type": ":integer",
                   "value": "10",
@@ -1121,6 +1119,10 @@
                   "value": "NaN"
                 },
                 "wrapMeter": {
+                  "type": ":float",
+                  "value": "NaN"
+                },
+                "wrongAdd": {
                   "type": ":float",
                   "value": "NaN"
                 }
@@ -1315,7 +1317,7 @@
     {
       "kind": "scriptApi",
       "name": "vector units are preserved in components and conversions",
-      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :float(position)\n  let rawPositionCast as :float be position\n  let remetered be :quantity(m)(rawPosition)\n  let sameMeter be :quantity(m)(position)\n  let wrongUnitVector be :quantity(s)(position)\n  let wrongScalarUnit be :quantity(m)(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
+      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :number(position)\n  let rawPositionCast as :number be position\n  let remetered be :quantity(m)(rawPosition)\n  let sameMeter be :quantity(m)(position)\n  let wrongUnitVector be :quantity(s)(position)\n  let wrongScalarUnit be :quantity(m)(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
       "steps": [
         {
           "input": {
@@ -1326,66 +1328,24 @@
             {
               "name": "Done",
               "args": {
-                "position": {
-                  "type": ":vector",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0",
-                  "unit": ":meter"
-                },
-                "x": {
-                  "type": ":float",
-                  "value": "3",
-                  "unit": ":meter"
-                },
-                "y": {
-                  "type": ":float",
-                  "value": "4",
-                  "unit": ":meter"
-                },
-                "listY": {
-                  "type": ":float",
-                  "value": "4",
-                  "unit": ":meter"
-                },
                 "dictX": {
                   "type": ":float",
                   "value": "3",
                   "unit": ":meter"
                 },
-                "rawPosition": {
+                "flattened": {
                   "type": ":vector",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0"
-                },
-                "rawPositionCast": {
-                  "type": ":vector",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0"
-                },
-                "remetered": {
-                  "type": ":vector",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0",
+                  "x": "1",
+                  "y": "2",
+                  "z": "3",
                   "unit": ":meter"
                 },
-                "sameMeter": {
+                "flattenedConstructed": {
                   "type": ":vector",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0",
+                  "x": "1",
+                  "y": "2",
+                  "z": "3",
                   "unit": ":meter"
-                },
-                "wrongUnitVector": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
-                "wrongScalarUnit": {
-                  "type": ":float",
-                  "value": "NaN"
                 },
                 "lifted": {
                   "type": ":vector",
@@ -1408,18 +1368,51 @@
                   "z": "20",
                   "unit": ":meter"
                 },
-                "flattened": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3",
+                "listY": {
+                  "type": ":float",
+                  "value": "4",
                   "unit": ":meter"
                 },
-                "flattenedConstructed": {
+                "position": {
                   "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3",
+                  "x": "3",
+                  "y": "4",
+                  "z": "0",
+                  "unit": ":meter"
+                },
+                "rawPosition": {
+                  "type": ":nothing"
+                },
+                "rawPositionCast": {
+                  "type": ":nothing"
+                },
+                "remetered": {
+                  "type": ":float",
+                  "value": "NaN"
+                },
+                "sameMeter": {
+                  "type": ":vector",
+                  "x": "3",
+                  "y": "4",
+                  "z": "0",
+                  "unit": ":meter"
+                },
+                "wrongScalarUnit": {
+                  "type": ":float",
+                  "value": "NaN"
+                },
+                "wrongUnitVector": {
+                  "type": ":float",
+                  "value": "NaN"
+                },
+                "x": {
+                  "type": ":float",
+                  "value": "3",
+                  "unit": ":meter"
+                },
+                "y": {
+                  "type": ":float",
+                  "value": "4",
                   "unit": ":meter"
                 }
               }
@@ -1700,7 +1693,7 @@
     {
       "kind": "scriptApi",
       "name": "lookup and empty checks are runtime-visible",
-      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :float be 'abc'\n  emit Done(second: items[2], missing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
+      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :number be 'abc'\n  emit Done(second: items[2], missing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
       "steps": [
         {
           "input": {
@@ -1711,20 +1704,13 @@
             {
               "name": "Done",
               "args": {
-                "second": {
-                  "type": ":integer",
-                  "value": "20"
-                },
-                "missing": {
-                  "type": ":nothing"
+                "emptyList": {
+                  "type": ":boolean",
+                  "value": true
                 },
                 "hp": {
                   "type": ":integer",
                   "value": "7"
-                },
-                "emptyList": {
-                  "type": ":boolean",
-                  "value": true
                 },
                 "invalidHasValue": {
                   "type": ":boolean",
@@ -1732,7 +1718,14 @@
                 },
                 "invalidIsEmpty": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
+                },
+                "missing": {
+                  "type": ":nothing"
+                },
+                "second": {
+                  "type": ":integer",
+                  "value": "20"
                 }
               }
             }
@@ -2105,7 +2098,7 @@
     {
       "kind": "scriptApi",
       "name": "type conversions length checks and type tags",
-      "script": "on Start(valueForLen, a, b, c, d, e, f, g) {\n  let tagOk as :tag be :name\n  let numberOk as :float be '12.2'\n  let numberFail as :float be 'abc'\n  let integerOk as :integer be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], valueForLenLen: :len valueForLen, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :float, cIsInteger: c is :integer, dIsText: d is :text, eIsList: e is :list, fIsMap: f is :map, gIsNothing: g is :nothing)\n}",
+      "script": "on Start(valueForLen, a, b, c, d, e, f, g) {\n  let tagOk as :tag be :name\n  let numberOk as :number be '12.2'\n  let numberFail as :number be 'abc'\n  let integerOk as :number be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], valueForLenLen: :len valueForLen, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :number, cIsInteger: c is :number, dIsText: d is :text, eIsList: e is :list, fIsMap: f is :map, gIsNothing: g is :nothing)\n}",
       "randomSequence": [
         "2",
         "6",
@@ -2164,61 +2157,18 @@
             {
               "name": "Done",
               "args": {
-                "tagOk": {
-                  "type": ":tag",
-                  "value": "name"
-                },
-                "numberOk": {
-                  "type": ":float",
-                  "value": "12.2"
-                },
-                "numberFail": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
-                "integerOk": {
-                  "type": ":integer",
-                  "value": "12"
-                },
-                "booleanOk": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "listLen": {
-                  "type": ":integer",
-                  "value": "2"
-                },
-                "diceFirst": {
-                  "type": ":integer",
-                  "value": "6"
-                },
-                "diceLen": {
-                  "type": ":integer",
-                  "value": "3"
-                },
-                "textLen": {
-                  "type": ":integer",
-                  "value": "3"
-                },
-                "dictLen": {
-                  "type": ":integer",
-                  "value": "2"
-                },
-                "valueForLenLen": {
-                  "type": ":integer",
-                  "value": "1"
-                },
-                "floatLen": {
-                  "type": ":nothing"
-                },
-                "booleanLen": {
-                  "type": ":nothing"
-                },
                 "aIsTag": {
                   "type": ":boolean",
                   "value": true
                 },
                 "bIsFloat": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "booleanLen": {
+                  "type": ":nothing"
+                },
+                "booleanOk": {
                   "type": ":boolean",
                   "value": true
                 },
@@ -2230,6 +2180,18 @@
                   "type": ":boolean",
                   "value": true
                 },
+                "diceFirst": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "diceLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "dictLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
                 "eIsList": {
                   "type": ":boolean",
                   "value": true
@@ -2238,9 +2200,39 @@
                   "type": ":boolean",
                   "value": true
                 },
+                "floatLen": {
+                  "type": ":nothing"
+                },
                 "gIsNothing": {
                   "type": ":boolean",
                   "value": true
+                },
+                "integerOk": {
+                  "type": ":float",
+                  "value": "12.7"
+                },
+                "listLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "numberFail": {
+                  "type": ":nothing"
+                },
+                "numberOk": {
+                  "type": ":float",
+                  "value": "12.2"
+                },
+                "tagOk": {
+                  "type": ":tag",
+                  "value": "name"
+                },
+                "textLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "valueForLenLen": {
+                  "type": ":integer",
+                  "value": "1"
                 }
               }
             }
@@ -2251,7 +2243,7 @@
     {
       "kind": "scriptApi",
       "name": "unary domain conditional and standard integer rounding forms",
-      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :float be 12 when age is :boolean, or 15 when age is :float, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
+      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :number be 12 when age is :boolean, or 15 when age is :number, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
       "steps": [
         {
           "input": {
@@ -2283,23 +2275,27 @@
             {
               "name": "Done",
               "args": {
-                "negInt": {
+                "boolNegation": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "ceil": {
+                  "type": ":integer",
+                  "value": "13"
+                },
+                "floor": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "halfDown": {
                   "type": ":integer",
                   "value": "-12"
                 },
-                "negFloat": {
-                  "type": ":float",
-                  "value": "-12.34"
+                "halfUp": {
+                  "type": ":integer",
+                  "value": "-13"
                 },
-                "negPercent": {
-                  "type": ":percentage",
-                  "value": "-0.25"
-                },
-                "restored": {
-                  "type": ":float",
-                  "value": "12.34"
-                },
-                "boolNegation": {
+                "handCheck": {
                   "type": ":boolean",
                   "value": true
                 },
@@ -2311,15 +2307,19 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "handCheck": {
-                  "type": ":boolean",
-                  "value": true
+                "negFloat": {
+                  "type": ":float",
+                  "value": "-12.34"
                 },
-                "targetCheck": {
-                  "type": ":boolean",
-                  "value": true
+                "negInt": {
+                  "type": ":integer",
+                  "value": "-12"
                 },
-                "oldHasValue": {
+                "negPercent": {
+                  "type": ":percentage",
+                  "value": "-0.25"
+                },
+                "newEmpty": {
                   "type": ":boolean",
                   "value": true
                 },
@@ -2331,33 +2331,13 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "newEmpty": {
+                "oldHasValue": {
                   "type": ":boolean",
                   "value": true
                 },
-                "score": {
+                "restored": {
                   "type": ":float",
-                  "value": "12"
-                },
-                "floor": {
-                  "type": ":integer",
-                  "value": "12"
-                },
-                "ceil": {
-                  "type": ":integer",
-                  "value": "13"
-                },
-                "truncate": {
-                  "type": ":integer",
-                  "value": "-12"
-                },
-                "halfUp": {
-                  "type": ":integer",
-                  "value": "-13"
-                },
-                "halfDown": {
-                  "type": ":integer",
-                  "value": "-12"
+                  "value": "12.34"
                 },
                 "roundEven_12": {
                   "type": ":integer",
@@ -2366,6 +2346,18 @@
                 "roundEven_13": {
                   "type": ":integer",
                   "value": "14"
+                },
+                "score": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "targetCheck": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "truncate": {
+                  "type": ":integer",
+                  "value": "-12"
                 }
               }
             }
@@ -2454,7 +2446,7 @@
                   "value": true
                 },
                 "score": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "5"
                 },
                 "floor": {
@@ -2505,29 +2497,9 @@
             {
               "name": "Done",
               "args": {
-                "wordTrue": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "wordFalse": {
-                  "type": ":boolean",
-                  "value": false
-                },
-                "square": {
-                  "type": ":integer",
-                  "value": "9"
-                },
-                "rightAssoc": {
-                  "type": ":integer",
-                  "value": "512"
-                },
                 "fractional": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "3"
-                },
-                "negativeExponent": {
-                  "type": ":float",
-                  "value": "0.25"
                 },
                 "negatedSquare": {
                   "type": ":integer",
@@ -2537,13 +2509,33 @@
                   "type": ":integer",
                   "value": "9"
                 },
+                "negativeExponent": {
+                  "type": ":float",
+                  "value": "0.25"
+                },
                 "precedence": {
                   "type": ":integer",
                   "value": "38"
                 },
+                "rightAssoc": {
+                  "type": ":integer",
+                  "value": "512"
+                },
+                "square": {
+                  "type": ":integer",
+                  "value": "9"
+                },
                 "unitPower": {
                   "type": ":float",
                   "value": "NaN"
+                },
+                "wordFalse": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "wordTrue": {
+                  "type": ":boolean",
+                  "value": true
                 }
               }
             }
@@ -2578,42 +2570,38 @@
             {
               "name": "Done",
               "args": {
+                "cube": {
+                  "type": ":integer",
+                  "value": "216"
+                },
+                "divide": {
+                  "type": ":integer",
+                  "value": "2"
+                },
                 "doubleX": {
                   "type": ":integer",
                   "value": "6"
                 },
                 "floatY": {
-                  "type": ":float",
+                  "type": ":integer",
                   "value": "15"
+                },
+                "greaterOrEqual": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "lessOrEqual": {
+                  "type": ":boolean",
+                  "value": true
                 },
                 "meter": {
                   "type": ":integer",
                   "value": "2",
                   "unit": ":meter"
                 },
-                "square": {
-                  "type": ":integer",
-                  "value": "9"
-                },
-                "cube": {
-                  "type": ":integer",
-                  "value": "216"
-                },
                 "multiply": {
                   "type": ":integer",
                   "value": "18"
-                },
-                "divide": {
-                  "type": ":float",
-                  "value": "2"
-                },
-                "lessOrEqual": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "greaterOrEqual": {
-                  "type": ":boolean",
-                  "value": true
                 },
                 "notEqual": {
                   "type": ":boolean",
@@ -2622,6 +2610,10 @@
                 "notFlag": {
                   "type": ":boolean",
                   "value": true
+                },
+                "square": {
+                  "type": ":integer",
+                  "value": "9"
                 }
               }
             }
@@ -2632,7 +2624,7 @@
     {
       "kind": "scriptApi",
       "name": "additional unicode mathematical aliases",
-      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  let projected be :list[:select item from 1 to 2↦item + 1]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :float, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :float, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :float, piAlias: ∏ as :float, piGreater: ∏ > 3, eTag: :e as :float, eAlias: ℇ as :float, eLess: ℇ < 3, tauTag: :tau as :float, tauAlias: τ as :float, tauGreater: τ > 6, phiTag: :phi as :float, phiAlias: φ as :float, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])\n}",
+      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  let projected be :list[:select item from 1 to 2↦item + 1]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :number, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :number, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :number, piAlias: ∏ as :number, piGreater: ∏ > 3, eTag: :e as :number, eAlias: ℇ as :number, eLess: ℇ < 3, tauTag: :tau as :number, tauAlias: τ as :number, tauGreater: τ > 6, phiTag: :phi as :number, phiAlias: φ as :number, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])\n}",
       "steps": [
         {
           "input": {
@@ -2652,41 +2644,37 @@
             {
               "name": "Done",
               "args": {
-                "dot": {
-                  "type": ":integer",
-                  "value": "18"
-                },
-                "smallDot": {
-                  "type": ":integer",
-                  "value": "18"
-                },
-                "unicodeMinus": {
-                  "type": ":integer",
-                  "value": "3"
-                },
                 "andAlias": {
                   "type": ":boolean",
                   "value": false
                 },
-                "orAlias": {
-                  "type": ":boolean",
-                  "value": true
+                "cbrtAlias": {
+                  "type": ":integer",
+                  "value": "3"
                 },
-                "xorAlias": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "tagMember": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "tagNotMember": {
-                  "type": ":boolean",
-                  "value": true
+                "cbrtTag": {
+                  "type": ":integer",
+                  "value": "3"
                 },
                 "dictKey": {
                   "type": ":boolean",
                   "value": true
+                },
+                "dot": {
+                  "type": ":integer",
+                  "value": "18"
+                },
+                "eAlias": {
+                  "type": ":float",
+                  "value": "2.71828182845905"
+                },
+                "eLess": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "eTag": {
+                  "type": ":float",
+                  "value": "2.71828182845905"
                 },
                 "infinity": {
                   "type": ":float",
@@ -2700,77 +2688,81 @@
                   "type": ":float",
                   "value": "-Infinity"
                 },
-                "unicodeNegativeInfinity": {
-                  "type": ":float",
-                  "value": "-Infinity"
-                },
-                "piTag": {
-                  "type": ":float",
-                  "value": "3.1415926535897932384626433833"
-                },
-                "piAlias": {
-                  "type": ":float",
-                  "value": "3.1415926535897932384626433833"
-                },
-                "piGreater": {
+                "orAlias": {
                   "type": ":boolean",
                   "value": true
-                },
-                "eTag": {
-                  "type": ":float",
-                  "value": "2.7182818284590452353602874714"
-                },
-                "eAlias": {
-                  "type": ":float",
-                  "value": "2.7182818284590452353602874714"
-                },
-                "eLess": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "tauTag": {
-                  "type": ":float",
-                  "value": "6.2831853071795864769252867666"
-                },
-                "tauAlias": {
-                  "type": ":float",
-                  "value": "6.2831853071795864769252867666"
-                },
-                "tauGreater": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "phiTag": {
-                  "type": ":float",
-                  "value": "1.6180339887498948482045868344"
                 },
                 "phiAlias": {
                   "type": ":float",
-                  "value": "1.6180339887498948482045868344"
+                  "value": "1.61803398874989"
                 },
                 "phiBetween": {
                   "type": ":boolean",
                   "value": true
                 },
-                "sqrtTag": {
+                "phiTag": {
                   "type": ":float",
-                  "value": "9"
+                  "value": "1.61803398874989"
                 },
-                "sqrtAlias": {
+                "piAlias": {
                   "type": ":float",
-                  "value": "9"
+                  "value": "3.14159265358979"
                 },
-                "cbrtTag": {
-                  "type": ":float",
-                  "value": "3"
+                "piGreater": {
+                  "type": ":boolean",
+                  "value": true
                 },
-                "cbrtAlias": {
+                "piTag": {
                   "type": ":float",
-                  "value": "3"
+                  "value": "3.14159265358979"
                 },
                 "projectionAlias": {
                   "type": ":integer",
                   "value": "3"
+                },
+                "smallDot": {
+                  "type": ":integer",
+                  "value": "18"
+                },
+                "sqrtAlias": {
+                  "type": ":integer",
+                  "value": "9"
+                },
+                "sqrtTag": {
+                  "type": ":integer",
+                  "value": "9"
+                },
+                "tagMember": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagNotMember": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tauAlias": {
+                  "type": ":float",
+                  "value": "6.28318530717959"
+                },
+                "tauGreater": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tauTag": {
+                  "type": ":float",
+                  "value": "6.28318530717959"
+                },
+                "unicodeMinus": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "unicodeNegativeInfinity": {
+                  "type": ":float",
+                  "value": "-Infinity"
+                },
+                "xorAlias": {
+                  "type": ":boolean",
+                  "value": true
                 }
               }
             }
@@ -2897,7 +2889,7 @@
     {
       "kind": "scriptApi",
       "name": "missing invalid and large values remain lenient",
-      "script": "on Start(item) {\n  let nanValue as :float be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be missing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
+      "script": "on Start(item) {\n  let nanValue as :number be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be missing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
       "steps": [
         {
           "input": {
@@ -2912,13 +2904,15 @@
             {
               "name": "Done",
               "args": {
-                "nanValue": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
                 "nanPropagated": {
+                  "type": ":nothing"
+                },
+                "nanValue": {
+                  "type": ":nothing"
+                },
+                "neg": {
                   "type": ":float",
-                  "value": "NaN"
+                  "value": "-79228162514264300000000000000"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -2926,16 +2920,12 @@
                 "nothingPropagated": {
                   "type": ":nothing"
                 },
-                "propertyFromNothing": {
-                  "type": ":nothing"
-                },
                 "pos": {
                   "type": ":float",
                   "value": "79228162514264300000000000000"
                 },
-                "neg": {
-                  "type": ":float",
-                  "value": "-79228162514264300000000000000"
+                "propertyFromNothing": {
+                  "type": ":nothing"
                 }
               }
             }
@@ -3008,7 +2998,7 @@
     {
       "kind": "scriptApi",
       "name": "type checks identify primitive custom and first class values",
-      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :integer, intIsFloat: integerValue is :float, percentIsFloat: percentValue is :float, degreeIsFloat: degreeValue is :float, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
       "steps": [
         {
           "input": {
@@ -3017,7 +3007,10 @@
               "custom": {
                 "type": ":gauge",
                 "entries": {
-                  "current": { "type": ":integer", "value": "5" }
+                  "current": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
               }
             }
@@ -3026,24 +3019,78 @@
             {
               "name": "Done",
               "args": {
-                "intIsInteger": { "type": ":boolean", "value": true },
-                "intIsFloat": { "type": ":boolean", "value": true },
-                "percentIsFloat": { "type": ":boolean", "value": true },
-                "degreeIsFloat": { "type": ":boolean", "value": true },
-                "degreeIsDegree": { "type": ":boolean", "value": true },
-                "meterIsMeter": { "type": ":boolean", "value": true },
-                "secondIsSecond": { "type": ":boolean", "value": true },
-                "textIsText": { "type": ":boolean", "value": true },
-                "tagIsTag": { "type": ":boolean", "value": true },
-                "boolIsBoolean": { "type": ":boolean", "value": true },
-                "listIsList": { "type": ":boolean", "value": true },
-                "dictIsMap": { "type": ":boolean", "value": true },
-                "customIsGauge": { "type": ":boolean", "value": true },
-                "customIsMap": { "type": ":boolean", "value": true },
-                "msgIsMessage": { "type": ":boolean", "value": true },
-                "msgIsMap": { "type": ":boolean", "value": false },
-                "handlerIsHandler": { "type": ":boolean", "value": true },
-                "missingIsNothing": { "type": ":boolean", "value": true }
+                "intIsInteger": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "intIsFloat": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "percentIsFloat": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "degreeIsFloat": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "degreeIsDegree": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "meterIsMeter": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "secondIsSecond": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textIsText": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagIsTag": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "boolIsBoolean": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listIsList": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "dictIsMap": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "customIsGauge": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "customIsMap": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "msgIsMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "msgIsMap": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "handlerIsHandler": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "missingIsNothing": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -3053,7 +3100,7 @@
     {
       "kind": "scriptApi",
       "name": "quantity casts checks and constructors normalize numeric units",
-      "script": "record :quantity as {\n  value: :integer\n}\n\non Start {\n  let distance be 100 as :quantity(m)\n  let duration be :quantity(s)(5)\n  let heading be :quantity(degree)(90)\n  let custom be :quantity(value: 3)\n  emit Done(distance: distance, duration: duration, heading: heading, distanceIsMeter: distance is :quantity(m), distanceIsSecond: distance is :quantity(s), symbolIsDegree: heading is :quantity(°), percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)\n}",
+      "script": "record :quantity as {\n  value: :number\n}\n\non Start {\n  let distance be 100 as :quantity(m)\n  let duration be :quantity(s)(5)\n  let heading be :quantity(degree)(90)\n  let custom be :quantity(value: 3)\n  emit Done(distance: distance, duration: duration, heading: heading, distanceIsMeter: distance is :quantity(m), distanceIsSecond: distance is :quantity(s), symbolIsDegree: heading is :quantity(°), percentageIsMeter: 50% is :quantity(m), customIsQuantity: custom is :quantity, customValue: custom.value)\n}",
       "steps": [
         {
           "input": {
@@ -3063,15 +3110,45 @@
             {
               "name": "Done",
               "args": {
-                "distance": { "type": ":integer", "value": "100", "unit": ":meter" },
-                "duration": { "type": ":integer", "value": "5", "unit": ":second" },
-                "heading": { "type": ":integer", "value": "90", "unit": ":degree" },
-                "distanceIsMeter": { "type": ":boolean", "value": true },
-                "distanceIsSecond": { "type": ":boolean", "value": false },
-                "symbolIsDegree": { "type": ":boolean", "value": true },
-                "percentageIsMeter": { "type": ":boolean", "value": false },
-                "customIsQuantity": { "type": ":boolean", "value": true },
-                "customValue": { "type": ":integer", "value": "3" }
+                "distance": {
+                  "type": ":integer",
+                  "value": "100",
+                  "unit": ":meter"
+                },
+                "duration": {
+                  "type": ":integer",
+                  "value": "5",
+                  "unit": ":second"
+                },
+                "heading": {
+                  "type": ":integer",
+                  "value": "90",
+                  "unit": ":degree"
+                },
+                "distanceIsMeter": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "distanceIsSecond": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "symbolIsDegree": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "percentageIsMeter": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "customIsQuantity": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "customValue": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             }
           ]
@@ -3091,9 +3168,18 @@
             {
               "name": "Done",
               "args": {
-                "meter": { "type": ":tag", "value": "meter" },
-                "degree": { "type": ":tag", "value": "degree" },
-                "seconds": { "type": ":tag", "value": "seconds" }
+                "meter": {
+                  "type": ":tag",
+                  "value": "meter"
+                },
+                "degree": {
+                  "type": ":tag",
+                  "value": "degree"
+                },
+                "seconds": {
+                  "type": ":tag",
+                  "value": "seconds"
+                }
               }
             }
           ]
@@ -3103,7 +3189,7 @@
     {
       "kind": "scriptApi",
       "name": "numeric helper keyword casts and checks",
-      "script": "on Start {\n  let integerValue be 12.0 as numeric\n  let floatValue be 12.5 as numeric\n  emit Done(integerValue: integerValue, floatValue: floatValue, integerIsNumeric: integerValue is numeric, textIsNumeric: '12' is numeric, badTextIsNumeric: 'abc' is numeric)\n}",
+      "script": "on Start {\n  let integerValue be 12.0 as :number\n  let floatValue be 12.5 as :number\n  emit Done(integerValue: integerValue, floatValue: floatValue, integerIsNumeric: integerValue is numeric, textIsNumeric: '12' is numeric, badTextIsNumeric: 'abc' is numeric)\n}",
       "steps": [
         {
           "input": {
@@ -3113,11 +3199,26 @@
             {
               "name": "Done",
               "args": {
-                "integerValue": { "type": ":integer", "value": "12" },
-                "floatValue": { "type": ":float", "value": "12.5" },
-                "integerIsNumeric": { "type": ":boolean", "value": true },
-                "textIsNumeric": { "type": ":boolean", "value": true },
-                "badTextIsNumeric": { "type": ":boolean", "value": false }
+                "integerValue": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "floatValue": {
+                  "type": ":float",
+                  "value": "12.5"
+                },
+                "integerIsNumeric": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textIsNumeric": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "badTextIsNumeric": {
+                  "type": ":boolean",
+                  "value": false
+                }
               }
             }
           ]

@@ -30,8 +30,8 @@ declarations:
 module Battle
 
 record :unit as {
-  hp: :integer clamped between 0 and maxHp,
-  maxHp: :integer
+  hp: :number clamped between 0 and maxHp,
+  maxHp: :number
 }
 
 predicate alive(_ unit) means unit.hp > 0
@@ -225,11 +225,11 @@ range to a value first.
 ### Seeded Random Scope
 
 `:` `random with` evaluates a body under a deterministic sub-random scope. The
-seed must statically resolve to a unitless `:integer`; dynamic seeds should be
-cast explicitly.
+seed must statically resolve to a unitless integer number; dynamic seeds should
+be cast explicitly with `as :number`.
 
 ```ges
-:random with seed as :integer {
+:random with seed as :number {
   emit Roll(value: :random from 1 to 6)
 }
 
@@ -363,8 +363,7 @@ The source language recognizes these built-in type tags:
 
 - `:nothing`
 - `:boolean`
-- `:integer`
-- `:float`
+- `:number`
 - `:percentage`
 - `:quantity(m)`, `:quantity(meter)`, `:quantity(s)`, `:quantity(second)`, `:quantity(degree)`, `:quantity(°)`
 - `:vector`
@@ -384,21 +383,28 @@ Custom record types are also type tags:
 
 ```ges
 record :unit as {
-  hp: :integer,
+  hp: :number,
   name: :text
 }
 ```
 
 ### Numbers
 
-`:integer` is signed 64-bit. `:float` is IEEE 754 double precision. Equality
-uses normal floating-point equality; approximate equality uses `=~`, `≈`, or
-`≅`.
+`:number` is the source-level numeric type. Runtime values are represented as
+integer when a finite result is exactly integral and fits signed 64-bit;
+otherwise they are represented as IEEE 754 double precision. Equality uses
+normal IEEE equality; approximate equality uses `=~`, `≈`, or `≅`.
 
-`numeric` is a source-level numeric conversion/check keyword, not a separate
-stored value kind or `:` tag. Casting `as numeric` returns an integer when the numeric value is
-integral and in range; otherwise it returns a float. `NaN` and infinities remain
-float values. Type checks use `is numeric`.
+Numeric checks are keyword constructs, not `:` type tags:
+
+```ges
+value is numeric
+value is integer
+value is fractional
+```
+
+`:integer` and `:float` are not built-in type tags. In expression positions they
+are ordinary tags.
 
 ### Quantities
 
@@ -744,8 +750,8 @@ Records are immutable map-like values with declared fields:
 
 ```ges
 record :gauge as {
-  current: :float clamped between 0 and maximum,
-  maximum: :float clamped between 0 and :infinity,
+  current: :number clamped between 0 and maximum,
+  maximum: :number clamped between 0 and :infinity,
   percentage: :percentage computed by
     0% when maximum <= 0,
     otherwise (current / maximum) as :percentage

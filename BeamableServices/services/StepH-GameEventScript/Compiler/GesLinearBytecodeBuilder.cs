@@ -677,17 +677,18 @@ internal sealed class GesLinearBytecodeBuilder
                         : GameEventScriptValueFactory.GesFloatNaN());
 
             case FloatLiteralExpressionNode floatLiteral:
-                return EmitSourceConstant(state, GameEventScriptValueFactory.GesFloat(floatLiteral.Value));
+                return EmitLoadFloat(
+                    state,
+                    floatLiteral.Value,
+                    (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
 
             case PercentageLiteralExpressionNode percentage:
                 return EmitSourceConstant(state, GameEventScriptValueFactory.GesPercentage(percentage.PercentValue / 100d));
 
             case UnitFloatLiteralExpressionNode unitFloat:
-                return EmitSourceConstant(
-                    state,
-                    GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
-                        ? GameEventScriptValueFactory.GesFloat(unitFloat.Value, unit)
-                        : GameEventScriptValueFactory.GesFloatNaN());
+                return GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
+                    ? EmitLoadFloat(state, unitFloat.Value, EncodeNumericUnitAndFlags(unit))
+                    : EmitSourceConstant(state, GameEventScriptValueFactory.GesFloatNaN());
 
             case TextLiteralExpressionNode text:
                 return EmitSourceConstant(state, GameEventScriptValueFactory.GesText(text.Value));
@@ -938,13 +939,13 @@ internal sealed class GesLinearBytecodeBuilder
                     ? GameEventScriptBytecodeOpCode.LoadTrue
                     : GameEventScriptBytecodeOpCode.LoadFalse);
 
-            case GameEventScriptIntegerValue integer:
+            case GameEventScriptNumberValue { IsIntegerValue: true } integer:
                 return EmitLoadInteger(
                     state,
-                    integer.Value,
+                    integer.IntegerValue,
                     EncodeNumericUnitAndFlags(integer.Unit));
 
-            case GameEventScriptFloatValue floatValue:
+            case GameEventScriptNumberValue floatValue:
                 return EmitLoadFloat(
                     state,
                     EncodeFloatPayload(floatValue),
@@ -2763,7 +2764,7 @@ internal sealed class GesLinearBytecodeBuilder
         return _code.Count - 1;
     }
 
-    private static double EncodeFloatPayload(GameEventScriptFloatValue value)
+    private static double EncodeFloatPayload(GameEventScriptNumberValue value)
     {
         if (value.IsNaNValue)
         {
@@ -2777,7 +2778,7 @@ internal sealed class GesLinearBytecodeBuilder
                 : double.PositiveInfinity;
         }
 
-        return value.Value;
+        return value.NumberValue;
     }
 
     private static byte EncodeNumericUnitAndFlags(GameEventScriptNumericUnit? unit)
@@ -2806,11 +2807,30 @@ internal sealed class GesLinearBytecodeBuilder
                 EncodeNumericUnitAndFlags(unit));
         }
 
-        if (string.Equals(typeName, "numeric", StringComparison.Ordinal))
+        if (string.Equals(typeName, "number", StringComparison.Ordinal) ||
+            string.Equals(typeName, "numeric", StringComparison.Ordinal))
         {
             return (
                 GameEventScriptBytecodeOpCode.CastNumeric,
                 GameEventScriptBytecodeOpCode.CheckNumeric,
+                0,
+                0);
+        }
+
+        if (string.Equals(typeName, "numeric:integer", StringComparison.Ordinal))
+        {
+            return (
+                GameEventScriptBytecodeOpCode.CastNumeric,
+                GameEventScriptBytecodeOpCode.CheckInteger,
+                0,
+                0);
+        }
+
+        if (string.Equals(typeName, "numeric:fractional", StringComparison.Ordinal))
+        {
+            return (
+                GameEventScriptBytecodeOpCode.CastNumeric,
+                GameEventScriptBytecodeOpCode.CheckFractional,
                 0,
                 0);
         }
@@ -2881,7 +2901,8 @@ internal sealed class GesLinearBytecodeBuilder
 
     private static bool IsBuiltInCastType(string typeName)
     {
-        return string.Equals(typeName, "numeric", StringComparison.Ordinal) ||
+        return string.Equals(typeName, "number", StringComparison.Ordinal) ||
+               string.Equals(typeName, "numeric", StringComparison.Ordinal) ||
                TryGetQuantityUnit(typeName, out _) ||
                TryGetBytecodeTypeKind(typeName, out _);
     }
@@ -2904,8 +2925,6 @@ internal sealed class GesLinearBytecodeBuilder
         {
             "nothing" => GameEventScriptBytecodeTypeKind.Nothing,
             "boolean" => GameEventScriptBytecodeTypeKind.Boolean,
-            "integer" => GameEventScriptBytecodeTypeKind.Integer,
-            "float" => GameEventScriptBytecodeTypeKind.Float,
             "percentage" => GameEventScriptBytecodeTypeKind.Percentage,
             "vector" => GameEventScriptBytecodeTypeKind.Vector,
             "point" => GameEventScriptBytecodeTypeKind.Point,

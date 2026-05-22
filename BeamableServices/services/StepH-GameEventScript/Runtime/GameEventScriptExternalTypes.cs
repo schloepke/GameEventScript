@@ -555,7 +555,7 @@ internal static class GameEventScriptExternalTypeNames
 {
     public static string ToTypeName(GameEventScriptValueKind kind, GameEventScriptNumericUnit? unit)
     {
-        if (unit is not null && kind is not (GameEventScriptValueKind.Integer or GameEventScriptValueKind.Float or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point))
+        if (unit is not null && kind is not (GameEventScriptValueKind.Number or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point))
         {
             throw new ArgumentException($"External GameEventScript type '{kind}' cannot declare a numeric unit.", nameof(unit));
         }
@@ -568,8 +568,7 @@ internal static class GameEventScriptExternalTypeNames
             GameEventScriptValueKind.Percentage => "percentage",
             GameEventScriptValueKind.Vector => "vector",
             GameEventScriptValueKind.Point => "point",
-            GameEventScriptValueKind.Float => unit?.ToTypeName() ?? "float",
-            GameEventScriptValueKind.Integer => unit?.ToTypeName() ?? "integer",
+            GameEventScriptValueKind.Number => unit?.ToTypeName() ?? "number",
             GameEventScriptValueKind.Boolean => "boolean",
             GameEventScriptValueKind.Series => "series",
             GameEventScriptValueKind.Range => "range",
@@ -586,7 +585,7 @@ internal static class GameEventScriptExternalTypeNames
     {
         if (GameEventScriptNumericUnits.TryParseTypeName(typeName, out var unit))
         {
-            return (GameEventScriptValueKind.Float, unit);
+            return (GameEventScriptValueKind.Number, unit);
         }
 
         return typeName switch
@@ -597,8 +596,7 @@ internal static class GameEventScriptExternalTypeNames
             "percentage" => (GameEventScriptValueKind.Percentage, null),
             "vector" => (GameEventScriptValueKind.Vector, null),
             "point" => (GameEventScriptValueKind.Point, null),
-            "float" or "numeric" => (GameEventScriptValueKind.Float, null),
-            "integer" => (GameEventScriptValueKind.Integer, null),
+            "number" => (GameEventScriptValueKind.Number, null),
             "boolean" => (GameEventScriptValueKind.Boolean, null),
             "series" => (GameEventScriptValueKind.Series, null),
             "range" => (GameEventScriptValueKind.Range, null),
@@ -716,16 +714,10 @@ internal static class GameEventScriptExternalTypeValueConverter
             return GesPoint(point.X, point.Y, point.Z, unit);
         }
 
-        if (kind == GameEventScriptValueKind.Float &&
+        if (kind == GameEventScriptValueKind.Number &&
             unit is not null)
         {
             return GesFloat(value.AsNumber(), unit);
-        }
-
-        if (kind == GameEventScriptValueKind.Integer &&
-            unit is not null)
-        {
-            return GesInteger(value.AsInteger(), unit);
         }
 
         return CoerceToDeclaredTypeCore(value, typeName);
@@ -742,8 +734,7 @@ internal static class GameEventScriptExternalTypeValueConverter
             "degree" => GesDegree(value.AsNumber()),
             "meter" => GesMeter(value.AsNumber()),
             "second" => GesSeconds(value.AsNumber()),
-            "integer" => GesInteger(value.AsInteger()),
-            "float" or "numeric" => GesFloat(value.AsNumber()),
+            "number" => GesFloat(value.AsNumber()),
             "boolean" => GesBoolean(value.AsBoolean()),
             "map" => GesMap(value.AsMap()),
             "list" => GesList(value.AsList()),

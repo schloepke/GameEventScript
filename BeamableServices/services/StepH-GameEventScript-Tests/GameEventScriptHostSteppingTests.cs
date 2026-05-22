@@ -480,7 +480,7 @@ public sealed class GameEventScriptHostSteppingTests
                 predicate high(value) means value >= 2
                 function boost(_ value) means value + 1
 
-                on Start(values, seed as :integer) {
+                on Start(values, seed as :number) {
                   let total be values[:filter value where value is high][:select value => boost(value)][:sum value => value]
                   let seeded be :random with seed :list[:select item from 1 to 3 => :random from 1 to 6]
                   let label be 'high' when total > 6, otherwise 'low'

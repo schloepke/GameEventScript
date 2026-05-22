@@ -231,6 +231,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     CheckCustomType = 0x1B,
     CheckUnit = 0x1C,
     CheckNumeric = 0x1D,
+    CheckInteger = 0x22,
+    CheckFractional = 0x23,
     MoveSlot = 0x1E,
     MemberAccess = 0x1F,
     IndexedAccess = 0x20,

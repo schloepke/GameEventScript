@@ -149,7 +149,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module NumericSugar
 
             on Start(value) {
-              let numericValue be value as numeric
+              let numericValue be value as :number
               let isNumeric be numericValue is numeric
               emit Done(numericValue: numericValue, isNumeric: isNumeric)
             }
@@ -320,7 +320,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             module RandomScopes
 
             on Start(seed) {
-              let value be :random with (seed as :integer) 1
+              let value be :random with (seed as :number) 1
               emit Done(value: value)
             }
             """;
@@ -549,7 +549,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsFalse(dump.Contains("IntAdd", StringComparison.Ordinal));
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));
         Assert.HasCount(1, received);
-        Assert.AreEqual(GameEventScriptValueKind.Float, received[0].Arguments["result"].Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Number, received[0].Arguments["result"].Kind);
         Assert.AreEqual(30d, received[0].Arguments["result"].AsNumber());
     }
 
@@ -2375,9 +2375,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """
             module Runtime
 
-            function boosted(_ value as :integer) means value + 1
+            function boosted(_ value as :number) means value + 1
 
-            on Start(value as :integer) {
+            on Start(value as :number) {
               emit Done(value: boosted(value))
             }
             """;
@@ -2389,12 +2389,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.AreEqual("Start(value)", GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels));
         Assert.AreEqual("boosted(_)", GameEventScriptMessageSignature.CreateSignatureId(callable.Name, callable.SignatureLabels));
-        Assert.AreEqual("integer", handler.ParameterTypes[0]);
-        Assert.AreEqual("integer", callable.ParameterTypes[0]);
+        Assert.AreEqual("number", handler.ParameterTypes[0]);
+        Assert.AreEqual("number", callable.ParameterTypes[0]);
         StringAssert.Contains(dump, "handler #0 Start(value)");
-        StringAssert.Contains(dump, "params=[value as :integer]");
+        StringAssert.Contains(dump, "params=[value as :number]");
         StringAssert.Contains(dump, "callable #0 Function boosted(_) entry=@");
-        StringAssert.Contains(dump, "params=[value as :integer]");
+        StringAssert.Contains(dump, "params=[value as :number]");
     }
 
     [TestMethod]

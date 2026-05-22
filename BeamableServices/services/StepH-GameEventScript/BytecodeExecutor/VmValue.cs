@@ -85,10 +85,21 @@ public struct VmValue
 
     public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
-        Kind = Float;
-        Flags = value != 0 && double.IsFinite(value) && !double.IsNaN(value) ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (double.IsFinite(value) && value is >= long.MinValue and <= long.MaxValue && value == Math.Truncate(value))
+        {
+            var intValue = (long)value;
+            Kind = Integer;
+            Flags = intValue != 0 ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
+            IntegerValue = intValue;
+        }
+        else
+        {
+            Kind = Float;
+            Flags = value != 0 && double.IsFinite(value) && !double.IsNaN(value) ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
+            FloatValue = value;
+        }
         Unit = unit;
-        FloatValue = value;
         ObjectValue = null;
     }
 

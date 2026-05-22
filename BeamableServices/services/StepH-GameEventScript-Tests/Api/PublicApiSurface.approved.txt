@@ -173,6 +173,8 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field MemberAccess = 31
   enum-field IndexedAccess = 32
   enum-field BindHandler = 33
+  enum-field CheckInteger = 34
+  enum-field CheckFractional = 35
   enum-field LoadNothing = 48
   enum-field LoadTrue = 49
   enum-field LoadFalse = 50
@@ -547,6 +549,7 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesMeter(System.Double meters)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesNothing()
+  method static StepH.GameEventScript.Types.GameEventScriptValue GesNumber(System.Double value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesPercentage(System.Double ratio)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesPoint(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
@@ -722,6 +725,7 @@ struct StepH.GameEventScript.Runtime.GameEventScriptFastValue
   property StepH.GameEventScript.Types.GameEventScriptNumericUnit? Unit { get }
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Boolean Boolean { get }
+  property System.Boolean IsIntegerNumber { get }
   property System.Boolean IsReferenceBacked { get }
   property System.Double Number { get }
   property System.Double X { get }
@@ -839,22 +843,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptDiceValue
   method static StepH.GameEventScript.Types.GameEventScriptDiceValue Create(System.Collections.Generic.IEnumerable<System.Int32> rolls)
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Collections.Generic.IReadOnlyList<System.Int32> Rolls { get }
-sealed class StepH.GameEventScript.Types.GameEventScriptFloatValue
-  field static StepH.GameEventScript.Types.GameEventScriptFloatValue Infinity
-  field static StepH.GameEventScript.Types.GameEventScriptFloatValue NaN
-  field static StepH.GameEventScript.Types.GameEventScriptFloatValue NegativeInfinity
-  method System.Boolean AsBoolean()
-  method System.Boolean HasSemanticValue()
-  method System.Double AsNumber()
-  method System.Int64 AsInteger()
-  method System.String AsText()
-  method static StepH.GameEventScript.Types.GameEventScriptFloatValue Create(System.Double value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
-  property StepH.GameEventScript.Types.GameEventScriptNumericUnit? Unit { get }
-  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
-  property System.Boolean IsInfinityValue { get }
-  property System.Boolean IsNaNValue { get }
-  property System.Boolean IsNegativeInfinityValue { get }
-  property System.Double Value { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptHandlerValue
   field static StepH.GameEventScript.Types.GameEventScriptHandlerValue Empty
   method System.Boolean TryGetMapMember(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
@@ -864,15 +852,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptHandlerValue
   property StepH.GameEventScript.Api.GameEventScriptMessageSignature Signature { get }
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> Members { get }
-sealed class StepH.GameEventScript.Types.GameEventScriptIntegerValue
-  method System.Boolean AsBoolean()
-  method System.Double AsNumber()
-  method System.Int64 AsInteger()
-  method System.String AsText()
-  method static StepH.GameEventScript.Types.GameEventScriptIntegerValue Create(System.Int64 value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
-  property StepH.GameEventScript.Types.GameEventScriptNumericUnit? Unit { get }
-  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
-  property System.Int64 Value { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptListValue
   field static StepH.GameEventScript.Types.GameEventScriptListValue Empty
   method StepH.GameEventScript.Types.GameEventScriptDiceValue AsDice()
@@ -918,6 +897,26 @@ sealed class StepH.GameEventScript.Types.GameEventScriptNothingValue
   method System.Int64 AsInteger()
   method System.String AsText()
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
+sealed class StepH.GameEventScript.Types.GameEventScriptNumberValue
+  field static StepH.GameEventScript.Types.GameEventScriptNumberValue Infinity
+  field static StepH.GameEventScript.Types.GameEventScriptNumberValue NaN
+  field static StepH.GameEventScript.Types.GameEventScriptNumberValue NegativeInfinity
+  method System.Boolean AsBoolean()
+  method System.Boolean HasSemanticValue()
+  method System.Double AsNumber()
+  method System.Int64 AsInteger()
+  method System.String AsText()
+  method static StepH.GameEventScript.Types.GameEventScriptNumberValue CreateFloat(System.Double value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
+  method static StepH.GameEventScript.Types.GameEventScriptNumberValue CreateInteger(System.Int64 value, StepH.GameEventScript.Types.GameEventScriptNumericUnit? unit)
+  property StepH.GameEventScript.Types.GameEventScriptNumericUnit? Unit { get }
+  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
+  property System.Boolean IsFractionalValue { get }
+  property System.Boolean IsInfinityValue { get }
+  property System.Boolean IsIntegerValue { get }
+  property System.Boolean IsNaNValue { get }
+  property System.Boolean IsNegativeInfinityValue { get }
+  property System.Double NumberValue { get }
+  property System.Int64 IntegerValue { get }
 enum StepH.GameEventScript.Types.GameEventScriptNumericUnit
   enum-field Degree = 0
   enum-field Meter = 1
@@ -1026,6 +1025,7 @@ abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method System.Boolean HasNumericUnit()
   method System.Boolean HasSemanticValue()
   method System.Boolean IsDice()
+  method System.Boolean IsFractional()
   method System.Boolean IsHandler()
   method System.Boolean IsInfinity()
   method System.Boolean IsInteger()
@@ -1075,16 +1075,15 @@ enum StepH.GameEventScript.Types.GameEventScriptValueKind
   enum-field Percentage = 3
   enum-field Vector = 4
   enum-field Point = 5
-  enum-field Float = 6
-  enum-field Integer = 7
-  enum-field Boolean = 8
-  enum-field Series = 9
-  enum-field Range = 10
-  enum-field Message = 11
-  enum-field Handler = 12
-  enum-field List = 13
-  enum-field Map = 14
-  enum-field Dice = 15
+  enum-field Number = 6
+  enum-field Boolean = 7
+  enum-field Series = 8
+  enum-field Range = 9
+  enum-field Message = 10
+  enum-field Handler = 11
+  enum-field List = 12
+  enum-field Map = 13
+  enum-field Dice = 14
 sealed class StepH.GameEventScript.Types.GameEventScriptVectorValue
   field static StepH.GameEventScript.Types.GameEventScriptVectorValue Zero
   method System.Boolean AsBoolean()

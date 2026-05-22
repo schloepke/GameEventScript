@@ -305,7 +305,7 @@ internal static class GesStandardExtensions
             return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
 
-        if (input.Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer)
+        if (input.Kind is GameEventScriptValueKind.Number)
         {
             return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptNumericUnit.Degree);
         }
@@ -403,8 +403,7 @@ internal static class GesStandardExtensions
 
         switch (input.Kind)
         {
-            case GameEventScriptValueKind.Float:
-            case GameEventScriptValueKind.Integer:
+            case GameEventScriptValueKind.Number:
             case GameEventScriptValueKind.Percentage:
             case GameEventScriptValueKind.Boolean:
                 number = GesValueOperations.NumericValue.Finite(input.Number);

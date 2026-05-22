@@ -17,8 +17,7 @@ public enum GameEventScriptValueKind
     Percentage,
     Vector,
     Point,
-    Float,
-    Integer,
+    Number,
     Boolean,
     Series,
     Range,
@@ -41,10 +40,11 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public static IComparer<GameEventScriptValue> StableComparer { get; } = new StableGameEventScriptValueComparer();
 
-    public bool IsNumber() => Kind is GameEventScriptValueKind.Float or GameEventScriptValueKind.Integer or GameEventScriptValueKind.Percentage;
+    public bool IsNumber() => Kind is GameEventScriptValueKind.Number or GameEventScriptValueKind.Percentage;
     public bool IsNothing() => Kind == GameEventScriptValueKind.Nothing;
     public bool IsTag() => Kind == GameEventScriptValueKind.Tag;
-    public bool IsInteger() => Kind == GameEventScriptValueKind.Integer;
+    public bool IsInteger() => this is GameEventScriptNumberValue { IsIntegerValue: true };
+    public bool IsFractional() => this is GameEventScriptNumberValue { IsFractionalValue: true };
     public bool IsText() => Kind == GameEventScriptValueKind.Text;
     public bool IsPercentage() => Kind == GameEventScriptValueKind.Percentage;
     public bool IsNumericUnit(GameEventScriptNumericUnit unit) => TryGetNumericUnit(this, out var valueUnit) && valueUnit == unit;
@@ -67,9 +67,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual double AsNumber() => 0d;
 
-    public bool IsNaN() => this is GameEventScriptFloatValue { IsNaNValue: true };
-    public bool IsInfinity() => this is GameEventScriptFloatValue { IsInfinityValue: true };
-    public bool IsNegativeInfinity() => this is GameEventScriptFloatValue { IsNegativeInfinityValue: true };
+    public bool IsNaN() => this is GameEventScriptNumberValue { IsNaNValue: true };
+    public bool IsInfinity() => this is GameEventScriptNumberValue { IsInfinityValue: true };
+    public bool IsNegativeInfinity() => this is GameEventScriptNumberValue { IsNegativeInfinityValue: true };
 
     public int CompareTo(GameEventScriptValue? other) => other is null ? 1 : StableComparer.Compare(this, other);
 
@@ -180,7 +180,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public string DescribeType()
     {
-        if (this is GameEventScriptFloatValue { Unit: { } unit })
+        if (this is GameEventScriptNumberValue { Unit: { } unit })
         {
             return $":{ToDisplayTypeName(unit.ToTypeName())}";
         }
@@ -193,8 +193,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Percentage => ":Percentage",
             GameEventScriptValueKind.Vector => ":Vector",
             GameEventScriptValueKind.Point => ":Point",
-            GameEventScriptValueKind.Float => ":Float",
-            GameEventScriptValueKind.Integer => ":Integer",
+            GameEventScriptValueKind.Number => ":Number",
             GameEventScriptValueKind.Boolean => ":Boolean",
             GameEventScriptValueKind.Series => ":Series",
             GameEventScriptValueKind.Range => ":Range",
@@ -217,8 +216,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Percentage => FormatPercentage(((GameEventScriptPercentageValue)this).Ratio),
             GameEventScriptValueKind.Vector => FormatVector((GameEventScriptVectorValue)this),
             GameEventScriptValueKind.Point => FormatPoint((GameEventScriptPointValue)this),
-            GameEventScriptValueKind.Float => FormatFloatValue((GameEventScriptFloatValue)this),
-            GameEventScriptValueKind.Integer => FormatIntegerValue((GameEventScriptIntegerValue)this),
+            GameEventScriptValueKind.Number => FormatNumberValue((GameEventScriptNumberValue)this),
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
             GameEventScriptValueKind.Series => $"series[{((GameEventScriptSeriesValue)this).SignatureId} offset {((GameEventScriptSeriesValue)this).Offset}]",
             GameEventScriptValueKind.Range => $"range[{((GameEventScriptRangeValue)this).From} to {((GameEventScriptRangeValue)this).To} step {((GameEventScriptRangeValue)this).Step}]",
@@ -267,8 +265,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                                               ((GameEventScriptPointValue)this).Y == ((GameEventScriptPointValue)other).Y &&
                                               ((GameEventScriptPointValue)this).Z == ((GameEventScriptPointValue)other).Z &&
                                               ((GameEventScriptPointValue)this).Unit == ((GameEventScriptPointValue)other).Unit,
-            GameEventScriptValueKind.Float => AsNumber() == other.AsNumber(),
-            GameEventScriptValueKind.Integer => AsInteger() == other.AsInteger(),
+            GameEventScriptValueKind.Number => AsNumber() == other.AsNumber(),
             GameEventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
             GameEventScriptValueKind.Series => ((GameEventScriptSeriesValue)this).SignatureId == ((GameEventScriptSeriesValue)other).SignatureId &&
                                                ((GameEventScriptSeriesValue)this).Offset == ((GameEventScriptSeriesValue)other).Offset,
@@ -545,8 +542,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         return value.Kind switch
         {
             GameEventScriptValueKind.Text => value.AsText(),
-                GameEventScriptValueKind.Float => value.ToString(),
-                GameEventScriptValueKind.Integer => value.AsInteger().ToString(CultureInfo.InvariantCulture),
+                GameEventScriptValueKind.Number => value.ToString(),
                 GameEventScriptValueKind.Boolean => value.AsBoolean().ToString(),
                 _ => value.ToString()
         };
@@ -757,7 +753,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     internal static string FormatPercentage(double ratio) => $"{(ratio * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%";
 
-    internal static string FormatFloatValue(GameEventScriptFloatValue value)
+    internal static string FormatNumberValue(GameEventScriptNumberValue value)
     {
         if (value.IsNaNValue)
         {
@@ -769,15 +765,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             return value.IsNegativeInfinityValue ? "-Infinity" : "Infinity";
         }
 
-        var formatted = value.Value.ToString("0.############################", CultureInfo.InvariantCulture);
-        return value.Unit.HasValue
-            ? $"{formatted}{value.Unit.Value.ToSuffix()}"
-            : formatted;
-    }
-
-    internal static string FormatIntegerValue(GameEventScriptIntegerValue value)
-    {
-        var formatted = value.Value.ToString(CultureInfo.InvariantCulture);
+        var formatted = value.IsIntegerValue
+            ? value.IntegerValue.ToString(CultureInfo.InvariantCulture)
+            : value.NumberValue.ToString("0.############################", CultureInfo.InvariantCulture);
         return value.Unit.HasValue
             ? $"{formatted}{value.Unit.Value.ToSuffix()}"
             : formatted;
@@ -796,13 +786,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     internal static bool TryGetNumericUnit(GameEventScriptValue value, out GameEventScriptNumericUnit unit)
     {
-        if (value is GameEventScriptIntegerValue { Unit: { } integerUnit })
-        {
-            unit = integerUnit;
-            return true;
-        }
-
-        if (value is GameEventScriptFloatValue { Unit: { } floatUnit })
+        if (value is GameEventScriptNumberValue { Unit: { } floatUnit })
         {
             unit = floatUnit;
             return true;

@@ -232,13 +232,13 @@
 					</dict>
 					<dict>
 						<key>match</key>
-						<string>\bnumeric\b</string>
+						<string>(?<!:)\b(?:numeric|integer|fractional)\b</string>
 						<key>name</key>
 						<string>support.type.primitive.gameeventscript</string>
 					</dict>
 					<dict>
 						<key>match</key>
-						<string>:(?:quantity\((?:m|meter|s|second|degree|°)\)|nothing|text|boolean|integer|float|percentage|vector|point|series|range|message|handler|envelope|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
+						<string>:(?:quantity\((?:m|meter|s|second|degree|°)\)|nothing|text|boolean|number|percentage|vector|point|series|range|message|handler|envelope|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
 						<key>name</key>
 						<string>support.type.primitive.gameeventscript</string>
 					</dict>

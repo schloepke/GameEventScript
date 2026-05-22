@@ -930,7 +930,10 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static void ValidateCastOrTypeCheckOperand(GameEventScriptCompiled module, GameEventScriptBytecodeInstruction instruction, string context)
     {
-        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.CheckNumeric)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or
+            GameEventScriptBytecodeOpCode.CheckNumeric or
+            GameEventScriptBytecodeOpCode.CheckInteger or
+            GameEventScriptBytecodeOpCode.CheckFractional)
         {
             ValidateNoFlags(instruction.UnitAndFlags, $"{context} flags");
             return;
@@ -1130,6 +1133,8 @@ internal sealed class GesBytecodeVmLinearExecutable
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.CheckType or
             GameEventScriptBytecodeOpCode.CheckNumeric or
+            GameEventScriptBytecodeOpCode.CheckInteger or
+            GameEventScriptBytecodeOpCode.CheckFractional or
             GameEventScriptBytecodeOpCode.CheckCustomType or
             GameEventScriptBytecodeOpCode.CheckUnit;
 

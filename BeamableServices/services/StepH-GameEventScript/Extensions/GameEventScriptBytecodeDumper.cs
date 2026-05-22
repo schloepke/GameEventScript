@@ -817,6 +817,8 @@ public static class GameEventScriptBytecodeDumper
     private static bool IsTypeCheckInstruction(GameEventScriptBytecodeOpCode opCode)
         => opCode is GameEventScriptBytecodeOpCode.CheckType or
             GameEventScriptBytecodeOpCode.CheckNumeric or
+            GameEventScriptBytecodeOpCode.CheckInteger or
+            GameEventScriptBytecodeOpCode.CheckFractional or
             GameEventScriptBytecodeOpCode.CheckCustomType or
             GameEventScriptBytecodeOpCode.CheckUnit;
 
@@ -825,6 +827,18 @@ public static class GameEventScriptBytecodeDumper
         if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastNumeric or GameEventScriptBytecodeOpCode.CheckNumeric)
         {
             builder.Append(" kind=numeric");
+            return;
+        }
+
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.CheckInteger)
+        {
+            builder.Append(" kind=integer");
+            return;
+        }
+
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.CheckFractional)
+        {
+            builder.Append(" kind=fractional");
             return;
         }
 

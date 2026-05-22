@@ -168,8 +168,7 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
             GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
             GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
-            GameEventScriptValueKind.Integer => ToIntegerJson((GameEventScriptIntegerValue)value),
-            GameEventScriptValueKind.Float => ToFloatJson((GameEventScriptFloatValue)value),
+            GameEventScriptValueKind.Number => ToNumberJson((GameEventScriptNumberValue)value),
             GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
             GameEventScriptValueKind.Vector => ToVectorJson((GameEventScriptVectorValue)value),
             GameEventScriptValueKind.Point => ToPointJson((GameEventScriptPointValue)value),
@@ -310,7 +309,10 @@ internal static class GameEventScriptConformanceValueCodec
             ["step"] = GetInternalProperty<long>(value, "Step").ToString(CultureInfo.InvariantCulture)
         };
 
-    private static JsonObject ToFloatJson(GameEventScriptFloatValue value)
+    private static JsonObject ToNumberJson(GameEventScriptNumberValue value)
+        => value.IsIntegerValue ? ToIntegerJson(value) : ToFloatJson(value);
+
+    private static JsonObject ToFloatJson(GameEventScriptNumberValue value)
     {
         var node = new JsonObject
         {
@@ -326,12 +328,12 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
-    private static JsonObject ToIntegerJson(GameEventScriptIntegerValue value)
+    private static JsonObject ToIntegerJson(GameEventScriptNumberValue value)
     {
         var node = new JsonObject
         {
             ["type"] = ":integer",
-            ["value"] = value.Value.ToString(CultureInfo.InvariantCulture)
+            ["value"] = value.IntegerValue.ToString(CultureInfo.InvariantCulture)
         };
 
         if (value.Unit.HasValue)

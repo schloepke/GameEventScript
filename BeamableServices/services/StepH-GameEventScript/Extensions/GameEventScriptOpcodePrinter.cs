@@ -204,6 +204,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CastUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
             GameEventScriptBytecodeOpCode.CheckType => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_TypeKind],
             GameEventScriptBytecodeOpCode.CheckNumeric => [DST_U16_TargetSlot, A_U16_SourceSlot],
+            GameEventScriptBytecodeOpCode.CheckInteger => [DST_U16_TargetSlot, A_U16_SourceSlot],
+            GameEventScriptBytecodeOpCode.CheckFractional => [DST_U16_TargetSlot, A_U16_SourceSlot],
             GameEventScriptBytecodeOpCode.CheckCustomType => [DST_U16_TargetSlot, A_U16_SourceSlot, B_U16_CustomTypeNameIndex],
             GameEventScriptBytecodeOpCode.CheckUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
 

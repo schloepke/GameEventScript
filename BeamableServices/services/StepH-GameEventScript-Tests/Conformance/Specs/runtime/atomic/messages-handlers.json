@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicMessagesHandlers",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "emit static message with one argument",
+      "script": "module AtomicEmitMessage\non Start(value) {\n  emit Done(value: value)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": {
+                "type": ":integer",
+                "value": "21"
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "21"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "emit message value loaded from literal",
+      "script": "module AtomicLoadMessage\non Start(value) {\n  let msg be Done(value: value)\n  emit msg\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": {
+                "type": ":integer",
+                "value": "21"
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "21"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "handler literal binds ordered arguments into message value",
+      "script": "module AtomicBindHandler\non Start(unit, target) {\n  let shoot be Shoot(unit, target)\n  let msg be shoot(unit: unit, target: target)\n  emit msg\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":text",
+                "value": "u_1"
+              },
+              "target": {
+                "type": ":text",
+                "value": "t_1"
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Shoot",
+              "args": {
+                "target": {
+                  "type": ":text",
+                  "value": "t_1"
+                },
+                "unit": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "handler binding with mismatched ordered labels yields no emitted message",
+      "script": "module AtomicInvalidBindHandler\non Start(unit, hp) {\n  let shoot be Shoot(unit, target)\n  let invalid be shoot(unit: unit, hp: hp)\n  emit invalid\n  emit Done\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "unit": {
+                "type": ":text",
+                "value": "u_1"
+              },
+              "hp": {
+                "type": ":integer",
+                "value": "10"
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

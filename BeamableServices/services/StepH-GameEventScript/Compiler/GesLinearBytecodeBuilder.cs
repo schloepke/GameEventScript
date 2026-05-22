@@ -456,6 +456,10 @@ internal sealed class GesLinearBytecodeBuilder
                     diagnosticAddress,
                     letSlot,
                     let.Identifier);
+                if (TryClassifyHandlerSignature(let.Expression, context, out var handlerSignature))
+                {
+                    context.DeclareHandlerSignature(let.Identifier, handlerSignature);
+                }
                 break;
             }
 
@@ -1397,23 +1401,30 @@ internal sealed class GesLinearBytecodeBuilder
         if (!_sourceCallables.TryGetValue(call.Name, out var called))
         {
             var handlerSlot = context.RequireSlot(call.Name);
-            var argumentNames = new string[call.ArgumentList.Count];
-            var operandSlots = new int[call.ArgumentList.Count + 1];
-            operandSlots[0] = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MoveSlot, a: handlerSlot);
+            if (context.TryResolveHandlerSignature(call.Name, out var signature) &&
+                !CallArgumentsMatchHandlerSignature(call.ArgumentList.Arguments, signature))
+            {
+                foreach (var argument in call.ArgumentList.Arguments)
+                {
+                    EmitSourceExpression(argument.Expression, context, state);
+                }
+
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.LoadNothing);
+            }
+
+            var argumentSlots = new int[call.ArgumentList.Count];
             for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Count; argumentIndex++)
             {
                 var argument = call.ArgumentList.Arguments[argumentIndex];
-                argumentNames[argumentIndex] = argument.Name;
-                operandSlots[argumentIndex + 1] = EmitSourceExpression(argument.Expression, context, state);
+                argumentSlots[argumentIndex] = EmitSourceExpression(argument.Expression, context, state);
             }
 
-            var operandSlotListIndex = ResolveSlotListIndex(operandSlots);
-            var argumentNameListIndex = ResolveStringListIndex(argumentNames);
+            var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
             return EmitValueInstruction(
                 state,
                 GameEventScriptBytecodeOpCode.BindHandler,
-                a: operandSlotListIndex,
-                b: argumentNameListIndex);
+                a: handlerSlot,
+                b: argumentSlotListIndex);
         }
 
         var destinationSlot = AllocateSlot(state);
@@ -2477,6 +2488,50 @@ internal sealed class GesLinearBytecodeBuilder
         return _resolveUShortListIndex(shape);
     }
 
+    private static bool TryClassifyHandlerSignature(ExpressionNode expression, SourceContext context, out GameEventScriptMessageSignature signature)
+    {
+        switch (expression)
+        {
+            case HandlerLiteralExpressionNode handler:
+                signature = GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels);
+                return true;
+
+            case IdentifierExpressionNode identifier when context.TryResolveHandlerSignature(identifier.Name, out signature):
+                return true;
+
+            default:
+                signature = GameEventScriptMessageSignature.Empty;
+                return false;
+        }
+    }
+
+    private static bool CallArgumentsMatchHandlerSignature(IReadOnlyList<ArgumentNode> arguments, GameEventScriptMessageSignature signature)
+    {
+        if (arguments.Count != signature.Parameters.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            var label = arguments[index].Label;
+            if (label is null)
+            {
+                continue;
+            }
+
+            if (!string.Equals(
+                    GameEventScriptMessageSignature.NormalizeParameterName(label),
+                    signature.Parameters[index],
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private int ResolveExtensionShapeIndex(GameEventScriptExtensionReference reference)
     {
         var shape = new ushort[reference.ArgumentLabels.Count + 2];
@@ -3316,6 +3371,7 @@ internal sealed class GesLinearBytecodeBuilder
         private readonly SourceContext? _parent;
         private readonly Func<int>? _allocateScopedSlot;
         private readonly Dictionary<string, int> _locals = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, GameEventScriptMessageSignature> _handlerSignatures = new(StringComparer.Ordinal);
 
         public SourceContext(IReadOnlyDictionary<string, int> slots, int? temporaryBaseSlot = null)
         {
@@ -3359,6 +3415,33 @@ internal sealed class GesLinearBytecodeBuilder
             }
 
             return slot;
+        }
+
+        public void DeclareHandlerSignature(string name, GameEventScriptMessageSignature signature)
+        {
+            _handlerSignatures[name] = signature;
+        }
+
+        public bool TryResolveHandlerSignature(string name, out GameEventScriptMessageSignature signature)
+        {
+            if (_handlerSignatures.TryGetValue(name, out signature!))
+            {
+                return true;
+            }
+
+            if (_locals.ContainsKey(name))
+            {
+                signature = GameEventScriptMessageSignature.Empty;
+                return false;
+            }
+
+            if (_parent is not null)
+            {
+                return _parent.TryResolveHandlerSignature(name, out signature);
+            }
+
+            signature = GameEventScriptMessageSignature.Empty;
+            return false;
         }
 
         public int RequireSlot(string name)

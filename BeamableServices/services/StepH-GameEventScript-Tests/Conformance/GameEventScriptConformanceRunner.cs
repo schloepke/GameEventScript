@@ -43,7 +43,7 @@ internal static class GameEventScriptConformanceRunner
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
             if (string.Equals(test.Kind, "scriptApi", StringComparison.OrdinalIgnoreCase))
             {
-                yield return new GameEventScriptConformanceCase(file, suite.Name!, test, BytecodeVmEngine);
+                yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, BytecodeVmEngine);
             }
         }
     }
@@ -136,9 +136,26 @@ internal static class GameEventScriptConformanceRunner
         {
             ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
-            yield return new GameEventScriptConformanceCase(file, suite.Name!, test, UsesRuntimeEngine(test.Kind) ? BytecodeVmEngine : null);
+            yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, UsesRuntimeEngine(test.Kind) ? BytecodeVmEngine : null);
         }
     }
+
+    private static string ResolveLevel(string file, GameEventScriptConformanceSuite suite, GameEventScriptConformanceTest test)
+    {
+        var level = test.Level ?? suite.Level;
+        if (string.IsNullOrWhiteSpace(level))
+        {
+            return IsAtomicSpecPath(file) ? "atomic" : "scenario";
+        }
+
+        return string.Equals(level, "atomic", StringComparison.OrdinalIgnoreCase)
+            ? "atomic"
+            : "scenario";
+    }
+
+    private static bool IsAtomicSpecPath(string file)
+        => file.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(segment => string.Equals(segment, "atomic", StringComparison.OrdinalIgnoreCase));
 
     private static IEnumerable<(string File, GameEventScriptConformanceSuite Suite, GameEventScriptConformanceTest Test)> EnumerateTests(
         string specDirectory)

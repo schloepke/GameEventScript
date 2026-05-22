@@ -1,10 +1,8 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
@@ -14,8 +12,8 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
 {
     private VmState _vmState = new(binary, registerSize, stackSize);
-    
-    public void Initialize(GameEventScriptSession context) 
+
+    public void Initialize(GameEventScriptSession session)
     {
         _vmState.Reset();
         var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
@@ -24,13 +22,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
             return;
         }
 
-        ExecuteMessage(message, context);
+        ExecuteMessage(message, session);
         _vmState.Reset();
     }
-    
-    public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession context)
+
+    public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession session)
     {
-        if (!_vmState.PrepareMessage(message, context)) return false;
+        if (!_vmState.PrepareMessage(message, session)) return false;
         _vmState.State = VmState.StateValue.Running;
         while (_vmState.State == VmState.StateValue.Running)
         {
@@ -80,30 +78,30 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.ReturnValue(instruction.XSlot);
                     break;
                 case EmitMessage:
-                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, context);
+                    _vmState.VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                     break;
                 case EmitMessageWithTags:
-                    VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), 
-                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex),false, context);
+                    _vmState.VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
+                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
                     break;
                 case EmitMessageValue:
-                    // TODO: Add emit as soon as we can load a message from a slot
+                    _vmState.VmPublishMessageValue(ref _vmState.Register(instruction.XSlot), false, session);
                     break;
                 case EmitMessageValueWithTags:
-                    // TODO: Add emit as soon as we can load a message from a slot
+                    _vmState.VmPublishMessageValueWithTags(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                     break;
                 case PublishMessage:
-                    VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, context);
+                    _vmState.VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                     break;
                 case PublishMessageWithTags:
-                    VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), 
-                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, context);
+                    _vmState.VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
+                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
                     break;
                 case PublishMessageValue:
-                    // TODO: Add publish as soon as we can load a message from a slot
+                    _vmState.VmPublishMessageValue(ref _vmState.Register(instruction.XSlot), true, session);
                     break;
                 case PublishMessageValueWithTags:
-                    // TODO: Add publish as soon as we can load a message from a slot
+                    _vmState.VmPublishMessageValueWithTags(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                     break;
                 case Cast:
                     break;
@@ -129,6 +127,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case IndexedAccess:
                     break;
                 case BindHandler:
+                    _vmState.Register(instruction.DestinationSlot).BindHandler(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), ref _vmState, session);
                     break;
                 case LoadNothing:
                     _vmState.Register(instruction.DestinationSlot).SetNothing();
@@ -155,8 +154,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).SetTagPointer(instruction.StringIndex);
                     break;
                 case LoadHandler:
+                    _vmState.Register(instruction.DestinationSlot).CreateMessageSignature(binary.Uint16ConstantTable.Resolve(instruction.ListIndex), ref _vmState, session);
                     break;
                 case LoadMessage:
+                    _vmState.Register(instruction.DestinationSlot).CreateMessage(binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), ref _vmState, session);
                     break;
                 case StageRegister:
                     _vmState.StageRegister(instruction.XSlot);
@@ -485,58 +486,5 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
         }
 
         return true;
-    }
-
-    private bool VmPublishMessage(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession context)
-    {
-        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
-        var messageName = binary.TextConstantTable.Resolve(shape[0]);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
-        for (var index = 0; index < argumentSlots.Length; index++)
-        {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
-                binary.TextConstantTable.Resolve(shape[index + 1]),
-                _vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
-        }
-
-        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
-        return publish ? context.Publish(message) : context.Emit(message);
-    }
-
-    private bool VmPublishMessageWithTags(ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession context)
-    {
-        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1) return false;
-        var messageName = binary.TextConstantTable.Resolve(shape[0]);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
-        for (var index = 0; index < argumentSlots.Length; index++)
-        {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
-                binary.TextConstantTable.Resolve(shape[index + 1]),
-                _vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
-        }
-
-        var tags = new List<string>(tagSlots.Length);
-        for (var index = 0; index < tagSlots.Length; index++)
-        {
-            AddTagsToList(tags, _vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
-        }
-
-        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);
-        return publish ? context.Publish(message) : context.Emit(message);
-    }
-
-    private static void AddTagsToList(List<string> tags, GameEventScriptValue value)
-    {
-        if (value.IsList())
-        {
-            foreach (var j in value.AsEnumerable())
-            {
-                AddTagsToList(tags, j);
-            }
-        }
-        else
-        {
-            tags.Add(value.AsText());
-        }
     }
 }

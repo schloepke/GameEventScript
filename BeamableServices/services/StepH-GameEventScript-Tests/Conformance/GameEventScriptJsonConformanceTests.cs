@@ -52,17 +52,21 @@ public sealed class GameEventScriptJsonConformanceTests
             targetedCases: testCases.Length,
             skippedNonRuntimeCases: allCases.Count - testCases.Length);
         var samples = new List<string>();
+        var byLevel = new SortedDictionary<string, NewVmConformanceSuiteResult>(StringComparer.Ordinal);
         var bySuite = new SortedDictionary<string, NewVmConformanceSuiteResult>(StringComparer.Ordinal);
 
         foreach (var testCase in testCases)
         {
             result.Attempted++;
+            var level = GetSuiteResult(byLevel, testCase.Level);
+            level.Attempted++;
             var suite = GetSuiteResult(bySuite, testCase.SuiteName);
             suite.Attempted++;
             var outcome = RunNewVirtualMachineCase(testCase);
             if (outcome.Passed)
             {
                 result.Passed++;
+                level.Passed++;
                 suite.Passed++;
                 continue;
             }
@@ -71,14 +75,17 @@ public sealed class GameEventScriptJsonConformanceTests
             {
                 case NewVmConformanceStatus.CompileFailure:
                     result.CompileFailures++;
+                    level.CompileFailures++;
                     suite.CompileFailures++;
                     break;
                 case NewVmConformanceStatus.RuntimeFailure:
                     result.RuntimeFailures++;
+                    level.RuntimeFailures++;
                     suite.RuntimeFailures++;
                     break;
                 default:
                     result.Mismatches++;
+                    level.Mismatches++;
                     suite.Mismatches++;
                     break;
             }
@@ -91,6 +98,14 @@ public sealed class GameEventScriptJsonConformanceTests
             $"{result.PassRate:P1} reached ({result.Passed}/{result.Attempted} targeted runtime scriptApi cases passed). " +
             $"allCases={result.TotalCases}, targeted={result.TargetedCases}, skippedNonRuntime={result.SkippedNonRuntimeCases}, " +
             $"mismatches={result.Mismatches}, compileFailures={result.CompileFailures}, runtimeFailures={result.RuntimeFailures}");
+        foreach (var pair in byLevel)
+        {
+            var level = pair.Value;
+            TestContext.WriteLine(
+                $"  {pair.Key}: {level.PassRate:P1} ({level.Passed}/{level.Attempted}), " +
+                $"mismatches={level.Mismatches}, compileFailures={level.CompileFailures}, runtimeFailures={level.RuntimeFailures}");
+        }
+
         foreach (var pair in bySuite)
         {
             var suite = pair.Value;

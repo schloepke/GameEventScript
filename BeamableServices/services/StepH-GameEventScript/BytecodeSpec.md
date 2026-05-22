@@ -767,7 +767,7 @@ compiler-assigned iterator slot.
 - `BuildList dst itemSlotListIndex`
 - `BuildMap dst keyNameListIndex valueSlotListIndex`
 - `LoadMessage dst messageShapeIndex argumentSlotListIndex`
-- `BindHandler dst operandSlotListIndex argumentNameListIndex`
+- `BindHandler dst handlerSlot argumentSlotListIndex`
 - `MemberAccess dst nameIndex objectSlot`
 - `IndexedAccess dst selectorSlot objectSlot`
 - `Range dst fromSlot toSlot`

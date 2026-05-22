@@ -435,7 +435,9 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessage
 sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   field static StepH.GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
+  method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Types.GameEventScriptValue[] arguments)
   method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
   method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
   method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
   method static System.String NormalizeMessageName(System.String name)
@@ -579,8 +581,8 @@ interface StepH.GameEventScript.Api.IGameEventScriptSeries
   property System.String SignatureId { get }
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
   ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
-  method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession context)
-  method System.Void Initialize(StepH.GameEventScript.Api.GameEventScriptSession context)
+  method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
+  method System.Void Initialize(StepH.GameEventScript.Api.GameEventScriptSession session)
 struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Boolean IsUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit requiredUnit)
   method System.Boolean TryGetInteger(System.Int64& intValue)

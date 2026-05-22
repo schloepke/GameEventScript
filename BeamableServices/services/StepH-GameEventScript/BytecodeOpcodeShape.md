@@ -221,7 +221,7 @@ not a second runtime dispatch step.
 | 0x1E | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
 | 0x1F | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
 | 0x20 | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
-| 0x21 | `BindHandler` | - | result slot | `SecondaryListIndex`=operand slots | `ListIndex`=argument names | - | Binds a handler value plus named arguments. Operand slot-list starts with the handler slot. |
+| 0x21 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
 | 0x22..0x2F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Loads, Argument Staging, Type Construction

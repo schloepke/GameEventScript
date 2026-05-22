@@ -8,6 +8,8 @@ public sealed class GameEventScriptConformanceSuite
 
     public string? Name { get; set; }
 
+    public string? Level { get; set; }
+
     public List<GameEventScriptConformanceTest> Tests { get; set; } = [];
 }
 
@@ -16,6 +18,8 @@ public sealed class GameEventScriptConformanceTest
     public string? Kind { get; set; }
 
     public string? Name { get; set; }
+
+    public string? Level { get; set; }
 
     public string? Script { get; set; }
 
@@ -169,12 +173,15 @@ public sealed class GameEventScriptExpectedCompileErrorSpec
 public sealed class GameEventScriptConformanceCase(
     string suiteFile,
     string suiteName,
+    string level,
     GameEventScriptConformanceTest test,
     string? engine)
 {
     public string SuiteFile { get; } = suiteFile;
 
     public string SuiteName { get; } = suiteName;
+
+    public string Level { get; } = level;
 
     public GameEventScriptConformanceTest Test { get; } = test;
 

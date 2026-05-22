@@ -1277,22 +1277,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeOpCode.BindHandler:
             {
-                if (!TryRentLinearOperands(instruction.SecondaryListIndex, out var bindOperands, out var bindOperandCount) ||
-                    !TryReadStringList(instruction.ListIndex, out var boundArgumentNames))
+                if (!TryRentLinearOperands(instruction.ListIndex, out var bindOperands, out var bindOperandCount))
                 {
                     return false;
                 }
 
                 try
                 {
-                    if (bindOperandCount == 0)
-                    {
-                        return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
-                    }
-
                     return DefineSlot(
                         instruction.DestinationSlot,
-                        BindHandlerValue(bindOperands[0], bindOperands, 1, bindOperandCount - 1, boundArgumentNames));
+                        BindHandlerValue(ResolveSlot(instruction.XSlot), bindOperands, bindOperandCount));
                 }
                 finally
                 {
@@ -4212,25 +4206,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private static BytecodeVmValue BindHandlerValue(
         BytecodeVmValue callee,
         BytecodeVmValue[] inputs,
-        int start,
-        int count,
-        string[]? names)
+        int count)
     {
-        if (names is null || names.Length != count)
+        if (!GesMessageValueCodec.TryReadHandlerValue(callee.ToGameEventScriptValue(), out var signature))
         {
             return BytecodeVmValue.Nothing;
         }
 
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[count];
+        var arguments = new GameEventScriptValue[count];
         for (var argumentIndex = 0; argumentIndex < count; argumentIndex++)
         {
-            pairs[argumentIndex] = new KeyValuePair<string, GameEventScriptValue>(
-                names[argumentIndex],
-                inputs[start + argumentIndex].ToGameEventScriptValue());
+            arguments[argumentIndex] = inputs[argumentIndex].ToGameEventScriptValue();
         }
 
-        var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, names);
-        return GesMessageValueCodec.TryBindHandlerValue(callee.ToGameEventScriptValue(), arguments, out var message)
+        return signature.TryCreateMessage(arguments, out var message)
             ? BytecodeVmValue.Reference(GesMessageValueCodec.CreateMessageValue(message))
             : BytecodeVmValue.Nothing;
     }

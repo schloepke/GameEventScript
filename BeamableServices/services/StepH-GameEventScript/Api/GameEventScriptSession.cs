@@ -17,13 +17,8 @@ public sealed class GameEventScriptSession
     private readonly object _pumpGate = new();
     private bool _automaticDispatchScheduled;
 
-    public GameEventScriptSession(
-        GameEventScriptRandomGenerator random,
-        Func<GameEventScriptMessage, bool> emit,
-        IGameEventScriptDiagnosticCollector? diagnosticCollector = null,
-        GameEventScriptRuntimeLimits? runtimeLimits = null,
-        IGameEventScriptExtensionRegistry? extensionRegistry = null,
-        Func<GameEventScriptMessage, bool>? publish = null)
+    public GameEventScriptSession(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit, IGameEventScriptDiagnosticCollector? diagnosticCollector = null, GameEventScriptRuntimeLimits? runtimeLimits = null,
+        IGameEventScriptExtensionRegistry? extensionRegistry = null, Func<GameEventScriptMessage, bool>? publish = null)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _emit = emit ?? throw new ArgumentNullException(nameof(emit));
@@ -34,18 +29,9 @@ public sealed class GameEventScriptSession
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
-    internal GameEventScriptSession(
-        GameEventScriptHost host,
-        GameEventScriptHostRunState state,
-        GameEventScriptDispatchMode dispatchMode,
-        GameEventScriptDispatcher dispatcher,
-        GameEventScriptRandomGenerator random,
-        Func<GameEventScriptMessage, bool> emit,
-        IGameEventScriptDiagnosticCollector? diagnosticCollector,
-        GameEventScriptRuntimeLimits runtimeLimits,
-        IGameEventScriptExtensionRegistry extensionRegistry,
-        Func<GameEventScriptMessage, bool>? publish)
-        : this(random, emit, diagnosticCollector, runtimeLimits, extensionRegistry, publish)
+    internal GameEventScriptSession(GameEventScriptHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, GameEventScriptDispatcher dispatcher, GameEventScriptRandomGenerator random,
+        Func<GameEventScriptMessage, bool> emit, IGameEventScriptDiagnosticCollector? diagnosticCollector, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
+        Func<GameEventScriptMessage, bool>? publish) : this(random, emit, diagnosticCollector, runtimeLimits, extensionRegistry, publish)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         State = state ?? throw new ArgumentNullException(nameof(state));
@@ -113,21 +99,19 @@ public sealed class GameEventScriptSession
             }
         }
 
-        if (shouldScheduleAutomaticDispatch)
+        if (!shouldScheduleAutomaticDispatch) return true;
+        try
         {
-            try
+            _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
+        }
+        catch
+        {
+            lock (_pumpGate)
             {
-                _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
+                _automaticDispatchScheduled = false;
             }
-            catch
-            {
-                lock (_pumpGate)
-                {
-                    _automaticDispatchScheduled = false;
-                }
 
-                throw;
-            }
+            throw;
         }
 
         return true;

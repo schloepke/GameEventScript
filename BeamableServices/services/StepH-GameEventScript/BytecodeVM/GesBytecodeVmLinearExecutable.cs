@@ -555,9 +555,8 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.BindHandler:
-                ValidateSlotListIndex(module, instruction.SecondaryListIndex, $"{context} operand slots");
-                ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
-                ValidateBindHandlerLists(module, instruction.SecondaryListIndex, instruction.ListIndex, $"{context} bound handler arguments");
+                ValidateSlot(module, instruction.XSlot, $"{context} handler slot");
+                ValidateSlotListIndex(module, instruction.ListIndex, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallStandard:
@@ -830,26 +829,6 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (leftCount != rightCount)
         {
             throw InvalidBytecode($"{context} count mismatch: {leftCount} name(s) for {rightCount} slot(s).");
-        }
-    }
-
-    private static void ValidateBindHandlerLists(GameEventScriptCompiled module, int operandSlotListIndex, int argumentNameListIndex, string context)
-    {
-        var operandCount = module.UShortListPool[operandSlotListIndex].Count;
-        var argumentNameCount = module.UShortListPool[argumentNameListIndex].Count;
-        if (operandCount == 0)
-        {
-            if (argumentNameCount != 0)
-            {
-                throw InvalidBytecode($"{context} cannot have argument names without a handler operand.");
-            }
-
-            return;
-        }
-
-        if (argumentNameCount != operandCount - 1)
-        {
-            throw InvalidBytecode($"{context} count mismatch: {argumentNameCount} name(s) for {operandCount - 1} bound argument slot(s).");
         }
     }
 

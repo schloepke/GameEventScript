@@ -438,8 +438,8 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.BindHandler:
-                AppendSlotListPoolIndex(builder, "operands", module, instruction.SecondaryListIndex);
-                AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
+                AppendSlot(builder, "handler", instruction.XSlot);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.ListIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.CallStandard:

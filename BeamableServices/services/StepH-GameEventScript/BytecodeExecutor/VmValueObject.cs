@@ -58,6 +58,10 @@ internal class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) 
 
 internal class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, IVmIndexAccess<double>, IVmKeyAccess<double>
 {
+    internal readonly double X = x;
+    internal readonly double Y = y;
+    internal readonly double Z = z;
+
     public int Length => 3;
 
     public bool TryGet(int index, out double value)
@@ -65,13 +69,13 @@ internal class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, I
         switch (index)
         {
             case 0:
-                value = x;
+                value = X;
                 return true;
             case 1:
-                value = y;
+                value = Y;
                 return true;
             case 2:
-                value = z;
+                value = Z;
                 return true;
             default:
                 value = 0;
@@ -84,13 +88,13 @@ internal class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, I
         switch (key)
         {
             case "x":
-                value = x;
+                value = X;
                 return true;
             case "y":
-                value = y;
+                value = Y;
                 return true;
             case "z":
-                value = z;
+                value = Z;
                 return true;
             default:
                 value = 0;

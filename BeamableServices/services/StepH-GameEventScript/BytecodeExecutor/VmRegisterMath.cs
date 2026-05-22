@@ -13,9 +13,31 @@ internal static class VmRegisterMath
     {
         switch (a.Kind)
         {
+            case Vector when b.Kind is Vector:
+            {
+                if (a.ObjectValue is VmFloatTriplet av && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetObject(Vector, new VmFloatTriplet(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z), vectorUnit);
+                else dst.SetFloat(double.NaN);
+                return;
+            }
+            case Vector:
+                if (b.Kind is Point) dst.SetFloat(double.NaN);
+                else dst.SetNothing();
+                return;
+            case Point when b.Kind is Vector:
+            {
+                if (a.ObjectValue is VmFloatTriplet ap && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Point, new VmFloatTriplet(ap.X + bv.X, ap.Y + bv.Y, ap.Z + bv.Z), pointUnit);
+                else dst.SetFloat(double.NaN);
+                return;
+            }
+            case Point:
+                dst.SetFloat(double.NaN);
+                return;
             case Integer when b.Kind is Integer:
                 if (TrySameUnit(ref a, ref b, out var unit)) dst.SetInteger(a.IntegerValue + b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float or Percentage when b.Kind is Vector or Point:
+                dst.SetFloat(double.NaN);
                 return;
             case Float or Percentage when b.Kind is Float or Percentage:
                 if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue + b.FloatValue, unit);
@@ -34,6 +56,37 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmSubtract(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
+        switch (a.Kind)
+        {
+            case Vector when b.Kind is Vector:
+            {
+                if (a.ObjectValue is VmFloatTriplet av && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetObject(Vector, new VmFloatTriplet(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z), vectorUnit);
+                else dst.SetFloat(double.NaN);
+                return;
+            }
+            case Vector:
+                dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Vector:
+            {
+                if (a.ObjectValue is VmFloatTriplet ap && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Point, new VmFloatTriplet(ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z), pointUnit);
+                else dst.SetFloat(double.NaN);
+                return;
+            }
+            case Point when b.Kind is Point:
+            {
+                if (a.ObjectValue is VmFloatTriplet ap && b.ObjectValue is VmFloatTriplet bp && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Vector, new VmFloatTriplet(ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z), pointUnit);
+                else dst.SetFloat(double.NaN);
+                return;
+            }
+            case Point:
+                dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float or Percentage when b.Kind is Vector or Point:
+                dst.SetFloat(double.NaN);
+                return;
+        }
+
         if (TrySameUnit(ref a, ref b, out var unit))
         {
             var left = a.AsNumberValue;
@@ -54,6 +107,26 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMultiply(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
+        if (a.Kind is Point || b.Kind is Point || (a.Kind is Vector && b.Kind is Vector))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        if (a.Kind is Vector || b.Kind is Vector)
+        {
+            var vector = a.Kind is Vector ? a.ObjectValue as VmFloatTriplet : b.ObjectValue as VmFloatTriplet;
+            var scalar = a.Kind is Vector ? b.AsNumberValue : a.AsNumberValue;
+            if (vector is null || double.IsNaN(scalar) || !double.IsFinite(scalar) || !TryProductUnit(ref a, ref b, out var vectorUnit))
+            {
+                dst.SetFloat(double.NaN);
+                return;
+            }
+
+            dst.SetObject(Vector, new VmFloatTriplet(vector.X * scalar, vector.Y * scalar, vector.Z * scalar), vectorUnit);
+            return;
+        }
+
         if (TryProductUnit(ref a, ref b, out var unit))
         {
             var left = a.AsNumberValue;
@@ -74,6 +147,25 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDivide(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
+        if (a.Kind is Point || b.Kind is Vector or Point)
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        if (a.Kind is Vector)
+        {
+            var scalar = b.AsNumberValue;
+            if (a.ObjectValue is not VmFloatTriplet vector || double.IsNaN(scalar) || !double.IsFinite(scalar) || scalar == 0.0d || !TryQuotientUnit(ref a, ref b, out var vectorUnit))
+            {
+                dst.SetFloat(double.NaN);
+                return;
+            }
+
+            dst.SetObject(Vector, new VmFloatTriplet(vector.X / scalar, vector.Y / scalar, vector.Z / scalar), vectorUnit);
+            return;
+        }
+
         if (TryQuotientUnit(ref a, ref b, out var unit))
         {
             var left = a.AsNumberValue;
@@ -114,6 +206,12 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmModulo(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
+        if (a.Kind is Vector or Point || b.Kind is Vector or Point)
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
         if (TrySameUnit(ref a, ref b, out var unit))
         {
             var left = a.AsNumberValue;
@@ -134,6 +232,12 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmRemainder(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
+        if (a.Kind is Vector or Point || b.Kind is Vector or Point)
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
         if (TrySameUnit(ref a, ref b, out var unit))
         {
             var left = a.AsNumberValue;
@@ -156,6 +260,13 @@ internal static class VmRegisterMath
     {
         switch (a.Kind)
         {
+            case Vector:
+                if (a.ObjectValue is VmFloatTriplet vector) dst.SetObject(Vector, new VmFloatTriplet(-vector.X, -vector.Y, -vector.Z), a.Unit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Point:
+                dst.SetFloat(double.NaN);
+                break;
             case Integer:
                 dst.SetInteger(-a.IntegerValue, a.Unit);
                 break;
@@ -173,6 +284,20 @@ internal static class VmRegisterMath
     {
         switch (a.Kind)
         {
+            case Vector:
+                if (a.ObjectValue is not VmFloatTriplet vector)
+                {
+                    dst.SetFloat(double.NaN);
+                    break;
+                }
+
+                var length = Math.Sqrt(vector.X * vector.X + vector.Y * vector.Y + vector.Z * vector.Z);
+                if (double.IsNaN(length) || double.IsInfinity(length)) dst.SetFloat(double.NaN);
+                else dst.SetFloat(length, a.Unit);
+                break;
+            case Point:
+                dst.SetFloat(double.NaN);
+                break;
             case Integer:
                 dst.SetInteger(Math.Abs(a.IntegerValue), a.Unit);
                 break;

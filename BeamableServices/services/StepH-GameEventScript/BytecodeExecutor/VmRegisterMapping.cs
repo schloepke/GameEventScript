@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -30,11 +31,17 @@ internal static class VmRegisterMapping
                 destination.SetPercentage(argument.AsNumber());
                 break;
             case GameEventScriptValueKind.Vector:
-                throw new NotImplementedException();
+            {
+                var vector = (GameEventScriptVectorValue)argument;
+                destination.SetObject(Vector, new VmFloatTriplet(vector.X, vector.Y, vector.Z), EncodeUnit(vector.Unit));
                 break;
+            }
             case GameEventScriptValueKind.Point:
-                throw new NotImplementedException();
+            {
+                var point = (GameEventScriptPointValue)argument;
+                destination.SetObject(Point, new VmFloatTriplet(point.X, point.Y, point.Z), EncodeUnit(point.Unit));
                 break;
+            }
             case GameEventScriptValueKind.Float:
                 destination.SetFloat(argument.AsNumber());
                 break;
@@ -76,8 +83,30 @@ internal static class VmRegisterMapping
         Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue),
         Float => GameEventScriptValueFactory.GesFloat(a.FloatValue),
         Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
+        Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, DecodeUnit(a.Unit)),
+        Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, DecodeUnit(a.Unit)),
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
         // FIXME this might not work here, since we need to binary to look up strings and tags
         _ => GameEventScriptValueFactory.GesNothing(),
     };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static GameEventScriptBytecodeInstructionUnit EncodeUnit(GameEventScriptNumericUnit? unit)
+        => unit switch
+        {
+            GameEventScriptNumericUnit.Degree => UnitDegree,
+            GameEventScriptNumericUnit.Meter => UnitMeter,
+            GameEventScriptNumericUnit.Second => UnitSecond,
+            _ => UnitNone
+        };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static GameEventScriptNumericUnit? DecodeUnit(GameEventScriptBytecodeInstructionUnit unit)
+        => unit switch
+        {
+            UnitDegree => GameEventScriptNumericUnit.Degree,
+            UnitMeter => GameEventScriptNumericUnit.Meter,
+            UnitSecond => GameEventScriptNumericUnit.Second,
+            _ => null
+        };
 }

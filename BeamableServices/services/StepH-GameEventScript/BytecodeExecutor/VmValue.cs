@@ -129,7 +129,7 @@ public struct VmValue
     {
         Kind = kind;
         Flags = VmValueFlags.StorageObject | VmValueFlags.IsTrue;
-        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+        Unit = unit;
         IntegerValue = 0;
         ObjectValue = value;
     }

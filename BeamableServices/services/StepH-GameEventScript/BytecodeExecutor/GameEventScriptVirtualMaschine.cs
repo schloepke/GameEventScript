@@ -238,24 +238,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case GreaterOrEqual:
                     _vmState.Register(instruction.DestinationSlot).VmGreaterOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
-                case IntEqual:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntNotEqual:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerNotEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntLess:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerLess(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntGreater:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerGreater(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntLessOrEqual:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerLessOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntGreaterOrEqual:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerGreaterOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
                 case Default:
                     _vmState.Register(instruction.DestinationSlot).VmDefault(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
@@ -282,27 +264,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Remainder:
                     _vmState.Register(instruction.DestinationSlot).VmRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntAdd:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntSubtract:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerSubtract(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntMultiply:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerMultiply(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntDivide:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntFloorDivide:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerFloorDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntModulo:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerModulo(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case IntRemainder:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case Min:
                     break;

@@ -519,7 +519,38 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code
             .Skip(entryAddress)
             .TakeWhile(instruction => instruction.OpCode != GameEventScriptBytecodeOpCode.ReturnValue)
-            .Any(instruction => instruction.OpCode is GameEventScriptBytecodeOpCode.Add or GameEventScriptBytecodeOpCode.IntAdd));
+            .Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Add));
+    }
+
+    [TestMethod]
+    public void LinearBytecodeDoesNotEmitIntegerFastPathsForMixedNumericIdentifiers()
+    {
+        const string script =
+            """
+            module LinearExecutable
+
+            on Start {
+              let intA be 10
+              let intB be 20.0
+              let resultInt be intA + intB
+              emit Done(result: resultInt)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var dump = compiled.DumpBytecode();
+        var received = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .Build()
+            .Load(compiled)
+            .Subscribe("Done", ["result"], (message, _) => received.Add(message));
+
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Add));
+        Assert.IsFalse(dump.Contains("IntAdd", StringComparison.Ordinal));
+        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+        Assert.HasCount(1, received);
+        Assert.AreEqual(GameEventScriptValueKind.Float, received[0].Arguments["result"].Kind);
+        Assert.AreEqual(30d, received[0].Arguments["result"].AsNumber());
     }
 
     [TestMethod]

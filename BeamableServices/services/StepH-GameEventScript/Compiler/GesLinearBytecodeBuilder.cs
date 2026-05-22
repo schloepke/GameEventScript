@@ -2165,7 +2165,7 @@ internal sealed class GesLinearBytecodeBuilder
         var entry = _code.Count;
         var slotLocalsAddress = EmitSlotLocals(0);
         var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
-        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IntAdd, accumulatorSlot, oneSlot);
+        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, oneSlot);
         EmitReturnValue(nextCountSlot);
         PatchSlotLocals(slotLocalsAddress, state.NextSlot - state.BaseSlot);
         return entry;
@@ -2176,7 +2176,7 @@ internal sealed class GesLinearBytecodeBuilder
         var entry = _code.Count;
         var slotLocalsAddress = EmitSlotLocals(0);
         var oneSlot = EmitLoadInteger(state, 1L, unitAndFlags: 0);
-        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IntAdd, countSlot, oneSlot);
+        var nextCountSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, countSlot, oneSlot);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: countSlot, a: nextCountSlot));
         var sumSlot = EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Add, accumulatorSlot, itemSlot);
         EmitReturnValue(sumSlot);
@@ -2850,19 +2850,6 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.IntegerDivide or
             GameEventScriptBytecodeOpCode.Modulo or
             GameEventScriptBytecodeOpCode.Remainder or
-            GameEventScriptBytecodeOpCode.IntEqual or
-            GameEventScriptBytecodeOpCode.IntNotEqual or
-            GameEventScriptBytecodeOpCode.IntLess or
-            GameEventScriptBytecodeOpCode.IntGreater or
-            GameEventScriptBytecodeOpCode.IntLessOrEqual or
-            GameEventScriptBytecodeOpCode.IntGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.IntAdd or
-            GameEventScriptBytecodeOpCode.IntSubtract or
-            GameEventScriptBytecodeOpCode.IntMultiply or
-            GameEventScriptBytecodeOpCode.IntDivide or
-            GameEventScriptBytecodeOpCode.IntFloorDivide or
-            GameEventScriptBytecodeOpCode.IntModulo or
-            GameEventScriptBytecodeOpCode.IntRemainder or
             GameEventScriptBytecodeOpCode.Default or
             GameEventScriptBytecodeOpCode.Contains or
             GameEventScriptBytecodeOpCode.ContainsValue or
@@ -2949,78 +2936,7 @@ internal sealed class GesLinearBytecodeBuilder
     }
 
     private static GameEventScriptBytecodeOpCode ToBinaryOpCode(BinaryExpressionNode expression)
-        => ShouldPreferPrimitiveIntegerOp(expression)
-            ? ToPrimitiveIntegerOpCode(expression.Operator)
-            : ToBinaryOpCode(expression.Operator);
-
-    private static bool ShouldPreferPrimitiveIntegerOp(BinaryExpressionNode expression)
-        => expression.Operator switch
-        {
-            GesBinaryOperator.IntegerDivide or
-                GesBinaryOperator.Modulo or
-                GesBinaryOperator.Remainder => IsIntegerCandidate(expression.Left) || IsIntegerCandidate(expression.Right),
-            GesBinaryOperator.Equal or
-                GesBinaryOperator.NotEqual or
-                GesBinaryOperator.Less or
-                GesBinaryOperator.Greater or
-                GesBinaryOperator.LessOrEqual or
-                GesBinaryOperator.GreaterOrEqual => IsIntegerCandidate(expression.Left) && IsIntegerCandidate(expression.Right),
-            GesBinaryOperator.Add or
-                GesBinaryOperator.Subtract or
-                GesBinaryOperator.Multiply or
-                GesBinaryOperator.Divide => IsIntegerCandidate(expression.Left) &&
-                                            IsIntegerCandidate(expression.Right) &&
-                                            !HasExplicitNonIntegerNumeric(expression.Left) &&
-                                            !HasExplicitNonIntegerNumeric(expression.Right),
-            _ => false
-        };
-
-    private static bool IsIntegerCandidate(ExpressionNode expression)
-        => expression switch
-        {
-            IntegerLiteralExpressionNode => true,
-            UnitIntegerLiteralExpressionNode => true,
-            IdentifierExpressionNode => true,
-            BinaryExpressionNode binary => ShouldPreferPrimitiveIntegerOp(binary),
-            TypeCastExpressionNode { TypeName: "integer" } => true,
-            TypeConstructorExpressionNode { TypeName: "integer" } => true,
-            _ => false
-        };
-
-    private static bool HasExplicitNonIntegerNumeric(ExpressionNode expression)
-        => expression switch
-        {
-            FloatLiteralExpressionNode => true,
-            PercentageLiteralExpressionNode => true,
-            UnitFloatLiteralExpressionNode => true,
-            BinaryExpressionNode binary => HasExplicitNonIntegerNumeric(binary.Left) || HasExplicitNonIntegerNumeric(binary.Right),
-            TypeCastExpressionNode typeCast => IsExplicitNonIntegerNumericType(typeCast.TypeName),
-            TypeConstructorExpressionNode typeConstructor => IsExplicitNonIntegerNumericType(typeConstructor.TypeName),
-            _ => false
-        };
-
-    private static bool IsExplicitNonIntegerNumericType(string typeName)
-        => typeName is "float" or "numeric" or "percentage" ||
-           GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
-
-    private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(GesBinaryOperator operation)
-        => operation switch
-        {
-            GesBinaryOperator.Equal => GameEventScriptBytecodeOpCode.IntEqual,
-            GesBinaryOperator.NotEqual => GameEventScriptBytecodeOpCode.IntNotEqual,
-            GesBinaryOperator.Less => GameEventScriptBytecodeOpCode.IntLess,
-            GesBinaryOperator.Greater => GameEventScriptBytecodeOpCode.IntGreater,
-            GesBinaryOperator.LessOrEqual => GameEventScriptBytecodeOpCode.IntLessOrEqual,
-            GesBinaryOperator.GreaterOrEqual => GameEventScriptBytecodeOpCode.IntGreaterOrEqual,
-            GesBinaryOperator.Add => GameEventScriptBytecodeOpCode.IntAdd,
-            GesBinaryOperator.Subtract => GameEventScriptBytecodeOpCode.IntSubtract,
-            GesBinaryOperator.Multiply => GameEventScriptBytecodeOpCode.IntMultiply,
-            GesBinaryOperator.Divide => GameEventScriptBytecodeOpCode.IntDivide,
-            GesBinaryOperator.IntegerDivide => GameEventScriptBytecodeOpCode.IntFloorDivide,
-            GesBinaryOperator.Modulo => GameEventScriptBytecodeOpCode.IntModulo,
-            GesBinaryOperator.Remainder => GameEventScriptBytecodeOpCode.IntRemainder,
-            _ => ToBinaryOpCode(operation)
-        };
+        => ToBinaryOpCode(expression.Operator);
 
     private static GameEventScriptBytecodeOpCode ToBinaryOpCode(GesBinaryOperator operation)
         => operation switch

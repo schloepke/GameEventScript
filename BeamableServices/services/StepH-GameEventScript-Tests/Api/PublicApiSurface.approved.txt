@@ -209,12 +209,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Greater = 91
   enum-field LessOrEqual = 92
   enum-field GreaterOrEqual = 93
-  enum-field IntEqual = 94
-  enum-field IntNotEqual = 95
-  enum-field IntLess = 96
-  enum-field IntGreater = 97
-  enum-field IntLessOrEqual = 98
-  enum-field IntGreaterOrEqual = 99
   enum-field Default = 100
   enum-field Add = 112
   enum-field Subtract = 113
@@ -224,13 +218,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field IntegerDivide = 117
   enum-field Modulo = 118
   enum-field Remainder = 119
-  enum-field IntAdd = 120
-  enum-field IntSubtract = 121
-  enum-field IntMultiply = 122
-  enum-field IntDivide = 123
-  enum-field IntFloorDivide = 124
-  enum-field IntModulo = 125
-  enum-field IntRemainder = 126
   enum-field Min = 127
   enum-field Max = 128
   enum-field UnaryNegate = 129

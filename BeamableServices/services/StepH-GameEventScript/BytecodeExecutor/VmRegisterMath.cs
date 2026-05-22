@@ -184,6 +184,28 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmIntegerDivide(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    {
+        if (TryQuotientUnit(ref a, ref b, out var unit))
+        {
+            var left = a.AsNumberValue;
+            if (!double.IsNaN(left))
+            {
+                var right = b.AsNumberValue;
+                if (!double.IsNaN(right))
+                {
+                    var result = Math.Floor(left / right);
+                    if (double.IsFinite(result) && result >= long.MinValue && result <= long.MaxValue) dst.SetInteger((long)result, unit);
+                    else dst.SetFloat(result, unit);
+                    return;
+                }
+            }
+        }
+
+        dst.SetNothing();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmPower(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         var right = b.AsNumberValue;

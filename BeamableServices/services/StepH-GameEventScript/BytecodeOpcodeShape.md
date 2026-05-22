@@ -270,16 +270,11 @@ not a second runtime dispatch step.
 | 0x5B | `Greater` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
 | 0x5C | `LessOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
 | 0x5D | `GreaterOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5E | `IntEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path equality comparison. |
-| 0x5F | `IntNotEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path inequality comparison. |
-| 0x60 | `IntLess` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path less-than comparison. |
-| 0x61 | `IntGreater` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path greater-than comparison. |
-| 0x62 | `IntLessOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path less-or-equal comparison. |
-| 0x63 | `IntGreaterOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path greater-or-equal comparison. |
+| 0x5E..0x63 | reserved | - | - | - | - | - | Former integer comparison fast-path range. |
 | 0x64 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
 | 0x65..0x6F | reserved | - | - | - | - | - | Reserved tail of Group 3. |
 
-### Group 4 - Math, Integer Fast Paths, Random
+### Group 4 - Math And Random
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -291,13 +286,7 @@ not a second runtime dispatch step.
 | 0x75 | `IntegerDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Floor-like integer division operation. |
 | 0x76 | `Modulo` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric modulo operation. |
 | 0x77 | `Remainder` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric remainder operation. |
-| 0x78 | `IntAdd` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path addition. |
-| 0x79 | `IntSubtract` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path subtraction. |
-| 0x7A | `IntMultiply` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path multiplication. |
-| 0x7B | `IntDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path division. |
-| 0x7C | `IntFloorDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path floor division. |
-| 0x7D | `IntModulo` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path modulo. |
-| 0x7E | `IntRemainder` | - | result slot | `XSlot`=left | `YSlot`=right | - | Integer fast-path remainder. |
+| 0x78..0x7E | reserved | - | - | - | - | - | Former integer arithmetic fast-path range. |
 | 0x7F | `Min` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
 | 0x80 | `Max` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
 | 0x81 | `UnaryNegate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |

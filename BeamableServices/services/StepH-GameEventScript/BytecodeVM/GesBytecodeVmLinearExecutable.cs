@@ -1153,19 +1153,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.IntegerDivide or
             GameEventScriptBytecodeOpCode.Modulo or
             GameEventScriptBytecodeOpCode.Remainder or
-            GameEventScriptBytecodeOpCode.IntEqual or
-            GameEventScriptBytecodeOpCode.IntNotEqual or
-            GameEventScriptBytecodeOpCode.IntLess or
-            GameEventScriptBytecodeOpCode.IntGreater or
-            GameEventScriptBytecodeOpCode.IntLessOrEqual or
-            GameEventScriptBytecodeOpCode.IntGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.IntAdd or
-            GameEventScriptBytecodeOpCode.IntSubtract or
-            GameEventScriptBytecodeOpCode.IntMultiply or
-            GameEventScriptBytecodeOpCode.IntDivide or
-            GameEventScriptBytecodeOpCode.IntFloorDivide or
-            GameEventScriptBytecodeOpCode.IntModulo or
-            GameEventScriptBytecodeOpCode.IntRemainder or
             GameEventScriptBytecodeOpCode.Default or
             GameEventScriptBytecodeOpCode.Contains or
             GameEventScriptBytecodeOpCode.ContainsValue or

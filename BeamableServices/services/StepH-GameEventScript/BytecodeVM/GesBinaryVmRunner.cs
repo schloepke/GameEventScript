@@ -110,16 +110,6 @@ internal sealed class GesBinaryVmRunner
                 case GameEventScriptBytecodeOpCode.LessOrEqual:
                 case GameEventScriptBytecodeOpCode.Min:
                 case GameEventScriptBytecodeOpCode.Max:
-                case GameEventScriptBytecodeOpCode.IntAdd:
-                case GameEventScriptBytecodeOpCode.IntSubtract:
-                case GameEventScriptBytecodeOpCode.IntMultiply:
-                case GameEventScriptBytecodeOpCode.IntDivide:
-                case GameEventScriptBytecodeOpCode.IntGreater:
-                case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
-                case GameEventScriptBytecodeOpCode.IntLess:
-                case GameEventScriptBytecodeOpCode.IntLessOrEqual:
-                case GameEventScriptBytecodeOpCode.IntEqual:
-                case GameEventScriptBytecodeOpCode.IntNotEqual:
                     maxSlot = Math.Max(maxSlot, Math.Max(instruction.XSlot, instruction.YSlot));
                     break;
 
@@ -247,19 +237,6 @@ internal sealed class GesBinaryVmRunState
 
                 case GameEventScriptBytecodeOpCode.CheckUnit:
                     Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.XSlot), DecodeUnit(instruction.UnitAndFlags))));
-                    break;
-
-                case GameEventScriptBytecodeOpCode.IntAdd:
-                case GameEventScriptBytecodeOpCode.IntSubtract:
-                case GameEventScriptBytecodeOpCode.IntMultiply:
-                case GameEventScriptBytecodeOpCode.IntDivide:
-                case GameEventScriptBytecodeOpCode.IntEqual:
-                case GameEventScriptBytecodeOpCode.IntNotEqual:
-                case GameEventScriptBytecodeOpCode.IntGreater:
-                case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
-                case GameEventScriptBytecodeOpCode.IntLess:
-                case GameEventScriptBytecodeOpCode.IntLessOrEqual:
-                    Set(instruction.DestinationSlot, EvaluatePrimitiveInteger(instruction.OpCode, Get(instruction.XSlot), Get(instruction.YSlot)));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Add:
@@ -475,26 +452,6 @@ internal sealed class GesBinaryVmRunState
         }
     }
 
-    private static GesBinaryVmValue EvaluatePrimitiveInteger(GameEventScriptBytecodeOpCode opCode, GesBinaryVmValue left, GesBinaryVmValue right)
-    {
-        var a = left.AsInteger();
-        var b = right.AsInteger();
-        return opCode switch
-        {
-            GameEventScriptBytecodeOpCode.IntAdd => GesBinaryVmValue.Integer(a + b, left.Unit ?? right.Unit),
-            GameEventScriptBytecodeOpCode.IntSubtract => GesBinaryVmValue.Integer(a - b, left.Unit),
-            GameEventScriptBytecodeOpCode.IntMultiply => GesBinaryVmValue.Integer(a * b, left.Unit ?? right.Unit),
-            GameEventScriptBytecodeOpCode.IntDivide => b == 0 ? GesBinaryVmValue.Nothing : GesBinaryVmValue.Integer(a / b, left.Unit),
-            GameEventScriptBytecodeOpCode.IntEqual => GesBinaryVmValue.Boolean(a == b),
-            GameEventScriptBytecodeOpCode.IntNotEqual => GesBinaryVmValue.Boolean(a != b),
-            GameEventScriptBytecodeOpCode.IntGreater => GesBinaryVmValue.Boolean(a > b),
-            GameEventScriptBytecodeOpCode.IntGreaterOrEqual => GesBinaryVmValue.Boolean(a >= b),
-            GameEventScriptBytecodeOpCode.IntLess => GesBinaryVmValue.Boolean(a < b),
-            GameEventScriptBytecodeOpCode.IntLessOrEqual => GesBinaryVmValue.Boolean(a <= b),
-            _ => GesBinaryVmValue.Nothing
-        };
-    }
-
     private static GesBinaryVmValue EvaluateGenericBinary(GameEventScriptBytecodeOpCode opCode, GesBinaryVmValue left, GesBinaryVmValue right)
     {
         if (opCode is GameEventScriptBytecodeOpCode.Equal or GameEventScriptBytecodeOpCode.NotEqual)
@@ -514,16 +471,18 @@ internal sealed class GesBinaryVmRunState
         if (left.Kind == GesBinaryVmValueKind.Integer &&
             right.Kind == GesBinaryVmValueKind.Integer)
         {
+            var leftInteger = left.AsInteger();
+            var rightInteger = right.AsInteger();
             return opCode switch
             {
-                GameEventScriptBytecodeOpCode.Add or
-                    GameEventScriptBytecodeOpCode.Subtract or
-                    GameEventScriptBytecodeOpCode.Multiply or
-                    GameEventScriptBytecodeOpCode.Divide or
-                    GameEventScriptBytecodeOpCode.Greater or
-                    GameEventScriptBytecodeOpCode.GreaterOrEqual or
-                    GameEventScriptBytecodeOpCode.Less or
-                    GameEventScriptBytecodeOpCode.LessOrEqual => EvaluatePrimitiveInteger(ToPrimitiveIntegerOpCode(opCode), left, right),
+                GameEventScriptBytecodeOpCode.Add => GesBinaryVmValue.Integer(leftInteger + rightInteger, left.Unit ?? right.Unit),
+                GameEventScriptBytecodeOpCode.Subtract => GesBinaryVmValue.Integer(leftInteger - rightInteger, left.Unit),
+                GameEventScriptBytecodeOpCode.Multiply => GesBinaryVmValue.Integer(leftInteger * rightInteger, left.Unit ?? right.Unit),
+                GameEventScriptBytecodeOpCode.Divide => rightInteger == 0 ? GesBinaryVmValue.Nothing : GesBinaryVmValue.Float((double)leftInteger / rightInteger, left.Unit),
+                GameEventScriptBytecodeOpCode.Greater => GesBinaryVmValue.Boolean(leftInteger > rightInteger),
+                GameEventScriptBytecodeOpCode.GreaterOrEqual => GesBinaryVmValue.Boolean(leftInteger >= rightInteger),
+                GameEventScriptBytecodeOpCode.Less => GesBinaryVmValue.Boolean(leftInteger < rightInteger),
+                GameEventScriptBytecodeOpCode.LessOrEqual => GesBinaryVmValue.Boolean(leftInteger <= rightInteger),
                 _ => GesBinaryVmValue.Nothing
             };
         }
@@ -546,20 +505,6 @@ internal sealed class GesBinaryVmRunState
             _ => GesBinaryVmValue.Nothing
         };
     }
-
-    private static GameEventScriptBytecodeOpCode ToPrimitiveIntegerOpCode(GameEventScriptBytecodeOpCode opCode)
-        => opCode switch
-        {
-            GameEventScriptBytecodeOpCode.Add => GameEventScriptBytecodeOpCode.IntAdd,
-            GameEventScriptBytecodeOpCode.Subtract => GameEventScriptBytecodeOpCode.IntSubtract,
-            GameEventScriptBytecodeOpCode.Multiply => GameEventScriptBytecodeOpCode.IntMultiply,
-            GameEventScriptBytecodeOpCode.Divide => GameEventScriptBytecodeOpCode.IntDivide,
-            GameEventScriptBytecodeOpCode.Greater => GameEventScriptBytecodeOpCode.IntGreater,
-            GameEventScriptBytecodeOpCode.GreaterOrEqual => GameEventScriptBytecodeOpCode.IntGreaterOrEqual,
-            GameEventScriptBytecodeOpCode.Less => GameEventScriptBytecodeOpCode.IntLess,
-            GameEventScriptBytecodeOpCode.LessOrEqual => GameEventScriptBytecodeOpCode.IntLessOrEqual,
-            _ => opCode
-        };
 
     private static GameEventScriptNumericUnit? DecodeUnit(byte unitAndFlags)
         => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F) switch

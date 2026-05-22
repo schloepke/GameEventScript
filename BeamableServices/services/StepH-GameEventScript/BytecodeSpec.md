@@ -365,8 +365,8 @@ future decoders. The current groups are:
 0x30 Group 2: loads, argument staging, type construction
 0x40 Group 2 continuation and reserved tail
 0x50 Group 3: boolean, comparison, implication, presence checks
-0x60 Group 3 integer comparison fast-path tail and reserved space
-0x70 Group 4: math, integer arithmetic fast paths, random
+0x60 Group 3 comparison reserved space
+0x70 Group 4: math and random
 0x80 Group 4 continuation and reserved tail
 0x90 Group 5: text/collection operators, range/iterator setup
 0xA0 Group 5 stream next/close/reduce/fold, series, PipelineIterator
@@ -596,7 +596,6 @@ Required operations:
 
 - `Add`, `Subtract`, `Multiply`, `Divide`
 - `Power`, `IntegerDivide`, `Modulo`, `Remainder`
-- primitive integer variants for comparison and arithmetic
 - `Equal`, `NotEqual`, `ApproxEqual`
 - `Less`, `Greater`, `LessOrEqual`, `GreaterOrEqual`
 - `And`, `Or`, `Xor`, `Implies`

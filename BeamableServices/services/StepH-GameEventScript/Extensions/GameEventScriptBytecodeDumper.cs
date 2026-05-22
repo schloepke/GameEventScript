@@ -581,16 +581,6 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "source", instruction.XSlot);
                 AppendIndex(builder, "count", instruction.ImmediateY);
                 break;
-            case GameEventScriptBytecodeOpCode.IntFloorDivide:
-            case GameEventScriptBytecodeOpCode.IntDivide:
-            case GameEventScriptBytecodeOpCode.IntRemainder:
-            case GameEventScriptBytecodeOpCode.IntModulo:
-            case GameEventScriptBytecodeOpCode.IntMultiply:
-            case GameEventScriptBytecodeOpCode.IntSubtract:
-            case GameEventScriptBytecodeOpCode.IntAdd:
-                AppendSlot(builder, "a", instruction.XSlot);
-                AppendSlot(builder, "b", instruction.YSlot);
-                break;
             default:
                 AppendSlot(builder, "a", instruction.XSlot);
                 AppendSlot(builder, "b", instruction.YSlot);

@@ -1019,19 +1019,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.IntegerDivide:
             case GameEventScriptBytecodeOpCode.Modulo:
             case GameEventScriptBytecodeOpCode.Remainder:
-            case GameEventScriptBytecodeOpCode.IntEqual:
-            case GameEventScriptBytecodeOpCode.IntNotEqual:
-            case GameEventScriptBytecodeOpCode.IntLess:
-            case GameEventScriptBytecodeOpCode.IntGreater:
-            case GameEventScriptBytecodeOpCode.IntLessOrEqual:
-            case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
-            case GameEventScriptBytecodeOpCode.IntAdd:
-            case GameEventScriptBytecodeOpCode.IntSubtract:
-            case GameEventScriptBytecodeOpCode.IntMultiply:
-            case GameEventScriptBytecodeOpCode.IntDivide:
-            case GameEventScriptBytecodeOpCode.IntFloorDivide:
-            case GameEventScriptBytecodeOpCode.IntModulo:
-            case GameEventScriptBytecodeOpCode.IntRemainder:
             case GameEventScriptBytecodeOpCode.Default:
             case GameEventScriptBytecodeOpCode.Contains:
             case GameEventScriptBytecodeOpCode.ContainsValue:
@@ -4406,44 +4393,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return EvaluateMinMaxBinary(left, right, isMax: false);
             case GameEventScriptBytecodeOpCode.Max:
                 return EvaluateMinMaxBinary(left, right, isMax: true);
-            case GameEventScriptBytecodeOpCode.IntEqual:
-                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var equalComparison)
-                    ? BytecodeVmValue.Boolean(equalComparison == 0)
-                    : BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
-            case GameEventScriptBytecodeOpCode.IntNotEqual:
-                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var notEqualComparison)
-                    ? BytecodeVmValue.Boolean(notEqualComparison != 0)
-                    : BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(left, right));
-            case GameEventScriptBytecodeOpCode.IntLess:
-                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerLessComparison)
-                    ? BytecodeVmValue.Boolean(integerLessComparison < 0)
-                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveLessComparison) && primitiveLessComparison < 0);
-            case GameEventScriptBytecodeOpCode.IntGreater:
-                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerGreaterComparison)
-                    ? BytecodeVmValue.Boolean(integerGreaterComparison > 0)
-                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveGreaterComparison) && primitiveGreaterComparison > 0);
-            case GameEventScriptBytecodeOpCode.IntLessOrEqual:
-                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerLessOrEqualComparison)
-                    ? BytecodeVmValue.Boolean(integerLessOrEqualComparison <= 0)
-                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveLessOrEqualComparison) && primitiveLessOrEqualComparison <= 0);
-            case GameEventScriptBytecodeOpCode.IntGreaterOrEqual:
-                return BytecodeVmValue.TryComparePrimitiveIntegers(left, right, out var integerGreaterOrEqualComparison)
-                    ? BytecodeVmValue.Boolean(integerGreaterOrEqualComparison >= 0)
-                    : BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var primitiveGreaterOrEqualComparison) && primitiveGreaterOrEqualComparison >= 0);
-            case GameEventScriptBytecodeOpCode.IntAdd:
-                return BytecodeVmValue.TryPrimitiveIntegerAdd(left, right, out var integerAdd) ? integerAdd : BytecodeVmValue.Add(left, right);
-            case GameEventScriptBytecodeOpCode.IntSubtract:
-                return BytecodeVmValue.TryPrimitiveIntegerSubtract(left, right, out var integerSubtract) ? integerSubtract : BytecodeVmValue.Subtract(left, right);
-            case GameEventScriptBytecodeOpCode.IntMultiply:
-                return BytecodeVmValue.TryPrimitiveIntegerMultiply(left, right, out var integerMultiply) ? integerMultiply : BytecodeVmValue.Multiply(left, right);
-            case GameEventScriptBytecodeOpCode.IntDivide:
-                return BytecodeVmValue.TryPrimitiveIntegerDivide(left, right, out var integerDivide) ? integerDivide : BytecodeVmValue.Divide(left, right);
-            case GameEventScriptBytecodeOpCode.IntFloorDivide:
-                return BytecodeVmValue.TryPrimitiveIntegerFloorDivide(left, right, out var integerFloorDivide) ? integerFloorDivide : BytecodeVmValue.IntegerDivide(left, right);
-            case GameEventScriptBytecodeOpCode.IntModulo:
-                return BytecodeVmValue.TryPrimitiveIntegerModulo(left, right, out var integerModulo) ? integerModulo : BytecodeVmValue.Modulo(left, right);
-            case GameEventScriptBytecodeOpCode.IntRemainder:
-                return BytecodeVmValue.TryPrimitiveIntegerRemainder(left, right, out var integerRemainder) ? integerRemainder : BytecodeVmValue.Remainder(left, right);
             default:
                 return TryEvaluateBinaryOperation(GetBinaryOperator(opCode), left, right, out var value)
                     ? value
@@ -4474,19 +4423,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Greater or
             GameEventScriptBytecodeOpCode.LessOrEqual or
             GameEventScriptBytecodeOpCode.GreaterOrEqual or
-            GameEventScriptBytecodeOpCode.IntEqual or
-            GameEventScriptBytecodeOpCode.IntNotEqual or
-            GameEventScriptBytecodeOpCode.IntLess or
-            GameEventScriptBytecodeOpCode.IntGreater or
-            GameEventScriptBytecodeOpCode.IntLessOrEqual or
-            GameEventScriptBytecodeOpCode.IntGreaterOrEqual or
-            GameEventScriptBytecodeOpCode.IntAdd or
-            GameEventScriptBytecodeOpCode.IntSubtract or
-            GameEventScriptBytecodeOpCode.IntMultiply or
-            GameEventScriptBytecodeOpCode.IntDivide or
-            GameEventScriptBytecodeOpCode.IntFloorDivide or
-            GameEventScriptBytecodeOpCode.IntModulo or
-            GameEventScriptBytecodeOpCode.IntRemainder;
+            GameEventScriptBytecodeOpCode.GreaterOrEqual;
 
     private static BytecodeVmValue EvaluateLogicalAnd(in BytecodeVmValue left, in BytecodeVmValue right)
     {
@@ -7060,165 +6997,6 @@ internal readonly record struct BytecodeVmValue(
         }
 
         return GesValueOperations.TryCompareNumeric(leftNumber, rightNumber, out comparison);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryComparePrimitiveIntegers(in BytecodeVmValue left, in BytecodeVmValue right, out int comparison)
-    {
-        if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
-        {
-            if (left.Unit != right.Unit)
-            {
-                comparison = default;
-                return false;
-            }
-
-            comparison = left.IntegerValue.CompareTo(right.IntegerValue);
-            return true;
-        }
-
-        comparison = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerAdd(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            left.Unit == right.Unit &&
-            TryAddInteger(leftInteger, rightInteger, out var result))
-        {
-            value = Integer(result, left.Unit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerSubtract(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            left.Unit == right.Unit &&
-            TrySubtractInteger(leftInteger, rightInteger, out var result))
-        {
-            value = Integer(result, left.Unit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerMultiply(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            !(left.Unit.HasValue && right.Unit.HasValue) &&
-            TryMultiplyInteger(leftInteger, rightInteger, out var result))
-        {
-            value = Integer(result, left.Unit ?? right.Unit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            TryGetDivideResultUnit(left.Unit, right.Unit, out var resultUnit) &&
-            rightInteger != 0 &&
-            !(leftInteger == long.MinValue && rightInteger == -1))
-        {
-            value = Float((double)leftInteger / rightInteger, resultUnit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerFloorDivide(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            TryGetDivideResultUnit(left.Unit, right.Unit, out var resultUnit) &&
-            rightInteger != 0 &&
-            !(leftInteger == long.MinValue && rightInteger == -1))
-        {
-            var quotient = leftInteger / rightInteger;
-            var remainder = leftInteger % rightInteger;
-            if (remainder != 0 && (remainder > 0) != (rightInteger > 0))
-            {
-                quotient--;
-            }
-
-            value = Integer(quotient, resultUnit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerModulo(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            left.Unit.HasValue == right.Unit.HasValue &&
-            (!left.Unit.HasValue || left.Unit == right.Unit) &&
-            rightInteger != 0 &&
-            !(leftInteger == long.MinValue && rightInteger == -1))
-        {
-            var modulo = leftInteger % rightInteger;
-            if (modulo != 0 &&
-                (modulo < 0 && rightInteger > 0 || modulo > 0 && rightInteger < 0))
-            {
-                modulo += rightInteger;
-            }
-
-            value = Integer(modulo, left.Unit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryPrimitiveIntegerRemainder(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
-    {
-        if (TryGetPrimitiveIntegerOperands(left, right, out var leftInteger, out var rightInteger) &&
-            left.Unit.HasValue == right.Unit.HasValue &&
-            (!left.Unit.HasValue || left.Unit == right.Unit) &&
-            rightInteger != 0 &&
-            !(leftInteger == long.MinValue && rightInteger == -1))
-        {
-            value = Integer(leftInteger % rightInteger, left.Unit);
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool TryGetPrimitiveIntegerOperands(in BytecodeVmValue left, in BytecodeVmValue right, out long leftInteger, out long rightInteger)
-    {
-        if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
-        {
-            leftInteger = left.IntegerValue;
-            rightInteger = right.IntegerValue;
-            return true;
-        }
-
-        leftInteger = default;
-        rightInteger = default;
-        return false;
     }
 
     public static BytecodeVmValue Add(in BytecodeVmValue left, in BytecodeVmValue right)

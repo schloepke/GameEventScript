@@ -7,6 +7,16 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterUnitCalculation
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmCastUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    {
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmCheckUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    {
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool HasSameUnit(ref VmValue a, ref VmValue b) => a.Unit == b.Unit;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

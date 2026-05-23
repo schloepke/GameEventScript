@@ -171,8 +171,10 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(6)] public ushort TargetAddress;
     [FieldOffset(6)] public ushort YSlot;
     [FieldOffset(6)] public ushort EntryAddress;
+    [FieldOffset(6)] public ushort SecondaryStringIndex;
     [FieldOffset(6)] public ushort ListIndex;
     [FieldOffset(6)] public ushort TypeOperand;
+    [FieldOffset(6)] public GameEventScriptBytecodeTypeKind TypeKind;
 
     #region Extra Payload for some opcodes
     

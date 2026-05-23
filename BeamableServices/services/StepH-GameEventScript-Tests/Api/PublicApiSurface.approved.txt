@@ -105,6 +105,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field MessageEnvelope = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
+  field StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind TypeKind
   field System.Byte UnitAndFlags
   field System.Double F64
   field System.Int16 AS
@@ -126,6 +127,7 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 ListIndex
   field System.UInt16 MessageDestination
   field System.UInt16 SecondaryListIndex
+  field System.UInt16 SecondaryStringIndex
   field System.UInt16 StringIndex
   field System.UInt16 TargetAddress
   field System.UInt16 TypeOperand

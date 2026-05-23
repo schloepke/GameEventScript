@@ -104,13 +104,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.VmPublishMessageValueWithTags(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                     break;
                 case Cast:
-                    _vmState.Register(instruction.DestinationSlot).VmCast(ref _vmState.Register(instruction.XSlot), instruction.TypeKind);
+                    _vmState.Register(instruction.DestinationSlot).VmCast(ref _vmState.Register(instruction.XSlot), instruction.TypeKind, ref binary.TextConstantTable);
                     break;
                 case CastNumeric:
-                    _vmState.Register(instruction.DestinationSlot).VmCastNumeric(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmCastNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case CastCustom:
-                    _vmState.Register(instruction.DestinationSlot).VmCastCustom(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
+                    _vmState.Register(instruction.DestinationSlot).VmCastCustom(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
                     break;
                 case CastUnit:
                     _vmState.Register(instruction.DestinationSlot).VmCastUnit(ref _vmState.Register(instruction.XSlot), (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1f));
@@ -119,16 +119,16 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmCheckType(ref _vmState.Register(instruction.XSlot), instruction.TypeKind);
                     break;
                 case CheckNumeric:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckNumeric(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmCheckNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case CheckInteger:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckInteger(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmCheckInteger(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case CheckFractional:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckFractional(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmCheckFractional(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case CheckCustomType:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckCustomType(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
+                    _vmState.Register(instruction.DestinationSlot).VmCheckCustomType(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
                     break;
                 case CheckUnit:
                     _vmState.Register(instruction.DestinationSlot).VmCheckUnit(ref _vmState.Register(instruction.XSlot), (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1f));
@@ -256,7 +256,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmDefault(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case Add:
-                    _vmState.Register(instruction.DestinationSlot).VmAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Subtract:
                     _vmState.Register(instruction.DestinationSlot).VmSubtract(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));

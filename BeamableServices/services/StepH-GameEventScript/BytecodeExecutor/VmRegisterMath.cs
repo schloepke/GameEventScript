@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static StepH.GameEventScript.BytecodeExecutor.VmRegisterTypeCastCheck.NumericKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -9,7 +10,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterMath
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -47,8 +48,49 @@ internal static class VmRegisterMath
                 if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue + b.AsNumberValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
+            case Float or Percentage or Integer:
+                switch (b.ReadNumeric(ref textTable, out var bNumber))
+                {
+                    case NumericFinite:
+                        if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue + bNumber, unit);
+                        else dst.SetFloat(double.NaN);
+                        break;
+                    case NumericPositiveInfinity or NumericNegativeInfinity or NumericNaN:
+                        dst.SetFloat(double.NaN);
+                        break;
+                    default:
+                        dst.SetNothing();
+                        break;
+                }
+                return;
             default:
-                dst.SetNothing();
+                switch (b.ReadNumeric(ref textTable, out var aNumber))
+                {
+                    case NumericFinite:
+                        if (TrySameUnit(ref a, ref b, out unit))
+                        {
+                            switch (b.ReadNumeric(ref textTable, out var bbNumber))
+                            {
+                                case NumericFinite:
+                                    if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(aNumber + bbNumber, unit);
+                                    else dst.SetFloat(double.NaN);
+                                    break;
+                                case NumericPositiveInfinity or NumericNegativeInfinity or NumericNaN:
+                                    dst.SetFloat(double.NaN);
+                                    break;
+                                default:
+                                    dst.SetNothing();
+                                    break;
+                            }
+                        }
+                        break;
+                    case NumericPositiveInfinity or NumericNegativeInfinity or NumericNaN:
+                        dst.SetFloat(double.NaN);
+                        break;
+                    default:
+                        dst.SetNothing();
+                        break;
+                }
                 return;
         }
     }

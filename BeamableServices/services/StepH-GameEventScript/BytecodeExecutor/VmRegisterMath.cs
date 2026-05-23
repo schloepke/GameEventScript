@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static StepH.GameEventScript.BytecodeExecutor.VmMathConstants;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterTypeCastCheck.NumericKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
@@ -14,84 +16,70 @@ internal static class VmRegisterMath
     {
         switch (a.Kind)
         {
-            case Vector when b.Kind is Vector:
-            {
-                if (a.ObjectValue is VmFloatTriplet av && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetObject(Vector, new VmFloatTriplet(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z), vectorUnit);
-                else dst.SetFloat(double.NaN);
-                return;
-            }
-            case Vector:
-                if (b.Kind is Point) dst.SetFloat(double.NaN);
-                else dst.SetNothing();
-                return;
-            case Point when b.Kind is Vector:
-            {
-                if (a.ObjectValue is VmFloatTriplet ap && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Point, new VmFloatTriplet(ap.X + bv.X, ap.Y + bv.Y, ap.Z + bv.Z), pointUnit);
-                else dst.SetFloat(double.NaN);
-                return;
-            }
-            case Point:
-                dst.SetFloat(double.NaN);
-                return;
             case Integer when b.Kind is Integer:
                 if (TrySameUnit(ref a, ref b, out var unit)) dst.SetInteger(a.IntegerValue + b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
-                return;
-            case Integer or Float or Percentage when b.Kind is Vector or Point:
-                dst.SetFloat(double.NaN);
-                return;
-            case Float or Percentage when b.Kind is Float or Percentage:
+                break;
+            case Float when b.Kind is Float:
                 if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue + b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
-                return;
-            case Float or Percentage or Integer when b.Kind is Float or Percentage or Integer:
+                break;
+            case Float or Integer when b.Kind is Float or Integer:
                 if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue + b.AsNumberValue, unit);
                 else dst.SetFloat(double.NaN);
-                return;
-            case Float or Percentage or Integer:
-                switch (b.ReadNumeric(ref textTable, out var bNumber))
-                {
-                    case NumericFinite:
-                        if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue + bNumber, unit);
-                        else dst.SetFloat(double.NaN);
-                        break;
-                    case NumericPositiveInfinity or NumericNegativeInfinity or NumericNaN:
-                        dst.SetFloat(double.NaN);
-                        break;
-                    default:
-                        dst.SetNothing();
-                        break;
-                }
+                break;
+            case Integer when b.Kind is Percentage:
+                dst.SetFloat(a.IntegerValue + a.IntegerValue * b.FloatValue, a.Unit);
+                break;
+            case Float when b.Kind is Percentage:
+                dst.SetFloat(a.FloatValue + a.FloatValue * b.FloatValue, a.Unit);
+                break;
+            case Percentage when b.Kind is Percentage:
+                dst.SetPercentage(a.FloatValue + b.FloatValue);
+                break;
+            case Vector when b.Kind is Vector:
+                if (a.ObjectValue is VmFloatTriplet av && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetObject(Vector, new VmFloatTriplet(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z), vectorUnit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Point when b.Kind is Vector:
+                if (a.ObjectValue is VmFloatTriplet ap && b.ObjectValue is VmFloatTriplet bvv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Point, new VmFloatTriplet(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z), pointUnit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Integer or Float or Percentage when b.Kind is Vector or Point:
+                dst.SetFloat(double.NaN);
+                break;
+            case Percentage:
+            case Vector:
+            case Point:
+                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
+                else dst.SetNothing();
+                break;
+            case Nothing:
+                dst.SetNothing();
                 return;
             default:
-                switch (b.ReadNumeric(ref textTable, out var aNumber))
+                if (b.Kind is Nothing)
                 {
-                    case NumericFinite:
-                        if (TrySameUnit(ref a, ref b, out unit))
-                        {
-                            switch (b.ReadNumeric(ref textTable, out var bbNumber))
-                            {
-                                case NumericFinite:
-                                    if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(aNumber + bbNumber, unit);
-                                    else dst.SetFloat(double.NaN);
-                                    break;
-                                case NumericPositiveInfinity or NumericNegativeInfinity or NumericNaN:
-                                    dst.SetFloat(double.NaN);
-                                    break;
-                                default:
-                                    dst.SetNothing();
-                                    break;
-                            }
-                        }
-                        break;
-                    case NumericPositiveInfinity or NumericNegativeInfinity or NumericNaN:
-                        dst.SetFloat(double.NaN);
-                        break;
-                    default:
-                        dst.SetNothing();
-                        break;
+                    dst.SetNothing();
                 }
-                return;
+                else
+                {
+                    var aNum = a.ReadNumericOrNan(ref textTable);
+                    if (double.IsNaN(aNum))
+                    {
+                        dst.SetFloat(double.NaN);
+                    }
+                    else
+                    {
+                        var bNum = b.ReadNumericOrNan(ref textTable);
+                        if (double.IsNaN(bNum)) dst.SetFloat(double.NaN);
+                        else if (b.Kind is Percentage) dst.SetFloat(aNum + aNum * bNum, a.Unit);
+                        else if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(aNum + bNum, unit);
+                        else dst.SetFloat(double.NaN);
+                    }
+                }
+
+                break;
         }
     }
 
@@ -445,4 +433,33 @@ internal static class VmRegisterMath
                 break;
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static double ReadNumericOrNan(ref this VmValue value, ref GameEventScriptTextTable textTable) => value.Kind switch
+    {
+        Integer => value.IntegerValue,
+        Float or Percentage => value.FloatValue,
+        GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
+        Text when value.IsStoragePointer => ReadNumericTextOrNaN(textTable.Resolve((ushort)value.IntegerValue)),
+        Text when value.ObjectValue is string text => ReadNumericTextOrNaN(text),
+        Tag when value.IsStoragePointer => ReadNumericTagOrNaN(textTable.Resolve((ushort)value.IntegerValue)),
+        Tag when value.ObjectValue is string tag => ReadNumericTagOrNaN(tag),
+        _ => double.NaN
+    };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double ReadNumericTextOrNaN(string text) => double.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : double.NaN;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double ReadNumericTagOrNaN(string tag) => tag switch
+    {
+        "infinity" => double.PositiveInfinity,
+        "negativeinfinity" => double.NegativeInfinity,
+        "nan" => double.NaN,
+        "pi" => GesPi,
+        "e" => GesEulerNumber,
+        "tau" => GesTau,
+        "phi" => GesPhi,
+        _ => double.NaN
+    };
 }

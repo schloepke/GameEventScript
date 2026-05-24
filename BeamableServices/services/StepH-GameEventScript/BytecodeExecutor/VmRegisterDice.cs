@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using static StepH.GameEventScript.BytecodeExecutor.VmListObject;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -14,10 +15,13 @@ internal static class VmRegisterDice
             dst.SetObject(List, Empty);
             return;
         }
-
+        var dices = new long[count];
+        for (var i = 0; i < count; i++) dices[i] = state.RandomGenerator.NextInclusiveInteger(1, sides);
+        Array.Sort(dices);
+        Array.Reverse(dices);
         var list = new VmListObject(count);
-        for (var i = 0; i < count; i++) list.Items[i].SetInteger(state.RandomGenerator.NextInclusiveInt(1, sides));
-        dst.SetObject(List, list);
+        for (var i = 0; i < count; i++) list.Items[i].SetInteger(dices[i]);
+        dst.SetObject(Dice, list);
     }
 
 }

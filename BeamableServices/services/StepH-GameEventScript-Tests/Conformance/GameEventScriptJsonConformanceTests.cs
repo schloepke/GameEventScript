@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using StepH.GameEventScript;
@@ -8,38 +9,157 @@ using StepH.GameEventScript.Runtime;
 namespace StepH_GameEventScript_Tests.Conformance;
 
 [TestClass]
-public sealed class GameEventScriptJsonConformanceTests
+public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJsonConformanceTestBase
 {
-    private const bool NewVirtualMachineConformanceSoftAssertions = true;
-    private static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
-
-    public TestContext TestContext { get; set; } = null!;
-
-    public static IEnumerable<object[]> ConformanceCases()
-        => GameEventScriptConformanceRunner.ConformanceCases(SpecDirectory);
-
-    public static IEnumerable<object[]> NewVirtualMachineConformanceCases()
-        => GameEventScriptConformanceRunner.AllConformanceCases(SpecDirectory)
-            .Where(testCase => string.Equals(testCase.Test.Kind, "scriptApi", StringComparison.OrdinalIgnoreCase))
-            .Select(testCase => new object[] { testCase });
+    [TestMethod]
+    [DynamicData(nameof(ApiMessagesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void ApiMessages(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
 
     [TestMethod]
-    [DynamicData(nameof(ConformanceCases))]
-    public void JsonConformanceCasePasses(GameEventScriptConformanceCase testCase)
-        => GameEventScriptConformanceRunner.RunCase(testCase);
+    [DynamicData(nameof(CompileBuildErrorsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void CompileBuildErrors(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
 
     [TestMethod]
-    [DynamicData(nameof(NewVirtualMachineConformanceCases))]
-    public void NewVirtualMachineConformanceCase(GameEventScriptConformanceCase testCase)
-    {
-        var outcome = RunNewVirtualMachineCase(testCase);
-        TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
-        if (!NewVirtualMachineConformanceSoftAssertions && !outcome.Passed)
-        {
-            Assert.Fail($"{outcome.Status}: {testCase}: {outcome.Detail}");
-        }
-    }
+    [DynamicData(nameof(CompileSyntaxErrorsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void CompileSyntaxErrors(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
 
+    [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicMathMatrixCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicMathMatrix(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeCollections(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeDiagnosticsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeDiagnostics(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeExtensionsSequencesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeExtensionsSequences(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeHostDispatchCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeHostDispatch(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeMessagesHandlers(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimePredicatesFunctionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimePredicatesFunctions(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimePublishTagsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimePublishTags(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeRandomDiceRangesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeRandomDiceRanges(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeTypesAndValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeTypesAndValues(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    public static string GetConformanceCaseDisplayName(MethodInfo methodInfo, object[] data)
+        => FormatConformanceCaseDisplayName(methodInfo, data);
+}
+
+[TestClass]
+public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJsonConformanceTestBase
+{
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMathMatrixCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicMathMatrix(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeCollections(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeDiagnosticsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeDiagnostics(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeExtensionsSequencesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeExtensionsSequences(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeHostDispatchCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeHostDispatch(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeMessagesHandlers(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimePredicatesFunctionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimePredicatesFunctions(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimePublishTagsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimePublishTags(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeRandomDiceRangesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeRandomDiceRanges(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeTypesAndValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeTypesAndValues(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    public static string GetConformanceCaseDisplayName(MethodInfo methodInfo, object[] data)
+        => FormatConformanceCaseDisplayName(methodInfo, data);
+}
+
+[TestClass]
+public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScriptJsonConformanceTestBase
+{
     [TestMethod]
     public void NewVirtualMachineConformanceSmokeIsSoft()
     {
@@ -127,8 +247,115 @@ public sealed class GameEventScriptJsonConformanceTests
                 $"Pass rate: {result.PassRate:P1}.{Environment.NewLine}{string.Join(Environment.NewLine, samples)}");
         }
     }
+}
 
-    private static NewVmConformanceOutcome RunNewVirtualMachineCase(GameEventScriptConformanceCase testCase)
+public abstract class GameEventScriptJsonConformanceTestBase
+{
+    protected const bool NewVirtualMachineConformanceSoftAssertions = true;
+    protected static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
+
+    public TestContext TestContext { get; set; } = null!;
+
+    public static IEnumerable<object[]> ApiMessagesCases()
+        => Cases("api/messages.json");
+
+    public static IEnumerable<object[]> CompileBuildErrorsCases()
+        => Cases("compile/build-errors.json");
+
+    public static IEnumerable<object[]> CompileSyntaxErrorsCases()
+        => Cases("compile/syntax-errors.json");
+
+    public static IEnumerable<object[]> RuntimeAtomicMathMatrixCases()
+        => Cases("runtime/atomic/math-matrix.json");
+
+    public static IEnumerable<object[]> RuntimeAtomicMessagesHandlersCases()
+        => Cases("runtime/atomic/messages-handlers.json");
+
+    public static IEnumerable<object[]> RuntimeCollectionsCases()
+        => Cases("runtime/collections.json");
+
+    public static IEnumerable<object[]> RuntimeControlFlowCases()
+        => Cases("runtime/control-flow.json");
+
+    public static IEnumerable<object[]> RuntimeDiagnosticsCases()
+        => Cases("runtime/diagnostics.json");
+
+    public static IEnumerable<object[]> RuntimeExtensionsSequencesCases()
+        => Cases("runtime/extensions-sequences.json");
+
+    public static IEnumerable<object[]> RuntimeHostDispatchCases()
+        => Cases("runtime/host-dispatch.json");
+
+    public static IEnumerable<object[]> RuntimeMessagesHandlersCases()
+        => Cases("runtime/messages-handlers.json");
+
+    public static IEnumerable<object[]> RuntimePredicatesFunctionsCases()
+        => Cases("runtime/predicates-functions.json");
+
+    public static IEnumerable<object[]> RuntimePublishTagsCases()
+        => Cases("runtime/publish-tags.json");
+
+    public static IEnumerable<object[]> RuntimeRandomDiceRangesCases()
+        => Cases("runtime/random-dice-ranges.json");
+
+    public static IEnumerable<object[]> RuntimeTypesAndValuesCases()
+        => Cases("runtime/types-and-values.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMathMatrixCases()
+        => NewVirtualMachineCases("runtime/atomic/math-matrix.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMessagesHandlersCases()
+        => NewVirtualMachineCases("runtime/atomic/messages-handlers.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
+        => NewVirtualMachineCases("runtime/collections.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeControlFlowCases()
+        => NewVirtualMachineCases("runtime/control-flow.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeDiagnosticsCases()
+        => NewVirtualMachineCases("runtime/diagnostics.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeExtensionsSequencesCases()
+        => NewVirtualMachineCases("runtime/extensions-sequences.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeHostDispatchCases()
+        => NewVirtualMachineCases("runtime/host-dispatch.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeMessagesHandlersCases()
+        => NewVirtualMachineCases("runtime/messages-handlers.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimePredicatesFunctionsCases()
+        => NewVirtualMachineCases("runtime/predicates-functions.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimePublishTagsCases()
+        => NewVirtualMachineCases("runtime/publish-tags.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeRandomDiceRangesCases()
+        => NewVirtualMachineCases("runtime/random-dice-ranges.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeTypesAndValuesCases()
+        => NewVirtualMachineCases("runtime/types-and-values.json");
+
+    protected static string FormatConformanceCaseDisplayName(MethodInfo methodInfo, object[] data)
+        => data is [GameEventScriptConformanceCase testCase]
+            ? testCase.Test.Name ?? testCase.ToString()
+            : methodInfo.Name;
+
+    protected static void RunJsonConformanceCase(GameEventScriptConformanceCase testCase)
+        => GameEventScriptConformanceRunner.RunCase(testCase);
+
+    protected void RunNewVirtualMachineConformanceCase(GameEventScriptConformanceCase testCase)
+    {
+        var outcome = RunNewVirtualMachineCase(testCase);
+        TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
+        if (!NewVirtualMachineConformanceSoftAssertions && !outcome.Passed)
+        {
+            Assert.Fail($"{outcome.Status}: {testCase}: {outcome.Detail}");
+        }
+    }
+
+    protected static NewVmConformanceOutcome RunNewVirtualMachineCase(GameEventScriptConformanceCase testCase)
     {
         GameEventScriptBinary binary;
         try
@@ -151,6 +378,37 @@ public sealed class GameEventScriptJsonConformanceTests
             return NewVmConformanceOutcome.RuntimeFailure(exception.Message);
         }
     }
+
+    protected static NewVmConformanceSuiteResult GetSuiteResult(
+        SortedDictionary<string, NewVmConformanceSuiteResult> suites,
+        string suiteName)
+    {
+        if (!suites.TryGetValue(suiteName, out var result))
+        {
+            result = new NewVmConformanceSuiteResult();
+            suites.Add(suiteName, result);
+        }
+
+        return result;
+    }
+
+    protected static void AddSample(List<string> samples, GameEventScriptConformanceCase testCase, string kind, string detail)
+    {
+        if (samples.Count >= 30)
+        {
+            return;
+        }
+
+        samples.Add($"{kind}: {testCase}: {detail}");
+    }
+
+    private static IEnumerable<object[]> Cases(string relativeSpecFile)
+        => GameEventScriptConformanceRunner.ConformanceCases(SpecDirectory, relativeSpecFile);
+
+    private static IEnumerable<object[]> NewVirtualMachineCases(string relativeSpecFile)
+        => GameEventScriptConformanceRunner.AllConformanceCases(SpecDirectory, relativeSpecFile)
+            .Where(testCase => string.Equals(testCase.Test.Kind, "scriptApi", StringComparison.OrdinalIgnoreCase))
+            .Select(testCase => new object[] { testCase });
 
     private static string GetSourceDirectory([CallerFilePath] string sourceFile = "")
         => Path.GetDirectoryName(sourceFile)!;
@@ -206,15 +464,15 @@ public sealed class GameEventScriptJsonConformanceTests
                 return false;
             }
 
-            if (!MessagesMatch(step.ExpectedPublished, emitted))
+            if (!TryMatchMessages(step.ExpectedPublished, emitted, out var emittedDiff))
             {
-                mismatch = $"step {stepIndex + 1}: emitted messages differ.";
+                mismatch = $"step {stepIndex + 1}: emitted messages differ.{Environment.NewLine}{emittedDiff}";
                 return false;
             }
 
-            if (!MessagesMatch(step.ExpectedOutboundPublished, published))
+            if (!TryMatchMessages(step.ExpectedOutboundPublished, published, out var publishedDiff))
             {
-                mismatch = $"step {stepIndex + 1}: published messages differ.";
+                mismatch = $"step {stepIndex + 1}: published messages differ.{Environment.NewLine}{publishedDiff}";
                 return false;
             }
         }
@@ -222,41 +480,31 @@ public sealed class GameEventScriptJsonConformanceTests
         return true;
     }
 
-    private static bool MessagesMatch(IReadOnlyList<JsonElement>? expectedPublished, IReadOnlyList<GameEventScriptMessage> actual)
+    private static bool TryMatchMessages(
+        IReadOnlyList<JsonElement>? expectedPublished,
+        IReadOnlyList<GameEventScriptMessage> actual,
+        out string diff)
     {
+        diff = string.Empty;
         var expected = (expectedPublished ?? []).Select(GameEventScriptConformanceValueCodec.DecodeMessage).ToArray();
-        return GameEventScriptConformanceValueCodec.ToCanonicalJson(expected) ==
-               GameEventScriptConformanceValueCodec.ToCanonicalJson(actual);
+        var expectedJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(expected);
+        var actualJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(actual);
+        if (expectedJson == actualJson)
+        {
+            return true;
+        }
+
+        diff =
+            $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
+            $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}";
+        return false;
     }
 
     private static bool HasDiagnosticExpectations(GameEventScriptApiStepSpec step)
         => step.ExpectedDiagnostics is { Count: > 0 } ||
            step.UnexpectedDiagnostics is { Count: > 0 };
 
-    private static NewVmConformanceSuiteResult GetSuiteResult(
-        SortedDictionary<string, NewVmConformanceSuiteResult> suites,
-        string suiteName)
-    {
-        if (!suites.TryGetValue(suiteName, out var result))
-        {
-            result = new NewVmConformanceSuiteResult();
-            suites.Add(suiteName, result);
-        }
-
-        return result;
-    }
-
-    private static void AddSample(List<string> samples, GameEventScriptConformanceCase testCase, string kind, string detail)
-    {
-        if (samples.Count >= 30)
-        {
-            return;
-        }
-
-        samples.Add($"{kind}: {testCase}: {detail}");
-    }
-
-    private sealed class NewVmConformanceResult(int totalCases, int targetedCases, int skippedNonRuntimeCases)
+    protected sealed class NewVmConformanceResult(int totalCases, int targetedCases, int skippedNonRuntimeCases)
     {
         public int TotalCases { get; } = totalCases;
         public int TargetedCases { get; } = targetedCases;
@@ -270,7 +518,7 @@ public sealed class GameEventScriptJsonConformanceTests
         public double PassRate => Attempted == 0 ? 0d : (double)Passed / Attempted;
     }
 
-    private sealed class NewVmConformanceSuiteResult
+    protected sealed class NewVmConformanceSuiteResult
     {
         public int Attempted { get; set; }
         public int Passed { get; set; }
@@ -280,7 +528,7 @@ public sealed class GameEventScriptJsonConformanceTests
         public double PassRate => Attempted == 0 ? 0d : (double)Passed / Attempted;
     }
 
-    private enum NewVmConformanceStatus
+    protected enum NewVmConformanceStatus
     {
         Passed,
         Mismatch,
@@ -288,7 +536,7 @@ public sealed class GameEventScriptJsonConformanceTests
         RuntimeFailure
     }
 
-    private sealed record NewVmConformanceOutcome(
+    protected sealed record NewVmConformanceOutcome(
         NewVmConformanceStatus Status,
         string Detail)
     {

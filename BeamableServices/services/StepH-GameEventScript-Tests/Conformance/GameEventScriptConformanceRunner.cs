@@ -32,8 +32,19 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
+    internal static IEnumerable<object[]> ConformanceCases(string specDirectory, string relativeSpecFile)
+    {
+        foreach (var testCase in EnumerateConformanceCases(specDirectory, relativeSpecFile))
+        {
+            yield return [testCase];
+        }
+    }
+
     internal static IReadOnlyList<GameEventScriptConformanceCase> AllConformanceCases(string specDirectory)
         => EnumerateConformanceCases(specDirectory).ToArray();
+
+    internal static IReadOnlyList<GameEventScriptConformanceCase> AllConformanceCases(string specDirectory, string relativeSpecFile)
+        => EnumerateConformanceCases(specDirectory, relativeSpecFile).ToArray();
 
     internal static IEnumerable<GameEventScriptConformanceCase> EnumerateBytecodeVmScriptApiCases(string specDirectory)
     {
@@ -133,6 +144,23 @@ internal static class GameEventScriptConformanceRunner
     private static IEnumerable<GameEventScriptConformanceCase> EnumerateConformanceCases(string specDirectory)
     {
         foreach (var (file, suite, test) in EnumerateTests(specDirectory))
+        {
+            ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
+            ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
+            yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, UsesRuntimeEngine(test.Kind) ? BytecodeVmEngine : null);
+        }
+    }
+
+    private static IEnumerable<GameEventScriptConformanceCase> EnumerateConformanceCases(
+        string specDirectory,
+        string relativeSpecFile)
+    {
+        var file = Path.Combine(
+            new[] { specDirectory }
+                .Concat(relativeSpecFile.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+                .ToArray());
+        var suite = LoadSuite(file);
+        foreach (var test in suite.Tests)
         {
             ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);

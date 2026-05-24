@@ -4933,9 +4933,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return combined;
         }
 
-        return left.IsText() || right.IsText()
-            ? GesText($"{GesValueOperations.ToText(left)}{GesValueOperations.ToText(right)}")
-            : GesFloatNaN();
+        return GesFloatNaN();
     }
 
     private static GameEventScriptValue EvaluateNumericBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)
@@ -7176,9 +7174,7 @@ internal readonly record struct BytecodeVmValue(
                 return FromGameEventScriptValue(combined);
             }
 
-            return leftValue.IsText() || rightValue.IsText()
-                ? Reference(GesText($"{GesValueOperations.ToText(leftValue)}{GesValueOperations.ToText(rightValue)}"))
-                : NaN();
+            return NaN();
         }
 
         if (leftUnit != rightUnit)

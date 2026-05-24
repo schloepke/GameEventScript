@@ -1000,7 +1000,8 @@ internal static class VmRegisterMath
                 dst.SetNothing();
                 return;
             case Vector or Point:
-                dst.SetFloat(double.NaN);
+                if (min.Kind is Nothing || max.Kind is Nothing) dst.SetNothing();
+                else dst.SetFloat(double.NaN);
                 return;
         }
 
@@ -1059,6 +1060,9 @@ internal static class VmRegisterMath
                 if (double.IsNaN(percentageValue) || percentageValue < 0d || double.IsNegativeInfinity(percentageValue)) dst.SetFloat(double.NaN);
                 else if (double.IsPositiveInfinity(percentageValue)) dst.SetFloat(double.PositiveInfinity);
                 else dst.SetFloat(Math.Log(percentageValue));
+                return;
+            case Nothing:
+                dst.SetNothing();
                 return;
             default:
                 if (a.HasUnit)
@@ -1132,7 +1136,16 @@ internal static class VmRegisterMath
                 if (double.IsFinite(numericLeft) && double.IsFinite(percentageRight)) dst.SetFloat(randomGenerator.NextInclusiveFloat(numericLeft, percentageRight));
                 else dst.SetFloat(double.NaN);
                 return;
+            case Nothing:
+                dst.SetNothing();
+                return;
             default:
+                if (to.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
                 if (!TrySameUnit(ref from, ref to, out unit))
                 {
                     dst.SetFloat(double.NaN);

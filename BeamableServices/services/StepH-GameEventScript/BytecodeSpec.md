@@ -613,6 +613,18 @@ Required operations:
   `UnaryAbs`, and `UnaryNaturalLog`
 - `Clamp`
 
+Numeric operations must preserve the language distinction between absent input
+and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and
+numeric random-range evaluation, any source operand that is `nothing` produces
+`nothing`. If all source operands are present but the operation cannot be
+computed as valid mathematics, the result is a numeric `NaN`.
+
+Invalid numeric results include non-numeric operands in numeric operations,
+incompatible quantity units, invalid vector/point arithmetic, and `mod`/`rem`
+by zero. Scalar `Divide` follows IEEE floating-point behavior, so zero
+denominators may produce `Infinity`, `-Infinity`, or `NaN` instead of
+`nothing`.
+
 Logical operations use three-valued truth tables with `nothing` as unknown.
 Runtime truth tests and false tests both fail for `nothing`.
 

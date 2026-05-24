@@ -395,6 +395,16 @@ integer when a finite result is exactly integral and fits signed 64-bit;
 otherwise they are represented as IEEE 754 double precision. Equality uses
 normal IEEE equality; approximate equality uses `=~`, `≈`, or `≅`.
 
+Numeric operations distinguish absence from invalid mathematics. If any operand
+of a numeric operation is `nothing`, the result is `nothing`. When all operands
+are present but the operation cannot be computed as valid mathematics, the
+result is numeric `NaN`.
+
+Examples of invalid mathematics include non-numeric operands in numeric
+operators, incompatible quantity units, invalid vector or point arithmetic, and
+`mod`/`rem` by zero. Scalar `/` follows IEEE floating-point behavior, so
+division by zero can produce `Infinity`, `-Infinity`, or `NaN`.
+
 Numeric checks are keyword constructs, not `:` type tags:
 
 ```ges

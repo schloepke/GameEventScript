@@ -278,6 +278,12 @@ not a second runtime dispatch step.
 
 ### Group 4 - Math And Random
 
+Group 4 numeric operations treat `nothing` as absent input: if any direct
+numeric source operand is `nothing`, the result slot receives `nothing`.
+Otherwise, a present but non-computable numeric operation writes numeric `NaN`
+to the result slot. Scalar `Divide` keeps IEEE floating-point behavior for zero
+denominators; `Modulo` and `Remainder` by zero write `NaN`.
+
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0x70 | `Add` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |

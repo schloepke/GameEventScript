@@ -7069,6 +7069,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Add(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "+", right, out var integerResult))
         {
             return integerResult;
@@ -7136,6 +7141,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Subtract(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "-", right, out var integerResult))
         {
             return integerResult;
@@ -7195,6 +7205,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Multiply(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "*", right, out var integerResult))
         {
             return integerResult;
@@ -7253,6 +7268,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Divide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "/", right, out var integerResult))
         {
             return integerResult;
@@ -7311,6 +7331,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue IntegerDivide(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "div", right, out var integerResult))
         {
             return integerResult;
@@ -7362,6 +7387,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Modulo(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "mod", right, out var integerResult))
         {
             return integerResult;
@@ -7412,6 +7442,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Remainder(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (TryEvaluateIntegerBinary(left, "rem", right, out var integerResult))
         {
             return integerResult;
@@ -7462,6 +7497,11 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue Power(in BytecodeVmValue left, in BytecodeVmValue right)
     {
+        if (TryPropagateNothing(left, right, out var nothingResult))
+        {
+            return nothingResult;
+        }
+
         if (GesValueOperations.TryEvaluateUnitBinary(left.ToGameEventScriptValue(), "^", right.ToGameEventScriptValue(), out var unitResult))
         {
             return FromGameEventScriptValue(unitResult);
@@ -7857,6 +7897,18 @@ internal readonly record struct BytecodeVmValue(
     public bool IsNothingLike()
         => Kind == BytecodeVmValueKind.Nothing ||
            ReferenceValue is { } reference && reference.IsNothing();
+
+    private static bool TryPropagateNothing(in BytecodeVmValue left, in BytecodeVmValue right, out BytecodeVmValue value)
+    {
+        if (left.IsNothingLike() || right.IsNothingLike())
+        {
+            value = Nothing;
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
 
     private static BytecodeVmValue FromFloatNumeric(GesValueOperations.NumericValue number, GameEventScriptNumericUnit? unit = null)
         => number.IsFinite

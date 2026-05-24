@@ -62,12 +62,6 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetBooleanOrNothing(bool? value)
-    {
-        if (value is null) SetNothing();
-        else SetBoolean(value.Value);
-    }
-
     public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         Kind = Integer;
@@ -75,12 +69,6 @@ public struct VmValue
         Unit = unit;
         IntegerValue = value;
         ObjectValue = null;
-    }
-
-    public void SetIntegerOrNothing(long? value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
-    {
-        if (value is null) SetNothing();
-        else SetInteger(value.Value, unit);
     }
 
     public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
@@ -118,12 +106,6 @@ public struct VmValue
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         FloatValue = ratio;
         ObjectValue = null;
-    }
-
-    public void SetFloatOrNothing(double? value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
-    {
-        if (value is null) SetNothing();
-        else SetFloat(value.Value, unit);
     }
 
     public void SetStringPointer(ushort pointer)

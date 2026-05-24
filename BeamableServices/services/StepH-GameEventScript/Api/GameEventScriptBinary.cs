@@ -125,27 +125,30 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
 
 public enum GameEventScriptBytecodeTypeKind : ushort
 {
-    Invalid = 0,
-    Nothing = 1,
-    Boolean = 2,
-    Integer = 3,
-    Float = 4,
-    Percentage = 5,
-    Vector = 6,
-    Point = 7,
-    Series = 8,
-    Envelope = 9,
-    Tag = 10,
-    Text = 11,
-    List = 12,
-    Range = 13,
-    Message = 14,
-    Handler = 15,
-    Map = 16,
-    Dice = 17,
-    Stream = 18,
+    Invalid = 0x00,
+    Nothing = 0x01,
+    Boolean = 0x02,
+    Integer = 0x03,
+    Float = 0x04,
+    Percentage = 0x05,
+    Tag = 0x06,
+    Text = 0x07,
+    Vector = 0x08,
+    Point = 0x09,
+    Range = 0x0a,
+
+    Handler = 0x10,
+    Message = 0x11,
+    Envelope = 0x12,
     
-    Custom = 0x7FFF,
+    List = 0x20,
+    Dice = 0x21,
+    Map = 0x22,
+
+    Stream = 0x30,
+    Series = 0x31,
+    
+    Custom = 0xFF,
 }
 
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]

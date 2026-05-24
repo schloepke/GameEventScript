@@ -4648,6 +4648,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (fromValue.Kind == BytecodeVmValueKind.Integer &&
             toValue.Kind == BytecodeVmValueKind.Integer)
         {
+            if (fromValue.Unit != toValue.Unit)
+            {
+                return BytecodeVmValue.NaN();
+            }
+
             var from = fromRaw.AsInteger();
             var to = toRaw.AsInteger();
             if (from > to)
@@ -4656,8 +4661,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             return TryNextInclusiveInteger(from, to, out var next)
-                ? BytecodeVmValue.Integer(next)
+                ? BytecodeVmValue.Integer(next, fromValue.Unit)
                 : BytecodeVmValue.Nothing;
+        }
+
+        if (fromValue.IsNothingLike() || toValue.IsNothingLike())
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
+        if (!GesValueOperations.HaveCompatibleNumericUnits(fromRaw, toRaw))
+        {
+            return BytecodeVmValue.NaN();
         }
 
         if (!GesValueOperations.TryCoerceNumericForOperation(fromRaw, out var fromNumber) ||
@@ -4665,7 +4680,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             !fromNumber.IsFinite ||
             !toNumber.IsFinite)
         {
-            return BytecodeVmValue.Nothing;
+            return BytecodeVmValue.NaN();
         }
 
         var lower = Math.Min(fromNumber.Value, toNumber.Value);
@@ -4676,7 +4691,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return TryNextInclusiveFloat(lower, upper, out var nextFloat)
-            ? BytecodeVmValue.Float(nextFloat)
+            ? BytecodeVmValue.Float(nextFloat, fromValue.Unit)
             : BytecodeVmValue.Nothing;
     }
 
@@ -5004,7 +5019,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return GesValueOperations.TryCoerceNumericForOperation(operand, out var number)
             ? GesValueOperations.ToGameEventScriptNumber(GesValueOperations.NegateNumeric(number))
-            : GameEventScriptNothingValue.Instance;
+            : GesFloatNaN();
     }
 
     private static GameEventScriptValue EvaluateNotUnary(GameEventScriptValue operand)
@@ -5080,9 +5095,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return vectorLength;
         }
 
-        return GesValueOperations.TryCoerceNumericForOperation(operand, out var number) && number.IsFinite
-            ? GesFloat(Math.Abs(number.Value))
-            : GameEventScriptNothingValue.Instance;
+        if (!GesValueOperations.TryCoerceNumericForOperation(operand, out var number))
+        {
+            return GesFloatNaN();
+        }
+
+        if (number.IsNaN)
+        {
+            return GesFloatNaN();
+        }
+
+        if (number.IsInfinity)
+        {
+            return GesFloatInfinity();
+        }
+
+        GameEventScriptValue.TryGetNumericUnit(operand, out var unit);
+        return GesFloat(Math.Abs(number.Value), operand.HasNumericUnit() ? unit : null);
     }
 
     private static GameEventScriptValue EvaluateNaturalLogUnary(GameEventScriptValue operand)
@@ -5154,6 +5183,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var minimum = minimumValue.ToGameEventScriptValue();
         var maximum = maximumValue.ToGameEventScriptValue();
 
+        if (rawValue.IsNothingLike() || minimumValue.IsNothingLike() || maximumValue.IsNothingLike())
+        {
+            return BytecodeVmValue.Nothing;
+        }
+
         if (!GesValueOperations.HaveCompatibleNumericUnits(raw, minimum) ||
             !GesValueOperations.HaveCompatibleNumericUnits(raw, maximum) ||
             !GesValueOperations.HaveCompatibleNumericUnits(minimum, maximum))
@@ -5164,19 +5198,35 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (!GesValueOperations.TryCoerceNumericForOperation(raw, out var rawNumber) ||
             !GesValueOperations.TryCoerceNumericForOperation(minimum, out var minimumNumber) ||
             !GesValueOperations.TryCoerceNumericForOperation(maximum, out var maximumNumber) ||
-            !rawNumber.IsFinite ||
-            !minimumNumber.IsFinite ||
-            !maximumNumber.IsFinite)
+            rawNumber.IsNaN ||
+            minimumNumber.IsNaN ||
+            maximumNumber.IsNaN)
         {
-            return BytecodeVmValue.Nothing;
+            return BytecodeVmValue.NaN();
         }
 
-        var lower = Math.Min(minimumNumber.Value, maximumNumber.Value);
-        var upper = Math.Max(minimumNumber.Value, maximumNumber.Value);
+        var rawDouble = NumericValueToDouble(rawNumber);
+        var lower = Math.Min(NumericValueToDouble(minimumNumber), NumericValueToDouble(maximumNumber));
+        var upper = Math.Max(NumericValueToDouble(minimumNumber), NumericValueToDouble(maximumNumber));
         GameEventScriptValue.TryGetNumericUnit(raw, out var unit);
-        return BytecodeVmValue.FromGameEventScriptValue(GesFloat(
-            Math.Min(Math.Max(rawNumber.Value, lower), upper),
+        return BytecodeVmValue.FromGameEventScriptValue(CreateFloatResult(
+            Math.Min(Math.Max(rawDouble, lower), upper),
             raw.HasNumericUnit() ? unit : null));
+    }
+
+    private static double NumericValueToDouble(GesValueOperations.NumericValue number)
+    {
+        if (number.IsPositiveInfinity) return double.PositiveInfinity;
+        if (number.IsNegativeInfinity) return double.NegativeInfinity;
+        return number.IsNaN ? double.NaN : number.Value;
+    }
+
+    private static GameEventScriptValue CreateFloatResult(double value, GameEventScriptNumericUnit? unit = null)
+    {
+        if (double.IsNaN(value)) return GesFloatNaN();
+        if (double.IsPositiveInfinity(value)) return GesFloatInfinity();
+        if (double.IsNegativeInfinity(value)) return GesFloatNegativeInfinity();
+        return GesFloat(value, unit);
     }
 
     private bool TryNextInclusiveFloat(double minInclusive, double maxInclusive, out double value)

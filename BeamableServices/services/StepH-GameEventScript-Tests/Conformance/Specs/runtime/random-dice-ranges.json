@@ -341,7 +341,7 @@
     {
       "kind": "scriptApi",
       "name": "reversed random bounds and invalid collection draws stay lenient",
-      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let tags be 123\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
+      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let none as :number be :nothing\n  let nothingValue be :random from none to max\n  let invalidValue be :random from 'hello' to max\n  let tags be 123\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, nothingValue: nothingValue, invalidValue: invalidValue, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
       "steps": [
         {
           "input": {
@@ -364,6 +364,13 @@
                 "valuePresent": {
                   "type": ":boolean",
                   "value": true
+                },
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "invalidValue": {
+                  "type": ":float",
+                  "value": "NaN"
                 },
                 "shuffledTags": {
                   "type": ":nothing"

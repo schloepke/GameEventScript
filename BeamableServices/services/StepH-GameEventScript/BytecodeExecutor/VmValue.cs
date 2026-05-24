@@ -105,8 +105,16 @@ public struct VmValue
 
     public void SetPercentage(double ratio)
     {
-        Kind = Percentage;
-        Flags = ratio != 0 && double.IsFinite(ratio) && !double.IsNaN(ratio) ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
+        if (double.IsFinite(ratio))
+        {
+            Kind = Percentage;
+            Flags = ratio != 0 ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
+        }
+        else
+        {
+            Kind = Float;
+            Flags = double.IsNaN(ratio) ? VmValueFlags.None : VmValueFlags.IsTrue;
+        }
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         FloatValue = ratio;
         ObjectValue = null;

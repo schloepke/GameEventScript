@@ -5,7 +5,6 @@ using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -153,10 +152,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).SetBoolean(false);
                     break;
                 case LoadInteger:
-                    _vmState.Register(instruction.DestinationSlot).SetInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.Register(instruction.DestinationSlot).SetInteger(instruction.I64, (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
                 case LoadFloat:
-                    _vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
                 case LoadPercentage:
                     _vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
@@ -186,10 +185,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.StageBoolean(false);
                     break;
                 case StageInteger:
-                    _vmState.StageInteger(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.StageInteger(instruction.I64, (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
                 case StageFloat:
-                    _vmState.StageFloat(instruction.F64, DecodeNumericUnit(instruction.UnitAndFlags));
+                    _vmState.StageFloat(instruction.F64, (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
                 case StagePercentage:
                     _vmState.StagePercentage(instruction.F64);
@@ -259,47 +258,47 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Subtract:
-                    _vmState.Register(instruction.DestinationSlot).VmSubtract(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmSubtract(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Multiply:
-                    _vmState.Register(instruction.DestinationSlot).VmMultiply(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmMultiply(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Divide:
-                    _vmState.Register(instruction.DestinationSlot).VmDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Power:
-                    _vmState.Register(instruction.DestinationSlot).VmPower(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmPower(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case IntegerDivide:
-                    _vmState.Register(instruction.DestinationSlot).VmIntegerDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmFloorDivide(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Modulo:
-                    _vmState.Register(instruction.DestinationSlot).VmModulo(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmModulo(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Remainder:
-                    _vmState.Register(instruction.DestinationSlot).VmRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Min:
                     break;
                 case Max:
                     break;
                 case UnaryNegate:
-                    _vmState.Register(instruction.DestinationSlot).VmNegate(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmNegate(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryAbs:
-                    _vmState.Register(instruction.DestinationSlot).VmAbs(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmAbs(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryNaturalLog:
-                    _vmState.Register(instruction.DestinationSlot).VmNaturalLog(ref _vmState.Register(instruction.XSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmNaturalLog(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryChance:
                     _vmState.Register(instruction.DestinationSlot).VmChance(ref _vmState.Register(instruction.XSlot), ref _vmState);
                     break;
                 case Clamp:
-                    _vmState.Register(instruction.DestinationSlot).VmClamp(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU));
+                    _vmState.Register(instruction.DestinationSlot).VmClamp(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU), ref binary.TextConstantTable);
                     break;
                 case GameEventScriptBytecodeOpCode.Random:
-                    _vmState.Register(instruction.DestinationSlot).VmRandom(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), _vmState.RandomGenerator);
+                    _vmState.Register(instruction.DestinationSlot).VmRandom(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), _vmState.RandomGenerator, ref binary.TextConstantTable);
                     break;
                 case RandomPush:
                     var seed = _vmState.Register(instruction.XSlot);

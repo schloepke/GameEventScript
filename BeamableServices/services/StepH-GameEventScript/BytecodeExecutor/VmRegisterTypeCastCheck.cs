@@ -24,6 +24,39 @@ internal static class VmRegisterTypeCastCheck
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmCastUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    {
+        switch (xSlot.Kind)
+        {
+            case Integer:
+                if (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit) dst.SetInteger(xSlot.IntegerValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float:
+                if ((unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit) && double.IsFinite(xSlot.FloatValue)) dst.SetFloat(xSlot.FloatValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector:
+                if (xSlot.ObjectValue is VmFloatTriplet vector && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetObject(Vector, vector, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point:
+                if (xSlot.ObjectValue is VmFloatTriplet point && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetObject(Point, point, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            default:
+                dst.SetFloat(double.NaN);
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmCheckUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    {
+        dst.SetBoolean(xSlot.Kind is Integer or Float or Vector or Point && xSlot.Unit == unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCast(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type, ref GameEventScriptTextTable textTable)
     {
         switch (type)

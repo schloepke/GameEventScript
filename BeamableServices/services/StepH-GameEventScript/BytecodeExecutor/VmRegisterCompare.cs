@@ -1,11 +1,12 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
+[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class VmRegisterCompare
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -72,7 +73,7 @@ internal static class VmRegisterCompare
         {
             dst.SetNothing();
         }
-        else if (!HasSameUnit(ref a, ref b))
+        else if (a.Unit != b.Unit)
         {
             dst.SetBoolean(false);
         }
@@ -89,7 +90,7 @@ internal static class VmRegisterCompare
         {
             dst.SetNothing();
         }
-        else if (!HasSameUnit(ref a, ref b))
+        else if (a.Unit != b.Unit)
         {
             dst.SetBoolean(true);
         }
@@ -106,7 +107,7 @@ internal static class VmRegisterCompare
         {
             dst.SetNothing();
         }
-        else if (!HasSameUnit(ref a, ref b))
+        else if (a.Unit != b.Unit)
         {
             dst.SetBoolean(false);
         }
@@ -125,7 +126,7 @@ internal static class VmRegisterCompare
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
+        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
         {
             dst.SetNothing();
         }
@@ -146,7 +147,7 @@ internal static class VmRegisterCompare
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
+        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
         {
             dst.SetNothing();
         }
@@ -167,7 +168,7 @@ internal static class VmRegisterCompare
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
+        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
         {
             dst.SetNothing();
         }
@@ -188,7 +189,7 @@ internal static class VmRegisterCompare
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || !HasSameUnit(ref a, ref b))
+        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
         {
             dst.SetNothing();
         }
@@ -199,12 +200,10 @@ internal static class VmRegisterCompare
         else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
         {
             dst.SetBoolean(a.IsTrue && b.IsFalse || a.IsTrue == b.IsTrue);
-            return;
         }
         else
         {
             dst.SetBoolean(false);
         }
     }
-
 }

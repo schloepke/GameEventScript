@@ -1,14 +1,15 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmMathConstants;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterTypeCastCheck.NumericKind;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterUnitCalculation;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
+[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class VmRegisterMath
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -84,10 +85,31 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmSubtract(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmSubtract(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
+            case Integer when b.Kind is Integer:
+                if (TrySameUnit(ref a, ref b, out var unit)) dst.SetInteger(a.IntegerValue - b.IntegerValue, unit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Float when b.Kind is Float:
+                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue - b.FloatValue, unit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue - b.AsNumberValue, unit);
+                else dst.SetFloat(double.NaN);
+                break;
+            case Integer when b.Kind is Percentage:
+                dst.SetFloat(a.IntegerValue - a.IntegerValue * b.FloatValue, a.Unit);
+                break;
+            case Float when b.Kind is Percentage:
+                dst.SetFloat(a.FloatValue - a.FloatValue * b.FloatValue, a.Unit);
+                break;
+            case Percentage when b.Kind is Percentage:
+                dst.SetPercentage(a.FloatValue - b.FloatValue);
+                break;
             case Vector when b.Kind is Vector:
             {
                 if (a.ObjectValue is VmFloatTriplet av && b.ObjectValue is VmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetObject(Vector, new VmFloatTriplet(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z), vectorUnit);
@@ -95,7 +117,8 @@ internal static class VmRegisterMath
                 return;
             }
             case Vector:
-                dst.SetFloat(double.NaN);
+                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
+                else dst.SetNothing();
                 return;
             case Point when b.Kind is Vector:
             {
@@ -110,332 +133,1022 @@ internal static class VmRegisterMath
                 return;
             }
             case Point:
-                dst.SetFloat(double.NaN);
+                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
+                else dst.SetNothing();
                 return;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
                 dst.SetFloat(double.NaN);
                 return;
-        }
-
-        if (TrySameUnit(ref a, ref b, out var unit))
-        {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right))
-                {
-                    dst.SetFloat(left - right, unit);
-                    return;
-                }
-            }
-        }
-
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmMultiply(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        if (a.Kind is Point || b.Kind is Point || (a.Kind is Vector && b.Kind is Vector))
-        {
-            dst.SetFloat(double.NaN);
-            return;
-        }
-
-        if (a.Kind is Vector || b.Kind is Vector)
-        {
-            var vector = a.Kind is Vector ? a.ObjectValue as VmFloatTriplet : b.ObjectValue as VmFloatTriplet;
-            var scalar = a.Kind is Vector ? b.AsNumberValue : a.AsNumberValue;
-            if (vector is null || double.IsNaN(scalar) || !double.IsFinite(scalar) || !TryProductUnit(ref a, ref b, out var vectorUnit))
-            {
-                dst.SetFloat(double.NaN);
+            case Percentage:
+                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
+                else dst.SetNothing();
+                break;
+            case Nothing:
+                dst.SetNothing();
                 return;
-            }
-
-            dst.SetObject(Vector, new VmFloatTriplet(vector.X * scalar, vector.Y * scalar, vector.Z * scalar), vectorUnit);
-            return;
-        }
-
-        if (TryProductUnit(ref a, ref b, out var unit))
-        {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right))
+            default:
+                if (b.Kind is Nothing)
                 {
-                    dst.SetFloat(left * right, unit);
-                    return;
+                    dst.SetNothing();
                 }
-            }
-        }
+                else
+                {
+                    var aNum = a.ReadNumericOrNan(ref textTable);
+                    if (double.IsNaN(aNum))
+                    {
+                        dst.SetFloat(double.NaN);
+                    }
+                    else
+                    {
+                        var bNum = b.ReadNumericOrNan(ref textTable);
+                        if (double.IsNaN(bNum)) dst.SetFloat(double.NaN);
+                        else if (b.Kind is Percentage) dst.SetFloat(aNum - aNum * bNum, a.Unit);
+                        else if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(aNum - bNum, unit);
+                        else dst.SetFloat(double.NaN);
+                    }
+                }
 
-        dst.SetNothing();
+                break;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmDivide(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        if (a.Kind is Point || b.Kind is Vector or Point)
-        {
-            dst.SetFloat(double.NaN);
-            return;
-        }
-
-        if (a.Kind is Vector)
-        {
-            var scalar = b.AsNumberValue;
-            if (a.ObjectValue is not VmFloatTriplet vector || double.IsNaN(scalar) || !double.IsFinite(scalar) || scalar == 0.0d || !TryQuotientUnit(ref a, ref b, out var vectorUnit))
-            {
-                dst.SetFloat(double.NaN);
-                return;
-            }
-
-            dst.SetObject(Vector, new VmFloatTriplet(vector.X / scalar, vector.Y / scalar, vector.Z / scalar), vectorUnit);
-            return;
-        }
-
-        if (TryQuotientUnit(ref a, ref b, out var unit))
-        {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right) && right != 0.0)
-                {
-                    dst.SetFloat(left / right, unit);
-                    return;
-                }
-            }
-        }
-
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmIntegerDivide(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        if (TryQuotientUnit(ref a, ref b, out var unit))
-        {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right))
-                {
-                    var result = Math.Floor(left / right);
-                    if (double.IsFinite(result) && result >= long.MinValue && result <= long.MaxValue) dst.SetInteger((long)result, unit);
-                    else dst.SetFloat(result, unit);
-                    return;
-                }
-            }
-        }
-
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmPower(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        var right = b.AsNumberValue;
-        if (!double.IsNaN(right))
-        {
-            if (TryPowerUnit(ref a, right, out var unit))
-            {
-                var left = a.AsNumberValue;
-                if (!double.IsNaN(left))
-                {
-                    dst.SetFloat(Math.Pow(left, right), unit);
-                    return;
-                }
-            }
-        }
-
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmModulo(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        if (a.Kind is Vector or Point || b.Kind is Vector or Point)
-        {
-            dst.SetFloat(double.NaN);
-            return;
-        }
-
-        if (TrySameUnit(ref a, ref b, out var unit))
-        {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right))
-                {
-                    dst.SetFloat(left - right * Math.Floor(left / right), unit);
-                    return;
-                }
-            }
-        }
-
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmRemainder(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        if (a.Kind is Vector or Point || b.Kind is Vector or Point)
-        {
-            dst.SetFloat(double.NaN);
-            return;
-        }
-
-        if (TrySameUnit(ref a, ref b, out var unit))
-        {
-            var left = a.AsNumberValue;
-            if (!double.IsNaN(left))
-            {
-                var right = b.AsNumberValue;
-                if (!double.IsNaN(right))
-                {
-                    dst.SetFloat(left - right * Math.Truncate(left / right), unit);
-                    return;
-                }
-            }
-        }
-
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmNegate(ref this VmValue dst, ref VmValue a)
+    internal static void VmMultiply(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (TryProductUnit(ref a, ref b, out var unit)) dst.SetFloat((double)a.IntegerValue * b.IntegerValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float when b.Kind is Float:
+                if (TryProductUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue * b.FloatValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (TryProductUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue * b.AsNumberValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Integer when b.Kind is Percentage:
+                dst.SetFloat(a.IntegerValue * b.FloatValue, a.Unit);
+                return;
+            case Float when b.Kind is Percentage:
+                dst.SetFloat(a.FloatValue * b.FloatValue, a.Unit);
+                return;
+            case Percentage when b.Kind is Percentage:
+                dst.SetPercentage(a.FloatValue * b.FloatValue);
+                return;
+            case Percentage when b.Kind is Integer:
+                var percentageIntegerResult = a.FloatValue * b.IntegerValue;
+                dst.SetFloat(percentageIntegerResult, b.Unit);
+                return;
+            case Percentage when b.Kind is Float:
+                var percentageFloatResult = a.FloatValue * b.FloatValue;
+                dst.SetFloat(percentageFloatResult, b.Unit);
+                return;
+            case Percentage when b.Kind is Vector:
+                if (b.ObjectValue is VmFloatTriplet percentageVector) dst.SetObject(Vector, new VmFloatTriplet(a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z), b.Unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Percentage when b.Kind is Point:
+                if (b.ObjectValue is VmFloatTriplet percentagePoint) dst.SetObject(Point, new VmFloatTriplet(a.FloatValue * percentagePoint.X, a.FloatValue * percentagePoint.Y, a.FloatValue * percentagePoint.Z), b.Unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Integer:
+                if (a.ObjectValue is VmFloatTriplet vectorInt && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Float:
+                if (a.ObjectValue is VmFloatTriplet vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Percentage:
+                if (a.ObjectValue is VmFloatTriplet vectorPercent) dst.SetObject(Vector, new VmFloatTriplet(vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue), a.Unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Nothing:
+                dst.SetNothing();
+                return;
+            case Vector:
+                var vectorScalar = b.ReadNumericOrNan(ref textTable);
+                if (a.ObjectValue is VmFloatTriplet vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Integer:
+                if (a.ObjectValue is VmFloatTriplet pointInt && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointInt.X * b.IntegerValue, pointInt.Y * b.IntegerValue, pointInt.Z * b.IntegerValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Float:
+                if (a.ObjectValue is VmFloatTriplet pointFloat && double.IsFinite(b.FloatValue) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointFloat.X * b.FloatValue, pointFloat.Y * b.FloatValue, pointFloat.Z * b.FloatValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Percentage:
+                if (a.ObjectValue is VmFloatTriplet pointPercent) dst.SetObject(Point, new VmFloatTriplet(pointPercent.X * b.FloatValue, pointPercent.Y * b.FloatValue, pointPercent.Z * b.FloatValue), a.Unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Nothing:
+                dst.SetNothing();
+                return;
+            case Point:
+                var pointScalar = b.ReadNumericOrNan(ref textTable);
+                if (a.ObjectValue is VmFloatTriplet point && !double.IsNaN(pointScalar) && double.IsFinite(pointScalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(point.X * pointScalar, point.Y * pointScalar, point.Z * pointScalar), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float when b.Kind is Vector:
+                var scalar = a.AsNumberValue;
+                if (b.ObjectValue is VmFloatTriplet rightVector && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float when b.Kind is Point:
+                scalar = a.AsNumberValue;
+                if (b.ObjectValue is VmFloatTriplet rightPoint && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(scalar * rightPoint.X, scalar * rightPoint.Y, scalar * rightPoint.Z), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Percentage:
+                if (b.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var percentageScalar = b.ReadNumericOrNan(ref textTable);
+                if (double.IsNaN(percentageScalar))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var percentageResult = a.FloatValue * percentageScalar;
+                if (b.HasUnit) dst.SetFloat(percentageResult, b.Unit);
+                else dst.SetFloat(percentageResult);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var fallbackLeft = a.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(fallbackLeft))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        switch (b.Kind)
         {
             case Vector:
-                if (a.ObjectValue is VmFloatTriplet vector) dst.SetObject(Vector, new VmFloatTriplet(-vector.X, -vector.Y, -vector.Z), a.Unit);
+            {
+                if (b.ObjectValue is VmFloatTriplet vector && double.IsFinite(fallbackLeft) && TryProductUnit(ref a, ref b, out var vectorUnit)) dst.SetObject(Vector, new VmFloatTriplet(fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z), vectorUnit);
                 else dst.SetFloat(double.NaN);
-                break;
+                return;
+            }
             case Point:
-                dst.SetFloat(double.NaN);
-                break;
-            case Integer:
-                dst.SetInteger(-a.IntegerValue, a.Unit);
-                break;
-            case Float or Percentage:
-                dst.SetFloat(-a.FloatValue, a.Unit);
-                break;
-            default:
+            {
+                if (b.ObjectValue is VmFloatTriplet point && double.IsFinite(fallbackLeft) && TryProductUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Point, new VmFloatTriplet(fallbackLeft * point.X, fallbackLeft * point.Y, fallbackLeft * point.Z), pointUnit);
+                else dst.SetFloat(double.NaN);
+                return;
+            }
+        }
+
+        var bNum = b.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(bNum) || !TryProductUnit(ref a, ref b, out var fallbackUnit))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        dst.SetFloat(fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmDivide(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (TryQuotientUnit(ref a, ref b, out var unit)) dst.SetFloat((double)a.IntegerValue / b.IntegerValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float when b.Kind is Float:
+                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue / b.FloatValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue / b.AsNumberValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Percentage when b.Kind is Percentage:
+                dst.SetFloat(a.FloatValue / b.FloatValue);
+                return;
+            case Percentage when b.Kind is Integer or Float:
+                if (b.HasUnit || !TryQuotientUnit(ref a, ref b, out unit))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                dst.SetPercentage(a.FloatValue / b.AsNumberValue);
+                return;
+            case Integer or Float when b.Kind is Percentage:
+                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue / b.FloatValue, unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Integer:
+                if (a.ObjectValue is VmFloatTriplet vectorInt && b.IntegerValue != 0 && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Float:
+                if (a.ObjectValue is VmFloatTriplet vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vectorFloat.X / b.FloatValue, vectorFloat.Y / b.FloatValue, vectorFloat.Z / b.FloatValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Percentage:
+                if (a.ObjectValue is VmFloatTriplet vectorPercent && b.FloatValue != 0d) dst.SetObject(Vector, new VmFloatTriplet(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue), a.Unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector when b.Kind is Nothing:
                 dst.SetNothing();
-                break;
+                return;
+            case Vector:
+                var vectorDivisor = b.ReadNumericOrNan(ref textTable);
+                if (a.ObjectValue is VmFloatTriplet vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vector.X / vectorDivisor, vector.Y / vectorDivisor, vector.Z / vectorDivisor), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Integer:
+                if (a.ObjectValue is VmFloatTriplet pointInt && b.IntegerValue != 0 && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointInt.X / b.IntegerValue, pointInt.Y / b.IntegerValue, pointInt.Z / b.IntegerValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Float:
+                if (a.ObjectValue is VmFloatTriplet pointFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointFloat.X / b.FloatValue, pointFloat.Y / b.FloatValue, pointFloat.Z / b.FloatValue), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Percentage:
+                if (a.ObjectValue is VmFloatTriplet pointPercent && b.FloatValue != 0d) dst.SetObject(Point, new VmFloatTriplet(pointPercent.X / b.FloatValue, pointPercent.Y / b.FloatValue, pointPercent.Z / b.FloatValue), a.Unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point when b.Kind is Nothing:
+                dst.SetNothing();
+                return;
+            case Point:
+                var pointDivisor = b.ReadNumericOrNan(ref textTable);
+                if (a.ObjectValue is VmFloatTriplet point && !double.IsNaN(pointDivisor) && double.IsFinite(pointDivisor) && pointDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(point.X / pointDivisor, point.Y / pointDivisor, point.Z / pointDivisor), unit);
+                else dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float or Percentage when b.Kind is Vector or Point:
+                dst.SetFloat(double.NaN);
+                return;
+            case Percentage:
+                if (b.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var percentageDivisor = b.ReadNumericOrNan(ref textTable);
+                if (double.IsNaN(percentageDivisor) || b.HasUnit || !TryQuotientUnit(ref a, ref b, out unit))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                dst.SetPercentage(a.FloatValue / percentageDivisor);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (b.Kind is Vector or Point)
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var aNum = a.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(aNum))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var bNum = b.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(bNum))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        if (a.Kind is Percentage && b.HasUnit)
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        if (!TryQuotientUnit(ref a, ref b, out var fallbackUnit))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var fallbackResult = aNum / bNum;
+        if (a.Kind is Percentage) dst.SetPercentage(fallbackResult);
+        else dst.SetFloat(fallbackResult, fallbackUnit);
+    }
+    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmPower(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (b.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var integerUnit = UnitNone;
+                if (a.HasUnit)
+                {
+                    if (b.IntegerValue == 1) integerUnit = a.Unit;
+                    else if (b.IntegerValue != 0)
+                    {
+                        dst.SetFloat(double.NaN);
+                        return;
+                    }
+                }
+
+                dst.SetFloat(Math.Pow(a.IntegerValue, b.IntegerValue), integerUnit);
+                return;
+            case Float when b.Kind is Float:
+                if (b.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var floatUnit = UnitNone;
+                if (a.HasUnit)
+                {
+                    if (b.FloatValue == 1d) floatUnit = a.Unit;
+                    else if (b.FloatValue != 0d)
+                    {
+                        dst.SetFloat(double.NaN);
+                        return;
+                    }
+                }
+
+                dst.SetFloat(Math.Pow(a.FloatValue, b.FloatValue), floatUnit);
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                var rightNumber = b.AsNumberValue;
+                if (b.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var mixedUnit = UnitNone;
+                if (a.HasUnit)
+                {
+                    if (rightNumber == 1d) mixedUnit = a.Unit;
+                    else if (rightNumber != 0d)
+                    {
+                        dst.SetFloat(double.NaN);
+                        return;
+                    }
+                }
+
+                dst.SetFloat(Math.Pow(a.AsNumberValue, rightNumber), mixedUnit);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (b.HasUnit)
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var right = b.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(right))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var unit = UnitNone;
+        if (a.HasUnit)
+        {
+            if (right == 1d) unit = a.Unit;
+            else if (right != 0d)
+            {
+                dst.SetFloat(double.NaN);
+                return;
+            }
+        }
+
+        var left = a.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(left)) dst.SetFloat(double.NaN);
+        else dst.SetFloat(Math.Pow(left, right), unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmFloorDivide(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (TryQuotientUnit(ref a, ref b, out var integerUnit))
+                {
+                    var result = Math.Floor((double)a.IntegerValue / b.IntegerValue);
+                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, integerUnit);
+                    else dst.SetFloat(result, integerUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float when b.Kind is Float:
+                if (TryQuotientUnit(ref a, ref b, out var floatUnit))
+                {
+                    var result = Math.Floor(a.FloatValue / b.FloatValue);
+                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, floatUnit);
+                    else dst.SetFloat(result, floatUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (TryQuotientUnit(ref a, ref b, out var mixedUnit))
+                {
+                    var result = Math.Floor(a.AsNumberValue / b.AsNumberValue);
+                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, mixedUnit);
+                    else dst.SetFloat(result, mixedUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Vector or Point:
+                if (b.Kind is Nothing) dst.SetNothing();
+                else dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float or Percentage when b.Kind is Vector or Point:
+                dst.SetFloat(double.NaN);
+                return;
+            case Percentage when b.Kind is Integer or Float or Percentage:
+                dst.SetFloat(double.NaN);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (b.Kind is Vector or Point || a.Kind is Percentage || b.Kind is Percentage || !TryQuotientUnit(ref a, ref b, out var unit))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var left = a.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(left))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var right = b.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(right))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var floorResult = Math.Floor(left / right);
+        if (double.IsFinite(floorResult) && floorResult is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)floorResult, unit);
+        else dst.SetFloat(floorResult, unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmModulo(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (TrySameUnit(ref a, ref b, out var integerUnit))
+                {
+                    var rightInteger = b.IntegerValue;
+                    if (rightInteger == 0)
+                    {
+                        dst.SetFloat(double.NaN, integerUnit);
+                        return;
+                    }
+
+                    long integerModuloResult;
+                    if (a.IntegerValue == long.MinValue && rightInteger == -1)
+                    {
+                        integerModuloResult = 0;
+                    }
+                    else
+                    {
+                        integerModuloResult = a.IntegerValue % rightInteger;
+                        if (integerModuloResult != 0 && (integerModuloResult < 0 && rightInteger > 0 || integerModuloResult > 0 && rightInteger < 0)) integerModuloResult += rightInteger;
+                    }
+
+                    dst.SetInteger(integerModuloResult, integerUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float when b.Kind is Float:
+                if (TrySameUnit(ref a, ref b, out var floatUnit))
+                {
+                    var leftFloat = a.FloatValue;
+                    var rightFloat = b.FloatValue;
+                    if (double.IsNaN(leftFloat) || double.IsNaN(rightFloat) || double.IsInfinity(leftFloat) || rightFloat == 0d)
+                    {
+                        dst.SetFloat(double.NaN, floatUnit);
+                        return;
+                    }
+
+                    if (double.IsInfinity(rightFloat))
+                    {
+                        dst.SetFloat(leftFloat, floatUnit);
+                        return;
+                    }
+
+                    var floatModuloResult = leftFloat % rightFloat;
+                    if (floatModuloResult != 0d && (floatModuloResult < 0d && rightFloat > 0d || floatModuloResult > 0d && rightFloat < 0d)) floatModuloResult += rightFloat;
+                    dst.SetFloat(floatModuloResult, floatUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (TrySameUnit(ref a, ref b, out var mixedUnit))
+                {
+                    var leftNumber = a.AsNumberValue;
+                    var rightNumber = b.AsNumberValue;
+                    if (double.IsNaN(leftNumber) || double.IsNaN(rightNumber) || double.IsInfinity(leftNumber) || rightNumber == 0d)
+                    {
+                        dst.SetFloat(double.NaN, mixedUnit);
+                        return;
+                    }
+
+                    if (double.IsInfinity(rightNumber))
+                    {
+                        dst.SetFloat(leftNumber, mixedUnit);
+                        return;
+                    }
+
+                    var mixedModuloResult = leftNumber % rightNumber;
+                    if (mixedModuloResult != 0d && (mixedModuloResult < 0d && rightNumber > 0d || mixedModuloResult > 0d && rightNumber < 0d)) mixedModuloResult += rightNumber;
+                    dst.SetFloat(mixedModuloResult, mixedUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (a.Kind is Vector or Point || b.Kind is Vector or Point || !TrySameUnit(ref a, ref b, out var unit))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var left = a.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(left))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var right = b.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(right) || double.IsInfinity(left) || right == 0d)
+        {
+            dst.SetFloat(double.NaN, unit);
+            return;
+        }
+
+        if (double.IsInfinity(right))
+        {
+            dst.SetFloat(left, unit);
+            return;
+        }
+
+        var fallbackModuloResult = left % right;
+        if (fallbackModuloResult != 0d && (fallbackModuloResult < 0d && right > 0d || fallbackModuloResult > 0d && right < 0d)) fallbackModuloResult += right;
+        dst.SetFloat(fallbackModuloResult, unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmRemainder(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (TrySameUnit(ref a, ref b, out var integerUnit))
+                {
+                    var rightInteger = b.IntegerValue;
+                    if (rightInteger == 0)
+                    {
+                        dst.SetFloat(double.NaN, integerUnit);
+                        return;
+                    }
+
+                    var integerRemainderResult = a.IntegerValue == long.MinValue && rightInteger == -1
+                        ? 0
+                        : a.IntegerValue % rightInteger;
+                    dst.SetInteger(integerRemainderResult, integerUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float when b.Kind is Float:
+                if (TrySameUnit(ref a, ref b, out var floatUnit))
+                {
+                    var leftFloat = a.FloatValue;
+                    var rightFloat = b.FloatValue;
+                    if (double.IsNaN(leftFloat) || double.IsNaN(rightFloat) || double.IsInfinity(leftFloat) || rightFloat == 0d)
+                    {
+                        dst.SetFloat(double.NaN, floatUnit);
+                        return;
+                    }
+
+                    dst.SetFloat(double.IsInfinity(rightFloat) ? leftFloat : leftFloat % rightFloat, floatUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (TrySameUnit(ref a, ref b, out var mixedUnit))
+                {
+                    var leftNumber = a.AsNumberValue;
+                    var rightNumber = b.AsNumberValue;
+                    if (double.IsNaN(leftNumber) || double.IsNaN(rightNumber) || double.IsInfinity(leftNumber) || rightNumber == 0d)
+                    {
+                        dst.SetFloat(double.NaN, mixedUnit);
+                        return;
+                    }
+
+                    dst.SetFloat(double.IsInfinity(rightNumber) ? leftNumber : leftNumber % rightNumber, mixedUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (a.Kind is Vector or Point || b.Kind is Vector or Point || !TrySameUnit(ref a, ref b, out var unit))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var left = a.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(left))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var right = b.ReadNumericOrNan(ref textTable);
+        if (double.IsNaN(right) || double.IsInfinity(left) || right == 0d)
+        {
+            dst.SetFloat(double.NaN, unit);
+            return;
+        }
+
+        dst.SetFloat(double.IsInfinity(right) ? left : left % right, unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmNegate(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer:
+                if (a.IntegerValue == long.MinValue) dst.SetFloat(-(double)a.IntegerValue, a.Unit);
+                else dst.SetInteger(-a.IntegerValue, a.Unit);
+                return;
+            case Float:
+                dst.SetFloat(-a.FloatValue, a.Unit);
+                return;
+            case Percentage:
+                dst.SetPercentage(-a.FloatValue);
+                return;
+            case Vector:
+                if (a.ObjectValue is VmFloatTriplet vector)
+                {
+                    dst.SetObject(Vector, new VmFloatTriplet(-vector.X, -vector.Y, -vector.Z), a.Unit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Point:
+                if (a.ObjectValue is VmFloatTriplet point)
+                {
+                    dst.SetObject(Point, new VmFloatTriplet(-point.X, -point.Y, -point.Z), a.Unit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            default:
+                var number = a.ReadNumericOrNan(ref textTable);
+                if (double.IsNaN(number)) dst.SetFloat(double.NaN);
+                else dst.SetFloat(-number);
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmAbs(ref this VmValue dst, ref VmValue a)
+    internal static void VmAbs(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
+            case Integer:
+                if (a.IntegerValue == long.MinValue) dst.SetFloat(-(double)a.IntegerValue, a.Unit);
+                else dst.SetInteger(Math.Abs(a.IntegerValue), a.Unit);
+                return;
+            case Float:
+                dst.SetFloat(Math.Abs(a.FloatValue), a.Unit);
+                return;
+            case Percentage:
+                dst.SetPercentage(Math.Abs(a.FloatValue));
+                return;
             case Vector:
                 if (a.ObjectValue is not VmFloatTriplet vector)
                 {
                     dst.SetFloat(double.NaN);
-                    break;
+                    return;
                 }
 
                 var length = Math.Sqrt(vector.X * vector.X + vector.Y * vector.Y + vector.Z * vector.Z);
-                if (double.IsNaN(length) || double.IsInfinity(length)) dst.SetFloat(double.NaN);
+                if (double.IsNaN(length)) dst.SetFloat(double.NaN);
                 else dst.SetFloat(length, a.Unit);
-                break;
+                return;
             case Point:
                 dst.SetFloat(double.NaN);
-                break;
-            case Integer:
-                dst.SetInteger(Math.Abs(a.IntegerValue), a.Unit);
-                break;
-            case Float or Percentage:
-                dst.SetFloat(Math.Abs(a.FloatValue), a.Unit);
-                break;
-            default:
+                return;
+            case Nothing:
                 dst.SetNothing();
-                break;
+                return;
+            default:
+                var number = a.ReadNumericOrNan(ref textTable);
+                dst.SetFloat(double.IsNaN(number) ? double.NaN : Math.Abs(number));
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmNaturalLog(ref this VmValue dst, ref VmValue a)
+    internal static void VmClamp(ref this VmValue dst, ref VmValue value, ref VmValue min, ref VmValue max, ref GameEventScriptTextTable textTable)
     {
-        if (a.Kind is Nothing)
+        switch (value.Kind)
         {
-            dst.SetNothing();
-        }
-        else if (a.HasUnit)
-        {
-            dst.SetFloat(double.NaN);
-        }
-        else
-        {
-            var x = a.AsNumberValue;
-            if (double.IsNaN(x) || x < 0d || double.IsNegativeInfinity(x)) dst.SetFloat(double.NaN);
-            else if (double.IsPositiveInfinity(x)) dst.SetFloat(double.PositiveInfinity);
-            else dst.SetFloat(Math.Log(x));
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmClamp(ref this VmValue dst, ref VmValue value, ref VmValue min, ref VmValue max)
-    {
-        if (TrySameUnit(ref value, ref min, ref max, out var unit))
-        {
-            if (value.Kind is Integer && min.Kind is Integer && max.Kind is Integer)
+            case Integer when min.Kind is Integer && max.Kind is Integer:
             {
-                dst.SetInteger(Math.Clamp(value.IntegerValue, min.IntegerValue, max.IntegerValue), unit);
+                if (!TrySameUnit(ref value, ref min, ref max, out var integerUnit))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var lower = min.IntegerValue <= max.IntegerValue ? min.IntegerValue : max.IntegerValue;
+                var upper = min.IntegerValue <= max.IntegerValue ? max.IntegerValue : min.IntegerValue;
+                var result = value.IntegerValue < lower ? lower : value.IntegerValue > upper ? upper : value.IntegerValue;
+                dst.SetInteger(result, integerUnit);
+                return;
             }
-            else
+            case Float when min.Kind is Float && max.Kind is Float:
             {
+                if (!TrySameUnit(ref value, ref min, ref max, out var floatUnit))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var lower = min.FloatValue <= max.FloatValue ? min.FloatValue : max.FloatValue;
+                var upper = min.FloatValue <= max.FloatValue ? max.FloatValue : min.FloatValue;
+                if (double.IsNaN(value.FloatValue) || double.IsNaN(lower) || double.IsNaN(upper))
+                {
+                    dst.SetFloat(double.NaN, floatUnit);
+                    return;
+                }
+
+                var result = value.FloatValue < lower ? lower : value.FloatValue > upper ? upper : value.FloatValue;
+                dst.SetFloat(result, floatUnit);
+                return;
+            }
+            case Float or Integer when min.Kind is Float or Integer && max.Kind is Float or Integer:
+            {
+                if (!TrySameUnit(ref value, ref min, ref max, out var mixedUnit))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
                 var x = value.AsNumberValue;
                 var a = min.AsNumberValue;
                 var b = max.AsNumberValue;
-                if (double.IsNaN(x) || double.IsNaN(a) || double.IsNaN(b)) dst.SetNothing();
-                else dst.SetFloat(Math.Clamp(x, a, b), unit);
+                var lower = a <= b ? a : b;
+                var upper = a <= b ? b : a;
+                if (double.IsNaN(x) || double.IsNaN(lower) || double.IsNaN(upper))
+                {
+                    dst.SetFloat(double.NaN, mixedUnit);
+                    return;
+                }
+
+                var result = x < lower ? lower : x > upper ? upper : x;
+                dst.SetFloat(result, mixedUnit);
+                return;
             }
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Vector or Point:
+                dst.SetFloat(double.NaN);
+                return;
         }
-        else
+
+        if (min.Kind is Nothing || max.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (min.Kind is Vector or Point || max.Kind is Vector or Point || !TrySameUnit(ref value, ref min, ref max, out var unit))
         {
             dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var raw = value.ReadNumericOrNan(ref textTable);
+        var minimum = min.ReadNumericOrNan(ref textTable);
+        var maximum = max.ReadNumericOrNan(ref textTable);
+        var lowerFallback = minimum <= maximum ? minimum : maximum;
+        var upperFallback = minimum <= maximum ? maximum : minimum;
+        if (double.IsNaN(raw) || double.IsNaN(lowerFallback) || double.IsNaN(upperFallback))
+        {
+            dst.SetFloat(double.NaN, unit);
+            return;
+        }
+
+        var fallbackResult = raw < lowerFallback ? lowerFallback : raw > upperFallback ? upperFallback : raw;
+        dst.SetFloat(fallbackResult, unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmNaturalLog(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Integer:
+                if (a.HasUnit) dst.SetFloat(double.NaN);
+                else if (a.IntegerValue < 0) dst.SetFloat(double.NaN);
+                else if (a.IntegerValue == 0) dst.SetFloat(double.NegativeInfinity);
+                else dst.SetFloat(Math.Log(a.IntegerValue));
+                return;
+            case Float:
+                if (a.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var floatValue = a.FloatValue;
+                if (double.IsNaN(floatValue) || floatValue < 0d || double.IsNegativeInfinity(floatValue)) dst.SetFloat(double.NaN);
+                else if (double.IsPositiveInfinity(floatValue)) dst.SetFloat(double.PositiveInfinity);
+                else dst.SetFloat(Math.Log(floatValue));
+                return;
+            case Percentage:
+                var percentageValue = a.FloatValue;
+                if (double.IsNaN(percentageValue) || percentageValue < 0d || double.IsNegativeInfinity(percentageValue)) dst.SetFloat(double.NaN);
+                else if (double.IsPositiveInfinity(percentageValue)) dst.SetFloat(double.PositiveInfinity);
+                else dst.SetFloat(Math.Log(percentageValue));
+                return;
+            default:
+                if (a.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var number = a.ReadNumericOrNan(ref textTable);
+                if (double.IsNaN(number) || number < 0d || double.IsNegativeInfinity(number)) dst.SetFloat(double.NaN);
+                else if (double.IsPositiveInfinity(number)) dst.SetFloat(double.PositiveInfinity);
+                else dst.SetFloat(Math.Log(number));
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmRandom(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptRandomGenerator randomGenerator)
+    internal static void VmRandom(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptRandomGenerator randomGenerator, ref GameEventScriptTextTable textTable)
     {
         switch (from.Kind)
         {
             case Integer when to.Kind is Integer:
-                if (TrySameUnit(ref from, ref to, out var unit)) dst.SetInteger(randomGenerator.NextInclusiveInt((int)from.IntegerValue, (int)to.IntegerValue), unit);
+                if (TrySameUnit(ref from, ref to, out var unit)) dst.SetInteger(randomGenerator.NextInclusiveInteger(from.IntegerValue, to.IntegerValue), unit);
                 else dst.SetFloat(double.NaN);
-                break;
-            case Float or Integer or Percentage when to.Kind is Float or Integer or Percentage:
-            {
+                return;
+            case Float when to.Kind is Float:
                 if (TrySameUnit(ref from, ref to, out unit))
                 {
-                    var a = from.FloatValue;
-                    var b = to.FloatValue;
-                    if (double.IsNaN(a) || double.IsNaN(b)) dst.SetFloat(double.NaN);
-                    else dst.SetFloat(randomGenerator.NextInclusiveFloat(a, b), unit);
+                    var left = from.FloatValue;
+                    var right = to.FloatValue;
+                    if (double.IsFinite(left) && double.IsFinite(right)) dst.SetFloat(randomGenerator.NextInclusiveFloat(left, right), unit);
+                    else dst.SetFloat(double.NaN);
                 }
                 else dst.SetFloat(double.NaN);
+                return;
+            case Float or Integer when to.Kind is Float or Integer:
+                if (TrySameUnit(ref from, ref to, out unit))
+                {
+                    var left = from.AsNumberValue;
+                    var right = to.AsNumberValue;
+                    if (double.IsFinite(left) && double.IsFinite(right)) dst.SetFloat(randomGenerator.NextInclusiveFloat(left, right), unit);
+                    else dst.SetFloat(double.NaN);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Percentage when to.Kind is Percentage:
+                if (double.IsFinite(from.FloatValue) && double.IsFinite(to.FloatValue)) dst.SetFloat(randomGenerator.NextInclusiveFloat(from.FloatValue, to.FloatValue));
+                else dst.SetFloat(double.NaN);
+                return;
+            case Percentage when to.Kind is Integer or Float:
+                if (to.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
 
-                break;
-            }
+                var percentageLeft = from.FloatValue;
+                var numericRight = to.AsNumberValue;
+                if (double.IsFinite(percentageLeft) && double.IsFinite(numericRight)) dst.SetFloat(randomGenerator.NextInclusiveFloat(percentageLeft, numericRight));
+                else dst.SetFloat(double.NaN);
+                return;
+            case Integer or Float when to.Kind is Percentage:
+                if (from.HasUnit)
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var numericLeft = from.AsNumberValue;
+                var percentageRight = to.FloatValue;
+                if (double.IsFinite(numericLeft) && double.IsFinite(percentageRight)) dst.SetFloat(randomGenerator.NextInclusiveFloat(numericLeft, percentageRight));
+                else dst.SetFloat(double.NaN);
+                return;
             default:
-                dst.SetNothing();
-                break;
+                if (!TrySameUnit(ref from, ref to, out unit))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var fallbackLeft = from.ReadNumericOrNan(ref textTable);
+                var fallbackRight = to.ReadNumericOrNan(ref textTable);
+                if (double.IsFinite(fallbackLeft) && double.IsFinite(fallbackRight)) dst.SetFloat(randomGenerator.NextInclusiveFloat(fallbackLeft, fallbackRight), unit);
+                else dst.SetFloat(double.NaN);
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static double ReadNumericOrNan(ref this VmValue value, ref GameEventScriptTextTable textTable) => value.Kind switch
+    private static double ReadNumericOrNan(ref this VmValue value, ref GameEventScriptTextTable textTable) => value.Kind switch
     {
         Integer => value.IntegerValue,
         Float or Percentage => value.FloatValue,
@@ -462,4 +1175,62 @@ internal static class VmRegisterMath
         "phi" => GesPhi,
         _ => double.NaN
     };
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    {
+        if (a.Unit == b.Unit)
+        {
+            unit = a.Unit;
+            return true;
+        }
+
+        unit = UnitNone;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TrySameUnit(ref VmValue a, ref VmValue b, ref VmValue c, out GameEventScriptBytecodeInstructionUnit unit)
+    {
+        if (a.Unit == b.Unit && b.Unit == c.Unit)
+        {
+            unit = a.Unit;
+            return true;
+        }
+
+        unit = UnitNone;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryProductUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    {
+        if (a.HasUnit && b.HasUnit)
+        {
+            unit = UnitNone;
+            return false;
+        }
+
+        unit = a.Unit is UnitNone ? b.Unit : a.Unit;
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool TryQuotientUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    {
+        switch (a.HasUnit)
+        {
+            case false when !b.HasUnit:
+                unit = UnitNone;
+                return true;
+            case true when !b.HasUnit:
+                unit = a.Unit;
+                return true;
+            default:
+                unit = UnitNone;
+                return a.Unit == b.Unit;
+        }
+    }
+
+
 }

@@ -323,20 +323,20 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field Integer = 3
   enum-field Float = 4
   enum-field Percentage = 5
-  enum-field Vector = 6
-  enum-field Point = 7
-  enum-field Series = 8
-  enum-field Envelope = 9
-  enum-field Tag = 10
-  enum-field Text = 11
-  enum-field List = 12
-  enum-field Range = 13
-  enum-field Message = 14
-  enum-field Handler = 15
-  enum-field Map = 16
-  enum-field Dice = 17
-  enum-field Stream = 18
-  enum-field Custom = 32767
+  enum-field Tag = 6
+  enum-field Text = 7
+  enum-field Vector = 8
+  enum-field Point = 9
+  enum-field Range = 10
+  enum-field Handler = 16
+  enum-field Message = 17
+  enum-field Envelope = 18
+  enum-field List = 32
+  enum-field Dice = 33
+  enum-field Map = 34
+  enum-field Stream = 48
+  enum-field Series = 49
+  enum-field Custom = 255
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileError
   ctor GameEventScriptCompileError(System.String Message, System.String ModuleName, System.String Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind, StepH.GameEventScript.Api.GameEventScriptCompileErrorKind Kind, StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation)
   method StepH.GameEventScript.Api.GameEventScriptCompileError <Clone>$()
@@ -576,11 +576,8 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Boolean TryGetInteger(System.Int64& intValue)
   method System.Double AsNumberValueWithUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
   method System.Void SetBoolean(System.Boolean value)
-  method System.Void SetBooleanOrNothing(System.Boolean? value)
   method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method System.Void SetFloatOrNothing(System.Double? value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method System.Void SetIntegerOrNothing(System.Int64? value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetNothing()
   method System.Void SetObject(StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, System.Object value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetPercentage(System.Double ratio)

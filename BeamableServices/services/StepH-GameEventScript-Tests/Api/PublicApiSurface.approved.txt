@@ -581,8 +581,10 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Void SetNothing()
   method System.Void SetObject(StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, System.Object value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetPercentage(System.Double ratio)
-  method System.Void SetStringPointer(System.UInt16 pointer)
+  method System.Void SetTag(System.String tag)
   method System.Void SetTagPointer(System.UInt16 pointer)
+  method System.Void SetText(System.String text)
+  method System.Void SetTextPointer(System.UInt16 pointer)
   property System.Boolean HasUnit { get }
   property System.Boolean IsFalse { get }
   property System.Boolean IsNotNothing { get }

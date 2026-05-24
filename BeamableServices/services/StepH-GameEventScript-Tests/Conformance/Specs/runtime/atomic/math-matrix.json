@@ -80,7 +80,7 @@
     {
       "kind": "scriptApi",
       "name": "abs",
-      "script": "module AtomicMathMatrixB\non Start {\n  let vNothing be missing\n  let vInteger be 10\n  let vFloat be 10.3\n  let vPercentage be 10%\n  let vMeter be 10m\n  let vBoolean be true\n  let vTextNumber be '10.3'\n  let vTextInvalid be 'hello'\n  let vTagPi be :pi\n  let vTagNan be :nan\n  let vTagInfinity be :infinity\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(1, 2, 3)\n  emit Done(nothing: :abs vNothing, integer: :abs vInteger, float: :abs vFloat, percentage: :abs vPercentage, meter: :abs vMeter, boolean: :abs vBoolean, textNumber: :abs vTextNumber, textInvalid: :abs vTextInvalid, tagPi: :abs vTagPi, tagNan: :abs vTagNan, tagInfinity: :abs vTagInfinity, vector: :abs vVector, point: :abs vPoint)\n}",
+      "script": "module AtomicMathMatrixB\non Start {\n  let vNothing be missing\n  let vInteger be -10\n  let vFloat be -10.3\n  let vPercentage be -10%\n  let vMeter be -10m\n  let vBoolean be true\n  let vTextNumber be '-10.3'\n  let vTextInvalid be 'hello'\n  let vTagPi be :pi\n  let vTagNan be :nan\n  let vTagInfinity be :infinity\n  let vVector be :vector(-1, -2, -3)\n  let vPoint be :point(1, 2, 3)\n  emit Done(nothing: :abs vNothing, integer: :abs vInteger, float: :abs vFloat, percentage: :abs vPercentage, meter: :abs vMeter, boolean: :abs vBoolean, textNumber: :abs vTextNumber, textInvalid: :abs vTextInvalid, tagPi: :abs vTagPi, tagNan: :abs vTagNan, tagInfinity: :abs vTagInfinity, vector: :abs vVector, point: :abs vPoint)\n}",
       "steps": [
         {
           "input": {
@@ -112,7 +112,7 @@
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
+                  "type": ":percentage",
                   "value": "0.1"
                 },
                 "point": {

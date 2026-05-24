@@ -5083,6 +5083,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return GameEventScriptNothingValue.Instance;
         }
 
+        if (operand.IsPercentage())
+        {
+            return GesPercentage(Math.Abs(operand.AsNumber()));
+        }
+
         if (GesValueOperations.TryEvaluatePointUnary(operand, "abs", out var pointAbs))
         {
             return pointAbs;
@@ -5109,7 +5114,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         GameEventScriptValue.TryGetNumericUnit(operand, out var unit);
-        return GesFloat(Math.Abs(number.Value), operand.HasNumericUnit() ? unit : null);
+        return GesValueOperations.ToGameEventScriptNumber(
+            GesValueOperations.NumericValue.Finite(Math.Abs(number.Value)),
+            operand.HasNumericUnit() ? unit : null);
     }
 
     private static GameEventScriptValue EvaluateNaturalLogUnary(GameEventScriptValue operand)

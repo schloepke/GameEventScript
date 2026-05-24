@@ -103,7 +103,7 @@ internal struct VmState
         RegisterFrameLength = (ushort)arguments.Count;
         for (var i = 0; i < RegisterFrameLength; i++) 
         {
-            RegisterSlots[i].BindArguments(arguments[i]);
+            RegisterSlots[i].BindArguments(arguments[i], ref Binary.TextConstantTable);
         }
         RandomGenerator = context.Random;
         RandomGeneratorsPointer = 0;
@@ -300,7 +300,7 @@ internal struct VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageTextConstant(ushort constantIndex)
     {
-        AddStageSlot().SetStringPointer(constantIndex);
+        AddStageSlot().SetTextPointer(constantIndex);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageTagConstant(ushort constantIndex)

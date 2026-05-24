@@ -625,6 +625,11 @@ by zero. Scalar `Divide` follows IEEE floating-point behavior, so zero
 denominators may produce `Infinity`, `-Infinity`, or `NaN` instead of
 `nothing`.
 
+Numeric opcodes preserve value families where the source language does:
+`UnaryAbs` keeps percentages as `Percentage`, keeps quantity units on numeric
+quantities, and finite exactly integral numeric results are represented as
+integer values when they fit signed 64-bit.
+
 Logical operations use three-valued truth tables with `nothing` as unknown.
 Runtime truth tests and false tests both fail for `nothing`.
 

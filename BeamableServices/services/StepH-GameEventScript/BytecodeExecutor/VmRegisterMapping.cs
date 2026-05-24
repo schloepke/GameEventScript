@@ -14,7 +14,7 @@ internal static class VmRegisterMapping
     internal static void VmDefault(ref this VmValue dst, ref VmValue a, ref VmValue b) => dst = a.Kind == Nothing ? b : a;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
+    internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument, ref GameEventScriptTextTable textTable)
     {
         switch (argument.Kind)
         {
@@ -22,10 +22,10 @@ internal static class VmRegisterMapping
                 destination.SetNothing();
                 break;
             case GameEventScriptValueKind.Tag:
-                throw new NotImplementedException();
+                destination.SetTag(argument.AsText());
                 break;
             case GameEventScriptValueKind.Text:
-                throw new NotImplementedException();
+                destination.SetText(argument.AsText());
                 break;
             case GameEventScriptValueKind.Percentage:
                 destination.SetPercentage(argument.AsNumber());
@@ -79,14 +79,16 @@ internal static class VmRegisterMapping
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
+    internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a, ref GameEventScriptTextTable textTable) => a.Kind switch
     {
-        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue),
-        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue),
+        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, DecodeUnit(a.Unit)),
+        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue, DecodeUnit(a.Unit)),
         Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
         Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, DecodeUnit(a.Unit)),
         Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, DecodeUnit(a.Unit)),
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
+        Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue! as string : textTable.Resolve((ushort)a.IntegerValue)),
+        Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue! as string : textTable.Resolve((ushort)a.IntegerValue)),
         // FIXME this might not work here, since we need to binary to look up strings and tags
         _ => GameEventScriptValueFactory.GesNothing(),
     };

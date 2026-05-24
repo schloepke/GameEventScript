@@ -163,7 +163,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
                     break;
                 case LoadText:
-                    _vmState.Register(instruction.DestinationSlot).SetStringPointer(instruction.StringIndex);
+                    _vmState.Register(instruction.DestinationSlot).SetTextPointer(instruction.StringIndex);
                     break;
                 case LoadTag:
                     _vmState.Register(instruction.DestinationSlot).SetTagPointer(instruction.StringIndex);

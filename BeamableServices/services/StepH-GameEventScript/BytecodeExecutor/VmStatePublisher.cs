@@ -19,7 +19,7 @@ internal static class VmStatePublisher
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
                 vmState.Binary.TextConstantTable.Resolve(shape[index + 1]),
-                vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+                vmState.Register(argumentSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable));
         }
 
         var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
@@ -36,13 +36,13 @@ internal static class VmStatePublisher
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
                 vmState.Binary.TextConstantTable.Resolve(shape[index + 1]),
-                vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+                vmState.Register(argumentSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable));
         }
 
         var tags = new List<string>(tagSlots.Length);
         for (var index = 0; index < tagSlots.Length; index++)
         {
-            AddTagsToList(tags, vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+            AddTagsToList(tags, vmState.Register(argumentSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable));
         }
 
         var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);
@@ -66,7 +66,7 @@ internal static class VmStatePublisher
         var tags = new List<string>(tagSlots.Length);
         for (var index = 0; index < tagSlots.Length; index++)
         {
-            AddTagsToList(tags, vmState.Register(tagSlots[index]).ToGameEventScriptValue());
+            AddTagsToList(tags, vmState.Register(tagSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable));
         }
         return publish ? session.Publish(msg.WithTags(tags)) : session.Emit(msg.WithTags(tags));
     }

@@ -416,6 +416,11 @@ value is fractional
 `:integer` and `:float` are not built-in type tags. In expression positions they
 are ordinary tags.
 
+`:abs` preserves the operand's numeric family for percentages and quantities:
+absolute percentages remain `:percentage`, and absolute quantities keep their
+unit. Finite numeric results that are exactly integral are represented as
+integer values.
+
 ### Quantities
 
 Quantities attach a numeric unit to an integer or float:

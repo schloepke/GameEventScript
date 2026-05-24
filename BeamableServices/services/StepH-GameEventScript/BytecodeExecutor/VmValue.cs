@@ -26,8 +26,8 @@ public struct VmValue
     }
 
     [FieldOffset(16)] internal GameEventScriptBytecodeTypeKind Kind;
-    [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
-    [FieldOffset(18)] internal VmValueFlags Flags;
+    [FieldOffset(18)] internal GameEventScriptBytecodeInstructionUnit Unit;
+    [FieldOffset(19)] internal VmValueFlags Flags;
     [FieldOffset(0)] internal long IntegerValue;
     [FieldOffset(0)] internal double FloatValue;
     [FieldOffset(8)] internal object? ObjectValue;
@@ -108,13 +108,22 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetStringPointer(ushort pointer)
+    public void SetTextPointer(ushort pointer)
     {
         Kind = Text;
         Flags = VmValueFlags.StoragePointer | VmValueFlags.IsTrue;
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
+    }
+
+    public void SetText(string text)
+    {
+        Kind = Text;
+        Flags = VmValueFlags.StorageObject | (text.Length == 0 ? VmValueFlags.IsFalse : VmValueFlags.IsTrue);
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+        IntegerValue = 0;
+        ObjectValue = text;
     }
 
     public void SetTagPointer(ushort pointer)
@@ -124,6 +133,15 @@ public struct VmValue
         Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
+    }
+
+    public void SetTag(string tag)
+    {
+        Kind = Text;
+        Flags = VmValueFlags.StorageObject | (tag.Length == 0 ? VmValueFlags.IsFalse : VmValueFlags.IsTrue);
+        Unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
+        IntegerValue = 0;
+        ObjectValue = tag;
     }
 
     public void SetObject(GameEventScriptBytecodeTypeKind kind, object value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)

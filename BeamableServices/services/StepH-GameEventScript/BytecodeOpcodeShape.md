@@ -283,6 +283,9 @@ numeric source operand is `nothing`, the result slot receives `nothing`.
 Otherwise, a present but non-computable numeric operation writes numeric `NaN`
 to the result slot. Scalar `Divide` keeps IEEE floating-point behavior for zero
 denominators; `Modulo` and `Remainder` by zero write `NaN`.
+`UnaryAbs` preserves percentage values as percentages and preserves quantity
+units on numeric quantities. Finite exactly integral numeric results are stored
+as integer values when they fit signed 64-bit.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |

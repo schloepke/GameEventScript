@@ -226,7 +226,7 @@ internal static class VmRegisterTypeCastCheck
                 dst = xSlot;
                 return;
             case Tag when xSlot.IsStoragePointer:
-                dst.SetStringPointer((ushort)xSlot.IntegerValue);
+                dst.SetTextPointer((ushort)xSlot.IntegerValue);
                 return;
             case Tag when xSlot.ObjectValue is string tag:
                 dst.SetObject(Text, tag);

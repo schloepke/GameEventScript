@@ -288,6 +288,11 @@ multiplication from either side, and vector-by-scalar division. Point arithmetic
 supports only affine operations: point plus/minus vector and point minus point.
 Point scaling, scalar divided by point, and point operands in integer division,
 modulo, or remainder write numeric `NaN` unless a direct operand is `nothing`.
+Unary negation of a vector negates its components; unary negation of a point
+writes numeric `NaN`. `Power` preserves a left quantity unit only for a
+unitless exponent of `1`, including `true` after numeric coercion; unit exponent
+`0`, including `false`, produces a unitless result. Other quantity powers write
+numeric `NaN`.
 `UnaryAbs` preserves percentage values as percentages and preserves quantity
 units on numeric quantities. Finite exactly integral numeric results are stored
 as integer values when they fit signed 64-bit.

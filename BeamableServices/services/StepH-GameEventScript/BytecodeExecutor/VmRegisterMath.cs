@@ -1301,11 +1301,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Point:
-                if (a.ObjectValue is VmFloatTriplet point)
-                {
-                    dst.SetObject(Point, new VmFloatTriplet(-point.X, -point.Y, -point.Z), a.Unit);
-                }
-                else dst.SetFloat(double.NaN);
+                dst.SetFloat(double.NaN);
                 return;
             case Nothing:
                 dst.SetNothing();

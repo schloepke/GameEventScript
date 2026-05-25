@@ -6968,8 +6968,9 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":integer",
+                  "value": "10",
+                  "unit": ":meter"
                 },
                 "float": {
                   "type": ":float",

@@ -413,6 +413,14 @@ produce points, while `point - point` produces a vector. Point scaling is not
 valid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
 `scalar / point`, and point operands in `div`, `mod`, or `rem` produce numeric
 `NaN` unless one operand is `nothing`, in which case the result is `nothing`.
+Unary negation follows the same model: `-vector` negates each component, while
+`-point` is invalid mathematics and produces numeric `NaN`.
+
+Power with quantity units is intentionally narrow because compound units such
+as `m²` are not represented. A quantity may be raised only to a unitless
+numeric exponent of `0` or `1`; booleans participate in the normal lenient
+numeric coercion, so `10m ^ true` is `10m` and `10m ^ false` is unitless `1`.
+Other quantity powers produce numeric `NaN` unless an operand is `nothing`.
 
 Numeric checks are keyword constructs, not `:` type tags:
 

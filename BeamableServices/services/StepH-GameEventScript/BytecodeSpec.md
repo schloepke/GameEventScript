@@ -632,6 +632,14 @@ divide by a scalar. Points may add/subtract compatible vectors, and
 are invalid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
 `scalar / point`, and any point operand in `IntegerDivide`, `Modulo`, or
 `Remainder` write numeric `NaN` unless a direct source operand is `nothing`.
+`UnaryNegate` negates vector components, but point negation is invalid
+mathematics and writes numeric `NaN`.
+
+`Power` with quantity units is valid only for a unitless numeric exponent of
+`0` or `1`; boolean exponents use the standard numeric coercion (`false` = `0`,
+`true` = `1`). Exponent `1` preserves the left quantity unit, exponent `0`
+produces a unitless result, and all other quantity powers write numeric `NaN`
+unless a direct source operand is `nothing`.
 
 Numeric opcodes preserve value families where the source language does:
 `UnaryAbs` keeps percentages as `Percentage`, keeps quantity units on numeric

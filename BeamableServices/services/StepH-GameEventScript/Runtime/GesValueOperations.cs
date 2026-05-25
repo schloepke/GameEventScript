@@ -644,6 +644,8 @@ internal static class GesValueOperations
                 ? SetUnit(leftUnit, out resultUnit)
                 : leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(null, out resultUnit),
             "mod" or "rem" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
+            "^" => leftHasUnit && !rightHasUnit && rightNumber.IsFinite && rightNumber.Value is 0d or 1d &&
+                   SetUnit(rightNumber.Value == 1d ? leftUnit : null, out resultUnit),
             _ => false
         };
 

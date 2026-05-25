@@ -37,6 +37,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicBooleanLogicCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicBooleanLogic(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -102,6 +107,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicBooleanLogicCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicBooleanLogic(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -271,6 +281,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicMessagesHandlersCases()
         => Cases("runtime/atomic/messages-handlers.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicBooleanLogicCases()
+        => Cases("runtime/atomic/boolean-logic.json");
+
     public static IEnumerable<object[]> RuntimeCollectionsCases()
         => Cases("runtime/collections.json");
 
@@ -306,6 +319,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMessagesHandlersCases()
         => NewVirtualMachineCases("runtime/atomic/messages-handlers.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicBooleanLogicCases()
+        => NewVirtualMachineCases("runtime/atomic/boolean-logic.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
         => NewVirtualMachineCases("runtime/collections.json");

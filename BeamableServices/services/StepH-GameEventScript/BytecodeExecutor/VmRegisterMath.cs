@@ -841,11 +841,441 @@ internal static class VmRegisterMath
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMin(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (!TrySameUnit(ref a, ref b, out _)) dst.SetFloat(double.NaN);
+                else dst = b.IntegerValue < a.IntegerValue ? b : a;
+                return;
+            case Float when b.Kind is Float:
+                if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(a.FloatValue) || double.IsNaN(b.FloatValue)) dst.SetFloat(double.NaN);
+                else dst = b.FloatValue < a.FloatValue ? b : a;
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (!TrySameUnit(ref a, ref b, out _))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var fastLeft = a.AsNumberValue;
+                var fastRight = b.AsNumberValue;
+                if (double.IsNaN(fastLeft) || double.IsNaN(fastRight)) dst.SetFloat(double.NaN);
+                else dst = fastRight < fastLeft ? b : a;
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var leftNumber = double.NaN;
+        var leftIsNumeric = false;
+        var rightNumber = double.NaN;
+        var rightIsNumeric = false;
+        var leftRank = 8;
+        var rightRank = 8;
+        string? leftText = null;
+        string? rightText = null;
+
+        switch (a.Kind)
+        {
+            case Integer:
+                leftNumber = a.IntegerValue;
+                leftIsNumeric = true;
+                leftRank = 1;
+                break;
+            case Float:
+                leftNumber = a.FloatValue;
+                leftIsNumeric = true;
+                leftRank = 1;
+                break;
+            case Percentage:
+                leftNumber = a.FloatValue;
+                leftIsNumeric = true;
+                leftRank = 1;
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                leftNumber = a.IsTrue ? 1d : 0d;
+                leftIsNumeric = true;
+                leftRank = 6;
+                break;
+            case Text:
+                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftIsNumeric = double.TryParse(leftText, NumberStyles.Number, CultureInfo.InvariantCulture, out leftNumber);
+                leftRank = 2;
+                break;
+            case Tag:
+                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftNumber = ReadNumericTagOrNaN(leftText);
+                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                leftRank = 1;
+                break;
+            case Vector:
+                leftRank = 4;
+                break;
+            case Point:
+                leftRank = 5;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range:
+                leftRank = 8;
+                break;
+            case Message:
+                leftRank = 9;
+                break;
+            case Handler:
+                leftRank = 10;
+                break;
+            case List:
+                leftRank = 11;
+                break;
+            case Map:
+                leftRank = 12;
+                break;
+            case Dice:
+                leftRank = 13;
+                break;
+        }
+
+        switch (b.Kind)
+        {
+            case Integer:
+                rightNumber = b.IntegerValue;
+                rightIsNumeric = true;
+                rightRank = 1;
+                break;
+            case Float:
+                rightNumber = b.FloatValue;
+                rightIsNumeric = true;
+                rightRank = 1;
+                break;
+            case Percentage:
+                rightNumber = b.FloatValue;
+                rightIsNumeric = true;
+                rightRank = 1;
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                rightNumber = b.IsTrue ? 1d : 0d;
+                rightIsNumeric = true;
+                rightRank = 6;
+                break;
+            case Text:
+                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightIsNumeric = double.TryParse(rightText, NumberStyles.Number, CultureInfo.InvariantCulture, out rightNumber);
+                rightRank = 2;
+                break;
+            case Tag:
+                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightNumber = ReadNumericTagOrNaN(rightText);
+                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                rightRank = 1;
+                break;
+            case Vector:
+                rightRank = 4;
+                break;
+            case Point:
+                rightRank = 5;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range:
+                rightRank = 8;
+                break;
+            case Message:
+                rightRank = 9;
+                break;
+            case Handler:
+                rightRank = 10;
+                break;
+            case List:
+                rightRank = 11;
+                break;
+            case Map:
+                rightRank = 12;
+                break;
+            case Dice:
+                rightRank = 13;
+                break;
+        }
+
+        if (leftIsNumeric && rightIsNumeric)
+        {
+            if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(leftNumber) || double.IsNaN(rightNumber))
+            {
+                dst.SetFloat(double.NaN);
+                return;
+            }
+
+            dst = rightNumber < leftNumber ? b : a;
+            return;
+        }
+
+        if (leftRank != rightRank)
+        {
+            dst = rightRank < leftRank ? b : a;
+            return;
+        }
+
+        var comparison = 0;
+        switch (a.Kind)
+        {
+            case Text when b.Kind is Text:
+                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                break;
+            case Tag when b.Kind is Tag:
+                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                break;
+            case Vector when b.Kind is Vector:
+            case Point when b.Kind is Point:
+                if (a.Unit != b.Unit)
+                {
+                    comparison = b.Unit.CompareTo(a.Unit);
+                    break;
+                }
+
+                if (a.ObjectValue is VmFloatTriplet leftTriplet && b.ObjectValue is VmFloatTriplet rightTriplet)
+                {
+                    comparison = rightTriplet.X.CompareTo(leftTriplet.X);
+                    if (comparison == 0) comparison = rightTriplet.Y.CompareTo(leftTriplet.Y);
+                    if (comparison == 0) comparison = rightTriplet.Z.CompareTo(leftTriplet.Z);
+                }
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+                comparison = b.IsTrue.CompareTo(a.IsTrue);
+                break;
+            default:
+                comparison = b.Kind.CompareTo(a.Kind);
+                break;
+        }
+
+        dst = comparison < 0 ? b : a;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMax(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
+        switch (a.Kind)
+        {
+            case Integer when b.Kind is Integer:
+                if (!TrySameUnit(ref a, ref b, out _)) dst.SetFloat(double.NaN);
+                else dst = b.IntegerValue > a.IntegerValue ? b : a;
+                return;
+            case Float when b.Kind is Float:
+                if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(a.FloatValue) || double.IsNaN(b.FloatValue)) dst.SetFloat(double.NaN);
+                else dst = b.FloatValue > a.FloatValue ? b : a;
+                return;
+            case Float or Integer when b.Kind is Float or Integer:
+                if (!TrySameUnit(ref a, ref b, out _))
+                {
+                    dst.SetFloat(double.NaN);
+                    return;
+                }
+
+                var fastLeft = a.AsNumberValue;
+                var fastRight = b.AsNumberValue;
+                if (double.IsNaN(fastLeft) || double.IsNaN(fastRight)) dst.SetFloat(double.NaN);
+                else dst = fastRight > fastLeft ? b : a;
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+        }
+
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var leftNumber = double.NaN;
+        var leftIsNumeric = false;
+        var rightNumber = double.NaN;
+        var rightIsNumeric = false;
+        var leftRank = 8;
+        var rightRank = 8;
+        string? leftText = null;
+        string? rightText = null;
+
+        switch (a.Kind)
+        {
+            case Integer:
+                leftNumber = a.IntegerValue;
+                leftIsNumeric = true;
+                leftRank = 1;
+                break;
+            case Float:
+                leftNumber = a.FloatValue;
+                leftIsNumeric = true;
+                leftRank = 1;
+                break;
+            case Percentage:
+                leftNumber = a.FloatValue;
+                leftIsNumeric = true;
+                leftRank = 1;
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                leftNumber = a.IsTrue ? 1d : 0d;
+                leftIsNumeric = true;
+                leftRank = 6;
+                break;
+            case Text:
+                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftIsNumeric = double.TryParse(leftText, NumberStyles.Number, CultureInfo.InvariantCulture, out leftNumber);
+                leftRank = 2;
+                break;
+            case Tag:
+                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftNumber = ReadNumericTagOrNaN(leftText);
+                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                leftRank = 1;
+                break;
+            case Vector:
+                leftRank = 4;
+                break;
+            case Point:
+                leftRank = 5;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range:
+                leftRank = 8;
+                break;
+            case Message:
+                leftRank = 9;
+                break;
+            case Handler:
+                leftRank = 10;
+                break;
+            case List:
+                leftRank = 11;
+                break;
+            case Map:
+                leftRank = 12;
+                break;
+            case Dice:
+                leftRank = 13;
+                break;
+        }
+
+        switch (b.Kind)
+        {
+            case Integer:
+                rightNumber = b.IntegerValue;
+                rightIsNumeric = true;
+                rightRank = 1;
+                break;
+            case Float:
+                rightNumber = b.FloatValue;
+                rightIsNumeric = true;
+                rightRank = 1;
+                break;
+            case Percentage:
+                rightNumber = b.FloatValue;
+                rightIsNumeric = true;
+                rightRank = 1;
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                rightNumber = b.IsTrue ? 1d : 0d;
+                rightIsNumeric = true;
+                rightRank = 6;
+                break;
+            case Text:
+                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightIsNumeric = double.TryParse(rightText, NumberStyles.Number, CultureInfo.InvariantCulture, out rightNumber);
+                rightRank = 2;
+                break;
+            case Tag:
+                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightNumber = ReadNumericTagOrNaN(rightText);
+                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                rightRank = 1;
+                break;
+            case Vector:
+                rightRank = 4;
+                break;
+            case Point:
+                rightRank = 5;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range:
+                rightRank = 8;
+                break;
+            case Message:
+                rightRank = 9;
+                break;
+            case Handler:
+                rightRank = 10;
+                break;
+            case List:
+                rightRank = 11;
+                break;
+            case Map:
+                rightRank = 12;
+                break;
+            case Dice:
+                rightRank = 13;
+                break;
+        }
+
+        if (leftIsNumeric && rightIsNumeric)
+        {
+            if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(leftNumber) || double.IsNaN(rightNumber))
+            {
+                dst.SetFloat(double.NaN);
+                return;
+            }
+
+            dst = rightNumber > leftNumber ? b : a;
+            return;
+        }
+
+        if (leftRank != rightRank)
+        {
+            dst = rightRank > leftRank ? b : a;
+            return;
+        }
+
+        var comparison = 0;
+        switch (a.Kind)
+        {
+            case Text when b.Kind is Text:
+                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                break;
+            case Tag when b.Kind is Tag:
+                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                break;
+            case Vector when b.Kind is Vector:
+            case Point when b.Kind is Point:
+                if (a.Unit != b.Unit)
+                {
+                    comparison = b.Unit.CompareTo(a.Unit);
+                    break;
+                }
+
+                if (a.ObjectValue is VmFloatTriplet leftTriplet && b.ObjectValue is VmFloatTriplet rightTriplet)
+                {
+                    comparison = rightTriplet.X.CompareTo(leftTriplet.X);
+                    if (comparison == 0) comparison = rightTriplet.Y.CompareTo(leftTriplet.Y);
+                    if (comparison == 0) comparison = rightTriplet.Z.CompareTo(leftTriplet.Z);
+                }
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+                comparison = b.IsTrue.CompareTo(a.IsTrue);
+                break;
+            default:
+                comparison = b.Kind.CompareTo(a.Kind);
+                break;
+        }
+
+        dst = comparison > 0 ? b : a;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -687,7 +687,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
         var from = args[0].Number;
         var to = args[1].Number;
         var delta = (to - from + 540d) % 360d - 180d;
-        return GameEventScriptFastValue.FromFloat(delta, GameEventScriptNumericUnit.Degree);
+        return GameEventScriptFastValue.FromFloat(delta, GameEventScriptBytecodeInstructionUnit.UnitDegree);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>

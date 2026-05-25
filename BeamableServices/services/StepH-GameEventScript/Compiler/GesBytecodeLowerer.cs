@@ -700,7 +700,7 @@ internal static class GesBytecodeLowerer
 
     private static bool IsKnownTypeCast(string typeName)
         => typeName is "boolean" or "number" or "numeric" or "percentage" or "vector" or "point" or "series" or "envelope" ||
-           GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out _);
+           GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(typeName, out _);
 
     private static bool IsKnownDeclaredType(string typeName)
         => typeName is "nothing" or "tag" or "text" or

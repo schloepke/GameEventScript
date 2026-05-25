@@ -43,11 +43,11 @@ public static class GameEventScriptValueFactory
     /// with an optional unit.
     /// </summary>
     /// <param name="value">The double value to encapsulate.</param>
-    /// <param name="unit">An optional unit of type <see cref="GameEventScriptNumericUnit"/>
+    /// <param name="unit">An optional unit of type <see cref="GameEventScriptBytecodeInstructionUnit"/>
     /// representing the measurement unit of the value. Defaults to null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the double value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesFloat(double value, GameEventScriptNumericUnit? unit = null) => GameEventScriptNumberValue.CreateFloat(value, unit);
+    public static GameEventScriptValue GesFloat(double value, GameEventScriptBytecodeInstructionUnit? unit = null) => GameEventScriptNumberValue.CreateFloat(value, unit);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a number value.
@@ -57,7 +57,7 @@ public static class GameEventScriptValueFactory
     /// <param name="unit">An optional measurement unit to attach to the number value.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the number value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesNumber(double value, GameEventScriptNumericUnit? unit = null) => GameEventScriptNumberValue.CreateFloat(value, unit);
+    public static GameEventScriptValue GesNumber(double value, GameEventScriptBytecodeInstructionUnit? unit = null) => GameEventScriptNumberValue.CreateFloat(value, unit);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a percentage value.
@@ -73,7 +73,7 @@ public static class GameEventScriptValueFactory
     /// <param name="degrees">The degree value to encapsulate. Represents an angle measurement in degrees.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the degree value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesDegree(double degrees) => GameEventScriptNumberValue.CreateFloat(degrees, GameEventScriptNumericUnit.Degree);
+    public static GameEventScriptValue GesDegree(double degrees) => GameEventScriptNumberValue.CreateFloat(degrees, GameEventScriptBytecodeInstructionUnit.UnitDegree);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a value in meters.
@@ -81,7 +81,7 @@ public static class GameEventScriptValueFactory
     /// <param name="meters">The value in meters to encapsulate. Must be a valid double number.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the specified value in meters.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesMeter(double meters) => GameEventScriptNumberValue.CreateFloat(meters, GameEventScriptNumericUnit.Meter);
+    public static GameEventScriptValue GesMeter(double meters) => GameEventScriptNumberValue.CreateFloat(meters, GameEventScriptBytecodeInstructionUnit.UnitMeter);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a duration in seconds.
@@ -89,7 +89,7 @@ public static class GameEventScriptValueFactory
     /// <param name="seconds">The duration value to encapsulate, measured in seconds.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the duration value with the "second" unit.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesSeconds(double seconds) => GameEventScriptNumberValue.CreateFloat(seconds, GameEventScriptNumericUnit.Second);
+    public static GameEventScriptValue GesSeconds(double seconds) => GameEventScriptNumberValue.CreateFloat(seconds, GameEventScriptBytecodeInstructionUnit.UnitSecond);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a vector.
@@ -100,7 +100,7 @@ public static class GameEventScriptValueFactory
     /// <param name="unit">The unit of measurement for the vector values. Can be null if no unit is specified.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the vector.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesVector(double x, double y = 0d, double z = 0d, GameEventScriptNumericUnit? unit = null) => GameEventScriptVectorValue.Create(x, y, z, unit);
+    public static GameEventScriptValue GesVector(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit? unit = null) => GameEventScriptVectorValue.Create(x, y, z, unit);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a point.
@@ -111,7 +111,7 @@ public static class GameEventScriptValueFactory
     /// <param name="unit">The unit of measurement for the point coordinates. Can be null if no unit is specified.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the point.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesPoint(double x, double y = 0d, double z = 0d, GameEventScriptNumericUnit? unit = null) => GameEventScriptPointValue.Create(x, y, z, unit);
+    public static GameEventScriptValue GesPoint(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit? unit = null) => GameEventScriptPointValue.Create(x, y, z, unit);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptNumberValue"/> representing a "Not-a-Number" (NaN) double value.
@@ -142,7 +142,7 @@ public static class GameEventScriptValueFactory
     /// <param name="unit">An optional measurement unit to attach to the integer value.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the integer value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesInteger(long value, GameEventScriptNumericUnit? unit = null) => GameEventScriptNumberValue.CreateInteger(value, unit);
+    public static GameEventScriptValue GesInteger(long value, GameEventScriptBytecodeInstructionUnit? unit = null) => GameEventScriptNumberValue.CreateInteger(value, unit);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a boolean value.

@@ -402,7 +402,7 @@ internal static class GesValueOperations
         return false;
     }
 
-    public static GameEventScriptValue ToGameEventScriptFloat(NumericValue number, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptValue ToGameEventScriptFloat(NumericValue number, GameEventScriptBytecodeInstructionUnit? unit = null)
     {
         return number.Kind switch
         {
@@ -414,7 +414,7 @@ internal static class GesValueOperations
         };
     }
 
-    public static GameEventScriptValue ToGameEventScriptNumber(NumericValue number, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptValue ToGameEventScriptNumber(NumericValue number, GameEventScriptBytecodeInstructionUnit? unit = null)
     {
         if (TryToInteger(number, out var integer))
         {
@@ -429,7 +429,7 @@ internal static class GesValueOperations
         string operation,
         GameEventScriptValue right,
         NumericValue number,
-        GameEventScriptNumericUnit? unit = null)
+        GameEventScriptBytecodeInstructionUnit? unit = null)
     {
         _ = left;
         _ = operation;
@@ -471,10 +471,12 @@ internal static class GesValueOperations
                 break;
 
             case "*":
-                if (!(leftIntegerValue.Unit.HasValue && rightIntegerValue.Unit.HasValue) &&
+                if (!(leftIntegerValue.Unit.IsNumericUnit() && rightIntegerValue.Unit.IsNumericUnit()) &&
                     TryMultiplyInteger(leftInteger, rightInteger, out var product))
                 {
-                    value = GameEventScriptValueFactory.GesInteger(product, leftIntegerValue.Unit ?? rightIntegerValue.Unit);
+                    value = GameEventScriptValueFactory.GesInteger(
+                        product,
+                        leftIntegerValue.Unit.IsNumericUnit() ? leftIntegerValue.Unit : rightIntegerValue.Unit);
                     return true;
                 }
 
@@ -499,8 +501,8 @@ internal static class GesValueOperations
                 break;
 
             case "mod":
-                if (leftIntegerValue.Unit.HasValue == rightIntegerValue.Unit.HasValue &&
-                    (!leftIntegerValue.Unit.HasValue || leftIntegerValue.Unit == rightIntegerValue.Unit) &&
+                if (leftIntegerValue.Unit.IsNumericUnit() == rightIntegerValue.Unit.IsNumericUnit() &&
+                    (!leftIntegerValue.Unit.IsNumericUnit() || leftIntegerValue.Unit == rightIntegerValue.Unit) &&
                     rightInteger != 0 &&
                     !(leftInteger == long.MinValue && rightInteger == -1))
                 {
@@ -518,8 +520,8 @@ internal static class GesValueOperations
                 break;
 
             case "rem":
-                if (leftIntegerValue.Unit.HasValue == rightIntegerValue.Unit.HasValue &&
-                    (!leftIntegerValue.Unit.HasValue || leftIntegerValue.Unit == rightIntegerValue.Unit) &&
+                if (leftIntegerValue.Unit.IsNumericUnit() == rightIntegerValue.Unit.IsNumericUnit() &&
+                    (!leftIntegerValue.Unit.IsNumericUnit() || leftIntegerValue.Unit == rightIntegerValue.Unit) &&
                     rightInteger != 0 &&
                     !(leftInteger == long.MinValue && rightInteger == -1))
                 {
@@ -633,7 +635,7 @@ internal static class GesValueOperations
             return true;
         }
 
-        var resultUnit = default(GameEventScriptNumericUnit?);
+        var resultUnit = default(GameEventScriptBytecodeInstructionUnit?);
         var valid = operation switch
         {
             "+" or "-" => leftHasUnit && rightHasUnit && leftUnit == rightUnit && SetUnit(leftUnit, out resultUnit),
@@ -669,10 +671,12 @@ internal static class GesValueOperations
     }
 
     private static bool TryGetDivideResultUnit(
-        GameEventScriptNumericUnit? leftUnit,
-        GameEventScriptNumericUnit? rightUnit,
-        out GameEventScriptNumericUnit? resultUnit)
+        GameEventScriptBytecodeInstructionUnit? leftUnit,
+        GameEventScriptBytecodeInstructionUnit? rightUnit,
+        out GameEventScriptBytecodeInstructionUnit? resultUnit)
     {
+        leftUnit = ToOptionalNumericUnit(leftUnit);
+        rightUnit = ToOptionalNumericUnit(rightUnit);
         if (!leftUnit.HasValue && !rightUnit.HasValue)
         {
             resultUnit = null;
@@ -868,7 +872,7 @@ internal static class GesValueOperations
 
         var labels = new[] { "x", "y", "z" };
         var values = new double[3];
-        var unit = default(GameEventScriptNumericUnit?);
+        var unit = default(GameEventScriptBytecodeInstructionUnit?);
         var initialized = false;
 
         foreach (var pair in components)
@@ -917,7 +921,7 @@ internal static class GesValueOperations
 
         var labels = new[] { "x", "y", "z" };
         var values = new double[3];
-        var unit = default(GameEventScriptNumericUnit?);
+        var unit = default(GameEventScriptBytecodeInstructionUnit?);
         var initialized = false;
 
         foreach (var pair in components)
@@ -999,17 +1003,17 @@ internal static class GesValueOperations
         }
     }
 
-    public static bool TryApplyVectorUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit, out GameEventScriptValue converted)
+    public static bool TryApplyVectorUnit(GameEventScriptValue value, GameEventScriptBytecodeInstructionUnit unit, out GameEventScriptValue converted)
     {
         switch (value)
         {
             case GameEventScriptVectorValue vector:
-                converted = vector.Unit.HasValue && vector.Unit.Value != unit
+                converted = vector.Unit.IsNumericUnit() && vector.Unit != unit
                     ? GameEventScriptValueFactory.GesFloatNaN()
                     : GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, unit);
                 return true;
             case GameEventScriptPointValue point:
-                converted = point.Unit.HasValue && point.Unit.Value != unit
+                converted = point.Unit.IsNumericUnit() && point.Unit != unit
                     ? GameEventScriptValueFactory.GesFloatNaN()
                     : GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, unit);
                 return true;
@@ -1026,7 +1030,7 @@ internal static class GesValueOperations
             return GameEventScriptNothingValue.Instance;
         }
 
-        if (GameEventScriptValue.TryGetNumericUnit(operand, out var unit) && unit != GameEventScriptNumericUnit.Degree)
+        if (GameEventScriptValue.TryGetNumericUnit(operand, out var unit) && unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
         {
             return GameEventScriptValueFactory.GesFloatNaN();
         }
@@ -1066,7 +1070,7 @@ internal static class GesValueOperations
         return leftHasUnit == rightHasUnit && (!leftHasUnit || leftUnit == rightUnit);
     }
 
-    private static bool TryGetCommonNumericUnit(IEnumerable<GameEventScriptValue> values, out GameEventScriptNumericUnit? unit)
+    private static bool TryGetCommonNumericUnit(IEnumerable<GameEventScriptValue> values, out GameEventScriptBytecodeInstructionUnit? unit)
     {
         unit = null;
         var initialized = false;
@@ -1089,15 +1093,18 @@ internal static class GesValueOperations
         return true;
     }
 
-    private static bool SetUnit(GameEventScriptNumericUnit? value, out GameEventScriptNumericUnit? unit)
+    private static bool SetUnit(GameEventScriptBytecodeInstructionUnit? value, out GameEventScriptBytecodeInstructionUnit? unit)
     {
-        unit = value;
+        unit = ToOptionalNumericUnit(value);
         return true;
     }
 
-    private readonly record struct VectorComponents(double X, double Y, double Z, GameEventScriptNumericUnit? Unit);
+    private static GameEventScriptBytecodeInstructionUnit? ToOptionalNumericUnit(GameEventScriptBytecodeInstructionUnit? unit)
+        => unit is { } value && value.IsNumericUnit() ? value : null;
 
-    private readonly record struct PointComponents(double X, double Y, double Z, GameEventScriptNumericUnit? Unit);
+    private readonly record struct VectorComponents(double X, double Y, double Z, GameEventScriptBytecodeInstructionUnit? Unit);
+
+    private readonly record struct PointComponents(double X, double Y, double Z, GameEventScriptBytecodeInstructionUnit? Unit);
 
     private static bool TryReadVector(GameEventScriptValue value, out VectorComponents vector)
     {
@@ -1134,7 +1141,7 @@ internal static class GesValueOperations
         }
 
         var values = new double[3];
-        var unit = default(GameEventScriptNumericUnit?);
+        var unit = default(GameEventScriptBytecodeInstructionUnit?);
         var initialized = false;
 
         for (var index = 0; index < components.Count; index++)
@@ -1172,7 +1179,7 @@ internal static class GesValueOperations
         }
 
         var values = new double[3];
-        var unit = default(GameEventScriptNumericUnit?);
+        var unit = default(GameEventScriptBytecodeInstructionUnit?);
         var initialized = false;
 
         for (var index = 0; index < components.Count; index++)
@@ -1204,7 +1211,7 @@ internal static class GesValueOperations
     private static bool TryReadVectorComponent(
         GameEventScriptValue component,
         out double value,
-        out GameEventScriptNumericUnit? unit,
+        out GameEventScriptBytecodeInstructionUnit? unit,
         out bool invalid)
     {
         value = default;
@@ -1259,11 +1266,13 @@ internal static class GesValueOperations
     }
 
     private static bool TryGetVectorScalarResultUnit(
-        GameEventScriptNumericUnit? vectorUnit,
-        GameEventScriptNumericUnit? scalarUnit,
+        GameEventScriptBytecodeInstructionUnit? vectorUnit,
+        GameEventScriptBytecodeInstructionUnit? scalarUnit,
         string operation,
-        out GameEventScriptNumericUnit? resultUnit)
+        out GameEventScriptBytecodeInstructionUnit? resultUnit)
     {
+        vectorUnit = ToOptionalNumericUnit(vectorUnit);
+        scalarUnit = ToOptionalNumericUnit(scalarUnit);
         resultUnit = null;
         if (operation == "*")
         {
@@ -1302,7 +1311,7 @@ internal static class GesValueOperations
         NumericValue x,
         NumericValue y,
         NumericValue z,
-        GameEventScriptNumericUnit? unit)
+        GameEventScriptBytecodeInstructionUnit? unit)
     {
         if (!x.IsFinite || !y.IsFinite || !z.IsFinite)
         {
@@ -1316,7 +1325,7 @@ internal static class GesValueOperations
         NumericValue x,
         NumericValue y,
         NumericValue z,
-        GameEventScriptNumericUnit? unit)
+        GameEventScriptBytecodeInstructionUnit? unit)
     {
         if (!x.IsFinite || !y.IsFinite || !z.IsFinite)
         {

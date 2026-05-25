@@ -2,7 +2,6 @@ using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -33,18 +32,18 @@ internal static class VmRegisterMapping
             case GameEventScriptValueKind.Vector:
             {
                 var vector = (GameEventScriptVectorValue)argument;
-                destination.SetObject(Vector, new VmFloatTriplet(vector.X, vector.Y, vector.Z), EncodeUnit(vector.Unit));
+                destination.SetObject(Vector, new VmFloatTriplet(vector.X, vector.Y, vector.Z), vector.Unit);
                 break;
             }
             case GameEventScriptValueKind.Point:
             {
                 var point = (GameEventScriptPointValue)argument;
-                destination.SetObject(Point, new VmFloatTriplet(point.X, point.Y, point.Z), EncodeUnit(point.Unit));
+                destination.SetObject(Point, new VmFloatTriplet(point.X, point.Y, point.Z), point.Unit);
                 break;
             }
             case GameEventScriptValueKind.Number:
             {
-                var unit = EncodeUnit(argument is GameEventScriptNumberValue number ? number.Unit : null);
+                var unit = argument.Unit;
                 if (argument.IsInteger()) destination.SetInteger(argument.AsInteger(), unit);
                 else destination.SetFloat(argument.AsNumber(), unit);
                 break;
@@ -81,35 +80,15 @@ internal static class VmRegisterMapping
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a, ref GameEventScriptTextTable textTable) => a.Kind switch
     {
-        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, DecodeUnit(a.Unit)),
-        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue, DecodeUnit(a.Unit)),
+        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
+        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
         Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
-        Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, DecodeUnit(a.Unit)),
-        Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, DecodeUnit(a.Unit)),
+        Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
+        Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
         Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue! as string : textTable.Resolve((ushort)a.IntegerValue)),
         Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue! as string : textTable.Resolve((ushort)a.IntegerValue)),
         // FIXME this might not work here, since we need to binary to look up strings and tags
         _ => GameEventScriptValueFactory.GesNothing(),
     };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static GameEventScriptBytecodeInstructionUnit EncodeUnit(GameEventScriptNumericUnit? unit)
-        => unit switch
-        {
-            GameEventScriptNumericUnit.Degree => UnitDegree,
-            GameEventScriptNumericUnit.Meter => UnitMeter,
-            GameEventScriptNumericUnit.Second => UnitSecond,
-            _ => UnitNone
-        };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static GameEventScriptNumericUnit? DecodeUnit(GameEventScriptBytecodeInstructionUnit unit)
-        => unit switch
-        {
-            UnitDegree => GameEventScriptNumericUnit.Degree,
-            UnitMeter => GameEventScriptNumericUnit.Meter,
-            UnitSecond => GameEventScriptNumericUnit.Second,
-            _ => null
-        };
 }

@@ -182,7 +182,7 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
             level.Attempted++;
             var suite = GetSuiteResult(bySuite, testCase.SuiteName);
             suite.Attempted++;
-            var outcome = RunNewVirtualMachineCase(testCase);
+            var outcome = RunNewVirtualMachineCase(testCase, includeMessageDiff: false);
             if (outcome.Passed)
             {
                 result.Passed++;
@@ -355,7 +355,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
         }
     }
 
-    protected static NewVmConformanceOutcome RunNewVirtualMachineCase(GameEventScriptConformanceCase testCase)
+    protected static NewVmConformanceOutcome RunNewVirtualMachineCase(
+        GameEventScriptConformanceCase testCase,
+        bool includeMessageDiff = true)
     {
         GameEventScriptBinary binary;
         try
@@ -369,7 +371,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         try
         {
-            return RunNewVirtualMachineCase(testCase, binary, out var mismatch)
+            return RunNewVirtualMachineCase(testCase, binary, includeMessageDiff, out var mismatch)
                 ? NewVmConformanceOutcome.Pass()
                 : NewVmConformanceOutcome.Mismatch(mismatch);
         }
@@ -416,6 +418,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
     private static bool RunNewVirtualMachineCase(
         GameEventScriptConformanceCase testCase,
         GameEventScriptBinary binary,
+        bool includeMessageDiff,
         out string mismatch)
     {
         mismatch = string.Empty;
@@ -464,13 +467,13 @@ public abstract class GameEventScriptJsonConformanceTestBase
                 return false;
             }
 
-            if (!TryMatchMessages(step.ExpectedPublished, emitted, out var emittedDiff))
+            if (!TryMatchMessages(step.ExpectedPublished, emitted, includeMessageDiff, out var emittedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: emitted messages differ.{Environment.NewLine}{emittedDiff}";
                 return false;
             }
 
-            if (!TryMatchMessages(step.ExpectedOutboundPublished, published, out var publishedDiff))
+            if (!TryMatchMessages(step.ExpectedOutboundPublished, published, includeMessageDiff, out var publishedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: published messages differ.{Environment.NewLine}{publishedDiff}";
                 return false;
@@ -483,6 +486,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
     private static bool TryMatchMessages(
         IReadOnlyList<JsonElement>? expectedPublished,
         IReadOnlyList<GameEventScriptMessage> actual,
+        bool includeMessageDiff,
         out string diff)
     {
         diff = string.Empty;
@@ -494,9 +498,10 @@ public abstract class GameEventScriptJsonConformanceTestBase
             return true;
         }
 
-        diff =
-            $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
-            $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}";
+        diff = includeMessageDiff
+            ? $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
+              $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}"
+            : $"expectedMessages={expected.Length}, actualMessages={actual.Count}";
         return false;
     }
 

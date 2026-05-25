@@ -3,18 +3,24 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptVectorValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptVectorValue Zero = new(0d, 0d, 0d, null);
+    public static readonly GameEventScriptVectorValue Zero = new(0d, 0d, 0d, GameEventScriptBytecodeInstructionUnit.UnitNone);
 
-    public static GameEventScriptVectorValue Create(double x, double y, double z, GameEventScriptNumericUnit? unit = null)
-        => x == 0d && y == 0d && z == 0d && unit is null ? Zero : new GameEventScriptVectorValue(x, y, z, unit);
+    public static GameEventScriptVectorValue Create(double x, double y, double z, GameEventScriptBytecodeInstructionUnit? unit = null)
+    {
+        var storedUnit = unit.ToStoredUnit();
+        return x == 0d && y == 0d && z == 0d && !storedUnit.IsNumericUnit()
+            ? Zero
+            : new GameEventScriptVectorValue(x, y, z, storedUnit);
+    }
 
-    private GameEventScriptVectorValue(double x, double y, double z, GameEventScriptNumericUnit? unit)
+    private GameEventScriptVectorValue(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit)
     {
         X = x;
         Y = y;
@@ -33,7 +39,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
     public double X { get; }
     public double Y { get; }
     public double Z { get; }
-    public GameEventScriptNumericUnit? Unit { get; }
+    public override GameEventScriptBytecodeInstructionUnit Unit { get; }
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Vector;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -15,6 +16,8 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
     }
 
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Nothing;
+
+    public override GameEventScriptBytecodeInstructionUnit Unit => GameEventScriptBytecodeInstructionUnit.UnitNothing;
 
     public override string AsText() => string.Empty;
 

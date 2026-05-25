@@ -197,7 +197,7 @@ internal static class GameEventScriptConformanceValueCodec
         };
     }
 
-    private static GameEventScriptNumericUnit? DecodeOptionalNumericUnit(JsonElement element)
+    private static GameEventScriptBytecodeInstructionUnit? DecodeOptionalNumericUnit(JsonElement element)
     {
         if (TryGetProperty(element, "unit", out var unitElement))
         {
@@ -212,7 +212,7 @@ internal static class GameEventScriptConformanceValueCodec
                 throw new InvalidOperationException($"Invalid numeric unit '{unitName}'.");
             }
 
-            if (!GameEventScriptNumericUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
+            if (!GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
             {
                 throw new InvalidOperationException($"Invalid numeric unit '{unitName}'.");
             }
@@ -320,9 +320,9 @@ internal static class GameEventScriptConformanceValueCodec
             ["value"] = FormatFloat(value)
         };
 
-        if (value.Unit.HasValue)
+        if (value.Unit.IsNumericUnit())
         {
-            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
         }
 
         return node;
@@ -336,9 +336,9 @@ internal static class GameEventScriptConformanceValueCodec
             ["value"] = value.IntegerValue.ToString(CultureInfo.InvariantCulture)
         };
 
-        if (value.Unit.HasValue)
+        if (value.Unit.IsNumericUnit())
         {
-            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
         }
 
         return node;
@@ -354,9 +354,9 @@ internal static class GameEventScriptConformanceValueCodec
             ["z"] = FormatFloat(value.Z)
         };
 
-        if (value.Unit.HasValue)
+        if (value.Unit.IsNumericUnit())
         {
-            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
         }
 
         return node;
@@ -372,9 +372,9 @@ internal static class GameEventScriptConformanceValueCodec
             ["z"] = FormatFloat(value.Z)
         };
 
-        if (value.Unit.HasValue)
+        if (value.Unit.IsNumericUnit())
         {
-            node["unit"] = ToCanonicalTypeName(value.Unit.Value.ToTypeName());
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
         }
 
         return node;

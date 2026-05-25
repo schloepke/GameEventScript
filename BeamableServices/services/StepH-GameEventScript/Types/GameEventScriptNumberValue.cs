@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -11,10 +12,10 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
     public static readonly GameEventScriptNumberValue Infinity = new(0, 0d, null, isInteger: false, isNaN: false, isInfinity: true, isNegativeInfinity: false);
     public static readonly GameEventScriptNumberValue NegativeInfinity = new(0, 0d, null, isInteger: false, isNaN: false, isInfinity: true, isNegativeInfinity: true);
 
-    public static GameEventScriptNumberValue CreateInteger(long value, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptNumberValue CreateInteger(long value, GameEventScriptBytecodeInstructionUnit? unit = null)
         => new(value, value, unit, isInteger: true, isNaN: false, isInfinity: false, isNegativeInfinity: false);
 
-    public static GameEventScriptNumberValue CreateFloat(double value, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptNumberValue CreateFloat(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
     {
         if (double.IsPositiveInfinity(value)) return Infinity;
         if (double.IsNegativeInfinity(value)) return NegativeInfinity;
@@ -31,7 +32,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
     private GameEventScriptNumberValue(
         long integerValue,
         double numberValue,
-        GameEventScriptNumericUnit? unit,
+        GameEventScriptBytecodeInstructionUnit? unit,
         bool isInteger,
         bool isNaN,
         bool isInfinity,
@@ -39,7 +40,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
     {
         IntegerValue = integerValue;
         NumberValue = numberValue;
-        Unit = isNaN || isInfinity ? null : unit;
+        Unit = isNaN || isInfinity ? GameEventScriptBytecodeInstructionUnit.UnitNone : unit.ToStoredUnit();
         IsIntegerValue = isInteger;
         IsNaNValue = isNaN;
         IsInfinityValue = isInfinity;
@@ -48,7 +49,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
 
     public long IntegerValue { get; }
     public double NumberValue { get; }
-    public GameEventScriptNumericUnit? Unit { get; }
+    public override GameEventScriptBytecodeInstructionUnit Unit { get; }
     public bool IsIntegerValue { get; }
     public bool IsFractionalValue => !IsIntegerValue && !IsNaNValue && !IsInfinityValue;
     public bool IsNaNValue { get; }
@@ -76,7 +77,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = Unit.HasValue
+        value = Unit.IsNumericUnit()
             ? IsIntegerValue ? GesInteger(IntegerValue) : GesFloat(NumberValue)
             : this;
         return true;

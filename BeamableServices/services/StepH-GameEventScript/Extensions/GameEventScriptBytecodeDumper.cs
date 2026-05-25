@@ -628,13 +628,13 @@ public static class GameEventScriptBytecodeDumper
         switch ((GameEventScriptBytecodeInstructionUnit)value)
         {
             case GameEventScriptBytecodeInstructionUnit.UnitDegree:
-                builder.Append(" unit=").Append(GameEventScriptNumericUnit.Degree.ToTypeName());
+                builder.Append(" unit=").Append(GameEventScriptBytecodeInstructionUnit.UnitDegree.ToTypeName());
                 break;
             case GameEventScriptBytecodeInstructionUnit.UnitMeter:
-                builder.Append(" unit=").Append(GameEventScriptNumericUnit.Meter.ToTypeName());
+                builder.Append(" unit=").Append(GameEventScriptBytecodeInstructionUnit.UnitMeter.ToTypeName());
                 break;
             case GameEventScriptBytecodeInstructionUnit.UnitSecond:
-                builder.Append(" unit=").Append(GameEventScriptNumericUnit.Second.ToTypeName());
+                builder.Append(" unit=").Append(GameEventScriptBytecodeInstructionUnit.UnitSecond.ToTypeName());
                 break;
         }
     }

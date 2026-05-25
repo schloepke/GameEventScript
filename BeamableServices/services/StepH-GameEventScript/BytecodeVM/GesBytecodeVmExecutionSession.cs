@@ -3982,7 +3982,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.LoadInteger:
-                value = BytecodeVmValue.Integer(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                value = BytecodeVmValue.Integer(instruction.I64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
                 return true;
 
             case GameEventScriptBytecodeOpCode.LoadFloat:
@@ -3994,7 +3994,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
                         : double.IsNegativeInfinity(number)
                             ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
-                            : BytecodeVmValue.Float(number, DecodeNumericUnit(instruction.UnitAndFlags));
+                            : BytecodeVmValue.Float(number, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
                 return true;
             }
 
@@ -4055,7 +4055,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.StageInteger:
-                value = BytecodeVmValue.Integer(instruction.I64, DecodeNumericUnit(instruction.UnitAndFlags));
+                value = BytecodeVmValue.Integer(instruction.I64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
                 return true;
 
             case GameEventScriptBytecodeOpCode.StageFloat:
@@ -4067,7 +4067,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
                         : double.IsNegativeInfinity(number)
                             ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
-                            : BytecodeVmValue.Float(number, DecodeNumericUnit(instruction.UnitAndFlags));
+                            : BytecodeVmValue.Float(number, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
                 return true;
             }
 
@@ -4103,15 +4103,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
         }
     }
-
-    private static GameEventScriptNumericUnit? DecodeNumericUnit(byte value)
-        => (GameEventScriptBytecodeInstructionUnit)value switch
-        {
-            GameEventScriptBytecodeInstructionUnit.UnitDegree => GameEventScriptNumericUnit.Degree,
-            GameEventScriptBytecodeInstructionUnit.UnitMeter => GameEventScriptNumericUnit.Meter,
-            GameEventScriptBytecodeInstructionUnit.UnitSecond => GameEventScriptNumericUnit.Second,
-            _ => null
-        };
 
     private static BytecodeVmValue EvaluateMemberAccess(BytecodeVmValue target, string? member)
     {
@@ -4477,7 +4468,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = BytecodeVmValue.Nothing;
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.CastUnit)
         {
-            if (!TryDecodeRequiredNumericUnit(instruction.UnitAndFlags, out var unit))
+            if (!TryGetRequiredNumericUnit(instruction.UnitAndFlags, out var unit))
             {
                 return false;
             }
@@ -4509,7 +4500,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         value = false;
         if (instruction.OpCode == GameEventScriptBytecodeOpCode.CheckUnit)
         {
-            if (!TryDecodeRequiredNumericUnit(instruction.UnitAndFlags, out var unit))
+            if (!TryGetRequiredNumericUnit(instruction.UnitAndFlags, out var unit))
             {
                 return false;
             }
@@ -4581,12 +4572,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             _ => string.Empty
         };
 
-    private static bool TryDecodeRequiredNumericUnit(byte unitAndFlags, out GameEventScriptNumericUnit unit)
+    private static bool TryGetRequiredNumericUnit(byte unitAndFlags, out GameEventScriptBytecodeInstructionUnit unit)
     {
-        var decoded = DecodeNumericUnit(unitAndFlags);
-        if (decoded.HasValue)
+        var value = GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(unitAndFlags);
+        if (value.IsNumericUnit())
         {
-            unit = decoded.Value;
+            unit = value;
             return true;
         }
 
@@ -4594,7 +4585,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    private static bool IsValueOfUnit(BytecodeVmValue value, GameEventScriptNumericUnit unit)
+    private static bool IsValueOfUnit(BytecodeVmValue value, GameEventScriptBytecodeInstructionUnit unit)
         => (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float) && value.Unit == unit ||
            (value.ReferenceValue?.IsNumericUnit(unit) ?? false);
 
@@ -4605,7 +4596,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return false;
         }
 
-        if (GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out var quantityUnit))
+        if (GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(typeName, out var quantityUnit))
         {
             return IsValueOfUnit(value, quantityUnit);
         }
@@ -4616,9 +4607,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
             "percentage" => value.Kind == BytecodeVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
-            "degree" => IsValueOfUnit(value, GameEventScriptNumericUnit.Degree),
-            "meter" => IsValueOfUnit(value, GameEventScriptNumericUnit.Meter),
-            "second" => IsValueOfUnit(value, GameEventScriptNumericUnit.Second),
+            "degree" => IsValueOfUnit(value, GameEventScriptBytecodeInstructionUnit.UnitDegree),
+            "meter" => IsValueOfUnit(value, GameEventScriptBytecodeInstructionUnit.UnitMeter),
+            "second" => IsValueOfUnit(value, GameEventScriptBytecodeInstructionUnit.UnitSecond),
             "vector" => value.ReferenceValue?.IsVector() ?? false,
             "point" => value.ReferenceValue?.IsPoint() ?? false,
             "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
@@ -5226,7 +5217,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return number.IsNaN ? double.NaN : number.Value;
     }
 
-    private static GameEventScriptValue CreateFloatResult(double value, GameEventScriptNumericUnit? unit = null)
+    private static GameEventScriptValue CreateFloatResult(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
     {
         if (double.IsNaN(value)) return GesFloatNaN();
         if (double.IsPositiveInfinity(value)) return GesFloatInfinity();
@@ -5609,7 +5600,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryConvertDeclaredType(string declaredType, BytecodeVmValue input, out BytecodeVmValue value)
     {
-        if (GameEventScriptNumericUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
+        if (GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
         {
             value = BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(input.ToGameEventScriptValue(), quantityUnit));
             return true;
@@ -5626,9 +5617,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "tag" => BytecodeVmValue.Reference(GesTag(boxed.AsText())),
             "text" => BytecodeVmValue.Reference(GesText(GesValueOperations.ToText(boxed))),
             "percentage" => BytecodeVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
-            "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptNumericUnit.Degree)),
-            "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptNumericUnit.Meter)),
-            "second" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptNumericUnit.Second)),
+            "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptBytecodeInstructionUnit.UnitDegree)),
+            "meter" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptBytecodeInstructionUnit.UnitMeter)),
+            "second" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptBytecodeInstructionUnit.UnitSecond)),
             "vector" => BytecodeVmValue.Reference(ConvertToVector(boxed)),
             "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "number" or "numeric" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumber(boxed)),
@@ -5693,11 +5684,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case "percentage":
                 return TryConvertPrimitiveToPercentage(input, out value);
             case "degree":
-                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptNumericUnit.Degree, out value);
+                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptBytecodeInstructionUnit.UnitDegree, out value);
             case "meter":
-                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptNumericUnit.Meter, out value);
+                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptBytecodeInstructionUnit.UnitMeter, out value);
             case "second":
-                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptNumericUnit.Second, out value);
+                return TryConvertPrimitiveToNumericUnit(input, GameEventScriptBytecodeInstructionUnit.UnitSecond, out value);
             default:
                 value = input;
                 return false;
@@ -5753,7 +5744,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private static bool TryConvertPrimitiveToNumericUnit(BytecodeVmValue input, GameEventScriptNumericUnit unit, out BytecodeVmValue value)
+    private static bool TryConvertPrimitiveToNumericUnit(BytecodeVmValue input, GameEventScriptBytecodeInstructionUnit unit, out BytecodeVmValue value)
     {
         switch (input.Kind)
         {
@@ -5903,7 +5894,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var unit = GameEventScriptValue.TryGetNumericUnit(value, out var numericUnit)
             ? numericUnit
-            : (GameEventScriptNumericUnit?)null;
+            : (GameEventScriptBytecodeInstructionUnit?)null;
 
         if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number))
         {
@@ -5978,7 +5969,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesPercentage(ratio);
     }
 
-    private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit)
+    private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptBytecodeInstructionUnit unit)
     {
         if (GesValueOperations.TryApplyVectorUnit(value, unit, out var vectorWithUnit))
         {
@@ -6907,7 +6898,7 @@ internal readonly record struct BytecodeVmValue(
     double Number,
     long IntegerValue,
     bool BooleanValue,
-    GameEventScriptNumericUnit? Unit,
+    GameEventScriptBytecodeInstructionUnit? Unit,
     GameEventScriptValue? ReferenceValue,
     BytecodeVmIterator? IteratorValue,
     BytecodeVmCollectionBuilder? CollectionBuilderValue)
@@ -6917,13 +6908,13 @@ internal readonly record struct BytecodeVmValue(
     public static BytecodeVmValue Boolean(bool value)
         => new(BytecodeVmValueKind.Boolean, value ? 1d : 0d, value ? 1 : 0, value, null, null, null, null);
 
-    public static BytecodeVmValue Integer(long value, GameEventScriptNumericUnit? unit = null)
-        => new(BytecodeVmValueKind.Integer, value, value, value != 0, unit, null, null, null);
+    public static BytecodeVmValue Integer(long value, GameEventScriptBytecodeInstructionUnit? unit = null)
+        => new(BytecodeVmValueKind.Integer, value, value, value != 0, ToOptionalNumericUnit(unit), null, null, null);
 
-    public static BytecodeVmValue Float(double value, GameEventScriptNumericUnit? unit = null)
-        => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, unit, null, null, null);
+    public static BytecodeVmValue Float(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
+        => new(BytecodeVmValueKind.Float, value, ToLongSaturated(value), value != 0d, ToOptionalNumericUnit(unit), null, null, null);
 
-    public static BytecodeVmValue Numeric(double value, GameEventScriptNumericUnit? unit = null)
+    public static BytecodeVmValue Numeric(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
         => double.IsFinite(value) &&
            value >= long.MinValue &&
            value <= long.MaxValue &&
@@ -6942,6 +6933,9 @@ internal readonly record struct BytecodeVmValue(
 
     public static BytecodeVmValue CollectionBuilder(BytecodeVmCollectionBuilder builder)
         => new(BytecodeVmValueKind.CollectionBuilder, 0d, 0, false, null, null, null, builder);
+
+    private static GameEventScriptBytecodeInstructionUnit? ToOptionalNumericUnit(GameEventScriptBytecodeInstructionUnit? unit)
+        => unit is { } value && value.IsNumericUnit() ? value : null;
 
     public static BytecodeVmValue NaN()
         => Reference(GesFloatNaN());
@@ -7581,9 +7575,9 @@ internal readonly record struct BytecodeVmValue(
     }
 
     private static bool TryGetDivideResultUnit(
-        GameEventScriptNumericUnit? leftUnit,
-        GameEventScriptNumericUnit? rightUnit,
-        out GameEventScriptNumericUnit? resultUnit)
+        GameEventScriptBytecodeInstructionUnit? leftUnit,
+        GameEventScriptBytecodeInstructionUnit? rightUnit,
+        out GameEventScriptBytecodeInstructionUnit? resultUnit)
     {
         if (!leftUnit.HasValue && !rightUnit.HasValue)
         {
@@ -7712,7 +7706,7 @@ internal readonly record struct BytecodeVmValue(
     private static bool TryGetPrimitiveNumeric(
         in BytecodeVmValue input,
         out double number,
-        out GameEventScriptNumericUnit? unit,
+        out GameEventScriptBytecodeInstructionUnit? unit,
         out bool isPercentage)
     {
         switch (input.Kind)
@@ -7842,7 +7836,7 @@ internal readonly record struct BytecodeVmValue(
 
     private bool TryGetNumeric(
         out GesValueOperations.NumericValue number,
-        out GameEventScriptNumericUnit? unit,
+        out GameEventScriptBytecodeInstructionUnit? unit,
         out bool isPercentage)
     {
         switch (Kind)
@@ -7963,7 +7957,7 @@ internal readonly record struct BytecodeVmValue(
         return false;
     }
 
-    private static BytecodeVmValue FromFloatNumeric(GesValueOperations.NumericValue number, GameEventScriptNumericUnit? unit = null)
+    private static BytecodeVmValue FromFloatNumeric(GesValueOperations.NumericValue number, GameEventScriptBytecodeInstructionUnit? unit = null)
         => number.IsFinite
             ? Numeric(number.Value, unit)
             : Reference(GesValueOperations.ToGameEventScriptNumber(number));
@@ -7973,7 +7967,7 @@ internal readonly record struct BytecodeVmValue(
         string operation,
         BytecodeVmValue right,
         double value,
-        GameEventScriptNumericUnit? unit = null)
+        GameEventScriptBytecodeInstructionUnit? unit = null)
         => double.IsFinite(value) &&
            value >= long.MinValue &&
            value <= long.MaxValue &&

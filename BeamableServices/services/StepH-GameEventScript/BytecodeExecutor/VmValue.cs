@@ -40,7 +40,7 @@ public struct VmValue
     public bool IsNotNothing => Kind is not Nothing;
 
     public bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
-    public bool HasUnit => Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone;
+    public bool HasUnit => Unit.IsNumericUnit();
     public bool IsStoragePointer => (Flags & VmValueFlags.StoragePointer) != 0;
     public bool IsStorageObject => (Flags & VmValueFlags.StorageObject) != 0;
     

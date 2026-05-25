@@ -3,18 +3,24 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptPointValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptPointValue Zero = new(0d, 0d, 0d, null);
+    public static readonly GameEventScriptPointValue Zero = new(0d, 0d, 0d, GameEventScriptBytecodeInstructionUnit.UnitNone);
 
-    public static GameEventScriptPointValue Create(double x, double y, double z, GameEventScriptNumericUnit? unit = null)
-        => x == 0d && y == 0d && z == 0d && unit is null ? Zero : new GameEventScriptPointValue(x, y, z, unit);
+    public static GameEventScriptPointValue Create(double x, double y, double z, GameEventScriptBytecodeInstructionUnit? unit = null)
+    {
+        var storedUnit = unit.ToStoredUnit();
+        return x == 0d && y == 0d && z == 0d && !storedUnit.IsNumericUnit()
+            ? Zero
+            : new GameEventScriptPointValue(x, y, z, storedUnit);
+    }
 
-    private GameEventScriptPointValue(double x, double y, double z, GameEventScriptNumericUnit? unit)
+    private GameEventScriptPointValue(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit)
     {
         X = x;
         Y = y;
@@ -33,7 +39,7 @@ public sealed class GameEventScriptPointValue : GameEventScriptValue
     public double X { get; }
     public double Y { get; }
     public double Z { get; }
-    public GameEventScriptNumericUnit? Unit { get; }
+    public override GameEventScriptBytecodeInstructionUnit Unit { get; }
     public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Point;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }

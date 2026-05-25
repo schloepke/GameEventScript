@@ -56,11 +56,11 @@ public sealed class GesFunctionAttribute(string name) : Attribute
         ReturnKind = returnKind;
     }
 
-    public GesFunctionAttribute(string name, GameEventScriptValueKind returnKind, GameEventScriptNumericUnit unit) : this(name)
+    public GesFunctionAttribute(string name, GameEventScriptValueKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
         ReturnKind = returnKind;
-        ReturnUnit = unit;
+        ReturnUnit = unit.ToStoredUnit();
     }
 
     public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
@@ -69,7 +69,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
 
     public GameEventScriptValueKind? ReturnKind { get; }
 
-    public GameEventScriptNumericUnit? ReturnUnit { get; }
+    public GameEventScriptBytecodeInstructionUnit ReturnUnit { get; }
 }
 
 public sealed class GameEventScriptExtensionContext(GameEventScriptSession runtimeSession)
@@ -85,7 +85,7 @@ public readonly struct GameEventScriptFastValue
 {
     private readonly GameEventScriptValue? _reference;
 
-    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, double number, double x, double y, double z, bool boolean, bool isIntegerNumber, GameEventScriptNumericUnit? unit,
+    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, double number, double x, double y, double z, bool boolean, bool isIntegerNumber, GameEventScriptBytecodeInstructionUnit? unit,
         GameEventScriptValue? reference)
     {
         Kind = kind;
@@ -96,7 +96,7 @@ public readonly struct GameEventScriptFastValue
         Z = z;
         BooleanValue = boolean;
         IsIntegerNumber = isIntegerNumber;
-        Unit = unit;
+        Unit = unit.ToStoredUnit();
         _reference = reference;
     }
 
@@ -129,7 +129,7 @@ public readonly struct GameEventScriptFastValue
 
     public string Text => ToGameEventScriptValue().AsText();
 
-    public GameEventScriptNumericUnit? Unit { get; }
+    public GameEventScriptBytecodeInstructionUnit Unit { get; }
 
     public double X { get; }
 
@@ -165,10 +165,10 @@ public readonly struct GameEventScriptFastValue
     public static GameEventScriptFastValue FromBoolean(bool value)
         => new(GameEventScriptValueKind.Boolean, value ? 1 : 0, value ? 1d : 0d, 0d, 0d, 0d, value, false, null, null);
 
-    public static GameEventScriptFastValue FromInteger(long value, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptFastValue FromInteger(long value, GameEventScriptBytecodeInstructionUnit? unit = null)
         => new(GameEventScriptValueKind.Number, value, value, 0d, 0d, 0d, value != 0, true, unit, null);
 
-    public static GameEventScriptFastValue FromFloat(double value, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptFastValue FromFloat(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
         => double.IsFinite(value) &&
            value >= long.MinValue &&
            value <= long.MaxValue &&
@@ -179,10 +179,10 @@ public readonly struct GameEventScriptFastValue
     public static GameEventScriptFastValue FromPercentage(double ratio)
         => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0d, 0d, 0d, ratio != 0d, false, null, null);
 
-    public static GameEventScriptFastValue FromVector(double x, double y = 0d, double z = 0d, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptFastValue FromVector(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit? unit = null)
         => new(GameEventScriptValueKind.Vector, 0, 0d, x, y, z, x != 0d || y != 0d || z != 0d, false, unit, null);
 
-    public static GameEventScriptFastValue FromPoint(double x, double y = 0d, double z = 0d, GameEventScriptNumericUnit? unit = null)
+    public static GameEventScriptFastValue FromPoint(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit? unit = null)
         => new(GameEventScriptValueKind.Point, 0, 0d, x, y, z, x != 0d || y != 0d || z != 0d, false, unit, null);
 
     public static GameEventScriptFastValue FromText(string value) => FromGameEventScriptValue(GesText(value));
@@ -423,12 +423,12 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return BoolReturnConverter.Instance;
         }
 
-        if (returnType == typeof(ValueTuple<double, GameEventScriptNumericUnit>))
+        if (returnType == typeof(ValueTuple<double, GameEventScriptBytecodeInstructionUnit>))
         {
             return FloatNumericUnitTupleReturnConverter.Instance;
         }
 
-        if (returnType == typeof(ValueTuple<double, GameEventScriptNumericUnit?>))
+        if (returnType == typeof(ValueTuple<double, GameEventScriptBytecodeInstructionUnit?>))
         {
             return FloatNullableNumericUnitTupleReturnConverter.Instance;
         }
@@ -515,15 +515,17 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         {
             Name = NormalizeName(name);
             TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-            (Kind, Unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(TypeName);
+            var (kind, unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(TypeName);
+            Kind = kind;
+            Unit = unit.ToStoredUnit();
         }
 
-        public ExtensionParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptNumericUnit? unit)
+        public ExtensionParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit? unit)
         {
             Name = NormalizeName(name);
             TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
             Kind = kind;
-            Unit = unit;
+            Unit = unit.ToStoredUnit();
         }
 
         public string Name { get; }
@@ -532,7 +534,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         public GameEventScriptValueKind? Kind { get; }
 
-        public GameEventScriptNumericUnit? Unit { get; }
+        public GameEventScriptBytecodeInstructionUnit Unit { get; }
 
         private static string NormalizeName(string name)
             => string.Equals(name, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)
@@ -650,17 +652,17 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
                 : GameEventScriptValueFactory.GesSeries(value));
     }
 
-    private sealed class FloatReturnConverter(GameEventScriptNumericUnit? unit) : IFastReturnConverter<double>
+    private sealed class FloatReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IFastReturnConverter<double>
     {
         public GameEventScriptFastValue Convert(double value) => GameEventScriptFastValue.FromFloat(value, unit);
     }
 
-    private sealed class LongReturnConverter(GameEventScriptNumericUnit? unit) : IFastReturnConverter<long>
+    private sealed class LongReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IFastReturnConverter<long>
     {
         public GameEventScriptFastValue Convert(long value) => GameEventScriptFastValue.FromInteger(value, unit);
     }
 
-    private sealed class IntReturnConverter(GameEventScriptNumericUnit? unit) : IFastReturnConverter<int>
+    private sealed class IntReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IFastReturnConverter<int>
     {
         public GameEventScriptFastValue Convert(int value) => GameEventScriptFastValue.FromInteger(value, unit);
     }
@@ -672,19 +674,19 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         public GameEventScriptFastValue Convert(bool value) => GameEventScriptFastValue.FromBoolean(value);
     }
 
-    private sealed class FloatNumericUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptNumericUnit Unit)>
+    private sealed class FloatNumericUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit Unit)>
     {
         public static readonly FloatNumericUnitTupleReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert((double Value, GameEventScriptNumericUnit Unit) value)
+        public GameEventScriptFastValue Convert((double Value, GameEventScriptBytecodeInstructionUnit Unit) value)
             => GameEventScriptFastValue.FromFloat(value.Value, value.Unit);
     }
 
-    private sealed class FloatNullableNumericUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptNumericUnit? Unit)>
+    private sealed class FloatNullableNumericUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit? Unit)>
     {
         public static readonly FloatNullableNumericUnitTupleReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert((double Value, GameEventScriptNumericUnit? Unit) value)
+        public GameEventScriptFastValue Convert((double Value, GameEventScriptBytecodeInstructionUnit? Unit) value)
             => GameEventScriptFastValue.FromFloat(value.Value, value.Unit);
     }
 

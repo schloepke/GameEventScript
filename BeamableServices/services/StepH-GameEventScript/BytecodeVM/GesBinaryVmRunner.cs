@@ -190,11 +190,11 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadInteger:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Integer(instruction.I64, DecodeUnit(instruction.UnitAndFlags)));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Integer(instruction.I64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadFloat:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Float(instruction.F64, DecodeUnit(instruction.UnitAndFlags)));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Float(instruction.F64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadPercentage:
@@ -218,7 +218,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastUnit:
-                    Set(instruction.DestinationSlot, CastUnit(Get(instruction.XSlot), DecodeUnit(instruction.UnitAndFlags)));
+                    Set(instruction.DestinationSlot, CastUnit(Get(instruction.XSlot), GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastNumeric:
@@ -246,7 +246,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.CheckUnit:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.XSlot), DecodeUnit(instruction.UnitAndFlags))));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.XSlot), GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit())));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Add:
@@ -396,7 +396,7 @@ internal sealed class GesBinaryVmRunState
 
         var unit = GameEventScriptValue.TryGetNumericUnit(boxed, out var numericUnit)
             ? numericUnit
-            : (GameEventScriptNumericUnit?)null;
+            : (GameEventScriptBytecodeInstructionUnit?)null;
 
         if (!GesValueOperations.TryCoerceNumericForOperation(boxed, out var number))
         {
@@ -462,7 +462,7 @@ internal sealed class GesBinaryVmRunState
         => value.ToGameEventScriptValue().TryGetCustomTypeName(out var customTypeName) &&
            string.Equals(customTypeName, _binary.TextConstantTable.Resolve(customTypeNameIndex), StringComparison.Ordinal);
 
-    private static GesBinaryVmValue CastUnit(GesBinaryVmValue value, GameEventScriptNumericUnit? unit)
+    private static GesBinaryVmValue CastUnit(GesBinaryVmValue value, GameEventScriptBytecodeInstructionUnit? unit)
         => unit.HasValue
             ? value.Kind switch
             {
@@ -472,7 +472,7 @@ internal sealed class GesBinaryVmRunState
             }
             : GesBinaryVmValue.Nothing;
 
-    private static bool IsValueOfUnit(GesBinaryVmValue value, GameEventScriptNumericUnit? unit)
+    private static bool IsValueOfUnit(GesBinaryVmValue value, GameEventScriptBytecodeInstructionUnit? unit)
         => unit.HasValue &&
            value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float &&
            value.Unit == unit.Value;
@@ -544,27 +544,19 @@ internal sealed class GesBinaryVmRunState
         };
     }
 
-    private static GameEventScriptNumericUnit? DecodeUnit(byte unitAndFlags)
-        => (GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F) switch
-        {
-            GameEventScriptBytecodeInstructionUnit.UnitDegree => GameEventScriptNumericUnit.Degree,
-            GameEventScriptBytecodeInstructionUnit.UnitMeter => GameEventScriptNumericUnit.Meter,
-            GameEventScriptBytecodeInstructionUnit.UnitSecond => GameEventScriptNumericUnit.Second,
-            _ => null
-        };
 }
 
 internal readonly struct GesBinaryVmValue
 {
     private readonly object? _reference;
 
-    private GesBinaryVmValue(GesBinaryVmValueKind kind, long integer, double number, object? reference, GameEventScriptNumericUnit? unit)
+    private GesBinaryVmValue(GesBinaryVmValueKind kind, long integer, double number, object? reference, GameEventScriptBytecodeInstructionUnit? unit)
     {
         Kind = kind;
         IntegerValue = integer;
         NumberValue = number;
         _reference = reference;
-        Unit = unit;
+        Unit = unit is { } value && value.IsNumericUnit() ? value : null;
     }
 
     public GesBinaryVmValueKind Kind { get; }
@@ -573,17 +565,17 @@ internal readonly struct GesBinaryVmValue
 
     public double NumberValue { get; }
 
-    public GameEventScriptNumericUnit? Unit { get; }
+    public GameEventScriptBytecodeInstructionUnit? Unit { get; }
 
     public static GesBinaryVmValue Nothing { get; } = new(GesBinaryVmValueKind.Nothing, 0, 0d, null, null);
 
     public static GesBinaryVmValue Boolean(bool value) => new(GesBinaryVmValueKind.Boolean, value ? 1 : 0, value ? 1d : 0d, null, null);
 
-    public static GesBinaryVmValue Integer(long value, GameEventScriptNumericUnit? unit = null) => new(GesBinaryVmValueKind.Integer, value, value, null, unit);
+    public static GesBinaryVmValue Integer(long value, GameEventScriptBytecodeInstructionUnit? unit = null) => new(GesBinaryVmValueKind.Integer, value, value, null, unit);
 
-    public static GesBinaryVmValue Float(double value, GameEventScriptNumericUnit? unit = null) => new(GesBinaryVmValueKind.Float, 0, value, null, unit);
+    public static GesBinaryVmValue Float(double value, GameEventScriptBytecodeInstructionUnit? unit = null) => new(GesBinaryVmValueKind.Float, 0, value, null, unit);
 
-    public static GesBinaryVmValue Number(double value, GameEventScriptNumericUnit? unit = null)
+    public static GesBinaryVmValue Number(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
         => double.IsFinite(value) &&
            value >= long.MinValue &&
            value <= long.MaxValue &&

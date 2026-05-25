@@ -672,7 +672,7 @@ internal sealed class GesLinearBytecodeBuilder
             case UnitIntegerLiteralExpressionNode unitInteger:
                 return EmitSourceConstant(
                     state,
-                    GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
+                    GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
                         ? GameEventScriptValueFactory.GesInteger(unitInteger.Value, integerUnit)
                         : GameEventScriptValueFactory.GesFloatNaN());
 
@@ -686,8 +686,8 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitSourceConstant(state, GameEventScriptValueFactory.GesPercentage(percentage.PercentValue / 100d));
 
             case UnitFloatLiteralExpressionNode unitFloat:
-                return GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
-                    ? EmitLoadFloat(state, unitFloat.Value, EncodeNumericUnitAndFlags(unit))
+                return GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
+                    ? EmitLoadFloat(state, unitFloat.Value, unit.ToUnitAndFlags())
                     : EmitSourceConstant(state, GameEventScriptValueFactory.GesFloatNaN());
 
             case TextLiteralExpressionNode text:
@@ -828,8 +828,8 @@ internal sealed class GesLinearBytecodeBuilder
                 instructionAddress = EmitLoadIntegerToSlot(
                     destinationSlot,
                     unitInteger.Value,
-                    GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
-                        ? EncodeNumericUnitAndFlags(integerUnit)
+                    GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit)
+                        ? integerUnit.ToUnitAndFlags()
                         : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
                 return true;
 
@@ -850,8 +850,8 @@ internal sealed class GesLinearBytecodeBuilder
                 instructionAddress = EmitLoadFloatToSlot(
                     destinationSlot,
                     unitFloat.Value,
-                    GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
-                        ? EncodeNumericUnitAndFlags(unit)
+                    GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloat.UnitName, out var unit)
+                        ? unit.ToUnitAndFlags()
                         : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone);
                 return true;
 
@@ -943,13 +943,13 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitLoadInteger(
                     state,
                     integer.IntegerValue,
-                    EncodeNumericUnitAndFlags(integer.Unit));
+                    integer.Unit.ToUnitAndFlags());
 
             case GameEventScriptNumberValue floatValue:
                 return EmitLoadFloat(
                     state,
                     EncodeFloatPayload(floatValue),
-                    EncodeNumericUnitAndFlags(floatValue.Unit));
+                    floatValue.Unit.ToUnitAndFlags());
 
             case GameEventScriptPercentageValue percentage:
                 return EmitLoadPercentage(
@@ -1018,10 +1018,10 @@ internal sealed class GesLinearBytecodeBuilder
                 instruction = new GameEventScriptBytecodeInstruction
                 {
                     OpCode = GameEventScriptBytecodeOpCode.StageInteger,
-                    UnitAndFlags = GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit) ? EncodeNumericUnitAndFlags(integerUnit) : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone,
+                    UnitAndFlags = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitInteger.UnitName, out var integerUnit) ? integerUnit.ToUnitAndFlags() : (byte)GameEventScriptBytecodeInstructionUnit.UnitNone,
                     I64 = unitInteger.Value
                 };
-                if (!GameEventScriptNumericUnits.TryParseTypeName(unitInteger.UnitName, out _))
+                if (!GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitInteger.UnitName, out _))
                 {
                     instruction = new GameEventScriptBytecodeInstruction { 
                         OpCode = GameEventScriptBytecodeOpCode.StageFloat,
@@ -1045,11 +1045,11 @@ internal sealed class GesLinearBytecodeBuilder
                 return true;
 
             case UnitFloatLiteralExpressionNode unitFloat:
-                if (GameEventScriptNumericUnits.TryParseTypeName(unitFloat.UnitName, out var unit))
+                if (GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloat.UnitName, out var unit))
                 {
                     instruction = new GameEventScriptBytecodeInstruction { 
                         OpCode = GameEventScriptBytecodeOpCode.StageFloat,
-                        UnitAndFlags = EncodeNumericUnitAndFlags(unit),
+                        UnitAndFlags = unit.ToUnitAndFlags(),
                         F64 = unitFloat.Value
                     };
                 }
@@ -2781,16 +2781,6 @@ internal sealed class GesLinearBytecodeBuilder
         return value.NumberValue;
     }
 
-    private static byte EncodeNumericUnitAndFlags(GameEventScriptNumericUnit? unit)
-        => unit switch
-        {
-            null => (byte)GameEventScriptBytecodeInstructionUnit.UnitNone,
-            GameEventScriptNumericUnit.Degree => (byte)GameEventScriptBytecodeInstructionUnit.UnitDegree,
-            GameEventScriptNumericUnit.Meter => (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter,
-            GameEventScriptNumericUnit.Second => (byte)GameEventScriptBytecodeInstructionUnit.UnitSecond,
-            _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
-        };
-
     private (GameEventScriptBytecodeOpCode CastOpCode, GameEventScriptBytecodeOpCode TypeCheckOpCode, ushort TypeOperand, byte UnitAndFlags) ResolveDeclaredTypeOperand(string? typeName)
     {
         if (string.IsNullOrWhiteSpace(typeName))
@@ -2804,7 +2794,7 @@ internal sealed class GesLinearBytecodeBuilder
                 GameEventScriptBytecodeOpCode.CastUnit,
                 GameEventScriptBytecodeOpCode.CheckUnit,
                 0,
-                EncodeNumericUnitAndFlags(unit));
+                unit.ToUnitAndFlags());
         }
 
         if (string.Equals(typeName, "number", StringComparison.Ordinal) ||
@@ -2944,9 +2934,9 @@ internal sealed class GesLinearBytecodeBuilder
         return typeKind != GameEventScriptBytecodeTypeKind.Invalid;
     }
 
-    private static bool TryGetQuantityUnit(string typeName, out GameEventScriptNumericUnit unit)
+    private static bool TryGetQuantityUnit(string typeName, out GameEventScriptBytecodeInstructionUnit unit)
     {
-        if (GameEventScriptNumericUnits.TryParseQuantityTypeName(typeName, out unit))
+        if (GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(typeName, out unit))
         {
             return true;
         }

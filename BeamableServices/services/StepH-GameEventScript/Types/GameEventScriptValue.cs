@@ -38,6 +38,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public abstract GameEventScriptValueKind Kind { get; }
 
+    public virtual GameEventScriptBytecodeInstructionUnit Unit => GameEventScriptBytecodeInstructionUnit.UnitNone;
+
     public static IComparer<GameEventScriptValue> StableComparer { get; } = new StableGameEventScriptValueComparer();
 
     public bool IsNumber() => Kind is GameEventScriptValueKind.Number or GameEventScriptValueKind.Percentage;
@@ -47,8 +49,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsFractional() => this is GameEventScriptNumberValue { IsFractionalValue: true };
     public bool IsText() => Kind == GameEventScriptValueKind.Text;
     public bool IsPercentage() => Kind == GameEventScriptValueKind.Percentage;
-    public bool IsNumericUnit(GameEventScriptNumericUnit unit) => TryGetNumericUnit(this, out var valueUnit) && valueUnit == unit;
+    public bool IsNumericUnit(GameEventScriptBytecodeInstructionUnit unit) => TryGetNumericUnit(this, out var valueUnit) && valueUnit == unit;
     public bool HasNumericUnit() => TryGetNumericUnit(this, out _);
+    public bool HasUnit => Unit.IsNumericUnit();
     public bool IsVector() => Kind == GameEventScriptValueKind.Vector;
     public bool IsPoint() => Kind == GameEventScriptValueKind.Point;
     public bool IsSeries() => Kind == GameEventScriptValueKind.Series;
@@ -180,7 +183,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public string DescribeType()
     {
-        if (this is GameEventScriptNumberValue { Unit: { } unit })
+        if (this is GameEventScriptNumberValue { Unit: var unit } && unit.IsNumericUnit())
         {
             return $":{ToDisplayTypeName(unit.ToTypeName())}";
         }
@@ -768,8 +771,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         var formatted = value.IsIntegerValue
             ? value.IntegerValue.ToString(CultureInfo.InvariantCulture)
             : value.NumberValue.ToString("0.############################", CultureInfo.InvariantCulture);
-        return value.Unit.HasValue
-            ? $"{formatted}{value.Unit.Value.ToSuffix()}"
+        return value.Unit.IsNumericUnit()
+            ? $"{formatted}{value.Unit.ToSuffix()}"
             : formatted;
     }
 
@@ -784,9 +787,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         return wrapped == 360d ? 0d : wrapped;
     }
 
-    internal static bool TryGetNumericUnit(GameEventScriptValue value, out GameEventScriptNumericUnit unit)
+    internal static bool TryGetNumericUnit(GameEventScriptValue value, out GameEventScriptBytecodeInstructionUnit unit)
     {
-        if (value is GameEventScriptNumberValue { Unit: { } floatUnit })
+        if (value is GameEventScriptNumberValue { Unit: var floatUnit } && floatUnit.IsNumericUnit())
         {
             unit = floatUnit;
             return true;
@@ -835,10 +838,10 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     internal static string FormatPoint(GameEventScriptPointValue value)
         => $"point[x: {FormatFloatComponent(value.X, value.Unit)}, y: {FormatFloatComponent(value.Y, value.Unit)}, z: {FormatFloatComponent(value.Z, value.Unit)}]";
 
-    internal static string FormatFloatComponent(double value, GameEventScriptNumericUnit? unit = null)
+    internal static string FormatFloatComponent(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
     {
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
-        return unit.HasValue ? $"{formatted}{unit.Value.ToSuffix()}" : formatted;
+        return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
     }
 
     internal static long ToIntegerPercentage(double ratio)

@@ -3,8 +3,8 @@ using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
-using static StepH.GameEventScript.Types.GameEventScriptNumericUnits;
-using GameEventScriptNumericUnits = StepH.GameEventScript.Types.GameEventScriptNumericUnits;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits;
+using GameEventScriptBytecodeInstructionUnits = StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits;
 
 namespace StepH_GameEventScript_Tests.impl;
 
@@ -56,6 +56,25 @@ public class GameEventScriptValueScenarios
     }
 
     [TestMethod]
+    public void ValuesStoreExplicitUnitSentinels()
+    {
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNothing, GesNothing().Unit);
+        Assert.IsFalse(GesNothing().HasUnit);
+
+        var unitlessNumber = GesFloat(1d, null);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNone, unitlessNumber.Unit);
+        Assert.IsFalse(unitlessNumber.HasUnit);
+
+        var unitlessVector = GesVector(1d, 2d, 3d, GameEventScriptBytecodeInstructionUnit.UnitNothing);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNone, unitlessVector.Unit);
+        Assert.IsFalse(unitlessVector.HasUnit);
+
+        var meteredNumber = GesInteger(3, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, meteredNumber.Unit);
+        Assert.IsTrue(meteredNumber.HasUnit);
+    }
+
+    [TestMethod]
     public void StableComparisonOrdersValuesDeterministically()
     {
         var values = new List<GameEventScriptValue> { GesBoolean(true), GesText("b"), GesFloat(2d), GesInteger(1), GesNothing(), GesText("a") };
@@ -96,7 +115,7 @@ public class GameEventScriptValueScenarios
         Assert.AreEqual(GameEventScriptValueKind.Number, over.Kind);
         Assert.AreEqual(450d, over.AsNumber());
         Assert.IsTrue(over.IsNumber());
-        Assert.IsTrue(over.IsNumericUnit(GameEventScriptNumericUnit.Degree));
+        Assert.IsTrue(over.IsNumericUnit(GameEventScriptBytecodeInstructionUnit.UnitDegree));
         Assert.AreEqual(-270d, negative.AsNumber());
         Assert.AreEqual(360d, fullTurn.AsNumber());
         Assert.AreNotEqual(over, negative);
@@ -138,15 +157,15 @@ public class GameEventScriptValueScenarios
         Assert.AreSame(GameEventScriptVectorValue.Zero, GesVector(0d, 0d, 0d));
         Assert.AreEqual("vector[x: 10.5, y: -2, z: 0]", vector.ToString());
 
-        var unitVector = GesVector(0d, 0d, 0d, GameEventScriptNumericUnit.Meter);
-        var sameComponentsDifferentUnit = GesVector(0d, 0d, 0d, GameEventScriptNumericUnit.Second);
+        var unitVector = GesVector(0d, 0d, 0d, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+        var sameComponentsDifferentUnit = GesVector(0d, 0d, 0d, GameEventScriptBytecodeInstructionUnit.UnitSecond);
         Assert.AreNotSame(GameEventScriptVectorValue.Zero, unitVector);
         Assert.AreNotEqual(GesVector(0d, 0d, 0d), unitVector);
         Assert.AreNotEqual(unitVector, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitVector.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptVectorValue)unitVector).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitVector.AsMap()["x"]).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitVector.AsList()[1]).Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, ((GameEventScriptVectorValue)unitVector).Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, ((GameEventScriptNumberValue)unitVector.AsMap()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, ((GameEventScriptNumberValue)unitVector.AsList()[1]).Unit);
         Assert.AreEqual("vector[x: 0m, y: 0m, z: 0m]", unitVector.ToString());
     }
 
@@ -167,15 +186,15 @@ public class GameEventScriptValueScenarios
         Assert.AreSame(GameEventScriptPointValue.Zero, GesPoint(0d, 0d, 0d));
         Assert.AreEqual("point[x: 10.5, y: -2, z: 0]", point.ToString());
 
-        var unitPoint = GesPoint(0d, 0d, 0d, GameEventScriptNumericUnit.Meter);
-        var sameComponentsDifferentUnit = GesPoint(0d, 0d, 0d, GameEventScriptNumericUnit.Second);
+        var unitPoint = GesPoint(0d, 0d, 0d, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+        var sameComponentsDifferentUnit = GesPoint(0d, 0d, 0d, GameEventScriptBytecodeInstructionUnit.UnitSecond);
         Assert.AreNotSame(GameEventScriptPointValue.Zero, unitPoint);
         Assert.AreNotEqual(GesPoint(0d, 0d, 0d), unitPoint);
         Assert.AreNotEqual(unitPoint, sameComponentsDifferentUnit);
         Assert.AreNotEqual(unitPoint.GetHashCode(), sameComponentsDifferentUnit.GetHashCode());
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptPointValue)unitPoint).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitPoint.AsMap()["x"]).Unit);
-        Assert.AreEqual(GameEventScriptNumericUnit.Meter, ((GameEventScriptNumberValue)unitPoint.AsList()[1]).Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, ((GameEventScriptPointValue)unitPoint).Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, ((GameEventScriptNumberValue)unitPoint.AsMap()["x"]).Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitMeter, ((GameEventScriptNumberValue)unitPoint.AsList()[1]).Unit);
         Assert.AreEqual("point[x: 0m, y: 0m, z: 0m]", unitPoint.ToString());
     }
 
@@ -217,11 +236,11 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void PercentageBinaryAluPreservesUnitsForRelativeBases()
     {
-        AssertNumericUnit(105d, GameEventScriptNumericUnit.Meter, EvaluatePercentageBinary(GesMeter(100d), "+", GesPercentage(0.05d)));
-        AssertNumericUnit(95d, GameEventScriptNumericUnit.Meter, EvaluatePercentageBinary(GesMeter(100d), "-", GesPercentage(0.05d)));
-        AssertNumericUnit(5d, GameEventScriptNumericUnit.Meter, EvaluatePercentageBinary(GesMeter(100d), "*", GesPercentage(0.05d)));
-        AssertNumericUnit(5d, GameEventScriptNumericUnit.Meter, EvaluatePercentageBinary(GesPercentage(0.05d), "*", GesMeter(100d)));
-        AssertNumericUnit(2000d, GameEventScriptNumericUnit.Meter, EvaluatePercentageBinary(GesMeter(100d), "/", GesPercentage(0.05d)));
+        AssertNumericUnit(105d, GameEventScriptBytecodeInstructionUnit.UnitMeter, EvaluatePercentageBinary(GesMeter(100d), "+", GesPercentage(0.05d)));
+        AssertNumericUnit(95d, GameEventScriptBytecodeInstructionUnit.UnitMeter, EvaluatePercentageBinary(GesMeter(100d), "-", GesPercentage(0.05d)));
+        AssertNumericUnit(5d, GameEventScriptBytecodeInstructionUnit.UnitMeter, EvaluatePercentageBinary(GesMeter(100d), "*", GesPercentage(0.05d)));
+        AssertNumericUnit(5d, GameEventScriptBytecodeInstructionUnit.UnitMeter, EvaluatePercentageBinary(GesPercentage(0.05d), "*", GesMeter(100d)));
+        AssertNumericUnit(2000d, GameEventScriptBytecodeInstructionUnit.UnitMeter, EvaluatePercentageBinary(GesMeter(100d), "/", GesPercentage(0.05d)));
         AssertNaN(EvaluatePercentageBinary(GesPercentage(0.05d), "/", GesMeter(100d)));
     }
 
@@ -285,7 +304,7 @@ public class GameEventScriptValueScenarios
         Assert.IsFalse(actual.HasNumericUnit());
     }
 
-    private static void AssertNumericUnit(double expected, GameEventScriptNumericUnit unit, GameEventScriptValue actual)
+    private static void AssertNumericUnit(double expected, GameEventScriptBytecodeInstructionUnit unit, GameEventScriptValue actual)
     {
         Assert.AreEqual(GameEventScriptValueKind.Number, actual.Kind);
         Assert.AreEqual(expected, actual.AsNumber());

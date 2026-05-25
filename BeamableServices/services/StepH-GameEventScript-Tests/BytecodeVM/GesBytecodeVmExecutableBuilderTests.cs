@@ -2782,7 +2782,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         private static readonly IGameEventScriptExtensionFunction ShortestTurn = new DelegateExtensionFunction((_, args) =>
         {
             var delta = (args[1].Number - args[0].Number + 540d) % 360d - 180d;
-            return GameEventScriptFastValue.FromFloat(delta, GameEventScriptNumericUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(delta, GameEventScriptBytecodeInstructionUnit.UnitDegree);
         });
 
         private NavExtensionRegistry()

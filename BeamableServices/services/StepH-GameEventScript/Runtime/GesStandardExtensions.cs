@@ -300,14 +300,14 @@ internal static class GesStandardExtensions
             return GameEventScriptFastValue.FromGameEventScriptValue(GesValueOperations.EvaluateWrapDegree(input.ToGameEventScriptValue()));
         }
 
-        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptNumericUnit.Degree)
+        if (input.Unit.IsNumericUnit() && input.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
         {
             return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
         }
 
         if (input.Kind is GameEventScriptValueKind.Number)
         {
-            return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptNumericUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptBytecodeInstructionUnit.UnitDegree);
         }
 
         return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
@@ -339,7 +339,7 @@ internal static class GesStandardExtensions
 
         try
         {
-            return GameEventScriptFastValue.FromFloat(number.Value / Pi * 180d, GameEventScriptNumericUnit.Degree);
+            return GameEventScriptFastValue.FromFloat(number.Value / Pi * 180d, GameEventScriptBytecodeInstructionUnit.UnitDegree);
         }
         catch (OverflowException)
         {
@@ -352,7 +352,7 @@ internal static class GesStandardExtensions
         if (input.IsReferenceBacked)
         {
             var value = input.ToGameEventScriptValue();
-            if (GameEventScriptValue.TryGetNumericUnit(value, out var unit) && unit != GameEventScriptNumericUnit.Degree)
+            if (GameEventScriptValue.TryGetNumericUnit(value, out var unit) && unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
             {
                 number = GesValueOperations.NumericValue.NaN();
                 return false;
@@ -361,7 +361,7 @@ internal static class GesStandardExtensions
             return GesValueOperations.TryCoerceNumericForOperation(value, out number);
         }
 
-        if (input.Unit.HasValue && input.Unit.Value != GameEventScriptNumericUnit.Degree)
+        if (input.Unit.IsNumericUnit() && input.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
         {
             number = GesValueOperations.NumericValue.NaN();
             return false;
@@ -384,7 +384,7 @@ internal static class GesStandardExtensions
             return GesValueOperations.TryCoerceNumericForOperation(value, out number);
         }
 
-        if (input.Unit.HasValue)
+        if (input.Unit.IsNumericUnit())
         {
             number = GesValueOperations.NumericValue.NaN();
             return false;

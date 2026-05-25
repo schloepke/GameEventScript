@@ -446,7 +446,7 @@ internal static class GesOptimizer
                 value = GameEventScriptValueFactory.GesInteger(integerLiteral.Value);
                 return true;
             case UnitIntegerLiteralExpressionNode unitIntegerLiteral:
-                value = GameEventScriptNumericUnits.TryParseTypeName(unitIntegerLiteral.UnitName, out var integerUnit)
+                value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitIntegerLiteral.UnitName, out var integerUnit)
                     ? GameEventScriptValueFactory.GesInteger(unitIntegerLiteral.Value, integerUnit)
                     : GameEventScriptValueFactory.GesFloatNaN();
                 return true;
@@ -457,7 +457,7 @@ internal static class GesOptimizer
                 value = GameEventScriptValueFactory.GesPercentage(percentageLiteral.PercentValue / 100d);
                 return true;
             case UnitFloatLiteralExpressionNode unitFloatLiteral:
-                value = GameEventScriptNumericUnits.TryParseTypeName(unitFloatLiteral.UnitName, out var unit)
+                value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloatLiteral.UnitName, out var unit)
                     ? GameEventScriptValueFactory.GesFloat(unitFloatLiteral.Value, unit)
                     : GameEventScriptValueFactory.GesFloatNaN();
                 return true;
@@ -1158,13 +1158,13 @@ internal static class GesOptimizer
 
     private static bool TryConvertConstantType(GameEventScriptValue value, string declaredType, ISet<string> knownTypeNames, out GameEventScriptValue converted)
     {
-        if (GameEventScriptNumericUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
+        if (GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(declaredType, out var quantityUnit))
         {
             converted = ConvertToNumericUnit(value, quantityUnit);
             return true;
         }
 
-        if (GameEventScriptNumericUnits.IsQuantityTypeName(declaredType))
+        if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(declaredType))
         {
             converted = value;
             return false;
@@ -1275,7 +1275,7 @@ internal static class GesOptimizer
 
         var unit = GameEventScriptValue.TryGetNumericUnit(value, out var numericUnit)
             ? numericUnit
-            : (GameEventScriptNumericUnit?)null;
+            : (GameEventScriptBytecodeInstructionUnit?)null;
 
         if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number))
         {
@@ -1334,7 +1334,7 @@ internal static class GesOptimizer
         return GameEventScriptValueFactory.GesPercentage(ratio);
     }
 
-    private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptNumericUnit unit)
+    private static GameEventScriptValue ConvertToNumericUnit(GameEventScriptValue value, GameEventScriptBytecodeInstructionUnit unit)
     {
         var unwrapped = value;
 
@@ -1891,7 +1891,7 @@ internal static class GesOptimizer
                 expression = new BooleanLiteralExpressionNode(value.AsBoolean());
                 return true;
             case GameEventScriptValueKind.Number when value.IsInteger():
-                expression = value is GameEventScriptNumberValue { Unit: { } integerUnit }
+                expression = value is GameEventScriptNumberValue { Unit: var integerUnit } && integerUnit.IsNumericUnit()
                     ? new UnitIntegerLiteralExpressionNode(value.AsInteger(), integerUnit.ToTypeName())
                     : new IntegerLiteralExpressionNode(value.AsInteger());
                 return true;
@@ -1902,7 +1902,7 @@ internal static class GesOptimizer
                     return false;
                 }
 
-                expression = value is GameEventScriptNumberValue { Unit: { } unit }
+                expression = value is GameEventScriptNumberValue { Unit: var unit } && unit.IsNumericUnit()
                     ? new UnitFloatLiteralExpressionNode(value.AsNumber(), unit.ToTypeName())
                     : new FloatLiteralExpressionNode(value.AsNumber());
                 return true;
@@ -1979,9 +1979,9 @@ internal static class GesOptimizer
         }
     }
 
-    private static ExpressionNode CreateFloatLiteral(double value, GameEventScriptNumericUnit? unit)
-        => unit.HasValue
-            ? new UnitFloatLiteralExpressionNode(value, GameEventScriptNumericUnits.ToTypeName(unit.Value))
+    private static ExpressionNode CreateFloatLiteral(double value, GameEventScriptBytecodeInstructionUnit? unit)
+        => unit is { } valueUnit && valueUnit.IsNumericUnit()
+            ? new UnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
             : new FloatLiteralExpressionNode(value);
 
     private static bool TryRemainderFinite(double left, double right, out double value)
